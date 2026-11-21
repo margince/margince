@@ -14,41 +14,59 @@
   "self_judged": true,
   "stamp": {
     "scenario": "bc3c36379b22a3ad",
-    "tools": "6a00a274020a56ea",
+    "tools": "3e5ccbdf2a93806c",
     "instructions": "c5c644eee9719be0",
     "judge": "",
-    "harness": "7901d2face754748",
-    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:09:10Z"
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T14:47:35Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:47:35Z"
   },
   "usage": {
     "input_tokens": 20,
-    "output_tokens": 1679,
-    "cache_creation_input_tokens": 20342,
-    "cache_read_input_tokens": 800771,
+    "output_tokens": 1574,
+    "cache_creation_input_tokens": 19812,
+    "cache_read_input_tokens": 799751,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1783
+    "cost_usd": 0.175
   },
-  "tools_called": [
-    "change_settings",
-    "describe_router_actions",
-    "describe_views",
-    "list_notification_preferences",
-    "read_view",
-    "read_workspace",
-    "update_automation"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "describe_views",
+        "list_notification_preferences",
+        "read_view",
+        "read_workspace",
+        "update_automation"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_views",
+        "list_notification_preferences",
+        "read_view",
+        "read_workspace",
+        "update_automation"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 6,
-      "min": 6,
+      "median": 5.5,
+      "min": 5,
       "max": 6
     },
     "turns": {
-      "median": 7,
-      "min": 7,
+      "median": 6.5,
+      "min": 6,
       "max": 7
     },
     "refused": {
@@ -57,19 +75,19 @@
       "max": 1
     },
     "prompt_tokens": {
-      "median": 410566.5,
-      "min": 410535,
-      "max": 410598
+      "median": 409791.5,
+      "min": 408565,
+      "max": 411018
     },
     "output_tokens": {
-      "median": 839.5,
-      "min": 825,
-      "max": 854
+      "median": 787,
+      "min": 714,
+      "max": 860
     },
     "duration_ms": {
-      "median": 11228,
-      "min": 10744,
-      "max": 11712
+      "median": 11562.5,
+      "min": 11101,
+      "max": 12024
     }
   }
 }

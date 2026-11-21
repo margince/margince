@@ -19,9 +19,11 @@
     "tools": "76d8c29c3b55be59",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:29:42Z"
+    "ran_at": "2026-11-21T08:29:42Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:50:34Z"
   },
   "usage": {
     "input_tokens": 16,
@@ -32,12 +34,27 @@
     "runs_costed": 2,
     "cost_usd": 0.0959
   },
-  "tools_called": [
-    "change_tags",
-    "list_tags",
-    "merge_tags",
-    "read_tags",
-    "update_tag"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_tags",
+        "list_tags",
+        "merge_tags",
+        "read_tags",
+        "update_tag"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_tags",
+        "list_tags",
+        "merge_tags",
+        "read_tags",
+        "update_tag"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,

@@ -20,9 +20,11 @@
     "tools": "2fab8ff230a8b4aa",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:45:46Z"
+    "ran_at": "2026-11-21T08:45:46Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:47:39Z"
   },
   "usage": {
     "input_tokens": 26,
@@ -33,17 +35,35 @@
     "runs_costed": 2,
     "cost_usd": 0.6853
   },
-  "tools_called": [
-    "at_risk_relationships",
-    "find_records",
-    "list_records",
-    "read_attention",
-    "read_relationships",
-    "read_reporting",
-    "read_reports",
-    "search_context",
-    "search_records",
-    "whats_slipping_this_week"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "find_records",
+        "list_records",
+        "read_attention",
+        "read_relationships",
+        "read_reporting",
+        "read_reports",
+        "search_context",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "find_records",
+        "read_attention",
+        "read_relationships",
+        "read_reporting",
+        "read_reports",
+        "search_context",
+        "search_records",
+        "whats_slipping_this_week"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,

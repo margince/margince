@@ -17,9 +17,11 @@
     "tools": "d3489e3d05911ae2",
     "instructions": "c5c644eee9719be0",
     "judge": "",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T09:01:28Z"
+    "ran_at": "2026-11-21T09:01:28Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:48:47Z"
   },
   "usage": {
     "input_tokens": 18,
@@ -30,14 +32,31 @@
     "runs_costed": 2,
     "cost_usd": 0.1325
   },
-  "tools_called": [
-    "change_compliance",
-    "describe_router_actions",
-    "find_records",
-    "place_legal_hold",
-    "read_record",
-    "read_workspace",
-    "search_records"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "place_legal_hold",
+        "read_record",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "place_legal_hold",
+        "read_record",
+        "read_workspace",
+        "search_records"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,

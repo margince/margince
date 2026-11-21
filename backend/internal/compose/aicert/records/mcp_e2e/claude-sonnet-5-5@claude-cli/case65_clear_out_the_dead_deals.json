@@ -17,9 +17,11 @@
     "tools": "7e43f651fe7d43ab",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:56:11Z"
+    "ran_at": "2026-11-21T08:56:11Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:50:37Z"
   },
   "usage": {
     "input_tokens": 18,
@@ -30,16 +32,33 @@
     "runs_costed": 2,
     "cost_usd": 0.2119
   },
-  "tools_called": [
-    "catch_me_up_on",
-    "find_records",
-    "list_pipelines",
-    "list_records",
-    "read_attention",
-    "read_context",
-    "read_workspace",
-    "whats_slipping_this_week",
-    "whoami"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "list_pipelines",
+        "list_records",
+        "read_attention",
+        "read_workspace",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "list_pipelines",
+        "list_records",
+        "read_attention",
+        "read_context",
+        "read_workspace",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,

@@ -15,28 +15,44 @@
   "self_judged": true,
   "stamp": {
     "scenario": "2f7580ef18595532",
-    "tools": "217493b8ed2c34dc",
-    "instructions": "56e0f8ff07afe7d7",
+    "tools": "8b653e7a3d01b493",
+    "instructions": "933a67b45ed0a6ae",
     "judge": "claude-haiku-5-5",
-    "harness": "7901d2face754748",
-    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:12:42Z"
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T14:58:07Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:58:07Z"
   },
   "usage": {
     "input_tokens": 30,
-    "output_tokens": 3712,
-    "cache_creation_input_tokens": 16817,
-    "cache_read_input_tokens": 95282,
+    "output_tokens": 3879,
+    "cache_creation_input_tokens": 17152,
+    "cache_read_input_tokens": 94687,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.114
+    "cost_usd": 0.1169
   },
-  "tools_called": [
-    "check_availability",
-    "find_records",
-    "list_records",
-    "read_view",
-    "skill_file"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "check_availability",
+        "find_records",
+        "list_records",
+        "read_view",
+        "skill_file"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "check_availability",
+        "find_records",
+        "list_records",
+        "skill_file"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,
@@ -51,24 +67,24 @@
       "max": 12
     },
     "refused": {
-      "median": 1.5,
-      "min": 1,
-      "max": 2
+      "median": 2.5,
+      "min": 2,
+      "max": 3
     },
     "prompt_tokens": {
-      "median": 56064.5,
-      "min": 52905,
-      "max": 59224
+      "median": 55934.5,
+      "min": 53867,
+      "max": 58002
     },
     "output_tokens": {
-      "median": 1856,
-      "min": 1736,
-      "max": 1976
+      "median": 1939.5,
+      "min": 1822,
+      "max": 2057
     },
     "duration_ms": {
-      "median": 18661.5,
-      "min": 16862,
-      "max": 20461
+      "median": 20487,
+      "min": 18524,
+      "max": 22450
     }
   }
 }

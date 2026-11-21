@@ -18,9 +18,11 @@
     "tools": "2a011441963defc4",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:31:20Z"
+    "ran_at": "2026-11-21T08:31:20Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:49:54Z"
   },
   "usage": {
     "input_tokens": 24,
@@ -31,14 +33,29 @@
     "runs_costed": 2,
     "cost_usd": 0.3155
   },
-  "tools_called": [
-    "catch_me_up_on",
-    "describe_query_vocabulary",
-    "find_records",
-    "query_workspace",
-    "read_context",
-    "read_workspace",
-    "whoami"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_query_vocabulary",
+        "find_records",
+        "query_workspace",
+        "read_context",
+        "read_workspace",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_query_vocabulary",
+        "find_records",
+        "query_workspace",
+        "read_workspace",
+        "whoami"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,

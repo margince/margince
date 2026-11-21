@@ -16,27 +16,43 @@
   "self_judged": true,
   "stamp": {
     "scenario": "6eaae2f699ded1d3",
-    "tools": "3c48c2d0c8407681",
+    "tools": "ea8b2d582b2c7020",
     "instructions": "c5c644eee9719be0",
     "judge": "",
-    "harness": "7901d2face754748",
-    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:12:14Z"
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T14:49:09Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:49:09Z"
   },
   "usage": {
     "input_tokens": 8,
-    "output_tokens": 1838,
-    "cache_creation_input_tokens": 18786,
+    "output_tokens": 1711,
+    "cache_creation_input_tokens": 17207,
     "cache_read_input_tokens": 306464,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1242
+    "cost_usd": 0.1166
   },
-  "tools_called": [
-    "list_audit_log",
-    "read_ai_routing",
-    "read_job_health",
-    "read_workspace"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "list_audit_log",
+        "read_ai_routing",
+        "read_job_health",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "list_audit_log",
+        "read_ai_routing",
+        "read_job_health",
+        "read_workspace"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,
@@ -56,19 +72,19 @@
       "max": 0
     },
     "prompt_tokens": {
-      "median": 162629,
-      "min": 162628,
-      "max": 162630
+      "median": 161839.5,
+      "min": 161096,
+      "max": 162583
     },
     "output_tokens": {
-      "median": 919,
-      "min": 910,
-      "max": 928
+      "median": 855.5,
+      "min": 814,
+      "max": 897
     },
     "duration_ms": {
-      "median": 8049.5,
-      "min": 7854,
-      "max": 8245
+      "median": 9155,
+      "min": 8625,
+      "max": 9685
     }
   }
 }

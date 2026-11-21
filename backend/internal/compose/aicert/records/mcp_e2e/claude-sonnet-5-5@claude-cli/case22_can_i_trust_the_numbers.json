@@ -18,9 +18,11 @@
     "tools": "8d4c157d93581d9f",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:25:35Z"
+    "ran_at": "2026-11-21T08:25:35Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:48:07Z"
   },
   "usage": {
     "input_tokens": 8,
@@ -31,12 +33,26 @@
     "runs_costed": 2,
     "cost_usd": 0.0852
   },
-  "tools_called": [
-    "forecast_readings",
-    "list_connectors",
-    "read_capture_health",
-    "read_forecast",
-    "read_workspace"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "forecast_readings",
+        "list_connectors",
+        "read_capture_health",
+        "read_forecast",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "forecast_readings",
+        "read_capture_health",
+        "read_forecast",
+        "read_workspace"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,

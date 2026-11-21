@@ -18,9 +18,11 @@
     "tools": "bb43c0cbad588045",
     "instructions": "c5c644eee9719be0",
     "judge": "",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "3e8b06484a135f3852cc0f216c6034e1c54a29f4",
-    "ran_at": "2026-11-21T13:05:04Z"
+    "ran_at": "2026-11-21T13:05:04Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:48:26Z"
   },
   "usage": {
     "input_tokens": 20,
@@ -31,12 +33,27 @@
     "runs_costed": 2,
     "cost_usd": 0.4865
   },
-  "tools_called": [
-    "commit_import",
-    "describe_import_format",
-    "preview_import",
-    "read_import",
-    "read_import_report"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "commit_import",
+        "describe_import_format",
+        "preview_import",
+        "read_import",
+        "read_import_report"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "commit_import",
+        "describe_import_format",
+        "preview_import",
+        "read_import",
+        "read_import_report"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,

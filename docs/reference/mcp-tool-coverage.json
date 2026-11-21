@@ -19,15 +19,16 @@
       "name": "claude-sonnet-5-5",
       "trust": "🟡 Mostly",
       "cases_with_a_committed_run": 81,
-      "cases_that_reached_their_bar": 78,
-      "cases_below_their_bar": 3,
-      "runs": 164,
-      "passed": 158,
-      "reliability": 0.9634146341463414,
+      "cases_that_reached_their_bar": 77,
+      "cases_below_their_bar": 4,
+      "runs": 165,
+      "passed": 157,
+      "reliability": 0.9515151515151515,
       "cases_below_their_bar_named": [
         "case64_catch_me_up_and_the_brief",
         "case75_sofia_is_leaving",
-        "case88_send_it_anyway"
+        "case88_send_it_anyway",
+        "case91_add_a_review_stage"
       ],
       "route": "Claude Code CLI",
       "self_judged": true,
@@ -76,19 +77,20 @@
         "name": "claude-sonnet-5-5",
         "trust": "⚪ Not enough tested yet",
         "cases_with_a_committed_run": 20,
-        "cases_that_reached_their_bar": 17,
-        "cases_below_their_bar": 3,
-        "runs": 40,
-        "passed": 34,
-        "reliability": 0.85,
+        "cases_that_reached_their_bar": 16,
+        "cases_below_their_bar": 4,
+        "runs": 42,
+        "passed": 32,
+        "reliability": 0.7619047619047619,
         "cases_below_their_bar_named": [
           "case20_put_it_in_the_board_pack",
-          "case64_catch_me_up_and_the_brief",
-          "case6_ask_the_company"
+          "case4_use_the_moment",
+          "case5_before_the_meeting",
+          "case64_catch_me_up_and_the_brief"
         ],
         "route": "Claude Code CLI",
         "self_judged": true,
-        "calls_per_case": "13.75 over 20",
+        "calls_per_case": "13.25 over 20",
         "slow_cases": []
       }
     ],
@@ -120,14 +122,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 28.5,
-                "min": 27,
-                "max": 30
+                "median": 24.5,
+                "min": 24,
+                "max": 25
               },
               "turns": {
-                "median": 29.5,
-                "min": 28,
-                "max": 31
+                "median": 25.5,
+                "min": 25,
+                "max": 26
               }
             }
           }
@@ -156,14 +158,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 14,
-                "min": 14,
-                "max": 14
+                "median": 16.5,
+                "min": 16,
+                "max": 17
               },
               "turns": {
-                "median": 15,
-                "min": 15,
-                "max": 15
+                "median": 17.5,
+                "min": 17,
+                "max": 18
               }
             }
           }
@@ -193,14 +195,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 7.5,
-                "min": 7,
-                "max": 8
+                "median": 6,
+                "min": 6,
+                "max": 6
               },
               "turns": {
-                "median": 8.5,
-                "min": 8,
-                "max": 9
+                "median": 7,
+                "min": 7,
+                "max": 7
               }
             }
           }
@@ -229,14 +231,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 10,
+                "median": 10.5,
                 "min": 10,
-                "max": 10
+                "max": 11
               },
               "turns": {
-                "median": 11,
+                "median": 11.5,
                 "min": 11,
-                "max": 11
+                "max": 12
               }
             }
           }
@@ -303,14 +305,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 19,
-                "min": 18,
-                "max": 20
+                "median": 22,
+                "min": 22,
+                "max": 22
               },
               "turns": {
-                "median": 20,
-                "min": 19,
-                "max": 21
+                "median": 23,
+                "min": 23,
+                "max": 23
               }
             }
           }
@@ -330,23 +332,23 @@
           {
             "model": "claude-sonnet-5-5@claude-cli",
             "runs": 2,
-            "passed": 2,
+            "passed": 0,
             "pass_at": 2,
-            "held": true,
+            "held": false,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 10,
-                "min": 10,
-                "max": 10
+                "median": 9.5,
+                "min": 8,
+                "max": 11
               },
               "turns": {
-                "median": 11,
-                "min": 11,
-                "max": 11
+                "median": 10.5,
+                "min": 9,
+                "max": 12
               }
             }
           }
@@ -366,7 +368,7 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
+            "runs": 3,
             "passed": 2,
             "pass_at": 2,
             "held": true,
@@ -374,16 +376,16 @@
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 2,
+              "runs": 3,
               "calls": {
-                "median": 22,
-                "min": 21,
-                "max": 23
+                "median": 21,
+                "min": 19,
+                "max": 26
               },
               "turns": {
-                "median": 23,
-                "min": 22,
-                "max": 24
+                "median": 22,
+                "min": 20,
+                "max": 27
               }
             }
           }
@@ -412,13 +414,13 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 17.5,
-                "min": 17,
+                "median": 18,
+                "min": 18,
                 "max": 18
               },
               "turns": {
-                "median": 18.5,
-                "min": 18,
+                "median": 19,
+                "min": 19,
                 "max": 19
               }
             }
@@ -479,22 +481,22 @@
           {
             "model": "claude-sonnet-5-5@claude-cli",
             "runs": 2,
-            "passed": 2,
+            "passed": 0,
             "pass_at": 2,
-            "held": true,
+            "held": false,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 13.5,
-                "min": 10,
+                "median": 14,
+                "min": 11,
                 "max": 17
               },
               "turns": {
-                "median": 14.5,
-                "min": 11,
+                "median": 15,
+                "min": 12,
                 "max": 18
               }
             }
@@ -523,13 +525,13 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 16,
-                "min": 16,
+                "median": 15,
+                "min": 14,
                 "max": 16
               },
               "turns": {
-                "median": 17,
-                "min": 17,
+                "median": 16,
+                "min": 15,
                 "max": 17
               }
             }
@@ -550,24 +552,24 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 0,
+            "runs": 3,
+            "passed": 2,
             "pass_at": 2,
-            "held": false,
+            "held": true,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 2,
+              "runs": 3,
               "calls": {
-                "median": 22,
-                "min": 17,
-                "max": 27
+                "median": 16,
+                "min": 14,
+                "max": 18
               },
               "turns": {
-                "median": 23,
-                "min": 18,
-                "max": 28
+                "median": 17,
+                "min": 15,
+                "max": 19
               }
             }
           }
@@ -595,14 +597,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 10,
-                "min": 7,
-                "max": 13
+                "median": 8.5,
+                "min": 8,
+                "max": 9
               },
               "turns": {
-                "median": 11,
-                "min": 8,
-                "max": 14
+                "median": 9.5,
+                "min": 9,
+                "max": 10
               }
             }
           }
@@ -636,14 +638,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 11,
-                "min": 10,
-                "max": 12
+                "median": 8.5,
+                "min": 7,
+                "max": 10
               },
               "turns": {
-                "median": 12,
-                "min": 11,
-                "max": 13
+                "median": 9.5,
+                "min": 8,
+                "max": 11
               }
             }
           }
@@ -671,13 +673,13 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 9,
-                "min": 9,
+                "median": 8.5,
+                "min": 8,
                 "max": 9
               },
               "turns": {
-                "median": 10,
-                "min": 10,
+                "median": 9.5,
+                "min": 9,
                 "max": 10
               }
             }
@@ -706,14 +708,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 17.5,
-                "min": 17,
-                "max": 18
+                "median": 10,
+                "min": 9,
+                "max": 11
               },
               "turns": {
-                "median": 18.5,
-                "min": 18,
-                "max": 19
+                "median": 11,
+                "min": 10,
+                "max": 12
               }
             }
           }
@@ -741,14 +743,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 9.5,
-                "min": 9,
-                "max": 10
-              },
-              "turns": {
                 "median": 10.5,
                 "min": 10,
                 "max": 11
+              },
+              "turns": {
+                "median": 11.5,
+                "min": 11,
+                "max": 12
               }
             }
           }
@@ -780,14 +782,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 23,
-                "min": 21,
-                "max": 25
+                "median": 20.5,
+                "min": 19,
+                "max": 22
               },
               "turns": {
-                "median": 24,
-                "min": 22,
-                "max": 26
+                "median": 21.5,
+                "min": 20,
+                "max": 23
               }
             }
           }
@@ -817,14 +819,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 9.5,
-                "min": 9,
-                "max": 10
+                "median": 12.5,
+                "min": 12,
+                "max": 13
               },
               "turns": {
-                "median": 10.5,
-                "min": 10,
-                "max": 11
+                "median": 13.5,
+                "min": 13,
+                "max": 14
               }
             }
           }
@@ -927,7 +929,8 @@
               "min": 8,
               "max": 9
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -981,7 +984,8 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1080,13 +1084,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 1.5,
-              "min": 1,
+              "median": 2,
+              "min": 2,
               "max": 2
             },
             "turns": {
-              "median": 2.5,
-              "min": 2,
+              "median": 3,
+              "min": 3,
               "max": 3
             }
           }
@@ -1144,7 +1148,8 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1197,7 +1202,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1241,13 +1247,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 6,
+              "median": 5.5,
+              "min": 5,
               "max": 6
             },
             "turns": {
-              "median": 7,
-              "min": 7,
+              "median": 6.5,
+              "min": 6,
               "max": 7
             }
           }
@@ -1303,7 +1309,8 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1356,7 +1363,8 @@
               "min": 7,
               "max": 11
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1402,13 +1410,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 5,
+              "median": 6,
+              "min": 6,
               "max": 6
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
+              "median": 7,
+              "min": 7,
               "max": 7
             }
           }
@@ -1446,7 +1454,8 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1556,7 +1565,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1612,7 +1622,8 @@
               "min": 7,
               "max": 9
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1668,7 +1679,8 @@
               "min": 8,
               "max": 9
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1715,14 +1727,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             },
             "turns": {
-              "median": 5.5,
+              "median": 5,
               "min": 5,
-              "max": 6
+              "max": 5
             }
           }
         },
@@ -1777,7 +1789,8 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1830,7 +1843,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1883,7 +1897,8 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1936,7 +1951,8 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -1971,7 +1987,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -2010,7 +2027,8 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -2036,14 +2054,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8,
+              "median": 8.5,
               "min": 8,
-              "max": 8
+              "max": 9
             },
             "turns": {
-              "median": 9,
+              "median": 9.5,
               "min": 9,
-              "max": 9
+              "max": 10
             }
           }
         }
@@ -2080,7 +2098,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -2120,7 +2139,8 @@
               "min": 3,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -2155,7 +2175,8 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -2190,7 +2211,8 @@
               "min": 4,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -2225,7 +2247,8 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -2260,7 +2283,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -2295,7 +2319,8 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -2331,7 +2356,8 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2385,7 +2411,8 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2432,14 +2459,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 4,
-              "max": 4
-            },
-            "turns": {
               "median": 5,
               "min": 5,
               "max": 5
+            },
+            "turns": {
+              "median": 6,
+              "min": 6,
+              "max": 6
             }
           }
         },
@@ -2495,7 +2522,8 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2549,7 +2577,8 @@
               "min": 11,
               "max": 11
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2603,7 +2632,8 @@
               "min": 7,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2660,7 +2690,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2718,7 +2749,8 @@
               "min": 8,
               "max": 13
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2772,7 +2804,8 @@
               "min": 11,
               "max": 12
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2827,7 +2860,8 @@
               "min": 11,
               "max": 11
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2881,7 +2915,8 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2940,7 +2975,8 @@
               "min": 6,
               "max": 10
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2994,7 +3030,8 @@
               "min": 10,
               "max": 10
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3051,7 +3088,8 @@
               "min": 17,
               "max": 19
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3098,13 +3136,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 7,
+              "median": 5.5,
+              "min": 4,
               "max": 7
             },
             "turns": {
-              "median": 8,
-              "min": 8,
+              "median": 6.5,
+              "min": 5,
               "max": 8
             }
           }
@@ -3164,7 +3202,8 @@
               "min": 8,
               "max": 9
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3249,7 +3288,8 @@
               "min": 5,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3307,7 +3347,8 @@
               "min": 13,
               "max": 13
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3363,7 +3404,8 @@
               "min": 8,
               "max": 9
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3409,14 +3451,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 3,
-              "max": 5
-            },
-            "turns": {
               "median": 5,
               "min": 4,
               "max": 6
+            },
+            "turns": {
+              "median": 6,
+              "min": 5,
+              "max": 7
             }
           }
         },
@@ -3471,7 +3513,8 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3528,7 +3571,8 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3581,7 +3625,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3635,7 +3680,8 @@
               "min": 8,
               "max": 8
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3690,7 +3736,8 @@
               "min": 8,
               "max": 13
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3751,7 +3798,8 @@
               "min": 8,
               "max": 11
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3804,7 +3852,8 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3862,7 +3911,8 @@
               "min": 4,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3915,7 +3965,8 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3968,7 +4019,8 @@
               "min": 5,
               "max": 11
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4021,7 +4073,8 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4075,7 +4128,8 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4128,7 +4182,8 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4181,7 +4236,8 @@
               "min": 4,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4234,7 +4290,8 @@
               "min": 4,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4287,7 +4344,8 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4340,7 +4398,8 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4393,7 +4452,8 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4446,7 +4506,8 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4499,7 +4560,8 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4552,7 +4614,8 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4605,7 +4668,8 @@
               "min": 2,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4658,7 +4722,8 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4711,7 +4776,8 @@
               "min": 11,
               "max": 12
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4764,7 +4830,8 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4821,7 +4888,8 @@
               "min": 9,
               "max": 14
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4857,24 +4925,24 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 1,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 7,
-              "min": 6,
-              "max": 8
+              "median": 3,
+              "min": 3,
+              "max": 9
             },
             "turns": {
-              "median": 8,
-              "min": 7,
-              "max": 9
+              "median": 4,
+              "min": 4,
+              "max": 10
             }
           }
         },
@@ -5035,7 +5103,8 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5088,7 +5157,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6066,8 +6136,7 @@
       ],
       "called_in_held_runs": [
         "case106_turn_that_rule_off",
-        "case116_the_rate_and_the_logo",
-        "case91_add_a_review_stage"
+        "case116_the_rate_and_the_logo"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -6075,10 +6144,12 @@
       "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "runs": 5,
+          "passed": 3,
+          "reliability": 0.6,
+          "cases_below_their_bar": [
+            "case91_add_a_review_stage"
+          ]
         },
         "gemini-4-hydrogen-medium@agy-cli": {
           "runs": 4,
@@ -6293,7 +6364,6 @@
         "case82_keep_that_newsletter_out",
         "case85_the_pilot_slipped",
         "case86_tell_her_what_we_hold",
-        "case91_add_a_review_stage",
         "case93_count_that_stage_as_won",
         "case94_a_field_for_the_region",
         "case99_they_raised_money"
@@ -6517,6 +6587,7 @@
       ],
       "called_in_held_runs": [
         "case106_turn_that_rule_off",
+        "case123_take_over_sofias_deal",
         "case31_wrong_word_on_the_record",
         "case63_is_she_already_here",
         "case94_a_field_for_the_region"
@@ -7226,6 +7297,7 @@
         "case124_log_it_with_read_access",
         "case127_log_the_call_again",
         "case128_is_she_here_twice",
+        "case23_find_us_a_slot",
         "case33_two_cards_for_one_company",
         "case4_use_the_moment",
         "case40_sort_the_queue",

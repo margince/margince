@@ -17,9 +17,11 @@
     "tools": "6e82141203cec7ea",
     "instructions": "c5c644eee9719be0",
     "judge": "",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:59:07Z"
+    "ran_at": "2026-11-21T08:59:07Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:46:56Z"
   },
   "usage": {
     "input_tokens": 20,
@@ -30,13 +32,36 @@
     "runs_costed": 3,
     "cost_usd": 0.1466
   },
-  "tools_called": [
-    "get_member",
-    "get_user_handover",
-    "list_colleagues",
-    "preview_member_retirement",
-    "read_workspace",
-    "whoami"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "get_member",
+        "get_user_handover",
+        "list_colleagues",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "get_user_handover",
+        "list_colleagues",
+        "preview_member_retirement",
+        "read_workspace",
+        "whoami"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "get_user_handover",
+        "list_colleagues",
+        "preview_member_retirement",
+        "read_workspace",
+        "whoami"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 3,

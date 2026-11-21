@@ -17,9 +17,11 @@
     "tools": "90aee2a1be9ccc17",
     "instructions": "c5c644eee9719be0",
     "judge": "",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:10:38Z"
+    "ran_at": "2026-11-21T08:10:38Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:47:59Z"
   },
   "usage": {
     "input_tokens": 26,
@@ -30,16 +32,33 @@
     "runs_costed": 2,
     "cost_usd": 0.4955
   },
-  "tools_called": [
-    "describe_router_actions",
-    "draft_intro_request",
-    "find_records",
-    "list_records",
-    "read_relationships",
-    "read_workspace",
-    "run_research",
-    "search_records",
-    "whoami"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "draft_intro_request",
+        "find_records",
+        "read_relationships",
+        "read_workspace",
+        "run_research",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "draft_intro_request",
+        "find_records",
+        "list_records",
+        "read_relationships",
+        "read_workspace",
+        "run_research",
+        "search_records"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,

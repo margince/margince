@@ -18,9 +18,11 @@
     "tools": "3e7244bead932e3a",
     "instructions": "c5c644eee9719be0",
     "judge": "",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:24:45Z"
+    "ran_at": "2026-11-21T08:24:45Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:48:25Z"
   },
   "usage": {
     "input_tokens": 16,
@@ -31,13 +33,29 @@
     "runs_costed": 2,
     "cost_usd": 0.1395
   },
-  "tools_called": [
-    "compose_analytics_report",
-    "describe_analytics_vocabulary",
-    "describe_report_blocks",
-    "read_analytics",
-    "read_workspace",
-    "run_analytics_query"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "compose_analytics_report",
+        "describe_analytics_vocabulary",
+        "describe_report_blocks",
+        "read_analytics",
+        "read_workspace",
+        "run_analytics_query"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "compose_analytics_report",
+        "describe_analytics_vocabulary",
+        "describe_report_blocks",
+        "read_analytics",
+        "read_workspace",
+        "run_analytics_query"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,

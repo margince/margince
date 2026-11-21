@@ -18,9 +18,11 @@
     "tools": "5856c0e9e82a006d",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "7901d2face754748",
+    "harness": "d904305f3d25fa7b",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:50:43Z"
+    "ran_at": "2026-11-21T08:50:43Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:48:24Z"
   },
   "usage": {
     "input_tokens": 20,
@@ -31,15 +33,31 @@
     "runs_costed": 2,
     "cost_usd": 0.1754
   },
-  "tools_called": [
-    "attach_document",
-    "change_activities",
-    "find_records",
-    "list_company_contracts",
-    "list_documents",
-    "list_records",
-    "read_details",
-    "search_records"
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "attach_document",
+        "change_activities",
+        "find_records",
+        "list_company_contracts",
+        "list_documents",
+        "read_details",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "attach_document",
+        "change_activities",
+        "find_records",
+        "list_company_contracts",
+        "list_records",
+        "read_details",
+        "search_records"
+      ]
+    }
   ],
   "efficiency": {
     "runs": 2,
