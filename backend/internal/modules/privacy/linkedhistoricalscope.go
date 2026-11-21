@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// legacyAuditSubjects is every entity type whose old audit copies the linked
+// legacyAuditSubjects maps the entity types whose old audit copies the linked
 // passes can tie to an erasure. The page query reads only these types, so a
 // type added here is both selected and corrected.
 var legacyAuditSubjects = map[string]func(legacyAuditEntry) (string, pgx.StrictNamedArgs){

@@ -71,7 +71,7 @@ type RunnerService struct {
 	specByName func(string) (runner.AgentSpec, bool)
 	// seeded remembers today's occurrences this process already inserted, so a
 	// tick after the due hour does not repeat an insert that can only conflict.
-	seeded seededOccurrences
+	seeded runner.SeededMemo
 }
 
 // RunnerOption adjusts a RunnerService at construction.
@@ -233,7 +233,7 @@ func (s *RunnerService) seedSeats(ctx context.Context, spec runner.AgentSpec, no
 		// The grants are still read every tick. A seat that grants during the
 		// day is not in the memo yet, so it gets today's job.
 		triggerRef := spec.TriggerRef(now, grant.UserID)
-		if s.seeded.has(now, spec.Name, triggerRef) {
+		if s.seeded.Has(now, spec.Name, triggerRef) {
 			continue
 		}
 		passportID := *grant.PassportID
@@ -241,7 +241,7 @@ func (s *RunnerService) seedSeats(ctx context.Context, spec runner.AgentSpec, no
 			failures = append(failures, fmt.Errorf("seat %s: %w", grant.UserID, err))
 			continue
 		}
-		s.seeded.add(spec.Name, triggerRef)
+		s.seeded.Add(spec.Name, triggerRef)
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("seeding %s for %d of %d seats: %w",

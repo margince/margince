@@ -277,14 +277,15 @@ and write leaves an entity with no embedding row. The vector arm cannot see it u
 embeds it again. Without a sweep, it would wait until a user confirmed a reindex they never asked for.
 
 - **`embed_drift_sweep`** runs every **15 minutes** and walks the live workspaces itself. It has no
-  time limit: the pending set limits the pass, and the time limit per call of the model lane limits
-  each embed. Most passes read only the `activity`, `contact` and `company` rows written in the last
-  hour, through an index on `created_at` or `updated_at`, and the small `deal`, `lead` and `project`
-  tables in full. So 15 minutes is how long a lost embed event for a new row may keep it out of
-  vector search.
-- **The first pass of each UTC day** in a worker process reads every live row of all six tables. It
-  finds an edit to a mail whose event was lost, and a row that became embeddable with no write of its
-  own, such as a mail whose audience was settled. Those wait up to a day.
+  time limit. The pending set limits the pass, and the time limit per call of the model lane limits
+  each embed.
+- **Most passes** read only the `activity`, `contact` and `company` rows written in the last hour,
+  through an index on `created_at` or `updated_at`. They read the small `deal`, `lead` and `project`
+  tables in full. So a lost embed event for a new row keeps it out of vector search for up to 15
+  minutes.
+- **The first pass of each UTC day** in a worker process reads every live row of these tables. It
+  finds an edit to a mail whose event was lost. It also finds a row that may now be embedded with no
+  write of its own, such as a mail whose audience was settled. Those wait up to a day.
 
 It is declared in `backend/api/jobs.yaml`. `compose/embeddriftsweep.go` registers it under a
 rule the contract's `when: [Embedder]` cannot state. The lane must also have a *binding* (an
