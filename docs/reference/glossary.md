@@ -96,6 +96,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Redis | The in-memory store Margince uses as its event bus. |
 | REST | The style of HTTP API Margince offers next to MCP. |
 | RTF | Rich Text Format, a document format most word processors read. |
+| SDK | A software development kit: a library a program uses to drive a tool, as the Claude Agent SDK drives Claude Code. |
 | Shift | The key held while pressing another, as in Page Up/Down by year in `Calendar`. |
 | skill | A folder an AI tool loads to learn a task, led by a `SKILL.md` file. |
 | Slack | A team chat tool where an incoming webhook can post messages. |
