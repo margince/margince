@@ -447,10 +447,9 @@ function applyEvent(
       );
     case "VOICE_DONE":
       return withEntries(state, { act: "connect", phase: "cn.consent" });
-    case "VOICE_REVISE":
-      // The corpus is kept; only the verdict on the build is withdrawn, so
-      // the next build starts from everything already in hand plus what the
-      // reader adds now.
+    case "VOICE_REVISE": {
+      // The corpus is kept and only the build's verdict is withdrawn, so the
+      // next build starts from everything in hand plus what the reader adds.
       const withdrawn = { ...state, lastBuildStatus: null };
       return withEntries(withdrawn, { phase: "vo.collecting" }, [
         {
@@ -459,6 +458,7 @@ function applyEvent(
           i18nKey: "ob.conv.voice.revise",
         },
       ]);
+    }
     case "CONNECT_BACK":
       return withEntries(state, {
         act: "voice",

@@ -10,8 +10,8 @@ import { VoiceAct } from "./voice-act";
 import {
   collectingState,
   documentStats,
-  INGEST_WAITER_MS,
   gate,
+  INGEST_WAITER_MS,
   render,
   requestsTo,
   stubApi,
