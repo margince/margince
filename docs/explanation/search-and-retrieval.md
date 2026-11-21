@@ -92,6 +92,9 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   `storekit.ContactEmails` and `storekit.CompanyDomains`. They compare the whole query, in lower
   case, with a live row. The contact and company lists match the same two tables. Whole identifiers
   and prefixes rank before text-only hits, with the same row scope as a name hit.
+- **The vector is stored as `halfvec`**, in `embedding_half`: each number takes two bytes and not
+  four. An older row keeps its `vector` in `embedding` until the data task `vectors_at_half_precision`
+  has moved it. A read takes whichever of the two the row holds.
 - **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`. It is ranked by the cosine
   operator (`<=>`), and always kept to the current embed identity (next section). There is no HNSW
   index. The query per branch, kept to one identity, reads the table in order. An index over a
@@ -231,8 +234,8 @@ and the readiness check can check against it.
 
 **Retrieval keeps to the current identity.** There are two reasons. First, to stay right: rows
 embedded by an older model must not rank against a query embedded in the new one.
-Second, so it does not crash: the `embedding.embedding` column is a `vector` with no fixed length. So
-`e.embedding <=> $query` by itself, against a row of another length, fails with
+Second, so it does not crash: the stored vector has no fixed length. So
+`<=>` by itself, against a row of another length, fails with
 `different vector dimensions`. The identity filter leaves those rows out before the query
 works out `<=>`.
 

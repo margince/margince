@@ -293,6 +293,14 @@ func TestEmbedCallRetentionAgesOutOverAgeEmbeddingRows(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM ai_call WHERE id = $1`, underAge); n != 1 {
 		t.Fatalf("under-age embedding call wrongly erased: %d rows, want 1", n)
 	}
+	// One record for the pass, with the count, and no audit row for each trace.
+	if n := e.WsCount(t, `SELECT count(*) FROM system_log WHERE action = 'retention.pruned'
+		AND detail->>'rows' = 'embedding call traces' AND (detail->>'count')::int = 1`); n != 1 {
+		t.Errorf("the pass left %d record(s) of its prune, want one that counts the one trace", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'ai_call' AND entity_id = $1`, overAge); n != 0 {
+		t.Errorf("the prune wrote %d audit row(s) for one trace, want none", n)
+	}
 }
 
 // seedAgedPayload plants an ai_call plus its ai_call_payload dated

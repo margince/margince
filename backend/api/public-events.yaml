@@ -3954,8 +3954,8 @@ components:
       x-version: 1
       description: >-
         Payload for retention.applied. A retention or erasure action ran
-        against one record. Four emit sites have four different runtime
-        subjects. The embed-call sweep acts on ai_call. The
+        against one record. Three emit sites have three different runtime
+        subjects. The
         voice-learning-signal content sweep acts on voice_learning_signal. A
         workspace's configured retention policy acts on its object type
         (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure
@@ -3963,8 +3963,8 @@ components:
         this is a dynamic-entity event (contract `x-entity-type: dynamic`).
         The generated EntityType() is unused, and each emit site supplies its
         own runtime entity type through storekit.EmitEventForEntity. The
-        policy and reason fields are a union across the sites. Both telemetry
-        sweeps set neither, the policy-driven sweep sets only policy, and Art.
+        policy and reason fields are a union across the sites. The voice
+        sweep sets neither, the policy-driven sweep sets only policy, and Art.
         17 erasure sets only reason.
       required:
         - action

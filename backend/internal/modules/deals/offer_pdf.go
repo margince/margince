@@ -28,7 +28,7 @@ import (
 	"github.com/go-pdf/fpdf"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
 // The template layout keys the renderer prints, spelled as the offer-template
@@ -68,14 +68,24 @@ type pdfLabels struct {
 	vatID    string
 	register string
 	bank     string
+	// A line's own figures, and the unit keys of unit.go by name.
+	discount   string
+	lineNet    string
+	lineTotal  string
+	units      map[string]string
+	validUntil string
+	// The page footer, with %d for the page and %s for the page count.
+	page string
+	// The document language's number separators and date layout.
+	format mailcopy.Copy
 }
 
-// resolvePDFLabels maps a locale to its label set: de-DE (and the empty
-// string, matching offer_template's own defaultOfferTemplateLocale) get
-// German labels; everything else gets English — the DE/EN launch pair
-// (WP7/OP-T02), not a general i18n catalog.
+// resolvePDFLabels maps a locale to its label set. A German locale gets German
+// labels, and so does "", which languageOfLocale reads as German. Every other
+// language gets English.
 func resolvePDFLabels(locale string) pdfLabels {
-	if locale == defaultOfferTemplateLocale || locale == "" {
+	format := mailcopy.For(languageOfLocale(locale))
+	if languageOfLocale(locale) == languageOfLocale(defaultOfferTemplateLocale) {
 		return pdfLabels{
 			title:     "Angebot",
 			issuer:    "Aussteller",
@@ -96,6 +106,15 @@ func resolvePDFLabels(locale string) pdfLabels {
 			vatID:     "USt-IdNr.",
 			register:  "Handelsregister",
 			bank:      "Bankverbindung",
+			discount:  "Rabatt",
+			lineNet:   "Netto",
+			lineTotal: "Gesamt",
+			units: map[string]string{
+				unitPiece: "Stk.", unitHour: "Std.", unitDay: "Tag(e)", unitMonth: "Monat(e)", unitFlatFee: "pauschal",
+			},
+			validUntil: "Gültig bis",
+			page:       "Seite %d von %s",
+			format:     format,
 		}
 	}
 	return pdfLabels{
@@ -118,25 +137,30 @@ func resolvePDFLabels(locale string) pdfLabels {
 		vatID:     "VAT ID",
 		register:  "Register",
 		bank:      "Bank details",
+		discount:  "Discount",
+		lineNet:   "Net",
+		lineTotal: "Total",
+		units: map[string]string{
+			unitPiece: "pc.", unitHour: "h", unitDay: "day(s)", unitMonth: "month(s)", unitFlatFee: "flat fee",
+		},
+		validUntil: "Valid until",
+		page:       "Page %d of %s",
+		format:     format,
 	}
 }
 
-// pdfFormatMinor renders an integer minor-unit amount as a decimal
-// display string with its currency code. Display-only: the money engine
-// itself (offer_totals.go) never touches a float, and this function never
-// re-derives the amount it formats.
-//
-// The decimal placement is values.MajorUnits' and not this file's, because the
-// PDF is the document a buyer receives and signs. A hard-coded /100 states an
-// offer priced in VND, JPY or KRW at a hundredth of its value — those
-// currencies have no minor unit, so their integer IS the amount — and states
-// a KWD offer at a hundred times, since a dinar has three.
-func pdfFormatMinor(minor int64, currency string) string {
-	return values.MajorUnits(minor, currency) + " " + currency
+// pdfFormatMinor prints a stored minor-unit amount and never re-derives it.
+// Money places the decimals by values.MajorUnits, so VND and KWD print at value.
+func pdfFormatMinor(minor int64, currency string, labels pdfLabels) string {
+	return labels.format.Money(minor, currency)
 }
 
-func pdfFormatQuantity(quantity float64) string {
-	return strconv.FormatFloat(quantity, 'f', -1, 64)
+func pdfFormatQuantity(quantity float64, labels pdfLabels) string {
+	return labels.format.Number(strconv.FormatFloat(quantity, 'f', -1, 64))
+}
+
+func pdfFormatPercent(pct float64, labels pdfLabels) string {
+	return labels.format.Number(strconv.FormatFloat(pct, 'f', -1, 64)) + " %"
 }
 
 // pdfOfferText reads one of the offer's own optional texts; null and an
@@ -162,12 +186,8 @@ func pdfLayoutString(layout map[string]any, key string) string {
 	return v
 }
 
-// pdfTranslator converts a UTF-8 Go string to the byte sequence the core
-// Helvetica font's built-in cp1252 encoding expects, so Cell/MultiCell
-// render diacritics correctly instead of the raw UTF-8 bytes' mojibake
-// (e.g. "ö" as two separate cp1252 code points, "Ã¶"). Every function in
-// this file threads it through and applies it to every string it hands
-// to Cell — labels included, since translating plain ASCII is a no-op.
+// pdfTranslator is applied to every string a writer draws, labels included. It
+// hands the string back unchanged and records what the font cannot print.
 type pdfTranslator func(string) string
 
 // writeOfferPDFHeader writes the title/revision/issuer block, the
@@ -186,19 +206,23 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 		revision = *o.Revision
 	}
 
-	pdf.SetFont("Helvetica", "B", 18)
+	pdf.SetFont(offerFontFamily, "B", 18)
 	pdf.Cell(0, 8, tr(labels.title+" "+number))
 	pdf.Ln(10)
-	pdf.SetFont("Helvetica", "", 11)
+	pdf.SetFont(offerFontFamily, "", 11)
 	pdf.Cell(0, 6, tr(labels.revision+" "+strconv.Itoa(revision)))
 	pdf.Ln(7)
+	if o.ValidUntil != nil {
+		pdf.Cell(0, 6, tr(labels.validUntil+": "+labels.format.Date(o.ValidUntil.Time)))
+		pdf.Ln(7)
+	}
 	pdf.Cell(0, 6, tr(labels.issuer+": "+issuer.Name))
 	pdf.Ln(7)
 	writeOfferPDFIssuerBlock(pdf, tr, issuer.OfferIssuer, labels)
 	pdf.Ln(3)
 
 	if headerText := pdfLayoutString(layout, offerLayoutHeader); headerText != "" {
-		pdf.SetFont("Helvetica", "", 10)
+		pdf.SetFont(offerFontFamily, "", 10)
 		pdf.MultiCell(0, 5, tr(headerText), "", "L", false)
 		pdf.Ln(4)
 	}
@@ -225,17 +249,15 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	if buyerBlock == nil || (displayName == "" && legalName == "") {
 		return
 	}
-	pdf.SetFont("Helvetica", "B", 12)
+	pdf.SetFont(offerFontFamily, "B", 12)
 	pdf.Cell(0, 6, tr(labels.buyer))
 	pdf.Ln(7)
-	pdf.SetFont("Helvetica", "", 11)
+	pdf.SetFont(offerFontFamily, "", 11)
 	if displayName != "" {
-		pdf.Cell(0, 6, tr(displayName))
-		pdf.Ln(6)
+		pdf.MultiCell(0, 6, tr(displayName), "", "L", false)
 	}
 	if legalName != "" {
-		pdf.Cell(0, 6, tr(legalName))
-		pdf.Ln(6)
+		pdf.MultiCell(0, 6, tr(legalName), "", "L", false)
 	}
 	pdf.Ln(4)
 }
@@ -247,78 +269,9 @@ func writeOfferPDFIntro(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer) 
 	if text == "" {
 		return
 	}
-	pdf.SetFont("Helvetica", "", 10)
+	pdf.SetFont(offerFontFamily, "", 10)
 	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 	pdf.Ln(4)
-}
-
-// writeOfferPDFLineItems writes the line-items section. Each line's
-// displayed unit price is its own persisted snapshot (offer_lines.go);
-// this function shows it verbatim, deriving nothing.
-func writeOfferPDFLineItems(pdf *fpdf.Fpdf, tr pdfTranslator, lines []crmcontracts.OfferLineItem, currency string, labels pdfLabels) {
-	pdf.SetFont("Helvetica", "B", 12)
-	pdf.Cell(0, 6, tr(labels.lineItems))
-	pdf.Ln(7)
-	pdf.SetFont("Helvetica", "", 10)
-	for _, li := range lines {
-		pdf.Cell(0, 5, tr(fmt.Sprintf("%d. %s", li.Position, li.Description)))
-		pdf.Ln(5)
-		price := fmt.Sprintf("%s x %s", pdfFormatQuantity(li.Quantity), pdfFormatMinor(li.UnitPriceMinor, currency))
-		if cadence := pdfLineCadence(li, labels); cadence != "" {
-			price += " " + cadence
-		}
-		pdf.Cell(0, 5, tr(price))
-		pdf.Ln(5)
-		if commitment := pdfLineCommitment(li, currency, labels); commitment != "" {
-			pdf.Cell(0, 5, tr(commitment))
-			pdf.Ln(5)
-		}
-	}
-	pdf.Ln(2)
-}
-
-// pdfLineCadence is how often a recurring line's price repeats, "" for a line
-// that does not repeat or has not been classified.
-//
-// A nil billing model is not one_time. Nobody has said what the price does, so
-// printing a cadence would answer a question the offer leaves open.
-//
-// An interval outside the four the schema admits prints nothing, for that
-// reason.
-func pdfLineCadence(li crmcontracts.OfferLineItem, labels pdfLabels) string {
-	if li.BillingModel == nil || *li.BillingModel != crmcontracts.OfferLineItemBillingModelRecurring {
-		return ""
-	}
-	if li.BillingIntervalMonths == nil {
-		return ""
-	}
-	return labels.cadence[int(*li.BillingIntervalMonths)]
-}
-
-// pdfLineCommitment is the term a recurring line is committed for and what it
-// is worth across that term, "" where either is unsettled.
-//
-// A recurring line with no interval_count has no committed total yet, the same
-// answer NetTcvMinor gives it: nothing is committed until somebody says how
-// long.
-//
-// The multiplication is CommittedNetMinor's, which is where the offer's own
-// total gets it, so this figure comes from one spelling of that arithmetic.
-//
-// A figure that cannot be computed prints the term alone. An offer handed to a
-// buyer with one line missing its total reads worse than one showing the term
-// by itself.
-func pdfLineCommitment(li crmcontracts.OfferLineItem, currency string, labels pdfLabels) string {
-	if pdfLineCadence(li, labels) == "" || li.IntervalCount == nil || li.LineNetMinor == nil {
-		return ""
-	}
-	term := fmt.Sprintf("%s: %d x %d %s", labels.periods, *li.IntervalCount,
-		int(*li.BillingIntervalMonths), labels.months)
-	committed, err := CommittedNetMinor(*li.LineNetMinor, *li.IntervalCount)
-	if err != nil {
-		return term
-	}
-	return term + " | " + labels.committed + ": " + pdfFormatMinor(committed, currency)
 }
 
 // writeOfferPDFTotals writes the money summary straight off o's already-
@@ -335,15 +288,15 @@ func writeOfferPDFTotals(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	if o.GrossMinor != nil {
 		gross = *o.GrossMinor
 	}
-	pdf.SetFont("Helvetica", "B", 12)
+	pdf.SetFont(offerFontFamily, "B", 12)
 	pdf.Cell(0, 6, tr(labels.totals))
 	pdf.Ln(7)
-	pdf.SetFont("Helvetica", "", 11)
-	pdf.Cell(0, 6, tr(labels.net+": "+pdfFormatMinor(net, o.Currency)))
+	pdf.SetFont(offerFontFamily, "", 11)
+	pdf.Cell(0, 6, tr(labels.net+": "+pdfFormatMinor(net, o.Currency, labels)))
 	pdf.Ln(6)
-	pdf.Cell(0, 6, tr(labels.tax+": "+pdfFormatMinor(tax, o.Currency)))
+	pdf.Cell(0, 6, tr(labels.tax+": "+pdfFormatMinor(tax, o.Currency, labels)))
 	pdf.Ln(6)
-	pdf.Cell(0, 6, tr(labels.gross+": "+pdfFormatMinor(gross, o.Currency)))
+	pdf.Cell(0, 6, tr(labels.gross+": "+pdfFormatMinor(gross, o.Currency, labels)))
 	pdf.Ln(6)
 }
 
@@ -359,10 +312,10 @@ func writeOfferPDFTerms(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer, 
 		return
 	}
 	pdf.Ln(2)
-	pdf.SetFont("Helvetica", "B", 12)
+	pdf.SetFont(offerFontFamily, "B", 12)
 	pdf.Cell(0, 6, tr(labels.terms))
 	pdf.Ln(7)
-	pdf.SetFont("Helvetica", "", 10)
+	pdf.SetFont(offerFontFamily, "", 10)
 	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 }
 
@@ -374,7 +327,7 @@ func writeOfferPDFFooter(pdf *fpdf.Fpdf, tr pdfTranslator, layout map[string]any
 		return
 	}
 	pdf.Ln(6)
-	pdf.SetFont("Helvetica", "I", 9)
+	pdf.SetFont(offerFontFamily, "", 9)
 	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 }
 
@@ -399,19 +352,23 @@ func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, bu
 		number = *o.OfferNumber
 	}
 
+	check, err := newPDFTextCheck()
+	if err != nil {
+		return nil, err
+	}
+	tr := check.text
+
 	pdf := fpdf.New("P", "mm", "A4", "")
 	pdf.SetCompression(false)
 	pdf.SetMargins(16, 16, 16)
 	pdf.SetAutoPageBreak(true, 16)
-	// tr maps a UTF-8 string onto core Helvetica's built-in cp1252
-	// encoding — the launch DE/EN locale pair's Latin diacritics (ö, ü,
-	// ß, é, …) all round-trip through cp1252; a non-Latin locale (e.g.
-	// Cyrillic, CJK) would need an embedded TTF font instead, not
-	// attempted here since only DE/EN ship at launch.
-	tr := pdf.UnicodeTranslatorFromDescriptor("")
-	// The isUTF8=true argument (unlike Cell's cp1252 byte stream) tells
-	// fpdf to UTF-16BE-encode the metadata itself, so the document
-	// properties survive a non-ASCII issuer/title too.
+	registerOfferFont(pdf)
+	pdf.AliasNbPages("")
+	pdf.SetFooterFunc(func() {
+		pdf.SetY(-12)
+		pdf.SetFont(offerFontFamily, "", 8)
+		pdf.CellFormat(0, 5, tr(fmt.Sprintf(labels.page, pdf.PageNo(), "{nb}")), "", 0, "C", false, 0, "")
+	})
 	pdf.SetTitle(labels.title+" "+number, true)
 	pdf.SetCreator("margince", true)
 	pdf.SetAuthor(issuer.Name, true)
@@ -421,10 +378,15 @@ func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, bu
 	writeOfferPDFLogo(pdf, issuer.Logo)
 	writeOfferPDFHeader(pdf, tr, o, buyerBlock, issuer, layout, labels)
 	writeOfferPDFIntro(pdf, tr, o)
-	writeOfferPDFLineItems(pdf, tr, lines, o.Currency, labels)
+	if err := writeOfferPDFLineItems(pdf, tr, lines, o.Currency, labels); err != nil {
+		return nil, err
+	}
 	writeOfferPDFTotals(pdf, tr, o, labels)
 	writeOfferPDFTerms(pdf, tr, o, labels)
 	writeOfferPDFFooter(pdf, tr, layout)
+	if err := check.err(); err != nil {
+		return nil, err
+	}
 
 	var buf bytes.Buffer
 	if err := pdf.Output(&buf); err != nil {
