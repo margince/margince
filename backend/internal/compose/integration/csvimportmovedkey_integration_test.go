@@ -72,8 +72,8 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 			}
 			first := storedCompany("Stored One", "one.stored.test")
 			second := storedCompany("Stored Two", "two.stored.test")
-			createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Held Contact",
-				"emails": []AnyMap{{"email": "held@moved.test", "email_type": "work", "is_primary": true}}})
+			heldEmail := []AnyMap{{"email": "held@moved.test", "email_type": "work", "is_primary": true}}
+			createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Held Contact", "emails": heldEmail})
 			createdID(t, e, "/v1/leads", AnyMap{"source": "manual", "full_name": "Held Lead", "email": "held-lead@moved.test"})
 			createdID(t, e, "/v1/companies", AnyMap{
 				"source": "manual", "display_name": "Held Co", "linkedin_url": "https://www.linkedin.com/company/held-co",
