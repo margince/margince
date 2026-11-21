@@ -74,6 +74,7 @@ network.
 import collections
 import datetime
 import json
+import math
 import os
 import re
 import shlex
@@ -253,6 +254,9 @@ def _form_value(text):
         value = json.loads(text)
     except ValueError:
         return text
+    # NaN and Infinity parse here, and no JSON reader the runner uses accepts them.
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError(f"{text} is not a finite number, so no form field holds it")
     if isinstance(value, (str, bool, int, float)) or (
         isinstance(value, list) and all(isinstance(item, str) for item in value)
     ):

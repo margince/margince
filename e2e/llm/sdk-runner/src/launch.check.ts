@@ -7,7 +7,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -26,8 +26,9 @@ fs.writeFileSync(process.env.FAKE_CLAUDE_SEEN, JSON.stringify({ argv, env: proce
 process.exit(1);
 `;
 
-test("the passport reaches claude in a private config file, never its argv or environment", () => {
+test("the passport reaches claude in a private config file, never its argv or environment", (t) => {
   const dir = mkdtempSync(join(tmpdir(), "e2e-llm-sdk-check."));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
   const claude = join(dir, "claude.cjs");
   writeFileSync(claude, FAKE_CLAUDE);
   chmodSync(claude, 0o755);
@@ -42,7 +43,9 @@ test("the passport reaches claude in a private config file, never its argv or en
       "--prompt-file", join(dir, "prompt.txt"), "--out", join(dir, "run.jsonl"), "--cwd", dir,
       "--claude", claude, "--claude-arg=--setting-sources", "--claude-arg=",
     ],
-    { env: { ...process.env, MARGINCE_E2E_TOKEN: PASSPORT, FAKE_CLAUDE_SEEN: seen }, encoding: "utf8" },
+    // Only what the stand-in needs: it records its whole environment, and an
+    // operator's own credential must not land in that file.
+    { env: { PATH: process.env.PATH, MARGINCE_E2E_TOKEN: PASSPORT, FAKE_CLAUDE_SEEN: seen }, encoding: "utf8" },
   );
   assert.equal(done.status, 3, "a claude that exits before any result is a harness stop");
   const recorded = JSON.parse(readFileSync(seen, "utf8"));

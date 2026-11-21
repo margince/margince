@@ -17,7 +17,10 @@
     "new owner => decline confirm=false",
     "new owner => maybe",
     "=> accept",
-    "pick => accept record={\"id\":1}"
+    "pick => accept record={\"id\":1}",
+    "count it => accept count=1e309",
+    "count it => accept count=NaN",
+    "count it => accept count=-Infinity"
   ],
   "refused_replies": [
     {"match": "new owner", "action": "decline", "content": {"confirm": false}},
