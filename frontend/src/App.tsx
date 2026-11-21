@@ -475,7 +475,11 @@ function AuthedShell({
       </RaillessFrame>
     );
   }
-  return <Shell onOpenSearch={onOpenSearch}>{children}</Shell>;
+  return (
+    <Shell onOpenSearch={onOpenSearch} held={hold.held}>
+      {children}
+    </Shell>
+  );
 }
 
 // The rail-less page frame (same shape Shell renders for onboarding/booking),

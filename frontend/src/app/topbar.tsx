@@ -257,12 +257,15 @@ export function TopBar({
   collapsed,
   onToggle,
   onOpenSearch,
+  held = false,
 }: Readonly<{
   route: Route;
   section?: NavSection;
   collapsed: boolean;
   onToggle?: () => void;
   onOpenSearch: () => void;
+  /** The onboarding gate holds the reader: the outbox and the bell stay out. */
+  held?: boolean;
 }>) {
   const t = useT();
   const hash = useHash();
@@ -331,8 +334,8 @@ export function TopBar({
             />
           </Suspense>
         )}
-        <OutboxButton />
-        <NotificationBell />
+        {!held && <OutboxButton />}
+        {!held && <NotificationBell />}
         <AccountMenu />
       </div>
     </header>

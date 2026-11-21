@@ -6,12 +6,16 @@ import {
   useRef,
   useState,
 } from "react";
+import { useEntityName } from "../components/entityref.queries";
 import { PageAsideProvider } from "../components/pageaside";
 import { PageHeadSlot } from "../components/pageheadaction";
 import { PageWait, usePageWait } from "../design-system/pagewait";
 import { ComposeDockProvider } from "../features/mail/composedock";
-import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
-import { useT } from "../i18n";
+import {
+  SETTINGS_SCREEN,
+  useSettingsSection,
+} from "../features/settings/settingsnav";
+import { useLocale, useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { useFirstScreenSettled } from "../lib/journeymarks";
 import { routeIdentity } from "../lib/routeidentity";
@@ -28,9 +32,15 @@ import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
 import { InstallHint } from "./installhint";
 import { LicenseBanner } from "./licensebanner";
-import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
+import {
+  entryLabel,
+  type NavCounts,
+  type NavSection,
+  RAIL_LESS_SCREENS,
+  recordKindOf,
+} from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
-import { usePageName, useRouteSubject } from "./pagemeta";
+import { sectionHead, usePageName, useRouteSubject } from "./pagemeta";
 import { isRecordPage, readingColumn } from "./readingcolumn";
 import { usePublishedScrollerHeight } from "./scrollerheight";
 import { TopBar } from "./topbar";
@@ -114,10 +124,13 @@ export function Shell({
   children,
   counts,
   onOpenSearch,
+  held = false,
 }: Readonly<{
   children: ReactNode;
   counts?: ShellCounts;
   onOpenSearch: () => void;
+  /** The onboarding gate holds the reader on the few pages it lets them see. */
+  held?: boolean;
 }>) {
   const live = useRoute();
   const liveHash = useLiveHash();
@@ -201,6 +214,7 @@ export function Shell({
     counts,
     collapsed,
   };
+  const bar = { route, collapsed, onToggle: toggle, onOpenSearch, held };
 
   return (
     // The provider spans the whole chrome, because the details pane's memory
@@ -227,22 +241,12 @@ export function Shell({
             className={mainClasses(gridded, griddedRecord)}
             aria-busy={waiting || undefined}
           >
-            {leveled ? (
-              <SettingsTopBar
-                route={route}
-                collapsed={collapsed}
-                onToggle={toggle}
-                onOpenSearch={onOpenSearch}
-              />
+            {leveled ? <SettingsTopBar {...bar} /> : <TopBar {...bar} />}
+            {live.screen === SETTINGS_SCREEN ? (
+              <SettingsPageArriving route={live} waiting={waiting} />
             ) : (
-              <TopBar
-                route={route}
-                collapsed={collapsed}
-                onToggle={toggle}
-                onOpenSearch={onOpenSearch}
-              />
+              <PageArriving route={live} waiting={waiting} />
             )}
-            <PageArriving route={live} waiting={waiting} />
             {/* Mounted from the start: it holds the outage watcher, and a
                 known offline state shows in the first paint. */}
             <ConnectivityBanner />
@@ -306,15 +310,30 @@ function isLeveled(route: Route): boolean {
   return route.screen === SETTINGS_SCREEN || onUnitPage;
 }
 
-// A record whose name is still being read is named by its list, not its id.
+// A settings page is named as its heading names it.
+function SettingsPageArriving(
+  props: Readonly<{ route: Route; waiting: boolean }>,
+) {
+  const section = useSettingsSection(props.route);
+  return <PageArriving {...props} section={section} />;
+}
+
+// A record whose name has not been read is named by its list, never its id.
 function PageArriving({
   route,
   waiting,
-}: Readonly<{ route: Route; waiting: boolean }>) {
+  section,
+}: Readonly<{ route: Route; waiting: boolean; section?: NavSection }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const kind = recordKindOf(route);
+  const record = kind && route.id;
+  const { name } = useEntityName(kind ?? "contact", record);
   const subject = useRouteSubject(route);
   const list = usePageName(route.screen);
-  const page = subject === route.id ? list : subject;
+  const entry = sectionHead(section, route)?.entry;
+  const named = record ? (name ?? list) : subject;
+  const page = entry ? entryLabel(entry, locale, t) : named;
   return (
     <PageWait waiting={waiting} label={t("settings.pageLoading", { page })} />
   );

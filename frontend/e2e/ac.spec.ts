@@ -421,29 +421,36 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
 test("AC-shell-1l: a page still loading keeps the old page's name and says it is loading", async ({
   page,
 }) => {
+  // Held from the start, so the idle warm-up cannot fetch it ahead of the move.
+  const settingsCode = (url: URL) =>
+    /\/assets\/App\.settings-[^/]+\.js$/.test(url.pathname);
+  const held: (() => Promise<void>)[] = [];
+  await page.route(settingsCode, (route) => {
+    held.push(() => route.continue());
+  });
   await page.goto("/#/analytics");
   const heading = page.getByRole("heading", { level: 1 });
   await expect(heading).toHaveText(de["nav.analytics"]);
+  // The shell names the bar's page before any body lands, so wait for the body.
+  await expect(
+    page.locator("main .pending").filter({ hasText: de["common.loading"] }),
+  ).toHaveCount(0);
   await settleAnimations(page);
 
-  const held: (() => Promise<void>)[] = [];
-  await page.route("**/assets/**/*.js", (route) => {
-    held.push(() => route.continue());
-  });
   await page.evaluate(() => {
     window.location.hash = "#/settings/privacy";
   });
-
+  await expect.poll(() => held.length).toBeGreaterThan(0);
   await expect(page.locator("main")).toHaveAttribute("aria-busy", "true");
   await expect(page.locator(".pagewait")).toHaveText(
-    de["settings.pageLoading"].replace("{page}", de["nav.settings"]),
+    de["settings.pageLoading"].replace("{page}", de["settings.tab.privacy"]),
   );
   await expect(heading).toHaveCount(1);
   await expect(heading).toHaveText(de["nav.analytics"]);
   expect(await page.title()).toMatch(new RegExp(`^${de["nav.analytics"]} · `));
   await expectNoAaViolations(page, "analytics, leaving for settings/privacy");
 
-  await page.unroute("**/assets/**/*.js");
+  await page.unroute(settingsCode);
   for (const release of held) await release();
   await expect(heading).toHaveText(de["settings.tab.privacy"]);
   await expect(page.locator("main")).not.toHaveAttribute("aria-busy");

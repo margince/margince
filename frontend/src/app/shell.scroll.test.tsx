@@ -332,6 +332,33 @@ describe("the chrome while the next page loads", () => {
     ).toBeInTheDocument();
   });
 
+  it.each([
+    [
+      "a settings page by its own name",
+      "#/settings/account",
+      en["settings.tab.account"],
+    ],
+    [
+      "a record whose name is not read by its list",
+      "#/contacts/0a7e5c1d-6b2f-4c8e-9d3a-1f2e3d4c5b6a",
+      en["nav.contacts"],
+    ],
+  ])("names %s", async (_case, destination, name) => {
+    vi.useFakeTimers();
+    window.history.replaceState(null, "", "#/analytics");
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <Loading from="#/analytics" />
+      </Shell>,
+    );
+    await moveTo(destination);
+
+    await act(() => vi.advanceTimersByTimeAsync(200));
+    expect(wait()).toHaveTextContent(
+      en["settings.pageLoading"].replace("{page}", name),
+    );
+  });
+
   it("shows no wait for a move that lands inside 200 ms", async () => {
     vi.useFakeTimers();
     window.history.replaceState(null, "", "#/analytics");

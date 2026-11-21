@@ -946,6 +946,26 @@ describe("the reads of a member held on onboarding", () => {
     expect(api.sideReads()).toEqual([]);
   });
 
+  it("sends neither the outbox's nor the bell's read on Settings > Account until let in", async () => {
+    window.location.hash = "#/settings/account";
+    const api = memberApi(wizardRow("connect"));
+    renderApp();
+    await screen.findByRole("button", { name: "Sign out" });
+    await restLong();
+    expect(api.count("GET /notices")).toBe(0);
+    expect(api.count("GET /scheduled-sends")).toBe(0);
+
+    act(() => window.history.pushState(null, "", GATE_TARGET));
+    act(() => window.dispatchEvent(new PopStateEvent("popstate")));
+    const skip = await screen.findByRole("button", { name: "Skip for now" });
+    await waitFor(() => expect(skip).toHaveProperty("disabled", false));
+    await userEvent.click(skip);
+    await waitFor(() => expect(window.location.hash).toBe(BRIEF));
+    await restLong();
+    expect(api.count("GET /notices")).toBeGreaterThan(0);
+    expect(api.count("GET /scheduled-sends")).toBeGreaterThan(0);
+  });
+
   it("starts the full app's reads once finishing lets the member in", async () => {
     window.location.hash = GATE_TARGET;
     const api = memberApi(wizardRow("connect"));

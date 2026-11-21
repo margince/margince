@@ -1,10 +1,12 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { House } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { parseHash, type Route } from "../lib/router";
+import { findExtension, unitTitle } from "../lib/extensions";
+import { parseHash, type Route, samePage, useHash } from "../lib/router";
+import { useReportShownAddress } from "../lib/screenaddress";
 import {
   fixtureSection,
   ignoreSearch,
@@ -63,11 +65,18 @@ vi.mock("@composition/extensions", () => ({
 // shell MOUNTS them in the places it promises, and feeds them the counts it
 // already has.
 
+// A screen still on `address` while the bar has moved on.
+function StillOn({ address }: Readonly<{ address: string }>) {
+  useReportShownAddress(address, !samePage(address, useHash()));
+  return null;
+}
+
 // A contact id in the form the server reads.
 const ANNA_ID = "0a7e5c1d-6b2f-4c8e-9d3a-1f2e3d4c5b6a";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   window.location.hash = "";
   vi.unstubAllGlobals();
   // The sidebar remembers its width in localStorage, which jsdom keeps for the
@@ -680,6 +689,27 @@ describe("Shell", () => {
         .getAllByRole("link")
         .some((link) => link.getAttribute("aria-current") === "page"),
     ).toBe(false);
+  });
+
+  it("names a composed unit's page on its way by the unit's title", async () => {
+    vi.useFakeTimers();
+    window.location.hash = "#/analytics";
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <StillOn address="#/analytics" />
+      </Shell>,
+    );
+    await act(async () => {
+      window.history.pushState(null, "", "#/ext/notes");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    await act(() => vi.advanceTimersByTimeAsync(200));
+    const unit = findExtension("notes");
+    if (!unit) throw new Error("the composed registry lost its unit");
+    expect(document.querySelector(".pagewait")?.textContent).toBe(
+      en["settings.pageLoading"].replace("{page}", unitTitle(unit, "en")),
+    );
   });
 
   it("mints the page-level heading on a route that names no record", () => {
