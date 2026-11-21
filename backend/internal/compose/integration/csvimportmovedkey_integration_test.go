@@ -86,7 +86,7 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 		prior: map[string]string{"leads.csv": "ref,full_name,email,linkedin\nl1,Lee One,lee@moved.test,\n"},
 		parts: leadParts,
 		file: func(_, _ string) string {
-			return "ref,full_name,email,linkedin\nl1,Lee One,lee@moved.test,https://www.linkedin.com/in/held-person\n"
+			return "ref,full_name,email,linkedin\nl1,Lee One,lee@moved.test,https://www.linkedin.com/in/held-profile\n"
 		},
 		want: []string{"created=0 updated=0 unchanged=0 skipped=1", "leads.csv:2:contact_holds_lead"},
 	}, {
@@ -94,7 +94,7 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 		prior: map[string]string{"contacts.csv": "ref,full_name,email,linkedin\nc1,Ada One,ada@moved.test,\n"},
 		parts: contactParts,
 		file: func(_, _ string) string {
-			return "ref,full_name,email,linkedin\nc1,Ada One,ada@moved.test,https://www.linkedin.com/in/held-lead-person\n"
+			return "ref,full_name,email,linkedin\nc1,Ada One,ada@moved.test,https://www.linkedin.com/in/held-lead-profile\n"
 		},
 		want: []string{"created=0 updated=0 unchanged=0 skipped=1", "contacts.csv:2:contact_email_held"},
 	}, {
@@ -129,10 +129,10 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 			createdID(t, e, "/v1/companies", AnyMap{
 				"source": "manual", "display_name": "Held Co", "linkedin_url": "https://www.linkedin.com/company/held-co",
 			})
-			createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Held Person", "linkedin_url": "https://www.linkedin.com/in/held-person"})
+			createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Held Profile", "linkedin_url": "https://www.linkedin.com/in/held-profile"})
 			createdID(t, e, "/v1/leads", AnyMap{
-				"source": "manual", "full_name": "Held Lead Person", "email": "held-lead-person@moved.test",
-				"linkedin_url": "https://www.linkedin.com/in/held-lead-person",
+				"source": "manual", "full_name": "Held Lead Profile", "email": "held-lead-profile@moved.test",
+				"linkedin_url": "https://www.linkedin.com/in/held-lead-profile",
 			})
 			archived := storedCompany("Archived Co", "archived.test")
 			if status := e.Call(t, http.MethodDelete, "/v1/companies/"+archived, nil, nil, nil); status != http.StatusOK {

@@ -110,7 +110,7 @@ func DomainHeld(ctx context.Context, pool *pgxpool.Pool, domain string) (bool, e
 	var held bool
 	err := probe(ctx, pool, fmt.Sprintf("%q", domain), func(tx pgx.Tx) error {
 		var err error
-		_, held, err = contacts.CompanyDomainRival(ctx, tx, ids.CompanyID{}, domain)
+		held, err = contacts.CompanyDomainHeld(ctx, tx, ids.CompanyID{}, domain)
 		return err
 	})
 	return held, err

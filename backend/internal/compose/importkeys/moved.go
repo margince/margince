@@ -28,10 +28,10 @@ type Holder struct {
 	Object string
 }
 
-// personRefusers are the record types whose hold on a key the store refuses a
+// holderRefusers are the record types whose hold on a key the store refuses a
 // lead or contact update over, in the order the store asks. A contact may share
 // a profile with another contact, so a LinkedIn URL is no key between two.
-var personRefusers = map[string]map[Kind][]string{
+var holderRefusers = map[string]map[Kind][]string{
 	migration.ObjectContact: {Email: {migration.ObjectContact, migration.ObjectLead}, LinkedIn: {migration.ObjectLead}},
 	migration.ObjectLead:    {Email: {migration.ObjectLead, migration.ObjectContact}, LinkedIn: {migration.ObjectContact}},
 }
@@ -93,7 +93,7 @@ func MovedKeyHeld(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object
 		if object == migration.ObjectCompany {
 			holder, err = companyKeyHolder(ctx, pool, ledger, kind, value, self)
 		} else {
-			holder, err = personKeyHolder(ctx, pool, ledger, object, kind, value, self)
+			holder, err = leadOrContactKeyHolder(ctx, pool, ledger, object, kind, value, self)
 		}
 		if err != nil || holder != "" {
 			return Holder{kind, holder}, holder != "", err
@@ -102,9 +102,9 @@ func MovedKeyHeld(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object
 	return Holder{}, false, nil
 }
 
-// personKeyHolder is MovedKeyHeld for the address or profile a lead or contact moves.
-func personKeyHolder(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object string, kind Kind, value string, self ids.UUID) (string, error) {
-	refusers := personRefusers[object][kind]
+// leadOrContactKeyHolder is MovedKeyHeld for the address or profile a lead or contact moves.
+func leadOrContactKeyHolder(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object string, kind Kind, value string, self ids.UUID) (string, error) {
+	refusers := holderRefusers[object][kind]
 	if len(refusers) == 0 {
 		return "", nil
 	}
@@ -156,7 +156,7 @@ func companyKeyHolder(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, ki
 		case LinkedIn:
 			held, err = contacts.CompanyLinkedInRival(ctx, tx, ids.From[ids.CompanyKind](self), value)
 		case Domain:
-			_, held, err = contacts.CompanyDomainRival(ctx, tx, ids.From[ids.CompanyKind](self), value)
+			held, err = contacts.CompanyDomainHeld(ctx, tx, ids.From[ids.CompanyKind](self), value)
 		}
 		return err
 	})
