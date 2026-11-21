@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"slices"
 	"testing"
 	"time"
 
@@ -20,6 +21,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// eventType is the generated payload's own type, so the declared set cannot
+// drift from the schema.
+var eventType = crmcontracts.InternalEventAiTaskStateChanged{}.EventType()
+
+func TestTheGroupDeclaresTheGeneratedEventType(t *testing.T) {
+	if got := events.AIActivityTypes.List(); !slices.Equal(got, []string{eventType}) {
+		t.Fatalf("cg:ai-activity declares %v, want [%s]", got, eventType)
+	}
+}
 
 func testConsumer() *Consumer {
 	return NewConsumer(NewStore(nil), slog.New(slog.NewTextHandler(io.Discard, nil)))

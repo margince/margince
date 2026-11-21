@@ -326,6 +326,12 @@ to keep events. The stream is capped by a count (`MAXLEN ~`), not by a time, so 
 rate an event can stay longer. A consumer that takes it back after its dedupe entry timed out runs the
 handler again, and the key layer makes that run do nothing.
 
+A group may declare the event types its handler acts on (`Group.Types`). The subscriber acks every
+other entry before `Dedupe` runs, in one `XACK` for each read, so such an entry leaves no mark. The
+handler tests its input against the same set. `TestEveryHandlerIgnoresTheTypesItsGroupLeavesOut` in
+`backend/internal/compose/grouptypes_test.go` feeds each handler every type its group leaves out. A
+group with no list gets every type on its streams.
+
 ---
 
 ## 6. Correlation & causation (the trace)

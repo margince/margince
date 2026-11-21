@@ -142,20 +142,11 @@ func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope)
 // holding an address whose mail is not on their record yet — created, renamed
 // or re-addressed, absorbed by a merge, or brought back.
 func contactGainedAddresses(eventType string) bool {
-	switch eventType {
-	case contactCreatedEvent, contactUpdatedEvent, contactMergedEvent, contactRestoredEvent:
-		return true
-	}
-	return false
+	return events.CohortPromoteTypes.Has(eventType)
 }
 
-// The contact events this repair reacts to. Spelled beside the predicate that
-// reads them rather than at each case, so a fifth event is added in one place.
-const (
-	contactUpdatedEvent  = "contact.updated"
-	contactMergedEvent   = "contact.merged"
-	contactRestoredEvent = "contact.restored"
-)
+// contactMergedEvent names the merged-away contact as its entity.
+const contactMergedEvent = "contact.merged"
 
 // cohortPromoteActor names this consumer in captured_by and in the audit trail,
 // so a link that appeared without anybody clicking is attributable to the pass

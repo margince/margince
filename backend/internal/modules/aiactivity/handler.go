@@ -17,17 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// aiTaskStateChanged is the generated payload's zero value, DECLARED rather
-// than composed on purpose: a composite literal of a payload struct is how the
-// event-ownership gate finds a module that PUBLISHES a type, and this consumer
-// publishes nothing. Composing one here would file the projection as a second
-// emitter of the event it exists to receive.
-var aiTaskStateChanged crmcontracts.InternalEventAiTaskStateChanged
-
-// eventType is the one type this consumer projects. Taken from the generated
-// payload rather than written out, so the string cannot drift from the schema.
-var eventType = aiTaskStateChanged.EventType()
-
 // Consumer projects ai_task.state_changed into ai_task_run.
 type Consumer struct {
 	store *Store
@@ -45,7 +34,7 @@ func NewConsumer(store *Store, log *slog.Logger) *Consumer {
 // flowing rather than wedging on somebody else's traffic — the same contract
 // every other consumer in the tree honours.
 func (c *Consumer) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Type != eventType {
+	if !events.AIActivityTypes.Has(env.Type) {
 		return nil
 	}
 	// A payload that does not decode and an actor that does not parse are both
