@@ -150,12 +150,11 @@ func writeTableGuards(up, down *strings.Builder, table string, columns []Column,
 	writeGuardPair(up, down, table, bounds)
 }
 
-// Bound is one column a guard checks. Stale marks a column the guard's refusal
-// still lists and the table no longer has as text, so no condition can name it.
+// Bound is one column a guard checks.
 type Bound struct {
-	Column       string
-	Limit        int
-	Array, Stale bool
+	Column string
+	Limit  int
+	Array  bool
 }
 
 // sortBounds puts a guard's columns in name order, the one order every writer
@@ -193,9 +192,6 @@ func Condition(table string, bounds []Bound, operation string) string {
 	}
 	checks := make([]string, 0, len(bounds))
 	for _, bound := range bounds {
-		if bound.Stale {
-			continue
-		}
 		column := pgx.Identifier{bound.Column}.Sanitize()
 		switch {
 		case bound.Array && operation == OnInsert:
@@ -207,9 +203,6 @@ func Condition(table string, bounds []Bound, operation string) string {
 		default:
 			checks = append(checks, fmt.Sprintf(`(char_length(NEW.%[1]s) > %[2]d AND NEW.%[1]s COLLATE "C" IS DISTINCT FROM OLD.%[1]s COLLATE "C")`, column, bound.Limit))
 		}
-	}
-	if len(checks) == 0 {
-		return "false"
 	}
 	return strings.Join(checks, "\n OR ")
 }

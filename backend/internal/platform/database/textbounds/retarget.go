@@ -15,6 +15,14 @@ import (
 
 var catalogGuardBounds = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*\.text_bound_(?:insert|update)) .* EXECUTE FUNCTION refuse_oversized_text\('(\{[^']*\})'\)$`)
 
+// catalogGuard matches a text guard as the catalog prints it: the table, then
+// the definition after CREATE TRIGGER.
+var catalogGuard = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.text_bound_(?:insert|update) CREATE TRIGGER (.*)$`)
+
+// unqualifiedGuardFunction finds the shared functions in a printed definition,
+// which Postgres prints without their schema.
+var unqualifiedGuardFunction = regexp.MustCompile(`\b(text_row_exceeds_bounds|text_values_exceed_bound|refuse_oversized_text)\(`)
+
 // Retarget builds the migration that moves the named tables' guards from the
 // bounds the catalog holds now to the bounds columns.txt states. Its rollback
 // puts the catalog's bounds back, so a policy change stays reversible. Like the
@@ -43,6 +51,10 @@ func Retarget(catalog io.Reader, tables []string) (Migration, error) {
 			return Migration{}, fmt.Errorf("the guards of %s already match columns.txt", table)
 		}
 		replaceGuards(&up, table, TableBounds(table, after, columns))
+		if NamesColumns(table) {
+			restorePrintedGuards(&down, table, string(raw))
+			continue
+		}
 		replaceGuards(&down, table, TableBounds(table, before, columns))
 	}
 	return Migration{
@@ -62,9 +74,24 @@ func replaceGuards(out *strings.Builder, table string, bounds []Bound) {
 	writeGuardPair(out, &unused, table, bounds)
 }
 
-// TableBounds gives each limit the shape of its column in the catalog. A limit
-// is stale when the catalog no longer holds its column as text. A rename or a
-// new type left it in the old guard, and the rollback restores it as it was.
+// restorePrintedGuards puts back a table's guards as the catalog prints them,
+// with no rebuilt condition. After a rename Postgres has already moved the condition to the new
+// name, while the refusal still lists the old one. So a condition built again
+// from the refusal's list would lose that column's check.
+func restorePrintedGuards(out *strings.Builder, table, catalog string) {
+	restored := false
+	for line := range strings.SplitSeq(catalog, "\n") {
+		if match := catalogGuard.FindStringSubmatch(line); match != nil && match[1] == table {
+			fmt.Fprintf(out, "CREATE OR REPLACE TRIGGER %s;\n", unqualifiedGuardFunction.ReplaceAllString(match[2], "public.$1("))
+			restored = true
+		}
+	}
+	if !restored {
+		replaceGuards(out, table, nil)
+	}
+}
+
+// TableBounds gives each limit the shape of its column in the catalog.
 func TableBounds(table string, limits map[string]int, columns []Column) []Bound {
 	shapes := map[string]Column{}
 	for _, column := range columns {
@@ -74,8 +101,7 @@ func TableBounds(table string, limits map[string]int, columns []Column) []Bound 
 	}
 	bounds := make([]Bound, 0, len(limits))
 	for name, limit := range limits {
-		shape, known := shapes[name]
-		bounds = append(bounds, Bound{Column: name, Limit: limit, Array: shape.Array, Stale: !known})
+		bounds = append(bounds, Bound{Column: name, Limit: limit, Array: shapes[name].Array})
 	}
 	sortBounds(bounds)
 	return bounds
