@@ -74,9 +74,11 @@ menu. A caller sees a prompt only when it is offered every tool the prompt names
 `-32602`. In the modern framing `prompts/get` needs `Mcp-Name`, like `tools/call`.
 
 **What the server says about itself.** `serverInfo` carries a `title` and a `description`. When the public origin is
-set, it also carries `websiteUrl` and `icons`, both on that origin. The server instructions open with what Margince is,
-then say that a client may list each tool under a prefix of its own, then name the tools to start with, before the rules.
-Every text of the server names a tool bare, because it cannot know that prefix.
+set, it also carries `websiteUrl` and `icons`, both on that origin. The server instructions open with what Margince is.
+
+**How the server names a tool.** Every text of the server names a tool bare, because it cannot know the prefix a
+client adds to the name. So the instructions say, before they name the tools to start with, that a client may list
+each tool under a prefix of its own. The rules come after.
 
 **Links and money in a result.** Each `evidence` entry for a deal, contact, company, lead or project carries a
 `web_url`. It opens the record in the app, on the public origin. Every `<name>_minor` beside a `currency`, or beside
