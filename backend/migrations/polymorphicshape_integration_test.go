@@ -151,7 +151,7 @@ func TestATaskItemWrittenBeforeTheKeysStaysWritable(t *testing.T) {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`UPDATE assurance_task_item SET state = 'resolved' WHERE subject_id = $1`, item.deal); err != nil {
+			`UPDATE assurance_task_item SET created_at = created_at WHERE subject_id = $1`, item.deal); err != nil {
 			return err
 		}
 		var unkeyed bool

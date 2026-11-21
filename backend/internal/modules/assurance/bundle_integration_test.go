@@ -244,9 +244,9 @@ func (e *scanEnv) seedException(t *testing.T, key string, subject ids.UUID) ids.
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO assurance_exception
 		    (id, logical_key, type, subject_kind, subject_id, severity, status,
-		     claim, observed, evidence_refs, first_seen_at, last_seen_at, captured_by)
+		     claim, observed, first_seen_at, last_seen_at, captured_by)
 		VALUES ($1, $2, 'test_rule', $3, $4, 'medium', 'open',
-		        '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, now(), now(), 'human:test')`,
+		        '{}'::jsonb, '{}'::jsonb, now(), now(), 'human:test')`,
 		id, key+"-"+id.String(), subjectDeal, subject); err != nil {
 		t.Fatalf("seeding the exception: %v", err)
 	}
