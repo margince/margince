@@ -11,12 +11,15 @@ const (
 	ForecastCaptureStatus = "forecast_capture_status"
 	Tag                   = "tag"
 	List                  = "list"
+	// The administered catalogs of stage exit criteria and record roles.
+	StageExitCriterion = "stage_exit_criterion"
+	RecordRole         = "record_role"
 )
 
 // MaintenanceTypes excludes only declared upkeep; unknown subjects remain visible
 // to diagnostics rather than silently claiming the receipt is complete.
 func MaintenanceTypes() []string {
-	return []string{KnowledgeDocument, ModelRate, ForecastCaptureStatus, Tag, List}
+	return []string{KnowledgeDocument, ModelRate, ForecastCaptureStatus, Tag, List, StageExitCriterion, RecordRole}
 }
 
 // The after-image keys a list or tag audit row files a record link under.
