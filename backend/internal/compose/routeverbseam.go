@@ -41,8 +41,10 @@ type routeVerbShape struct {
 	AnswerSchema string
 	Query        []viewQuery
 	// HumanOnly names the body members only a human sets; the agent gate
-	// refuses an agent body that carries one.
-	HumanOnly []string
+	// refuses an agent body that carries one. AgentValues are the values an
+	// agent may send in a member, and the gate refuses any other.
+	HumanOnly   []string
+	AgentValues map[string][]string
 }
 
 func (p agentPolicy) egresses() bool {

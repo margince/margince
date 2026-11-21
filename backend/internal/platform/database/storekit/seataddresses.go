@@ -120,7 +120,7 @@ func HoldsNoSeatAddressSQL(contactID string, seats []string, arg func(any) int) 
 	}
 	return fmt.Sprintf(`NOT EXISTS (SELECT 1 FROM contact_email seat_address
 		WHERE seat_address.contact_id = %s AND seat_address.archived_at IS NULL
-		  AND lower(seat_address.email) = ANY($%d))`, contactID, arg(spellings))
+		  AND seat_address.email = ANY($%d))`, contactID, arg(spellings))
 }
 
 // NotCoveredSQL is true when address, a lowercased SQL expression, is none Covers

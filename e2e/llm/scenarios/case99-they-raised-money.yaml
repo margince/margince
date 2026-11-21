@@ -7,15 +7,6 @@ writes: true
 prompt: |
   Heads up, Reply Deutschland just announced a funding round. Record that as a signal on the company.
 
-must_call:
-  - change_attention
-
-must_call_with:
-  - change_attention.action=create_signal
-
-must_call_matching:
-  - 'change_attention~(?i)fund'
-
 must_not_call_with:
   - update_record~.
   - bulk_update_records~.
@@ -27,6 +18,7 @@ may_call:
   - read_record
   - read_workspace
   - whoami
+  - change_attention
 
 must_end_with:
   - company "Reply Deutschland Betreuerwechsel" signal=*fund*

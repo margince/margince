@@ -37,6 +37,16 @@ func dbNow(t *testing.T, e *loadEnv) time.Time {
 }
 
 // verdictAndRuleset reads back what a row was judged as, and under which rules.
+// activityVersion reads the row's version, which a stamp write must name.
+func activityVersion(t *testing.T, e *loadEnv, id ids.UUID) int64 {
+	t.Helper()
+	var version int64
+	if err := e.owner.QueryRow(e.as(), `SELECT version FROM activity WHERE id = $1`, id).Scan(&version); err != nil {
+		t.Fatalf("reading the version: %v", err)
+	}
+	return version
+}
+
 func verdictAndRuleset(t *testing.T, e *loadEnv, id ids.UUID) (verdict, ruleset string) {
 	t.Helper()
 	var v, r *string
@@ -247,13 +257,13 @@ func TestARestaleDeclineStandsOnlyForThePromptThatWasDeclined(t *testing.T) {
 		return containsCandidate(rows, activity)
 	}
 
-	if recorded, err := store.MarkOwedVerdictDeclined(asClassifier(e), activity, rulesetOld); err != nil || !recorded {
+	if recorded, err := store.MarkOwedVerdictDeclined(asClassifier(e), activity, rulesetOld, activityVersion(t, e, activity)); err != nil || !recorded {
 		t.Fatalf("recording the decline under the old prompt: recorded=%v err=%v", recorded, err)
 	}
 	if !offered(rulesetNew) {
 		t.Error("a verdict whose re-judge was declined under the old prompt is not offered to the new one")
 	}
-	if recorded, err := store.MarkOwedVerdictDeclined(asClassifier(e), activity, rulesetNew); err != nil || !recorded {
+	if recorded, err := store.MarkOwedVerdictDeclined(asClassifier(e), activity, rulesetNew, activityVersion(t, e, activity)); err != nil || !recorded {
 		t.Fatalf("recording the decline under the new prompt: recorded=%v err=%v", recorded, err)
 	}
 	if offered(rulesetNew) {

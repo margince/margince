@@ -49,9 +49,9 @@ func renderIndex(root *yaml.Node, ops []operation) []byte {
 		b.WriteString("| Call | operationId | What it does | Permission | Runs |\n")
 		b.WriteString("| --- | --- | --- | --- | --- |\n")
 		for _, op := range rows {
+			does := strings.Join(append([]string{oasnode.Scalar(op.node, "summary")}, op.pathChoices...), " ")
 			fmt.Fprintf(&b, "| `%s %s` | %s | %s | %s | %s |\n", op.method, op.path,
-				oasnode.Scalar(op.node, "operationId"), cell(oasnode.Scalar(op.node, "summary")),
-				op.permission(), op.runs())
+				oasnode.Scalar(op.node, "operationId"), cell(does), op.permission(), op.runs())
 		}
 	}
 	return []byte(b.String())

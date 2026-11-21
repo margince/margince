@@ -50,8 +50,8 @@ cases:
     6:
       name: Check with the owner before turning up
       statement: >-
-        The assistant tells the rep to confirm with the account owner rather
-        than acting on a proximity answer alone.
+        The assistant tells the rep whose account a nearby company is, so the
+        rep can involve the owner rather than act on a proximity answer alone.
   case5_before_the_meeting:
     1:
       name: A briefing arrives without naming a record

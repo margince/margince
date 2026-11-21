@@ -73,7 +73,7 @@ export function PageLoading({
     <Suspense
       fallback={
         <PendingBody
-          label={t("settings.pageLoading", {
+          label={t("shell.pageLoading", {
             page: t(`settings.tab.${id}`),
           })}
           lines={6}

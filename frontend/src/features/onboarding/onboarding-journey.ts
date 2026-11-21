@@ -7,6 +7,7 @@ import {
   readStored,
   removeStored,
   STORAGE_KEYS,
+  storedInFamily,
   watchStored,
   writeStored,
 } from "../../lib/storage";
@@ -25,9 +26,11 @@ function useRememberedFinished(userId: string | undefined): boolean {
         : watchStored(finishedKey(userId), changed),
     [userId],
   );
-  return useSyncExternalStore(
-    watch,
-    () => userId !== undefined && readStored(finishedKey(userId)) === "1",
+  // Before the session names its user, the marks name this browser's last seat.
+  return useSyncExternalStore(watch, () =>
+    userId === undefined
+      ? storedInFamily(STORAGE_KEYS.onboardingComplete)
+      : readStored(finishedKey(userId)) === "1",
   );
 }
 
@@ -52,6 +55,7 @@ export function useJourneyProgress(
 ): Readonly<{
   pending: boolean;
   unfinished: boolean;
+  remembered: boolean;
 }> {
   const rollout = useCompanyContextCapabilities(authed);
   const walkable = wanted && rollout.data?.onboarding_enabled === true;
@@ -80,5 +84,6 @@ export function useJourneyProgress(
       !remembered &&
       (rollout.isPending || (walkable && progress.isPending)),
     unfinished,
+    remembered,
   };
 }

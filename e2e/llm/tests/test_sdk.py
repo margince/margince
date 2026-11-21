@@ -136,6 +136,16 @@ class MustAnswerTest(unittest.TestCase):
         problems = check.check(scenario, never_asked.name)
         self.assertIn("the question holding 'Give a new owner to' was never answered decline", problems)
 
+    def test_a_scripted_no_is_a_run_that_happened(self):
+        self.assertEqual(check.unrun(DECLINED), "")
+
+    def test_a_no_nobody_scripted_is_still_a_harness_stop(self):
+        with open(DECLINED, encoding="utf-8") as handle:
+            lines = [line.replace('"scripted_by": "Give a new owner to"', '"scripted_by": null') for line in handle]
+        with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False, encoding="utf-8") as unscripted:
+            unscripted.writelines(lines)
+        self.assertIn("declined a question the server asked in the chat", check.unrun(unscripted.name))
+
     def test_lint_refuses_a_premise_no_entry_scripts(self):
         path = scenario_with("Give a new owner to => accept confirm=true")
         with open(path, "a", encoding="utf-8") as handle:

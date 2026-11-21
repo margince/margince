@@ -257,7 +257,7 @@ func emailMatchCandidates(ctx context.Context, tx pgx.Tx, owner, onlyContact ids
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT g.id, pe.contact_id, g.owner_user_id, (%[4]s)
 		  FROM linkedin_connection g
-		  JOIN contact_email pe ON g.email IS NOT NULL AND lower(pe.email) = g.email
+		  JOIN contact_email pe ON g.email IS NOT NULL AND pe.email = g.email
 		  JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
 		 WHERE g.tombstoned_at IS NULL
 		   -- Only an undecided ghost. A human's confirm or reject stands.

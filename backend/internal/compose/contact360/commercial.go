@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -132,10 +133,10 @@ func (s *Service) leadingDealSeat(ctx context.Context, tx pgx.Tx, contactID ids.
 		FROM relationship r
 		JOIN deal d ON d.id = r.deal_id AND d.status = 'open' AND d.archived_at IS NULL
 		LEFT JOIN stage s ON s.id = d.stage_id
-		WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $%[1]d
-		  AND r.archived_at IS NULL AND r.ended_at IS NULL AND (%[2]s) AND (%[3]s)
+		WHERE %[6]s AND r.contact_id = $%[1]d
+		  AND (%[2]s) AND (%[3]s)
 		ORDER BY d.expected_close_date NULLS LAST, d.id
-		LIMIT 1`, contactPos, edgeBound, dealScope, amountSQL, stageName), args...).
+		LIMIT 1`, contactPos, edgeBound, dealScope, amountSQL, stageName, dealseat.CurrentSQL("r")), args...).
 		Scan(&seat.dealID, &seat.role, &seat.deal.Title, &stage, &amount, &currency, &closeDate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return dealSeat{}, false, nil
@@ -178,10 +179,10 @@ func (s *Service) committeeFor(ctx context.Context, tx pgx.Tx, contactID ids.Con
 		SELECT p.id, p.full_name, r.role, p.photo_object_key
 		FROM relationship r
 		JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
-		WHERE r.kind = 'deal_stakeholder' AND r.deal_id = $%d
-		  AND r.contact_id <> $%d AND r.archived_at IS NULL AND r.ended_at IS NULL AND (%s) AND (%s)
+		WHERE %s AND r.deal_id = $%d
+		  AND r.contact_id <> $%d AND (%s) AND (%s)
 		ORDER BY p.full_name, p.id
-		LIMIT %d`, dealPos, contactPos, edgeBound, contactScope, committeeCap), args...)
+		LIMIT %d`, dealseat.CurrentSQL("r"), dealPos, contactPos, edgeBound, contactScope, committeeCap), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the buying committee: %w", err)
 	}

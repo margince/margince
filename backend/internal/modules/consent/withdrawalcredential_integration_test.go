@@ -287,6 +287,30 @@ func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
 	}
 }
 
+// A lead stored under the punycode spelling of a domain is the same mailbox as
+// the Unicode spelling a send names. So the link speaks for that lead.
+func TestTheSendPathBindsALeadStoredInTheOtherDomainSpelling(t *testing.T) {
+	e := setupChannelConsent(t)
+	var leadID ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`INSERT INTO lead (full_name, email, source, captured_by)
+		 VALUES ('Punycode Lead', $1, 'test', 'human:x') RETURNING id`,
+		"anna@xn--mller-kva.example").Scan(&leadID); err != nil {
+		t.Fatalf("seeding the lead: %v", err)
+	}
+	token, _, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, "anna@müller.example", "")
+	if err != nil || !ok {
+		t.Fatalf("minting for the Unicode spelling: ok=%v err=%v", ok, err)
+	}
+	ref, err := e.store.ResolveWithdrawalToken(e.ctx, token)
+	if err != nil {
+		t.Fatalf("the link does not resolve: %v", err)
+	}
+	if ref.LeadID.UUID != leadID {
+		t.Errorf("the link speaks for lead %s, want the lead holding the punycode spelling %s", ref.LeadID, leadID)
+	}
+}
+
 // A CONTACT WINS OVER A LEAD holding the same address, because a promoted lead's
 // mail is the contact's. Both records can legitimately carry one address —
 // uq_contact_email_dedupe bounds contact_email alone — so this is reachable in a

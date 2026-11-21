@@ -39,9 +39,9 @@ type anthropicClient struct {
 const anthropicAPIVersion = "2023-06-01"
 
 type anthropicWire struct {
-	Model     string `json:"model"`
-	MaxTokens int    `json:"max_tokens"`
-	System    string `json:"system,omitempty"`
+	Model     string                 `json:"model"`
+	MaxTokens int                    `json:"max_tokens"`
+	System    []anthropicSystemBlock `json:"system,omitempty"`
 	// Messages is this adapter's own message type rather than a shared one:
 	// only here does a turn's body become an array of Anthropic content blocks
 	// once it carries an image (anthropicparts.go).
@@ -53,9 +53,10 @@ type anthropicWire struct {
 }
 
 type anthropicToolWire struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description,omitempty"`
-	InputSchema json.RawMessage `json:"input_schema"`
+	Name         string                 `json:"name"`
+	Description  string                 `json:"description,omitempty"`
+	InputSchema  json.RawMessage        `json:"input_schema"`
+	CacheControl *anthropicCacheControl `json:"cache_control,omitempty"`
 }
 
 // anthropicOutputConfig / anthropicResponseFormat carry Anthropic's native
@@ -316,7 +317,7 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 	wire := anthropicWire{
 		Model:     req.Model,
 		MaxTokens: req.MaxTokens,
-		System:    req.System,
+		System:    anthropicSystem(req.System),
 		Messages:  anthropicMessages(req.Messages, req.Attachments),
 		Stream:    stream,
 	}
@@ -333,6 +334,9 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 		wire.Tools = append(wire.Tools, anthropicToolWire{
 			Name: tool.Name, Description: tool.Description, InputSchema: tool.InputSchema,
 		})
+	}
+	if n := len(wire.Tools); n > 0 {
+		wire.Tools[n-1].CacheControl = anthropicCacheable
 	}
 	wire.OutputConfig = anthropicOutputConfigFor(anthropicEffortFor(wire.Model, req.ThinkingLevel), schema)
 	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)

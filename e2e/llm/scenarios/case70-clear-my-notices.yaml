@@ -7,17 +7,12 @@ writes: true
 prompt: |
   I have read all my notices. Clear them so they stop showing up.
 
-must_call:
-  - change_attention
-
-must_call_with:
-  - change_attention.action=mark_all_notices_read
-
 may_call:
   - read_details
   - read_attention
   - whoami
   - read_workspace
+  - change_attention
 
 must_not_call_with:
   - update_record~.

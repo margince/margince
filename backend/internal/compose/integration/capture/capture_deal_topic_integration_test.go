@@ -61,6 +61,28 @@ func TestASuggestedDealIsFiledOnlyOnAConfidentAnswer(t *testing.T) {
 	}
 }
 
+// A mail every model declines is remembered like a doubtful answer. It files on
+// no deal, and a later capture under the same prompt does not ask again.
+func TestADeclinedTopicCheckIsNotAskedAgain(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme rollout")
+	env.topic.withheld = true
+	raw := mailFrom("alice@acme.example", "declined1@acme.example", "", "Invoice for the maintenance hours")
+	env.sync(t, raw)
+	first := env.topic.asked()
+	if first == 0 {
+		t.Fatal("the topic check never asked the model, so this proves nothing about a decline")
+	}
+	env.sync(t, raw)
+	wantDeals(t, e, "declined1@acme.example")
+	if asked := env.topic.asked(); asked != first {
+		t.Fatalf("the model was asked %d times over two captures, want %d: the memo holds the decline", asked, first)
+	}
+}
+
 // With no model, capture files nothing on a suggestion. The refile pass files
 // the mail once a model answers.
 func TestASuggestedDealWaitsForAModel(t *testing.T) {

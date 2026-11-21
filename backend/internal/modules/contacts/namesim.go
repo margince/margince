@@ -4,6 +4,7 @@
 package contacts
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -79,9 +80,11 @@ func foldedNameKey(s string) string {
 // accents and spacing are folded. A legal suffix stays, for the reason
 // CompanyCandidateScore.ExactName gives.
 func companyNamesAreTheSame(left, right string) bool {
-	l, r := foldedNameKey(left), foldedNameKey(right)
-	return l != "" && l == r
+	return sameNameKey(foldedNameKey(left), foldedNameKey(right))
 }
+
+// sameNameKey says two folded name keys name one name. An empty key names none.
+func sameNameKey(left, right string) bool { return left != "" && left == right }
 
 // collapseSpaces reduces every run of whitespace to one space. A name read off
 // a web page carries the spacing of its markup, and "Baqend  GmbH" is not a
@@ -100,9 +103,35 @@ func digraphNameKey(s string) string {
 // better of the plain and the digraph spelling. Only the contact score asks
 // it: lead dedupe and site-contact routing keep nameSimilarity as it is.
 func contactNameSimilarity(a, b string) float64 {
-	plain := nameSimilarity(a, b)
-	digraph := nameSimilarity(namematch.Digraphs(a), namematch.Digraphs(b))
-	return max(plain, digraph)
+	return contactFormsSimilarity(contactNameFormsOf(a), contactNameFormsOf(b))
+}
+
+// contactNameForms is a contact name in every form the contact score compares.
+type contactNameForms struct {
+	folded, digraphs []rune
+	given, family    string
+	// noDigraph says the digraph form is the folded one.
+	noDigraph bool
+}
+
+func contactNameFormsOf(name string) contactNameForms {
+	given, family := namematch.SplitName(name)
+	forms := contactNameForms{
+		folded: namematch.ScoringRunes(namematch.Fold(name)), digraphs: namematch.ScoringRunes(namematch.Fold(namematch.Digraphs(name))),
+		given: given, family: family,
+	}
+	forms.noDigraph = slices.Equal(forms.folded, forms.digraphs)
+	return forms
+}
+
+// contactFormsSimilarity is contactNameSimilarity over forms. Two names with
+// no umlaut have digraph forms equal to their folded ones, scored once.
+func contactFormsSimilarity(a, b contactNameForms) float64 {
+	plain := namematch.JaroWinklerRunes(a.folded, b.folded)
+	if a.noDigraph && b.noDigraph {
+		return plain
+	}
+	return max(plain, namematch.JaroWinklerRunes(a.digraphs, b.digraphs))
 }
 
 // NormalizeCompanyName is namematch.Fold plus the PO-PARAM-1 legal-suffix

@@ -35,9 +35,9 @@ import "./imap-connect-form.css";
 // `/connectors/imap/connect` onboarding's ImapConnectPanel
 // (onboarding-connect-panels.imap.tsx) posts to.
 //
-// Two surfaces render the form: Settings, in a dialog, and the first-run
-// platform step, inline. ImapMailboxForm is the one form; ImapConnectForm is
-// the dialog around it.
+// Three surfaces render the form: Settings, in a dialog, and inline the
+// first-run platform step and the onboarding connect step. ImapMailboxForm is
+// the one form; ImapConnectForm is the dialog around it.
 
 type ImapConnectRequest = components["schemas"]["ImapCredentials"];
 
@@ -170,6 +170,16 @@ export function ImapMailboxForm({
   const errorMessage = connect.isError
     ? imapErrorMessage(connect.error, t)
     : null;
+  // A failure answers the values that were sent; once one changes, it no
+  // longer describes the form.
+  const edit =
+    <V,>(set: (value: V) => void) =>
+    (value: V) => {
+      if (connect.isError) {
+        connect.reset();
+      }
+      set(value);
+    };
 
   // One submit for Enter in a field and for the Connect button, wherever the
   // button stands: pressable whatever is filled in, and the press is what
@@ -241,7 +251,7 @@ export function ImapMailboxForm({
               <TextInput
                 {...control}
                 value={host}
-                onChange={(event) => setHost(event.target.value)}
+                onChange={(event) => edit(setHost)(event.target.value)}
               />
             )}
           </Field>
@@ -254,7 +264,7 @@ export function ImapMailboxForm({
                 {...control}
                 inputMode="numeric"
                 value={port}
-                onChange={(event) => setPort(event.target.value)}
+                onChange={(event) => edit(setPort)(event.target.value)}
               />
             )}
           </Field>
@@ -269,7 +279,7 @@ export function ImapMailboxForm({
                 type="email"
                 autoComplete="email"
                 value={username}
-                onChange={(event) => setUsername(event.target.value)}
+                onChange={(event) => edit(setUsername)(event.target.value)}
               />
             )}
           </Field>
@@ -284,7 +294,7 @@ export function ImapMailboxForm({
                 type="password"
                 autoComplete="off"
                 value={secret}
-                onChange={(event) => setSecret(event.target.value)}
+                onChange={(event) => edit(setSecret)(event.target.value)}
               />
             )}
           </Field>
@@ -293,7 +303,7 @@ export function ImapMailboxForm({
               <TextInput
                 {...control}
                 value={mailbox}
-                onChange={(event) => setMailbox(event.target.value)}
+                onChange={(event) => edit(setMailbox)(event.target.value)}
               />
             )}
           </Field>
@@ -308,13 +318,13 @@ export function ImapMailboxForm({
                 {...control}
                 inputMode="numeric"
                 value={maxMessages}
-                onChange={(event) => setMaxMessages(event.target.value)}
+                onChange={(event) => edit(setMaxMessages)(event.target.value)}
               />
             )}
           </Field>
           <ImapSendFields
             draft={send}
-            onChange={setSend}
+            onChange={edit(setSend)}
             imapHost={host}
             portError={ranged(smtpPortInRange, PORT_RANGE, identifierNumber)}
           />

@@ -157,6 +157,7 @@ export function useChronologySlots({
           <ChronologyFilter filter={filter} conversations onFilter={openCut} />
           {filter !== "changes" && (
             <TimelineFilterBar
+              key={company.id}
               value={filters}
               kinds={kinds}
               onChange={setFilters}

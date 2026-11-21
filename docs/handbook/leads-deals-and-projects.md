@@ -78,8 +78,7 @@ A warning on that preview: the matching contact may be one you are not allowed t
 
 The only open deal you can change at the employer starts selected. Choose **Qualify without a deal** to create no deal. When you pick one, the contact joins its team and the lead links to it. A deal that closes or moves to another company before you confirm is refused.
 
-A deal opened in the same step takes the lead's owner and the contact's employer, when one exists. The amount is a whole number in the base currency of your
-installation.
+A deal opened in the same step takes the lead's owner and the contact's employer, when one exists. The amount is a whole number in the base currency of your installation.
 
 ### How do I reverse a qualification?
 To reverse a lead qualification in Margince, open the qualified lead, choose **More**, then **Reverse qualification**.
@@ -125,7 +124,7 @@ To edit a lead in Margince, open it from **Leads** and press **Edit** in a secti
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead is read-only.
 Also called: update a lead, rename a lead, correct a prospect.
 
-**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
+**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then offers a **Referred by partner** column under **View** → **Columns**. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
 
 ### How do I change a lead's owner?
 To change or set the owner of a lead in Margince, open the lead. Press **Edit** in the **Ownership** section of its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
@@ -140,13 +139,12 @@ To name a lead's product in Margince, open the lead, press **Edit** in the **Abo
 Also called: lead product, the product a lead asks about.
 
 ### How do I see why a lead has its score?
-To see why a lead has its score in Margince, open the lead and look at its **Score** panel. Each factor lists what counted, and **{count} activities** on a factor opens **Activities behind this factor**.
+To see why a lead has its score in Margince, open the lead and look at its **Score** panel. Each factor lists what counted, and **{count} activities** on a factor opens **Activities behind this factor**. On the **Leads** table, point at a score to read its main reason.
 Also called: lead score explained, why is this lead hot.
 
 ### Scoring
 
-Leads carry a score from 0 to 100. You can override it by hand, but a reason is
-required. The override stops the score being updated until you clear it.
+Leads carry a score from 0 to 100. You can override it by hand, but a reason is required. The override stops the score being updated until you clear it.
 
 The score falls over time: under the score the panel says "activity points halve every 14
 days".
@@ -238,6 +236,8 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 2. You may type a **Role**, such as economic buyer, and a **Started** date.
 3. Choose **Create**.
 Anyone who may edit the deal can open **Change or remove stakeholders** on the same panel. Choose **Edit stakeholder** on the row to change the role. To take the contact off, choose **Remove** on the row and confirm in **Remove stakeholder?**; there is no undo. A contact with several roles has a row for each role, and each row needs its own **Remove**. The **Buying committee** panel names a contact once, with each role, and counts them once.
+
+To show that a contact no longer takes part, set an **End** date on the row instead. On that date the contact leaves the **Buying committee** and its count. The contact's **Deals** tab still lists the deal and marks it **No longer on this deal**. The row stays under the fold with its dates.
 
 From a contact's **Deals** tab, **Add to a deal** does the same from the other end. Select the search field to see open deals at their current employers. Typing searches open deals, with employer deals first and each deal's company shown.
 Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.

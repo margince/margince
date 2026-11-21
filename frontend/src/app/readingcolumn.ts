@@ -1,4 +1,3 @@
-import { useDeferredValue } from "react";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import type { Route } from "../lib/router";
 import {
@@ -9,18 +8,12 @@ import {
 
 /**
  * Which pages keep the capped reading column, and which of those are records.
- *
- * Decided from the screen ON THE PAGE, not the address. The screen is rendered
- * against a deferred route (App.tsx's ScreenView keeps the old screen up while
- * the next chunk loads), so a width keyed on the live route flipped a beat
- * before the screen changed and a record page was drawn at a list's full width
- * for the length of a chunk load.
+ * Asked of the page on screen, which the title and the rail read too.
  */
-export function useReadingColumn(route: Route): {
+export function readingColumn(shown: Route): {
   gridded: boolean;
   griddedRecord: boolean;
 } {
-  const shown = useDeferredValue(route);
   const griddedRecord = isRecordPage(shown);
   // The id-less half of the same policy: a screen that reads down but is not a
   // record, so there is no id to key on. Brief is the one today.

@@ -76,7 +76,7 @@ func subjectContactIDs(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		SELECT DISTINCT p.id FROM contact p
 		 WHERE p.id = $1
 		    OR EXISTS (SELECT 1 FROM contact_email pe
-		                WHERE pe.contact_id = p.id AND lower(pe.email) = ANY($2))`,
+		                WHERE pe.contact_id = p.id AND pe.email = ANY($2))`,
 		contactID, lowercased(emails))
 	if err != nil {
 		return nil, fmt.Errorf("resolving the subject's contact rows: %w", err)

@@ -105,7 +105,7 @@ func meansWord(m messagingrules.ContactMeans) string {
 // here: the send refuses an advertising mail that owes it.
 //
 // The packs in force are those of the installation's country and of each live
-// legal entity's country.
+// legal entity's jurisdiction.
 func (s *Store) checkParticularsInForce(ctx context.Context, p ControllerParticulars) error {
 	inForce, err := s.rulesInForce(ctx)
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *Store) checkParticularsInForce(ctx context.Context, p ControllerParticu
 }
 
 // rulesInForce answers the rule set of each pack in force: the installation's
-// country and each live legal entity's country. Both what settings refuse and
+// country and each live legal entity's jurisdiction. Both what settings refuse and
 // what the settings form asks for are read off this one answer.
 func (s *Store) rulesInForce(ctx context.Context) ([]messagingrules.Rules, error) {
 	var inForce []messagingrules.Rules
@@ -165,25 +165,25 @@ func checkMeansStated(d messagingrules.Disclosure, versions [][]particularField)
 	return nil
 }
 
-// countriesInForceTx is the installation's country and every live legal
-// entity's country, each once.
+// countriesInForceTx is the installation's country and every live further
+// legal entity's jurisdiction, each once.
 func (s *Store) countriesInForceTx(ctx context.Context, tx pgx.Tx) ([]jurisdiction.Code, error) {
 	installation, err := s.defaultEntityCountry(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT lower(country) FROM legal_entity
-		 WHERE archived_at IS NULL AND coalesce(country, '') <> ''`)
+		SELECT DISTINCT jurisdiction FROM legal_entity
+		 WHERE NOT is_default AND archived_at IS NULL AND jurisdiction IS NOT NULL`)
 	if err != nil {
-		return nil, fmt.Errorf("consent: reading the legal entities' countries: %w", err)
+		return nil, fmt.Errorf("consent: reading the legal entities' jurisdictions: %w", err)
 	}
-	entityCountries, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	entityLaws, err := pgx.CollectRows(rows, pgx.RowTo[string])
 	if err != nil {
-		return nil, fmt.Errorf("consent: reading the legal entities' countries: %w", err)
+		return nil, fmt.Errorf("consent: reading the legal entities' jurisdictions: %w", err)
 	}
 	codes := []jurisdiction.Code{installation}
-	for _, c := range entityCountries {
+	for _, c := range entityLaws {
 		if code := jurisdiction.Code(c); code != installation {
 			codes = append(codes, code)
 		}

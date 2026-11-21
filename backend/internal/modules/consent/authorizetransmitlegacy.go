@@ -66,7 +66,7 @@ func (g *Gate) transmitCountries(ctx context.Context, req commsauthz.TransmitReq
 		// An entity edited while the message waits does not change the law it
 		// was staged under.
 		for i, r := range req.Recipients {
-			if staged := claims[decisionRecipientKey(r)].sender; staged != "" && i < len(out) {
+			if staged := stagedClaimOf(claims, r).sender; staged != "" && i < len(out) {
 				out[i].Sender = staged
 			}
 		}
