@@ -39,7 +39,7 @@ type caseMember struct {
 	Company   *string
 	OwnerID   *ids.UUID
 	OwnerName *string
-	// OwnerLive is a live human seat owning the member; OwnerSeat is its seat.
+	// OwnerLive is an active or invited human seat owning the member; OwnerSeat is its seat.
 	OwnerLive bool
 	OwnerSeat string
 	Version   int64
@@ -158,10 +158,10 @@ func readComponentCase(ctx context.Context, tx pgx.Tx, k contactComponent, addre
 	return c, nil
 }
 
-// liveCaseOwnerSQL is whether the joined owner seat u still counts as an owner
-// of a case. It asks what identity asks before carrying a former owner's
-// access, so the owners a case names are the ones a merge can carry.
-var liveCaseOwnerSQL = "coalesce(u.removed_at IS NULL AND " + workforce.LiveHumanSQL("u") + ", false)"
+// liveCaseOwnerSQL is whether the joined owner seat u owns for a case: a human
+// who is active, or invited and not yet signed in. A new record may name the
+// same set, so the case and the pair merge keep the same colleagues.
+var liveCaseOwnerSQL = "coalesce(u.removed_at IS NULL AND " + workforce.AskableMemberSQL("u") + ", false)"
 
 // readCaseMembers reads what a reviewer compares, in id order. The employer is
 // the list's own, so a company hidden from the reader stays hidden here.
