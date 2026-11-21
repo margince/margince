@@ -47,7 +47,7 @@ import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
 import { RecordGone } from "../../components/recordgone";
 import { useHiddenCoreFeatures } from "../../lib/corefeatures";
-import { readsNoRecord } from "../../lib/problem";
+import { isGone } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   openContactTab,
@@ -453,7 +453,7 @@ function readsGone(
   record: Readonly<{ isError: boolean; error: unknown }>,
   view: Readonly<{ error: unknown }>,
 ): boolean {
-  return readsNoRecord(record.isError ? record.error : view.error);
+  return isGone(record.isError ? record.error : view.error);
 }
 
 // A read no retry can answer says the contact is not there; any other failure

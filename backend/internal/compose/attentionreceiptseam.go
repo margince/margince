@@ -102,12 +102,12 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 			if completed.Writable {
 				undo = &attention.ReceiptUndo{AuditLogID: completed.AuditID, Version: completed.Version}
 			}
-			said := approvalSummaryCopyFor(systemtext.Locale(ctx))
+			locale := systemtext.Locale(ctx)
 			contact := completed.Contact
 			if contact == "" {
-				contact = said.taskContact
+				contact = systemtext.Copy(systemtext.TaskClosedContactKey(completed.Booking), locale)
 			}
-			reason := fmt.Sprintf(said.taskCompleted, contact, completed.WrittenAt.Format(time.DateOnly))
+			reason := fmt.Sprintf(systemtext.Copy(systemtext.TaskClosedKey(completed.Booking), locale), contact, completed.WrittenAt.Format(time.DateOnly))
 			decided = append(decided, attention.Receipt{Source: attention.ReceiptFromCorrection, ID: completed.AuditID, AuditLogID: completed.AuditID, Kind: "task_completed", Summary: reason, Headline: completed.Subject, Reason: reason, OccurredAt: completed.At, TargetType: string(recordTypeActivity), TargetID: completed.ID, Actor: attention.ReceiptActor{Type: systemActor}, Undo: undo})
 		}
 	}

@@ -249,8 +249,8 @@ func (said briefCopy) attendeeLine(attendee AttendeeIn, now time.Time, loc *time
 	if attendee.Title != "" {
 		parts = append(parts, attendee.Title)
 	}
-	if attendee.DealRole != "" {
-		parts = append(parts, strings.ReplaceAll(dealrole.Word(attendee.DealRole, string(said.Lang())), "_", " "))
+	if role := dealrole.Label(attendee.DealRole, string(said.Lang())); role != "" {
+		parts = append(parts, role)
 	}
 	line := strings.Join(parts, ", ")
 	// FirstTime and a nil LastTouch are ONE fact with two spellings: the

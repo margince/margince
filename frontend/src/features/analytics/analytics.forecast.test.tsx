@@ -587,6 +587,22 @@ describe("SharedForecastView", () => {
     }
   });
 
+  it("says a closed or unknown share link is gone and offers no Retry", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({ status: 404, detail: "not found" }, 404),
+      ),
+    );
+    render(<SharedForecastView token="closed" />);
+    expect(
+      await screen.findByText(en["reporting.sharedForecastGone"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["common.retry"] }),
+    ).toBeNull();
+  });
+
   const ranged = {
     range_low_minor: 90_000,
     range_high_minor: 210_000,

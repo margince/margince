@@ -5,7 +5,7 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { RecordCard } from "../../design-system/recordcard";
 import { useT } from "../../i18n";
-import { DEAL_ROLES, dealRoleLabel } from "../../lib/recordlabels";
+import { dealRoleLabel } from "../../lib/recordlabels";
 import { routeHash } from "../../lib/router";
 import { contactRole } from "./companyrailshared";
 
@@ -21,11 +21,11 @@ export function CompanyContactCard({
   companyName,
 }: Readonly<{ contact: Contact; companyName: string }>) {
   const t = useT();
-  // A role the server adds before the label map learns it draws no pill
-  // rather than a raw code.
+  // A typed role, or one the server adds before the label map learns it,
+  // draws no pill rather than a raw code.
   const role = contact.deal_roles
-    .map((seat) => seat.role)
-    .find((seat) => DEAL_ROLES.keys.includes(seat));
+    .map((seat) => dealRoleLabel(seat.role, t))
+    .find(Boolean);
   const title = contactRole(contact);
   return (
     <RecordCard
@@ -43,7 +43,7 @@ export function CompanyContactCard({
         )
       }
       email={contact.primary_email ?? undefined}
-      aside={role && <Badge wrap>{dealRoleLabel(role, t)}</Badge>}
+      aside={role && <Badge wrap>{role}</Badge>}
     />
   );
 }

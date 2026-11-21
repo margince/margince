@@ -28,6 +28,7 @@ export function ContactFacts({
   buyingRole,
 }: Readonly<{ contact: Contact; buyingRole?: string | null }>): ReactNode {
   const t = useT();
+  const role = dealRoleLabel(buyingRole ?? "", t);
   const { locale } = useLocale();
   const zone = useViewerZone();
   const ownerName = useMemberName(contact.owner_id);
@@ -89,11 +90,7 @@ export function ContactFacts({
           t("contact.page.ownerUnassigned"),
         )}
       </Fact>
-      {buyingRole && (
-        <Fact label={t("contact.page.buyingRole")}>
-          {dealRoleLabel(buyingRole, t)}
-        </Fact>
-      )}
+      {role && <Fact label={t("contact.page.buyingRole")}>{role}</Fact>}
       <Fact label={t("list.created")}>
         {formatDateAbbrev(contact.created_at, locale, zone)}
       </Fact>

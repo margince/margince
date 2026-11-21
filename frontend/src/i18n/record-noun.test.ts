@@ -727,6 +727,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "co.role.user",
     "co.roleLabel.blocker",
     "co.roleLabel.champion",
+    "co.roleLabel.decision_maker",
     "co.roleLabel.economic_buyer",
     "co.roleLabel.influencer",
     "co.roleLabel.user",
