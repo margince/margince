@@ -85,6 +85,8 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 			value := reportingcsv.AnswerCell(row[column], unit == reportingMoney, currency)
 			if coverage != "ok" {
 				value = ""
+			} else if analyticsquery.LeavesOut(row, column) {
+				coverage = reportingPartial
 			}
 			rows = append(rows, cell(questionCell{label: label, value: value, unit: unit, currency: currency, context: column, coverage: coverage}))
 		}

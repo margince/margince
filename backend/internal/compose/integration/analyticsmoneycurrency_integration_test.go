@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -137,38 +138,109 @@ func TestEachCurrencyIsSummedInItsOwnMinorUnits(t *testing.T) {
 	}
 }
 
-func TestTheBaseMeasureWithholdsAnIncompleteTotalAndConvertsThePricedSubset(t *testing.T) {
+// The stage totals add the deals that convert, as the reports do.
+// A per-company total is still all or nothing.
+func TestTheBaseMeasureAddsTheDealsThatConvertAndNamesWhatItLeavesOut(t *testing.T) {
 	d := newTwoDoors(t, "money-currency-base", "read")
 	seedMixedCurrencyPipeline(t, d)
 	// 5×100000 EUR + 5×(10000 USD cents × 0.5) + 5×(1000 yen × 0.006 × 100 cents).
 	const want = 500_000 + 25_000 + 3_000
-	for _, entity := range []string{"deals-by-stage", "open-deals-per-company"} {
-		query := map[string]any{"entity": entity, "scope_kind": "workspace", "measures": []any{
-			map[string]any{"fn": "count", "as": "deals"},
-			map[string]any{"fn": "sum", "field": "amount_base_minor", "as": "base"},
-			map[string]any{"fn": "count_distinct", "field": "amount_base_minor", "as": "distinct_prices"},
-		}}
-		answer := askMoney(t, d, query)
+	measures := []any{
+		map[string]any{"fn": "count", "as": "deals"},
+		map[string]any{"fn": "sum", "field": "amount_base_minor", "as": "base"},
+		map[string]any{"fn": "count_distinct", "field": "amount_base_minor", "as": "distinct_prices"},
+	}
+	query := map[string]any{"entity": "deals-by-stage", "scope_kind": "workspace", "measures": measures}
+	doors := map[string]moneyAnswer{
+		"route": askMoney(t, d, query),
+		"tool":  decodeMoney(t, d.tool(t, "run_analytics_query", query)),
+	}
+	for door, answer := range doors {
 		if len(answer.Rows) != 1 {
-			t.Fatalf("%s: ungrouped answer has %d rows: %+v", entity, len(answer.Rows), answer.Rows)
+			t.Fatalf("%s: ungrouped answer has %d rows: %+v", door, len(answer.Rows), answer.Rows)
 		}
 		row := answer.Rows[0]
-		if value, present := row["base"]; !present || value != nil {
-			t.Errorf("%s: incomplete converted total = %v, want an explicit null", entity, row)
+		if fmt.Sprint(row["base"]) != itoa(want) {
+			t.Errorf("%s: converted total = %v, want the deals that convert, %d", door, row["base"], want)
 		}
 		if fmt.Sprint(row["deals"]) != itoa(int64(len(mixedCurrencyDeals)*dealsPerCurrency)) {
-			t.Errorf("%s: counted %s deals, want every one including the unrated CHF", entity, row["deals"])
+			t.Errorf("%s: counted %s deals, want every one including the unrated CHF", door, row["deals"])
 		}
-		// One converted price per rated currency: CHF has none to count.
 		if fmt.Sprint(row["distinct_prices"]) != "3" {
-			t.Errorf("%s: %s distinct converted prices, want 3 — CHF has no rate and must not price at zero", entity, row["distinct_prices"])
+			t.Errorf("%s: %s distinct converted prices, want 3: CHF has no rate and must not price at zero", door, row["distinct_prices"])
 		}
-		query["filters"] = []any{map[string]any{"field": "currency", "op": "ne", "value": "CHF"}}
-		priced := askMoney(t, d, query)
-		if len(priced.Rows) != 1 || fmt.Sprint(priced.Rows[0]["base"]) != itoa(want) {
-			t.Errorf("%s: priced subset = %v, want %d with yen converted from whole units", entity, priced.Rows, want)
+		coverage, _ := row["_coverage"].(map[string]any)
+		got := []string{
+			fmt.Sprint(coverage["partial"]), fmt.Sprint(coverage["no_value_deals"]), fmt.Sprint(coverage["no_rate_deals"]),
+			fmt.Sprint(coverage["missing_currencies"]), fmt.Sprint(coverage["aggregates"]),
+		}
+		if wantCoverage := []string{"true", "0", itoa(dealsPerCurrency), "[CHF]", "[base]"}; !slices.Equal(got, wantCoverage) {
+			t.Errorf("%s: coverage %v, want %v", door, got, wantCoverage)
 		}
 	}
+
+	query["filters"] = []any{map[string]any{"field": "currency", "op": "ne", "value": "CHF"}}
+	priced := askMoney(t, d, query)
+	if len(priced.Rows) != 1 || fmt.Sprint(priced.Rows[0]["base"]) != itoa(want) {
+		t.Fatalf("priced subset = %v, want %d with yen converted from whole units", priced.Rows, want)
+	}
+	if coverage, _ := priced.Rows[0]["_coverage"].(map[string]any); coverage["partial"] != false {
+		t.Errorf("a subset with every deal converted states coverage %v, want none left out", coverage)
+	}
+
+	perCompany := askMoney(t, d, map[string]any{"entity": "open-deals-per-company", "scope_kind": "workspace", "measures": measures})
+	if len(perCompany.Rows) != 1 {
+		t.Fatalf("per-company answer has %d rows: %+v", len(perCompany.Rows), perCompany.Rows)
+	}
+	if value, present := perCompany.Rows[0]["base"]; !present || value != nil {
+		t.Errorf("a per-company converted total = %v, want the explicit null its report gives", perCompany.Rows[0])
+	}
+}
+
+func TestASumNoDealConvertsIntoStaysBlankAndSaysWhy(t *testing.T) {
+	d := newTwoDoors(t, "money-currency-none", "read")
+	stages := apptest.DiscoverSeededPipeline(t, d.e)
+	for range dealsPerCurrency {
+		createdID(t, d.e, "/v1/deals", AnyMap{
+			"name": "CHF deal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
+			"source": "manual", "amount_minor": 2_000, "currency": "CHF",
+		})
+		createdID(t, d.e, "/v1/deals", AnyMap{
+			"name": "No amount", "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual",
+		})
+	}
+	query := map[string]any{"entity": "deals-by-stage", "scope_kind": "workspace", "measures": []any{
+		map[string]any{"fn": "sum", "field": "amount_base_minor", "as": "base"},
+		map[string]any{"fn": "max", "field": "amount_base_minor", "as": "largest"},
+	}}
+	for door, answer := range map[string]moneyAnswer{
+		"route": askMoney(t, d, query),
+		"tool":  decodeMoney(t, d.tool(t, "run_analytics_query", query)),
+	} {
+		if len(answer.Rows) != 1 {
+			t.Fatalf("%s: answer has %d rows: %+v", door, len(answer.Rows), answer.Rows)
+		}
+		row := answer.Rows[0]
+		if row["base"] != nil || row["largest"] != nil {
+			t.Errorf("%s: no deal converts, yet the answer holds %v", door, row)
+		}
+		coverage, _ := row["_coverage"].(map[string]any)
+		if coverage["partial"] != true || fmt.Sprint(coverage["no_value_deals"]) != "5" ||
+			fmt.Sprint(coverage["no_rate_deals"]) != "5" || fmt.Sprint(coverage["aggregates"]) != "[base]" {
+			t.Errorf("%s: coverage %v, want 5 deals with no value, 5 with no rate, naming only the sum", door, coverage)
+		}
+	}
+}
+
+func decodeMoney(t *testing.T, body []byte) moneyAnswer {
+	t.Helper()
+	var out moneyAnswer
+	dec := json.NewDecoder(strings.NewReader(string(body)))
+	dec.UseNumber()
+	if err := dec.Decode(&out); err != nil {
+		t.Fatalf("decoding the answer: %v\n%s", err, body)
+	}
+	return out
 }
 
 func itoa(n int64) string { return strconv.FormatInt(n, 10) }

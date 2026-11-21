@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
+import { PartialMark } from "../../components/partialmark";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
@@ -18,9 +19,11 @@ import {
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { labelFor } from "../../lib/labelfor";
+import { coverageOfMeasure, hasGap } from "../../lib/moneycoverage";
 import { ProblemError, throwProblem } from "../../lib/problem";
 import { derivationColumns, ExcludedNote } from "./analytics.explain";
 import { ExplainDrawer } from "./analytics.explain.drawer";
+import { CoverageFootnote } from "./analytics.moneygap";
 import {
   type Namer,
   shortId,
@@ -54,7 +57,31 @@ export type ExplainSource =
   | Readonly<{ kind: "query"; query: AnalyticsQuery }>
   | Readonly<{ kind: "run"; runId: string }>;
 
+// A sum that adds only the deals that convert carries its mark and the gap in words.
+// So does a blank sum, because no deal converts.
 function measureCell(
+  query: AnalyticsQuery,
+  column: string,
+  row: AnswerRow,
+  baseCurrency: string | null,
+  locale: Locale,
+  t: Translate,
+): ReactNode {
+  const coverage = coverageOfMeasure(row, column);
+  const figure = measureFigure(query, column, row, baseCurrency, locale, t);
+  if (!hasGap(coverage)) {
+    return figure;
+  }
+  return (
+    <span className="analytics-money-cell">
+      {figure}
+      <PartialMark coverage={coverage} />
+      <CoverageFootnote coverage={coverage} />
+    </span>
+  );
+}
+
+function measureFigure(
   query: AnalyticsQuery,
   column: string,
   row: AnswerRow,

@@ -99,8 +99,10 @@ func TestPrebuiltConvertedTotalsAndTheirEvidenceKeepMissingValues(t *testing.T) 
 			if generic.Withheld || len(generic.Rows) != 1 {
 				t.Fatalf("the real population was not queried: %+v", generic)
 			}
-			if generic.Rows[0]["base"] != nil {
-				t.Errorf("generic query served incomplete money: %v", generic.Rows[0]["base"])
+			// A sum adds what converts and carries its coverage; every other aggregate stays blank.
+			isSum := fn == analyticsquery.Sum
+			if (generic.Rows[0]["base"] != nil) != isSum || (generic.Rows[0][analyticsquery.CoverageColumnName] != nil) != isSum {
+				t.Errorf("generic %s served %v with coverage %v, want both exactly for the sum", fn, generic.Rows[0]["base"], generic.Rows[0][analyticsquery.CoverageColumnName])
 			}
 			detail := e.explainReport(e.Admin(), t, "pipeline-current", report.DerivationURL)
 			found := false
