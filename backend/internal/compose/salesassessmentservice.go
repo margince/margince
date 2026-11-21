@@ -157,7 +157,7 @@ func (s *salesAssessments) prepareAssessment(ctx context.Context, selection crmc
 	if sales {
 		dealsMetric = reportingOpenPipeline
 	}
-	evaluation, deals, err := s.reports.EvaluateWithEvidence(ctx, selection, receipt, dealsMetric, assessmentCandidates)
+	evaluation, deals, err := s.reports.EvaluateWithLargestEvidence(ctx, selection, receipt, dealsMetric, assessmentCandidates)
 	if err != nil {
 		return evaluation, in, err
 	}
@@ -299,7 +299,7 @@ func foldAssessment(out crmcontracts.SalesAssessment, written salesassessment.Wr
 // gather turns the evaluation into what the model reads. That is the cells
 // with their figures as text, the deals behind the open pipeline the reader
 // may see, and the decisions recorded on them.
-func (s *salesAssessments) gather(ctx context.Context, evaluation crmcontracts.ReportingEvaluation, deals crmcontracts.ReportingEvidence) (salesassessment.Input, error) {
+func (s *salesAssessments) gather(ctx context.Context, evaluation crmcontracts.ReportingEvaluation, deals []crmcontracts.ReportingEvidenceRow) (salesassessment.Input, error) {
 	zone, err := time.LoadLocation(evaluation.Context.Timezone)
 	if err != nil {
 		return salesassessment.Input{}, fmt.Errorf("reporting timezone: %w", apperrors.ErrInvalidArgument)
@@ -402,8 +402,8 @@ func assessmentCell(id, label string, value *float64, unit string, window string
 }
 
 // assessmentCandidateDeals are the open pipeline's largest deals the reader
-// may see, paged from the evidence the chart's drill-through also reads.
-func assessmentCandidateDeals(evaluation crmcontracts.ReportingEvaluation, evidence crmcontracts.ReportingEvidence) []salesassessment.CandidateIn {
+// sees whole, from the evidence the chart's drill-through also reads.
+func assessmentCandidateDeals(evaluation crmcontracts.ReportingEvaluation, largest []crmcontracts.ReportingEvidenceRow) []salesassessment.CandidateIn {
 	var hasOpen bool
 	for _, metric := range evaluation.Metrics {
 		if metric.Id == reportingOpenPipeline {
@@ -413,11 +413,8 @@ func assessmentCandidateDeals(evaluation crmcontracts.ReportingEvaluation, evide
 	if !hasOpen {
 		return nil
 	}
-	out := make([]salesassessment.CandidateIn, 0, len(evidence.Rows))
-	for _, row := range evidence.Rows {
-		if row.Restricted || row.SourceId == nil || row.OwnerId == nil {
-			continue
-		}
+	out := make([]salesassessment.CandidateIn, 0, len(largest))
+	for _, row := range largest {
 		candidate := salesassessment.CandidateIn{ID: row.SourceId.String(), Name: row.Label, OwnerID: row.OwnerId.String()}
 		if row.Value != nil {
 			candidate.Amount = salesassessment.FigureText(*row.Value, evaluation.Context.Currency)

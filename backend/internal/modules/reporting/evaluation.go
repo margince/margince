@@ -4,8 +4,11 @@
 package reporting
 
 import (
+	"cmp"
 	"context"
 	"crypto/subtle"
+	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -186,10 +189,7 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 	week := evidenceWeek(frame, group)
 	matched := 0
 	for _, fact := range facts {
-		if fact.Metric != metric || fact.ContextID != contextID || !evidenceGroup(fact, group, week) {
-			continue
-		}
-		if through != nil && (fact.At() == nil || !fact.At().Before(*through)) {
+		if !evidenceMatches(fact, metric, contextID, group, through, week) {
 			continue
 		}
 		matched++
@@ -205,6 +205,44 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 		out.Rows = append(out.Rows, evidenceRow(fact))
 	}
 	return out, nil
+}
+
+func evidenceMatches(fact Fact, metric crmcontracts.ReportingMetricID, contextID, group string, through *time.Time, week evidenceWeekSpan) bool {
+	if fact.Metric != metric || fact.ContextID != contextID || !evidenceGroup(fact, group, week) {
+		return false
+	}
+	return through == nil || (fact.At() != nil && fact.At().Before(*through))
+}
+
+// largestNamedEvidence answers the rows behind a reading that name their record
+// and its owner to the reader. A restricted or withheld row names no owner, so
+// it never takes a place. Rows rank by value, then by record id.
+func largestNamedEvidence(frame crmcontracts.ReportingContext, facts []Fact, ref crmcontracts.ReportingEvidenceRef, limit int) []crmcontracts.ReportingEvidenceRow {
+	group := textOrEmpty(ref.GroupKey)
+	week := evidenceWeek(frame, group)
+	rows := []crmcontracts.ReportingEvidenceRow{}
+	for _, fact := range facts {
+		if !evidenceMatches(fact, ref.Metric, ref.ContextId, group, ref.Through, week) {
+			continue
+		}
+		if row := evidenceRow(fact); row.SourceId != nil && row.OwnerId != nil {
+			rows = append(rows, row)
+		}
+	}
+	slices.SortFunc(rows, func(a, b crmcontracts.ReportingEvidenceRow) int {
+		if byValue := cmp.Compare(evidenceValue(b), evidenceValue(a)); byValue != 0 {
+			return byValue
+		}
+		return strings.Compare(a.SourceId.String(), b.SourceId.String())
+	})
+	return rows[:min(len(rows), limit)]
+}
+
+func evidenceValue(row crmcontracts.ReportingEvidenceRow) float64 {
+	if row.Value == nil {
+		return math.Inf(-1)
+	}
+	return *row.Value
 }
 
 // evidenceRow shows one fact as a row, withholding what the reader may not
@@ -320,15 +358,16 @@ func (s *Service) EvaluatedReceipt(ctx context.Context, selection crmcontracts.R
 	return out, err
 }
 
-// EvaluateWithEvidence evaluates a selection, or checks the receipt the reader
-// saw, and pages the evidence one metric's reading points to from that same
-// snapshot. An empty metric, or one the selection does not read, has no rows.
-func (s *Service) EvaluateWithEvidence(ctx context.Context, selection crmcontracts.ReportingSelection, receipt *EvidenceExpectation, metric crmcontracts.ReportingMetricID, limit int) (crmcontracts.ReportingEvaluation, crmcontracts.ReportingEvidence, error) {
+// EvaluateWithLargestEvidence evaluates a selection, or checks the receipt the
+// reader saw, and answers the largest rows behind one metric's reading from
+// that same snapshot. An empty metric, or one the selection does not read, has
+// no rows.
+func (s *Service) EvaluateWithLargestEvidence(ctx context.Context, selection crmcontracts.ReportingSelection, receipt *EvidenceExpectation, metric crmcontracts.ReportingMetricID, limit int) (crmcontracts.ReportingEvaluation, []crmcontracts.ReportingEvidenceRow, error) {
 	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
-		return crmcontracts.ReportingEvaluation{}, crmcontracts.ReportingEvidence{}, err
+		return crmcontracts.ReportingEvaluation{}, nil, err
 	}
 	var evaluation Evaluation
-	var evidence crmcontracts.ReportingEvidence
+	var evidence []crmcontracts.ReportingEvidenceRow
 	err := s.store.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		if receipt != nil {
@@ -341,8 +380,7 @@ func (s *Service) EvaluateWithEvidence(ctx context.Context, selection crmcontrac
 		}
 		for _, reading := range evaluation.Result.Metrics {
 			if reading.Id == metric {
-				ref := reading.Evidence
-				evidence, err = evidencePage(evaluation.Result.Context, evaluation.Facts, ref.Metric, ref.ContextId, textOrEmpty(ref.GroupKey), ref.Through, nil, limit)
+				evidence = largestNamedEvidence(evaluation.Result.Context, evaluation.Facts, reading.Evidence, limit)
 			}
 		}
 		return err

@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -131,13 +133,39 @@ func TestAnEmptyAssessmentDoesNotAskForReassurance(t *testing.T) {
 	}
 }
 
-// One assessment evaluates its selection once. Its candidates are the deals
-// the open pipeline's own drill-through lists. Beside one evaluation it reads
-// only the reader's language and the decisions on those deals.
+// seedRankedOpenDeals adds owned open deals of distinct amounts, smallest
+// first, and unowned ones larger than any. It answers every owned deal's id,
+// largest amount first and equal amounts by id.
+func seedRankedOpenDeals(t *testing.T, e *forecastEnv, start time.Time, company ids.UUID, equal map[string]ids.UUID) []string {
+	t.Helper()
+	seed := func(name string, owner *ids.UUID, amount int64) ids.UUID {
+		return e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, company_id, amount_minor, currency, status, created_at, expected_close_date, source, captured_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, 'EUR', 'open', $8, current_date + 30, 'manual', 'human:x')`,
+			name, e.pipeline, e.stages[pipelineTestStage], owner, company, amount, start.Add(-24*time.Hour))
+	}
+	ranked := []string{}
+	for _, amount := range []int64{20000, 30000, 40000, 50000, 60000, 70000, 80000} {
+		ranked = append(ranked, seed(fmt.Sprintf("Ranked %d", amount), &e.Rep1, amount).String())
+	}
+	slices.Reverse(ranked)
+	seed("Unowned large", nil, 900000)
+	seed("Unowned larger", nil, 990000)
+	tied := []string{}
+	for _, id := range equal {
+		tied = append(tied, id.String())
+	}
+	slices.Sort(tied)
+	return append(ranked, tied...)
+}
+
+// One assessment evaluates its selection once. Its candidates are the largest
+// open deals that name their owner. Beside one evaluation it reads only the
+// reader's language and the decisions on those deals.
 func TestTheSalesAssessmentEvaluatesItsSelectionOnce(t *testing.T) {
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
-	_, _, open := seedInitiativeDeals(t, e, start)
+	manufacturing, _, open := seedInitiativeDeals(t, e, start)
+	ranked := seedRankedOpenDeals(t, e, start, manufacturing, open)
 	ctx := initiativeManager(e)
 	at := start.Add(time.Hour)
 	service := newReportingService(e.Pool, func() time.Time { return at })
@@ -150,17 +178,7 @@ func TestTheSalesAssessmentEvaluatesItsSelectionOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	evaluated := meter.Cost().Statements
-	var drill crmcontracts.ReportingEvidenceRef
-	for _, metric := range evaluation.Metrics {
-		if metric.Id == reportingOpenPipeline {
-			drill = metric.Evidence
-		}
-	}
 	expectation := reporting.EvidenceExpectation{Key: evaluation.EvaluationKey, At: evaluation.Context.EvaluatedAt, FrameworkRevision: evaluation.Context.FrameworkRevision}
-	evidence, err := service.Evidence(ctx, selection, drill.Metric, drill.ContextId, "", nil, nil, assessmentCandidates, expectation)
-	if err != nil {
-		t.Fatal(err)
-	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		t.Fatal("the manager has no actor")
@@ -169,16 +187,12 @@ func TestTheSalesAssessmentEvaluatesItsSelectionOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{}
-	for _, row := range evidence.Rows {
-		want = append(want, row.SourceId.String())
-	}
 	got := []string{}
 	for _, candidate := range in.Candidates {
 		got = append(got, candidate.ID)
 	}
-	if len(want) != len(open) || !slices.Equal(got, want) {
-		t.Fatalf("the candidates are %v, want the drill-through's %v for the %d open deals", got, want, len(open))
+	if want := ranked[:assessmentCandidates]; !slices.Equal(got, want) {
+		t.Fatalf("the candidates are %v, want the %d largest owned open deals %v", got, assessmentCandidates, want)
 	}
 
 	metered, meter = database.WithStatementMeter(ctx)
