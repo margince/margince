@@ -145,6 +145,28 @@ export function zoneNameAndOffset(
     .join(" · ");
 }
 
+/** The zone a wire instant was read on, named and offset in the reader's language. */
+export function zoneLabelAt(at: string, zone: string, locale: Locale): string {
+  return zoneNameAndOffset(locale, new Date(at), zone);
+}
+
+// A zone's name in every season, "Central European Time", in the reader's
+// language. `at` picks the era, since a zone's rules change over the years.
+export function zoneNameAllYear(
+  at: string,
+  zone: string,
+  locale: Locale,
+): string {
+  if (!isRenderableZone(zone)) return zone;
+  const name = dateTimeFormat(locale, {
+    timeZone: zone,
+    timeZoneName: "longGeneric",
+  })
+    .formatToParts(new Date(at))
+    .find((piece) => piece.type === "timeZoneName")?.value;
+  return name?.replace("GMT", "UTC") ?? zone;
+}
+
 // A function, so a change of zone is read on the next call. A runtime that
 // reports no zone gets UTC, since Intl throws on an empty one.
 export function browserZone(): string {

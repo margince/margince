@@ -40,6 +40,10 @@ export const companyZoneSites: { file: string; why: string }[] = [
     "reporting.targets.tsx",
     "reporting.versions.tsx",
   ].map((name) => ({ file: `features/analytics/${name}`, why: REPORTING })),
+  {
+    file: "features/analytics/goals.tsx",
+    why: "A goal plan's months are the company's reporting months, so the times its history was changed read on that clock, and the history names the zone once.",
+  },
   { file: "features/companies/companies.hierarchy.tsx", why: REPORTING },
   {
     file: "design-system/boardtotals.tsx",

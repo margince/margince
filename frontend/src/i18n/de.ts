@@ -959,6 +959,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.targetStatus": "Zielstatus",
   "reporting.activeTargets": "Aktive Ziele",
   "reporting.allTargets": "Alle Ziele",
+  "reporting.retiredTargets": "Stillgelegte Ziele",
   "reporting.noTargetsYet":
     "Noch ist kein Ziel festgelegt. Ziele legen die Teamleitung, die Geschäftsleitung oder ein Admin fest.",
   "reporting.periodYear": "Jahr",
@@ -1387,7 +1388,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.setup.unusedItem": "„{phrase}“: {reason}",
   "reporting.setup.fieldName": "Name",
   "reporting.setup.fieldCountry": "Land",
-  "reporting.setup.fieldMetric": "Kennzahl",
   "reporting.setup.fieldChart": "Diagramm",
   "reporting.describeInitiative": "Initiative beschreiben",
   "reporting.describeInitiativeHint":
@@ -1473,9 +1473,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Öffnet die Umsatzübersicht für ein Produkt. Es ist nichts einzurichten, und nichts wird geschrieben.",
   "reporting.noProducts":
     "Noch keine aktiven Produkte. Erstelle Produkte in den Einstellungen, um darüber zu berichten.",
-  "reporting.actualsThrough": "Ist-Werte bis {at}",
+  "reporting.actualsThrough": "Ist-Werte bis {at} · {zone}",
   "reporting.periodNotStarted":
-    "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",
+    "Der Zeitraum beginnt am {at} ({zone}); darin ist noch nichts geschehen",
   "reporting.writtenNoneWon": "Kein Umsatz gewonnen im Zeitraum {period}.",
   "reporting.writtenWon": "Gewonnen im Zeitraum {period}: {amount}.",
   "reporting.writtenTarget":
@@ -1727,6 +1727,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.blocks": "Diagramme und Reihenfolge",
   "reporting.metricUnavailable": "Kennzahl nicht mehr verfügbar",
   "reporting.metrics": "Kennzahlen",
+  "reporting.metric": "Kennzahl",
   "reporting.cancel": "Abbrechen",
   "reporting.saved": "Bericht gespeichert",
   "reporting.live": "Aktueller Bericht",
@@ -2908,6 +2909,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "shell.railAria": "Hauptnavigation",
   "shell.skipToContent": "Zum Inhalt springen",
+  "shell.pageLoading": "{page}: wird geladen…",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
@@ -9438,7 +9440,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.meetingsNoShow": "Nicht erschienen",
   "analytics.meetingsCanceled": "Abgesagt",
   "analytics.outcomesOwnLensOnly":
-    "Dieser Bereich misst die Datensätze eines einzelnen Nutzerkontos. Die breiteren Bereiche decken den Rest der Sicht ab.",
+    "Dieser Bereich zählt die eigenen Datensätze eines einzelnen Mitglieds.",
   "analytics.reportWinLoss": "Gewonnen und verloren",
   "analytics.reportLossEvents": "Jeder Verlust einzeln",
   "analytics.reportStageAge": "Verweildauer je Phase",
@@ -11276,7 +11278,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.capture_confidentiality_verdict":
     "Vertraulichkeitsprüfung von E-Mails",
   "jobs.kind.capture_counterparty_verdict": "Prüfung der Absendeadressen",
-  "jobs.kind.capture_digest": "Morgendliche E-Mail-Zusammenfassung",
   "jobs.kind.capture_enrich": "Kontaktdaten aus Signaturen",
   "jobs.kind.captured_deal_refile": "Erfasste Aktivitäten zu Deals zuordnen",
   "jobs.kind.captured_deal_refile_sweep":
@@ -15145,7 +15146,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.scopeAriaMixed":
     "Einstellungen auf dieser Seite betreffen unterschiedliche Personen. Jede Einstellung nennt, wen sie betrifft.",
   "settings.readOnlyPageTitle": "Schreibgeschützte Einstellungen",
-  "settings.pageLoading": "{page} wird geladen…",
   "settings.readOnlyPage": "Deine Rolle darf diese Einstellungen nicht ändern.",
   "settings.seatRefused":
     "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",
@@ -23991,6 +23991,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.chipIndustry": "Branche: {name}",
   "analytics.overview.chipBasis": "Wert: {basis}",
   "analytics.overview.profileCompany": "Unternehmensumsatz",
+  "analytics.overview.profileTeam": "Teamumsatz",
+  "analytics.overview.profileSeller": "Umsatz eines Teammitglieds",
   "analytics.overview.profileProduct": "Produktumsatz",
   "analytics.overview.removeFilter": "{filter} entfernen",
   "analytics.intervention.scope":
@@ -24431,7 +24433,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.closedRevenue": "Gewonnener Umsatz",
   "progress.goal": "Ziel",
   "progress.goalLine": "Ziel für den Zeitraum: {goal}",
-  "progress.figuresUpTo": "Zahlen bis {cutoff}",
+  "progress.figuresUpTo": "Zahlen bis {cutoff} · {zone}",
   "progress.ofGoalLine": "Ziel von {goal}",
   "progress.toGo": "Noch {amount} offen",
   "progress.noGoalFor": "Für {period} ist kein Umsatzziel veröffentlicht.",
@@ -24464,8 +24466,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.readings": "Umsatzwerte",
   "progress.productSales": "Produktverkäufe",
   "progress.serviceSales": "Services und Projekte",
-  "progress.planned": "Offene Pipeline",
-  "progress.plannedAt": "Offene Deals, Stand {at}",
+  "progress.planned": "Offene Pipeline mit Abschluss im Zeitraum",
+  "progress.plannedAt": "Offene Deals, Stand {at} · {zone}",
   "progress.scenarios": "Wo der Monat enden kann",
   "progress.scenario.worst": "Schlechtester Fall",
   "progress.scenario.worstWhy": "Wenn nichts mehr abschließt",
@@ -24554,6 +24556,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.history.what": "Änderung",
   "goals.history.reason": "Grund",
   "goals.history.when": "Wann",
+  "goals.history.zone": "Zeiten in {zone}",
   "goals.event.draft": "{name} hat einen Entwurf gespeichert",
   "goals.event.published": "{name} hat die Ziele veröffentlicht",
   "goals.event.discarded": "{name} hat den Entwurf verworfen",

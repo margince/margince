@@ -219,6 +219,8 @@ export function useExitAsking(): AskThen {
 /**
  * Holds `children` on their address while a draft is unsaved, and asks before
  * leaving. Stay hands `onKeep` the depth stamp of the entry that address was on.
+ * `children` learns whether the question is open, so the frame can tell a held
+ * page from one still loading.
  */
 export function UnsavedGuard<Address extends string>({
   address,
@@ -229,7 +231,7 @@ export function UnsavedGuard<Address extends string>({
   address: Address;
   onKeep: (address: Address, depth: number | undefined) => void;
   samePlace?: (one: Address, other: Address) => boolean;
-  children: (address: Address) => ReactNode;
+  children: (address: Address, asking: boolean) => ReactNode;
 }>) {
   const registry = useUnsavedRegistry(null);
   // The address whose content is on screen. It follows `address` freely until a
@@ -239,10 +241,8 @@ export function UnsavedGuard<Address extends string>({
   const dirty = registry.dirty;
   useBeforeUnload(dirty);
 
-  // Catching up is not a state change, so it happens during render rather than
-  // in an effect: an effect would paint the OLD content for one frame against
-  // the NEW page heading the shell has already swapped, which reads as the page
-  // half-navigating.
+  // Not in an effect: there catching up is an urgent update. A page whose code
+  // is still loading would then drop to the loading body instead of waiting.
   if (
     address !== shown.address &&
     (!dirty || samePlace(address, shown.address))
@@ -265,7 +265,7 @@ export function UnsavedGuard<Address extends string>({
 
   return (
     <UnsavedContext.Provider value={registry}>
-      {children(shown.address)}
+      {children(shown.address, asking)}
       <LeaveQuestion
         open={asking || exit !== null}
         savers={registry.savers}
