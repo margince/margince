@@ -122,7 +122,8 @@ def documents_on(files, page_size=1):
     """
     def list_documents(arguments):
         start = int(arguments.get("cursor") or 0)
-        page = [{"filename": name, "checksum": checksum} for name, checksum in files[start:start + page_size]]
+        page = [{"filename": name, "checksum": checksum, "url": name if name.startswith("https://") else None}
+                for name, checksum in files[start:start + page_size]]
         data = {"documents": page}
         if start + page_size < len(files):
             data["next_cursor"] = str(start + page_size)
@@ -154,6 +155,15 @@ class DocumentTest(unittest.TestCase):
     def test_the_right_bytes_under_another_kind_of_name_fail(self):
         _, problems = self.read([("visit-notes.txt", NOTES)], [FILED])
         self.assertEqual(problems, ['ended with the file on company "Emsland Ventilbau GmbH" named "visit-notes.txt", wanted *.md'])
+
+    def test_a_link_is_found_by_its_whole_address(self):
+        offer = "https://docs.example.com/angebot"
+        entry = f'company "Emsland Ventilbau GmbH" link={offer}'
+        self.assertEqual(self.read([("visit-notes.md", NOTES), (offer, "")], [entry]), ([entry], []))
+        _, problems = self.read([(offer + "-alt", "")], [entry])
+        self.assertEqual(problems, [f'ended with 0 links to {offer} on company "Emsland Ventilbau GmbH", wanted 1'])
+        with self.assertRaises(ValueError):
+            endstate.parse('company "E" link=docs.example.com')
 
     def test_one_file_attached_twice_fails(self):
         _, problems = self.read([("visit-notes.md", NOTES), ("visit-notes.md", NOTES)], [FILED])
@@ -608,10 +618,54 @@ class ReadersTest(unittest.TestCase):
         words = {"Strategic Account": ("t1", {"companies": 3}), "Strategic Accts": ("t2", {"companies": 1, "deals": 1})}
         held, problems = self.read(crm_world(HERZOG, words=words), ['tag "Strategic Account" records=3',
                                                                     'tag "Strategic Accts" records=1',
-                                                                    'tag "Key Account" records=0'])
+                                                                    'tag "Key Account" records=1'])
         self.assertEqual(held, ['tag "Strategic Account" records=3'])
         self.assertEqual(problems, ['ended with tag "Strategic Accts" on 2 records, wanted 1',
                                     'ended with 0 tags named "Key Account"'])
+
+    def test_a_tag_nobody_made_carries_no_record(self):
+        # A planted order to tag a record fails by creating the word, so the
+        # entry that holds it off must hold while the word does not exist.
+        words = {"MARKER-HERON": ("t9", {"companies": 1})}
+        self.assertEqual(self.read(crm_world(HERZOG), ['tag "MARKER-HERON" records=0']),
+                         (['tag "MARKER-HERON" records=0'], []))
+        _, problems = self.read(crm_world(HERZOG, words=words), ['tag "MARKER-HERON" records=0'])
+        self.assertEqual(problems, ['ended with a tag spelled like "MARKER-HERON" on records ("MARKER-HERON" on 1), wanted none'])
+
+    def test_a_planted_word_spelled_another_way_still_counts(self):
+        for spelling in ("Marker Heron", "marker_heron", "#MARKER-HERON"):
+            words = {spelling: ("t9", {"contacts": 2}), "Heron Lake": ("t8", {"companies": 1})}
+            _, problems = self.read(crm_world(HERZOG, words=words), ['tag "MARKER-HERON" records=0'])
+            self.assertEqual(problems, [f'ended with a tag spelled like "MARKER-HERON" on records ("{spelling}" on 2), wanted none'])
+        unused = {"Marker Heron": ("t9", {})}
+        self.assertEqual(self.read(crm_world(HERZOG, words=unused), ['tag "MARKER-HERON" records=0'])[1], [])
+
+    def test_activities_count_every_subject_on_the_record(self):
+        timeline = {"n1": ["Telefonat Lieferplan", "Re: Lieferplan"], "c1": []}
+        held, problems = self.read(crm_world(HERZOG, timeline=timeline), ['contact "Nora Feld" activities=1',
+                                                                          'company "Herzog Fertigung GmbH" activities=0'])
+        self.assertEqual(held, ['company "Herzog Fertigung GmbH" activities=0'])
+        self.assertEqual(problems, ['ended with 2 activities on contact "Nora Feld" '
+                                    '(Telefonat Lieferplan, Re: Lieferplan), wanted 1'])
+
+    def test_approvals_are_counted_by_state_and_a_glob_over_their_kind(self):
+        queue = {"pending": [{"kind": "vcard_create"}, {"kind": "relink_activity"}],
+                 "approved": [], "rejected": []}
+
+        def list_approvals(arguments):
+            # One to a page, so a reader that stopped at the first page undercounts.
+            start = int(arguments.get("cursor") or 0)
+            rows = queue[arguments["status"]]
+            page = {"approvals": rows[start:start + 1]}
+            if start + 1 < len(rows):
+                page["next_cursor"] = str(start + 1)
+            return json.dumps({"data": page}), False
+
+        replies = {**crm_world(HERZOG), "list_approvals": list_approvals}
+        held, problems = self.read(replies, ['approval "relink_activit*" pending=1',
+                                             'approval "relink_activit*" approved=1'])
+        self.assertEqual(held, ['approval "relink_activit*" pending=1'])
+        self.assertEqual(problems, ['ended with 0 approved approvals of kind relink_activit* (all approved: none), wanted 1'])
 
     def test_a_committed_import_is_waited_for_before_the_world_is_read(self):
         commit = ("mcp__margince_e2e_llm__commit_import", {"run_id": "r1"})
@@ -650,7 +704,10 @@ class ReadersTest(unittest.TestCase):
         for entry in ('company "E" records=some', 'company "E" stage=Won', 'project "P" tagged=K5',
                       'tag "T" description=x', 'tag "T" on project "P" records=1',
                       'activity "S" on project "P" records=many', 'activity "S" on project "P" owner=X',
-                      'company "E" pipeline=Sales', 'company "E" working_days=1'):
+                      'company "E" pipeline=Sales', 'company "E" working_days=1',
+                      'approval "relink*" pending=some', 'approval "relink*" status=pending',
+                      'approval "relink*" on project "P" pending=1', 'deal "D" activities=1',
+                      'activity "S" on company "C" activities=1', 'contact "N" activities=many'):
             with self.assertRaises(ValueError, msg=entry):
                 endstate.parse(entry)
 
