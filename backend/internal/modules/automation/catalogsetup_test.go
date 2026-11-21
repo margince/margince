@@ -4,8 +4,11 @@
 package automation
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestEveryCatalogTemplateHasSummarySetupPreviewAndAnAction(t *testing.T) {
@@ -34,4 +37,37 @@ func TestEveryCatalogTemplateHasSummarySetupPreviewAndAnAction(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNoStarterShipsOnWhileItNeedsSetup(t *testing.T) {
+	for _, entry := range Catalog() {
+		if !entry.Seeded {
+			continue
+		}
+		t.Run(entry.Key, func(t *testing.T) {
+			seeded := Automation{Key: entry.Key, Params: json.RawMessage(`{}`)}
+			state := configurationOf(seeded, false).State
+			if state == crmcontracts.AutomationSetupStateNeedsSetup && seededEnabled(entry) {
+				t.Fatal("a starter that needs setup must be seeded paused")
+			}
+		})
+	}
+}
+
+func TestSeededStartersAreOnOnlyWhenSetupIsComplete(t *testing.T) {
+	if seededEnabled(mustEntry(t, renewalReminderName)) {
+		t.Fatal("the renewal starter needs a record type and a date field, so it must start paused")
+	}
+	if !seededEnabled(mustEntry(t, routeLeadName)) {
+		t.Fatal("a starter with no required setting must start on")
+	}
+}
+
+func mustEntry(t *testing.T, key string) CatalogEntry {
+	t.Helper()
+	entry, ok := CatalogEntryByKey(key)
+	if !ok {
+		t.Fatalf("catalog has no %s", key)
+	}
+	return entry
 }
