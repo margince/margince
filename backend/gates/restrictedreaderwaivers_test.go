@@ -14,7 +14,7 @@ var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/activities/systemtaskopen.go:SourceFiledOnTx":                     "System-only. Answers the id of an activity under one source key that is linked to one record, as the replay lookup does, and no content. A held row must count too, or its record gets a second task or summary.",
 	"internal/modules/activities/capturelabelrename.go:activitiesToInspectTx":           activityCorrectionMetadata,
 	"internal/modules/activities/capturelabelrename.go:CountActivitiesToInspect":        activityCorrectionMetadata,
-	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupFrom":                mailCopyGroupReader,
+	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupBoundedFrom":         mailCopyGroupReader,
 	"internal/modules/consent/noticesubjectwrote.go:SubjectMailFromSQL":                 subjectMailReader,
 	"internal/compose/noticesubjectwrote.go:NoticeCaseOpen.settleWhenSubjectWrote":      subjectMailReader,
 	"internal/modules/privacy/sarretainedcopies.go:sarThreadVerdictSection":             "The authorized subject-access export includes a held thread verdict only when its seen addresses name the requested subject. Exported addresses are reduced to that subject and the existing content-disclosure predicate still applies. Cost: a held message's classification can appear in its subject's export.",
