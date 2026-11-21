@@ -48,15 +48,15 @@ func (s *Store) PreviewLeadCreationForActor(ctx context.Context, in CreateLeadIn
 	if err != nil {
 		return out, err
 	}
-	active, err := s.activeColumns(ctx, leadEntity)
-	if err != nil {
-		return out, err
-	}
-	custom, err := storekit.CreateFieldValues(active, in.CustomFields)
-	if err != nil {
-		return out, err
-	}
 	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, leadEntity)
+		if err != nil {
+			return err
+		}
+		custom, err := storekit.CreateFieldValues(active, in.CustomFields)
+		if err != nil {
+			return err
+		}
 		existing, err := replayedLead(ctx, tx, in, active)
 		if err != nil {
 			return err

@@ -45,13 +45,11 @@ func (s *Store) RevertBundle(
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return out, err
 	}
-	// Before the transaction, as on the single path: the catalog reads
-	// through its own connection.
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return out, err
-	}
 	out.Abort = s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := lockBundle(ctx, tx, dealID, undos); err != nil {
 			return err
 		}

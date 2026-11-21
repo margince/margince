@@ -120,8 +120,7 @@ func (w *csvWriters) applyContact(
 	if given {
 		in.Phones = mergedPhones
 	}
-	_, err = w.contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id), in)
-	return err
+	return w.contacts.ApplyContactUpdate(ctx, ids.From[ids.ContactKind](id), in)
 }
 
 // contactEmailIsClaimed answers whether the estate already holds this row's

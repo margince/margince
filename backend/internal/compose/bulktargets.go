@@ -26,11 +26,15 @@ type bulkRow struct {
 	label   string
 	version int64
 	ownerID *ids.UUID
+	// Set by hold only; lock stays zero where the writer takes its own.
+	archived bool
+	lock     storekit.RowLock
 }
 
-// bulkTarget is one record type's share of a bulk change.
+// bulkTarget is one record type's share of a bulk change. hold locks every
+// row first, archived ones included, because an undo restores them.
 type bulkTarget interface {
-	hold(ctx context.Context, tx pgx.Tx, id ids.UUID) error
+	hold(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
 	lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
 }
 
@@ -44,6 +48,12 @@ type bulkRestoreSettler interface {
 // version is the one the caller was shown; the write is conditioned on it.
 type bulkReassigner interface {
 	reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error
+}
+
+// bulkHeldReassigner is a reassignment that writes on the lock hold took
+// instead of locking the row a second time.
+type bulkHeldReassigner interface {
+	reassignHeld(ctx context.Context, tx pgx.Tx, held storekit.RowLock, owner ids.UserID, version int64) error
 }
 
 // bulkArchiver is the share of a record type that has a single-record archive.
@@ -142,6 +152,10 @@ func (t dealBulkTarget) lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkR
 
 func (t dealBulkTarget) reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error {
 	return t.store.ReassignDealTx(ctx, tx, ids.From[ids.DealKind](id), owner, &version)
+}
+
+func (t dealBulkTarget) reassignHeld(ctx context.Context, tx pgx.Tx, held storekit.RowLock, owner ids.UserID, version int64) error {
+	return t.store.ReassignHeldDealTx(ctx, tx, held, owner, &version)
 }
 
 func (t dealBulkTarget) archive(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64) error {

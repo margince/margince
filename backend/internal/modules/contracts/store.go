@@ -100,24 +100,24 @@ type Store struct {
 	// catalog is the fieldcatalog seam (custom-field columns); nil means no
 	// catalog is wired and every read and write runs core-columns-only, which
 	// is the supported shape for a deployment that never mounted the module.
-	catalog fieldcatalog.Reader
+	catalog storekit.FieldCatalog
 }
 
 // WithFieldCatalog wires the workspace custom-field catalog into this store.
 // Compose injects modules/customfields' Service; contracts may not import that
 // module, so the seam is the edge (ADR-0054 §3).
-func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+func (s *Store) WithFieldCatalog(catalog storekit.FieldCatalog) *Store {
 	s.catalog = catalog
 	return s
 }
 
-// catalogColumns answers the active custom-field columns for a contract, or
-// none when no catalog is wired.
-func (s *Store) catalogColumns(ctx context.Context) ([]fieldcatalog.Column, error) {
+// catalogColumnsIn answers the active custom-field columns for a contract on
+// the transaction the store's entry point opened, or none when no catalog is wired.
+func (s *Store) catalogColumnsIn(ctx context.Context, tx pgx.Tx) ([]fieldcatalog.Column, error) {
 	if s.catalog == nil {
 		return nil, nil
 	}
-	return s.catalog.ActiveColumns(ctx, contractObject)
+	return s.catalog.ActiveColumnsIn(ctx, tx, contractObject)
 }
 
 // TimezoneFunc answers the installation's IANA timezone name inside a
@@ -276,15 +276,15 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 
 // GetContract reads one agreement.
 func (s *Store) GetContract(ctx context.Context, id ids.ContractID) (crmcontracts.Contract, error) {
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Contract{}, err
-	}
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	var out crmcontracts.Contract
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err

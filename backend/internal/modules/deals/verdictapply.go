@@ -136,16 +136,16 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return VerdictResult{}, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return VerdictResult{}, err
-	}
 	result := VerdictResult{Outcomes: make([]string, len(in.Changes))}
 	outcomes := result.Outcomes
 	for i := range outcomes {
 		outcomes[i] = VerdictDroppedStale
 	}
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		ctx, held, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
 		if err != nil {
 			return err

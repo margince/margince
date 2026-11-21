@@ -131,15 +131,15 @@ func (s *Store) disposeMerge(ctx context.Context, id ids.UUID, row DedupeCandida
 	if err := auth.Require(ctx, row.EntityType, principal.ActionUpdate); err != nil {
 		return err
 	}
-	active, err := s.activeColumns(ctx, row.EntityType)
-	if err != nil {
-		return err
-	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, row.EntityType)
+		if err != nil {
+			return err
+		}
 		// A company merge takes the name lock before the pair row, the order
 		// every company write keeps: a domain claim holding the name lock while
 		// it files this same pair would otherwise wait on the row this merge

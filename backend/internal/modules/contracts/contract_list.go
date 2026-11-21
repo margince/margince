@@ -47,13 +47,13 @@ func (s *Store) ListCompanyContracts(ctx context.Context, in ListContractsInput)
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.ContractListResponse{}, err
-	}
 
 	var out crmcontracts.ContractListResponse
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		// Naming the account is a read of it: a caller who cannot see the
 		// company does not learn how many agreements it holds.
 		if err := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID); err != nil {
@@ -100,12 +100,12 @@ func (s *Store) readDealContracts(ctx context.Context, dealID ids.DealID, contra
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.ContractListResponse{}, err
-	}
 	var out crmcontracts.ContractListResponse
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureLinkTarget(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
@@ -224,16 +224,8 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	if err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
-	// NO catalog fetch here, deliberately. This runs INSIDE a transaction the
-	// caller opened — the 360 assembly holds one across every section — and the
-	// catalog reader opens a second transaction of its own to answer. On a pool
-	// with one connection, or a busy one, that waits for a connection this
-	// caller is itself holding, which is a deadlock rather than a slow page.
-	//
-	// The cost is that the project page's contract rows carry no custom values.
-	// That is the right trade for a compact section listing title, value and
-	// dates: the full record is one click away and reads them through the
-	// handler path, which fetches the catalog before it opens anything.
+	// No custom values here. The project page's section lists title, value and
+	// dates, and the full record is one click away.
 	var active []fieldcatalog.Column
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

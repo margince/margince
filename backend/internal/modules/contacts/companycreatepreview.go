@@ -36,11 +36,11 @@ func (s *Store) PreviewCompanyCreationForActor(ctx context.Context, in CreateCom
 	if _, err := s.readyCompanyCreate(creatorCtx, &in); err != nil {
 		return out, err
 	}
-	active, err := s.activeColumns(ctx, companyEntity)
-	if err != nil {
-		return out, err
-	}
-	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, companyEntity)
+		if err != nil {
+			return err
+		}
 		owner, err := storekit.NewRecordOwnerWithDefault(ctx, tx, in.OwnerID, storekit.OwnerOrActor(creatorCtx))
 		if err != nil {
 			return err
