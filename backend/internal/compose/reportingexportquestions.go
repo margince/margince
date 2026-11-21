@@ -93,7 +93,8 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 }
 
 // answerMoney reads a money measure the way the screen does. A converted
-// amount is in the base currency. A native one is in its row's own currency.
+// amount, one with a coverage count, is in the base currency. A native one is
+// in its row's own currency.
 type answerMoney struct {
 	spec reportSpec
 	base string
@@ -112,7 +113,7 @@ func (m answerMoney) of(measure analyticsquery.Measure, row map[string]any) (uni
 		}
 		return reportingMoney, own, "ok"
 	}
-	if !strings.HasSuffix(measure.Field, "_minor") {
+	if _, converted := m.spec.sumCoverage[measure.Field]; !converted {
 		return "", "", "ok"
 	}
 	if m.base == "" {

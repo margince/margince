@@ -6,12 +6,14 @@ package compose
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -36,24 +38,22 @@ func TestReportingCSVNamesACurrencyOnlyForMoney(t *testing.T) {
 	}
 }
 
-// A spreadsheet reader sees the name the page shows, in the reading's language;
-// the id stays in the metric column for a machine.
-func TestReportingCSVLabelsAHeadlineWithTheCatalogName(t *testing.T) {
-	sales := float64(2160000)
+// An edition captured in English names its metric as the German reader's
+// screen does. The id and a frozen caption stay as written.
+func TestAnEditionFileNamesItsMetricsAsTheReadersCatalogDoes(t *testing.T) {
 	reader := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{string(recordTypeDeal): {Read: true}}}})
 	catalog, err := metricEvaluator{}.Catalog(reader, textlang.German)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var evaluation crmcontracts.ReportingEvaluation
-	german := string(textlang.German)
-	evaluation.Context.ProseLanguage = &german
-	evaluation.Metrics = []crmcontracts.ReportingMetric{{Id: reportingBookingsWon, Unit: reportingMoney, Value: &sales}}
-	rows := reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context))
-	metric, label := slices.Index(rows[0], "metric"), slices.Index(rows[0], "label")
 	shown := catalog.Metrics[slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == reportingBookingsWon })].Label
-	if rows[1][metric] != reportingBookingsWon || rows[1][label] != shown || shown != "Gewonnener Umsatz" {
-		t.Fatalf("headline row %v, catalog label %q", rows[1], shown)
+	var edition crmcontracts.ReportingEdition
+	edition.Evaluation.Context.ProseLanguage = new("en")
+	edition.Evaluation.Metrics = []crmcontracts.ReportingMetric{{Id: reportingBookingsWon, Unit: reportingCountUnit}}
+	edition.Evaluation.Charts = []crmcontracts.ReportingChart{{Metric: reportingBookingsWon, Kind: reportingOwnerAttainment, Points: []crmcontracts.ReportingPoint{{Key: "k", Label: "Frozen caption"}}}}
+	raw, err := editionCSV(edition, langcopy.For(string(textlang.German)))
+	if err != nil || shown != "Gewonnener Umsatz" || !strings.Contains(string(raw), "bookings_won,headline,"+shown+",") || !strings.Contains(string(raw), ",Frozen caption,") {
+		t.Fatalf("the German reader's file is %q (%v), the catalog says %q", raw, err, shown)
 	}
 }
 

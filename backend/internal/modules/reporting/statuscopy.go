@@ -8,9 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -35,17 +33,6 @@ func (s *Service) readerCopy(ctx context.Context, tx pgx.Tx) langcopy.Spoken {
 		return s.statusCopy(ctx, tx)
 	}
 	return langcopy.For(string(s.reader(ctx, tx)))
-}
-
-// ReaderLanguage is readerCopy in a transaction of its own. An edition file the
-// caller downloads names catalog entries in it, as the catalog on their screen does.
-func (s *Service) ReaderLanguage(ctx context.Context) (langcopy.Spoken, error) {
-	var out langcopy.Spoken
-	if err := auth.Require(ctx, "report_edition", principal.ActionRead); err != nil {
-		return out, err
-	}
-	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error { out = s.readerCopy(ctx, tx); return nil })
-	return out, err
 }
 
 func (s *Service) statusCopy(ctx context.Context, tx pgx.Tx) langcopy.Spoken {

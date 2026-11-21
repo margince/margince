@@ -9,7 +9,6 @@ package compose
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 )
@@ -71,11 +70,15 @@ func (s reportSpec) perRowCurrency(measure string) *analyticsquery.PerRowCurrenc
 
 // perRowMoneySQL reads the measure's own SQL, never its name, so a new money
 // measure is covered under any name. It is money in each row's currency when
-// it reads a minor-unit column and converts nothing to the base currency.
+// it reads a minor-unit column and never looks up a rate to the base currency.
 func perRowMoneySQL(expression string) bool {
-	return minorUnitColumn.MatchString(expression) && !strings.Contains(expression, reportBaseCurrencyToken)
+	return minorUnitColumn.MatchString(expression) && !baseConversion.MatchString(expression)
 }
 
-// minorUnitColumn is a column holding an amount in minor units. The schema
-// names every such column `*_minor`.
+// minorUnitColumn is an amount in its row's currency. It leaves out the
+// `*_minor_base` column, which already holds the base-currency amount.
 var minorUnitColumn = regexp.MustCompile(`\b[a-z_]+_minor\b`)
+
+// baseConversion is the rate lookup deals.BaseValueSQL converts through. Naming
+// the base currency alone converts nothing, as a filter on it shows.
+var baseConversion = regexp.MustCompile(`(?i)\bfrom\s+fx_rate\b`)

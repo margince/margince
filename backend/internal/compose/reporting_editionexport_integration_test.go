@@ -39,11 +39,6 @@ func exportedEditionRows(reader context.Context, t *testing.T, q *questionEditio
 	return out
 }
 
-func exportedQuestionRows(reader context.Context, t *testing.T, q *questionEditions, edition crmcontracts.ReportingEdition) [][]string {
-	t.Helper()
-	return exportedEditionRows(reader, t, q, edition, "question:open-deals")
-}
-
 // The edition's export carries the kept answer, judged for whoever downloads
 // it as the screen judges it. The sender gets the count. A reader who may not
 // ask the question gets only that it was withheld.
@@ -52,7 +47,7 @@ func TestAnEditionExportCarriesItsKeptAnswers(t *testing.T) {
 	q.keepForAYear(t)
 	edition := q.send(t)
 
-	sent := exportedQuestionRows(q.human, t, q, edition)
+	sent := exportedEditionRows(q.human, t, q, edition, "question:open-deals")
 	if len(sent) != 1 || sent[0][3] != "7" || sent[0][9] != "deals" || sent[0][10] != "ok" {
 		t.Fatalf("the sender's export carries %q, want the kept count of 7", sent)
 	}
@@ -62,7 +57,7 @@ func TestAnEditionExportCarriesItsKeptAnswers(t *testing.T) {
 	for _, object := range []string{"report_definition", "report_edition"} {
 		actor.Permissions.Objects[object] = principal.ObjectGrant{Read: true}
 	}
-	narrow := exportedQuestionRows(principal.WithActor(reader, actor), t, q, edition)
+	narrow := exportedEditionRows(principal.WithActor(reader, actor), t, q, edition, "question:open-deals")
 	if len(narrow) != 1 || narrow[0][3] != "" || narrow[0][10] != "withheld" {
 		t.Fatalf("the narrower reader's export carries %q, want one withheld row and no value", narrow)
 	}

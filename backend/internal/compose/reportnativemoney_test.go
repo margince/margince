@@ -38,15 +38,21 @@ func TestTheCurrencyRuleSeesEveryMoneyMeasure(t *testing.T) {
 	}
 }
 
-// A money measure under a name that does not say so is refused across
-// currencies all the same. Its converted twin is not.
+// A money measure is refused across currencies under any name, and when its
+// SQL only names the base currency. Its converted twin is not refused.
 func TestTheCurrencyRuleReadsTheSQLNotTheName(t *testing.T) {
 	t.Parallel()
-	spec := prebuiltReports["open-deals-per-company"]
+	spec, ok := prebuiltReports["open-deals-per-company"]
+	if !ok {
+		t.Fatal("open-deals-per-company is not in the catalog")
+	}
 	spec.measures = maps.Clone(spec.measures)
 	spec.measures["deal_value"] = colAmountMinor
-	if refuseUngroupedNativeMoney(spec, nil, nil, []reportAggregate{{Fn: aggFnSum, Field: "deal_value"}}) == nil {
-		t.Error("a sum of the deal amount named deal_value was answered across currencies")
+	spec.measures["foreign_minor"] = "CASE WHEN t.currency <> " + reportBaseCurrencyToken + " THEN t.amount_minor END"
+	for _, measure := range []string{"deal_value", "foreign_minor"} {
+		if refuseUngroupedNativeMoney(spec, nil, nil, []reportAggregate{{Fn: aggFnSum, Field: measure}}) == nil {
+			t.Errorf("a sum of the deal amount as %s was answered across currencies", measure)
+		}
 	}
 	if err := refuseUngroupedNativeMoney(spec, nil, nil, []reportAggregate{{Fn: aggFnSum, Field: fieldAmountBaseMinor}}); err != nil {
 		t.Errorf("a sum converted to the base currency was refused: %v", err)
@@ -68,8 +74,7 @@ func TestTheCurrencyGateFailsAReportWithNoConvertedMeasure(t *testing.T) {
 	t.Parallel()
 	planted := prebuiltReports["open-deals-per-company"]
 	planted.measures = map[string]string{fieldAmountMinor: colAmountMinor}
-	escapes := moneyRuleEscapes(map[string]reportSpec{"planted": planted})
-	if len(escapes) == 0 {
+	if escapes := moneyRuleEscapes(map[string]reportSpec{"planted": planted}); len(escapes) == 0 {
 		t.Fatal("a report offering amount_minor and no amount_base_minor passed the gate")
 	}
 }

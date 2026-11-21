@@ -70,7 +70,7 @@ func TestAnEditionExportGuardsAQuestionsAlias(t *testing.T) {
 // A kept money measure is written with its unit and its one currency. Without
 // a single currency it has no value and says why.
 func TestAKeptMoneyMeasureStatesItsUnitAndCurrency(t *testing.T) {
-	native := answerMoney{spec: reportSpec{measures: map[string]string{fieldAmountMinor: colAmountMinor}}, base: "EUR"}
+	native := answerMoney{spec: prebuiltReports["open-deals-per-company"], base: "EUR"}
 	noBase := answerMoney{spec: native.spec}
 	sum := func(field string) analyticsquery.Measure {
 		return analyticsquery.Measure{Fn: analyticsquery.Sum, Field: field}
@@ -86,6 +86,7 @@ func TestAKeptMoneyMeasureStatesItsUnitAndCurrency(t *testing.T) {
 		"a converted amount in the base currency":  {native, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"money", "EUR", "ok"}},
 		"a converted amount with no base currency": {noBase, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"", "", "no_base_currency"}},
 		"a count of a money field":                 {native, analyticsquery.Measure{Fn: analyticsquery.CountAll, Field: fieldAmountMinor}, map[string]any{}, [3]string{"", "", "ok"}},
+		"a money-named measure with no coverage":   {noBase, sum("retired_minor"), map[string]any{}, [3]string{"", "", "ok"}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			unit, currency, coverage := tc.money.of(tc.measure, tc.row)

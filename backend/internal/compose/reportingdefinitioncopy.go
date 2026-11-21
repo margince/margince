@@ -26,12 +26,12 @@ var (
 	reportingComponentKindLabels = metriccopy.ComponentKindLabels
 )
 
-// reportingMetricName names a metric in said's language. An edition keeps no
+// reportingMetricName names a metric in the language of names. An edition keeps no
 // name, so a metric retired since it was captured says so.
-func reportingMetricName(said langcopy.Spoken, metric crmcontracts.ReportingMetricID) string {
+func reportingMetricName(names langcopy.Spoken, metric crmcontracts.ReportingMetricID) string {
 	name, ok := reportingMetricNames[metric]
 	if !ok {
 		name = reportingLabelWords.MetricRetired
 	}
-	return said.Say(name)
+	return names.Say(name)
 }

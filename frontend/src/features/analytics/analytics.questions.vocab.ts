@@ -61,8 +61,9 @@ function isEntityName(name: string): name is EntityName {
 /**
  * The money measures kept in each deal's OWN currency. Every other `_minor`
  * measure was converted into the base currency before it was summed.
- * Mirrors nativeMoney() in backend/internal/compose/reportnativemoney.go;
- * backend/gates/analyticsvocabularylabels_test.go holds the two equal.
+ * Mirrors the fields the served analytics vocabulary marks with a per-row
+ * `Currency` (backend/internal/compose/reportnativemoney.go reads it from each
+ * measure's SQL); backend/gates/analyticsvocabularylabels_test.go holds the two equal.
  */
 export const NATIVE_CURRENCY_MEASURES = [
   "amount_minor",
