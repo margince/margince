@@ -86,30 +86,42 @@ const SCRIPTS = [
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Bopomofo}]/u,
 ];
 
-// One script per label; a letter outside the listed scripts counts as its own.
-function singleScript(label: string): boolean {
+const LATIN = 0;
+
+// The one script a label's letters use: -1 for none, undefined when mixed or unlisted.
+function scriptOf(label: string): number | undefined {
   const seen = new Set<number>();
   for (const char of label) {
     if (!/\p{L}/u.test(char)) continue;
-    const index = SCRIPTS.findIndex((script) => script.test(char));
-    seen.add(index);
+    seen.add(SCRIPTS.findIndex((script) => script.test(char)));
   }
-  return seen.size <= 1 && !seen.has(-1);
+  if (seen.has(-1) || seen.size > 1) return undefined;
+  return seen.size === 0 ? -1 : [...seen][0];
 }
 
 function decodedLabel(label: string): string | undefined {
   if (!label.toLowerCase().startsWith("xn--")) return label;
   const decoded = decodeLabel(label.slice(4).toLowerCase());
-  if (decoded === undefined || !PLAIN.test(decoded) || !singleScript(decoded)) {
+  if (decoded === undefined || !PLAIN.test(decoded)) {
     return undefined;
   }
   return decoded;
 }
 
-// The Unicode form when every label decodes safely, else the stored form.
+// The Unicode form only when every label decodes safely and the domain reads in
+// one script: Latin, or one other script that its ending uses too. A non-Latin
+// name under a Latin ending can imitate a Latin one, so it keeps its stored form.
 export function displayDomain(domain: string): string {
   const labels = domain.split(".").map(decodedLabel);
-  return labels.every((label) => label !== undefined)
+  if (!labels.every((label) => label !== undefined)) return domain;
+  const scripts = labels.map(scriptOf);
+  if (scripts.some((script) => script === undefined)) return domain;
+  const used = new Set(scripts.filter((script) => script !== -1));
+  if (used.size === 0 || (used.size === 1 && used.has(LATIN))) {
+    return labels.join(".");
+  }
+  const ending = scripts[scripts.length - 1];
+  return used.size === 1 && ending !== LATIN && ending !== -1
     ? labels.join(".")
     : domain;
 }

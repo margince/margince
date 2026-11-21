@@ -27,4 +27,15 @@ describe("displayDomain", () => {
     const stored = `xn--${"9".repeat(40)}.de`;
     expect(displayDomain(stored)).toBe(stored);
   });
+
+  it("keeps punycode for a whole-script look-alike under a Latin ending", () => {
+    // Cyrillic "аррӏе" imitates "apple" under .com
+    const stored = "xn--80ak6aa92e.com";
+    expect(displayDomain(stored)).toBe(stored);
+    expect(displayDomain("xn--e1afmkfd.de")).toBe("xn--e1afmkfd.de");
+  });
+
+  it("shows a non-Latin name under an ending in the same script", () => {
+    expect(displayDomain("xn--e1afmkfd.xn--p1ai")).toBe("пример.рф");
+  });
 });
