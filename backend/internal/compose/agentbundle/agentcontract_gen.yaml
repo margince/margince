@@ -26801,7 +26801,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website]
+        enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website, email]
       description: The profile field's key — the same closed vocabulary `ContactProfileField.field` carries.
     ProfileFieldKey:
       name: field

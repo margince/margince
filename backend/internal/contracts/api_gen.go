@@ -29465,6 +29465,7 @@ func (e CapturedByKind) Valid() bool {
 const (
 	ContactProfileFieldKeyAddress     ContactProfileFieldKey = "address"
 	ContactProfileFieldKeyCompanyName ContactProfileFieldKey = "company_name"
+	ContactProfileFieldKeyEmail       ContactProfileFieldKey = "email"
 	ContactProfileFieldKeyFirstName   ContactProfileFieldKey = "first_name"
 	ContactProfileFieldKeyLastName    ContactProfileFieldKey = "last_name"
 	ContactProfileFieldKeyLinkedin    ContactProfileFieldKey = "linkedin"
@@ -29480,6 +29481,8 @@ func (e ContactProfileFieldKey) Valid() bool {
 	case ContactProfileFieldKeyAddress:
 		return true
 	case ContactProfileFieldKeyCompanyName:
+		return true
+	case ContactProfileFieldKeyEmail:
 		return true
 	case ContactProfileFieldKeyFirstName:
 		return true
