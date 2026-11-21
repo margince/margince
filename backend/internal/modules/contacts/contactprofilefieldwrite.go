@@ -190,12 +190,9 @@ type contactProfileFieldRow struct {
 
 // profileFieldValueKey is what tells two rows of one field apart.
 //
-// An email is a list keyed by the lowercased address. A phone is one too, so
-// each number is its own row keyed by its E.164 form —
-// the spelling contact_phone stores, so a number restated in another format
-// lands on its own row rather than beside it. Every other field holds one
-// answer and keys on the empty string, which the table's cardinality check
-// holds.
+// An email is a list keyed by the lowercased address. A phone is keyed by its
+// E.164 form, the spelling contact_phone stores, so a restated number lands on
+// its own row. Every other field keys on the empty string.
 func profileFieldValueKey(field, value string) string {
 	if field == fieldEmail {
 		return strings.ToLower(strings.TrimSpace(value))

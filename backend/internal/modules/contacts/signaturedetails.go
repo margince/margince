@@ -70,7 +70,7 @@ func contactAddressArguments(contactID ids.ContactID, a crmcontracts.Address) []
 }
 
 // withdrawSignatureAddress clears the address parts a signature's line filled,
-// while the contact still shows exactly those parts.
+// while the contact still shows those parts.
 func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, line string) error {
 	address, split := SplitAddressText(line)
 	if !split {
@@ -93,9 +93,8 @@ func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 }
 
 // applySignatureEmails adds each further address a signature lists as a
-// non-primary email of the contact, and reports how many landed. An address
-// any contact or lead already holds, an erased one, a seat's or a machine's
-// stays out: a signature never moves an address between records.
+// non-primary email of the contact, and reports how many landed. An address a
+// record already holds stays out, as do erased, seat and machine addresses.
 func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField) (int, error) {
 	if len(fields) == 0 {
 		return 0, nil
@@ -188,8 +187,8 @@ func withdrawSignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 }
 
 // fillEmployerStreetTx writes a signature's address onto the contact's one
-// current employer when the signature names that employer and the company
-// holds no address a user stated. It is a company mutation of its own.
+// current employer when the signature names that employer. The company must
+// hold no address a user stated. It is a company mutation of its own.
 func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, fields []SignatureField) error {
 	line, employerName := signatureValue(fields, fieldAddress), signatureValue(fields, fieldCompanyName)
 	if line == "" || employerName == "" {

@@ -64,8 +64,8 @@ func nameSet(names []string) map[string]bool {
 }
 
 // signatureRepeatedFields hold a list. A signature listing a German, a
-// Vietnamese and a Singapore number states three numbers, all current, and a
-// gate that kept the first would record one and lose two. Addresses likewise.
+// Vietnamese and a Singapore number states three numbers, all current. A gate
+// that kept the first would record one and lose two. Addresses likewise.
 var signatureRepeatedFields = map[string]bool{"phone": true, "email": true}
 
 const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone,

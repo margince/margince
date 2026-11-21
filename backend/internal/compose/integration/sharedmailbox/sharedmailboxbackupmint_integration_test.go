@@ -6,7 +6,7 @@
 package sharedmailbox
 
 // A shared mailbox with a backup owner judges an unknown sender by the same
-// ladder a seat's own mailbox does, and what it mints is the backup owner's.
+// ladder a seat's own mailbox does. What it mints is the backup owner's.
 
 import (
 	"context"
