@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/adminread"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -40,11 +41,11 @@ type captureHealthHandlers struct {
 
 // GetCaptureHealth reports what the judgement queues are holding.
 func (h captureHealthHandlers) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
-	if !admitHealthReader(w, r) {
+	if !adminread.AdmitHealthReader(w, r) {
 		return
 	}
 	now := h.now()
-	serveHealthReport(w, r, h.pool, "capture health",
+	adminread.ServeReport(w, r, h.pool, "capture health",
 		func(ctx context.Context, tx pgx.Tx) (crmcontracts.CaptureHealth, error) {
 			return readCaptureHealth(ctx, tx, now)
 		})

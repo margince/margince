@@ -247,6 +247,10 @@ func (stubs) GetSystemHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetSystemHealth")
 }
 
+func (stubs) GetVacuumRecommendations(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetVacuumRecommendations")
+}
+
 func (stubs) DownloadAgentSkillBundle(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DownloadAgentSkillBundle")
 }

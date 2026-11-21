@@ -1,0 +1,123 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strings"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// churnedTable creates a table of 20,000 rows, deletes the given share and analyzes it.
+// The statistics then describe the rows left, while the file keeps its size.
+func churnedTable(t *testing.T, e *apptest.AppEnv, deletePercent int) string {
+	t.Helper()
+	ctx := context.Background()
+	name := "vacuum_probe_" + strings.ReplaceAll(ids.NewV7().String(), "-", "")
+	var appRole string
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT current_user`).Scan(&appRole)
+	}); err != nil {
+		t.Fatalf("app role: %v", err)
+	}
+	table := pgx.Identifier{"public", name}.Sanitize()
+	for _, statement := range []string{
+		`CREATE TABLE ` + table + ` (id int PRIMARY KEY, body text NOT NULL)`,
+		`INSERT INTO ` + table + ` SELECT g, repeat('x', 200) FROM generate_series(1, 20000) g`,
+		fmt.Sprintf(`DELETE FROM %s WHERE id %% 100 < %d`, table, deletePercent),
+		`ANALYZE ` + table,
+		`GRANT SELECT ON ` + table + ` TO ` + pgx.Identifier{appRole}.Sanitize(),
+	} {
+		if _, err := e.Owner.Exec(ctx, statement); err != nil {
+			t.Fatalf("%s: %v", statement, err)
+		}
+	}
+	t.Cleanup(func() {
+		if _, err := e.Owner.Exec(context.Background(), `DROP TABLE `+table); err != nil {
+			t.Error(err)
+		}
+	})
+	return name
+}
+
+func vacuumReport(t *testing.T, e *apptest.AppEnv, limits vacuumhealth.Thresholds) crmcontracts.VacuumRecommendations {
+	t.Helper()
+	var out crmcontracts.VacuumRecommendations
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
+		var err error
+		out, err = vacuumhealth.Read(context.Background(), tx, clocktest.Now(t), limits)
+		return err
+	}); err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	return out
+}
+
+func vacuumListed(report crmcontracts.VacuumRecommendations, table string) *crmcontracts.VacuumRecommendation {
+	for i := range report.Tables {
+		if report.Tables[i].Table == table {
+			return &report.Tables[i]
+		}
+	}
+	return nil
+}
+
+// The test tables are a few megabytes, so the byte floor is lowered to one
+// megabyte; the share threshold is the shipped one.
+func TestATableWithMostRowsDeletedIsRecommendedAndALightlyChurnedOneIsNot(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	heavy := churnedTable(t, e, 60)
+	light := churnedTable(t, e, 5)
+	limits := vacuumhealth.Thresholds{MinWastePercent: vacuumhealth.Default.MinWastePercent, MinWasteBytes: 1 << 20}
+
+	report := vacuumReport(t, e, limits)
+	got := vacuumListed(report, heavy)
+	if got == nil {
+		t.Fatalf("a table with 60%% of its rows deleted is not recommended: %+v", report.Tables)
+	}
+	if got.WastePercent < 50 || got.WastePercent > 70 || got.WasteBytes < 1<<20 {
+		t.Fatalf("the estimate is off: %d%% of %d bytes, waste %d", got.WastePercent, got.TableBytes, got.WasteBytes)
+	}
+	if got.Statement != `VACUUM (FULL, ANALYZE) "public"."`+heavy+`";` || got.Owner == "" {
+		t.Fatalf("the advice to run is incomplete: %+v", got)
+	}
+	// With no byte floor, only the share keeps the lightly churned table off.
+	if lightly := vacuumListed(vacuumReport(t, e, vacuumhealth.Thresholds{MinWastePercent: limits.MinWastePercent}), light); lightly != nil {
+		t.Fatalf("a table with 5%% of its rows deleted is recommended: %+v", lightly)
+	}
+
+	limits.MinWasteBytes = 1 << 30
+	if over := vacuumListed(vacuumReport(t, e, limits), heavy); over != nil {
+		t.Fatalf("a table under the byte floor is recommended: %+v", over)
+	}
+}
+
+func TestOnlyAdminsAndOpsReadTheVacuumRecommendations(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var report crmcontracts.VacuumRecommendations
+	if status := e.Call(t, "GET", "/v1/admin/vacuum-recommendations", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("admin read: %d", status)
+	}
+	if report.MinWastePercent != vacuumhealth.Default.MinWastePercent || int64(report.MinWasteBytes) != vacuumhealth.Default.MinWasteBytes {
+		t.Fatalf("the report states thresholds it did not use: %+v", report)
+	}
+	assignSessionRole(t, e, "rep")
+	if status := e.Call(t, "GET", "/v1/admin/vacuum-recommendations", nil, nil, nil); status != http.StatusForbidden {
+		t.Fatalf("a rep read the recommendations: %d", status)
+	}
+}

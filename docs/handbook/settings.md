@@ -344,10 +344,10 @@ Moving to another view asks you to save a draft first. **Search settings** opens
 - **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
   **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.
 - **Restore drills**: when a restore was tested, if it passed, and how long it took against the targets. Whoever runs the installation records each test. Margince does not see backups; the card says "Not observed by Margince". The same readers as Background jobs see it.
+- **Table space**: below **Restore drills**. It lists each table where at least 20% of the file, and at least 100 MB, holds no live row. It shows the command to run and the role that must run it. Margince never runs the command: it holds a lock on the table until it ends, so run it in a set window.
 - **Reset data**: takes an installation back to how it was on its first start.
-  It deletes every record and setting, but keeps the company and its users, so
-  everyone can still sign in. It appears only where whoever runs the
-  installation has turned it on.
+  It deletes every record and setting, but keeps the company and its users, so everyone can still sign in.
+  It appears only where whoever runs the installation has turned it on.
 
 ### Review automatic Home work
 

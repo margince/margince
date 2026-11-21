@@ -11398,6 +11398,38 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.recoveryHealth": "Wiederherstellungstests",
   "settings.recoveryHealthSub":
     "Wann die Wiederherstellung aus dem Backup zuletzt getestet wurde und wie lange sie gedauert hat.",
+  "settings.vacuumHealth": "Tabellenspeicher",
+  "settings.vacuumHealthSub":
+    "Tabellen, deren Dateien viel Platz ohne lebende Zeilen enthalten. Margince führt die Bereinigung nicht selbst aus.",
+  "vacuumHealth.adminOnly":
+    "Der Tabellenspeicher betrifft die ganze Installation und braucht eine Berechtigung, die deine Rolle nicht hat.",
+  "vacuumHealth.thresholds":
+    "Eine Tabelle wird gelistet, wenn mindestens {percent} ihrer Datei und mindestens {size} keine lebende Zeile enthalten. Die Größen sind Schätzungen aus den Statistiken der Datenbank.",
+  "vacuumHealth.empty":
+    "Keine Tabelle hat so viel Platz ohne lebende Zeilen. Es ist nichts auszuführen.",
+  "vacuumHealth.unmeasured_one":
+    "{count} große Tabelle hat noch keine Statistiken und daher keine Schätzung. Die Datenbank erhebt sie bei der nächsten Analyse der Tabelle.",
+  "vacuumHealth.unmeasured_other":
+    "{count} große Tabellen haben noch keine Statistiken und daher keine Schätzung. Die Datenbank erhebt sie bei der nächsten Analyse jeder Tabelle.",
+  "vacuumHealth.col.table": "Tabelle",
+  "vacuumHealth.col.size": "Größe",
+  "vacuumHealth.col.waste": "Platz ohne lebende Zeilen",
+  "vacuumHealth.col.run": "Auszuführen",
+  "vacuumHealth.runAs": "Als {owner} ausführen.",
+  "vacuumHealth.copy": "Befehl kopieren",
+  "vacuumHealth.copied": "Kopiert",
+  "vacuumHealth.copyRemedy": "Markiere den Befehl und kopiere ihn von Hand.",
+  "vacuumHealth.howTitle": "So führst du es aus",
+  "vacuumHealth.step.window":
+    "Plane ein Wartungsfenster. VACUUM FULL sperrt die Tabelle, solange es läuft: Niemand kann sie bis zum Ende lesen oder ändern.",
+  "vacuumHealth.step.disk":
+    "Prüfe den freien Speicherplatz. Das Neuschreiben braucht Platz für eine neue Kopie der Tabelle und ihrer Indizes.",
+  "vacuumHealth.step.owner":
+    "Verbinde dich mit der Datenbank als die Rolle aus der Zeile. Diese Rolle besitzt die Tabelle; die Rolle, unter der Margince läuft, kann das nicht.",
+  "vacuumHealth.step.run":
+    "Führe den Befehl aus. Er erneuert auch die Statistiken, sodass die Tabelle beim nächsten Lesen von dieser Liste verschwindet.",
+  "vacuumHealth.repack":
+    "Ohne Sperre geht es mit dem Werkzeug pg_repack, das eine Tabelle neu schreibt, während sie in Gebrauch bleibt. Es muss auf dem Datenbankserver installiert sein.",
   "settings.automaticWork": "Automatische Arbeit",
   "settings.automaticWorkSub":
     "Was Margince jedem Teammitglied von selbst gegeben hat, und wie viel davon als „Nicht meins“ zurückkam.",

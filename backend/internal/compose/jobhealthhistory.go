@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/adminread"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -24,7 +25,7 @@ type jobHistoryCursor struct {
 }
 
 func (h jobHealthHandlers) GetJobHealthHistory(w http.ResponseWriter, r *http.Request, p crmcontracts.GetJobHealthHistoryParams) {
-	if !admitHealthReader(w, r) {
+	if !adminread.AdmitHealthReader(w, r) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), jobHealthReadTimeout)

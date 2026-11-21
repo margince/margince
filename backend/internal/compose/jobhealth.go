@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/adminread"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -146,7 +147,7 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 	// same reader the other two System health cards have — so the same ladder
 	// admits all three (adminhealth.go), which is where the ORDER of its rungs
 	// is stated once.
-	if !admitHealthReader(w, r) {
+	if !adminread.AdmitHealthReader(w, r) {
 		return
 	}
 	wsID, ok := principal.WorkspaceID(ctx)

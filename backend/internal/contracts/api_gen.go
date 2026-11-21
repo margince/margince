@@ -71725,6 +71725,44 @@ type VCardImportResult struct {
 // matches a contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
 
+// VacuumRecommendation defines model for VacuumRecommendation.
+type VacuumRecommendation struct {
+	// Owner The database role that owns the table. Only it can run the statement.
+	Owner  string `json:"owner"`
+	Schema string `json:"schema"`
+
+	// Statement The statement to run, with the names quoted.
+	Statement string `json:"statement"`
+	Table     string `json:"table"`
+
+	// TableBytes The size of the table's file, without its indexes.
+	TableBytes int `json:"table_bytes"`
+
+	// WasteBytes The estimated space in that file that holds no live row.
+	WasteBytes int `json:"waste_bytes"`
+
+	// WastePercent `waste_bytes` as a whole percent of `table_bytes`, rounded down.
+	WastePercent int `json:"waste_percent"`
+}
+
+// VacuumRecommendations The tables a full vacuum would shrink by enough to be worth a maintenance window. Sizes are
+// estimates from the statistics the database keeps for its query planner.
+type VacuumRecommendations struct {
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// MinWasteBytes The smallest empty space, in bytes, for a table to be listed.
+	MinWasteBytes int `json:"min_waste_bytes"`
+
+	// MinWastePercent The smallest share of a table's file, in percent, that must be empty for it to be listed.
+	MinWastePercent int `json:"min_waste_percent"`
+
+	// Tables The tables over both thresholds, most empty space first.
+	Tables []VacuumRecommendation `json:"tables"`
+
+	// UnmeasuredTables Tables large enough to qualify that have no statistics yet, so no estimate.
+	UnmeasuredTables int `json:"unmeasured_tables"`
+}
+
 // VoiceBuild defines model for VoiceBuild.
 type VoiceBuild struct {
 	ArchivedAt      *time.Time                `json:"archived_at"`
@@ -99944,6 +99982,9 @@ type ServerInterface interface {
 	// Scoped capability readings and evidence coverage for System health.
 	// (GET /admin/system-health)
 	GetSystemHealth(w http.ResponseWriter, r *http.Request)
+	// Which tables would win back enough space from a full vacuum run out of band.
+	// (GET /admin/vacuum-recommendations)
+	GetVacuumRecommendations(w http.ResponseWriter, r *http.Request)
 	// Download the Margince skill for an AI tool, as a ZIP.
 	// (GET /agent-bundle)
 	DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request)
@@ -103496,6 +103537,12 @@ func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
 // Scoped capability readings and evidence coverage for System health.
 // (GET /admin/system-health)
 func (_ Unimplemented) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which tables would win back enough space from a full vacuum run out of band.
+// (GET /admin/vacuum-recommendations)
+func (_ Unimplemented) GetVacuumRecommendations(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -112393,6 +112440,26 @@ func (siw *ServerInterfaceWrapper) GetSystemHealth(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSystemHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetVacuumRecommendations operation middleware
+func (siw *ServerInterfaceWrapper) GetVacuumRecommendations(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetVacuumRecommendations(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -159956,6 +160023,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/system-health", wrapper.GetSystemHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/vacuum-recommendations", wrapper.GetVacuumRecommendations)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent-bundle", wrapper.DownloadAgentSkillBundle)

@@ -1087,6 +1087,35 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /admin/vacuum-recommendations:
+    get:
+      tags: [Identity]
+      operationId: getVacuumRecommendations
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      x-human-only-reason: security   # names the database's tables, sizes and owner role
+      summary: Which tables would win back enough space from a full vacuum run out of band.
+      description: >
+        Admin and ops only (`job_health:read`). Estimates, from the database's own statistics, how much
+        of each table's file holds no live row. A table is listed when that share is at least
+        `min_waste_percent` and the space is at least `min_waste_bytes`, largest first. Each entry
+        carries the statement to run and the role that owns the table. Margince never runs it:
+        `VACUUM FULL` locks the table for reads and writes until it ends. A table the statistics do
+        not yet describe, and that is large enough to qualify, is counted in `unmeasured_tables`.
+      responses:
+        '200':
+          description: The tables worth a full vacuum, with the thresholds that chose them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VacuumRecommendations' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >
+            Refused: the caller holds no `job_health:read` (the admin and ops roles hold it).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /admin/automatic-work-health:
     get:
       tags: [Identity]
@@ -71879,6 +71908,52 @@ components:
           allOf: [{ $ref: '#/components/schemas/RestoreDrill' }]
           nullable: true
           description: The most recent drill, or null when none was ever recorded.
+
+    VacuumRecommendations:
+      type: object
+      additionalProperties: false
+      description: |
+        The tables a full vacuum would shrink by enough to be worth a maintenance window. Sizes are
+        estimates from the statistics the database keeps for its query planner.
+      required: [generated_at, min_waste_percent, min_waste_bytes, tables, unmeasured_tables]
+      properties:
+        generated_at: { type: string, format: date-time }
+        min_waste_percent:
+          type: integer
+          description: The smallest share of a table's file, in percent, that must be empty for it to be listed.
+        min_waste_bytes:
+          type: integer
+          description: The smallest empty space, in bytes, for a table to be listed.
+        tables:
+          type: array
+          description: The tables over both thresholds, most empty space first.
+          items: { $ref: '#/components/schemas/VacuumRecommendation' }
+        unmeasured_tables:
+          type: integer
+          description: Tables large enough to qualify that have no statistics yet, so no estimate.
+
+    VacuumRecommendation:
+      type: object
+      additionalProperties: false
+      required: [schema, table, owner, table_bytes, waste_bytes, waste_percent, statement]
+      properties:
+        schema: { type: string }
+        table: { type: string }
+        owner:
+          type: string
+          description: The database role that owns the table. Only it can run the statement.
+        table_bytes:
+          type: integer
+          description: The size of the table's file, without its indexes.
+        waste_bytes:
+          type: integer
+          description: The estimated space in that file that holds no live row.
+        waste_percent:
+          type: integer
+          description: '`waste_bytes` as a whole percent of `table_bytes`, rounded down.'
+        statement:
+          type: string
+          description: The statement to run, with the names quoted.
 
     AutomaticWorkHealth:
       type: object
