@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/kernel/promptfence/promptfence.go backend/internal/compose/companycontextprompt.go backend/internal/compose/confidentialityverdictask.go backend/internal/compose/batchfidelity.go backend/internal/shared/kernel/promptref/promptref.go backend/internal/compose/captureclassify.go backend/internal/compose/captureverdict.go -->
+<!-- describes: backend/internal/shared/kernel/promptfence/promptfence.go backend/internal/compose/companycontextprompt.go backend/internal/compose/confidentialityverdictask.go backend/internal/compose/batchfidelity.go backend/internal/shared/kernel/promptref/promptref.go backend/internal/compose/captureclassify.go backend/internal/compose/captureverdict.go backend/internal/modules/ai/anthropiccache.go -->
 # How we write prompts: the password, the cost, and one item at a time
 
 Most prompts this product sends have the same three parts. One carries no
@@ -250,8 +250,12 @@ and 5%, by whether one of those four calls is inside the window. It
 does not show a change over time, and nothing we have changed moves it.
 
 "Caches we created: 0" is a separate fact with a separate reason: **the caching we
-would have to ask for, we never ask for.** Gemini has a `cachedContents` API, and
-Anthropic has a marker per block. Nothing in our code calls either one.
+would have to ask for, we did not ask for** in that window, and every task ran on
+Gemini. Gemini has a `cachedContents` API, and no code calls it. Anthropic has a
+marker per block, and its adapter sets one: it cuts the system prompt in front
+of the password, marks the rules before it, and marks the last tool. A prefix
+under 512 tokens, the smallest any model caches, goes unmarked
+(`backend/internal/modules/ai/anthropiccache.go`).
 
 ### Where `agent_loop` puts the boundary
 
