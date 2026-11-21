@@ -3773,6 +3773,8 @@
   "ob.field.register_number": "Registernummer",
   "ob.field.industry": "Branche",
   "ob.field.history": "Unternehmensgeschichte",
+  "backfill.restartedNote": "Der Import hat von vorn begonnen, weil das Postfach seine Position verloren hat. Die Zählung der E-Mails beginnt neu; gefundene Kontakte bleiben erhalten.",
+  "backfill.retryNote": "Beim Import ist ein Verbindungsproblem aufgetreten. Er versucht es erneut. Die letzte Seite wird neu gelesen, ihre E-Mails werden erneut gezählt.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGdocs": "Google Docs",

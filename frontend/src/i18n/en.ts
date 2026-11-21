@@ -12654,6 +12654,10 @@ export const en = {
   "backfill.narrowingNote":
     "This mailbox already went back further. Pick the same time or longer.",
   "backfill.staleUpdated": "No progress for {duration}.",
+  "backfill.restartedNote":
+    "The import started over because the mailbox lost its place. The email count begins again; contacts already found stay.",
+  "backfill.retryNote":
+    "The import hit a connection problem and is trying again. The last page is read again, so its emails are counted again.",
   "backfill.countScanned_one": "{count} email checked",
   "backfill.countScanned_other": "{count} emails checked",
   "backfill.errorResumeNote":

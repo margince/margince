@@ -15,6 +15,7 @@ import {
   activityHasHappened,
   activityIsAhead,
 } from "../../../format/activitywhen";
+import { taskDueOnDay, taskDueZone } from "../../../format/calendarday";
 import {
   calendarDaysBetween,
   formatDayMonth,
@@ -34,6 +35,7 @@ import {
 } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
+import { useCompanyZone } from "../../../lib/companyzone";
 import { labelFor } from "../../../lib/labelfor";
 import { recordsAnotherMeeting } from "../../../lib/meetingrecord";
 import { useViewerId } from "../../../lib/session";
@@ -53,11 +55,18 @@ type Words = Readonly<{
   plural: PluralTranslator;
   locale: Locale;
   zone: string;
+  companyZone: string;
 }>;
 
 function useWords(): Words {
   const { locale } = useLocale();
-  return { t: useT(), plural: usePlural(), locale, zone: useViewerZone() };
+  return {
+    t: useT(),
+    plural: usePlural(),
+    locale,
+    zone: useViewerZone(),
+    companyZone: useCompanyZone(),
+  };
 }
 
 // The calls and meetings that already happened, newest kept: the axis has room
@@ -288,7 +297,7 @@ function timelineGap(
  */
 export function timelineEvents(
   { deal, activities, asOf, lastInbound }: DealStandingInputs,
-  { t, locale, zone }: Words,
+  { t, locale, zone, companyZone }: Words,
 ): TimelineEvent[] {
   const now = Date.parse(asOf);
   const day = (iso: string) => formatDayMonth(iso, locale, zone);
@@ -346,7 +355,17 @@ export function timelineEvents(
               zone,
               row.due_intent,
             ),
-            kind: Date.parse(row.due_at) < now ? "late" : "ahead",
+            kind:
+              Date.parse(
+                taskDueOnDay(
+                  row.due_at,
+                  row.due_has_time,
+                  row.due_intent,
+                  taskDueZone(row.due_has_time, zone, companyZone),
+                ),
+              ) < now
+                ? "late"
+                : "ahead",
           },
         ]
       : [],

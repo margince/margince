@@ -29768,6 +29768,8 @@ components:
             contacts_created: {type: integer}
             companies_created: {type: integer}
         resumable: {type: boolean, description: 'The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.'}
+        window_restarts: {type: integer, description: 'How many times the scan began again from the newest message because the provider no longer accepted its place. `counts.messages_scanned`, `captured` and `skipped` start again from zero each time; the contacts and companies already created stay counted. A client says so rather than showing the lower count as lost work.'}
+        retry_attempts: {type: integer, description: 'Pages in a row that failed and will be tried again; 0 once a page succeeds. The committed counts are kept across a retry, and only the unfinished page is read again.'}
         started_at: {type: [string, 'null'], format: date-time}
         completed_at: {type: [string, 'null'], format: date-time}
         updated_at: {type: [string, 'null'], format: date-time, description: 'Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").'}

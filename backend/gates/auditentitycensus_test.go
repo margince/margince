@@ -54,6 +54,9 @@ type auditEntityCensus struct {
 	// seedInserts is whether the seed still holds the INSERT this census
 	// starts from, with the parameter it reads.
 	seedInserts bool
+	// seed is the function holding the INSERT, and index the module it read.
+	seed  string
+	index *auditIndex
 }
 
 var auditEntityCensusOnce sync.Once
@@ -98,7 +101,7 @@ type auditIndex struct {
 // readAuditEntityCensus reads pkgs from seed, the function holding the INSERT.
 func readAuditEntityCensus(pkgs []typedPackage, seed string) *auditEntityCensus {
 	index := indexAuditModule(pkgs)
-	census := &auditEntityCensus{writers: map[string]bool{}}
+	census := &auditEntityCensus{writers: map[string]bool{}, seed: seed, index: index}
 	var queue []auditDoor
 	seen := map[auditDoor]bool{}
 	push := func(d auditDoor) {

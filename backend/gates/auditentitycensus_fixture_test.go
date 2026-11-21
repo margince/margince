@@ -27,10 +27,15 @@ const (
 	fixtureAppPkg  = modulePath + "/fixture/app"
 )
 
-// fixtureSeedSource is a storekit in miniature: one INSERT, one door.
+// fixtureSeedSource is a storekit in miniature. It has one INSERT, and doors
+// with no image, an after-image and both images. One writer fixes its verb,
+// and one reads it from data.
 const fixtureSeedSource = `package sk
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 type Tx interface {
 	Exec(ctx context.Context, sql string, args ...any) error
@@ -44,6 +49,22 @@ func insertRows(ctx context.Context, tx Tx, action, entityType string) error {
 
 func Audit(ctx context.Context, tx Tx, action, entityType string) error {
 	return insertRows(ctx, tx, action, entityType)
+}
+
+func AuditEvent(ctx context.Context, tx Tx, action, entityType string, id int, after any) error {
+	return insertRows(ctx, tx, action, entityType)
+}
+
+func Record(ctx context.Context, tx Tx, action, entityType string, before, after any) error {
+	return insertRows(ctx, tx, action, entityType)
+}
+
+func FromData(ctx context.Context, tx Tx, key, entityType string) error {
+	return insertRows(ctx, tx, strings.ToLower(key), entityType)
+}
+
+func Fixed(ctx context.Context, tx Tx, entityType string) error {
+	return insertRows(ctx, tx, "erase", entityType)
 }
 `
 
@@ -237,6 +258,12 @@ func TestTheAuditCensusReadsEachShape(t *testing.T) {
 				"func i() { _ = fixed[0]; for _, t := range fixed { _ = k.Audit(ctx, tx, \"u\", t) }; for _, t := range grown { _ = k.Audit(ctx, tx, \"u\", t) }\n" +
 				"for _, t := range copied { _ = k.Audit(ctx, tx, \"u\", t) }; for _, t := range Shared { _ = k.Audit(ctx, tx, \"u\", t) } }\n",
 			want: fixtureRead{values: []string{"lambda", "mu"}, opaque: []string{"t", "t", "t"}},
+		},
+		{
+			name: "an element of a package map is read by its literal, and one the package changes is not",
+			body: "var verbs = map[string]string{\"a\": \"delta\", \"b\": \"epsilon\"}\nvar moved = map[string]string{\"a\": \"no\"}\n" +
+				"func init() { moved[\"b\"] = \"no\" }\nfunc q(key string) { _ = k.Audit(ctx, tx, \"u\", verbs[key]); _ = k.Audit(ctx, tx, \"u\", moved[key]) }\n",
+			want: fixtureRead{values: []string{"delta", "epsilon"}, opaque: []string{"moved[key]"}},
 		},
 		{
 			name: "a write to audit_log built by fmt.Sprintf or strings.Join from constants is reported",

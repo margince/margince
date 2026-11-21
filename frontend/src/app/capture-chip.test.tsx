@@ -101,6 +101,21 @@ describe("CaptureChip", () => {
     );
   });
 
+  it("says why the count fell after a restart, and draws no ring that fell with it", async () => {
+    mount([
+      mailbox({
+        state: "running",
+        estimated_messages: 2_900,
+        counts: { messages_scanned: 0 },
+        window_restarts: 1,
+      }),
+    ]);
+    const link = await screen.findByRole("link", {
+      name: /started over because the mailbox lost its place/,
+    });
+    expect(link.querySelector(".core-progress-value")).toBeNull();
+  });
+
   it("counts rather than guesses when the run has no estimate", async () => {
     mount([
       mailbox({

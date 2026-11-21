@@ -239,6 +239,7 @@ describe("what the axis marks", () => {
     ) => translatePlural("en", base, count, params),
     locale: ENGLISH,
     zone: UTC_ZONE,
+    companyZone: UTC_ZONE,
   };
   const row = (over: Partial<Activity>): Activity => ({
     occurred_precision: "instant",

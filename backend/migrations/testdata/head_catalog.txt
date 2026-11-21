@@ -66,6 +66,7 @@ public.activity.activity_sent_by_colleague_fkey FOREIGN KEY (sent_by_colleague) 
 public.activity.activity_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.activity.activity_strength_dates CREATE TRIGGER activity_strength_dates AFTER UPDATE ON public.activity REFERENCING OLD TABLE AS changed_from NEW TABLE AS changed_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_strength_dates()
 public.activity.activity_system_text_retire CREATE TRIGGER activity_system_text_retire BEFORE UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()
 public.activity.activity_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192))))
 public.activity.activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))
@@ -296,6 +297,9 @@ public.activity_link.activity_link_project_id_fkey FOREIGN KEY (project_id) REFE
 public.activity_link.activity_link_project_last_activity CREATE TRIGGER activity_link_project_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION trg_activity_link_project_last_activity()
 public.activity_link.activity_link_relevance_source_check CHECK ((relevance_source = ANY (ARRAY['human'::text, 'classifier'::text])))
 public.activity_link.activity_link_shape CHECK ((((entity_type = 'contact'::text) AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company'::text) AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal'::text) AND (deal_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead'::text) AND (lead_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project'::text) AND (project_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL))))
+public.activity_link.activity_link_strength_dates_added CREATE TRIGGER activity_link_strength_dates_added AFTER INSERT ON public.activity_link REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_added()
+public.activity_link.activity_link_strength_dates_moved CREATE TRIGGER activity_link_strength_dates_moved AFTER UPDATE ON public.activity_link REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_moved()
+public.activity_link.activity_link_strength_dates_removed CREATE TRIGGER activity_link_strength_dates_removed AFTER DELETE ON public.activity_link REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_removed()
 public.activity_link.company_id uuid gen=- def=-
 public.activity_link.contact_id uuid gen=- def=-
 public.activity_link.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -488,6 +492,9 @@ public.activity_participant.activity_participant_pkey PRIMARY KEY (id)
 public.activity_participant.activity_participant_response_check CHECK ((response = ANY (ARRAY['accepted'::text, 'declined'::text, 'tentative'::text, 'needs_action'::text])))
 public.activity_participant.activity_participant_role_check CHECK ((role = ANY (ARRAY['from'::text, 'to'::text, 'cc'::text, 'bcc'::text, 'attendee'::text, 'organizer'::text])))
 public.activity_participant.activity_participant_roster_seat_fkey FOREIGN KEY (roster_seat) REFERENCES app_user(id) ON DELETE SET NULL
+public.activity_participant.activity_participant_strength_dates_added CREATE TRIGGER activity_participant_strength_dates_added AFTER INSERT ON public.activity_participant REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_added()
+public.activity_participant.activity_participant_strength_dates_moved CREATE TRIGGER activity_participant_strength_dates_moved AFTER UPDATE ON public.activity_participant REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_moved()
+public.activity_participant.activity_participant_strength_dates_removed CREATE TRIGGER activity_participant_strength_dates_removed AFTER DELETE ON public.activity_participant REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_removed()
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_participant.address text gen=- def=-
 public.activity_participant.address_domain_folded text gen=- def=-
@@ -2509,6 +2516,9 @@ public.capture_import.capture_import_legal_entity_id_fkey FOREIGN KEY (legal_ent
 public.capture_import.capture_import_one_importer CHECK (((user_id IS NULL) <> (connection_id IS NULL)))
 public.capture_import.capture_import_pkey PRIMARY KEY (id)
 public.capture_import.capture_import_posture_check CHECK (((posture_at_import IS NULL) OR (posture_at_import = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text]))))
+public.capture_import.capture_import_strength_dates_added CREATE TRIGGER capture_import_strength_dates_added AFTER INSERT ON public.capture_import REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_import_strength_dates_added()
+public.capture_import.capture_import_strength_dates_moved CREATE TRIGGER capture_import_strength_dates_moved AFTER UPDATE ON public.capture_import REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_import_strength_dates_moved()
+public.capture_import.capture_import_strength_dates_removed CREATE TRIGGER capture_import_strength_dates_removed AFTER DELETE ON public.capture_import REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_import_strength_dates_removed()
 public.capture_import.capture_import_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.capture_import.capture_import_verdict_status_check CHECK (((verdict_status IS NULL) OR (verdict_status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text]))))
 public.capture_import.connection_id uuid gen=- def=-
@@ -2729,6 +2739,9 @@ public.capture_thread_verdict.capture_thread_verdict_confidence_range CHECK (((c
 public.capture_thread_verdict.capture_thread_verdict_first_activity_id_fkey FOREIGN KEY (first_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.capture_thread_verdict.capture_thread_verdict_pkey PRIMARY KEY (id)
 public.capture_thread_verdict.capture_thread_verdict_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text])))
+public.capture_thread_verdict.capture_thread_verdict_strength_dates_added CREATE TRIGGER capture_thread_verdict_strength_dates_added AFTER INSERT ON public.capture_thread_verdict REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_thread_verdict_strength_dates_added()
+public.capture_thread_verdict.capture_thread_verdict_strength_dates_moved CREATE TRIGGER capture_thread_verdict_strength_dates_moved AFTER UPDATE ON public.capture_thread_verdict REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_thread_verdict_strength_dates_moved()
+public.capture_thread_verdict.capture_thread_verdict_strength_dates_removed CREATE TRIGGER capture_thread_verdict_strength_dates_removed AFTER DELETE ON public.capture_thread_verdict REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_thread_verdict_strength_dates_removed()
 public.capture_thread_verdict.capture_thread_verdict_thread_user_key UNIQUE (thread_key, user_id)
 public.capture_thread_verdict.capture_thread_verdict_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.capture_thread_verdict.claimed_by uuid gen=- def=-
@@ -4126,6 +4139,7 @@ public.contact.contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFE
 public.contact.contact_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.contact.contact_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
 public.contact.contact_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
+public.contact.contact_strength_dates_archive CREATE TRIGGER contact_strength_dates_archive BEFORE UPDATE OF archived_at ON public.contact FOR EACH ROW WHEN ((old.archived_at IS DISTINCT FROM new.archived_at)) EXECUTE FUNCTION trg_contact_strength_dates_archive()
 public.contact.contact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact.contact_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.contact.converted_from_lead_id uuid gen=- def=-
@@ -4154,6 +4168,13 @@ public.contact.source_author_id uuid gen=- def=-
 public.contact.source_author_name text gen=- def=-
 public.contact.source_id text gen=- def=-
 public.contact.source_system text gen=- def=-
+public.contact.strength_folded boolean NOT NULL gen=- def=true
+public.contact.strength_last_engaged_at timestamp with time zone gen=- def=-
+public.contact.strength_last_inbound_at timestamp with time zone gen=- def=-
+public.contact.strength_last_inbound_day boolean gen=- def=-
+public.contact.strength_last_interaction_at timestamp with time zone gen=- def=-
+public.contact.strength_last_outbound_at timestamp with time zone gen=- def=-
+public.contact.strength_last_outbound_day boolean gen=- def=-
 public.contact.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
 public.contact.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
 public.contact.title text gen=- def=-
@@ -4299,6 +4320,9 @@ public.contact_email.contact_email_contact_id_fkey FOREIGN KEY (contact_id) REFE
 public.contact_email.contact_email_email_type_check CHECK ((email_type = ANY (ARRAY['work'::text, 'personal'::text, 'other'::text])))
 public.contact_email.contact_email_norm CHECK ((email = lower(email)))
 public.contact_email.contact_email_pkey PRIMARY KEY (id)
+public.contact_email.contact_email_strength_dates_added CREATE TRIGGER contact_email_strength_dates_added AFTER INSERT ON public.contact_email REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_contact_email_strength_dates_added()
+public.contact_email.contact_email_strength_dates_moved CREATE TRIGGER contact_email_strength_dates_moved AFTER UPDATE ON public.contact_email REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_contact_email_strength_dates_moved()
+public.contact_email.contact_email_strength_dates_removed CREATE TRIGGER contact_email_strength_dates_removed AFTER DELETE ON public.contact_email REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_contact_email_strength_dates_removed()
 public.contact_email.contact_email_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact_email.contact_id uuid NOT NULL gen=- def=-
 public.contact_email.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -4472,6 +4496,250 @@ public.contact_social.text_bound_insert CREATE TRIGGER text_bound_insert AFTER I
 public.contact_social.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_social FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"handle": 20000, "platform": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"handle":20000,"platform":20000}')
 public.contact_social_contact_id_platform_key CREATE UNIQUE INDEX contact_social_contact_id_platform_key ON public.contact_social USING btree (contact_id, platform)
 public.contact_social_pkey CREATE UNIQUE INDEX contact_social_pkey ON public.contact_social USING btree (id)
+public.contact_strength_dates(cid uuid) secdef=false cfg=- acl=- 
+  SELECT max(a.occurred_at),
+		       max(a.occurred_at) FILTER (WHERE ((a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.kind IN ('meeting','call') AND (EXISTS (SELECT 1 FROM activity_participant tp
+		 WHERE tp.activity_id = a.id AND tp.contact_id = cid AND tp.role IN ('from','to','cc','bcc','attendee','organizer')
+		   AND tp.response IS DISTINCT FROM 'declined')
+	   OR NOT EXISTS (SELECT 1 FROM activity_participant tp
+		 WHERE tp.activity_id = a.id AND tp.contact_id IS NOT NULL))))),
+		       max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))),
+		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'instant' AND ((a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))))) = max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))) THEN 'instant'
+		WHEN max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))) IS NOT NULL THEN 'day' END),
+		       max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')),
+		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'day' AND ((a.direction = 'outbound'))) = max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')) THEN 'day'
+		WHEN max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')) IS NOT NULL THEN 'instant' END)
+    FROM activity a
+    JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = cid
+   WHERE (a.internal_mail_authorization IS NULL AND a.kind IN ('email','call','meeting','message') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND (a.origin NOT IN ('system_remediation','system_notice') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND NOT a.forwarded_to_self AND (a.kind <> 'email' OR (NOT a.sender_is_machine AND a.calendar_method IS NULL))) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now()))))) AND a.archived_at IS NULL AND (a.audience = 'workspace' AND
+ (a.internal_mail_authorization IS NOT NULL OR NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))) AND (a.kind <> 'task' OR a.source_activity_id IS NULL AND coalesce(a.source_system, '') <> 'lead_replied' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = CASE WHEN a.source_system = 'lead_replied' THEN coalesce(a.source_activity_id, CASE WHEN a.source_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN a.source_id::uuid END) ELSE a.source_activity_id END AND (follow_up_source.audience = 'workspace' AND
+ (follow_up_source.internal_mail_authorization IS NOT NULL OR NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=follow_up_source.thread_key
+ WHERE thread_hold_import.activity_id=follow_up_source.id AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))) AND follow_up_source.restricted_at IS NULL))
+
+public.contact_strength_dates_among(cid uuid, aids uuid[]) secdef=false cfg=- acl=- 
+  SELECT max(a.occurred_at),
+		       max(a.occurred_at) FILTER (WHERE ((a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.kind IN ('meeting','call') AND (EXISTS (SELECT 1 FROM activity_participant tp
+		 WHERE tp.activity_id = a.id AND tp.contact_id = cid AND tp.role IN ('from','to','cc','bcc','attendee','organizer')
+		   AND tp.response IS DISTINCT FROM 'declined')
+	   OR NOT EXISTS (SELECT 1 FROM activity_participant tp
+		 WHERE tp.activity_id = a.id AND tp.contact_id IS NOT NULL))))),
+		       max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))),
+		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'instant' AND ((a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))))) = max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))) THEN 'instant'
+		WHEN max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))) IS NOT NULL THEN 'day' END),
+		       max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')),
+		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'day' AND ((a.direction = 'outbound'))) = max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')) THEN 'day'
+		WHEN max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')) IS NOT NULL THEN 'instant' END)
+    FROM activity a
+    JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = cid
+   WHERE (a.internal_mail_authorization IS NULL AND a.kind IN ('email','call','meeting','message') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND (a.origin NOT IN ('system_remediation','system_notice') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND NOT a.forwarded_to_self AND (a.kind <> 'email' OR (NOT a.sender_is_machine AND a.calendar_method IS NULL))) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now()))))) AND a.archived_at IS NULL AND (a.audience = 'workspace' AND
+ (a.internal_mail_authorization IS NOT NULL OR NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=a.thread_key
+ WHERE thread_hold_import.activity_id=a.id AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))) AND (a.kind <> 'task' OR a.source_activity_id IS NULL AND coalesce(a.source_system, '') <> 'lead_replied' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = CASE WHEN a.source_system = 'lead_replied' THEN coalesce(a.source_activity_id, CASE WHEN a.source_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN a.source_id::uuid END) ELSE a.source_activity_id END AND (follow_up_source.audience = 'workspace' AND
+ (follow_up_source.internal_mail_authorization IS NOT NULL OR NOT EXISTS (
+ SELECT 1 FROM capture_import thread_hold_import
+ JOIN capture_thread_verdict thread_hold ON thread_hold.user_id=thread_hold_import.user_id
+ AND thread_hold.thread_key=follow_up_source.thread_key
+ WHERE thread_hold_import.activity_id=follow_up_source.id AND thread_hold.status IN ('held', 'held_by_owner', 'unsure')))) AND follow_up_source.restricted_at IS NULL)) AND a.id = ANY (aids)
+
 public.contract acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contract.archived_at timestamp with time zone gen=- def=-
 public.contract.arr_minor bigint gen=- def=-
@@ -6381,6 +6649,7 @@ public.idx_contact_search CREATE INDEX idx_contact_search ON public.contact USIN
 public.idx_contact_signature_enrich_state_activity CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id)
 public.idx_contact_signature_enrich_state_retry_activity CREATE INDEX idx_contact_signature_enrich_state_retry_activity ON public.contact_signature_enrich_state USING btree (retry_activity_id) WHERE (retry_activity_id IS NOT NULL)
 public.idx_contact_social_linkedin_profile CREATE INDEX idx_contact_social_linkedin_profile ON public.contact_social USING btree ("substring"(lower(handle), '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)'::text)) WHERE (platform = 'linkedin'::text)
+public.idx_contact_strength_unfolded CREATE INDEX idx_contact_strength_unfolded ON public.contact USING btree (id) WHERE ((NOT strength_folded) AND (archived_at IS NULL))
 public.idx_contact_unkeyed_address_hashes CREATE INDEX idx_contact_unkeyed_address_hashes ON public.contact USING btree (id) WHERE ((anonymized_address_hashes IS NOT NULL) AND (anonymized_address_key_id IS NULL))
 public.idx_contact_updated_keyset CREATE INDEX idx_contact_updated_keyset ON public.contact USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_conversation_claim_contact CREATE INDEX idx_conversation_claim_contact ON public.conversation_claim USING btree (contact_id)
@@ -8905,6 +9174,31 @@ BEGIN
   END LOOP;
 END;
 
+public.refresh_contact_strength_dates(cids uuid[]) secdef=false cfg=- acl=- 
+DECLARE
+  moving text := current_setting('margince.last_activity_move', true);
+BEGIN
+  IF cids IS NULL OR cardinality(cids) = 0 THEN RETURN; END IF;
+  PERFORM 1 FROM contact WHERE id = ANY (cids) ORDER BY id FOR UPDATE;
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  UPDATE contact p
+     SET strength_last_interaction_at = f.interaction_at,
+         strength_last_engaged_at = f.engaged_at,
+         strength_last_inbound_at = f.inbound_at,
+         strength_last_inbound_day = f.inbound_precision = 'day',
+         strength_last_outbound_at = f.outbound_at,
+         strength_last_outbound_day = f.outbound_precision = 'day',
+         strength_folded = true
+    FROM contact c
+    LEFT JOIN LATERAL (SELECT * FROM contact_strength_dates(c.id) WHERE c.archived_at IS NULL) f ON true
+   WHERE c.id = ANY (cids) AND p.id = c.id
+     AND (p.strength_last_interaction_at, p.strength_last_engaged_at, p.strength_last_inbound_at,
+          p.strength_last_inbound_day, p.strength_last_outbound_at, p.strength_last_outbound_day, p.strength_folded)
+         IS DISTINCT FROM (f.interaction_at, f.engaged_at, f.inbound_at, f.inbound_precision = 'day',
+          f.outbound_at, f.outbound_precision = 'day', true);
+  PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+END;
+
 public.refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) secdef=false cfg=- acl=- 
 DECLARE
   reached record;
@@ -8916,6 +9210,18 @@ BEGIN
   LOOP
     PERFORM move_last_activity(reached.kind::regclass, reached.id);
   END LOOP;
+END;
+
+public.refresh_strength_dates_of_addresses(emails text[], holders uuid[]) secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM refresh_contact_strength_dates(ARRAY(
+    SELECT named.id FROM (
+      SELECT h.id FROM unnest(holders) h(id)
+      UNION SELECT ce.contact_id FROM contact_email ce WHERE ce.email = ANY (emails)
+      UNION SELECT ap.contact_id FROM activity_participant ap
+             WHERE lower(ap.address) = ANY (emails) AND ap.address IS NOT NULL AND ap.contact_id IS NOT NULL) named
+     WHERE named.id IS NOT NULL
+       AND EXISTS (SELECT 1 FROM activity_link l WHERE l.contact_id = named.id)));
 END;
 
 public.refuse_oversized_text() secdef=false cfg=search_path=pg_catalog acl=- 
@@ -10586,6 +10892,87 @@ SELECT EXISTS (SELECT 1 FROM unnest(new_values) AS item(value)
  AND NOT EXISTS (SELECT 1 FROM unnest(old_values) AS previous(value)
                  WHERE previous.value COLLATE "C" = item.value COLLATE "C"))
 
+public.touch_contact_strength_dates(cids uuid[], aids uuid[], was timestamp with time zone[]) secdef=false cfg=- acl=- 
+DECLARE
+  moving text := current_setting('margince.last_activity_move', true);
+BEGIN
+  IF cids IS NULL OR cardinality(cids) = 0 THEN RETURN; END IF;
+  PERFORM 1 FROM contact WHERE id IN (SELECT unnest(cids)) ORDER BY id FOR UPDATE;
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  WITH grouped AS (
+    SELECT t.cid, array_agg(t.aid) AS aids, array_agg(t.was) AS was, bool_or(t.was IS NULL) AS unknown
+      FROM unnest(cids, aids, was) t(cid, aid, was)
+     WHERE t.cid IS NOT NULL
+     GROUP BY t.cid
+  ), judged AS (
+    SELECT p.id, f.*,
+           g.unknown
+           OR (p.strength_last_interaction_at = ANY (g.was) AND coalesce(f.interaction_at < p.strength_last_interaction_at, true))
+           OR (p.strength_last_engaged_at = ANY (g.was) AND coalesce(f.engaged_at < p.strength_last_engaged_at, true))
+           OR (p.strength_last_inbound_at = ANY (g.was) AND coalesce(f.inbound_at < p.strength_last_inbound_at, true))
+           OR (p.strength_last_outbound_at = ANY (g.was) AND coalesce(f.outbound_at < p.strength_last_outbound_at, true))
+           OR (f.inbound_at = p.strength_last_inbound_at
+               AND (f.inbound_precision = 'day') IS DISTINCT FROM p.strength_last_inbound_day)
+           OR (f.outbound_at = p.strength_last_outbound_at
+               AND (f.outbound_precision = 'day') IS DISTINCT FROM p.strength_last_outbound_day) AS refold
+      FROM grouped g
+      JOIN contact p ON p.id = g.cid
+     CROSS JOIN LATERAL contact_strength_dates_among(p.id, g.aids) f
+     WHERE p.strength_folded AND p.archived_at IS NULL
+  ), moved AS (
+    SELECT j.id,
+           CASE WHEN j.refold THEN h.interaction_at ELSE greatest(p.strength_last_interaction_at, j.interaction_at) END AS interaction_at,
+           CASE WHEN j.refold THEN h.engaged_at ELSE greatest(p.strength_last_engaged_at, j.engaged_at) END AS engaged_at,
+           CASE WHEN j.refold THEN h.inbound_at ELSE greatest(p.strength_last_inbound_at, j.inbound_at) END AS inbound_at,
+           CASE WHEN j.refold THEN h.inbound_precision = 'day'
+                WHEN j.inbound_at > coalesce(p.strength_last_inbound_at, '-infinity') THEN j.inbound_precision = 'day'
+                ELSE p.strength_last_inbound_day END AS inbound_day,
+           CASE WHEN j.refold THEN h.outbound_at ELSE greatest(p.strength_last_outbound_at, j.outbound_at) END AS outbound_at,
+           CASE WHEN j.refold THEN h.outbound_precision = 'day'
+                WHEN j.outbound_at > coalesce(p.strength_last_outbound_at, '-infinity') THEN j.outbound_precision = 'day'
+                ELSE p.strength_last_outbound_day END AS outbound_day
+      FROM judged j
+      JOIN contact p ON p.id = j.id
+      LEFT JOIN LATERAL (SELECT * FROM contact_strength_dates(j.id) WHERE j.refold) h ON true
+  )
+  UPDATE contact p
+     SET strength_last_interaction_at = m.interaction_at,
+         strength_last_engaged_at = m.engaged_at,
+         strength_last_inbound_at = m.inbound_at,
+         strength_last_inbound_day = m.inbound_day,
+         strength_last_outbound_at = m.outbound_at,
+         strength_last_outbound_day = m.outbound_day
+    FROM moved m
+   WHERE p.id = m.id
+     AND (p.strength_last_interaction_at, p.strength_last_engaged_at, p.strength_last_inbound_at,
+          p.strength_last_inbound_day, p.strength_last_outbound_at, p.strength_last_outbound_day)
+         IS DISTINCT FROM (m.interaction_at, m.engaged_at, m.inbound_at, m.inbound_day, m.outbound_at, m.outbound_day);
+  PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+END;
+
+public.touch_strength_dates_of_activities(aids uuid[]) secdef=false cfg=- acl=- 
+DECLARE
+  c uuid[];
+  a uuid[];
+  w timestamptz[];
+BEGIN
+  SELECT array_agg(l.contact_id), array_agg(l.activity_id), array_agg(x.occurred_at)
+    INTO c, a, w
+    FROM activity_link l
+    LEFT JOIN activity x ON x.id = l.activity_id
+   WHERE l.activity_id = ANY (aids) AND l.contact_id IS NOT NULL;
+  PERFORM touch_contact_strength_dates(c, a, w);
+END;
+
+public.touch_strength_dates_of_holds(holds jsonb) secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_activities(ARRAY(
+    SELECT DISTINCT i.activity_id
+      FROM jsonb_to_recordset(holds) h(thread_key text, user_id uuid)
+      JOIN activity a ON a.thread_key = h.thread_key
+      JOIN capture_import i ON i.activity_id = a.id AND i.user_id = h.user_id));
+END;
+
 public.transcript_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.transcript_read.activity_id uuid NOT NULL gen=- def=-
 public.transcript_read.attempt integer NOT NULL gen=- def=1
@@ -10671,10 +11058,94 @@ public.trg_activity_link_project_last_activity() secdef=false cfg=- acl=- BEGIN
   RETURN NULL;
 END;
 
+public.trg_activity_link_strength_dates_added() secdef=false cfg=- acl=- 
+DECLARE
+  c uuid[];
+  a uuid[];
+  w timestamptz[];
+BEGIN
+  SELECT array_agg(n.contact_id), array_agg(n.activity_id), array_agg('-infinity'::timestamptz)
+    INTO c, a, w FROM added n WHERE n.contact_id IS NOT NULL;
+  PERFORM touch_contact_strength_dates(c, a, w);
+  RETURN NULL;
+END;
+
+public.trg_activity_link_strength_dates_moved() secdef=false cfg=- acl=- 
+DECLARE
+  c uuid[];
+  a uuid[];
+  w timestamptz[];
+BEGIN
+  SELECT array_agg(p.contact_id), array_agg(p.activity_id), array_agg(p.was)
+    INTO c, a, w
+    FROM (SELECT o.contact_id, o.activity_id, x.occurred_at AS was
+            FROM moved_from o JOIN moved_to n ON n.id = o.id
+            LEFT JOIN activity x ON x.id = o.activity_id
+           WHERE (o.contact_id, o.activity_id) IS DISTINCT FROM (n.contact_id, n.activity_id)
+          UNION ALL
+          SELECT n.contact_id, n.activity_id, '-infinity'
+            FROM moved_from o JOIN moved_to n ON n.id = o.id
+           WHERE (o.contact_id, o.activity_id) IS DISTINCT FROM (n.contact_id, n.activity_id)) p
+   WHERE p.contact_id IS NOT NULL;
+  PERFORM touch_contact_strength_dates(c, a, w);
+  RETURN NULL;
+END;
+
+public.trg_activity_link_strength_dates_removed() secdef=false cfg=- acl=- 
+DECLARE
+  c uuid[];
+  a uuid[];
+  w timestamptz[];
+BEGIN
+  SELECT array_agg(o.contact_id), array_agg(o.activity_id), array_agg(x.occurred_at)
+    INTO c, a, w FROM removed o LEFT JOIN activity x ON x.id = o.activity_id WHERE o.contact_id IS NOT NULL;
+  PERFORM touch_contact_strength_dates(c, a, w);
+  RETURN NULL;
+END;
+
+public.trg_activity_participant_strength_dates_added() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_activities(ARRAY(SELECT DISTINCT n.activity_id FROM added n));
+  RETURN NULL;
+END;
+
+public.trg_activity_participant_strength_dates_moved() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_activities(ARRAY(
+    SELECT DISTINCT unnest(ARRAY[o.activity_id, n.activity_id])
+      FROM moved_from o JOIN moved_to n ON n.id = o.id
+     WHERE (o.activity_id, o.role, o.contact_id, o.address, o.response)
+           IS DISTINCT FROM (n.activity_id, n.role, n.contact_id, n.address, n.response)));
+  RETURN NULL;
+END;
+
+public.trg_activity_participant_strength_dates_removed() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_activities(ARRAY(SELECT DISTINCT o.activity_id FROM removed o));
+  RETURN NULL;
+END;
+
 public.trg_activity_project_last_activity() secdef=false cfg=- acl=- 
 BEGIN
   PERFORM move_project_last_activity(l.project_id)
      FROM activity_link l WHERE l.activity_id = NEW.id AND l.project_id IS NOT NULL;
+  RETURN NULL;
+END;
+
+public.trg_activity_strength_dates() secdef=false cfg=- acl=- 
+DECLARE
+  c uuid[];
+  a uuid[];
+  w timestamptz[];
+BEGIN
+  SELECT array_agg(l.contact_id), array_agg(l.activity_id), array_agg(o.occurred_at)
+    INTO c, a, w
+    FROM changed_from o
+    JOIN changed_to n ON n.id = o.id
+    JOIN activity_link l ON l.activity_id = n.id AND l.contact_id IS NOT NULL
+   WHERE (o.archived_at, o.audience, o.bulk_mail_attested, o.calendar_method, o.call_outcome, o.counterparty_email, o.direction, o.forwarded_to_self, o.internal_mail_authorization, o.kind, o.meeting_status, o.occurred_at, o.occurred_precision, o.origin, o.restricted_at, o.sender_is_machine, o.source_activity_id, o.source_id, o.source_system, o.thread_key)
+         IS DISTINCT FROM (n.archived_at, n.audience, n.bulk_mail_attested, n.calendar_method, n.call_outcome, n.counterparty_email, n.direction, n.forwarded_to_self, n.internal_mail_authorization, n.kind, n.meeting_status, n.occurred_at, n.occurred_precision, n.origin, n.restricted_at, n.sender_is_machine, n.source_activity_id, n.source_id, n.source_system, n.thread_key);
+  PERFORM touch_contact_strength_dates(c, a, w);
   RETURN NULL;
 END;
 
@@ -10710,6 +11181,102 @@ BEGIN
     PERFORM refresh_clocks_of_activity(imported.activity_id);
   END IF;
   RETURN NULL;
+END;
+
+public.trg_capture_import_strength_dates_added() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_activities(ARRAY(
+    SELECT DISTINCT n.activity_id FROM added n JOIN activity a ON a.id = n.activity_id
+      JOIN capture_thread_verdict v ON v.thread_key = a.thread_key AND v.user_id = n.user_id));
+  RETURN NULL;
+END;
+
+public.trg_capture_import_strength_dates_moved() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_activities(ARRAY(
+    SELECT DISTINCT unnest(ARRAY[o.activity_id, n.activity_id])
+      FROM moved_from o JOIN moved_to n ON n.id = o.id
+     WHERE (o.activity_id, o.user_id) IS DISTINCT FROM (n.activity_id, n.user_id)));
+  RETURN NULL;
+END;
+
+public.trg_capture_import_strength_dates_removed() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_activities(ARRAY(
+    SELECT DISTINCT o.activity_id FROM removed o JOIN activity a ON a.id = o.activity_id
+      JOIN capture_thread_verdict v ON v.thread_key = a.thread_key AND v.user_id = o.user_id));
+  RETURN NULL;
+END;
+
+public.trg_capture_thread_verdict_strength_dates_added() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_holds(
+    (SELECT jsonb_agg(jsonb_build_object('thread_key', n.thread_key, 'user_id', n.user_id)) FROM added n));
+  RETURN NULL;
+END;
+
+public.trg_capture_thread_verdict_strength_dates_moved() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_holds((
+    SELECT jsonb_agg(jsonb_build_object('thread_key', side.thread_key, 'user_id', side.user_id))
+      FROM moved_from o
+      JOIN moved_to n ON n.id = o.id
+     CROSS JOIN LATERAL (VALUES (o.thread_key, o.user_id), (n.thread_key, n.user_id)) side(thread_key, user_id)
+     WHERE (o.thread_key, o.user_id, o.status) IS DISTINCT FROM (n.thread_key, n.user_id, n.status)));
+  RETURN NULL;
+END;
+
+public.trg_capture_thread_verdict_strength_dates_removed() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM touch_strength_dates_of_holds(
+    (SELECT jsonb_agg(jsonb_build_object('thread_key', o.thread_key, 'user_id', o.user_id)) FROM removed o));
+  RETURN NULL;
+END;
+
+public.trg_contact_email_strength_dates_added() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM refresh_strength_dates_of_addresses(ARRAY(SELECT n.email FROM added n), ARRAY(SELECT n.contact_id FROM added n));
+  RETURN NULL;
+END;
+
+public.trg_contact_email_strength_dates_moved() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM refresh_strength_dates_of_addresses(
+    ARRAY(SELECT unnest(ARRAY[o.email, n.email]) FROM moved_from o JOIN moved_to n ON n.id = o.id
+           WHERE (o.contact_id, o.email, o.archived_at) IS DISTINCT FROM (n.contact_id, n.email, n.archived_at)),
+    ARRAY(SELECT unnest(ARRAY[o.contact_id, n.contact_id]) FROM moved_from o JOIN moved_to n ON n.id = o.id
+           WHERE (o.contact_id, o.email, o.archived_at) IS DISTINCT FROM (n.contact_id, n.email, n.archived_at)));
+  RETURN NULL;
+END;
+
+public.trg_contact_email_strength_dates_removed() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM refresh_strength_dates_of_addresses(ARRAY(SELECT o.email FROM removed o), ARRAY(SELECT o.contact_id FROM removed o));
+  RETURN NULL;
+END;
+
+public.trg_contact_strength_dates_archive() secdef=false cfg=- acl=- 
+DECLARE
+  f record;
+BEGIN
+  IF NEW.archived_at IS NOT NULL THEN
+    NEW.strength_last_interaction_at := NULL;
+    NEW.strength_last_engaged_at := NULL;
+    NEW.strength_last_inbound_at := NULL;
+    NEW.strength_last_inbound_day := NULL;
+    NEW.strength_last_outbound_at := NULL;
+    NEW.strength_last_outbound_day := NULL;
+    RETURN NEW;
+  END IF;
+  SELECT * INTO f FROM contact_strength_dates(NEW.id);
+  NEW.strength_last_interaction_at := f.interaction_at;
+  NEW.strength_last_engaged_at := f.engaged_at;
+  NEW.strength_last_inbound_at := f.inbound_at;
+  NEW.strength_last_inbound_day := f.inbound_precision = 'day';
+  NEW.strength_last_outbound_at := f.outbound_at;
+  NEW.strength_last_outbound_day := f.outbound_precision = 'day';
+  NEW.strength_folded := true;
+  RETURN NEW;
 END;
 
 public.trg_deal_last_activity() secdef=false cfg=- acl=- 
@@ -10807,6 +11374,15 @@ BEGIN
 	END IF;
 	RETURN NEW;
 END 
+public.unfold_contact_strength_dates() secdef=false cfg=- acl=- 
+DECLARE
+  moving text := current_setting('margince.last_activity_move', true);
+BEGIN
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  UPDATE contact SET strength_folded = false WHERE strength_folded AND archived_at IS NULL;
+  PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+END;
+
 public.update_intent_time(old_wall timestamp without time zone, old_zone text, old_instant timestamp with time zone, new_wall timestamp without time zone, new_zone text, new_instant timestamp with time zone) secdef=false cfg=search_path=pg_catalog acl=- 
  WITH kept AS MATERIALIZED (
   SELECT CASE

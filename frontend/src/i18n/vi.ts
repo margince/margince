@@ -12388,6 +12388,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "backfill.narrowingNote":
     "Hộp thư này đã lấy thư từ một mốc xa hơn. Chọn khoảng thời gian bằng hoặc dài hơn.",
   "backfill.staleUpdated": "Không có tiến triển trong {duration}.",
+  "backfill.restartedNote":
+    "Đợt nhập đã bắt đầu lại vì hộp thư mất vị trí đang đọc. Số email được đếm lại từ đầu; các liên hệ đã tìm thấy vẫn được giữ.",
+  "backfill.retryNote":
+    "Đợt nhập gặp sự cố kết nối và đang thử lại. Trang cuối được đọc lại nên email của trang đó được đếm lại.",
   "backfill.countScanned_one": "Đã kiểm tra {count} email",
   "backfill.countScanned_other": "Đã kiểm tra {count} email",
   "backfill.errorResumeNote":

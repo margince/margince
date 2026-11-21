@@ -7,9 +7,11 @@ import {
   OverviewList,
   OverviewRow,
 } from "../../design-system/overviewcard";
+import { taskDueOnDay, taskDueZone } from "../../format/calendarday";
 import { formatMoney } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { navigate } from "../../lib/router";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -178,6 +180,7 @@ export function DealOverviewPane({
   const t = useT();
   const plural = usePlural();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const { deal, offers, coverage, activities, card } = inputs;
   // A reader the server would refuse every change to is offered none of them.
   const canWrite = useCanWriteRecord("deal", deal);
@@ -197,7 +200,14 @@ export function DealOverviewPane({
             subject: row.subject ?? t("task.untitled"),
             dueAt: row.due_at,
             overdue: row.due_at
-              ? Date.parse(row.due_at) < Date.parse(inputs.asOf)
+              ? Date.parse(
+                  taskDueOnDay(
+                    row.due_at,
+                    row.due_has_time,
+                    row.due_intent,
+                    taskDueZone(row.due_has_time, zone, companyZone),
+                  ),
+                ) < Date.parse(inputs.asOf)
               : false,
           })),
           { t, plural, locale, zone },

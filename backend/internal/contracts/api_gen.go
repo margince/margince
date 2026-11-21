@@ -38994,13 +38994,19 @@ type BackfillStatus struct {
 	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
 
 	// Resumable The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.
-	Resumable *bool               `json:"resumable,omitempty"`
-	StartedAt *time.Time          `json:"started_at,omitempty"`
-	State     BackfillStatusState `json:"state"`
+	Resumable *bool `json:"resumable,omitempty"`
+
+	// RetryAttempts Pages in a row that failed and will be tried again; 0 once a page succeeds. The committed counts are kept across a retry, and only the unfinished page is read again.
+	RetryAttempts *int                `json:"retry_attempts,omitempty"`
+	StartedAt     *time.Time          `json:"started_at,omitempty"`
+	State         BackfillStatusState `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
 	Window    *BackfillStatusWindow `json:"window,omitempty"`
+
+	// WindowRestarts How many times the scan began again from the newest message because the provider no longer accepted its place. `counts.messages_scanned`, `captured` and `skipped` start again from zero each time; the contacts and companies already created stay counted. A client says so rather than showing the lower count as lost work.
+	WindowRestarts *int `json:"window_restarts,omitempty"`
 }
 
 // BackfillStatusOfferedWindows defines model for BackfillStatus.OfferedWindows.

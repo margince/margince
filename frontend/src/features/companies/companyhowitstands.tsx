@@ -26,6 +26,7 @@ import {
   useT,
 } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
+import { useCompanyZone } from "../../lib/companyzone";
 import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -68,6 +69,7 @@ export function CompanyHowItStands({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const payment = usePaymentHealth(companyId);
   const healthReason = useHealthReason();
   // The 360's page seeds the line; a wider zoom pages older rows from the list.
@@ -101,7 +103,7 @@ export function CompanyHowItStands({
     locale,
   });
   const withheld = omitted(view, "health");
-  const late = nextBarLateness(view, zone, { t, plural, locale });
+  const late = nextBarLateness(view, zone, { t, plural, locale }, companyZone);
   const verdict = companyVerdict({
     dimensions,
     withheld,
