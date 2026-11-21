@@ -4054,6 +4054,7 @@
   "cf.labelTaken": "This record type already has a custom field with this label.",
   "cf.formSection": "Custom fields",
   "cf.url.invalid": "Enter a web address that starts with http:// or https://.",
+  "cf.retiredLabel": "{label} (retired)",
   "settings.home": "Overview",
   "settings.home.sub": "Every settings page you can open, in groups.",
   "settings.page.account.sub": "How colleagues see you, how you sign in, and the language and look Margince uses for you.",
