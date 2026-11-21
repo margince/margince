@@ -9,6 +9,8 @@ import {
   sameWallClockOnDay,
   startOfDayInZone,
   wallClockIntent,
+  zoneLabelAt,
+  zoneNameAllYear,
   zoneNameAndOffset,
   zoneOffsetMs,
 } from "./timezone";
@@ -304,6 +306,54 @@ describe("timezone choices", () => {
     expect(
       zones.find((zone) => zone.value === "America/New_York")?.keywords,
     ).toContain("America/New_York");
+  });
+});
+
+describe("zoneLabelAt", () => {
+  it("names the zone at a wire instant in the reader's language", () => {
+    expect(zoneLabelAt("2026-11-16T16:45:00Z", "Europe/Berlin", "en")).toBe(
+      "Central European Standard Time · UTC+1",
+    );
+    expect(zoneLabelAt("2026-07-16T16:45:00Z", "Europe/Berlin", "de")).toBe(
+      "Mitteleuropäische Sommerzeit · UTC+2",
+    );
+  });
+
+  it("shows a zone the formatters refuse as it was stored", () => {
+    expect(zoneLabelAt("2026-07-16T16:45:00Z", "Mars/Olympus", "en")).toBe(
+      "Mars/Olympus",
+    );
+  });
+});
+
+describe("zoneNameAllYear", () => {
+  it("names a zone the same in summer and winter, with no offset", () => {
+    const july = "2026-07-10T09:00:00Z";
+    const november = "2026-11-10T09:00:00Z";
+    expect(zoneNameAllYear(july, "Europe/Berlin", "en")).toBe(
+      "Central European Time",
+    );
+    expect(zoneNameAllYear(november, "Europe/Berlin", "en")).toBe(
+      "Central European Time",
+    );
+    expect(zoneNameAllYear(july, "Europe/Berlin", "de")).toBe(
+      "Mitteleuropäische Zeit",
+    );
+    expect(zoneNameAllYear(july, "Asia/Ho_Chi_Minh", "vi")).toBe(
+      "Giờ Đông Dương",
+    );
+  });
+
+  it("spells a zone with no name of its own in UTC, not GMT", () => {
+    expect(zoneNameAllYear("2026-07-10T09:00:00Z", "UTC", "en")).toBe(
+      "UTC+00:00",
+    );
+  });
+
+  it("shows a zone the formatters refuse as it was stored", () => {
+    expect(zoneNameAllYear("2026-07-10T09:00:00Z", "Mars/Olympus", "en")).toBe(
+      "Mars/Olympus",
+    );
   });
 });
 

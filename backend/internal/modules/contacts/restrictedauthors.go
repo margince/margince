@@ -23,7 +23,7 @@ import (
 const restrictedAuthorsSQL = `SELECT DISTINCT lower(contact_address.email)
   FROM contact_email contact_address
   JOIN contact subject ON subject.id = contact_address.contact_id
- WHERE lower(contact_address.email) = ANY($1)
+ WHERE contact_address.email = ANY($1)
    AND (subject.archived_at IS NOT NULL
         OR EXISTS (SELECT 1 FROM communication_suppression live_stop
                     WHERE live_stop.contact_id = contact_address.contact_id

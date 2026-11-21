@@ -113,7 +113,7 @@ func mailsLinkedAtCreateTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.Cont
 		          AND EXISTS (
 		              SELECT 1 FROM contact_email e
 		               WHERE e.contact_id = p.id AND e.archived_at IS NULL
-		                 AND lower(e.email) = lower(a.counterparty_email))
+		                 AND e.email = lower(a.counterparty_email))
 		        ORDER BY rc.id
 		        LIMIT $2) m ON true
 		 WHERE p.id = ANY($1::uuid[])

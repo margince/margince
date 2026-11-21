@@ -1,5 +1,11 @@
-import { stepBackOutOf } from "./historydepth";
-import { parseHash, type Route, routeHash, type Screen } from "./router";
+import { stepBackOutOf, steppedBackOutOf } from "./historydepth";
+import {
+  parseHash,
+  type Route,
+  routeHash,
+  type Screen,
+  samePage,
+} from "./router";
 import {
   type AddressWriters,
   GLOBAL_DIALS,
@@ -46,19 +52,33 @@ export function listAddress(screen: Screen): string {
   return lastListAddress.get(screen) ?? routeHash({ screen });
 }
 
+/** Whether `hash` is on `record`, whichever tab and dials it has open. */
+export function isOnRecord(record: Route, hash: string): boolean {
+  const route = parseHash(hash);
+  return route.screen === record.screen && route.id === record.id;
+}
+
+const onRecord = (record: Route) => (hash: string) => isOnRecord(record, hash);
+
 /**
  * Leave a record for the screen before it, which history restores with its
  * filter and scroll; with none of ours behind, the record's list.
  */
 export function leaveRecord(record: Route): void {
-  stepBackOutOf(
-    (hash) => {
-      const route = parseHash(hash);
-      return route.screen === record.screen && route.id === record.id;
-    },
-    () => {
-      globalThis.location.hash = listAddress(record.screen);
-    },
+  stepBackOutOf(onRecord(record), () => {
+    globalThis.location.hash = listAddress(record.screen);
+  });
+}
+
+/**
+ * Whether the bar has already left `record` the way `leaveRecord` would: just
+ * behind it, or on its list. A bar still on the record has left nothing.
+ */
+export function leftRecord(record: Route, bar: string): boolean {
+  return (
+    !isOnRecord(record, bar) &&
+    (steppedBackOutOf(onRecord(record)) ||
+      samePage(bar, listAddress(record.screen)))
   );
 }
 

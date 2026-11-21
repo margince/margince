@@ -10,6 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -92,10 +93,8 @@ func anchorDealPeersSQL(ctx context.Context, anchorPos int, arg func(any) int) (
 		 FROM relationship mine
 		 JOIN deal d ON d.id = mine.deal_id AND d.archived_at IS NULL
 		 JOIN relationship peer ON peer.deal_id = mine.deal_id
-		  AND peer.kind = '`+dealStakeholderKind+`'
-		  AND peer.archived_at IS NULL AND peer.ended_at IS NULL
-		 WHERE mine.contact_id = $%d AND mine.kind = '`+dealStakeholderKind+`'
-		   AND mine.archived_at IS NULL AND mine.ended_at IS NULL`, anchorPos) +
+		  AND %s
+		 WHERE mine.contact_id = $%d AND %s`, dealseat.CurrentSQL("peer"), anchorPos, dealseat.CurrentSQL("mine")) +
 		` AND (` + allRowsIfEmpty(mineBound) + `) AND (` + allRowsIfEmpty(peerBound) + `) AND (` + dealScope + `)`, nil
 }
 

@@ -135,18 +135,18 @@
     transparent 60%
   );
 }
-/* A plate of readings: each card spans the plate's five rows (name, figure,
-   detail, meter, door), so every name, figure and detail shares a line with
+/* A plate of readings: each card spans the plate's four rows (name, figure,
+   detail, meter), so every name, figure and detail shares a line with
    its neighbours however far a long name wraps. Above the fold point only:
    folded, the plate is a column and statstrip.css lays each row out. */
 @container (width > 40rem) {
   .analytics-body .stat-strip[data-density="plate"] {
-    grid-template-rows: repeat(5, auto);
+    grid-template-rows: repeat(4, auto);
     row-gap: 0;
   }
   .analytics-body .stat-strip[data-density="plate"] > .stat-card {
     display: grid;
-    grid-row: span 5;
+    grid-row: span 4;
     grid-template-rows: subgrid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: none;
@@ -161,6 +161,8 @@
   .analytics-body .stat-strip[data-density="plate"] > .stat-card:first-child {
     container-type: normal;
   }
+  /* The door's foot stays unplaced: an abspos box given a row takes that row
+     as its containing block, and the door over the cell shrinks to it. */
   .analytics-body .stat-strip[data-density="plate"] > .stat-card > * {
     grid-area: auto;
   }
@@ -172,17 +174,10 @@
   .analytics-body .stat-strip[data-density="plate"] .stat-card-meter {
     align-self: start;
   }
-  .analytics-body .stat-strip[data-density="plate"] .stat-card-foot {
-    align-self: end;
-    padding-top: 0;
-  }
   /* Each part keeps its own row, so a card with no detail line still draws
      its meter level with its neighbours'. */
   .analytics-body .stat-strip[data-density="plate"] .stat-card-meter {
     grid-row: 4;
-  }
-  .analytics-body .stat-strip[data-density="plate"] .stat-card-foot {
-    grid-row: 5;
   }
 }
 .analytics-body .stat-strip[data-density="plate"] .stat-card-label {

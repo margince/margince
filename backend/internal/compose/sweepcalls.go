@@ -15,9 +15,8 @@ import (
 
 // sweepCalls bounds one pass by the MODEL CALLS it makes, solo re-asks and a
 // declined batch's split included. A bound on batches read or verdicts written
-// does not end a pass whose batches keep splitting: one message the models
-// decline turns its batch into a call per message, and a batch of abstentions
-// writes nothing and is read again.
+// does not bound the calls. One message the models decline turns its batch into
+// a call per message. Each low-confidence answer costs one solo re-ask.
 type sweepCalls struct{ left int }
 
 // newSweepCalls allows each batch the verdict cap needs one call of its own and

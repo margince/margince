@@ -3,24 +3,9 @@
 
 package compose
 
-// Whether a row names a company THIS CALLER CAN SEE that the estate already
-// holds.
-//
-// One question, deliberately — an earlier shape asked two, deciding on the
-// estate and disclosing on what may be read, and every version of that leaked.
-// Filtering the preview moved the answer into the finished report, which needs
-// only the import_run grant. Making the report's wording opaque left the
-// OUTCOME saying what the words would not: "your row was not created" answers
-// "is this company in your CRM" about a colleague's owner-private capture,
-// probed one row at a time.
-//
-// So an invisible incumbent is answered as no incumbent, and the row creates.
-// The cost is a twin the dedupe review queue picks up like any other and a merge
-// resolves. The cost of the alternative is a disclosure no merge undoes.
-//
-// The ladder itself still reads every company, by design: it is the write
-// path's collision check. What is filtered is what this caller is TOLD, never
-// what the estate knows.
+// Whether a row names a record the caller can see that the estate holds, or
+// one an earlier row of the same file will create. The import meets that
+// earlier record stored. The test run writes nothing and carries it instead.
 
 import (
 	"context"
@@ -31,32 +16,18 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A match the caller MAY NOT SEE is answered as no match at all, so the row goes
-// on to create.
+// A match the caller may not see is answered as no match, so the row creates.
+// Skipping it would leak: "your row was not created" tells the caller, one row
+// at a time, that a colleague's private record exists. A twin costs a merge in
+// the review queue. A disclosure is one no merge undoes. Not leads: the
+// store's unique key on a lead's email already refuses a twin.
 //
-// Skipping it instead is the intuitive choice and it leaks. Hiding which company
-// was hit is not enough: the outcome still says one was, and "your row was not
-// created" answers "is this company in your CRM" — for a colleague's
-// owner-private capture, probed one CSV row at a time, against a finished report
-// readable on the import_run grant alone.
-//
-// What creating costs is a twin of a record the caller cannot see, which the
-// dedupe review queue picks up like any other and a merge resolves. What skipping
-// costs is a disclosure no merge undoes.
-//
-// Not leads: a lead's identity is its email, which the store's own unique key
-// already refuses, so there is no silent twin to warn about.
-//
-// A read-only transaction, and NOT DedupeCompanyForCreate — that one takes
-// a write lock to serialize concurrent creates, which a preview has no business
-// holding. The answer can go stale between the preview and the commit; the
-// create path runs the locking version itself and its answer is the one that
-// decides.
+// A read-only transaction, not DedupeCompanyForCreate, whose write lock a
+// preview has no business holding. The create path runs the locking version.
 func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row) (bool, error) {
 	switch w.object {
 	case migration.ObjectCompany:
@@ -69,58 +40,19 @@ func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row
 }
 
 func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bool, error) {
-	fields := textFields(row.Fields)
-	candidate := contacts.CompanyCandidate{
-		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
-		LegalName:   strings.TrimSpace(fields["legal_name"]),
-		Address:     addressFrom(fields),
-	}
+	named := newCompanyOf(textFields(row.Fields))
+	candidate := contacts.CompanyCandidate{DisplayName: named.DisplayName, LegalName: named.LegalName, Address: named.Address}
 	if candidate.DisplayName == "" && candidate.LegalName == "" {
 		return false, nil
 	}
 	var visible bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		match, err := contacts.DedupeCompany(ctx, tx, candidate)
-		if err != nil || match.Decision == contacts.DecisionNoMatch {
+		if match = match.Without(w.links.batch.Changes); err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
 		}
-		// EVERY candidate at or above the ladder's threshold, not just its
-		// winner.
-		//
-		// The winner is chosen by confidence with the lowest uuid breaking ties,
-		// which has nothing to do with who may read it — so an invisible record
-		// ranking first MASKS a visible one behind it. Asking only about the
-		// winner then made the hidden record change what this caller is told: with
-		// it present the row created and reported no duplicate, without it the
-		// visible candidate won and the row was skipped. The hidden company was
-		// inferable from the disposition either way, which is the whole leak
-		// wearing a different hat.
-		//
-		// A collision this caller can see is a collision. One they cannot see is,
-		// as far as they are told, not there — and Ranked carries the set that
-		// question has to be asked of.
-		//
-		// The ladder itself still reads every company, by design: it is the
-		// write path's collision check. What is filtered is what this caller is
-		// TOLD, never what the estate knows.
-		// EVERY candidate is asked, with no early exit once one answers yes.
-		//
-		// Returning on the first visible match would make the number of queries
-		// depend on where the visible candidate sits among the hidden ones — and
-		// a caller who can time the call reads that ordering back. It is a
-		// narrow channel and it is the same fact by another route: whether
-		// records they cannot see are there.
-		//
-		// The loop is bounded by the ladder's own threshold, so the cost is the
-		// candidate set and not the estate.
-		for _, candidate := range candidatesOf(match) {
-			seen, err := auth.VisibleTo(ctx, tx, "company", candidate.UUID)
-			if err != nil {
-				return err
-			}
-			visible = visible || seen
-		}
-		return nil
+		visible, err = contacts.AnyCompanyMatchVisible(ctx, tx, match)
+		return err
 	}); err != nil {
 		return false, fmt.Errorf("import: checking %q against the companies already held: %w",
 			candidate.DisplayName, err)
@@ -128,22 +60,89 @@ func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bo
 	return visible, nil
 }
 
-// candidatesOf answers every company the ladder matched, best first.
-//
-// Held by: TestEveryMatchedCandidateIsAskedAboutNotJustTheWinner
-// (backend/internal/compose/csvcollisionvisibility_test.go)
-//
-// Ranked is the full set at or above the review threshold and is what a
-// visibility question must be asked of. It is empty for an exact (domain)
-// collision, which carries its answer in CompanyID instead — so that one is
-// added when Ranked has nothing, and never twice.
-func candidatesOf(match contacts.CompanyMatch) []ids.CompanyID {
-	if len(match.Ranked) == 0 {
-		return []ids.CompanyID{match.CompanyID}
+// rememberRow files a row the test run says will create or change a record,
+// as the import leaves that record for the rows after it.
+func (w *csvWriters) rememberRow(row migration.Row, outcome predictedOutcome) {
+	fields, batch := textFields(row.Fields), &w.links.batch
+	switch {
+	case outcome == predictUpdate && w.predictedChange != nil:
+		w.predictedChange(batch)
+	case outcome != predictCreate && outcome != predictCollides:
+	case w.object == migration.ObjectCompany:
+		held := newCompanyOf(fields)
+		held.Ref, held.Domains = row.ExternalID, []string{canonicalFor(fieldDomain, fields[fieldDomain])}
+		batch.AddCompany(held)
+	case w.object == migration.ObjectContact:
+		employer := w.predictedEmployers[row.ExternalID]
+		if employer.Effect == contacts.ContactEmployerCreateEffect {
+			batch.AddCompany(contacts.NewCompany{DisplayName: employer.CompanyName, Domains: employer.DomainNames()})
+		}
+		held := w.newContactOf(fields)
+		held.EmployerDomains = w.employerDomainsOf(row)
+		batch.AddContact(held)
 	}
-	out := make([]ids.CompanyID, 0, len(match.Ranked))
-	for _, scored := range match.Ranked {
-		out = append(out, scored.CompanyID)
+}
+
+// employerDomainsOf are the domains of the company a contact row is employed
+// at once it lands. That is a stored company, else the one of the file it names.
+func (w *csvWriters) employerDomainsOf(row migration.Row) []string {
+	employer := w.predictedEmployers[row.ExternalID]
+	if employer.CompanyID != nil {
+		return employer.EmployerDomains
 	}
-	return out
+	held, _ := w.links.batch.CompanyNamed(employer.CompanyName)
+	if ref := strings.TrimSpace(textFields(row.Fields)[csvTargetCompanyRef]); ref != "" {
+		held, _ = w.links.batch.CompanyByRef(ref)
+	}
+	return held.Domains
+}
+
+// changeOf is the stored record id as the predicted update leaves it.
+func (w *csvWriters) changeOf(ctx context.Context, id ids.UUID, changed map[string]string, current []byte) (func(*contacts.Batch), error) {
+	switch w.object {
+	case migration.ObjectCompany:
+		address, _, err := addressMergedOnto(current, addressFrom(changed), changed)
+		if err != nil {
+			return nil, err
+		}
+		held, err := contacts.CompanyAfterUpdate(id, current, strings.TrimSpace(changed[fieldDisplayName]),
+			strings.TrimSpace(changed[fieldLegalName]), canonicalFor(fieldDomain, changed[fieldDomain]), address)
+		return func(b *contacts.Batch) { b.AddCompany(held) }, err
+	case migration.ObjectContact:
+		var held contacts.NewContact
+		err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) (err error) {
+			held, err = contacts.ContactAfterUpdate(ctx, tx, ids.From[ids.ContactKind](id), current, contactUpdateFrom(changed, nil))
+			return err
+		})
+		return func(b *contacts.Batch) { b.AddContact(held) }, err
+	}
+	return func(*contacts.Batch) {}, nil
+}
+
+// collidesInFile answers whether the import, reaching this row, meets a record
+// an earlier row of the file creates or changes as its duplicate.
+func (w *csvWriters) collidesInFile(ctx context.Context, row migration.Row) (bool, error) {
+	fields := textFields(row.Fields)
+	inTx := func(fn func(pgx.Tx) error) error { return database.WithWorkspaceTx(ctx, w.pool, fn) }
+	switch w.object {
+	case migration.ObjectCompany:
+		return w.links.batch.CompanyLookAlike(ctx, inTx, newCompanyOf(fields))
+	case migration.ObjectContact:
+		return w.links.batch.ContactLookAlike(ctx, inTx, w.newContactOf(fields), w.consumerMail)
+	}
+	return false, nil
+}
+
+// newCompanyOf is the company a row names, as the duplicate check reads it.
+func newCompanyOf(fields map[string]string) contacts.NewCompany {
+	return contacts.NewCompany{DisplayName: strings.TrimSpace(fields[fieldDisplayName]), LegalName: strings.TrimSpace(fields[fieldLegalName]), Address: addressFrom(fields)}
+}
+
+// newContactOf is the contact a row names, as the duplicate check reads it.
+func (w *csvWriters) newContactOf(fields map[string]string) contacts.NewContact {
+	var emails []string
+	if email := strings.TrimSpace(fields[fieldEmail]); email != "" {
+		emails = []string{email}
+	}
+	return contacts.NewContact{FullName: contactFullName(fields), Emails: emails}
 }

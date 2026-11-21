@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -84,19 +85,19 @@ func (s *Store) EdgeFactsForReverse(ctx context.Context, tx pgx.Tx, id ids.UUID)
 // record read takes.
 //
 // The verb follows the ENTRY and is not update for both: reversing a `create`
-// archives the link, and the archive above asks delete. Asking update for both
-// lights the button for every seat holding the seeded rep grid, which carries
-// create, read and update on `relationship` and no delete.
+// archives the link, and the archive asks the kind's removal grant. Asking
+// update for both would light the button for an employment edge a seat may not
+// remove.
 //
 // Both grants, because an edge annotates its anchor: without the anchor's write
 // grant an edge write is an RBAC side door onto it, and that is the rule the
 // store's own entry points ask at their own entry.
 func (s *Store) RefuseEdgeWrite(ctx context.Context, kind, entryAction string) error {
-	action, err := edgeReversalGrant(entryAction)
+	actions, err := edgeReversalGrant(kind, entryAction)
 	if err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, "relationship", action); err != nil {
+	if err := auth.RequireAny(ctx, "relationship", actions...); err != nil {
 		return err
 	}
 	anchor, _ := relationshipAnchor(kind)
@@ -107,14 +108,14 @@ func (s *Store) RefuseEdgeWrite(ctx context.Context, kind, entryAction string) e
 // performed under. It reads the same pair ReverseEdge dispatches on, so the
 // authority asked in advance and the write that follows cannot name different
 // verbs for one entry.
-func edgeReversalGrant(entryAction string) (principal.Action, error) {
+func edgeReversalGrant(kind, entryAction string) ([]principal.Action, error) {
 	switch entryAction {
 	case edgeEntryCreate:
-		return principal.ActionDelete, nil
+		return dealseat.RemovalGrants(kind), nil
 	case edgeEntryUpdate:
-		return principal.ActionUpdate, nil
+		return []principal.Action{principal.ActionUpdate}, nil
 	default:
-		return "", unreversibleEdgeAction(entryAction)
+		return nil, unreversibleEdgeAction(entryAction)
 	}
 }
 

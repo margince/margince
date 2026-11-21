@@ -29,8 +29,10 @@ type topicModel struct {
 	// it; the request names it to the model only by ref.
 	answer       func(shown string) (verdict string, confidence float64)
 	unconfigured bool
-	forbid       *testing.T
-	calls        int
+	// withheld has every answer withheld, as a provider's safety filter does.
+	withheld bool
+	forbid   *testing.T
+	calls    int
 	// prompts holds the user turns the check sent, in order.
 	prompts []string
 	// during runs once, while the model is answering its first question.
@@ -53,6 +55,9 @@ func (m *topicModel) Complete(_ context.Context, req model.Request) (model.Respo
 	}
 	if m.unconfigured {
 		return model.Response{}, ai.ErrUnconfiguredModel
+	}
+	if m.withheld {
+		return model.Response{}, fmt.Errorf("provider: finish_reason SAFETY: %w", model.ErrOutputWithheld)
 	}
 	deals, err := askedDeals(req)
 	if err != nil {

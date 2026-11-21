@@ -15,10 +15,10 @@ import (
 )
 
 // sameAddressSQL is the gate's one spelling of "column holds this address":
-// case-insensitive on the whole address. Every lookup of an address here uses
-// it, so the gate and the questions asked of it cannot match differently.
+// case-insensitive on the whole address. The column is one a CHECK holds in
+// lower case, so it stays bare and its plain index answers the lookup.
 func sameAddressSQL(column, param string) string {
-	return "lower(" + column + ") = lower(" + param + ")"
+	return column + " = lower(" + param + ")"
 }
 
 // requestCoversSQL is true when a request covers the recipient address in

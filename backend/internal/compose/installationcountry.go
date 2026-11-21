@@ -97,13 +97,13 @@ func carryFloorOnCountryChange(ctx context.Context, tx pgx.Tx, store *settings.S
 	return privacy.CarryOnChangeTx(ctx, tx, store, from, to, time.Now())
 }
 
-// EntityFloorCarry is the hook a legal entity move or country change runs:
+// EntityFloorCarry is the hook a legal entity move or jurisdiction change runs:
 // privacy keeps the floor the change would shorten on the mail already held.
 func EntityFloorCarry(pool *pgxpool.Pool) contacts.FloorCarry {
 	store := NewSettingsStore(pool)
 	return func(ctx context.Context, tx pgx.Tx, from, to contacts.EntityJurisdiction) error {
 		return privacy.CarryOnEntityChangeTx(ctx, tx, store, identity.CountryForDecision,
-			privacy.EntityJurisdiction{Default: from.Default, Country: jurisdiction.Code(from.Country)},
-			privacy.EntityJurisdiction{Default: to.Default, Country: jurisdiction.Code(to.Country)}, time.Now())
+			privacy.EntityJurisdiction{Default: from.Default, Jurisdiction: jurisdiction.Code(from.Jurisdiction)},
+			privacy.EntityJurisdiction{Default: to.Default, Jurisdiction: jurisdiction.Code(to.Jurisdiction)}, time.Now())
 	}
 }

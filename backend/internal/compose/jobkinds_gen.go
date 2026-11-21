@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "5bfa230f5d4f0df552ae0f05855f6c93e97711edc5b7a402eefee5d90c68518c"
+const jobContractHash = "09c83ec6f96b05a2a2978f108b20c792473c13eba71faabc542db666280d65e5"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -42,7 +42,6 @@ func (CaptureBackfillReconcileArgs) declaredJobType(CaptureBackfillReconcileArgs
 func (CaptureClassifyArgs) declaredJobType(CaptureClassifyArgs)                       {}
 func (ConfidentialityVerdictArgs) declaredJobType(ConfidentialityVerdictArgs)         {}
 func (CounterpartyVerdictArgs) declaredJobType(CounterpartyVerdictArgs)               {}
-func (CaptureDigestArgs) declaredJobType(CaptureDigestArgs)                           {}
 func (CaptureEnrichArgs) declaredJobType(CaptureEnrichArgs)                           {}
 func (CapturePartSlimArgs) declaredJobType(CapturePartSlimArgs)                       {}
 func (CaptureSyncArgs) declaredJobType(CaptureSyncArgs)                               {}
@@ -158,7 +157,6 @@ var (
 	_ jobs.FleetWide = CaptureClassifyArgs{}
 	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
-	_ jobs.FleetWide = CaptureDigestArgs{}
 	_ jobs.FleetWide = CaptureEnrichArgs{}
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CapturedDealRefileSweepArgs{}
