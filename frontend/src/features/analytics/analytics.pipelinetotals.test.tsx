@@ -21,7 +21,7 @@ async function openPipeline() {
     .click(await screen.findByRole("button", { name: "Pipeline" }));
 }
 
-it("totals the whole pipeline above its stages, priced shortfall included", async () => {
+it("totals the whole pipeline above its stages and says which deals it leaves out", async () => {
   vi.stubGlobal(
     "fetch",
     reportsStub({
@@ -31,14 +31,17 @@ it("totals the whole pipeline above its stages, priced shortfall included", asyn
           raw_minor: 100_000,
           weighted_minor: 20_000,
           deal_count: 2,
-          priced_deals: 2,
+          no_value_deals: 0,
+          no_rate_deals: 0,
         },
         {
           stage_id: "pl-s9",
           raw_minor: 50_000,
           weighted_minor: 10_000,
           deal_count: 3,
-          priced_deals: 2,
+          no_value_deals: 1,
+          no_rate_deals: 1,
+          currency: "JPY",
         },
       ],
     }),
@@ -54,12 +57,13 @@ it("totals the whole pipeline above its stages, priced shortfall included", asyn
   ).toBeTruthy();
   expect(screen.getByText("5")).toBeTruthy();
   // Under both money totals: the weighted one is short the same deals.
-  expect(
-    screen.getAllByText((text) => text.includes("4 of 5 priced")),
-  ).toHaveLength(2);
+  expect(screen.getAllByText("1 deal has no exchange rate (JPY)")).toHaveLength(
+    3,
+  );
+  expect(screen.getAllByText(/1 deal has no value/)).toHaveLength(3);
 });
 
-it("states no pipeline-wide shortfall when a stage left its priced count out", async () => {
+it("states no pipeline-wide gap when a stage left its counts out", async () => {
   vi.stubGlobal(
     "fetch",
     reportsStub({
@@ -69,7 +73,8 @@ it("states no pipeline-wide shortfall when a stage left its priced count out", a
           raw_minor: 100_000,
           weighted_minor: 20_000,
           deal_count: 2,
-          priced_deals: 1,
+          no_value_deals: 0,
+          no_rate_deals: 1,
         },
         {
           stage_id: "pl-s9",
@@ -86,7 +91,9 @@ it("states no pipeline-wide shortfall when a stage left its priced count out", a
   expect(
     await screen.findByText(formatAnalyticsMoney(150_000, "EUR", "en")),
   ).toBeTruthy();
-  expect(screen.queryByText((text) => text.includes("of 5 priced"))).toBeNull();
+  expect(
+    screen.getAllByText((text) => text.includes("no exchange rate")),
+  ).toHaveLength(1);
 });
 
 it("draws no pipeline total when an unpriced stage's shortfall cannot be stated", async () => {
@@ -166,8 +173,8 @@ it("asks every pipeline card for the picked record scope, and leaves delivery co
   expect(byMonth?.body.scope).toEqual({ kind: "team", id: "t-north" });
   expect(byMonth?.body.aggregates).toContainEqual({
     fn: "count",
-    field: "amount_base_minor",
-    as: "priced_deals",
+    field: "no_rate_deal",
+    as: "no_rate_deals",
   });
 
   await userEvent
@@ -259,7 +266,7 @@ it("lists open pipeline by close month in calendar order, undated deals last", a
   expect(months).toEqual(["November 2026", "December 2026", "No close date"]);
 });
 
-it("says when a month's total leaves out deals without a price", async () => {
+it("says when a month's total leaves out deals, and why", async () => {
   vi.stubGlobal(
     "fetch",
     reportsStub({
@@ -269,7 +276,9 @@ it("says when a month's total leaves out deals without a price", async () => {
           raw_minor: 70_000,
           weighted_minor: 14_000,
           deal_count: 2,
-          priced_deals: 1,
+          no_value_deals: 0,
+          no_rate_deals: 1,
+          currency: "SEK",
         },
       ],
     }),
@@ -280,5 +289,7 @@ it("says when a month's total leaves out deals without a price", async () => {
   const table = await screen.findByRole("table", {
     name: "Open pipeline by close month",
   });
-  expect(within(table).getByText("1 of 2 priced")).toBeTruthy();
+  expect(
+    within(table).getByText("1 deal has no exchange rate (SEK)"),
+  ).toBeTruthy();
 });

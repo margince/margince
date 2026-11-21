@@ -428,7 +428,7 @@ describe("DealCard + PipelineBoard", () => {
       weightedMinor: 50_000,
       currency: "EUR",
       asOf: "2026-10-01",
-      unpricedCount: 2,
+      coverage: { noValue: 2, noRate: 0, rateCurrencies: [] },
       deals: [deal],
       count: 29,
     };
@@ -445,7 +445,7 @@ describe("DealCard + PipelineBoard", () => {
         `Exchange rates ${formatDayMonth("2026-10-01", "en", "Europe/Berlin")}`,
       ),
     ).toBeTruthy();
-    expect(screen.getByText("2 not priced")).toBeTruthy();
+    expect(screen.getByText("2 deals have no value")).toBeTruthy();
     expect(screen.getByText("29 deals")).toBeTruthy();
   });
 

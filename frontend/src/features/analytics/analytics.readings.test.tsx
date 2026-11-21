@@ -107,7 +107,6 @@ describe("a forecast tile with no money to state", () => {
         amountMinor={250_000}
         weightedMinor={125_000}
         dealCount={4}
-        pricedDeals={4}
         currency="EUR"
         locale="en"
       />,

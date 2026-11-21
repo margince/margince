@@ -162,6 +162,7 @@ func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing
 	const withPriced = `{"group_by":["stage_id"],"aggregates":[` +
 		`{"fn":"count","as":"deals"},` +
 		`{"fn":"count","field":"amount_base_minor","as":"priced"},` +
+		`{"fn":"count","field":"no_rate_deal","as":"no_rate"},` +
 		`{"fn":"sum","field":"amount_base_minor","as":"base"}]}`
 	result := e.runReport(e.Admin(), t, "pipeline-current", withPriced)
 	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
@@ -169,15 +170,14 @@ func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing
 	if got := wireInt(t, row, "deals"); got != 2 {
 		t.Errorf("counted %v deals, want both — an unconvertible deal is still pipeline", got)
 	}
-	if row["base"] != nil {
-		t.Errorf("incomplete pipeline total was served: %v", row["base"])
+	if got := wireInt(t, row, "base"); got != 10_000 {
+		t.Errorf("total = %v, want the 10000 of the deal that converts", got)
 	}
-	// The two numbers disagreeing is the whole point: a reader comparing them
-	// can see the total covers one deal of the two. Equal counts would say the
-	// money is complete, which is the state this row is not in.
 	if got := wireInt(t, row, "priced"); got != 1 {
-		t.Errorf("the money covers %v deals, want 1 — a short total beside a complete "+
-			"count reads as whole, and nothing else on the row says otherwise", got)
+		t.Errorf("the money covers %v deals, want 1", got)
+	}
+	if got := wireInt(t, row, "no_rate"); got != 1 {
+		t.Errorf("%v deals with no rate, want 1", got)
 	}
 }
 

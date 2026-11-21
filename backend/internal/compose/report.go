@@ -167,6 +167,7 @@ type reportSpec struct {
 	measures     map[string]string
 	// sumCoverage finalizes nullable sums after grouping, keeping empty rows from hiding unknown money.
 	sumCoverage map[string]string
+	partialSums bool // a covered sum adds the deals that convert
 	filters     map[string]string
 	// rowKeys are the dimensions that each name one row. A listing report
 	// groups by them to list its records. A typed question that does so asks

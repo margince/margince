@@ -237,13 +237,16 @@ func projectsGoneQuietSpec() reportSpec {
 //
 // A group holding an unpriced amount has no answer, whatever the function, so a
 // function added to the vocabulary later is held to it too. A sum over an empty
-// group reads zero. Every other function folds the rows as each row reads, and
+// group reads zero, and a partialSums spec sums what converts. Every other function folds the rows as each row reads, and
 // a project with no deals reads zero because its measure does.
 func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, expression string) string {
 	rendered := aggregateOver(aggregate.Fn, expression)
 	coverage, ok := spec.sumCoverage[aggregate.Field]
 	if !ok {
 		return rendered
+	}
+	if spec.partialSums && aggregate.Fn == aggFnSum {
+		return moneytotal.PartialSumSQL(rendered)
 	}
 	return moneytotal.CompleteAggregateSQL(rendered, "sum("+coverage+")", aggregate.Fn == aggFnSum)
 }

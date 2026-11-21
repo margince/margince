@@ -216,6 +216,9 @@
   color: var(--textSecondary);
   font-variant-numeric: tabular-nums;
 }
+.board-col-partial {
+  color: var(--textSecondary);
+}
 .board-col-weighted-figure {
   color: var(--accentText);
   font-weight: var(--fontWeightMedium);

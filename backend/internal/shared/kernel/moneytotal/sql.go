@@ -9,6 +9,12 @@ func FinalizeBaseTotalSQL(sumSQL, unpricedSQL string) string {
 	return "CASE WHEN (" + sumSQL + ") IS NULL AND coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE coalesce((" + sumSQL + "), 0) END"
 }
 
+// PartialSumSQL is the sum of the amounts a group can price. A group with
+// deals but none it can price answers null. A group with no deals reads zero.
+func PartialSumSQL(sumSQL string) string {
+	return FinalizeBaseTotalSQL(sumSQL, "count(*)")
+}
+
 // StrictBaseTotalSQL answers null for a group holding an amount that cannot be
 // priced, rather than an aggregate over the rest of it.
 //

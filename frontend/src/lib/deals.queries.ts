@@ -18,6 +18,13 @@ import {
 import { useHealthScope } from "./healthscope";
 import { translatedPipeline } from "./labeltranslation";
 import {
+  COVERAGE_AGGREGATES,
+  coverageOf,
+  type MoneyCoverage,
+  NO_RATE_ONLY,
+  withRateCurrencies,
+} from "./moneycoverage";
+import {
   defaultPipelineOf,
   pipelinesOptions,
   pipelinesWithArchivedOptions,
@@ -283,32 +290,49 @@ export function useStageTotals(f: DealFilters, enabled = true) {
     // the column cannot explain a missing total by the wrong rule.
     enabled: enabled && scope !== undefined && withheld === undefined,
     queryFn: async ({ signal }): Promise<Map<string, StageTotals> | null> => {
-      const { data, error, response } = await api.POST("/reports/{report}", {
-        signal,
-        params: { path: { report: "deals-by-stage" } },
-        body: {
-          group_by: ["stage_id"],
-          aggregates: [
-            { fn: "count", as: "deals" },
-            { fn: "sum", field: "amount_base_minor", as: "base_minor" },
-            {
-              fn: "sum",
-              field: "weighted_base_minor",
-              as: "weighted_base_minor",
-            },
-            { fn: "count", field: "amount_base_minor", as: "priced_deals" },
-          ],
-          filters: reportFilters,
-        },
-      });
-      if (error) {
-        if (response.status === 403) {
-          return null;
+      const run = async (
+        group_by: string[],
+        aggregates: typeof COVERAGE_AGGREGATES,
+      ) => {
+        const { data, error, response } = await api.POST("/reports/{report}", {
+          signal,
+          params: { path: { report: "deals-by-stage" } },
+          body: { group_by, aggregates, filters: reportFilters },
+        });
+        if (error) {
+          if (response.status === 403) {
+            return null;
+          }
+          throwProblem(error);
         }
-        throwProblem(error);
+        return data;
+      };
+      const data = await run(
+        ["stage_id"],
+        [
+          { fn: "count", as: "deals" },
+          { fn: "sum", field: "amount_base_minor", as: "base_minor" },
+          {
+            fn: "sum",
+            field: "weighted_base_minor",
+            as: "weighted_base_minor",
+          },
+          ...COVERAGE_AGGREGATES,
+        ],
+      );
+      if (!data) {
+        return null;
       }
-      return buildStageTotals(
+      const rows = await withRateCurrencies(
         data.rows,
+        ["stage_id"],
+        async (by) => {
+          const split = await run(by, NO_RATE_ONLY);
+          return split?.rows ?? [];
+        },
+      );
+      return buildStageTotals(
+        rows,
         data.base_currency ?? null,
         data.as_of ?? null,
         data.timezone ?? null,
@@ -325,7 +349,7 @@ export type StageTotals = {
   currency: string | null;
   asOf: string | null;
   timezone: string | null;
-  unpricedCount: number | null;
+  coverage: MoneyCoverage | null;
 };
 
 function reportMinor(value: unknown): number | null {
@@ -343,7 +367,6 @@ export function buildStageTotals(
   return new Map(
     rows.map((row) => {
       const count = reportMinor(row.deals) ?? 0;
-      const priced = reportMinor(row.priced_deals);
       return [
         String(row.stage_id ?? ""),
         {
@@ -355,7 +378,7 @@ export function buildStageTotals(
           currency,
           asOf,
           timezone,
-          unpricedCount: priced == null ? null : Math.max(0, count - priced),
+          coverage: coverageOf(row),
         },
       ];
     }),

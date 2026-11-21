@@ -8,6 +8,7 @@ import {
   monthAndYear,
 } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
+import { coverageOf } from "../../lib/moneycoverage";
 import {
   BarFigure,
   columnScale,
@@ -16,7 +17,7 @@ import {
   rowMoney,
 } from "./analytics.cells";
 import { CellExplain, rowDerivationUrl } from "./analytics.explain";
-import { pricedFootnote } from "./analytics.pipeline";
+import { CoverageFootnote } from "./analytics.pipeline";
 
 const closeMonth = (row: ReportRow) =>
   typeof row.close_month === "string" ? row.close_month : null;
@@ -90,18 +91,6 @@ export function CloseMonthTable({
           align: "end",
           grow: true,
           render: (row: ReportRow) => {
-            // A deal with no amount or no rate counts in the month and adds
-            // nothing to its total, so the shortfall is said beside it.
-            const priced = rowMoney(row, "priced_deals");
-            const footnote =
-              priced == null
-                ? null
-                : pricedFootnote(
-                    priced,
-                    rowCount(row, "deal_count"),
-                    locale,
-                    t,
-                  );
             return (
               <BarFigure
                 value={rowMoney(row, "raw_minor")}
@@ -115,7 +104,7 @@ export function CloseMonthTable({
                     baseCurrency,
                     locale,
                   )}
-                  {footnote && <span className="t-caption">{footnote}</span>}
+                  <CoverageFootnote coverage={coverageOf(row)} />
                 </span>
               </BarFigure>
             );

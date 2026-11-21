@@ -84,7 +84,7 @@ describe("the stage totals at the head of a board column", () => {
       stage("a", 106_254_800, {
         weightedMinor: 10_625_480,
         probabilityPct: 10,
-        unpricedCount: 6,
+        coverage: { noValue: 0, noRate: 6, rateCurrencies: ["JPY"] },
         asOf: "2026-11-03T08:00:00Z",
       }),
     ]);
@@ -98,9 +98,8 @@ describe("the stage totals at the head of a board column", () => {
       "€1,062,548.00 open, €106,254.80 weighted by each deal’s probability.",
     );
     expect(tip).not.toContain("10%");
-    expect(tip).toContain(
-      "6 deals have no price and are left out of both totals.",
-    );
+    expect(tip).toContain("Partial total: it leaves out these deals.");
+    expect(tip).toContain("6 deals have no exchange rate (JPY).");
     expect(tip).toContain(
       `Converted at exchange rates as of ${formatDate("2026-11-03T08:00:00Z", "en", UTC_ZONE)}.`,
     );

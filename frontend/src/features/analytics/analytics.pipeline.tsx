@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import { AppLink } from "../../design-system/applink";
 import { StatCard } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Popover } from "../../design-system/popover";
@@ -8,8 +10,15 @@ import {
   formatAnalyticsNumber,
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
+import { RATE_SHEET, useCoverageWords } from "../../lib/coveragewords";
 import { WIN_PROBABILITY_DIAL } from "../../lib/dealranges";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
+import {
+  addCoverage,
+  coverageOf,
+  hasGap,
+  type MoneyCoverage,
+} from "../../lib/moneycoverage";
 import {
   bandDialValue,
   bandOfKey,
@@ -37,31 +46,53 @@ type StageAgg = {
   count: number;
   rawMinor: number | null;
   weightedMinor: number | null;
-  // How many of `count` the two sums above cover. A deal in a currency the
-  // rate sheet cannot price is counted but priced nowhere in the money.
-  // Null, not zero, when the server left the aggregate out of the row: that
-  // is "we do not know". Folding it into 0 would print "0 of 2 priced" for a
-  // stage nobody finished pricing.
-  pricedDeals: number | null;
+  // The deals the two sums above leave out, by reason. Null when the server
+  // left the counts out of the row: that is "we do not know", not "none".
+  coverage: MoneyCoverage | null;
   derivationUrl: string | null;
 };
 
-// The footnote for a money figure a currency the rate sheet cannot price left
-// short. Null when every counted deal was priced. The TABLE's spelling; a stat
-// card states the same gap through `analytics.forecastPriced`, as a fragment.
-export function pricedFootnote(
-  pricedDeals: number,
-  total: number,
-  locale: Locale,
-  t: ReturnType<typeof useT>,
-): string | null {
-  if (pricedDeals >= total) {
+// The two reasons a deal is left out of a figure, worded apart. The rate note
+// links to the rates, the one cause a reader can fix.
+export function CoverageNote({
+  coverage,
+}: Readonly<{ coverage: MoneyCoverage }>) {
+  const { rate, value } = useCoverageWords()(coverage);
+  return (
+    <>
+      {rate && <AppLink href={RATE_SHEET}>{rate}</AppLink>}
+      {rate && value && " · "}
+      {value}
+    </>
+  );
+}
+
+// The footnote under a money figure that leaves deals out: how many, and why.
+// Nothing when every deal is in the figure.
+export function CoverageFootnote({
+  coverage,
+}: Readonly<{ coverage: MoneyCoverage | null }>) {
+  if (!hasGap(coverage)) {
     return null;
   }
-  return t("analytics.priced", {
-    priced: formatAnalyticsNumber(pricedDeals, locale),
-    total: formatAnalyticsNumber(total, locale),
-  });
+  return (
+    <span className="t-caption">
+      <CoverageNote coverage={coverage} />
+    </span>
+  );
+}
+
+// What a band with deals and no money says: which deals the money cannot
+// cover, or that none carries an amount.
+function noMoneyDetail(
+  coverage: MoneyCoverage | null | undefined,
+  t: ReturnType<typeof useT>,
+): ReactNode {
+  return hasGap(coverage) ? (
+    <CoverageNote coverage={coverage} />
+  ) : (
+    t("analytics.forecastNoAmount")
+  );
 }
 
 // One probability band as one slot of the strip. The raw total is the reading
@@ -75,7 +106,7 @@ export function ForecastTile({
   amountMinor,
   weightedMinor,
   dealCount,
-  pricedDeals,
+  coverage,
   currency,
   locale,
   explainUrl,
@@ -95,10 +126,8 @@ export function ForecastTile({
   // with nothing on screen to suggest otherwise.
   // Optional: a caller with no count to hand shows none rather than a zero.
   dealCount?: number | null;
-  // How many of `dealCount` the money above actually covers (margince#4201).
-  // Optional and paired with dealCount: a caller with no count has nothing
-  // this could qualify either.
-  pricedDeals?: number | null;
+  // The deals of `dealCount` the money above leaves out, and why.
+  coverage?: MoneyCoverage | null;
   currency: string | null;
   locale: Locale;
   // The band row's own handle; a tile with none draws no trigger.
@@ -130,14 +159,14 @@ export function ForecastTile({
         value={
           dealCount == null ? t("analytics.forecastNoFigure") : deals(dealCount)
         }
-        detail={dealCount == null ? undefined : t("analytics.forecastNoAmount")}
+        detail={dealCount == null ? undefined : noMoneyDetail(coverage, t)}
       />
     );
   }
-  // The line under the figure: what it was weighted to, and how many deals it
-  // covers. Fragments, never "Label: value" pairs: a caption is read as one
-  // sentence about the figure, and a colon makes it a small table.
-  const parts: string[] = [];
+  // The line under the figure: what it was weighted to, how many deals it
+  // covers, and the deals it leaves out. Fragments, never "Label: value"
+  // pairs: a caption is read as one sentence about the figure.
+  const parts: ReactNode[] = [];
   if (weightedMinor != null) {
     parts.push(
       t("analytics.forecastWeighted", {
@@ -146,16 +175,10 @@ export function ForecastTile({
     );
   }
   if (dealCount != null) {
-    // The gap is stated only where there is one: "8 of 8 priced" sends a reader
-    // looking for a shortfall the band does not have.
-    parts.push(
-      pricedDeals != null && pricedDeals < dealCount
-        ? t("analytics.forecastPriced", {
-            priced: formatAnalyticsNumber(pricedDeals, locale),
-            count: formatAnalyticsNumber(dealCount, locale),
-          })
-        : deals(dealCount),
-    );
+    parts.push(deals(dealCount));
+  }
+  if (hasGap(coverage)) {
+    parts.push(<CoverageNote key="coverage" coverage={coverage} />);
   }
   return (
     <StatCard
@@ -164,7 +187,15 @@ export function ForecastTile({
       source={source}
       href={dealsUrl}
       value={formatAnalyticsMoney(amountMinor, currency, locale)}
-      detail={parts.join(" · ") || undefined}
+      detail={
+        parts.length > 0 ? (
+          <>
+            {parts.flatMap((part, index) =>
+              index === 0 ? [part] : [" · ", part],
+            )}
+          </>
+        ) : undefined
+      }
     />
   );
 }
@@ -226,10 +257,7 @@ export function ForecastStrip({
               amountMinor={row ? rowMoney(row, "raw_minor") : null}
               weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
               dealCount={row ? rowCount(row, "deal_count") : null}
-              // Not rowCount: an absent aggregate here means the server
-              // did not answer. rowCount's 0 default would print that as
-              // "0 priced" instead of leaving the detail out.
-              pricedDeals={row ? rowMoney(row, "priced_deals") : null}
+              coverage={row ? coverageOf(row) : null}
               explainUrl={row ? rowDerivationUrl(row) : null}
               currency={baseCurrency}
               locale={locale}
@@ -268,10 +296,7 @@ export function buildStageAggregates(
           // (weighted_amount_minor), never round(rawMinor × p / 100).
           // That rounds the column sum once instead of every deal.
           weightedMinor: rowMoney(row, "weighted_minor"),
-          // Not rowCount: an absent aggregate here means the server did not
-          // answer the question, and rowCount's 0 default would print that
-          // as an answer.
-          pricedDeals: rowMoney(row, "priced_deals"),
+          coverage: coverageOf(row),
           derivationUrl: rowDerivationUrl(row),
         };
       })
@@ -348,10 +373,6 @@ export function StageTable({
             // form one shape, so how much of each stage the probabilities
             // discount is read at a glance rather than by dividing.
             render: (row: StageAgg) => {
-              const footnote =
-                row.pricedDeals == null
-                  ? null
-                  : pricedFootnote(row.pricedDeals, row.count, locale, t);
               return (
                 <BarFigure
                   value={row.rawMinor}
@@ -365,7 +386,7 @@ export function StageTable({
                       baseCurrency,
                       locale,
                     )}
-                    {footnote && <span className="t-caption">{footnote}</span>}
+                    <CoverageFootnote coverage={row.coverage} />
                   </span>
                 </BarFigure>
               );
@@ -412,17 +433,13 @@ function PipelineTotals({
 }>) {
   const t = useT();
   const count = aggregates.reduce((total, row) => total + row.count, 0);
-  // Stated only when every stage answered it. A stage that did not would
-  // count its deals into the total and none into the priced: a shortfall the
-  // pipeline does not have.
-  const pricedDeals = aggregates.every((row) => row.pricedDeals != null)
-    ? sumKnown(aggregates.map((row) => row.pricedDeals))
-    : null;
-  // A stage the rate sheet could not price drops out of the sums. With the
-  // priced count in hand, the footnote says so. Without it the shortfall has
-  // no words, so the totals are absent rather than short with no note.
+  // Every stage's sum already leaves out the deals it cannot price, so the
+  // header adds the sums and the gaps of the same stages. A stage that did
+  // not state its gaps would leave a shortfall unsaid, so then the totals
+  // are absent.
+  const coverage = addCoverage(aggregates.map((row) => row.coverage));
   const unstated =
-    pricedDeals == null &&
+    coverage == null &&
     aggregates.some((row) => row.count > 0 && row.rawMinor == null);
   const rawMinor = unstated
     ? null
@@ -430,10 +447,7 @@ function PipelineTotals({
   const weightedMinor = unstated
     ? null
     : sumKnown(aggregates.map((row) => row.weightedMinor));
-  const footnote =
-    pricedDeals == null
-      ? undefined
-      : (pricedFootnote(pricedDeals, count, locale, t) ?? undefined);
+  const footnote = <CoverageFootnote coverage={coverage} />;
   return (
     <StatStrip density="plate">
       <StatCard
