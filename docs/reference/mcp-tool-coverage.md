@@ -142,8 +142,8 @@ Everything below is the detail behind the two tables above: which tools each job
 | | |
 |---|---:|
 | Tools the assistant is offered | 48 |
-| … some case requires | 38 |
-| … some case requires as one of a set | 4 |
+| … some case requires | 37 |
+| … some case requires as one of a set | 5 |
 | … **no case requires** | 6 |
 | … of those, permitted somewhere but never required | 2 |
 | Prompt tokens spent on tools no case requires | 5925 |
@@ -260,9 +260,9 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
-| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
-| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
-| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | - |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | - |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | - |
 | [case118_is_the_crane_job_at_risk](../../e2e/llm/scenarios/case118-is-the-crane-job-at-risk.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A project's health is read with its reason | - |
 | [case118_is_the_crane_job_at_risk](../../e2e/llm/scenarios/case118-is-the-crane-job-at-risk.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** A project's health is read with its reason | - |
 | [case118_is_the_crane_job_at_risk](../../e2e/llm/scenarios/case118-is-the-crane-job-at-risk.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A project's health is read with its reason | - |
@@ -610,7 +610,6 @@ Every run of every case requiring this tool passed, for the model named.
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
@@ -651,7 +650,6 @@ Every run of every case requiring this tool passed, for the model named.
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
@@ -685,7 +683,6 @@ Every run of every case requiring this tool passed, for the model named.
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
@@ -761,6 +758,7 @@ and the case's pass rate belongs to the set rather than to this row. That is why
 | Tool | Tokens | Required as one of a set by | Permitted in | Graded by | Attached to |
 |---|---:|---|---|---|---|
 | `read_analytics` | 1067 | `case62_held_meetings_to_opportunities` | `case20_put_it_in_the_board_pack`, `case49_who_can_introduce_us` | - | - |
+| `list_approvals` | 474 | `case125_what_waits_for_my_approval` | `case117_log_it_and_say_what_waits`, `case122_file_the_acceptance_report`, `case126_file_it_i_approve`, `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - | - |
 | `read_record` | 284 | `case105_what_changed_there`, `case107_tidy_up_the_room`, `case66_what_are_these_two_worth` | `case104_mark_it_seen`, `case108_ask_sofia_for_an_intro`, `case10_finish_the_import`, `case110_write_greta_a_thank_you`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case117_log_it_and_say_what_waits`, `case118_is_the_crane_job_at_risk`, `case120_what_the_pump_customer_wants`, `case121_the_gist_of_the_visit_note`, `case122_file_the_acceptance_report`, `case123_take_over_sofias_deal`, `case124_log_it_with_read_access`, `case125_what_waits_for_my_approval`, `case126_file_it_i_approve`, `case127_log_the_call_again`, `case128_is_she_here_twice`, `case129_move_it_to_service`, `case130_put_the_offer_link_on_the_deal`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case6_ask_the_company`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case99_they_raised_money`, `case9_filed_in_the_wrong_place` | - | `morning_brief`, `overnight_at_risk_sweep` |
 | `read_approval` | 154 | `case125_what_waits_for_my_approval` | `case122_file_the_acceptance_report`, `case126_file_it_i_approve`, `case32_two_words_for_one_thing` | - | - |
 | `whoami` | 129 | `case75_sofia_is_leaving` | `case102_shorter_in_my_voice`, `case103_stop_telling_me`, `case104_mark_it_seen`, `case105_what_changed_there`, `case106_turn_that_rule_off`, `case107_tidy_up_the_room`, `case109_my_hours_zone_and_language`, `case110_write_greta_a_thank_you`, `case111_how_is_the_workspace_doing`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case116_the_rate_and_the_logo`, `case117_log_it_and_say_what_waits`, `case123_take_over_sofias_deal`, `case124_log_it_with_read_access`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case62_held_meetings_to_opportunities`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case70_clear_my_notices`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case82_keep_that_newsletter_out`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case91_add_a_review_stage`, `case93_count_that_stage_as_won`, `case94_a_field_for_the_region`, `case97_import_this_card`, `case99_they_raised_money` | - | - |
