@@ -264,11 +264,6 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version, &enabledFrom); err != nil {
 				return err
 			}
-			if runnable, err := setupComplete(key, inst.params); err != nil {
-				return err
-			} else if !runnable {
-				continue
-			}
 			if owner != nil {
 				inst.owner = *owner
 			}

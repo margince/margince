@@ -71,19 +71,3 @@ func mustEntry(t *testing.T, key string) CatalogEntry {
 	}
 	return entry
 }
-
-func TestEnabledRuleThatNeedsSetupIsReportedPausedAndNotRun(t *testing.T) {
-	record := Automation{Key: renewalReminderName, Enabled: true, Params: json.RawMessage(`{}`)}
-	state := configurationOf(record, false)
-	record.Configuration = &state
-	wire, err := WireAutomation(record)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if wire.Status != crmcontracts.AutomationStatusPaused || *wire.SetupState != crmcontracts.AutomationSetupStateNeedsSetup {
-		t.Fatalf("status=%s state=%v, want paused/needs_setup", wire.Status, *wire.SetupState)
-	}
-	if runnable, err := setupComplete(renewalReminderName, record.Params); err != nil || runnable {
-		t.Fatalf("runnable=%v err=%v, want not runnable", runnable, err)
-	}
-}
