@@ -98,8 +98,8 @@ func (r *Router) startWalk(lc *logicalCall, task Task, b *binding, rungs []Tier)
 }
 
 // tryTimeout is how long lc's next try may take: its per-try limit, cut to
-// what is left of the walk bound. Whether a try may start at all is
-// walkSpent's to say, asked after every failed or refused try.
+// what is left of the walk bound. walkSpent says whether a try may start at
+// all. It is asked after every failed or refused try.
 func (r *Router) tryTimeout(lc *logicalCall, task Task) time.Duration {
 	settings := r.callSettings(lc, task)
 	if settings.WalkTimeout == 0 || !lc.walking {
