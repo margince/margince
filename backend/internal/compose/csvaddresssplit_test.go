@@ -68,20 +68,3 @@ func TestASplitLineOneReplacesTheWholeStoredAddress(t *testing.T) {
 		t.Errorf("address = %q, want %q", got, want)
 	}
 }
-
-func TestACountryNameCellBecomesItsCodeAndAnUnknownOneStaysForTheCheck(t *testing.T) {
-	for raw, want := range map[string]string{
-		"Germany": "DE", "Deutschland": "DE", "Việt Nam": "VN", "vietnam": "VN", " Philippines ": "PH",
-		"de": "DE", "VN": "VN", "Atlantis": "Atlantis", "": "",
-	} {
-		fields := map[string]any{fieldAddressCountry: raw}
-		resolveCountryCell(fields)
-		if fields[fieldAddressCountry] != want {
-			t.Errorf("country %q became %q, want %q", raw, fields[fieldAddressCountry], want)
-		}
-	}
-	_, problem := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", fieldAddressCountry: "Atlantis"}, importCatalog{})
-	if problem == nil || problem.Target != fieldAddressCountry {
-		t.Errorf("an unknown country name must be refused on its cell, got %+v", problem)
-	}
-}

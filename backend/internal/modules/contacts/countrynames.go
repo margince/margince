@@ -57,7 +57,7 @@ var countryByName = func() map[string]string {
 	return byName
 }()
 
-// ResolveCountry reads a country a person typed: an assigned alpha-2 code, or
+// ResolveCountry reads a country as typed: an assigned alpha-2 code, or
 // the name of one country in English, German or Vietnamese. It returns the
 // upper-case code, and false for anything unknown or shared by two countries.
 // NormalizeCountryCode stays the stricter rule the stores apply.
