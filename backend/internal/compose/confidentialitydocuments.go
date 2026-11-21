@@ -86,18 +86,27 @@ type attachmentOpener interface {
 	OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.Attachment, io.ReadCloser, error)
 }
 
+// pdfEngine is the PDF reader the verdict parses through: processPDFReader,
+// which compiles on its first Read unless Start ran before.
+type pdfEngine interface {
+	Start() error
+	Read(ctx context.Context, raw []byte, maxChars int) (string, error)
+}
+
 // threadDocuments reads the documents of claimed threads for one engine.
 type threadDocuments struct {
-	files attachmentOpener
-	pdf   *pdftext.Reader
-	slots chan struct{}
+	files      attachmentOpener
+	pdf        pdfEngine
+	slots      chan struct{}
+	fileBudget time.Duration
 }
 
 func newThreadDocuments(pool *pgxpool.Pool, blob blobstore.Store) *threadDocuments {
 	return &threadDocuments{
-		files: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob),
-		pdf:   processPDFReader,
-		slots: make(chan struct{}, confidentialityDocumentSlots),
+		files:      activities.NewStore(InstallationDB(pool)).WithBlobstore(blob),
+		pdf:        processPDFReader,
+		slots:      make(chan struct{}, confidentialityDocumentSlots),
+		fileBudget: confidentialityDocumentTimeout,
 	}
 }
 
@@ -252,7 +261,7 @@ func (d *threadDocuments) excerpt(ctx context.Context, doc *capture.ThreadDocume
 			return nil
 		}
 	}
-	fileCtx, cancel := context.WithTimeout(ctx, confidentialityDocumentTimeout)
+	fileCtx, cancel := context.WithTimeout(ctx, d.fileBudget)
 	defer cancel()
 	text, truncated, err := d.parse(fileCtx, raw, mediaType, confidentialityCVChars)
 	if ctx.Err() != nil {

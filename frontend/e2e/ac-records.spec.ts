@@ -73,7 +73,7 @@ test("the shared links drawer is worked by the keyboard alone", async ({
 
 // The contact header's access chip, open. Its panel is portalled over the page
 // and carries the record's one radio group. Neither the closed-header sweeps
-// above nor the chip's own unit suite judges it. This test checks the contrast
+// in ac-a11y.spec.ts nor the chip's own unit suite judges it. This test checks the contrast
 // of the sentence and switch, the group's name, and focus landing inside.
 // The route answers the contact as shared and owned by the session's own user,
 // who may write it: the case that draws the switch.
@@ -128,7 +128,8 @@ test.describe("the contact's access panel, open", () => {
 });
 
 // An archived contact opens on its row: the server refuses its 360, brief and
-// guard. The seeded contact is live, so no sweep above reaches this page.
+// guard. The seeded contact is live, so no sweep in ac-a11y.spec.ts or
+// ac.spec.ts reaches this page.
 test.describe("an archived contact opens read-only", () => {
   const schemes: readonly ("light" | "dark")[] = ["light", "dark"];
   for (const colorScheme of schemes) {
@@ -347,7 +348,7 @@ test.describe("calling a contact", () => {
 });
 
 // Authorize access is reached from an AI tool's redirect, never from the rail,
-// so neither route list above sweeps it.
+// so no route list in ac-a11y.spec.ts or ac.spec.ts sweeps it.
 test.describe("Authorize access on the sign-in surface", () => {
   const consentAddress = (extra: Record<string, string>) =>
     `/#/oauth-consent?${new URLSearchParams({

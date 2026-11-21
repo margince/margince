@@ -1,4 +1,4 @@
--- A zone file loads under its own name, in whatever case it was asked for.
+-- Postgres finds a zone file in any case and reports the file's own spelling.
 -- A POSIX rule such as UTC+3 needs no file and loads under its upper-case
 -- spelling. So a name Postgres hands back unchanged names a zone file, unless
 -- it is upper case with a digit and could be a rule. Only those names read the
