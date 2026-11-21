@@ -129,7 +129,9 @@ export function useCandidateSearch<T>(
   };
 }
 
-export function RecordPicker({
+export function RecordPicker<
+  T extends RecordPickerCandidate = RecordPickerCandidate,
+>({
   label,
   searchTargets,
   onPick,
@@ -152,8 +154,8 @@ export function RecordPicker({
   placeholder?: string;
   // Announced, not native: the field empties once a candidate is picked.
   required?: boolean;
-  searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
-  onPick: (candidate: RecordPickerCandidate) => void;
+  searchTargets: (q: string) => Promise<T[]>;
+  onPick: (candidate: T) => void;
   selected?: RecordPickerCandidate | null;
   // Inert while the caller's own write for this pick is still in flight, so a
   // second choice cannot race the first. Disabled rather than unmounted: the
@@ -167,7 +169,7 @@ export function RecordPicker({
   onSearchChange?: (term: string) => void;
   // A sentence for a row that is listed but cannot be picked. A function read
   // at render, not part of the search, so a new translator never restarts it.
-  unavailableReason?: (candidate: RecordPickerCandidate) => string | undefined;
+  unavailableReason?: (candidate: T) => string | undefined;
   // The sentence for a search that finds nothing, when the caller can say why
   // and what to do next.
   noMatch?: string;

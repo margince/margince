@@ -40,12 +40,12 @@ func writeOfferPDFIssuerBlock(pdf *fpdf.Fpdf, tr pdfTranslator, issuer OfferIssu
 	if bank := joinNonEmpty(" · ", issuer.BankAccountHolder, issuer.IBAN, issuer.BIC); bank != "" {
 		lines = append(lines, labels.bank+": "+bank)
 	}
-	pdf.SetFont("Helvetica", "", 9)
+	pdf.SetFont(offerFontFamily, "", 9)
 	for _, line := range lines {
 		pdf.Cell(0, 4.5, tr(line))
 		pdf.Ln(4.5)
 	}
-	pdf.SetFont("Helvetica", "", 11)
+	pdf.SetFont(offerFontFamily, "", 11)
 }
 
 // writeOfferPDFLogo embeds the issuer's logo at the top of the first page. A

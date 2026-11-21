@@ -314,7 +314,7 @@ erDiagram
 | [`dedupe_scan_state`](contacts.md#dedupe_scan_state) | contacts | 3 | 0 |
 | [`email_signature`](contacts.md#email_signature) | contacts | 10 | 0 |
 | [`embed_store_binding`](search.md#embed_store_binding) | search | 6 | 0 |
-| [`embedding`](search.md#embedding) | search | 7 | 0 |
+| [`embedding`](search.md#embedding) | search | 8 | 0 |
 | [`erasure_suppression`](privacy.md#erasure_suppression) | privacy | 7 | 0 |
 | [`event_outbox`](platform.md#event_outbox) | platform | 7 | 0 |
 | [`existing_customer_notice`](consent.md#existing_customer_notice) | consent | 14 | 1 |

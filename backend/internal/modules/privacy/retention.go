@@ -172,6 +172,8 @@ type RetentionService struct {
 	outboxReaders *storekit.OutboxReaders
 	// operationalPrunes remove other modules' bookkeeping rows past their window.
 	operationalPrunes []OperationalPrune
+	// pruneEmbedCalls is the ai module's delete of old embedding call traces.
+	pruneEmbedCalls EmbedCallPrune
 }
 
 // NewRetentionService wires the nightly evaluator.

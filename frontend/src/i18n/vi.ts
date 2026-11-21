@@ -4459,10 +4459,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ khi có xác nhận chữ ký. Không bao giờ lấy từ ngày chốt của deal.",
   "contracts.form.save": "Ghi nh\u1eadn h\u1ee3p \u0111\u1ed3ng",
   "contracts.form.errNoName": "Nhập tiêu đề hợp đồng.",
+  "contracts.form.errNegativeAmount":
+    "Giá trị và doanh thu định kỳ hằng năm không được âm.",
   "contracts.form.errTermOrder":
     "Kỳ hạn không thể kết thúc trước ngày bắt đầu.",
   "contracts.add": "Th\u00eam h\u1ee3p \u0111\u1ed3ng",
-  "contracts.rowMenu": "Thao t\u00e1c h\u1ee3p \u0111\u1ed3ng",
   "contracts.renew.title": "Gia hạn hợp đồng",
   "contracts.renew.hint":
     "Tạo hợp đồng mới với điều khoản riêng và đánh dấu hợp đồng này là đã bị thay thế. Chỉ giữ lại bên đối tác.",
@@ -4572,6 +4573,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.lines.description": "Mô tả",
   "deal.lines.quantity": "Số lượng",
   "deal.lines.price": "Giá bán",
+  "deal.lines.priceInOtherCurrency":
+    "Sản phẩm này có giá bằng {currency}. Hãy nhập giá của nó.",
   "deal.lines.remove": "Xóa {name}",
   "deal.lines.editTitle": "Sản phẩm và dịch vụ",
   "deal.lines.save": "Lưu sản phẩm",
@@ -6290,6 +6293,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.standing.figure.amountByModel": "Do Margince đọc từ email",
   "deal.standing.figure.currencyGuessed":
     "Đơn vị tiền tệ là giả định, hãy kiểm tra",
+  "deal.standing.figure.offerInProgress":
+    "Báo giá {number} · phiên bản {revision} · {status}",
   "deal.standing.figure.next": "Bước tiếp theo",
   "standing.noneYet": "Chưa có",
   "deal.standing.figure.daysInStage": "Số ngày trong giai đoạn",
@@ -6839,6 +6844,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.offersEmpty": "Chưa có báo giá nào",
 
   "offer.backToDeal": "Quay lại deal",
+  "offer.deal": "Deal",
   "offer.totals": "Tổng cộng",
   "offer.net": "Trước thuế",
   "offer.tax": "Thuế",
@@ -6871,26 +6877,34 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.unit": "Đơn vị",
   "offer.unitFromProduct": "Theo sản phẩm",
   "offer.quantity": "Số lượng",
+  "offer.unitPriceRequired": "Nhập đơn giá hoặc chọn một sản phẩm.",
   "offer.unitPrice": "Đơn giá",
   "offer.discountPct": "Chiết khấu %",
   "offer.taxRate": "Thuế %",
   "offer.committedPeriods": "Số kỳ",
   "offer.lineTotal": "Thành tiền",
   "offer.unpriced": "chưa có giá, không tính vào tổng",
-  "offer.removeLine": "Gỡ",
+  "offer.lineCell": "{column}, dòng {position}",
+  "offer.removeLineNamed": "Gỡ dòng {position}",
   "offer.pickProduct": "Chọn sản phẩm",
   "offer.pickProductConfirm": "Sản phẩm: {name}",
   "offer.send": "Gửi",
-  "offer.sendConfirm": "Gửi báo giá này cho bên mua?",
-  "offer.sendBody": "Báo giá chuyển sang chỉ đọc cho đến khi bên mua phản hồi.",
+  "offer.sendConfirm": "Đánh dấu báo giá này là đã gửi?",
+  "offer.sendBody":
+    "Không có email nào được gửi đi, và phiên bản này bị khóa vĩnh viễn. Hãy tạo PDF và tự gửi cho bên mua.",
   "offer.accept": "Chấp nhận",
   "offer.acceptConfirm": "Đánh dấu báo giá này là đã chấp nhận?",
   "offer.acceptBody":
     "Giá trị và loại tiền của deal sẽ được cập nhật theo báo giá này.",
   "offer.reject": "Từ chối",
+  "offer.discard": "Bỏ bản nháp",
+  "offer.discardBody":
+    "Bản nháp được lưu trữ và không còn trong danh sách báo giá của deal.",
   "offer.rejectConfirm": "Đánh dấu báo giá này là đã từ chối?",
   "offer.rejectReason": "Lý do (không bắt buộc)",
   "offer.regenerate": "Tạo lại phiên bản",
+  "offer.writeUnsure":
+    "Margince không xác định được thao tác đã thành công hay chưa. Hãy kiểm tra các báo giá của deal trước khi thử lại.",
   "offer.aiDisclosureTitle": "Báo giá có AI hỗ trợ",
   "offer.diffAdded_one": "Đã thêm {count} dòng",
   "offer.diffAdded_other": "Đã thêm {count} dòng",
@@ -16203,6 +16217,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "product.unitOtherRequired":
     "Nhập đơn vị hoặc chọn một đơn vị trong danh sách.",
   "product.unitPrice": "Đơn giá",
+  "product.candidatePrice": "{price} / {unit}",
   "product.currency": "Loại tiền",
   "product.taxRate": "Thuế suất mặc định %",
   "product.billingModel": "Thanh toán",
@@ -22862,6 +22877,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalReview.closesOn": "Chốt {date}",
   "legalReview.back": "Tất cả rà soát pháp lý",
   "legalReview.packTitle": "Hồ sơ rà soát",
+  "legalReview.packDeal": "Deal",
   "legalReview.decideTitle": "Trả lời",
   "legalReview.ownRequest":
     "Bạn đã yêu cầu rà soát này, nên một đồng nghiệp sẽ trả lời.",
@@ -22884,7 +22900,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalReview.packOffer": "Báo giá hiện tại",
   "legalReview.offerNumber": "Báo giá",
   "legalReview.offerRevision": "{number}, phiên bản {revision}",
-  "legalReview.offerTotal": "Tổng",
+  "legalReview.offerTotal": "Tổng gồm thuế",
   "legalReview.offerValidUntil": "Hiệu lực đến",
   "legalReview.offerTerms": "Điều khoản",
   "legalReview.packNoOffer": "Deal này chưa có báo giá.",
@@ -22921,6 +22937,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không mở được tệp này. Hãy hỏi đồng nghiệp đã yêu cầu rà soát.",
   "legalReview.offerLine": "Dòng {number}",
   "legalReview.offerLineText": "{quantity} × {description}, đơn giá {price}",
+  "legalReview.offerLineDiscount": "Chiết khấu {rate}%",
+  "legalReview.offerLineTax": "Thuế {rate}%",
   "legalReview.offerLineRecurring_one": "{cadence}, trong {count} kỳ",
   "legalReview.offerLineRecurring_other": "{cadence}, trong {count} kỳ",
   "legalReview.offerLineStaged": "Được đề xuất, chưa tính vào tổng",

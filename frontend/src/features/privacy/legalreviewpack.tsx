@@ -5,12 +5,14 @@
 // so nobody briefs legal by hand. A document is listed only when this reader
 // can open it, and opens through the file's own gate.
 
+import { EntityRef } from "../../components/entityref";
 import { LegalReviewStatusBadge } from "../../components/legalreviewstatus";
 import { EmptyState } from "../../design-system/atoms";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { FileChip } from "../../design-system/filechip";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatActivityWhen } from "../../format/activitywhen";
+import { lineBillingPhrase } from "../../format/billingphrase";
 import { middayInstant } from "../../format/calendarday";
 import {
   formatBytes,
@@ -20,14 +22,7 @@ import {
   formatNumber,
   ordinalNumber,
 } from "../../format/format";
-import {
-  type Locale,
-  type PluralTranslator,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { attachmentTitle } from "../../lib/attachmentlink";
 import { CONTRACT_STATUS_LABEL } from "../../lib/contractstatus";
@@ -123,6 +118,9 @@ function PackFacts({ packet }: Readonly<{ packet: Packet }>) {
     <Panel title={t("legalReview.packTitle")}>
       <PanelBody>
         <FieldGrid>
+          <FieldRow label={t("legalReview.packDeal")}>
+            <EntityRef kind="deal" id={deal.id} name={deal.name} />
+          </FieldRow>
           <FieldRow label={t("legalReview.packCompany")}>
             {deal.company_name ?? "—"}
           </FieldRow>
@@ -148,13 +146,6 @@ function PackFacts({ packet }: Readonly<{ packet: Packet }>) {
 
 type PacketOffer = NonNullable<Packet["offer"]>;
 type PacketOfferLine = PacketOffer["lines"][number];
-
-const CADENCE: Readonly<Record<number, MessageKey>> = {
-  1: "product.billingMonthly",
-  3: "product.billingQuarterly",
-  6: "product.billingHalfYearly",
-  12: "product.billingYearly",
-};
 
 // The approval binds to every offer the buyer holds, so each one is shown.
 function PackOffer({ packet }: Readonly<{ packet: Packet }>) {
@@ -217,7 +208,7 @@ function OfferFields({ offer }: Readonly<{ offer: PacketOffer }>) {
           })}
         >
           {t("legalReview.offerLineText", {
-            quantity: line.quantity,
+            quantity: formatNumber(Number(line.quantity), locale),
             description: line.description,
             price: formatMoneyOrAbsent(
               line.unit_price_minor,
@@ -253,34 +244,30 @@ function LineTerms({ line }: Readonly<{ line: PacketOfferLine }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const billing = lineBilling(line, t, plural, locale);
+  const billing = lineBillingPhrase(line, t, plural, locale);
+  const discount = Number(line.discount_pct ?? 0);
   return (
     <>
+      {discount !== 0 && (
+        <div className="t-caption">
+          {t("legalReview.offerLineDiscount", {
+            rate: formatNumber(discount, locale),
+          })}
+        </div>
+      )}
+      {line.tax_rate != null && (
+        <div className="t-caption">
+          {t("legalReview.offerLineTax", {
+            rate: formatNumber(Number(line.tax_rate), locale),
+          })}
+        </div>
+      )}
       {billing && <div className="t-caption">{billing}</div>}
       {line.staged && (
         <div className="t-caption">{t("legalReview.offerLineStaged")}</div>
       )}
     </>
   );
-}
-
-function lineBilling(
-  line: PacketOfferLine,
-  t: Translator,
-  plural: PluralTranslator,
-  locale: Locale,
-): string | null {
-  if (line.billing_model === "one_time") return t("product.billingOneTime");
-  if (line.billing_model !== "recurring") return null;
-  const months = line.billing_interval_months;
-  const cadence = t(
-    (months != null && CADENCE[months]) || "product.billingRecurring",
-  );
-  if (line.interval_count == null) return cadence;
-  return plural("legalReview.offerLineRecurring", line.interval_count, {
-    cadence,
-    count: formatNumber(line.interval_count, locale),
-  });
 }
 
 function PackDocuments({ packet }: Readonly<{ packet: Packet }>) {
