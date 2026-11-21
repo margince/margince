@@ -32,6 +32,9 @@ info:
     GET /v1/deals/{id}/viability:
       release: ""
       announced_at: ""
+    GET /v1/digest:
+      release: ""
+      announced_at: ""
     GET /v1/forecast/assurance/enforcement:
       release: ""
       announced_at: ""
@@ -34904,7 +34907,7 @@ components:
           description: "The deal's status, so a reader can tell an open opportunity from one that has closed."
         seat_current:
           type: boolean
-          description: "False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it."
+          description: "False once the seat's End day has arrived in the installation's time zone; an End date still ahead keeps it current. A seat that ended stays listed as history, and a follow-up cannot rest on it."
         role:
           type: string
           description: "The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title."
@@ -51147,7 +51150,14 @@ components:
         country:
           type: string
           nullable: true
-          description: Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country.
+          description: Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity.
+        jurisdiction:
+          type: [string, 'null']
+          description: |-
+            The jurisdiction pack whose law the entity follows, as its lower-case code, for example
+            `de`. It is one of the packs this build offers (`available` of
+            `/installation/jurisdiction`). Null on the default entity, whose law is the
+            installation's jurisdiction.
         default_language:
           type: string
           nullable: true
@@ -51215,7 +51225,13 @@ components:
       properties:
         display_name: {type: string, maxLength: 120}
         legal_name: {type: string, maxLength: 500}
-        country: {type: string, description: 'Lower-case ISO 3166-1 alpha-2, for example `de`.'}
+        country: {type: string, description: 'The address country, lower-case ISO 3166-1 alpha-2, for example `de`.'}
+        jurisdiction:
+          type: string
+          description: |-
+            The jurisdiction pack whose law the entity follows, one of `available` of
+            `/installation/jurisdiction`. Left out, it is the `country`, and a country no pack
+            covers answers `invalid_jurisdiction`.
         address: {$ref: '#/components/schemas/LegalEntityAddress'}
         vat_id: {type: string, maxLength: 200}
         register_court: {type: string, maxLength: 200}
@@ -51234,6 +51250,7 @@ components:
         display_name: {type: string, maxLength: 120}
         legal_name: {type: string, maxLength: 500}
         country: {type: string}
+        jurisdiction: {type: string, description: 'One of `available` of `/installation/jurisdiction`. The default entity refuses it.'}
         address: {$ref: '#/components/schemas/LegalEntityAddress'}
         vat_id: {type: string, maxLength: 200}
         register_court: {type: string, maxLength: 200}

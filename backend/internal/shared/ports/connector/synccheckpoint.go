@@ -57,3 +57,24 @@ func NarrowSyncAnchor(ctx context.Context, from, to time.Time) error {
 	}
 	return n.NarrowSyncAnchor(ctx, from, to)
 }
+
+// LostCursorRecorder records the mail a sync skipped because the provider
+// dropped its stored cursor. The sync read again from readFrom only. The engine
+// knows when the lost cursor was last good, and records the span between as
+// unread, so the owner can import it.
+type LostCursorRecorder interface {
+	RecordLostCursor(ctx context.Context, readFrom time.Time) error
+}
+
+// ErrNoLostCursorRecorder is a lost cursor reported by a sync nobody records it for.
+var ErrNoLostCursorRecorder = errors.New("connector: no engine records a lost sync cursor")
+
+// RecordLostCursor reports a lost cursor through the installed checkpointer.
+// With none installed it refuses, as NarrowSyncAnchor does and for its reason.
+func RecordLostCursor(ctx context.Context, readFrom time.Time) error {
+	r, ok := ctx.Value(syncCheckpointKey{}).(LostCursorRecorder)
+	if !ok {
+		return ErrNoLostCursorRecorder
+	}
+	return r.RecordLostCursor(ctx, readFrom)
+}

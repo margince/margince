@@ -40,3 +40,25 @@ func TestVoiceWordFloorPreservesMeasuredCounts(t *testing.T) {
 		}
 	}
 }
+
+// Every member reads the unconfigured text, and most cannot open the AI
+// settings. So it names who fixes it and where, in words a reader knows.
+func TestUnconfiguredVoiceFailureNamesTheAdministratorAndNoInternals(t *testing.T) {
+	internals := []string{"stand-in", "tier", "bind", "Ersatzmodell", "Stufe", "zuordnen", "Ordne", "thay thế ngoại tuyến", "từng cấp"}
+	path := map[textlang.Lang]string{
+		textlang.English:    "Settings → AI models → Providers",
+		textlang.German:     "Einstellungen → KI-Modelle → Anbieter",
+		textlang.Vietnamese: "Cài đặt → Mô hình AI → Nhà cung cấp",
+	}
+	for language, where := range path {
+		got := SafeVoiceBuildFailure(fmt.Errorf("build: %w", ErrUnconfiguredModel), language)
+		if !strings.Contains(got, where) {
+			t.Fatalf("%s text does not name %q: %s", language, where, got)
+		}
+		for _, word := range internals {
+			if strings.Contains(got, word) {
+				t.Fatalf("%s text carries the internal term %q: %s", language, word, got)
+			}
+		}
+	}
+}

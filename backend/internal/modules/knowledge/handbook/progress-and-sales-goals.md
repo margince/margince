@@ -27,7 +27,7 @@ Click **View won deals** to open the won deals behind the figure.
 
 The cases come from the forecast for the same month and the same team member or team. In the month that runs today, a click on a case opens the forecast with its deals. A line under the cases says when the deals were read, and whether deals with no amount or no exchange rate are left out. The yearly view has no cases, because the forecast has no year.
 
-Under the result, **Product sales** and **Services and projects** split the sales won by what each deal is for. The split comes from the products on the deal and the kind of each product. **Open pipeline** is the value of open deals expected to close in the period. It is not weighted by probability and never counts for the goal. **Unclassified** appears when some revenue has no place. For example, a deal has no lines, or its lines add up to more than the deal value.
+Under the result, **Product sales** and **Services and projects** split the sales won by what each deal is for. The split comes from the products on the deal and the kind of each product. **Open pipeline closing in period** is the value of open deals expected to close in the period. It is not weighted by probability and never counts for the goal. **Unclassified** appears when some revenue has no place. For example, a deal has no lines, or its lines add up to more than the deal value.
 
 A team view lists each team member in name order. Click a name to open the progress of that team member for the same period. Each row has a bar that shows how much of their goal that team member has reached.
 

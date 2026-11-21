@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx frontend/src/features/deals/deal360/deallines.tsx frontend/src/features/deals/offers.fromdeal.tsx backend/internal/modules/deals/deallines.go backend/internal/modules/deals/deallinefigures.go backend/internal/modules/deals/offerfromdeal.go -->
+<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offers.linetable.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx frontend/src/features/deals/deal360/deallines.tsx frontend/src/features/deals/offers.fromdeal.tsx frontend/src/features/deals/offers.summary.tsx backend/internal/modules/deals/deallines.go backend/internal/modules/deals/deallinefigures.go backend/internal/modules/deals/offerfromdeal.go -->
 # Offers and the rate card
 
 An **offer** in Margince is the document with prices that you give a buyer. It belongs to a deal. Once it has been sent, you do not edit it; you make a new version of it instead.
@@ -8,8 +8,8 @@ An offer starts in the deal's currency, and while it is a draft you can change i
 
 ### How do I price a deal from its products?
 To price a deal from its products in Margince, open the deal and click **Price from products** on the **Products** card of its **Overview** tab.
-1. Pick a product under **Add a product**, or type a **Custom item** and click **Add item**.
-2. Fill **Quantity** and **Selling price** on each line, and say whether it is paid once or repeats.
+1. Pick a product under **Add a product**, or type a **Custom item** and click **Add item**. Each product in the list shows its SKU and rate card price. A picked product starts at that price when the price is in the deal's currency.
+2. Fill **Quantity** and **Selling price** on each line, and say whether it is paid once or repeats. Set **Tax %** and **Discount %** where the line needs them. A product line with no tax rate takes the product's own. A custom item with no tax rate carries no tax.
 3. Click **Save products**.
 
 The deal's value is then the net of its lines, without tax: 100 pieces at €2 make a deal worth €200. A line that repeats counts once for each period agreed. Once a deal has lines, **Edit products** on the same card changes them.
@@ -28,9 +28,13 @@ Also called: deal products for reporting, product split, which product a deal is
 To create an offer in Margince, open the deal and click **New offer** in the **Offers** panel on its **Overview** tab.
 1. Open **Deals** in the sidebar and open the deal.
 2. Click **New offer**. Margince creates a draft offer in the deal's currency and opens it.
-3. Click **Edit header** to set **Valid until**, **Template**, **Buyer company**, **Intro text** and **Terms text**.
+3. Click **Edit header** to set **Valid until**, **Template**, **Buyer company**, **Intro text** and **Terms text**. **Valid until** takes today or a later day.
 4. Add lines under **Line items** (see the next question).
+
 If the deal has no currency yet, the button is turned off and says: "Set the deal value first. An offer uses the deal’s currency."
+In every state, the top of the offer shows its deal, buyer company and version. It also shows **Valid until**, language, template, intro text and terms text.
+
+To drop a draft made by mistake, click **Discard draft** and confirm. The draft is archived and leaves the deal's **Offers** panel. Opened by its link, an archived offer reads **Archived** and cannot be changed.
 Also called: quote, quotation, proposal, estimate.
 
 ### How do I make an offer from the deal's products?
@@ -43,15 +47,19 @@ The deal's value has no tax. The offer works out its tax on the day you send it,
 
 ### How do I add a product or a line to an offer?
 To add a line to an offer in Margince, open the draft offer and fill the **Add line** row in the **Line items** panel.
-1. Choose **Pick product** to copy a product from your rate card, or type the line yourself.
+1. Choose **Pick product** to copy a product from your rate card, or type the line yourself. Each product in the list shows its SKU and its rate card price.
 2. Fill **Description**, **Unit**, **Quantity** and **Unit price**; set **Discount %** and **Tax %** on the added line.
 3. For a line that repeats, set **Billing** to **Recurring**, a **Billing period**, and **Periods** agreed.
-4. Click **Add line**. **Remove** takes a line out again.
-You can add or remove lines only while the offer is a draft.
+4. Click **Add line**. To take a line out again, choose **Remove line** on its row.
+
+A line needs a **Unit price** or a picked product; a picked product with no price typed takes its rate card price. Type an amount as 1234.50 or 1234,50, never as 1,234.50. An amount the field cannot use stays in the field with the reason under it.
+
+Each added line keeps its **Billing**, **Billing period** and **Periods** in its row, and you can change them there while the offer is a draft. A line made **Recurring** saves once it has a **Billing period**. A change the offer refuses goes back to the saved value, and the reason shows in that line's row.
+You can add or remove lines only while the offer is a draft. After that, and on an offer made from the deal's products, **Line items** lists the lines without controls.
 Also called: line item, position, add an item to a quote.
 
 ### How do I send a quote to a customer?
-To send an offer in Margince, open the draft offer and click **Send**, then confirm "Send this offer to the buyer?". Sending marks the offer as sent and locks it: "The offer becomes read-only until the buyer responds."
+To send an offer in Margince, open the draft offer and click **Send**, then confirm "Mark this offer as sent?". Sending marks the offer as sent and locks this version for good. To change it later, click **Regenerate revision** for a new draft.
 
 **Send does not email anything.** Nothing leaves Margince when you click it; it records that this version is the one you are sending. To get the offer to the buyer, click **Render PDF** and open it with **View PDF**. Then send that file yourself: added to an email, or uploaded to the deal and added to its [Deal Room](deal-rooms.md). You cannot send an offer with no lines.
 
@@ -59,7 +67,10 @@ Send removes a PDF made from the draft, so make it again after sending; the new 
 Also called: email the proposal, issue the quote.
 
 ### How do I print or download an offer?
-To print an offer or save it as a file, open the offer and choose **Render PDF**, then **View PDF** once it shows. Print or download the PDF from your browser; Margince has no print button of its own. The PDF holds the offer's intro text, lines, totals and terms text, plus the template's header and footer.
+To print an offer or save it as a file, open the offer and choose **Render PDF**, then **View PDF** once it shows. Print or download the PDF from your browser; Margince has no print button of its own. The PDF holds the offer's valid-until day, intro text, lines, totals and terms text, plus the template's header and footer.
+
+Each line on the PDF shows its quantity and unit, unit price and discount, then its own net, tax rate with tax, and total. Amounts use the number format of the offer's language. A line never splits across two pages, and each page is numbered.
+
 The **View PDF** button does not show when the offer's buyer is a company you cannot open, because the stored PDF may print its name. This is true even for a PDF you made yourself. Changing a draft's buyer removes its PDF; make it again for the new buyer.
 
 Also called: print a quote, offer PDF, download the proposal, export an offer.
@@ -123,9 +134,13 @@ You can make an offer **PDF** at any point, draft included. Where your Margince 
 
 The PDF prints the offer's own **Intro text** above the lines and its **Terms text** under the totals. It leaves either part out when it is empty. The terms always come from the offer, never from the template.
 
+The PDF prints text in Latin letters, Vietnamese included, and in Greek and Cyrillic letters. It cannot print Chinese, Japanese, Korean, Arabic or Hebrew, nor picture characters. **Render PDF** then makes no file and names the characters it cannot print, so change them and make the PDF again.
+
 Every offer PDF prints who issues it. That is the name, address, VAT ID, register entry, **Bank details** and logo of the company on the offer's **Issued by** line. A new offer is issued by the company its writer works for, set on the **Legal entities** card. While the offer is a draft you can choose another under **Edit**; once sent, it stays. The send keeps what it printed, so a later change to that company does not change a sent offer. If your template's footer already lists your address or account, the PDF prints them twice until you take them out of the footer.
 
-Each offer has a **Language**. A new offer takes the language of the company that issues it, and else the language of its template. A line you add from the rate card takes the product's name in that language when the product has one, and else its own name. To give a product a name in another language, open the menu on its row and choose **Translations**. A line keeps the name it was added with, so a later change to the product leaves it as it is. The fixed words a template prints, such as its headings, follow the template's own language.
+Each offer has a **Language**. A new offer takes the language of the company that issues it, and else the language of its template. A line you add from the rate card takes the product's name in that language when the product has one, and else its own name. To give a product a name in another language, open the menu on its row and choose **Translations**. A line keeps the name it was added with, so a later change to the product leaves it as it is.
+
+The fixed words the PDF prints, such as its headings, follow the template's own language. An offer with no template prints with the default template of its language. With no default for that language, the PDF has no header or footer. Its headings are then German for a German offer and English for any other.
 
 ## What an offer refuses
 
@@ -160,7 +175,8 @@ To add a product to the rate card in Margince, open **Settings → Products and 
 1. Open the account menu at the top right and choose **Settings**, then **Products and offers**.
 2. Click **New product**.
 3. Fill **Name**, **Unit price** and **Currency** (all required). If you like, also fill **SKU**, **Description**, **Unit**, **Default tax rate %**, **Billing** and **Billing period**.
-To change a price, use **Edit product** in its row's **…** menu; **Archive product** there stops using one. Without the right role the list reads "Read-only. Your role cannot change products."
+
+To change a price, use **Edit product** in its row's **…** menu; **Archive product** there stops using one. An archived product has no **…** menu: it cannot be changed, and it cannot be brought back. Sorting by **Unit price** groups the products by currency, then by price. Without the right role the list reads "Read-only. Your role cannot change products."
 Also called: price list, price book, catalogue, SKU.
 
 **Unit** is a list: **Piece**, **Hour**, **Day**, **Month** or **Flat fee**. It is **Piece** if you change nothing. Each one shows in the reader's language. The same list sets the unit of an offer line.
@@ -169,7 +185,7 @@ For any other unit, pick **Other** and type it in **Other unit**. Margince shows
 
 **Billing period** shows only once **Billing** is **Recurring**, and then you must pick one.
 
-A product holds a name, a SKU if you want one, a description, a unit, a unit price and currency, and a default tax rate. It also holds its billing type: one-time or recurring, and for recurring, the period.
+A product holds a name, a SKU if you want one, a description, a unit, a unit price and currency, and a default tax rate. A default tax rate left empty is 0%. It also holds its billing type: one-time or recurring, and for recurring, the period.
 
 You can leave product billing **unspecified**, which is not the same as one-time. Margince does not guess the type, so the product says "Not specified".
 
@@ -205,6 +221,6 @@ To create an offer template in Margince, open **Settings → Products and offers
 Then pick the template on an offer with **Edit header** → **Template**.
 Also called: quote template, proposal layout, letterhead.
 
-**Limits of offer templates.** An offer whose template no longer exists does not use your language default in its place; it is made from an empty layout. An archived template still works for its offers. Logos are not fetched, so put your letterhead in **Header text**.
+**Limits of offer templates.** An offer whose template no longer exists prints with the default template of its language, as an offer with no template does. A new offer does not pick the default itself, so **Edit header** shows no template; the PDF still uses the default. An archived template still works for its offers. Logos are not fetched, so put your letterhead in **Header text**.
 
 An offer template has no terms field: terms belong to each offer, set under **Edit header** → **Terms text**.

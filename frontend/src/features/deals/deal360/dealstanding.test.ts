@@ -341,6 +341,49 @@ describe("the offer that stands", () => {
     expect(standingOffer([offer({ status: "superseded" })])).toBeUndefined();
     expect(standingOffer(undefined)).toBeUndefined();
   });
+
+  it("is the accepted offer, whatever drafts came after it", () => {
+    const offers = [
+      offer({
+        id: "later-draft",
+        offer_number: "A-1002",
+        created_at: "2026-06-05T00:00:00Z",
+      }),
+      offer({
+        id: "accepted",
+        offer_number: "A-1001",
+        status: "accepted",
+        accepted_at: "2026-06-03T00:00:00Z",
+      }),
+    ];
+    expect(standingOffer(offers)?.id).toBe("accepted");
+  });
+
+  it("is never a rejected or expired offer", () => {
+    const offers = [
+      offer({ id: "rejected", revision: 2, status: "rejected" }),
+      offer({ id: "expired", status: "expired" }),
+    ];
+    expect(standingOffer(offers)).toBeUndefined();
+  });
+
+  it("is the latest made of several offers in progress", () => {
+    const offers = [
+      offer({ id: "older", offer_number: "A-1018" }),
+      offer({
+        id: "newer",
+        offer_number: "A-1020",
+        status: "sent",
+        created_at: "2026-06-04T00:00:00Z",
+      }),
+      offer({
+        id: "archived",
+        created_at: "2026-06-09T00:00:00Z",
+        archived_at: "2026-06-10T00:00:00Z",
+      }),
+    ];
+    expect(standingOffer(offers)?.id).toBe("newer");
+  });
 });
 
 describe("the next step", () => {

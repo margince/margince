@@ -13,7 +13,6 @@ package compose
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -175,53 +174,6 @@ func (w *companyNamePromotionWorker) Work(ctx context.Context, _ *river.Job[Comp
 func (w *companyNamePromotionWorker) promoteWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(wsCtx, workspace))
-}
-
-// CaptureDigestArgs builds the morning digests (CAP-DDL-6; the nightly
-// suite's last pass).
-type CaptureDigestArgs struct{}
-
-// Kind is the stable job identifier River persists in river_job.
-func (CaptureDigestArgs) Kind() string { return "capture_digest" }
-
-// FleetWide marks this as answering for the whole installation: it owns no
-// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
-func (CaptureDigestArgs) FleetWide() {}
-
-// captureDigestWorker assembles one digest per connected user per
-// workspace; a re-run replaces the day's payload (as-of-now truths).
-type captureDigestWorker struct {
-	registry *capture.Registry
-	pool     *pgxpool.Pool
-	log      *slog.Logger
-	// now is the injected clock (nil = wall clock). The digest day is
-	// deliberately read at execution time, not enqueue time: the payload
-	// is as-of-now truths and a re-run replaces the day, so a retry that
-	// crosses midnight builds the morning actually being served.
-	now func() time.Time
-}
-
-// Work fans out on the DEFAULT queue, not ai_capture, unlike its three
-// siblings in this file: assembling a digest is a database-only pass — this
-// worker holds no model lane at all — and ai_capture exists to keep long,
-// model-bound work from evicting short jobs. Queueing the morning digest
-// behind two model workers would delay it for no reason.
-// The GRANULARITY returns to one row for the fleet (ADR-0103). A per-workspace
-// child gave a retry that re-ran only the workspace that failed; the pass joins
-// its failures again, as it did before that split, and a retry re-runs the
-// walk. Assembling a digest for a workspace that already has today's is a
-// re-build of the same day, which the payload's as-of-now truths make
-// idempotent — that is why the split was affordable to undo.
-func (w *captureDigestWorker) Work(ctx context.Context, _ *river.Job[CaptureDigestArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.digestWorkspace))
-}
-
-func (w *captureDigestWorker) digestWorkspace(ctx context.Context, workspace ids.UUID) error {
-	clock := w.now
-	if clock == nil {
-		clock = time.Now
-	}
-	return w.registry.BuildDigests(principal.WithWorkspaceID(ctx, workspace), clock())
 }
 
 // CounterpartyVerdictArgs runs one counterparty-verdict pass (ADR-0072/A118 §4).

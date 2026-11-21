@@ -101,6 +101,7 @@ copied-file-licenses:
   - MIT
   - Community-Spec-1.0
   - Unicode-3.0
+  - OFL-1.1 # the offer PDF's font; admitted in `allow` above for the UI fonts
 
 require-license: true # When true, deny packages with no detected licenses
 require-known-license: true

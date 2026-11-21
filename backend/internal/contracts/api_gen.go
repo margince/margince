@@ -44891,7 +44891,7 @@ type Contact360DealRole struct {
 	// Role The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title.
 	Role string `json:"role"`
 
-	// SeatCurrent False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it.
+	// SeatCurrent False once the seat's End day has arrived in the installation's time zone; an End date still ahead keeps it current. A seat that ended stays listed as history, and a follow-up cannot rest on it.
 	SeatCurrent *bool `json:"seat_current,omitempty"`
 }
 
@@ -47362,7 +47362,7 @@ type CreateLegalEntityRequest struct {
 	BankAccountHolder *string             `json:"bank_account_holder,omitempty"`
 	Bic               *string             `json:"bic,omitempty"`
 
-	// Country Lower-case ISO 3166-1 alpha-2, for example `de`.
+	// Country The address country, lower-case ISO 3166-1 alpha-2, for example `de`.
 	Country string `json:"country"`
 
 	// DefaultLanguage ISO 639-1, for example `de`.
@@ -47370,9 +47370,14 @@ type CreateLegalEntityRequest struct {
 	DisplayName     string  `json:"display_name" singleline:"true"`
 
 	// Iban Spaces are removed and letters upper-cased before the check.
-	Iban      *string `json:"iban,omitempty"`
-	Imprint   *string `json:"imprint,omitempty"`
-	LegalName string  `json:"legal_name" singleline:"true"`
+	Iban    *string `json:"iban,omitempty"`
+	Imprint *string `json:"imprint,omitempty"`
+
+	// Jurisdiction The jurisdiction pack whose law the entity follows, one of `available` of
+	// `/installation/jurisdiction`. Left out, it is the `country`, and a country no pack
+	// covers answers `invalid_jurisdiction`.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
+	LegalName    string  `json:"legal_name" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -56146,7 +56151,7 @@ type LegalEntity struct {
 	// Bic The BIC, upper case.
 	Bic *string `json:"bic,omitempty"`
 
-	// Country Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country.
+	// Country Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity.
 	Country   *string   `json:"country,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 
@@ -56165,6 +56170,12 @@ type LegalEntity struct {
 
 	// IsDefault The entity a user with no assignment works for. Exactly one exists, and it cannot be archived.
 	IsDefault bool `json:"is_default"`
+
+	// Jurisdiction The jurisdiction pack whose law the entity follows, as its lower-case code, for example
+	// `de`. It is one of the packs this build offers (`available` of
+	// `/installation/jurisdiction`). Null on the default entity, whose law is the
+	// installation's jurisdiction.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
 
 	// LegalName The registered name documents are issued under.
 	LegalName *string `json:"legal_name,omitempty"`
@@ -70831,7 +70842,10 @@ type UpdateLegalEntityRequest struct {
 	DisplayName       *string             `json:"display_name,omitempty" singleline:"true"`
 	Iban              *string             `json:"iban,omitempty"`
 	Imprint           *string             `json:"imprint,omitempty"`
-	LegalName         *string             `json:"legal_name,omitempty" singleline:"true"`
+
+	// Jurisdiction One of `available` of `/installation/jurisdiction`. The default entity refuses it.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
+	LegalName    *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -79893,12 +79907,6 @@ type ListContactCasesParams struct {
 
 // ListContactCasesParamsScope defines parameters for ListContactCases.
 type ListContactCasesParamsScope string
-
-// GetMorningDigestParams defines parameters for GetMorningDigest.
-type GetMorningDigestParams struct {
-	// Date A specific digest day; default: the latest generated.
-	Date *openapi_types.Date `form:"date,omitempty" json:"date,omitempty"`
-}
 
 // SendCompanyEmailParams defines parameters for SendCompanyEmail.
 type SendCompanyEmailParams struct {
@@ -101178,7 +101186,7 @@ type ServerInterface interface {
 	UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request)
 	// The calling user's morning digest — what capture did overnight.
 	// (GET /digest)
-	GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams)
+	GetMorningDigest(w http.ResponseWriter, r *http.Request)
 	// The workspace's signature template.
 	// (GET /email-signature-template)
 	GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
@@ -106188,7 +106196,7 @@ func (_ Unimplemented) UpdateContactCaseSettings(w http.ResponseWriter, r *http.
 
 // The calling user's morning digest — what capture did overnight.
 // (GET /digest)
-func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams) {
+func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -135504,33 +135512,14 @@ func (siw *ServerInterfaceWrapper) UpdateContactCaseSettings(w http.ResponseWrit
 // GetMorningDigest operation middleware
 func (siw *ServerInterfaceWrapper) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetMorningDigestParams
-
-	// ------------- Optional query parameter "date" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "date", r.URL.Query(), &params.Date, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "date"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetMorningDigest(w, r, params)
+		siw.Handler.GetMorningDigest(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

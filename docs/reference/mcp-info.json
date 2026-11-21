@@ -21284,7 +21284,7 @@
                 "type": "string"
               },
               "country": {
-                "description": "Lower-case ISO 3166-1 alpha-2, for example `de`.",
+                "description": "The address country, lower-case ISO 3166-1 alpha-2, for example `de`.",
                 "type": "string"
               },
               "default_language": {
@@ -21302,6 +21302,10 @@
               },
               "imprint": {
                 "maxLength": 20000,
+                "type": "string"
+              },
+              "jurisdiction": {
+                "description": "The jurisdiction pack whose law the entity follows, one of `available` of `/installation/jurisdiction`. Left out, it is the `country`, and a country no pack covers answers `invalid_jurisdiction`.",
                 "type": "string"
               },
               "legal_name": {
@@ -22887,6 +22891,10 @@
               },
               "imprint": {
                 "maxLength": 20000,
+                "type": "string"
+              },
+              "jurisdiction": {
+                "description": "One of `available` of `/installation/jurisdiction`. The default entity refuses it.",
                 "type": "string"
               },
               "legal_name": {

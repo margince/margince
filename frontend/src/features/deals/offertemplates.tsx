@@ -80,8 +80,8 @@ function templateFields(t: Translator): CreateField[] {
     },
     // The offer PDF prints these two layout keys by these names;
     // backend/gates/offertemplatelayout_test.go holds the spellings together.
-    { key: "header", label: "template.header" },
-    { key: "footer", label: "template.footer" },
+    { key: "header", label: "template.header", type: "textarea" },
+    { key: "footer", label: "template.footer", type: "textarea" },
   ];
 }
 

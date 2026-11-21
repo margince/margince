@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -148,9 +149,7 @@ func lastTouchEligibility() string {
 			 AND NOT EXISTS (%[5]s))
 		 OR (q.entity_type = '%[3]s' AND EXISTS (
 			   SELECT 1 FROM contact p
-			   JOIN relationship r ON r.contact_id = p.id
-			              AND r.kind = 'deal_stakeholder'
-			              AND r.ended_at IS NULL AND r.archived_at IS NULL
+			   JOIN relationship r ON r.contact_id = p.id AND %[7]s
 			   JOIN deal d ON d.id = r.deal_id
 			              AND d.status = 'open' AND d.archived_at IS NULL
 			   WHERE p.id = q.entity_id
@@ -165,7 +164,8 @@ func lastTouchEligibility() string {
 		datasource.RecordDeal, datasource.RecordCompany, datasource.RecordContact,
 		contactCollapsesIntoAccount(),
 		openChildReminderHoldsAccount(),
-		datasource.RecordLead)
+		datasource.RecordLead,
+		dealseat.CurrentSQL("r"))
 }
 
 // openChildReminderHoldsAccount stops an account being drawn while a record it

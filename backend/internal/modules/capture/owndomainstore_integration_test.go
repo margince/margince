@@ -61,7 +61,7 @@ func TestReaderAddressesBatchesTheLiveSeatRead(t *testing.T) {
 	user := ids.NewV7()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name, status)
-			VALUES ($1, 'Reader <reader@example.test>', 'Reader', 'active')`, user)
+			VALUES ($1, 'reader <reader@example.test>', 'Reader', 'active')`, user)
 		return err
 	}); err != nil {
 		t.Fatal(err)

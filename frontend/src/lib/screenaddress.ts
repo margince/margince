@@ -11,15 +11,22 @@ import { createContext, useContext, useLayoutEffect } from "react";
  */
 export const ScreenAddress = createContext<string | null>(null);
 
-/** How the routed screen tells the frame around it which address it shows. */
+/** The page on screen, and whether the page asked for is still loading. */
+export type ShownScreen = Readonly<{ address: string; pending: boolean }>;
+
+/** How the routed screen tells the frame around it what is on screen. */
 export const ShownAddressSink = createContext<
-  ((address: string) => void) | null
+  ((shown: ShownScreen | null) => void) | null
 >(null);
 
-/** Tell the frame around the routed screen that `address` is on screen. */
-export function useReportShownAddress(address: string): void {
+/**
+ * Tell the frame around the routed screen what is on screen. A screen that
+ * leaves, or hides behind a loading body, takes its report back.
+ */
+export function useReportShownAddress(address: string, pending = false): void {
   const report = useContext(ShownAddressSink);
   useLayoutEffect(() => {
-    report?.(address);
-  }, [report, address]);
+    report?.({ address, pending });
+    return () => report?.(null);
+  }, [report, address, pending]);
 }

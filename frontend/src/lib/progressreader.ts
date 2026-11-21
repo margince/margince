@@ -41,10 +41,11 @@ const NAME_STALE_MS = 5 * 60_000;
  * the wait costs the open screen no render. A seat with neither grant is
  * refused the frame and is not asked.
  */
-export function useWarmProgressName(): void {
+export function useWarmProgressName(enabled: boolean): void {
   const client = useQueryClient();
   const me = useMe(false).data;
-  const asks = grants(me, "deal", "read") || grants(me, "forecast", "read");
+  const asks =
+    enabled && (grants(me, "deal", "read") || grants(me, "forecast", "read"));
   useEffect(() => {
     if (!asks) return;
     let handle: number | undefined;

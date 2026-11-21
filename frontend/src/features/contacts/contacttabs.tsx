@@ -225,6 +225,7 @@ export function ContactTimelineTab({
           <ChronologyFilter filter={filter} conversations onFilter={openCut} />
           {filter !== "changes" && (
             <TimelineFilterBar
+              key={contactId}
               value={filters}
               kinds={kinds}
               onChange={setFilters}

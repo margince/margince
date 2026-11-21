@@ -105,7 +105,11 @@ export function DealHistoryTab({
           <div className="timeline-header">
             <ChronologyFilter filter={filter} onFilter={setFilter} />
             {filter !== "changes" && (
-              <TimelineFilterBar value={filters} onChange={setFilters} />
+              <TimelineFilterBar
+                key={deal.id}
+                value={filters}
+                onChange={setFilters}
+              />
             )}
           </div>
           {/* The Changes view is the record's history: one reading of what

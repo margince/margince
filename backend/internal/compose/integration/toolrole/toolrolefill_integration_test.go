@@ -208,7 +208,7 @@ func fillSchema(raw json.RawMessage, pattern string, pool *recordPool) map[strin
 //
 // gatekit:fixture a valid value for each well-known field name: expected data, not a waived cost
 var namedValues = map[string]string{
-	"country": "de", "currency": "EUR", "locale": "en", "content_type": "application/pdf",
+	"country": "de", "jurisdiction": "zq", "currency": "EUR", "locale": "en", "content_type": "application/pdf",
 	"content_base64": base64.StdEncoding.EncodeToString([]byte("%PDF-1.4 role sweep")), "filename": "role-sweep.pdf",
 	"scheduled_tz": "Europe/Berlin", "timezone": "Europe/Berlin", "source": "manual",
 	"text_hash": strings.Repeat("0", 32), "url": "https://example.test/role-sweep",

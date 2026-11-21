@@ -80,7 +80,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_exception
 
-24 columns · primary key `(id)` · referenced by 3 foreign keys
+22 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -92,7 +92,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `delivery_attempts` | `integer`, default `0` | yes |  |
 | `delivery_state` | `text` |  | One of `pending`, `failed`, `delivered`. |
 | `episode` | `integer`, default `1` | yes |  |
-| `evidence_refs` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `first_seen_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `last_seen_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `logical_key` | `text` | yes |  |
@@ -107,7 +106,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
 
@@ -124,7 +122,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_exception_severity_check`: `CHECK ((severity = ANY (ARRAY['low', 'medium', 'high'])))`
 - `assurance_exception_status_check`: `CHECK ((status = ANY (ARRAY['open', 'resolved', 'expired', 'condition_cleared', 'subject_departed'])))`
 - `assurance_exception_subject_kind_check`: `CHECK ((subject_kind = ANY (ARRAY['deal', 'signal', 'offer', 'contract', 'forecast_call'])))`
-- `assurance_exception_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_assurance_exception_logical_key`: `UNIQUE (logical_key)`
 
 **Indexes**
@@ -212,7 +209,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_run
 
-18 columns · primary key `(id)` · referenced by 3 foreign keys
+17 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -233,7 +230,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Rules**
 
@@ -242,7 +238,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_run_readiness_matches_status`: `CHECK (((status = 'running') = (readiness IS NULL)))`
 - `assurance_run_requester_is_named`: `CHECK (((requested_by IS NULL) OR (length(btrim(requested_by)) > 0)))`
 - `assurance_run_status_check`: `CHECK ((status = ANY (ARRAY['running', 'complete', 'incomplete'])))`
-- `assurance_run_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -279,7 +274,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_source_coverage
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -291,7 +286,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | One of `mail`, `calendar`, `documents`, `contracts`, `offers`, `incumbent`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
 
@@ -304,7 +298,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_source_coverage_date_matches_state`: `CHECK (((state = 'checked') OR (checked_through IS NULL)))`
 - `assurance_source_coverage_source_check`: `CHECK ((source = ANY (ARRAY['mail', 'calendar', 'documents', 'contracts', 'offers', 'incumbent'])))`
 - `assurance_source_coverage_state_check`: `CHECK ((state = ANY (ARRAY['checked', 'stale', 'unavailable', 'permission_limited', 'not_connected'])))`
-- `assurance_source_coverage_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_assurance_source_coverage_run_source`: `UNIQUE (run_id, source)`
 
 **Indexes**
@@ -319,14 +312,13 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_task_item
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `cycle_id` | `uuid` | yes | Points at `assurance_cycle.id`. |
 | `exception_id` | `uuid` | yes | Points at `assurance_exception.id`. |
-| `state` | `text`, default `'open'::text` | yes | One of `open`, `resolved`, `dismissed`. |
 | `subject_contract_id` | `uuid` |  | Points at `contract.id`. |
 | `subject_deal_id` | `uuid` |  | Points at `deal.id`. |
 | `subject_id` | `uuid` | yes |  |
@@ -353,7 +345,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 - `assurance_task_item_once`: `UNIQUE (exception_id, cycle_id)`
 - `assurance_task_item_one_task_per_subject`: `EXCLUDE USING gist (cycle_id WITH =, subject_kind WITH =, subject_id WITH =, task_activity_id WITH <>)`
-- `assurance_task_item_state`: `CHECK ((state = ANY (ARRAY['open', 'resolved', 'dismissed'])))`
 - `assurance_task_item_subject_contract_id_bound`: `CHECK ((subject_unkeyed OR (NOT (subject_contract_id IS DISTINCT FROM CASE WHEN (subject_kind = 'contract') THEN subject_id ELSE NULL::uuid END))))`
 - `assurance_task_item_subject_deal_id_bound`: `CHECK ((subject_unkeyed OR (NOT (subject_deal_id IS DISTINCT FROM CASE WHEN (subject_kind = 'deal') THEN subject_id ELSE NULL::uuid END))))`
 - `assurance_task_item_subject_kind`: `CHECK ((subject_kind = ANY (ARRAY['deal', 'signal', 'offer', 'contract'])))`
@@ -374,6 +365,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "subject_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"state":20000,"subject_kind":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "subject_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"state":20000,"subject_kind":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"subject_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"subject_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"subject_kind":20000}')`
 - `trg_assurance_task_item_subject_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_assurance_task_item_subject_keys()`

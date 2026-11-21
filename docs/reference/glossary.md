@@ -14,12 +14,14 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Antigravity | Google's AI coding tool, which can connect to Margince. |
 | Apache | The Apache License 2.0, which each release becomes after two years. |
 | API | The HTTP interface the server offers, defined in `backend/api/crm.yaml`. |
+| Arabic | The Arabic script, written from right to left. |
 | backend | The Go server code under `backend/`. |
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | breakdown | A count of one population split by one field, which an extension can add. |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
 | challenge | A check a WAF puts to the browser in the app's place, which only a page load can pass. |
 | changelog | A file listing the changes of each release, which this repository does not keep. |
+| Chinese | The Chinese script and the languages written in it. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
 | CLDR | The Unicode Common Locale Data Repository, whose zone files map IANA zones to Windows zones. |
@@ -32,6 +34,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | CRM | Customer relationship management: software for contacts, companies and deals. |
 | CSV | Comma-separated values, a plain text format for tables. |
 | Cursor | An AI code editor, which can connect to Margince. |
+| Cyrillic | The alphabet of Russian, Ukrainian, Bulgarian and Serbian. |
 | de | The language code for German, as a setting value. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
@@ -54,18 +57,22 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Google | The company behind Gmail and the Gemini models. |
 | grace | The grace period: the time after a licence expires in which Margince still runs. |
 | Gradion | The company that builds Margince and licenses it. |
+| Greek | The Greek alphabet and the language written in it. |
 | handoff | An SDR passing a prospect to an account executive, who accepts or returns it. |
 | handoffs | SDRs passing prospects to account executives, who accept or return them. |
+| Hebrew | The Hebrew script, written from right to left. |
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
 | identity | Who sent a privacy request; closing one records how that was checked. |
 | IMAP | The standard protocol for reading mail from a mail server. |
 | incoming | An incoming webhook: the address a chat tool gives for posting into a channel. |
 | Italian | Of Italy, as in Italian law, whose pack is in `extensions/eu`. |
+| Japanese | The Japanese language and the scripts it is written in. |
 | JPEG | A common photo file format, saved as .jpg or .jpeg. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Korean | Of the Republic of Korea, as in Korean law, whose pack is in `extensions/apac`. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
+| Latin | The Latin alphabet, which English, German and Vietnamese are written in. |
 | Launchpad | The Ubuntu project service that records each package Ubuntu publishes. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |

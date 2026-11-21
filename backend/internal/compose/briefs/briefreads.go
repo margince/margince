@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -263,9 +264,9 @@ func briefEvidenceRows(
 		}
 		contacts, err := collectIDList(tx.Query(ctx, fmt.Sprintf(`
 			SELECT r.contact_id FROM relationship r
-			WHERE r.kind = 'deal_stakeholder' AND r.deal_id = $1 AND r.archived_at IS NULL
+			WHERE %s AND r.deal_id = $1
 			  AND (%s)
-			ORDER BY r.contact_id`, edgeBound), append([]any{dealID}, edgeArgs...)...))
+			ORDER BY r.contact_id`, dealseat.CurrentSQL("r"), edgeBound), append([]any{dealID}, edgeArgs...)...))
 		if err != nil {
 			return false, err
 		}

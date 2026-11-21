@@ -40,6 +40,10 @@ export const companyZoneSites: { file: string; why: string }[] = [
     "reporting.targets.tsx",
     "reporting.versions.tsx",
   ].map((name) => ({ file: `features/analytics/${name}`, why: REPORTING })),
+  {
+    file: "features/analytics/goals.tsx",
+    why: "A goal plan's months are the company's reporting months, so the times its history was changed read on that clock, and the history names the zone once.",
+  },
   { file: "features/companies/companies.hierarchy.tsx", why: REPORTING },
   {
     file: "design-system/boardtotals.tsx",
@@ -52,6 +56,7 @@ export const companyZoneSites: { file: string; why: string }[] = [
   },
   { file: "features/settings/rates.tsx", why: SERVER_TODAY },
   { file: "features/settings/taxrates.tsx", why: SERVER_TODAY },
+  { file: "features/deals/offers.header.tsx", why: SERVER_TODAY },
   {
     file: "features/brief/brief.glance.tsx",
     why: "Home holds the server's day and the weekly's week, both bucketed on the company's clock (decision B1), so the day and week it is labelled with are on that clock; the greeting hour is the reader's.",

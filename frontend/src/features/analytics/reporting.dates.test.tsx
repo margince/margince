@@ -169,7 +169,9 @@ it("says this week has not started yet instead of a backwards range at Monday mi
   );
   expect(
     await screen.findByText(/^The period starts .*nothing has happened/),
-  ).toHaveTextContent("21/09/2026, 00:00");
+  ).toHaveTextContent(
+    "21/09/2026, 00:00 (Central European Summer Time · UTC+2)",
+  );
   expect(screen.getAllByText("This week")[0]).toBeVisible();
   expect(screen.queryByText(/^Actuals through /)).not.toBeInTheDocument();
 });

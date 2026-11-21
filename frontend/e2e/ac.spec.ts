@@ -416,6 +416,53 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await expect(page.locator("main")).not.toContainText("privacy");
 });
 
+// While the next page's code loads, the chrome names the page on screen. After
+// 200 ms the frame is busy and names the page on its way.
+test("AC-shell-1l: a page still loading keeps the old page's name and says it is loading", async ({
+  page,
+}) => {
+  // Held from the start, so the idle warm-up cannot fetch it ahead of the move.
+  const settingsCode = (url: URL) =>
+    /\/assets\/App\.settings-[^/]+\.js$/.test(url.pathname);
+  const held: (() => Promise<void>)[] = [];
+  await page.route(settingsCode, (route) => {
+    held.push(() => route.continue());
+  });
+  await page.goto("/#/analytics");
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(heading).toHaveText(de["nav.analytics"]);
+  // The shell names the bar's page before any body lands, so wait for the body.
+  await expect(
+    page.locator("main .pending").filter({ hasText: de["common.loading"] }),
+  ).toHaveCount(0);
+  await settleAnimations(page);
+
+  await page.evaluate(() => {
+    window.location.hash = "#/settings/privacy";
+  });
+  await expect.poll(() => held.length).toBeGreaterThan(0);
+  await expect(page.locator("main > .scroll")).toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
+  await expect(page.locator(".pagewait")).toHaveText(
+    de["shell.pageLoading"].replace("{page}", de["settings.tab.privacy"]),
+  );
+  const statusInBusy = await page
+    .locator(".pagewait")
+    .evaluate((region) => region.closest("[aria-busy]") !== null);
+  expect(statusInBusy).toBe(false);
+  await expect(heading).toHaveCount(1);
+  await expect(heading).toHaveText(de["nav.analytics"]);
+  expect(await page.title()).toMatch(new RegExp(`^${de["nav.analytics"]} · `));
+  await expectNoAaViolations(page, "analytics, leaving for settings/privacy");
+
+  await page.unroute(settingsCode);
+  for (const release of held) await release();
+  await expect(heading).toHaveText(de["settings.tab.privacy"]);
+  await expect(page.locator("main > .scroll")).not.toHaveAttribute("aria-busy");
+});
+
 test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async ({
   page,
 }) => {
@@ -3037,7 +3084,8 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       .getByRole("button", { name: /^Qualifizieren/ })
       .click();
 
-    const said = page.getByRole("status");
+    // The toast's own region: the shell's page wait is a status beside it.
+    const said = page.locator(".toast-region").getByRole("status");
     await expect(said).toBeVisible();
 
     // Keyboard, before the sweep: the link the message carries is reachable,

@@ -39,7 +39,6 @@ var aggregateReaders = map[string]string{
 	"internal/modules/deals/lastemail.go":      "the deal's newest email, dated on every board card for anybody who can list deals",
 	"internal/compose/meetingbrief/meeting.go": "last-touch per attendee, the number a brief's reader trusts most",
 	"internal/modules/search/graphedge.go":     "the global who-knows-whom projection, readable by everyone",
-	"internal/modules/capture/digestcounts.go": "the weekly digest's counts of what came in",
 	"internal/compose/contact360/lasttouch.go": "the contact page's last-inbound/last-outbound dates — and the same pair on every queue row — read by any seat that can open the record",
 }
 

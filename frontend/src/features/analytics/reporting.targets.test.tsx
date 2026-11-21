@@ -134,7 +134,7 @@ describe("ReportingTargets", () => {
     const user = userEvent.setup();
     render(<ReportingTargets />);
     await screen.findAllByText("Sam Okafor");
-    await user.click(screen.getByRole("button", { name: "Target retired" }));
+    await user.click(screen.getByRole("button", { name: "Retired targets" }));
     await waitFor(() => expect(screen.queryByText("Sam Okafor")).toBeNull());
   });
 });
