@@ -40,7 +40,16 @@ type liveList struct {
 // its steward can replace.
 func (s *Store) summarize(ctx context.Context, lists []listRow) ([]*listSummary, error) {
 	out := make([]*listSummary, 0, len(lists))
+	gated := map[string]bool{}
 	for _, l := range lists {
+		// Before any filter is judged, so a list whose filter no longer
+		// compiles is refused to a reader who may not read its records.
+		if !gated[l.EntityType] {
+			if err := auth.Require(ctx, l.EntityType, principal.ActionRead); err != nil {
+				return nil, err
+			}
+			gated[l.EntityType] = true
+		}
 		out = append(out, &listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)})
 	}
 	// Resolved before the transaction: the catalog reads take a connection of
@@ -53,9 +62,6 @@ func (s *Store) summarize(ctx context.Context, lists []listRow) ([]*listSummary,
 	live := map[string][]liveList{}
 	for _, summary := range out {
 		if summary.ListType != listTypeDynamic {
-			if err := auth.Require(ctx, summary.EntityType, principal.ActionRead); err != nil {
-				return nil, err
-			}
 			shortlists[summary.EntityType] = append(shortlists[summary.EntityType], summary)
 			continue
 		}

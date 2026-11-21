@@ -9,13 +9,16 @@ package integration
 // number of statements, however many lists the page holds.
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // listsPageFixture holds workspace Shortlists and Live Lists of contacts: each
@@ -111,6 +114,21 @@ func TestALiveListThatNoLongerCompilesLeavesTheOthersCounted(t *testing.T) {
 		if l.Health != crmcontracts.ListHealthOk || l.VisibleCount == nil || *l.VisibleCount == 0 {
 			t.Fatalf("list %q beside the broken one: health %s, count %v; want ok and counted", l.Name, l.Health, l.VisibleCount)
 		}
+	}
+}
+
+func TestABrokenLiveListIsRefusedToAReaderWhoMayNotReadItsRecords(t *testing.T) {
+	f := newListsPageFixture(t)
+	f.e.WsExec(t, `UPDATE list SET definition = '{"field": "no_such_field", "op": "eq", "value": "x"}' WHERE id = $1`, f.list)
+	perms := liveListReaderPerms()
+	perms.Objects = map[string]principal.ObjectGrant{"list": {Read: true}}
+	listsOnly := f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, perms)
+
+	if _, err := f.store.ListsPage(listsOnly, collections.ListFilter{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a reader without contact read got %v from the library, want permission denied", err)
+	}
+	if _, err := f.store.ListView(listsOnly, f.list); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a reader without contact read got %v from the list, want permission denied", err)
 	}
 }
 
