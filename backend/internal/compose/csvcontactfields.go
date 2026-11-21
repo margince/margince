@@ -236,6 +236,16 @@ func storedPrimaryPhone(current map[string]json.RawMessage) json.RawMessage {
 			return encodedText(row.Phone)
 		}
 	}
+	// A contact whose only numbers are mobile or home still has one to show,
+	// so an export of it uploads as the same.
+	for _, row := range rows {
+		if row.IsPrimary {
+			return encodedText(row.Phone)
+		}
+	}
+	if len(rows) > 0 {
+		return encodedText(rows[0].Phone)
+	}
 	return nil
 }
 

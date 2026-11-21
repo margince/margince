@@ -10996,10 +10996,16 @@ export const en = {
     "“{value}” cannot be written: this field is no longer active.",
   "import.reason.id_not_a_company_id":
     "“{value}” is not a company id. Export the companies to get theirs, or leave the column empty to import this row as a new company.",
+  "import.reason.id_not_a_record_id":
+    "“{value}” is not a record id. Export the list to get the ids, or leave the column empty to import this row as a new record.",
+  "import.reason.id_record_not_visible":
+    "No record you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+  "import.reason.ref_taken_by_another_record":
+    "The reference “{ref}” already stands for another record from an earlier import, so this row is not applied. Use a new reference for this row or fix the id column.",
   "import.reason.id_not_visible":
     "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
   "import.reason.id_on_non_company":
-    "Only a company row can name an “{column}”. A {object} row is identified by its own key.",
+    "Only a company, contact, lead or deal row can name an “{column}”. A {object} row is identified by its own key.",
   "import.reason.link_ambiguous":
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
   "import.reason.link_ambiguous_dropped":

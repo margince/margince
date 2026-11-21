@@ -396,5 +396,5 @@ To export records from Margince, build a filter on **Filters and views**. Press 
 1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
 2. Press **Add condition** and fill at least one condition. **Matching records** then shows, with **Export CSV** and **Export JSON** beside its count.
 3. Press **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view shows them in the same place.
-Only records you can see are exported, and each export goes into the audit log. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** beside its name.
+Only records you can see are exported, each export is logged, and Data import takes the CSV back. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** beside its name.
 Also called: download a list, export to spreadsheet, extract contacts.

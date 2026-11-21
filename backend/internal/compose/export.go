@@ -31,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -282,7 +283,7 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 // happened is not something an erasure undoes, and a bundle missing the line
 // would answer "who touched this record" with a gap.
 func exportColumnSQL(table, column string, arg func(any) int) string {
-	if derived, ok := derivedColumnExpr(table, column); ok {
+	if derived, ok := recordexport.DerivedColumnExpr(table, column); ok {
 		return derived + " AS " + column
 	}
 	if table != "audit_log" || (column != "before" && column != "after") {
@@ -324,5 +325,5 @@ func exportableColumns(ctx context.Context, tx pgx.Tx, table string) ([]string, 
 		// registry disagree — fail loudly rather than write an empty file.
 		return nil, fmt.Errorf("export: table %q has no exportable columns", table)
 	}
-	return append(columns, derivedExportColumns[table]...), nil
+	return append(columns, recordexport.DerivedColumns[table]...), nil
 }
