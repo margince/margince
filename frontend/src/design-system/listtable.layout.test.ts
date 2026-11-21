@@ -124,10 +124,10 @@ describe("columnLayout", () => {
     expect(layout.floor).toBeCloseTo(1000);
   });
 
-  it("keeps a badge column at 80px on any page, and the rest take the width", () => {
+  it("keeps a score column at 80px on any page, and the rest take the width", () => {
     const leads: SizedColumn[] = [
       { key: "name", fixed: true },
-      { key: "score", numeric: true, holds: "badge" },
+      { key: "score", numeric: true, holds: "score" },
       { key: "status" },
     ];
     for (const available of [300, 900, 1800]) {
@@ -138,8 +138,8 @@ describe("columnLayout", () => {
     expect(wide.floor).toBeCloseTo(900);
   });
 
-  it("widens a badge column to a figure wider than its badge", () => {
-    const score: SizedColumn = { key: "price", numeric: true, holds: "badge" };
+  it("widens a score column to a figure wider than its score", () => {
+    const score: SizedColumn = { key: "price", numeric: true, holds: "score" };
     const layout = columnLayout([score], {}, 900, figures(96));
     expect(layout.widthOf(score)).toBe("96px");
   });

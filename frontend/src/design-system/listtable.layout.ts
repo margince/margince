@@ -42,7 +42,7 @@ const COLUMN_SIZES: Readonly<
     | "numeric"
     | "date"
     | "colleague"
-    | "badge"
+    | "score"
     | "standard"
     | "verbs"
     | "menu",
@@ -55,8 +55,8 @@ const COLUMN_SIZES: Readonly<
   date: { share: 0.8, min: 120, max: 150 },
   // A 20px avatar beside a full name.
   colleague: { share: 1, min: 150, max: 240 },
-  // A badge of up to three digits under a one-word header and its sort arrow.
-  badge: { share: null, min: 80 },
+  // A score of up to three digits under a one-word header and its sort arrow.
+  score: { share: null, min: 80 },
   standard: { share: 1.3, min: 130 },
   // Two labelled ghost buttons side by side in the longest locale this tree
   // ships: German turns "Edit product" into "Produkt bearbeiten".
@@ -71,7 +71,7 @@ export type SizedColumn = Readonly<{
   fixed?: boolean;
   numeric?: boolean;
   verbs?: boolean | "menu";
-  holds?: "date" | "colleague" | "badge";
+  holds?: "date" | "colleague" | "score";
 }>;
 
 /**
