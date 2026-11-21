@@ -141,12 +141,14 @@ print(str(judge.family(judge.pinned_model()) == sys.argv[1]).lower())' "$CANDIDA
 if [[ "$WIRE" = claude-cli || "$WIRE" = claude-sdk || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
   command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
 fi
-# The runner is no workspace member, so only this lane installs it, from its lockfile.
+# The runner is no workspace member and has no lockfile, which would put the
+# Agent SDK in the source SBOM: this lane installs its exact pins and checks them.
 if [[ "$WIRE" = claude-sdk ]]; then
   command -v node >/dev/null || { echo "node is not on PATH; the SDK route runs e2e/llm/sdk-runner" >&2; exit 1; }
   if [[ ! -d "$ROOT/e2e/llm/sdk-runner/node_modules/@anthropic-ai/claude-agent-sdk" ]]; then
-    (cd "$ROOT/e2e/llm/sdk-runner" && npm ci --no-audit --no-fund >/dev/null && npm audit signatures >/dev/null) ||
-      { echo "the SDK runner did not install from its lockfile" >&2; exit 1; }
+    (cd "$ROOT/e2e/llm/sdk-runner" && npm install --no-package-lock --no-audit --no-fund >/dev/null &&
+      npm audit signatures >/dev/null) ||
+      { echo "the SDK runner did not install, or a registry signature did not verify" >&2; exit 1; }
   fi
 fi
 if [[ "$WIRE" = codex-cli ]]; then

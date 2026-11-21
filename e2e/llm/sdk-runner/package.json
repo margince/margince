@@ -1,7 +1,7 @@
 {
   "name": "e2e-llm-sdk-runner",
   "private": true,
-  "description": "Drives one e2e-llm scenario through the Claude Agent SDK, answering the MCP server's in-chat questions from the scenario. Not a workspace member: only the opt-in E2E_LLM_VIA=sdk lane installs it, with npm ci against the lockfile beside this file.",
+  "description": "Drives one e2e-llm scenario through the Claude Agent SDK, answering the MCP server's in-chat questions from the scenario. Not a workspace member and no lockfile: the Agent SDK is under Anthropic's own terms and never ships, so it stays out of the source SBOM. Only the opt-in E2E_LLM_VIA=sdk lane installs these exact versions and verifies their registry signatures.",
   "type": "module",
   "engines": {
     "node": ">=24"

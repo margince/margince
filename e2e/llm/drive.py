@@ -295,7 +295,7 @@ def run_sdk(route, mcp_url, token_env, prompt_file, scenario, out_path, timeout=
         print("the claude CLI is not on PATH; the SDK route runs that binary", file=sys.stderr)
         return HARNESS
     if not os.path.isdir(os.path.join(SDK_RUNNER_DIR, "node_modules", "@anthropic-ai", "claude-agent-sdk")):
-        print(f"the SDK runner is not installed: npm ci --prefix {SDK_RUNNER_DIR}", file=sys.stderr)
+        print(f"the SDK runner is not installed: npm install --no-package-lock --prefix {SDK_RUNNER_DIR}", file=sys.stderr)
         return HARNESS
     entries = check.parse_scenario(scenario).get("elicitation", []) if scenario else []
     with tempfile.TemporaryDirectory(prefix="e2e-llm-sdk.") as scratch, clean.claude_launch() as (flags, env, empty):
