@@ -805,12 +805,13 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## home_read_cache
 
-8 columns · primary key `(reader_id, read, request_key)` · referenced by 0 foreign keys
+9 columns · primary key `(reader_id, read, request_key)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `computed_at` | `timestamp with time zone` | yes |  |
 | `fence` | `bigint` | yes |  |
+| `lifted_snooze_digest` | `bytea` |  |  |
 | `payload` | `jsonb` | yes |  |
 | `read` | `text` | yes | One of `worklist`, `magic`. |
 | `reader_id` | `uuid` | yes | Points at `app_user.id`. |
