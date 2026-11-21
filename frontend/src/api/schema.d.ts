@@ -50505,7 +50505,7 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
-            /** @description Active memberships; populated by listTeams. */
+            /** @description Active and invited memberships; populated by listTeams. */
             member_count?: number;
         };
         AssistantProfile: {
