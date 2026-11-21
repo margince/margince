@@ -201,6 +201,64 @@ describe("handing a task to somebody else", () => {
     ).toBeTruthy();
   });
 
+  // The refetch after a hand-off drops the row from the day, and its form
+  // with it. The line must not hang on a form that is still mounted.
+  it("says Reassigned when the row leaves the day before the write answers", async () => {
+    let answer: (response: Response) => void = () => {};
+    const held = new Promise<Response>((resolve) => {
+      answer = resolve;
+    });
+    const fetched = vi.fn(async (input: RequestInfo | URL) => {
+      if (input instanceof Request && input.method === "PATCH") {
+        return held;
+      }
+      if (
+        String(input instanceof Request ? input.url : input).includes("/users")
+      ) {
+        return jsonResponse({
+          data: [{ id: MINH, display_name: "Minh Tran" }],
+          page: { next_cursor: null },
+        });
+      }
+      return jsonResponse({ data: [] });
+    });
+    vi.stubGlobal("fetch", fetched);
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const day = (rows: React.ReactNode) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            {rows}
+            <ToastRegion />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(
+      day(rowOf(row({ id: "task-1", actions: ["complete"] }), LENA)),
+    );
+
+    await openHandOff(user);
+    await user.click(await screen.findByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "Minh Tran" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.reassignConfirm"],
+      }),
+    );
+    await waitFor(async () => expect(await wrote(fetched)).toBeDefined());
+
+    rerender(day(null));
+    answer(jsonResponse({}));
+
+    expect(
+      await screen.findByText(en["worklist.manager.reassigned"]),
+    ).toBeTruthy();
+  });
+
   // The contact who already holds the work is not a destination for it.
   it("offers everyone except the contact whose queue this is", async () => {
     stubRosterAnd(() => jsonResponse({}));

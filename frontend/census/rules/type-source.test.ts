@@ -87,6 +87,23 @@ describe("the gate sees what it claims to see", () => {
     ]);
   });
 
+  it("takes the weight a @font-face draws, and no rule beside it", () => {
+    const source =
+      '@font-face { font-family: "Geist"; font-weight: 700; }\n.a { font-weight: 700; }';
+    expect(cssFindings(sheet, source)).toEqual([
+      `${sheet}:2: font-weight: 700`,
+    ]);
+    expect(cssFindings(sheet, "@font-face { font: 700 1rem Geist; }")).toEqual([
+      `${sheet}:1: font: 700 1rem Geist`,
+    ]);
+    expect(
+      cssFindings(
+        sheet,
+        '.a { @font-face { font-family: "Geist"; font-weight: 400; } font-weight: 700; }',
+      ),
+    ).toEqual([`${sheet}:1: font-weight: 700`]);
+  });
+
   it("reads past a comment without reading it", () => {
     const source = "/* font-size: 13px is wrong */\n.a { font: inherit; }";
     expect(cssFindings(sheet, source)).toEqual([]);

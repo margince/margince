@@ -77,3 +77,25 @@ func TestDaysPastAgreesWithPassed(t *testing.T) {
 		t.Error("the two disagree about an undated promise")
 	}
 }
+
+func TestDayPassedIsOverOnlyAfterTheWholeDayInTheZone(t *testing.T) {
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatal(err)
+	}
+	endOfNov20 := time.Date(2026, 11, 20, 23, 59, 59, 0, time.UTC)
+	endOfNov20InAuckland := time.Date(2026, 11, 20, 23, 59, 59, 0, auckland)
+	for name, c := range map[string]struct {
+		due, now time.Time
+		loc      *time.Location
+		want     bool
+	}{
+		"last fraction of the day": {endOfNov20, time.Date(2026, 11, 20, 23, 59, 59, 500_000_000, time.UTC), time.UTC, false},
+		"first moment after":       {endOfNov20, time.Date(2026, 11, 21, 0, 0, 0, 0, time.UTC), time.UTC, true},
+		"the day is over there":    {endOfNov20InAuckland, time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC), auckland, true},
+	} {
+		if got := DayPassed(c.due, c.now, c.loc); got != c.want {
+			t.Errorf("%s: DayPassed = %v, want %v", name, got, c.want)
+		}
+	}
+}

@@ -54,6 +54,11 @@ function loadCatalog(locale: Locale, level: CatalogLevel): Promise<void> {
   return loading;
 }
 
+/** Whether something has asked for the complete catalog of `locale`. */
+export function completeRequested(locale: Locale): boolean {
+  return loadedCatalogs.has(locale) || catalogLoads.has(`${locale}/complete`);
+}
+
 export function loadLocale(locale: Locale): Promise<void> {
   return loadCatalog(locale, "complete");
 }

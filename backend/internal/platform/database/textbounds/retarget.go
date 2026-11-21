@@ -8,11 +8,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"regexp"
 	"strings"
 )
 
-var catalogGuardBounds = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*\.text_bound_(?:insert|update)) .*'(\{[^']*\})'::jsonb`)
+var catalogGuardBounds = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*\.text_bound_(?:insert|update)) .* EXECUTE FUNCTION refuse_oversized_text\('(\{[^']*\})'\)$`)
+
+// catalogGuard matches a text guard as the catalog prints it: the table, then
+// the definition after CREATE TRIGGER.
+var catalogGuard = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.text_bound_(?:insert|update) CREATE TRIGGER (.*)$`)
+
+// unqualifiedGuardFunction finds the shared functions in a printed definition,
+// which Postgres prints without their schema.
+var unqualifiedGuardFunction = regexp.MustCompile(`\b(text_row_exceeds_bounds|text_values_exceed_bound|refuse_oversized_text)\(`)
 
 // Retarget builds the migration that moves the named tables' guards from the
 // bounds the catalog holds now to the bounds columns.txt states. Its rollback
@@ -31,21 +40,22 @@ func Retarget(catalog io.Reader, tables []string) (Migration, error) {
 	if err != nil {
 		return Migration{}, err
 	}
+	columns, err := Columns(strings.NewReader(string(raw)))
+	if err != nil {
+		return Migration{}, err
+	}
 	var up, down strings.Builder
 	for _, table := range tables {
-		before, err := compact(current[table+".text_bound_insert"])
-		if err != nil {
-			return Migration{}, err
-		}
-		after, err := compact(wanted[table])
-		if err != nil {
-			return Migration{}, err
-		}
-		if before == after {
+		before, after := current[table+".text_bound_insert"], wanted[table]
+		if maps.Equal(before, after) {
 			return Migration{}, fmt.Errorf("the guards of %s already match columns.txt", table)
 		}
-		replaceGuards(&up, table, after)
-		replaceGuards(&down, table, before)
+		replaceGuards(&up, table, TableBounds(table, after, columns))
+		if NamesColumns(table) {
+			restorePrintedGuards(&down, table, string(raw))
+			continue
+		}
+		replaceGuards(&down, table, TableBounds(table, before, columns))
 	}
 	return Migration{
 		Up:   unwrappedHeader + up.String() + "RESET lock_timeout;\n",
@@ -55,21 +65,46 @@ func Retarget(catalog io.Reader, tables []string) (Migration, error) {
 
 // replaceGuards sets a table's guards to bounds, or removes them when no
 // column of the table is bounded.
-func replaceGuards(out *strings.Builder, table, bounds string) {
+func replaceGuards(out *strings.Builder, table string, bounds []Bound) {
 	var unused strings.Builder
-	if bounds == "" {
-		writeGuardPair(&unused, out, table, "{}")
+	if len(bounds) == 0 {
+		writeGuardPair(&unused, out, table, nil)
 		return
 	}
 	writeGuardPair(out, &unused, table, bounds)
 }
 
-func compact(bounds map[string]int) (string, error) {
-	if len(bounds) == 0 {
-		return "", nil
+// restorePrintedGuards puts back a table's guards as the catalog prints them,
+// with no rebuilt condition. After a rename Postgres has already moved the condition to the new
+// name, while the refusal still lists the old one. So a condition built again
+// from the refusal's list would lose that column's check.
+func restorePrintedGuards(out *strings.Builder, table, catalog string) {
+	restored := false
+	for line := range strings.SplitSeq(catalog, "\n") {
+		if match := catalogGuard.FindStringSubmatch(line); match != nil && match[1] == table {
+			fmt.Fprintf(out, "CREATE OR REPLACE TRIGGER %s;\n", unqualifiedGuardFunction.ReplaceAllString(match[2], "public.$1("))
+			restored = true
+		}
 	}
-	encoded, err := json.Marshal(bounds)
-	return string(encoded), err
+	if !restored {
+		replaceGuards(out, table, nil)
+	}
+}
+
+// TableBounds gives each limit the shape of its column in the catalog.
+func TableBounds(table string, limits map[string]int, columns []Column) []Bound {
+	shapes := map[string]Column{}
+	for _, column := range columns {
+		if column.Table == table {
+			shapes[column.Name] = column
+		}
+	}
+	bounds := make([]Bound, 0, len(limits))
+	for name, limit := range limits {
+		bounds = append(bounds, Bound{Column: name, Limit: limit, Array: shapes[name].Array})
+	}
+	sortBounds(bounds)
+	return bounds
 }
 
 // GuardBounds reads the bounds of every text guard in a catalog, keyed by

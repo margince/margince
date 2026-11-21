@@ -76908,7 +76908,8 @@ components:
           format: date-time
           description: |
             A future moment to send at instead of now. The decision is recorded now and spent when
-            the message fires. Absent sends now.
+            the message fires. It sends now only when `scheduled_at`, `scheduled_tz` and
+            `scheduled_intent` are all absent.
         scheduled_tz:
           type: string
           description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.

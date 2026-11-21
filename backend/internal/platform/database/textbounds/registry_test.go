@@ -83,6 +83,56 @@ func TestChangedTextGuardsPreserveExistingValues(t *testing.T) {
 	}
 }
 
+// A whole-row condition would copy the mail body to jsonb on every write to activity.
+func TestTheActivityGuardsNameTheirColumnsAndPreserveExistingValues(t *testing.T) {
+	guards, err := SQL(strings.NewReader("public.activity.body text gen=- def=-\npublic.activity.owed_ask text gen=- def=-\npublic.activity.redacted_fields text[] gen=- def=-\n"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fragment := range []string{
+		`AFTER INSERT ON "public"."activity" FOR EACH ROW` + "\n" + `WHEN (char_length(NEW."owed_ask") > 2000` + "\n OR " + `public.text_values_exceed_bound(NEW."redacted_fields", NULL, 20000))`,
+		`(char_length(NEW."owed_ask") > 2000 AND NEW."owed_ask" COLLATE "C" IS DISTINCT FROM OLD."owed_ask" COLLATE "C")`,
+		`(NEW."redacted_fields" IS DISTINCT FROM OLD."redacted_fields" AND public.text_values_exceed_bound(NEW."redacted_fields", OLD."redacted_fields", 20000))`,
+		`refuse_oversized_text('{"owed_ask":2000,"redacted_fields":20000}')`,
+	} {
+		if !strings.Contains(guards.Tables.Up, fragment) {
+			t.Errorf("missing changed-value guard %q in:\n%s", fragment, guards.Tables.Up)
+		}
+	}
+	if strings.Contains(guards.Tables.Up, "to_jsonb") || strings.Contains(guards.Tables.Up, `"body"`) {
+		t.Fatal("the activity condition copies the row, or checks the exempt body")
+	}
+}
+
+func TestAnActivityRetargetRollsBackToTheGuardsAsTheCatalogPrintsThem(t *testing.T) {
+	// A rename left the old name in the refusal, and Postgres moved the condition
+	// to the new one. A rollback built from the refusal would drop that check.
+	printed := `text_bound_update AFTER UPDATE ON public.activity FOR EACH ROW WHEN ((((char_length(new.owed_ask) > 120) AND ((new.owed_ask COLLATE "C") IS DISTINCT FROM (old.owed_ask COLLATE "C"))) OR ((new.redacted_fields IS DISTINCT FROM old.redacted_fields) AND text_values_exceed_bound(new.redacted_fields, old.redacted_fields, 120)))) EXECUTE FUNCTION refuse_oversized_text('{"owed_ask_was":120,"redacted_fields":120}')`
+	catalog := "public.activity.owed_ask text gen=- def=-\npublic.activity.redacted_fields text[] gen=- def=-\n" +
+		`public.activity.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity FOR EACH ROW WHEN ((char_length(new.owed_ask) > 120)) EXECUTE FUNCTION refuse_oversized_text('{"owed_ask_was":120,"redacted_fields":120}')` + "\n" +
+		"public.activity.text_bound_update CREATE TRIGGER " + printed + "\n"
+	migration, err := Retarget(strings.NewReader(catalog), []string{"activity"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(migration.Up, `WHEN (char_length(NEW."owed_ask") > 2000`) || !strings.Contains(migration.Up, `refuse_oversized_text('{"owed_ask":2000,"redacted_fields":20000}')`) {
+		t.Errorf("the pair does not move activity to the registry:\n%s", migration.Up)
+	}
+	qualified := strings.NewReplacer("AND text_values_exceed_bound(", "AND public.text_values_exceed_bound(", "FUNCTION refuse_oversized_text(", "FUNCTION public.refuse_oversized_text(").Replace(printed)
+	if !strings.Contains(migration.Down, "CREATE OR REPLACE TRIGGER "+qualified+";\n") || strings.Count(migration.Down, "CREATE OR REPLACE TRIGGER") != 2 {
+		t.Errorf("the rollback is not the two guards as the catalog prints them:\n%s", migration.Down)
+	}
+	// A migration that dropped a bounded column took the guards off first.
+	unguarded, err := Retarget(strings.NewReader("public.activity.owed_ask text gen=- def=-\n"), []string{"activity"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(unguarded.Up, `WHEN (char_length(NEW."owed_ask") > 2000)`) || strings.Contains(unguarded.Down, "CREATE") ||
+		!strings.Contains(unguarded.Down, `DROP TRIGGER IF EXISTS "text_bound_insert" ON "public"."activity"`) {
+		t.Errorf("a table without guards does not get them, or its rollback leaves them:\nup:\n%s\ndown:\n%s", unguarded.Up, unguarded.Down)
+	}
+}
+
 // One transaction would close every guarded table to writers until the last guard is
 // made. A database that already has the guards must also take them again.
 func TestEachTableGuardCommitsOnItsOwnAndRunsTwice(t *testing.T) {
@@ -110,16 +160,16 @@ func TestEachTableGuardCommitsOnItsOwnAndRunsTwice(t *testing.T) {
 }
 
 func TestARetargetMovesTheGuardsToTheRegistryAndItsRollbackMovesThemBack(t *testing.T) {
-	catalog := "public.activity.body text gen=- def=-\n" +
+	catalog := "public.mail_draft.body text gen=- def=-\n" +
 		"public.company.description text gen=- def=-\n" +
-		`public.activity.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"body": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"body": 20000}')` + "\n" +
+		`public.mail_draft.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.mail_draft FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"body": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"body": 20000}')` + "\n" +
 		`public.company.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"description": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"description": 120}')` + "\n"
-	migration, err := Retarget(strings.NewReader(catalog), []string{"activity", "company"})
+	migration, err := Retarget(strings.NewReader(catalog), []string{"mail_draft", "company"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(migration.Up, `TRIGGER "text_bound_insert" AFTER INSERT ON "public"."activity"`) ||
-		!strings.Contains(migration.Up, `DROP TRIGGER IF EXISTS "text_bound_insert" ON "public"."activity"`) {
+	if strings.Contains(migration.Up, `TRIGGER "text_bound_insert" AFTER INSERT ON "public"."mail_draft"`) ||
+		!strings.Contains(migration.Up, `DROP TRIGGER IF EXISTS "text_bound_insert" ON "public"."mail_draft"`) {
 		t.Errorf("an exempt column's table keeps a guard:\n%s", migration.Up)
 	}
 	if !strings.Contains(migration.Up, `CREATE OR REPLACE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."company"`) ||

@@ -393,7 +393,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 // arch_test.go's TestNoModelClientOutsideTheGate enforces — rather than
 // aicert becoming a second, ungated construction site.
 func NewLocalRouterForCert(cfg ai.RoutingConfig, opts ...ai.LocalOption) (*ai.Router, error) {
-	return ai.NewLocalRouter(cfg, opts...)
+	return ai.NewLocalRouter(cfg, append([]ai.LocalOption{ai.WithoutInteractiveLimits()}, opts...)...)
 }
 
 // Router exposes the model path's underlying router — the same one every model

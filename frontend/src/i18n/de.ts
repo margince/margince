@@ -1711,7 +1711,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.evidenceWithheld":
     "Diese Zahl ist für dich verborgen, daher erscheinen weder ihre Datensätze noch deren Anzahl.",
   "reporting.evidenceUnavailable":
-    "Diese Zahl konnte nicht gelesen werden, daher gibt es keine Datensätze. Versuch es erneut, um sie noch einmal zu lesen.",
+    "Diese Zahl konnte nicht gelesen werden, daher gibt es keine Datensätze. Bitte versuche es erneut, um sie noch einmal zu lesen.",
   "reporting.exportStale":
     "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und exportiere ihn dann noch einmal.",
   "reporting.details": "Details",
@@ -2254,8 +2254,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "dealSuggestion.decided":
     "Über diesen Vorschlag wurde schon entschieden. Lade die Seite neu, um den Stand zu sehen.",
   "dealSuggestion.unavailable":
-    "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
-  "dealSuggestion.failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "Der Vorschlag konnte nicht gelesen werden. Bitte versuche es später noch einmal.",
+  "dealSuggestion.failed":
+    "Das hat nicht geklappt. Bitte versuche es noch einmal.",
   "dealSuggestion.evidence.meeting": "Termin fand statt: {title}",
   "dealSuggestion.evidence.signal": "Signal: {title}",
   "dealSuggestion.evidence.attachment": "Gesendet: {title}",
@@ -3717,7 +3718,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.loadMore": "Mehr laden",
   "scrollSentinel.loading": "Mehr wird geladen…",
   "scrollSentinel.failed": "Weitere Einträge konnten nicht geladen werden.",
-  "scrollSentinel.stalled": "Die Liste kommt nicht weiter. Versuch es erneut.",
+  "scrollSentinel.stalled":
+    "Die Liste kommt nicht weiter. Bitte versuche es erneut.",
   "scrollSentinel.more": "Weitere Einträge sind verfügbar.",
   "list.viewAll": "Alle",
   "list.viewHot": "Heiß",
@@ -3956,7 +3958,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.unconfirmed_double_opt_in":
     "Einwilligung erfasst, aber nie per Double-Opt-in bestätigt",
   "consent.reason.no_connection":
-    "Der Kontakt hat dir nicht geschrieben, dich nicht getroffen und um nichts gebeten, das erfasst ist",
+    "Keine erfasste Nachricht, kein erfasstes Treffen und keine erfasste Anfrage verbindet euch",
   "consent.reason.qualifying_event": "Ein erfasster Austausch verbindet euch",
   "consent.reason.consent_confirmed": "Einwilligung erteilt, mit Bestätigung",
   "consent.reason.consent_withdrawn":
@@ -5797,7 +5799,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tagSuggestion.decided":
     "Über diesen Vorschlag wurde schon entschieden. Lade die Seite neu, um den Stand zu sehen.",
   "tagSuggestion.unavailable":
-    "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
+    "Der Vorschlag konnte nicht gelesen werden. Bitte versuche es später noch einmal.",
   "tagAdmin.descriptionLabel": "Anzeichen für Interesse",
   "tagAdmin.descriptionHint":
     "Zum Beispiel: fragt nach Preisen oder einer Demo von Produkt X. Ohne KI zählt jede kommagetrennte Wendung als Treffer.",
@@ -8524,7 +8526,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.whyHint.marketing":
     "Fügt einen Abmeldelink und die Firmenangaben hinzu. Braucht ihre Einwilligung oder einen früheren Kauf.",
   "compose.met.failed":
-    "Das Treffen wurde nicht gespeichert, daher wurde nichts gesendet. Versuch es erneut.",
+    "Das Treffen wurde nicht gespeichert, daher wurde nichts gesendet. Bitte versuche es erneut.",
   "sendPermission.stopWithReason": "Senden braucht deine Begründung",
   "sendPermission.refused": "Nachricht kann nicht gesendet werden",
   "sendPermission.sayWhy": "Kontaktgrund erfassen",
@@ -8926,7 +8928,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.withheld": "Für dich verborgen",
   "analytics.prospect.failed": "Konnte nicht gelesen werden",
   "analytics.prospect.failedDetail":
-    "Die Quelle hat nicht geantwortet. Versuch es später erneut.",
+    "Die Quelle hat nicht geantwortet. Bitte versuche es später erneut.",
   "analytics.prospect.weeksFailed":
     "Die letzten Wochen konnten nicht gelesen werden.",
   "analytics.prospect.noMeetingsWeek":
@@ -15126,6 +15128,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.scopeAriaMixed":
     "Einstellungen auf dieser Seite betreffen unterschiedliche Personen. Jede Einstellung nennt, wen sie betrifft.",
   "settings.readOnlyPageTitle": "Schreibgeschützte Einstellungen",
+  "settings.pageLoading": "{page} wird geladen…",
   "settings.readOnlyPage": "Deine Rolle darf diese Einstellungen nicht ändern.",
   "settings.seatRefused":
     "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",
