@@ -24,8 +24,9 @@ removes the subject's personal values. These parts stay, each for its own reason
   contacts still point at it.
 - **Published outbox events** about other records stay for 30 days after they were published. The
   nightly pass then removes them. It keeps an event the deal check has not read yet (`assurance_inputs_read`). It
-  keeps an event an imported lead's follow-up is told by, and one about a record under a hold or a
-  retention floor. It never removes an event that is not published yet.
+  keeps an event an imported lead's follow-up is told by, and one about a record under a hold. For
+  an activity, only a legal hold on a linked record counts: the retention floor keeps the activity,
+  not the event. It never removes an event that is not published yet.
 - **Webhook bodies.** A body about another record stays for 7 days after its delivery ended. A body
   still to be sent stays until it is sent or cancelled. The erasure clears the subject's own bodies at once.
 - **Failed-login rows** in `system_log` keep a keyed hash of the address that was tried.
