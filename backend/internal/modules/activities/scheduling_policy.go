@@ -45,7 +45,7 @@ func (s *Store) calendarBusy(ctx context.Context, host ids.UserID, p crmcontract
 // by their buffer. skip leaves out the one event a move must not count.
 func (s *Store) providerBusy(ctx context.Context, host ids.UserID, p crmcontracts.SchedulingProfile, from, to time.Time, skip func(calendar string, interval connector.CalendarInterval) bool) ([]slot, error) {
 	if s.calendar == nil {
-		return nil, apperrors.ErrPermissionDenied
+		return nil, errCalendarNotConnected()
 	}
 	calendars := []string{p.CalendarId}
 	if p.BlockingCalendars != nil {
@@ -141,9 +141,9 @@ func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, f
 		return nil, false, err
 	}
 	if profile.Provider == "" || s.calendar == nil {
-		return nil, false, apperrors.ErrPermissionDenied
+		return nil, false, errCalendarNotConnected()
 	}
-	if err := s.calendar.Check(ctx, host, string(profile.Provider)); err != nil {
+	if err := unconnectedAsRefusal(s.calendar.Check(ctx, host, string(profile.Provider))); err != nil {
 		return nil, false, err
 	}
 	if duration <= 0 {
@@ -259,7 +259,7 @@ func (s *Store) validatePolicyTime(ctx context.Context, host ids.UserID, profile
 		return &SchedulingArgumentError{Field: fieldStart, Code: codeOutsideAvailability, Message: "Choose a future time within the host's bookable hours and notice period"}
 	}
 	if s.calendar == nil {
-		return apperrors.ErrPermissionDenied
+		return errCalendarNotConnected()
 	}
 	return unconnectedAsRefusal(s.calendar.Check(ctx, host, string(profile.Provider)))
 }
