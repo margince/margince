@@ -39,7 +39,9 @@ func rotatingOAuth(t *testing.T) (OAuth, *atomic.Int32) {
 	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		n := calls.Add(1)
-		fmt.Fprintf(w, `{"access_token":"at-%d","refresh_token":"r-%d","expires_in":3600}`, n, n+1)
+		if _, err := fmt.Fprintf(w, `{"access_token":"at-%d","refresh_token":"r-%d","expires_in":3600}`, n, n+1); err != nil {
+			t.Errorf("writing the token answer: %v", err)
+		}
 	}))
 	t.Cleanup(srv.Close)
 	return NewOAuth(OAuthConfig{

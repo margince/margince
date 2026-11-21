@@ -292,7 +292,7 @@ func (c *Client) Refresh(ctx context.Context, refreshToken string, granted []str
 		return c.redeem(ctx, refreshToken, granted)
 	}
 	key := c.grantKey(refreshToken, granted)
-	if renewing(ctx) {
+	if renewRequested(ctx) {
 		cache.Drop(key)
 	} else if cached, ok := cache.lookup(key); ok {
 		return TokenRefresh{AccessToken: cached.AccessToken, ExpiresIn: cached.ExpiresIn}, nil
@@ -325,7 +325,7 @@ func Renewing(ctx context.Context) context.Context {
 	return context.WithValue(ctx, renewKey{}, true)
 }
 
-func renewing(ctx context.Context) bool {
+func renewRequested(ctx context.Context) bool {
 	renew, ok := ctx.Value(renewKey{}).(bool)
 	return ok && renew
 }

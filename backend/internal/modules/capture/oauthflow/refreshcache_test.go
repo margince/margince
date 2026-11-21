@@ -27,7 +27,9 @@ func countingTokenEndpoint(t *testing.T, rotate bool) (*httptest.Server, *atomic
 		if rotate {
 			refresh = fmt.Sprintf("rt-%d", n)
 		}
-		fmt.Fprintf(w, `{"access_token":"at-%d","refresh_token":%q,"expires_in":3600}`, n, refresh)
+		if _, err := fmt.Fprintf(w, `{"access_token":"at-%d","refresh_token":%q,"expires_in":3600}`, n, refresh); err != nil {
+			t.Errorf("writing the token answer: %v", err)
+		}
 	}))
 	t.Cleanup(srv.Close)
 	return srv, &calls

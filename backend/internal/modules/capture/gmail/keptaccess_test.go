@@ -36,7 +36,9 @@ func keepingOAuth(t *testing.T) (OAuth, *atomic.Int32) {
 	t.Helper()
 	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprintf(w, `{"access_token":"at-%d","expires_in":3600}`, calls.Add(1))
+		if _, err := fmt.Fprintf(w, `{"access_token":"at-%d","expires_in":3600}`, calls.Add(1)); err != nil {
+			t.Errorf("writing the token answer: %v", err)
+		}
 	}))
 	t.Cleanup(srv.Close)
 	return NewOAuth(OAuthConfig{

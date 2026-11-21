@@ -73,7 +73,7 @@ func (s *Sink) discardUnnamedFiles(ctx context.Context) {
 	if len(unnamed) == 0 {
 		return
 	}
-	if err := keeper.FileKeeper.Discard(ctx, unnamed); err != nil {
+	if err := keeper.Discard(ctx, unnamed); err != nil {
 		slog.WarnContext(ctx, "capture: deleting files a message did not keep; the stored-object sweep will reap them",
 			"files", len(unnamed), "err", err)
 	}
