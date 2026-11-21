@@ -7,8 +7,8 @@ package gates
 
 // The subscriber acks every event type a consumer group does not declare
 // before the group's handler runs. These gates hold each declaring handler to
-// its group's kernel TypeSet: by probing it with every left-out type, and by
-// reading that its first statement tests that set.
+// its group's kernel TypeSet. One probes it with every left-out type. The
+// other reads that its first statement tests that set.
 
 import (
 	"context"
