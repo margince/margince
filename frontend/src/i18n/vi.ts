@@ -3628,6 +3628,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Sắp xếp theo {column}",
   "table.noMatches": "Không có {unit} nào khớp với các bộ lọc này.",
   "table.clearFilters": "Bỏ bộ lọc",
+  "table.dialsRefused": "Không thể hiển thị danh sách với bộ lọc này.",
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "Đã tải {first} đến {last} trong {count} {unit}",
@@ -6325,22 +6326,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.colName": "Tên",
   "legalEntities.colLegalName": "Tên pháp lý",
   "legalEntities.colCountry": "Quốc gia",
-  "legalEntities.countryMissing": "Chưa đặt: áp dụng quốc gia của bản cài đặt",
+  "legalEntities.colJurisdiction": "Khu vực pháp lý",
+  "legalEntities.jurisdictionMissing":
+    "Chưa đặt: áp dụng khu vực pháp lý của hệ thống",
   "legalEntities.defaultBadge": "Mặc định",
   "legalEntities.defaultUnnamed": "Công ty của bạn",
   "legalEntities.displayName": "Tên",
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
-  "legalEntities.defaultCountry":
-    "Quốc gia: {country}. Công ty mặc định theo khu vực pháp lý của hệ thống.",
-  "legalEntities.defaultCountryNone":
-    "Chưa đặt quốc gia. Công ty mặc định theo khu vực pháp lý của hệ thống.",
-  "legalEntities.defaultCountryLink": "Đổi ở mục Khu vực pháp lý",
+  "legalEntities.countryHint": "Quốc gia của địa chỉ đăng ký.",
+  "legalEntities.jurisdiction": "Khu vực pháp lý",
+  "legalEntities.jurisdictionHint":
+    "Luật của khu vực này áp dụng cho thư nhân viên công ty gửi và hồ sơ họ phụ trách.",
+  "legalEntities.defaultJurisdiction":
+    "Khu vực pháp lý: {jurisdiction}. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultJurisdictionNone":
+    "Chưa đặt khu vực pháp lý. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultJurisdictionLink": "Đổi ở mục Khu vực pháp lý",
   "jurisdiction.entities.title": "Pháp nhân",
-  "jurisdiction.entities.lead":
-    "Quốc gia của mỗi công ty quyết định luật áp dụng cho thư nhân viên gửi và hồ sơ họ phụ trách.",
-  "jurisdiction.entities.default": "{country}, theo lựa chọn ở trên",
-  "jurisdiction.entities.none": "Chưa đặt quốc gia",
+  "jurisdiction.entities.default": "{jurisdiction}, theo lựa chọn ở trên",
+  "jurisdiction.entities.none": "Chưa đặt khu vực pháp lý",
   "jurisdiction.entities.edit": "Đổi pháp nhân",
   "legalEntities.edit": "Sửa",
   "legalEntities.archive": "Lưu trữ",
@@ -8322,7 +8327,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unprovenRefuses": "Không thể gửi cho đến khi ghi nhận lý do.",
   "sendPermission.missingContext": "Tin nhắn này còn thiếu một thông tin",
   "sendPermission.missingPermission": "Cần được phép gửi thư này",
-  "sendPermission.reason.chooseDeal": "Chọn giao dịch cho lần liên hệ lại này.",
+  "sendPermission.reason.dealFact":
+    "Không có giao dịch đang mở với bên nhận này để hỗ trợ việc theo dõi này.",
   "sendPermission.reason.footerIncomplete":
     "Đọc thông tin chân trang bên dưới. Bạn có thể gửi email này kèm lý do được ghi lại.",
   "sendPermission.footer.language": "{detail} bằng {language}",
@@ -8564,6 +8570,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 
   "tasks.complete": "Xong",
+  "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
   "tasks.log.action": "Ghi lại kết quả",
@@ -19365,6 +19372,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.deals.noClose": "Chưa có ngày chốt",
   "contact.deals.untitled": "Deal chưa có tên",
   "contact.deals.noStage": "Chưa có giai đoạn",
+  "contact.deals.seatEnded": "Không còn tham gia cơ hội này",
   "contact.meetings.upcoming": "Sắp tới",
   "contact.meetings.past": "Đã diễn ra",
   "contact.meetings.noneBooked": "Chưa có cuộc họp nào sắp tới.",
@@ -20470,6 +20478,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chuyển vào kho lưu trữ sẽ gỡ dự án này khỏi danh sách đang hoạt động và giải phóng mã của dự án. Không thể hoàn tác ở đây.",
   "project.archivedReadOnly":
     "Dự án này đang trong kho lưu trữ và không thể thay đổi.",
+  "project.page.notFound": "Không tìm thấy dự án",
+  "project.page.notFoundBody":
+    "Dự án này không tồn tại, hoặc bạn không có quyền xem.",
+  "project.page.backToProjects": "Quay lại danh sách dự án",
   "project.notYoursToChange":
     "Bạn không có quyền sửa dự án này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
   "project.phaseLabel": "Giai đoạn dự án",
@@ -22081,6 +22093,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.card.askedOpen": "Mở tin nhắn",
   "lead.card.qualified": "Nếu đủ điều kiện",
   "lead.card.qualifiedContact": "Liên hệ",
+  "lead.card.qualifiedCompany": "Công ty",
   "lead.card.qualifiedDeal": "Deal mới",
   "lead.card.qualifiedDealOptional": "Có thể mở deal ngay trong cùng bước",
   "lead.card.qualifiedNewContact": "Một liên hệ mới",

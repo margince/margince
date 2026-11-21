@@ -278,10 +278,9 @@ func codeOf(column *string) jurisdiction.Code {
 	return jurisdiction.Code(*column)
 }
 
-// dataProtectionCountryTx is the data-protection selector: the country of the
-// legal entity the message goes out for. The default entity, a further entity
-// with no country, and the zero entity take the installation's country, so an
-// installation with one entity configures nothing.
+// dataProtectionCountryTx is the data-protection selector: the jurisdiction of
+// the legal entity the message goes out for. The default entity, a further
+// entity with none, and the zero entity take the installation's country.
 //
 // That fallback reads installation.country, which is MachineryApplied: this runs
 // under whatever principal is sending, and a rep or a worker holds no
@@ -295,8 +294,8 @@ func (s *Store) dataProtectionCountryTx(ctx context.Context, tx pgx.Tx, entity i
 }
 
 func (s *Store) dataProtectionCountryOf(ctx context.Context, tx pgx.Tx, entity sendingEntityFacts) (jurisdiction.Code, error) {
-	if entity.further() && entity.country != "" {
-		return jurisdiction.Code(entity.country), nil
+	if entity.further() && entity.jurisdiction != "" {
+		return jurisdiction.Code(entity.jurisdiction), nil
 	}
 	return s.defaultEntityCountry(ctx, tx)
 }

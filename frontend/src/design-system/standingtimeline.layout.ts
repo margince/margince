@@ -3,6 +3,8 @@
 
 const DAY_MS = 86_400_000;
 const WEEKLY_SPAN_MS = 42 * DAY_MS;
+// Past two years a line per month is too dense to name; the axis counts years.
+const YEARLY_SPAN_MS = 2 * 366 * DAY_MS;
 
 /** Past this share of the axis a label hangs to the left of its dot, so the
  *  last event's words stay on the canvas. */
@@ -137,13 +139,23 @@ export function pct(at: number, range: TimelineRange): number {
 }
 
 /**
- * The grid lines: every month start inside the range, every other one past
- * seven months, or every seventh day on a range of weeks.
+ * The grid lines: every month start inside the range, and every other one past
+ * seven months. Past two years, every year start; on a range of weeks, every
+ * seventh day.
  */
 export function ticksOf(range: TimelineRange): TimelineTick[] {
   const ticks: TimelineTick[] = [];
   if (isWeekly(range)) {
     for (let at = range.start; at <= range.end; at += 7 * DAY_MS) {
+      ticks.push({ at, pct: pct(at, range) });
+    }
+    return ticks;
+  }
+  if (isYearly(range)) {
+    const year = new Date(range.start).getUTCFullYear();
+    const first = Date.UTC(year, 0, 1) < range.start ? year + 1 : year;
+    for (let year = first; Date.UTC(year, 0, 1) <= range.end; year++) {
+      const at = Date.UTC(year, 0, 1);
       ticks.push({ at, pct: pct(at, range) });
     }
     return ticks;
@@ -165,31 +177,56 @@ const TICK_INSET_PX = 8;
  * Which grid-line labels are drawn: a label whose words would run into the
  * one drawn before it is left off, and its line stays. The first label in
  * axis order wins, so the axis's end (which hangs left of its line) is the
- * one that gives way.
+ * one that gives way. A label that names its year outranks one that does
+ * not, because the labels after it name no year at all.
  */
 export function tickLabelsShown(
-  ticks: readonly Readonly<{ pct: number; chars: number }>[],
+  ticks: readonly Readonly<{
+    pct: number;
+    chars: number;
+    namesYear?: boolean;
+  }>[],
   canvasPx: number,
 ): boolean[] {
-  let lastEnd = Number.NEGATIVE_INFINITY;
-  return ticks.map((tick) => {
+  const drawn: { index: number; span: Span; namesYear: boolean }[] = [];
+  const runsInto = (span: Span, upTo: number) => {
+    const last = drawn[upTo - 1];
+    return last !== undefined && span[0] < last.span[1] + TICK_INSET_PX;
+  };
+  ticks.forEach((tick, index) => {
     const at = (tick.pct / 100) * canvasPx;
     const width = tick.chars * TICK_CHAR_PX;
     const span: Span =
       tick.pct > RIGHT_ALIGN_AFTER
         ? [at - TICK_INSET_PX - width, at - TICK_INSET_PX]
         : [at + TICK_INSET_PX, at + TICK_INSET_PX + width];
-    if (span[0] < lastEnd + TICK_INSET_PX) {
-      return false;
+    const namesYear = tick.namesYear === true;
+    // The plain labels it would push out go only once the year label fits.
+    let kept = drawn.length;
+    while (
+      namesYear &&
+      runsInto(span, kept) &&
+      drawn[kept - 1]?.namesYear === false
+    ) {
+      kept -= 1;
     }
-    lastEnd = span[1];
-    return true;
+    if (!runsInto(span, kept)) {
+      drawn.splice(kept);
+      drawn.push({ index, span, namesYear });
+    }
   });
+  const shown = new Set(drawn.map((label) => label.index));
+  return ticks.map((_, index) => shown.has(index));
 }
 
 /** Whether the axis counts weeks rather than months. */
 export function isWeekly(range: TimelineRange): boolean {
   return range.end - range.start <= WEEKLY_SPAN_MS;
+}
+
+/** Whether the axis counts years rather than months. */
+export function isYearly(range: TimelineRange): boolean {
+  return range.end - range.start > YEARLY_SPAN_MS;
 }
 
 /** Which events a reader most needs named, most first. */

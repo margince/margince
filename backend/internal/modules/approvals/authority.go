@@ -423,7 +423,8 @@ func requireDecisionGrants(p principal.Principal, a row) error {
 	return nil
 }
 
-// An owner's archive may use update; the row check still proves ownership.
+// decisionChecksFor lists the grant checks approving a row needs. Each is
+// admitted by the actions decisionActions names.
 func decisionChecksFor(a row) ([]auth.Check, error) {
 	grants, err := decisionGrantsFor(a.Kind, a.TargetType)
 	if err != nil {
@@ -431,11 +432,7 @@ func decisionChecksFor(a row) ([]auth.Check, error) {
 	}
 	checks := make([]auth.Check, 0, len(grants))
 	for _, grant := range grants {
-		check := auth.Check{Object: grant.Object, Actions: []principal.Action{grant.Action}}
-		if _, ruled := auth.ArchiveRuleFor(grant.Object); ruled && a.Kind == kindArchiveRecord && grant.Action == principal.ActionDelete {
-			check.Actions = append(check.Actions, principal.ActionUpdate)
-		}
-		checks = append(checks, check)
+		checks = append(checks, auth.Check{Object: grant.Object, Actions: decisionActions(a.Kind, grant)})
 	}
 	return checks, nil
 }

@@ -92,7 +92,7 @@ export function sendPermissionReasonKey(
       return "sendPermission.reason.lawfulBasisUnconfirmed" as const;
     case "no_compatible_evidence":
       return dealFollowup
-        ? ("sendPermission.reason.chooseDeal" as const)
+        ? ("sendPermission.reason.dealFact" as const)
         : recordable
           ? ("sendPermission.unprovenHint" as const)
           : ("sendPermission.unprovenRefuses" as const);

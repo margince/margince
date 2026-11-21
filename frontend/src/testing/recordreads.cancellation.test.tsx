@@ -14,7 +14,7 @@ import { CompanyScreen } from "../features/companies/companies";
 import { useCompany360 } from "../features/companies/company360";
 import { LeadScreen } from "../features/leads/leads";
 import { useComposeRecords } from "../features/mail/composefiling";
-import { useProject360 } from "../features/projects/project360";
+import { useProject360 } from "../features/projects/project360.reads";
 import { useProjectRecord } from "../features/projects/projectrecord";
 import { connectivityNow } from "../lib/connectivity";
 import {

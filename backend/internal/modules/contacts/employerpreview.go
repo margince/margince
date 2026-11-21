@@ -25,6 +25,10 @@ type ContactEmployerPreview struct {
 	CompanyName string
 	Domains     []CompanyDomainInput
 	Effect      string
+	// EmployerDomains are the live domains of CompanyID, which the dedupe
+	// ladder reads once the contact is employed there. Empty when the caller
+	// may not see that company.
+	EmployerDomains []string
 }
 
 // PreviewContactEmployer uses the write path's match and authority checks for import review.
@@ -36,6 +40,9 @@ func (s *Store) PreviewContactEmployer(ctx context.Context, in CreateContactInpu
 	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = s.previewContactEmployerTx(ctx, tx, in.Employer, in.Emails)
+		if err == nil && out.CompanyID != nil {
+			out.EmployerDomains, err = visibleCompanyDomainsTx(ctx, tx, *out.CompanyID)
+		}
 		return err
 	})
 	return out, err

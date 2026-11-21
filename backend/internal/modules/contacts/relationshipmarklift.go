@@ -38,7 +38,7 @@ func (s *Store) LockAutomaticMarkTx(ctx context.Context, tx pgx.Tx, id ids.Conta
 		   AND c.relationship_mark IS NOT NULL AND c.relationship_mark_set_by = $2
 		   AND EXISTS (SELECT 1 FROM contact_email ce
 		                WHERE ce.contact_id = c.id AND ce.archived_at IS NULL
-		                  AND lower(ce.email) = lower($3))
+		                  AND ce.email = lower($3))
 		   FOR UPDATE OF c`, id, CaptureVerdictActor, email).Scan(&madeAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return time.Time{}, false, nil

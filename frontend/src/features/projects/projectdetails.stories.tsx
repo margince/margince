@@ -70,6 +70,19 @@ function column(
 /** A project in delivery: Day 166 of 275 under the name, every fact set. */
 export const Delivering: Story = { render: column(deliveringProject360()) };
 
+/** A written description: under its term across the column, line breaks kept. */
+const delivering = deliveringProject360();
+export const WrittenDescription: Story = {
+  render: column({
+    ...delivering,
+    project: {
+      ...delivering.project,
+      description:
+        "Roll out the CRM to the Hamburg depot.\nThen train the dispatch team on the new tour planning.",
+    },
+  }),
+};
+
 /** No dates set and the account withheld: both said, neither dropped. */
 export const UnsetAndWithheld: Story = {
   render: column(

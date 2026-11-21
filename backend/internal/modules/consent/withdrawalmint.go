@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -111,7 +112,7 @@ func bindWithdrawalSubject(ctx context.Context, tx pgx.Tx, in *WithdrawalMintInp
 		SELECT pe.contact_id
 		  FROM contact_email pe
 		  JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
-		 WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL`, in.Address)
+		 WHERE pe.email = $1 AND pe.archived_at IS NULL`, in.Address)
 	if err != nil {
 		return fmt.Errorf("consent: resolving the contact the unsubscribe link is for: %w", err)
 	}
@@ -119,14 +120,14 @@ func bindWithdrawalSubject(ctx context.Context, tx pgx.Tx, in *WithdrawalMintInp
 		in.ContactID = ids.From[ids.ContactKind](contact)
 		return nil
 	}
-	lead, err := theOneSubjectHolding(ctx, tx, `
-		SELECT id FROM lead
-		 WHERE lower(email) = $1 AND archived_at IS NULL AND merged_into_id IS NULL`, in.Address)
+	// The shared probe reads both spellings of an internationalised domain and
+	// names the oldest live lead. A merge archives the lead it retires.
+	lead, held, err := storekit.LiveLeadByEmail(ctx, tx, in.Address, nil)
 	if err != nil {
 		return fmt.Errorf("consent: resolving the lead the unsubscribe link is for: %w", err)
 	}
-	if !lead.IsZero() {
-		in.LeadID = ids.From[ids.LeadKind](lead)
+	if held {
+		in.LeadID = lead
 	}
 	return nil
 }

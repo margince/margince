@@ -3674,6 +3674,7 @@ export const en = {
   "table.sortBy": "Sort by {column}",
   "table.noMatches": "No {unit} match these filters.",
   "table.clearFilters": "Clear filters",
+  "table.dialsRefused": "This list cannot be shown with these filters.",
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
@@ -6460,22 +6461,26 @@ export const en = {
   "legalEntities.colName": "Name",
   "legalEntities.colLegalName": "Legal name",
   "legalEntities.colCountry": "Country",
-  "legalEntities.countryMissing": "Not set: the installation’s country applies",
+  "legalEntities.colJurisdiction": "Jurisdiction",
+  "legalEntities.jurisdictionMissing":
+    "Not set: the installation’s jurisdiction applies",
   "legalEntities.defaultBadge": "Default",
   "legalEntities.defaultUnnamed": "Your company",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
-  "legalEntities.defaultCountry":
-    "Country: {country}. The default company follows the installation’s jurisdiction.",
-  "legalEntities.defaultCountryNone":
-    "No country set. The default company follows the installation’s jurisdiction.",
-  "legalEntities.defaultCountryLink": "Change it under Jurisdiction",
+  "legalEntities.countryHint": "The country of the registered address.",
+  "legalEntities.jurisdiction": "Jurisdiction",
+  "legalEntities.jurisdictionHint":
+    "Its law applies to the mail this company’s team sends and the contacts it owns.",
+  "legalEntities.defaultJurisdiction":
+    "Jurisdiction: {jurisdiction}. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultJurisdictionNone":
+    "No jurisdiction set. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultJurisdictionLink": "Change it under Jurisdiction",
   "jurisdiction.entities.title": "Legal entities",
-  "jurisdiction.entities.lead":
-    "Each company’s country sets the law for the mail its team sends and the contacts it owns.",
-  "jurisdiction.entities.default": "{country}, the selection above",
-  "jurisdiction.entities.none": "No country set",
+  "jurisdiction.entities.default": "{jurisdiction}, the selection above",
+  "jurisdiction.entities.none": "No jurisdiction set",
   "jurisdiction.entities.edit": "Change legal entities",
   "legalEntities.edit": "Edit",
   "legalEntities.archive": "Archive",
@@ -8521,7 +8526,8 @@ export const en = {
     "Sending is refused until a reason is recorded.",
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
-  "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.dealFact":
+    "No open deal with this recipient supports this follow-up.",
   "sendPermission.reason.footerIncomplete":
     "Read the footer details below. You can send this email with a recorded reason.",
   "sendPermission.footer.language": "{detail} in {language}",
@@ -8775,6 +8781,7 @@ export const en = {
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",
+  "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
   "tasks.log.action": "Log what happened",
@@ -19670,6 +19677,7 @@ export const en = {
   "contact.deals.noClose": "None dated",
   "contact.deals.untitled": "Untitled deal",
   "contact.deals.noStage": "No stage yet",
+  "contact.deals.seatEnded": "No longer on this deal",
   "contact.meetings.upcoming": "Upcoming",
   "contact.meetings.past": "Held",
   "contact.meetings.noneBooked": "No upcoming meetings.",
@@ -20793,6 +20801,10 @@ export const en = {
   "project.archiveConfirm":
     "Archiving removes this project from the active list and frees its key. This cannot be undone here.",
   "project.archivedReadOnly": "This project is archived and takes no changes.",
+  "project.page.notFound": "Project not found",
+  "project.page.notFoundBody":
+    "This project does not exist, or you cannot see it.",
+  "project.page.backToProjects": "Back to projects",
   "project.notYoursToChange":
     "You cannot edit this project. Ask its owner to share it, or an administrator for edit rights.",
   "project.phaseLabel": "Phase",
@@ -22367,6 +22379,7 @@ export const en = {
   "lead.card.askedOpen": "Open message",
   "lead.card.qualified": "If they are qualified",
   "lead.card.qualifiedContact": "Contact",
+  "lead.card.qualifiedCompany": "Company",
   "lead.card.qualifiedDeal": "Deal",
   "lead.card.qualifiedDealOptional": "You can open one in the same step",
   "lead.card.qualifiedNewContact": "A new contact",

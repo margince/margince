@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -338,7 +339,7 @@ func (s *Store) buyerWrote(ctx context.Context, tx pgx.Tx, deal ids.DealID, acti
 		  JOIN deal d ON d.id = $1
 		  JOIN relationship r ON r.archived_at IS NULL
 		   AND ((r.kind = 'employment' AND r.company_id = d.company_id AND `+employment.IsCurrentSQL("r.ended_at")+`)
-		        OR (r.kind = 'deal_stakeholder' AND r.deal_id = d.id))
+		        OR (`+dealseat.CurrentSQL("r")+` AND r.deal_id = d.id))
 		 WHERE a.id = $2 AND a.kind = 'email'
 		   AND `+relstrength.ParticipantNamesSQL("r.contact_id", "p")+`
 		   FOR SHARE OF r`, deal, activity)
