@@ -148,7 +148,7 @@ Most of the time of a case goes to the start and seed of its stack, not to the m
 
 1. **Run a few scenarios first** (section 3), and read their transcripts. A harness error then costs a few cases.
 2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case whose runs use a tool.
-   Generate the coverage page again (section 8): its count of tools no case drives must not grow. A case drives a tool when it requires it, or when a run that reached its bar called it.
+   Generate the coverage page again (section 8): its count of tools no case drives must not grow. A case drives a tool it requires, or one a passing run of a held case called.
 3. **Run a discovery pass.** Fix all that it finds ([improve-mcp-quality.md](improve-mcp-quality.md)).
 4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on every target ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
 5. **Read the stamps.** Each verdict carries a `stamp` of what it measured (section 8).

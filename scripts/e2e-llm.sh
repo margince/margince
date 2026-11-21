@@ -674,6 +674,8 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   echo "==> $name ($runs runs, passes at $pass_at)"
   ok=0
+  # The transcripts of the runs that passed: only their tools count as driven.
+  passing=()
   results="$WORK/$name.results"
   : > "$results"
 
@@ -829,6 +831,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       0)
         if [[ "$ended" -eq 0 ]]; then
           ok=$((ok + 1))
+          passing+=("$transcript")
           echo "  run $i: pass"
         else
           echo "  run $i: fail"
@@ -884,7 +887,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
     E2E_LLM_STAMPS="$STAMP_DIR/stamps.json" E2E_LLM_COMMIT="$COMMIT" \
     python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$made" \
-    ${transcripts[@]+"${transcripts[@]}"} > "$WORK/${name}.verdict.json" || {
+    ${transcripts[@]+"${transcripts[@]}"} --passing ${passing[@]+"${passing[@]}"} > "$WORK/${name}.verdict.json" || {
     echo "HARNESS: the verdict of $name could not be written; the committed one is unchanged." >&2
     exit 2
   }

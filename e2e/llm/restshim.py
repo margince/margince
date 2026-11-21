@@ -12,6 +12,7 @@ Stdlib only, like the rest of the lane: it runs on a fresh checkout.
 import http.client
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -61,20 +62,24 @@ TOOLS = [
 
 
 # A found line is shown this long. A longer one is shown from its start and
-# around the match, so the word searched for is always in what comes back.
+# around the whole match, so what was searched for is always in what comes back.
 HIT_CHARS = 200
+# The characters kept on each side of a match in a long line.
+HIT_CONTEXT = 40
 
 
-def _hit(line, needle):
-    """One found line, short enough to list, with the match in it."""
+def _hit(line, found):
+    """One found line, short enough to list, with the whole match in it."""
     if len(line) <= HIT_CHARS:
         return line
-    at = line.lower().find(needle)
-    if at + len(needle) <= HIT_CHARS:
+    if found.end() <= HIT_CHARS:
         return line[:HIT_CHARS] + " …"
     head = HIT_CHARS // 2
-    start = max(at - (HIT_CHARS - head) // 2, head)
-    return line[:head] + " … " + line[start:start + HIT_CHARS - head] + " …"
+    width = max(HIT_CHARS - head, found.end() - found.start() + 2 * HIT_CONTEXT)
+    start = max((found.start() + found.end() - width) // 2, head)
+    end = min(start + width, len(line))
+    gap = " … " if start > head else ""
+    return line[:head] + gap + line[start:end] + (" …" if end < len(line) else "")
 
 
 def read_skill_file(root, path, start, end, find=None):
@@ -87,8 +92,11 @@ def read_skill_file(root, path, start, end, find=None):
     with open(full, encoding="utf-8", errors="replace") as handle:
         lines = handle.read().splitlines()
     if find:
-        needle = str(find).lower()
-        hits = [f"{number}: {_hit(line, needle)}" for number, line in enumerate(lines, 1) if needle in line.lower()]
+        # Matched on the line as written: lowering a line can change its length
+        # and move every index after a letter such as "İ".
+        needle = re.compile(re.escape(str(find)), re.IGNORECASE)
+        found = ((number, line, needle.search(line)) for number, line in enumerate(lines, 1))
+        hits = [f"{number}: {_hit(line, match)}" for number, line, match in found if match]
         more = f"\n[{len(hits) - MAX_MATCHES} more: narrow the search]" if len(hits) > MAX_MATCHES else ""
         return f"{path}: {len(hits)} line(s) hold {find!r}\n" + "\n".join(hits[:MAX_MATCHES]) + more, False
     first = max(_whole(start, 1), 1)

@@ -40,7 +40,7 @@ refusal: the model must ask before it archives.
    tool under `counts_when_refused` when its refusal is the outcome.
 3. **Hold what the model says.** `must_mention` and `must_not_mention` are
    regexes, for names, dates and counts. `must_mention` and the judge read the final answer only. `figures_from_results: true` asks the
-   judge about each money value no tool result holds. A value worked out right
+   judge about each money value no tool result holds, in the answer or before it. A value worked out right
    from the run's data holds, and a made-up or wrong one fails. Put a fact that needs a judge in
    `judge:` as one sentence that ends with when to answer no.
 4. **Hold the world it leaves.** `must_end_with` reads the records back after
