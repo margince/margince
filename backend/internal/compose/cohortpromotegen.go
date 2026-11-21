@@ -80,14 +80,9 @@ func NewCohortPromoteGen(pool *pgxpool.Pool, store *contacts.Store, log *slog.Lo
 // not care about answers nil, so the group keeps flowing rather than wedging on
 // somebody else's traffic.
 func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.Type != contactObject || env.Entity.ID == ids.Nil {
-		return nil
-	}
 	// Every event that can leave a live contact holding addresses whose mail is
-	// not yet on their record. An archive needs no reaction: the repair only
-	// ever ADDS a link, and an archived contact is not a record anybody is
-	// asking to complete.
-	if !contactGainedAddresses(env.Type) {
+	// not yet on their record. The repair only adds links, so an archive needs none.
+	if !events.CohortPromoteTypes.Has(env.Type) || env.Entity.Type != contactObject || env.Entity.ID == ids.Nil {
 		return nil
 	}
 	// The repair reads mail the workspace already holds and attaches it to a

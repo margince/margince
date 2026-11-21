@@ -51,6 +51,9 @@ func NewScheduledSendStop(pool *pgxpool.Pool, ident *identity.Service, log *slog
 // HandleEvent routes one envelope. Anything that is not a stop on a contact
 // answers nil, so the consumer group keeps flowing.
 func (s *ScheduledSendStop) HandleEvent(ctx context.Context, env events.Envelope) error {
+	if !events.ScheduledSendStopTypes.Has(env.Type) {
+		return nil
+	}
 	purpose, stop, err := stopOf(env)
 	if err != nil || !stop {
 		return err
@@ -89,7 +92,7 @@ func onStopTrace(scope context.Context, env events.Envelope) context.Context {
 // withdrawal names the purpose it withdrew. A lead's consent.changed shares the
 // event type and is not this consumer's: a scheduled send addresses contacts.
 func stopOf(env events.Envelope) (purpose string, stop bool, err error) {
-	if !events.ScheduledSendStopTypes.Has(env.Type) || env.Entity.Type != string(recordTypeContact) || env.Entity.ID == ids.Nil {
+	if env.Entity.Type != string(recordTypeContact) || env.Entity.ID == ids.Nil {
 		return "", false, nil
 	}
 	switch env.Type {

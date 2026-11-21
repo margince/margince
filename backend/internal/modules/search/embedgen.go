@@ -94,8 +94,11 @@ var embedText = map[string]string{
 // entities. Events that are not entity-content changes are not ours —
 // nil, so the consumer group keeps flowing.
 func (g *EmbedGen) HandleEvent(ctx context.Context, env kevents.Envelope) error {
+	if !kevents.ContextGraphTypes.Has(env.Type) {
+		return nil
+	}
 	query, embeddable := embedText[env.Entity.Type]
-	if !embeddable || !kevents.ContextGraphTypes.Has(env.Type) {
+	if !embeddable {
 		return nil
 	}
 	// The generator reads AS the system: embeddings are an index over

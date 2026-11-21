@@ -17,7 +17,9 @@ package events
 //
 // The contract with the per-entry path is unchanged where it matters:
 //
-//   - nothing is acked until the effect succeeded, so at-least-once holds;
+//   - an entry the handler must not see (undecodable, or a type the group does
+//     not declare) is acked by screen before any effect runs. A handled entry
+//     is acked only after its effect succeeded, so at-least-once holds;
 //   - a batch that fails is NOT left pending as a unit. Its entries go through
 //     the ordinary one-at-a-time handler at once, so one entry the batch cannot
 //     handle costs that entry its own retry and never holds the rest back;

@@ -68,7 +68,7 @@ func NewCompanyAutoEnrichTrigger(pool *pgxpool.Pool, enqueue *jobs.Runner, log *
 func (g *CompanyAutoEnrichTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
 	// Every event that can make a company newly due: appearing, gaining a
 	// domain, or inheriting one in a merge. An archived company is not due.
-	if env.Entity.Type != string(recordTypeCompany) || !events.CompanyAutoEnrichTypes.Has(env.Type) {
+	if !events.CompanyAutoEnrichTypes.Has(env.Type) || env.Entity.Type != string(recordTypeCompany) {
 		return nil
 	}
 	// A stale event has no promptness left to buy: it is either a replayed
