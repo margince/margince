@@ -46,6 +46,9 @@ func (s *Store) NextMeetingFollowUpsByDealTx(ctx context.Context, tx pgx.Tx, asO
 	return out, nil
 }
 
+// followUpsOwed names the batch's follow-up rows, which every deal link joins.
+const followUpsOwed = "follow_up_owed"
+
 // meetingFollowUpsByDealStatement selects each readable deal's newest meeting follow-up.
 func meetingFollowUpsByDealStatement(ctx context.Context, asOf time.Time, days int, dealIDs []ids.UUID) (string, []any, error) {
 	if err := requireDealFollowUpRead(ctx); err != nil {
@@ -65,9 +68,11 @@ func meetingFollowUpsByDealStatement(ctx context.Context, asOf time.Time, days i
 	if err != nil {
 		return "", nil, err
 	}
-	return `SELECT DISTINCT ON (d.id) owed.id, owed.subject, owed.occurred_at, owed.recipients,
-  owed.company_id, d.id, owed.precision FROM (` + query + `)
-  owed(id, subject, occurred_at, recipients, company_id, deal_id, precision)
+	// Materialized, so a nested loop over the deals' links never runs the
+	// follow-up query once for each link it joins.
+	return `WITH ` + followUpsOwed + `(id, subject, occurred_at, recipients, company_id, deal_id, precision) AS MATERIALIZED (` + query + `)
+  SELECT DISTINCT ON (d.id) owed.id, owed.subject, owed.occurred_at, owed.recipients,
+  owed.company_id, d.id, owed.precision FROM ` + followUpsOwed + ` owed
   JOIN activity_link on_deal ON on_deal.activity_id = owed.id
   JOIN deal d ON d.id = on_deal.deal_id
   WHERE ` + dealScope + ` ORDER BY d.id, owed.occurred_at DESC, owed.id DESC`, args, nil
