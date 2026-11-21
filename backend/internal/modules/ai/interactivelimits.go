@@ -1,0 +1,154 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package ai
+
+// A task a user waits on is held to limits its certified models measured. One
+// bounds each try. The other bounds the whole walk across rungs, retries and
+// the escalation. They hold only while every rung of the walk is a cloud model
+// a record measured for the task; any other walk keeps today's limits.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
+)
+
+const (
+	// InteractiveAttemptFloor is the least a derived per-try limit may be. A
+	// fast model still meets a cold connection or a busy host. A limit near its
+	// p95 would cut those answers.
+	InteractiveAttemptFloor = 30 * time.Second
+
+	// interactiveWalkTries is how many full tries a walk may spend. Two covers
+	// the first try and one more at the full limit: a step up or the schema
+	// retry. Past that the user has waited three times the slowest p95.
+	interactiveWalkTries = 2
+)
+
+// boundModel is the provider and model one ladder rung reaches.
+type boundModel struct {
+	provider string
+	model    string
+}
+
+// certifiedLimit is one interactive task's generated per-try limit, with every
+// model a record measured it on (attemptlimits_gen.go).
+type certifiedLimit struct {
+	limit    time.Duration
+	measured []boundModel
+}
+
+// InteractiveAttemptTimeout is the per-try limit of an interactive task whose
+// slowest served model measured p95. It is half again that p95, rounded up to a
+// second. It stays between InteractiveAttemptFloor and CallCeiling.
+func InteractiveAttemptTimeout(p95 time.Duration) time.Duration {
+	limit := (p95*3/2 + time.Second - 1).Truncate(time.Second)
+	return min(max(limit, InteractiveAttemptFloor), CallCeiling)
+}
+
+// walkBound is how long the whole walk may run under a derived per-try limit.
+// CallCeiling caps it, so no derived default keeps a user longer than one try
+// of a background task may take.
+func walkBound(attempt time.Duration) time.Duration {
+	return min(interactiveWalkTries*attempt, CallCeiling)
+}
+
+// ExecutionModeOf is whether a user waits on task, as ai-tasks.yaml declares.
+func ExecutionModeOf(task Task) ExecutionMode { return taskExecutionModes[task] }
+
+// interactiveLimit is task's derived per-try limit when every rung is a cloud
+// model a record measured for it. A local model, or one no record measured,
+// may be far slower, so its walk keeps CallCeiling.
+func interactiveLimit(task Task, rungs []boundModel) (time.Duration, bool) {
+	row, ok := certifiedAttemptTimeouts[task]
+	if !ok || len(rungs) == 0 {
+		return 0, false
+	}
+	for _, rung := range rungs {
+		if ProviderIsLocal(rung.provider) || !slices.Contains(row.measured, rung) {
+			return 0, false
+		}
+	}
+	return row.limit, true
+}
+
+// WalkSpentError is a walk that ran out of its bound. It wraps ErrAllTiersFailed,
+// since no rung is left to try, and reads as a deadline in the trace.
+func WalkSpentError(task Task, bound time.Duration) error {
+	return fmt.Errorf("%w for %s: its %s walk bound is spent: %w", ErrAllTiersFailed, task, bound, context.DeadlineExceeded)
+}
+
+// startWalk sets lc's per-try limit and walk bound for one walk, from the
+// models that walk reaches. A rebind mid-call can change them, so each walk
+// asks again. The bound counts from the first walk's first try, so a decision
+// call or a budget read before it spends none of it.
+func (r *Router) startWalk(lc *logicalCall, task Task, b *binding, rungs []Tier) {
+	models := make([]boundModel, 0, len(rungs))
+	for _, tier := range rungs {
+		meta := b.routeMeta[tier]
+		models = append(models, boundModel{provider: meta.provider, model: meta.model})
+	}
+	settings := r.settingsFor(r.callOverrides(lc, task), task, models)
+	if !lc.walking {
+		lc.walking, lc.started = true, r.now()
+	} else if lc.settings.WalkTimeout == 0 {
+		// Its earlier tries ran past any bound a later walk would set.
+		return
+	}
+	lc.settings.AttemptTimeout, lc.settings.WalkTimeout = settings.AttemptTimeout, settings.WalkTimeout
+}
+
+// tryTimeout is how long lc's next try may take: its per-try limit, cut to
+// what is left of the walk bound. walkSpent says whether a try may start at
+// all. It is asked after every failed or refused try.
+func (r *Router) tryTimeout(lc *logicalCall, task Task) time.Duration {
+	settings := r.callSettings(lc, task)
+	if settings.WalkTimeout == 0 || !lc.walking {
+		return settings.AttemptTimeout
+	}
+	return min(settings.AttemptTimeout, settings.WalkTimeout-r.now().Sub(lc.started))
+}
+
+// walkSpent says the walk has too little of its bound left for another try.
+// A try needs half its per-try limit, or half the floor when that is lower.
+// After one try timed out at the limit, a second still fits the bound.
+func (r *Router) walkSpent(lc *logicalCall, task Task) error {
+	settings := r.callSettings(lc, task)
+	if settings.WalkTimeout == 0 || !lc.walking {
+		return nil
+	}
+	if settings.WalkTimeout-r.now().Sub(lc.started) < min(InteractiveAttemptFloor, settings.AttemptTimeout)/2 {
+		return WalkSpentError(task, settings.WalkTimeout)
+	}
+	return nil
+}
+
+// tryContext is the context one try runs under.
+func (r *Router) tryContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if r.tryDeadline != nil {
+		return r.tryDeadline(ctx, timeout)
+	}
+	return context.WithTimeout(ctx, timeout)
+}
+
+// endWalk is why the walk ends after a rung failed with callErr, or nil to
+// walk on. A spent bound after a withheld or rejected answer ends on that
+// answer, since a model decided. Any other stop names the rung beside it.
+func (r *Router) endWalk(ctx context.Context, lc *logicalCall, task Task, callErr error) error {
+	stop := ctx.Err()
+	if stop == nil {
+		stop = r.walkSpent(lc, task)
+		if stop != nil && (errors.Is(callErr, model.ErrOutputWithheld) || errors.Is(callErr, model.ErrRequestRejected)) {
+			return callErr
+		}
+	}
+	if stop != nil {
+		return fmt.Errorf("%w (the rung: %w)", stop, callErr)
+	}
+	return nil
+}

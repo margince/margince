@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/ai frontend/src/features/settings/providerhealth.tsx backend/internal/compose/systemhealthoperations.go backend/internal/modules/ai/providerkeys.go backend/internal/modules/ai/providerhealth.go backend/internal/modules/ai/pricesync.go backend/internal/modules/ai/routing.go backend/internal/modules/ai/openrouterrouting.go backend/internal/modules/ai/residency.go -->
+<!-- describes: frontend/src/features/ai frontend/src/features/settings/providerhealth.tsx backend/internal/compose/systemhealthoperations.go backend/internal/modules/ai/providerkeys.go backend/internal/modules/ai/providerhealth.go backend/internal/modules/ai/pricesync.go backend/internal/modules/ai/routing.go backend/internal/modules/ai/interactivelimits.go backend/internal/modules/ai/openrouterrouting.go backend/internal/modules/ai/residency.go -->
 # AI providers
 
 An AI provider is the company whose models Margince calls. It is Anthropic,
@@ -215,8 +215,16 @@ The same users who may change a provider may change these.
 - **Decision model timeout** shows only on a task that asks a decision model first.
   It runs from 5 to 60 seconds, 15 by default. After it, the task falls back to its tier model.
   If **p95** is close to the line and the fallback answers, give it a little more time.
-- **Model call timeout** runs from 10 to 300 seconds, 300 by default. A call that runs longer is stopped, and the next tier gets a try.
+- **Model call timeout** runs from 10 to 300 seconds. A call that runs longer is stopped, and the next tier gets a try.
   Lower it when a host stops answering and the tier above it works.
+
+  A task that runs in the background has 300 seconds by default.
+  A task you wait on has a shorter default, set from how long its slowest tested model took. The sheet shows it.
+  It applies only when every tier of the task uses a model that was tested for it. A local model keeps 300 seconds.
+  A task that takes longer the more it reads, such as a summary, keeps 300 seconds too.
+
+  When the shorter default applies, all the calls of one answer also stop after twice the timeout, and after 300 seconds at most.
+  If you set the timeout yourself, they stop after twice your value.
 
 **Save settings** applies to the whole installation within a minute. **Reset to defaults** removes the task's own values.
 To check the change, come back to **Recent calls** after some calls. A call's own page shows the **Request settings sent** with it.
