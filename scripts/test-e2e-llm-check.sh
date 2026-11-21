@@ -1024,7 +1024,10 @@ c45="case45-move-the-deal-on.yaml"
 judges "$c45" case45 explains-from-the-readings 0 "!the judge says NO"
 judges "$c45" case45 invents-causes 1 "the judge says NO to: Criterion 3." "!the judge says NO to: Criterion 1."
 judges "$c45" case45 moves-it-to-won 1 "the judge says NO to: Criterion 1."
-judges "$c45" case45 quotes-a-figure-no-reading-holds 1 "stated 'EUR 26,025', which no tool result of this run holds" "!the judge says NO"
+# EUR 26,025 is no reading's figure, and it is the readings worked out right:
+# the earlier weighted total plus the moved deal at its new rate. A figure the
+# model computed correctly holds; case20's invented one still fails.
+judges "$c45" case45 quotes-a-figure-no-reading-holds 0 "!stated 'EUR 26,025'"
 c46="case46-get-us-in-a-room.yaml"
 judges "$c46" case46 keeps-record-and-invitation-apart 0 "!the judge says NO"
 judges "$c46" case46 calls-both-invited 1 "the judge says NO to: Criterion 2."
@@ -1154,8 +1157,9 @@ referenced, missing, unscored = {}, [], []
 with open(os.path.join(root, "scripts/test-e2e-llm-check.sh"), encoding="utf-8") as handle:
     suite = handle.read()
 for path in sorted(glob.glob(os.path.join(root, "e2e/llm/scenarios/*.yaml"))):
-    criteria = check.parse_scenario(path).get("judge", [])
-    if not criteria:
+    scenario = check.parse_scenario(path)
+    criteria = scenario.get("judge", [])
+    if not criteria and scenario.get("figures_from_results") != "true":
         continue
     case = "case" + re.match(r"case(\d+)", os.path.basename(path)).group(1)
     fixtures = sorted(glob.glob(os.path.join(root, "e2e/llm/testdata", case, "*.jsonl")))
@@ -1169,7 +1173,9 @@ for path in sorted(glob.glob(os.path.join(root, "e2e/llm/scenarios/*.yaml"))):
         if re.search(rf"^held \S+ {case} {re.escape(name)} ", suite, re.MULTILINE):
             continue
         _, said, _ = check.read_transcript(fixture)
-        for criterion in criteria:
+        # A figure no result holds is a question the judge is asked too.
+        worked_out, _ = check.worked_out_criterion(check.read_run(fixture).said, check.read_tool_results(fixture))
+        for criterion in criteria + ([worked_out] if worked_out and scenario.get("figures_from_results") == "true" else []):
             key = judge._digest(criterion, said)
             referenced[key] = f"{case}/{os.path.basename(fixture)}"
             if not os.path.exists(os.path.join(root, "e2e/llm/testdata/judge", key + ".json")):

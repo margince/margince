@@ -12,8 +12,12 @@ change it.
 than one way. A case checks what the answer says, and what is in the records
 after the run. It does not fail an answer for the tools it picks.
 
-Pin a tool only when the call is itself the result: a refusal to call, or a
-write that the records cannot show. A run that calls no tool is scored the same
+Pin the outcome, not the path. Pin a call only when the call is itself the
+result. That is a refusal to call, a write the records cannot show, or a change
+that waits until the user agrees. Extra calls and retries never fail a case; the
+verdict counts them instead.
+
+A run that calls no tool is scored the same
 way. It can be right only when the case needs no data and no change. `case65-clear-out-the-dead-deals.yaml` is a short one that holds a
 refusal: the model must ask before it archives.
 
@@ -35,8 +39,9 @@ refusal: the model must ask before it archives.
    A required call counts only when it worked. The lane's stack cannot send mail, so list a send
    tool under `counts_when_refused` when its refusal is the outcome.
 3. **Hold what the model says.** `must_mention` and `must_not_mention` are
-   regexes, for names, dates and counts. `must_mention` and the judge read the final answer only. `figures_from_results: true` fails a
-   money value that no tool result of the run holds. Put a fact that needs a judge in
+   regexes, for names, dates and counts. `must_mention` and the judge read the final answer only. `figures_from_results: true` asks the
+   judge about each money value no tool result holds. A value worked out right
+   from the run's data holds, and a made-up or wrong one fails. Put a fact that needs a judge in
    `judge:` as one sentence that ends with when to answer no.
 4. **Hold the world it leaves.** `must_end_with` reads the records back after
    the run ([mcp-e2e-end-state.md](../reference/mcp-e2e-end-state.md)). Set `writes: true` on a case whose tools can write,

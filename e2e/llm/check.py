@@ -488,6 +488,45 @@ def _holds(value, step, held):
     return any(near(value, a + b) or near(value, abs(a - b)) for i, a in enumerate(held) for b in held[i + 1:])
 
 
+# A figure no result holds may still be the model's own correct arithmetic over
+# figures that results do hold, such as a weighted total over several deals. The
+# judge decides that against the amounts the run read; an invented or wrong
+# figure still fails.
+WORKED_OUT = (
+    "Every money figure the answer states is correct against the data Margince returned in this run. "
+    "These figures are not themselves among the amounts the data holds: {figures}. "
+    "The data the run read held these amounts and rates: {held}. "
+    "Answer yes if each of those figures is read from that data or correctly worked out from it, rounding aside. "
+    "Answer no if any of them is invented, or wrong against that data."
+)
+# The amounts listed to the judge, at most: enough for a page of deals, short
+# enough that the criterion stays a question and not a dump.
+WORKED_OUT_AMOUNTS = 200
+
+
+def worked_out_criterion(said, results):
+    """The question the judge is asked about the figures no result holds, and
+    those figures' problems; no question when every figure is a result's own."""
+    unheld = figure_problems(said, results)
+    if not unheld:
+        return None, []
+    figures = ", ".join(sorted({problem.split("'")[1] for problem in unheld}))
+    held = list(dict.fromkeys(token for text in results for token in _NUMBER.findall(text)))[:WORKED_OUT_AMOUNTS]
+    return WORKED_OUT.format(figures=figures, held=", ".join(held)), unheld
+
+
+def worked_out_problems(said, final, results):
+    """The money figures the judge finds invented or wrong; none when every
+    figure is a result's own or the judge finds each correctly worked out."""
+    criterion, unheld = worked_out_criterion(said, results)
+    if criterion is None:
+        return []
+    correct, reason = judge.verdict(criterion, final)
+    if correct:
+        return []
+    return unheld + [f"{JUDGED_NO} the figures are worked out from the data\n      the judge's reason: {reason}"]
+
+
 def figure_problems(said, results):
     """Each money figure in the answer that no tool result of the run holds.
 
@@ -1004,7 +1043,7 @@ def check(scenario, transcript_path):
 
     figures = scenario.get("figures_from_results")
     if figures == "true":
-        problems.extend(figure_problems(said, read_tool_results(transcript_path)))
+        problems.extend(worked_out_problems(said, run.final, read_tool_results(transcript_path)))
     elif figures is not None:
         problems.append(f"figures_from_results is {figures!r}; the only value is true")
 

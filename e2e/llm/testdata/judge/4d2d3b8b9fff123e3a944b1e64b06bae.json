@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The figures check out: EUR 12,500 is 1250000 cents, EUR 17,900 is 1790000 cents, 10% and 75% are the stage rates, and 12,500 × 0.65 = 8,125 with 17,900 + 8,125 = 26,025 as the given derived value.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Every money figure the answer states is correct against the data Margince returned in this run. These figures are not themselves among the amounts the data holds: EUR 26,025. The data the run read held these amounts and rates: 1, 1250000, 10, 75, 100, 1790000. Answer yes if each of those figures is read from that data or correctly worked out from it, rounding aside. Answer no if any of them is invented, or wrong against that data.",
+  "answer": "Rheinufer Netzmodernisierung (EUR 12,500) is now in Negotiation, and I left a note that purchasing joined the call and terms are being negotiated. Weighted forecast for the quarter went from EUR 17,900 to EUR 26,025, up EUR 8,125: the deal's stage probability moved from 10% (Qualified) to 75% (Negotiation) on EUR 12,500. Open pipeline and won are unchanged."
+}
