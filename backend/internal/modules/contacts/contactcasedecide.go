@@ -95,14 +95,13 @@ func (s *Store) decideContactCase(ctx context.Context, contactID ids.UUID, d Con
 	if err != nil {
 		return crmcontracts.ContactCaseOutcome{}, err
 	}
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return crmcontracts.ContactCaseOutcome{}, err
-	}
 	var out crmcontracts.ContactCaseOutcome
 	// errCasePreview is no lock cycle, so a preview's rollback is never run again.
 	err = s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
-		var err error
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		if out, err = s.decideContactCaseTx(ctx, tx, contactID, d, selected, active); err != nil {
 			return err
 		}

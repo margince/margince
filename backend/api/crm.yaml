@@ -68936,7 +68936,7 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
-        member_count: { type: integer, description: 'Active memberships; populated by listTeams.' }
+        member_count: { type: integer, description: 'Active and invited memberships; populated by listTeams.' }
 
     # `Role` used to sit here as an untyped mirror of the `role` table — the
     # "schema below" the deferred-stubs block promised while /roles was

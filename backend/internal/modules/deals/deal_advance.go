@@ -95,17 +95,12 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return AdvancedDeal{}, err
 	}
-	// The custom-field catalog is fetched BEFORE the transaction opens: it
-	// reads through its own connection, and a second connection inside a
-	// transaction commits separately and can deadlock undetectably against a
-	// lock that transaction holds.
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return AdvancedDeal{}, err
-	}
 	var out AdvancedDeal
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = s.advanceOnTx(ctx, tx, id, in, active)
 		return err
 	})

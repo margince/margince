@@ -63,12 +63,12 @@ func (s *Store) ArchiveCompany(
 	if err := auth.RequireArchiveGrant(ctx, auth.CompanyArchive); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	active, err := s.activeColumns(ctx, companyEntity)
-	if err != nil {
-		return crmcontracts.Company{}, err
-	}
 	var out crmcontracts.Company
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, companyEntity)
+		if err != nil {
+			return err
+		}
 		if err := lockThenEnsureArchivable(ctx, tx, companyEntity, auth.CompanyArchive, id.UUID); err != nil {
 			return err
 		}
@@ -86,7 +86,6 @@ func (s *Store) ArchiveCompany(
 				return err
 			}
 		}
-		var err error
 		out, err = archiveCompanyTx(ctx, tx, id, ifVersion, active)
 		return err
 	})

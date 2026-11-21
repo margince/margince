@@ -144,7 +144,7 @@ func ProjectDealLink(store *deals.Store) (projects.CheckDeal, projects.AttachDea
 			return err
 		}
 		// The version read above, so a link made in between is not overwritten.
-		_, err = store.UpdateDealTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID, IfVersion: deal.Version}, deals.CustomColumns{})
+		err = store.ApplyDealUpdateTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID, IfVersion: deal.Version}, deals.CustomColumns{})
 		if _, mismatch := errors.AsType[*deals.DealProjectCompanyMismatchError](err); mismatch {
 			return &projects.DealCompanyMismatchError{}
 		}
