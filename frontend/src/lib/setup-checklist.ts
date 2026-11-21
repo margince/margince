@@ -79,6 +79,8 @@ export type SetupStepReason =
   | "needsVendor"
   /** No usable company Google or Microsoft app yet. */
   | "waitsAdmin"
+  /** No usable company app yet, and the reader is the one who sets it up. */
+  | "registerApp"
   /** The booking link offers times from a calendar. */
   | "needsCalendar";
 
@@ -126,6 +128,8 @@ export type SetupReads = Readonly<{
   /** What the reader's own seat says about the three personal steps, or null
    *  while it has not answered. */
   personal: PersonalFacts | null;
+  /** Whether the reader may register or repair the company's apps. */
+  registersApps: boolean;
 }>;
 
 /** The personal steps' facts: three answers every seat can give. */
@@ -166,6 +170,13 @@ export function waitsOnAdmin(
   return reason === "app_missing" || reason === "app_unusable";
 }
 
+// The reader who sets the company app up is sent to do it, not told to wait.
+function appWait(id: "mail" | "calendar", registersApps: boolean): Draft {
+  return registersApps
+    ? draft(id, "authentication", { reason: "registerApp" })
+    : draft(id, "connections", { blocked: true, reason: "waitsAdmin" });
+}
+
 function draft(
   id: SetupStepId,
   page: SettingsPageId,
@@ -199,7 +210,10 @@ function expired(
   );
 }
 
-function mailStep(connectors: ConnectorsResult): Draft | null {
+function mailStep(
+  connectors: ConnectorsResult,
+  registersApps: boolean,
+): Draft | null {
   const mailbox = connected(connectors, isMailbox);
   if (mailbox) {
     return draft("mail", "connections", { connection: mailbox });
@@ -211,12 +225,13 @@ function mailStep(connectors: ConnectorsResult): Draft | null {
     });
   }
   // Nothing connects here and no administrator can change that: no step.
-  return reasons.some(waitsOnAdmin)
-    ? draft("mail", "connections", { blocked: true, reason: "waitsAdmin" })
-    : null;
+  return reasons.some(waitsOnAdmin) ? appWait("mail", registersApps) : null;
 }
 
-function calendarStep(connectors: ConnectorsResult): Draft | null {
+function calendarStep(
+  connectors: ConnectorsResult,
+  registersApps: boolean,
+): Draft | null {
   const isCalendar = (provider: Provider) => CALENDARS.has(provider);
   const calendar = connected(connectors, isCalendar);
   // A read-only grant blocks no time for bookings it cannot write: not done.
@@ -231,10 +246,7 @@ function calendarStep(connectors: ConnectorsResult): Draft | null {
   );
   if (!readiness.includes("ready")) {
     return readiness.some(waitsOnAdmin)
-      ? draft("calendar", "connections", {
-          blocked: true,
-          reason: "waitsAdmin",
-        })
+      ? appWait("calendar", registersApps)
       : null;
   }
   if (calendar || expired(connectors, isCalendar)) {
@@ -318,6 +330,7 @@ export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
     now,
     modelReady,
     personal,
+    registersApps,
   } = reads;
   // A role or seat that cannot capture is never asked to connect anything.
   const connections =
@@ -327,13 +340,13 @@ export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
     connectors.captureAllowed
       ? connectors
       : null;
-  const calendar = connections && calendarStep(connections);
+  const calendar = connections && calendarStep(connections, registersApps);
   const drafts = [
     // First, because reading, drafting and research all wait on it.
     acts.has("models") && modelReady !== null
       ? draft("model", "models", { done: modelReady })
       : null,
-    connections && mailStep(connections),
+    connections && mailStep(connections, registersApps),
     calendar,
     ...(personal ? personalSteps(personal) : []),
     acts.has("agents") && passports ? aiStep(passports, now) : null,
@@ -416,6 +429,9 @@ export function useSetupChecklist(
   const model = useModelRead(acts);
   const me = useMe();
   const permissions = usePermissionsSeen();
+  // The grant the company-app endpoints enforce, on the page that holds them.
+  const registersApps =
+    useCanWrite("capture_settings", "update") && acts.has("authentication");
   const aiConnects = acts.has("agents") && connector.data?.enabled === true;
   const passports = usePassports({
     enabled: aiConnects,
@@ -450,6 +466,7 @@ export function useSetupChecklist(
     personal: withPersonal
       ? personalFacts(me.data?.user, permissions.seen)
       : null,
+    registersApps,
   });
   const done = steps.filter((step) => step.state === "done").length;
   return {

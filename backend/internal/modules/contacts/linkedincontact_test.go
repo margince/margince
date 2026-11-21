@@ -19,6 +19,11 @@ func TestContactLinkedInRefusesACompanyPage(t *testing.T) {
 		"https://www.linkedin.com/showcase/acme-labs",
 		"https://www.linkedin.com/in/",
 		"https://www.linkedin.com/",
+		"linkedin.com/in/../company/acme",
+		"https://www.linkedin.com/in/sam/../../company/acme",
+		"https://www.linkedin.com/in/%2e%2e/company/acme",
+		"https://www.linkedin.com/in/%2E%2E/company/acme",
+		"https://www.linkedin.com/in/./sam",
 	} {
 		_, err := NormalizeContactLinkedInURL(raw)
 		parseErr, ok := errors.AsType[*values.ParseError](err)

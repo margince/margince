@@ -3514,6 +3514,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một công ty khác đã có tên miền này, nên tên miền chưa được lưu ở đây.",
   "common.duplicate.linkedinUrl":
     "Một lead khác đã có hồ sơ LinkedIn này, nên hồ sơ chưa được lưu ở đây.",
+  "common.linkedinProfileInvalid":
+    "Đây không phải địa chỉ hồ sơ LinkedIn. Hãy nhập một địa chỉ, ví dụ https://www.linkedin.com/in/ten-ban.",
   "common.duplicate.slotTaken":
     "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
@@ -12288,7 +12290,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.s4.microsoftFailed": "Không thể hoàn tất kết nối Microsoft",
   "ob.s4.connectVerifying": "Đang xác nhận kết nối…",
   "ob.s4.connectConfirmFailed": "Không thể xác nhận kết nối.",
-  "ob.s4.connectRetry": "Kết nối lại trong Cài đặt, mục Kết nối.",
+  "ob.s4.connectRetry": "Chọn lại tài khoản bên dưới.",
   "ob.s4.connectDenied": "Quyền truy cập bị từ chối. Chưa kết nối gì.",
   "ob.s4.googleUnverified":
     "Nếu Google cảnh báo “unverified app”, chọn Nâng cao (Advanced), rồi Tiếp tục (Continue). Màn hình của Google liệt kê chính xác những quyền được cấp.",
@@ -17166,6 +17168,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.caption.calendarSkipped": "Đã bỏ qua khi thiết lập.",
   "setup.caption.calendarNeedsVendor": "Cần Google hoặc Microsoft.",
   "setup.caption.waitsAdmin": "Đang chờ quản trị viên.",
+  "setup.caption.registerApp":
+    "Cần ứng dụng Google hoặc Microsoft của công ty bạn.",
+  "setup.action.registerApp": "Thiết lập ứng dụng",
   "setup.caption.mailReconnect": "Kết nối đã hết hạn.",
   "setup.caption.calendarReconnect": "Đã hết hạn hoặc không thể đặt lịch.",
   "setup.caption.voice": "Cần thêm khoảng {n} từ do bạn viết.",
