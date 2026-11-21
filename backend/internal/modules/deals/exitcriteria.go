@@ -20,13 +20,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // criterionEntity is the audit and event entity name for a criterion row.
-const criterionEntity = "stage_exit_criterion"
+const criterionEntity = auditentity.StageExitCriterion
 
 const (
 	codeTerminalStageNoCriteria = "terminal_stage_has_no_exit_criteria"

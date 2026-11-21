@@ -60,7 +60,8 @@ func (s *Service) UnplacedChanges(ctx context.Context, since time.Time) ([]Unpla
 }
 
 // unplacedChangesSince counts the admitted machine changes no done-lane arm can
-// place. With no table to join, no gate proves the reader may see them.
+// place. With no table to join, no gate proves the reader may see them. A
+// child row a placement can place is placed, whoever reads.
 // Creates and archives are left out, since they include bookkeeping. Upkeep of
 // maintenance subjects is left out, except the record links filed under them.
 // The counts name what kinds of record were touched, so they need ai_diagnostics.
@@ -83,10 +84,11 @@ func unplacedChangesSince(ctx context.Context, tx pgx.Tx, since time.Time) ([]Un
 		   AND a.action = ANY($%d)
 		   AND (NOT (a.entity_type = ANY($%d)) OR %s)
 		   AND NOT (a.entity_type = ANY($%d))
+		   AND NOT %s
 		 GROUP BY 1, 2
 		 ORDER BY 3 DESC, 1, 2`,
 		action, arg(since), arg(MachineActors()), arg(admittedActions(false)),
-		arg(auditentity.MaintenanceTypes()), linked, arg(placed))
+		arg(auditentity.MaintenanceTypes()), linked, arg(placed), placeableSQL())
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("count the machine actions this build cannot place: %w", err)
