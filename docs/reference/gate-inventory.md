@@ -520,6 +520,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |
 | `unvalidatedconstraints_test.go` | H2 | A constraint left NOT VALID is declared, with the reason it stays that way. |
+| `updatedatshape_test.go` | H2 | A row that was never changed carries the moment it was written in updated\_at. |
 | `usertimezonewriters_test.go` | H2 | A user's time zone has one writer after their row exists: writeTimezoneTx in identity/usertimezone.go. |
 | `uuidkeydefault_test.go` | H2 | Every uuid `id` column defaults to uuidv7(). |
 | `validatedreplypath_test.go` | H2 | A model reply this tree can refuse must be asked for through the validated lane, so the refusal reaches the model that can act on it. |

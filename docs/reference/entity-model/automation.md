@@ -25,7 +25,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `trigger` | `jsonb` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone` |  | When the row last changed. Refreshed on every write. |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**

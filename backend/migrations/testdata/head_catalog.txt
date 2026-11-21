@@ -2079,7 +2079,7 @@ public.automation.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSER
 public.automation.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.automation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "tier": 20000, "origin": 20000, "paused_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120,"origin":20000,"paused_reason":2000,"tier":20000}')
 public.automation.tier text NOT NULL gen=- def='confirmation_required'::text
 public.automation.trigger jsonb NOT NULL gen=- def=-
-public.automation.updated_at timestamp with time zone gen=- def=-
+public.automation.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.automation.version bigint NOT NULL gen=- def=1
 public.automation_effect_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.automation_effect_claim.applied_at timestamp with time zone gen=- def=-
@@ -9336,7 +9336,7 @@ public.runner_job.trigger_ref text NOT NULL gen=- def=-
 public.runner_job_pkey CREATE UNIQUE INDEX runner_job_pkey ON public.runner_job USING btree (id)
 public.runner_job_trigger_unique CREATE UNIQUE INDEX runner_job_trigger_unique ON public.runner_job USING btree (agent_spec, trigger_ref)
 public.sales_goal_plan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.sales_goal_plan.created_at timestamp with time zone NOT NULL gen=- def=-
+public.sales_goal_plan.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.sales_goal_plan.currency currency_code NOT NULL gen=- def=-
 public.sales_goal_plan.draft_revision bigint gen=- def=-
 public.sales_goal_plan.id uuid NOT NULL gen=- def=uuidv7()
@@ -9351,7 +9351,7 @@ public.sales_goal_plan.sales_goal_plan_published_revision_js_safe CHECK (((publi
 public.sales_goal_plan.sales_goal_plan_version_js_safe CHECK (((version >= 1) AND (version <= '9007199254740991'::bigint)))
 public.sales_goal_plan.sales_goal_plan_withdrawn_revision_js_safe CHECK (((withdrawn_revision >= 1) AND (withdrawn_revision <= '9007199254740991'::bigint)))
 public.sales_goal_plan.sales_goal_plan_year_check CHECK (((year >= 2000) AND (year <= 2200)))
-public.sales_goal_plan.updated_at timestamp with time zone NOT NULL gen=- def=-
+public.sales_goal_plan.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.sales_goal_plan.version bigint NOT NULL gen=- def=-
 public.sales_goal_plan.withdrawn_revision bigint gen=- def=-
 public.sales_goal_plan.year integer NOT NULL gen=- def=-
@@ -10899,7 +10899,7 @@ public.voice_build.status_code text gen=- def=-
 public.voice_build.status_detail text gen=- def=-
 public.voice_build.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_build FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"stage": 20000, "reason": 2000, "status": 20000, "source_hash": 20000, "status_code": 20000, "status_detail": 20000, "candidate_action": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"candidate_action":20000,"reason":2000,"source_hash":20000,"stage":20000,"status":20000,"status_code":20000,"status_detail":20000}')
 public.voice_build.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_build FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"stage": 20000, "reason": 2000, "status": 20000, "source_hash": 20000, "status_code": 20000, "status_detail": 20000, "candidate_action": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"candidate_action":20000,"reason":2000,"source_hash":20000,"stage":20000,"status":20000,"status_code":20000,"status_detail":20000}')
-public.voice_build.updated_at timestamp with time zone gen=- def=-
+public.voice_build.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_build.version bigint NOT NULL gen=- def=1
 public.voice_build.voice_build_attempt_check CHECK ((attempt >= 1))
 public.voice_build.voice_build_candidate_action_check CHECK ((candidate_action = ANY (ARRAY['none'::text, 'auto_activated'::text, 'review_required'::text])))
@@ -10943,7 +10943,7 @@ public.voice_corpus_source.source_label text NOT NULL gen=- def=-
 public.voice_corpus_source.source_ref text NOT NULL gen=- def=-
 public.voice_corpus_source.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_corpus_source FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "origin": 20000, "source": 20000, "register": 20000, "source_ref": 20000, "captured_by": 20000, "content_hash": 20000, "source_label": 500, "exclusion_reason": 2000, "extractor_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"content_hash":20000,"exclusion_reason":2000,"extractor_version":20000,"kind":20000,"origin":20000,"register":20000,"source":20000,"source_label":500,"source_ref":20000}')
 public.voice_corpus_source.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_corpus_source FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "origin": 20000, "source": 20000, "register": 20000, "source_ref": 20000, "captured_by": 20000, "content_hash": 20000, "source_label": 500, "exclusion_reason": 2000, "extractor_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"content_hash":20000,"exclusion_reason":2000,"extractor_version":20000,"kind":20000,"origin":20000,"register":20000,"source":20000,"source_label":500,"source_ref":20000}')
-public.voice_corpus_source.updated_at timestamp with time zone gen=- def=-
+public.voice_corpus_source.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_corpus_source.uq_voice_corpus_source_ref UNIQUE (voice_profile_id, source_ref)
 public.voice_corpus_source.version bigint NOT NULL gen=- def=1
 public.voice_corpus_source.voice_corpus_source_exclusion_check CHECK (((excluded AND (exclusion_reason IS NOT NULL)) OR (NOT excluded)))
@@ -10979,7 +10979,7 @@ public.voice_learning_signal.source text NOT NULL gen=- def=-
 public.voice_learning_signal.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_learning_signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000,"source":20000}')
 public.voice_learning_signal.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_learning_signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000,"source":20000}')
 public.voice_learning_signal.transformations jsonb NOT NULL gen=- def='[]'::jsonb
-public.voice_learning_signal.updated_at timestamp with time zone gen=- def=-
+public.voice_learning_signal.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_learning_signal.uq_voice_learning_signal_draft UNIQUE (draft_ref_hash)
 public.voice_learning_signal.version bigint NOT NULL gen=- def=1
 public.voice_learning_signal.voice_learning_signal_outcome_check CHECK ((outcome = ANY (ARRAY['drafted'::text, 'accepted'::text, 'edited_sent'::text, 'rejected'::text])))
@@ -11012,7 +11012,7 @@ public.voice_profile.status text NOT NULL gen=- def='collecting'::text
 public.voice_profile.team_id uuid gen=- def=-
 public.voice_profile.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_profile FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}')
 public.voice_profile.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_profile FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}')
-public.voice_profile.updated_at timestamp with time zone gen=- def=-
+public.voice_profile.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_profile.version bigint NOT NULL gen=- def=1
 public.voice_profile.voice_profile_derived_versioned CHECK (((voice_profile_md = ''::text) OR (profile_version >= 1)))
 public.voice_profile.voice_profile_md text NOT NULL gen=- def=''::text
@@ -11036,7 +11036,7 @@ public.voice_profile_delta.id uuid NOT NULL gen=- def=uuidv7()
 public.voice_profile_delta.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_profile_delta FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"classification": 20000, "activation_outcome": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activation_outcome":20000,"classification":20000}')
 public.voice_profile_delta.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_profile_delta FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"classification": 20000, "activation_outcome": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activation_outcome":20000,"classification":20000}')
 public.voice_profile_delta.to_version integer NOT NULL gen=- def=-
-public.voice_profile_delta.updated_at timestamp with time zone gen=- def=-
+public.voice_profile_delta.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_profile_delta.uq_voice_profile_delta_version UNIQUE (voice_profile_id, to_version)
 public.voice_profile_delta.voice_profile_delta_activation_outcome_check CHECK ((activation_outcome = ANY (ARRAY['auto_activated'::text, 'review_required'::text, 'manually_activated'::text, 'rejected'::text, 'rollback'::text])))
 public.voice_profile_delta.voice_profile_delta_classification_check CHECK ((classification = ANY (ARRAY['routine'::text, 'material'::text])))
@@ -11076,7 +11076,7 @@ public.voice_profile_version.stats_json jsonb NOT NULL gen=- def=-
 public.voice_profile_version.status text NOT NULL gen=- def=-
 public.voice_profile_version.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_profile_version FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "source": 20000, "status": 20000, "model_name": 120, "captured_by": 20000, "source_hash": 20000, "model_provider": 20000, "review_reasons": 2000, "builder_version": 20000, "activation_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activation_policy_version":20000,"builder_version":20000,"captured_by":20000,"model_name":120,"model_provider":20000,"reason":2000,"review_reasons":2000,"source":20000,"source_hash":20000,"status":20000}')
 public.voice_profile_version.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_profile_version FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "source": 20000, "status": 20000, "model_name": 120, "captured_by": 20000, "source_hash": 20000, "model_provider": 20000, "review_reasons": 2000, "builder_version": 20000, "activation_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activation_policy_version":20000,"builder_version":20000,"captured_by":20000,"model_name":120,"model_provider":20000,"reason":2000,"review_reasons":2000,"source":20000,"source_hash":20000,"status":20000}')
-public.voice_profile_version.updated_at timestamp with time zone gen=- def=-
+public.voice_profile_version.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_profile_version.uq_voice_profile_version_number UNIQUE (voice_profile_id, profile_version)
 public.voice_profile_version.version bigint NOT NULL gen=- def=1
 public.voice_profile_version.voice_profile_id uuid NOT NULL gen=- def=-

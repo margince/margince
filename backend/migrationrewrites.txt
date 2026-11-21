@@ -198,3 +198,4 @@
 1795247585_the_canonical_address_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795257100_the_text_limits_follow_the_dropped_columns.up.sql | * | replaces the two text-bound triggers on four tables, which act on later writes only; no existing row is changed
 1795257100_the_text_limits_follow_the_dropped_columns.down.sql | * | restores the two text-bound triggers on four tables as they stood before; no existing row is changed
+1795276613_updated_at_is_never_null.up.sql | automation, voice_build, voice_corpus_source, voice_learning_signal, voice_profile, voice_profile_delta, voice_profile_version | the voice tables hold one profile per user with its builds, versions, sources and learned drafts, and automation holds the rules an administrator configured: thousands of rows at most; one column is copied from its own row
