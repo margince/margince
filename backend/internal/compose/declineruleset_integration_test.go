@@ -128,6 +128,20 @@ func TestAnUnsureStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
 	}
 }
 
+// The owed stamp is held to the version read as well.
+func TestAnOwedStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
+	e := integration.Setup(t)
+	id := seedWaitingMail(t, e, "Monatsreporting Juli")
+	store := activities.NewStore(InstallationDB(e.Pool))
+	recorded, err := store.MarkOwedVerdictDeclined(owedSweepContext(e), id, owedverdict.Ruleset, versionOf(t, e, "activity", id)-1)
+	if err != nil {
+		t.Fatalf("recording the owed stamp: %v", err)
+	}
+	if recorded || declinedUnder(t, e, id, "owed_verdict_declined_ruleset") != "" {
+		t.Error("an owed stamp about an older version of the message was written")
+	}
+}
+
 // Re-offering must not become the per-tick loop the stamp ended: a message the
 // current prompt declines too is asked once, re-stamped, and left alone.
 func TestTheClassifyPassRestampsAStaleDeclineOnce(t *testing.T) {
@@ -159,7 +173,7 @@ func TestTheOwedPassOffersAMessageDeclinedUnderAnotherPrompt(t *testing.T) {
 	store := activities.NewStore(InstallationDB(e.Pool))
 	ctx := owedSweepContext(e)
 	for id, ruleset := range map[ids.UUID]string{stale: retiredPrompt, current: owedverdict.Ruleset} {
-		if recorded, err := store.MarkOwedVerdictDeclined(ctx, id, ruleset); err != nil || !recorded {
+		if recorded, err := store.MarkOwedVerdictDeclined(ctx, id, ruleset, versionOf(t, e, "activity", id)); err != nil || !recorded {
 			t.Fatalf("recording the prior decline: recorded=%v err=%v", recorded, err)
 		}
 	}
@@ -184,7 +198,7 @@ func TestTheOwedPassRestampsAStaleDeclineOnce(t *testing.T) {
 	e := integration.Setup(t)
 	hostile := seedWaitingMail(t, e, "Invoice "+hostileMarker)
 	store := activities.NewStore(InstallationDB(e.Pool))
-	if recorded, err := store.MarkOwedVerdictDeclined(owedSweepContext(e), hostile, retiredPrompt); err != nil || !recorded {
+	if recorded, err := store.MarkOwedVerdictDeclined(owedSweepContext(e), hostile, retiredPrompt, versionOf(t, e, "activity", hostile)); err != nil || !recorded {
 		t.Fatalf("recording the prior decline: recorded=%v err=%v", recorded, err)
 	}
 

@@ -35,6 +35,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -54,6 +55,25 @@ var (
 	captureLabelDecline = declineStamp{"capture_label_declined_at", "capture_label_declined_ruleset", "capture_label"}
 	owedVerdictDecline  = declineStamp{"owed_verdict_declined_at", "owed_verdict_declined_ruleset", owedVerdictField}
 )
+
+// declineStampsClearedWhen is the SET list that offers a row to both sweeps
+// again when changed holds. Every write that changes text a model reads uses
+// it, because a stamp answered for the old text says nothing about the new.
+func declineStampsClearedWhen(changed string) string {
+	var sets []string
+	for _, stamp := range []declineStamp{captureLabelDecline, owedVerdictDecline} {
+		for _, column := range []string{stamp.at, stamp.ruleset} {
+			col := pgx.Identifier{column}.Sanitize()
+			sets = append(sets, col+" = CASE WHEN "+changed+" THEN NULL ELSE "+col+" END")
+		}
+	}
+	return strings.Join(sets, ", ")
+}
+
+// patchChangesTextSQL holds when the patch's subject ($%[2]d) or body ($%[3]d)
+// differs from the stored text, in applyActivityPatch's own placeholders.
+const patchChangesTextSQL = `(($%[2]d::text IS NOT NULL AND $%[2]d::text IS DISTINCT FROM subject)
+		    OR ($%[3]d::text IS NOT NULL AND nullif($%[3]d::text, '') IS DISTINCT FROM body))`
 
 // errRulesetUnnamed refuses a read or write that names no prompt digest. Every
 // stamp is stale against an empty digest: a backlog read for none would hand
@@ -86,14 +106,14 @@ func (s *Store) MarkCaptureLabelUnsure(ctx context.Context, id ids.UUID, ruleset
 }
 
 // MarkOwedVerdictDeclined takes one message out of the owed backlog and the
-// re-judge sweep because the models declined to judge it under ruleset. A
-// verdict already on the row stands: declining to re-judge it is not a
-// judgement that it was wrong.
-func (s *Store) MarkOwedVerdictDeclined(ctx context.Context, id ids.UUID, ruleset string) (bool, error) {
+// re-judge sweep because the models declined or stayed unsure under ruleset.
+// A verdict already on the row stands: declining to re-judge it is not a
+// judgement that it was wrong. It applies only to readVersion.
+func (s *Store) MarkOwedVerdictDeclined(ctx context.Context, id ids.UUID, ruleset string, readVersion int64) (bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return false, err
 	}
-	return s.markDeclined(ctx, id, owedVerdictDecline, ruleset, nil)
+	return s.markDeclined(ctx, id, owedVerdictDecline, ruleset, &readVersion)
 }
 
 // markDeclined stamps the question as declined under ruleset. offeredSQL is the

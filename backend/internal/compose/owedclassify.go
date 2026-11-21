@@ -253,7 +253,7 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			worded = append(worded, msg)
 			continue
 		}
-		if _, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset); err != nil {
+		if _, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset, msg.Version); err != nil {
 			return 0, err
 		}
 	}
@@ -266,7 +266,7 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			return c.store.SetOwedVerdictAsked(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt, ask)
 		},
 		decline: func(ctx context.Context, msg owedCandidate, cause error) (bool, error) {
-			recorded, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
+			recorded, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset, msg.Version)
 			if err != nil {
 				return false, err
 			}
@@ -276,7 +276,7 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 		// An answer below the floor takes the decline stamp: the row stays
 		// unjudged, and this prompt would only be unsure about it again.
 		unsure: func(ctx context.Context, msg owedCandidate) (bool, error) {
-			return c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
+			return c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset, msg.Version)
 		},
 	})
 	return judged + len(batch) - len(worded), err
