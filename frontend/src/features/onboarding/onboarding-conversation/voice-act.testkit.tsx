@@ -157,8 +157,8 @@ export const richVersion = {
 export type IngestFixture = {
   stats: IngestStats;
   summary: CorpusSummary;
-  /** Response latency, to force out-of-order settlement in tests. */
-  delayMs?: number;
+  /** Held until the test settles it, to force out-of-order settlement. */
+  release?: Promise<void>;
 };
 
 export type StubOptions = {
@@ -181,12 +181,19 @@ export type StubOptions = {
   modelReady?: boolean;
   /** The meter the sources GET reports once a sample is removed. */
   afterRemove?: CorpusSummary;
+  /** A failing status for that sources GET, after the DELETE landed. */
+  afterRemoveStatus?: number;
+  /** Held until the test settles it, so a removal stays in flight. */
+  removeRelease?: Promise<void>;
 };
 
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    globalThis.setTimeout(resolve, ms);
+/** A promise the test settles when it chooses, and the function that does. */
+export function gate(): { held: Promise<void>; open: () => void } {
+  let open = () => {};
+  const held = new Promise<void>((resolve) => {
+    open = resolve;
   });
+  return { held, open };
 }
 
 export function jsonResponse(body: unknown, status = 200) {
@@ -229,12 +236,11 @@ async function answerIngest(
     throw new Error("unexpected ingest: no fixture left");
   }
   cursor.ingestIndex += 1;
-  if (ingest.delayMs !== undefined) {
-    await delay(ingest.delayMs);
-  }
+  const sourceId = `source-${cursor.ingestIndex}`;
+  await ingest.release;
   return jsonResponse(
     {
-      source: { id: `source-${cursor.ingestIndex}`, version: 1 },
+      source: { id: sourceId, version: 1 },
       summary: ingest.summary,
       ingest_stats: ingest.stats,
     },
@@ -298,6 +304,29 @@ function answerRead(path: string, options: StubOptions): Response | null {
   return null;
 }
 
+// A removal's DELETE and the sources read that follows it.
+async function answerRemoval(
+  method: string,
+  path: string,
+  options: StubOptions,
+): Promise<Response | null> {
+  if (method === "DELETE" && path.includes("/sources/")) {
+    await options.removeRelease;
+    return jsonResponse({ id: path.slice(path.lastIndexOf("/") + 1) });
+  }
+  if (method === "GET" && path.endsWith("/sources")) {
+    if (options.afterRemoveStatus !== undefined) {
+      return jsonResponse(
+        { detail: "sources read failed" },
+        options.afterRemoveStatus,
+      );
+    }
+    const summary = options.afterRemove ?? summaryOf(0);
+    return jsonResponse({ data: [], summary, page: { next_cursor: null } });
+  }
+  return null;
+}
+
 async function answer(
   request: Request,
   options: StubOptions,
@@ -317,12 +346,11 @@ async function answer(
   if (request.method === "POST" && path.endsWith("/sources")) {
     return answerIngest(request, options, cursor);
   }
-  if (request.method === "DELETE" && path.includes("/sources/")) {
-    return jsonResponse({ id: path.slice(path.lastIndexOf("/") + 1) });
-  }
-  if (request.method === "GET" && path.endsWith("/sources")) {
-    const summary = options.afterRemove ?? summaryOf(0);
-    return jsonResponse({ data: [], summary, page: { next_cursor: null } });
+  if (path.includes("/sources")) {
+    const removal = await answerRemoval(request.method, path, options);
+    if (removal !== null) {
+      return removal;
+    }
   }
   if (request.method === "POST" && path.endsWith("/builds")) {
     return answerBuildStart(options, cursor);

@@ -22,6 +22,7 @@ import {
   documentPreview,
   documentStats,
   dropOnWindow,
+  gate,
   INGEST_WAITER_MS,
   POLL_WAITER_MS,
   render,
@@ -459,7 +460,8 @@ describe("the conversational voice act", () => {
   );
 
   it("keeps the newest-by-request-order summary when ingest responses settle out of order", async () => {
-    stubApi({
+    const first = gate();
+    const calls = stubApi({
       preview: documentPreview,
       // The first upload's response is held back past the second's: the
       // stale 500-word summary settles last and must not roll the meter
@@ -468,15 +470,20 @@ describe("the conversational voice act", () => {
         "one.md": {
           stats: documentStats,
           summary: summaryOf(500),
-          delayMs: 150,
+          release: first.held,
         },
         "two.md": { stats: documentStats, summary: summaryOf(820) },
       },
     });
+    const user = userEvent.setup();
     render(<VoiceHarness initial={collectingState()} />);
 
     await uploadFile("one.md", "First document.");
     await uploadFile("two.md", "Second document.");
+    await waitFor(() => {
+      expect(screen.getAllByText("900 words").length).toBe(1);
+    });
+    first.open();
 
     // Both sources land in the scene's own list regardless of settlement
     // order — the rail carries neither reaction.
@@ -496,6 +503,11 @@ describe("the conversational voice act", () => {
     ).toBeTruthy();
     expect(screen.queryByText(/I need at least 800/)).toBeNull();
     expect(screen.queryByText("500 of 800 words")).toBeNull();
+    // Each file keeps the source the server gave it, whatever the order.
+    await user.click(screen.getByRole("button", { name: "Remove one.md" }));
+    await waitFor(() =>
+      expect(requestsTo(calls, "/sources/source-1", "DELETE")).toHaveLength(1),
+    );
   });
 
   it("concludes as failed with the retry chip when the build poll keeps erroring", async () => {
