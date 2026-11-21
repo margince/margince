@@ -15,8 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/completedchanges"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/contracts"
@@ -24,8 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,7 +38,7 @@ import (
 type placedFixture struct {
 	e                      *Env
 	deal, company, contact ids.UUID
-	agent                  ids.UUID
+	stage                  ids.StageID
 }
 
 // placedGrants are the child grants a placed reader or writer holds on top of
@@ -62,7 +65,7 @@ func newPlacedFixture(t *testing.T) placedFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return placedFixture{e: e, deal: ids.UUID(deal.Id), company: company, contact: e.SeedContact(t, "Placed Contact", &e.Rep1)}
+	return placedFixture{e: e, deal: ids.UUID(deal.Id), company: company, stage: open, contact: e.SeedContact(t, "Placed Contact", &e.Rep1)}
 }
 
 func (f placedFixture) writer(t *testing.T) context.Context {
@@ -116,6 +119,26 @@ func placedWriters(f placedFixture) map[string]func(t *testing.T) (key string, p
 			mustWrite(t, err)
 			return "magic.action.create_attachment", f.company
 		},
+		"attachment on a deal": func(t *testing.T) (string, ids.UUID) {
+			_, err := e.Activities.AddAttachmentLink(f.writer(t), activities.LinkInput{
+				EntityType: "deal", EntityID: f.deal, URL: "https://example.com/plan", Title: "Plan",
+			})
+			mustWrite(t, err)
+			return "magic.action.create_attachment", f.deal
+		},
+		"record_assignment on a company": func(t *testing.T) (string, ids.UUID) {
+			role, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM record_role WHERE 'company' = ANY(record_types) AND active ORDER BY sort_order LIMIT 1`))
+			mustWrite(t, err)
+			_, err = assignments.NewStore(e.DB()).CreateAssignment(f.writer(t), assignments.CreateAssignmentInput{
+				RecordType: crmcontracts.AssignmentRecordTypeCompany, RecordID: f.company,
+				SubjectKind: crmcontracts.AssignmentSubjectKindUser, SubjectID: e.Rep2, RoleID: role,
+			})
+			mustWrite(t, err)
+			return "magic.action.create_assignment", f.company
+		},
+		"deal_stage_evidence": func(t *testing.T) (string, ids.UUID) {
+			return "magic.action.create_stage_evidence", f.writeEvidence(t)
+		},
 		"intro_request": func(t *testing.T) (string, ids.UUID) {
 			_, err := introductions.NewStore(e.DB(), func() time.Time { return clocktest.Now(t) }).Record(f.writer(t), introductions.NewRecorded{
 				ContactID: f.contact, IntroducerUser: e.Rep1, IntroducedUser: e.Rep2,
@@ -127,6 +150,27 @@ func placedWriters(f placedFixture) map[string]func(t *testing.T) (key string, p
 	}
 }
 
+// writeEvidence records one stage-evidence claim on the deal through the
+// ledger's writer, from a mail linked to the deal, and answers the deal.
+func (f placedFixture) writeEvidence(t *testing.T) ids.UUID {
+	t.Helper()
+	criterion, err := f.e.Deals.CreateStageExitCriterion(f.e.Admin(), deals.CreateCriterionInput{
+		StageID: f.stage, Key: "budget_named", Label: "Budget named", Kind: string(deals.CriterionCustom),
+	})
+	mustWrite(t, err)
+	mail := ids.NewV7()
+	f.e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'Budget', 'inbound', $2, 'gmail:seed', 'connector:gmail')`, mail, clocktest.Now(t).Add(-time.Hour))
+	f.e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, mail, f.deal)
+	_, err = f.e.Deals.RecordStageEvidence(f.writer(t), deals.EvidenceInput{
+		DealID: ids.From[ids.DealKind](f.deal), CriterionID: ids.From[ids.ExitCriterionKind](ids.UUID(criterion.Id)),
+		SourceType: deals.SourceActivity, SourceID: mail, AuthorSide: deals.AuthorUnknown,
+		Commitment: deals.CommitmentNone, ObservedAt: clocktest.Now(t).Add(-time.Hour), ExtractedBy: deals.ExtractedByDeterministic,
+	})
+	mustWrite(t, err)
+	return f.deal
+}
+
 func mustWrite(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
@@ -136,7 +180,7 @@ func mustWrite(t *testing.T, err error) {
 
 // placedLines answers, per sentence, the record each placed line names on
 // Home and in the Worklist's change history.
-func placedLines(t *testing.T, e *Env, ctx context.Context) (home, worklist map[string]ids.UUID) {
+func placedLines(ctx context.Context, t *testing.T, e *Env) (home, worklist map[string]ids.UUID) {
 	t.Helper()
 	since := clocktest.Now(t).Add(-time.Hour)
 	svc := magic.NewService(e.Pool, nil, func() time.Time { return clocktest.Now(t) })
@@ -165,7 +209,10 @@ func placedLines(t *testing.T, e *Env, ctx context.Context) (home, worklist map[
 }
 
 // placedChildren are the child types placedWriters writes.
-var placedChildren = []string{"offer", "contract", "deal_room", "record_assignment", "attachment", "intro_request"}
+var placedChildren = []string{
+	"offer", "contract", "deal_room", "record_assignment", "record_assignment on a company",
+	"attachment", "attachment on a deal", "deal_stage_evidence", "intro_request",
+}
 
 func TestDoneForYouPlacesEachChildOnTheRecordItBelongsTo(t *testing.T) {
 	for _, child := range placedChildren {
@@ -173,7 +220,7 @@ func TestDoneForYouPlacesEachChildOnTheRecordItBelongsTo(t *testing.T) {
 			f := newPlacedFixture(t)
 			key, parent := placedWriters(f)[child](t)
 			reader := f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true}))
-			home, worklist := placedLines(t, f.e, reader)
+			home, worklist := placedLines(reader, t, f.e)
 			if home[key] != parent {
 				t.Errorf("Home names %v for %s, want the parent %v (lines %v)", home[key], key, parent, home)
 			}
@@ -201,7 +248,7 @@ func writeEveryChild(t *testing.T, f placedFixture) []string {
 func TestDoneForYouHidesAChildOnARecordTheReaderDoesNotWorkOn(t *testing.T) {
 	f := newPlacedFixture(t)
 	keys := writeEveryChild(t, f)
-	home, worklist := placedLines(t, f.e, f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})))
+	home, worklist := placedLines(f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})), t, f.e)
 	for _, key := range keys {
 		if _, shown := home[key]; shown {
 			t.Errorf("Home shows %s on another team's record", key)
@@ -222,7 +269,7 @@ func TestDoneForYouHidesAChildOnARecordKeptPrivateFromTheReader(t *testing.T) {
 	f.e.WsExec(t, `UPDATE company SET visibility = 'owner' WHERE id = $1`, f.company)
 	f.e.WsExec(t, `UPDATE contact SET visibility = 'owner' WHERE id = $1`, f.contact)
 	reader := f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true}))
-	home, worklist := placedLines(t, f.e, reader)
+	home, worklist := placedLines(reader, t, f.e)
 	for _, key := range []string{"magic.action.create_attachment", "magic.action.create_introduction"} {
 		if _, shown := home[key]; shown {
 			t.Errorf("Home shows %s on a record kept private from the reader", key)
@@ -231,36 +278,64 @@ func TestDoneForYouHidesAChildOnARecordKeptPrivateFromTheReader(t *testing.T) {
 			t.Errorf("the Worklist shows %s on a record kept private from the reader", key)
 		}
 	}
-	owner, _ := placedLines(t, f.e, f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})))
+	owner, _ := placedLines(f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})), t, f.e)
 	if owner["magic.action.create_attachment"] != f.company || owner["magic.action.create_introduction"] != f.contact {
 		t.Fatalf("the owner lost the lines on their own private records: %v", owner)
 	}
 }
 
-// The child's own grant is asked as well as the parent's. A seat that may not
-// read offers sees no offer line and keeps the file on its company. Without the
-// deal grant, nothing placed on a deal shows.
-func TestDoneForYouHidesAChildWhoseOwnGrantTheReaderLacks(t *testing.T) {
+// Each child's own grant is asked as well as its parent's. A seat missing one
+// loses those lines and keeps the rest. Without the deal grant, nothing placed
+// on a deal shows.
+func TestDoneForYouHidesAChildWhoseGrantTheReaderLacks(t *testing.T) {
 	f := newPlacedFixture(t)
 	writeEveryChild(t, f)
-	perms := withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})
-	delete(perms.Objects, "offer")
-	home, worklist := placedLines(t, f.e, f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, perms))
-	if _, shown := home["magic.action.create_offer"]; shown {
-		t.Error("Home shows an offer to a seat without the offer grant")
-	}
-	if _, shown := worklist["magic.action.create_offer"]; shown {
-		t.Error("the Worklist shows an offer to a seat without the offer grant")
-	}
-	if home["magic.action.create_attachment"] != f.company {
-		t.Errorf("a missing offer grant took the file line with it: %v", home)
-	}
-	delete(perms.Objects, objDeal)
-	home, _ = placedLines(t, f.e, f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, perms))
-	for _, key := range []string{"magic.action.create_contract", "magic.action.create_deal_room", "magic.action.create_assignment"} {
-		if _, shown := home[key]; shown {
-			t.Errorf("Home shows %s on a deal to a seat without the deal grant", key)
+	onDeal := []string{"magic.action.create_offer", "magic.action.create_contract", "magic.action.create_deal_room", "magic.action.create_stage_evidence"}
+	for grant, hidden := range map[string][]string{
+		"offer":        {"magic.action.create_offer"},
+		"contract":     {"magic.action.create_contract"},
+		"deal_room":    {"magic.action.create_deal_room"},
+		"introduction": {"magic.action.create_introduction"},
+		objDeal:        onDeal,
+	} {
+		perms := withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})
+		delete(perms.Objects, grant)
+		home, worklist := placedLines(f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, perms), t, f.e)
+		for _, key := range hidden {
+			if _, shown := home[key]; shown {
+				t.Errorf("without %s, Home shows %s", grant, key)
+			}
+			if _, shown := worklist[key]; shown {
+				t.Errorf("without %s, the Worklist shows %s", grant, key)
+			}
 		}
+		if _, kept := home["magic.action.create_attachment"]; !kept {
+			t.Errorf("a missing %s grant took the file lines with it: %v", grant, home)
+		}
+	}
+}
+
+// A contract on an archived deal is anchored on its own company. A teammate
+// who sees the deal but not that private company is not shown the contract.
+// The deal room on the same deal is the control that the deal is seen.
+func TestDoneForYouHidesAContractAnchoredOnACompanyTheReaderMayNotSee(t *testing.T) {
+	f := newPlacedFixture(t)
+	writers := placedWriters(f)
+	writers["contract"](t)
+	writers["deal_room"](t)
+	_, err := f.e.Deals.ArchiveDeal(f.e.Admin(), ids.From[ids.DealKind](f.deal), nil)
+	mustWrite(t, err)
+	f.e.WsExec(t, `UPDATE company SET visibility = 'owner' WHERE id = $1`, f.company)
+	reader := f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true}))
+	home, worklist := placedLines(reader, t, f.e)
+	if home["magic.action.create_deal_room"] != f.deal {
+		t.Fatalf("the reader does not see the deal at all, so the case proves nothing: %v", home)
+	}
+	if _, shown := home["magic.action.create_contract"]; shown {
+		t.Error("Home shows a contract anchored on a company kept private from the reader")
+	}
+	if _, shown := worklist["magic.action.create_contract"]; shown {
+		t.Error("the Worklist shows a contract anchored on a company kept private from the reader")
 	}
 }
 
@@ -274,6 +349,13 @@ func TestAPlacedChildLeavesTheUnplacedCount(t *testing.T) {
 	_, _, err = f.e.Deals.UpdateOffer(f.writer(t), ids.From[ids.OfferKind](ids.UUID(offer.Id)), deals.UpdateOfferInput{IntroText: &intro, IfVersion: &version})
 	mustWrite(t, err)
 	seedUnplaceableMachineAction(t, f.e)
+	// No writer assigns an offer today. The row stands for a verb a future
+	// writer adds before it has a sentence.
+	err = database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+		_, err := storekit.Audit(principal.SystemActing(f.e.Admin(), "offer-sync"), tx, "assign", "offer", ids.UUID(offer.Id), nil, nil)
+		return err
+	})
+	mustWrite(t, err)
 
 	svc := magic.NewService(f.e.Pool, nil, func() time.Time { return clocktest.Now(t) })
 	changes, err := svc.UnplacedChanges(f.e.Admin(), clocktest.Now(t).Add(-time.Hour))
@@ -284,10 +366,10 @@ func TestAPlacedChildLeavesTheUnplacedCount(t *testing.T) {
 	for _, change := range changes {
 		got[change.EntityType+"/"+change.Action] = change.Count
 	}
-	if got["offer/update"] != 0 || got["product/update"] != 1 {
-		t.Fatalf("the breakdown is %v, want the product update counted and the placed offer update not", got)
+	if got["offer/update"] != 0 || got["offer/assign"] != 1 || got["product/update"] != 1 {
+		t.Fatalf("the breakdown is %v, want the product update and the offer's unsentenced verb counted and the placed offer update not", got)
 	}
-	home, _ := placedLines(t, f.e, f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})))
+	home, _ := placedLines(f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})), t, f.e)
 	if home["magic.action.update_offer"] != f.deal {
 		t.Fatalf("the offer update is not placed on its deal: %v", home)
 	}
@@ -304,11 +386,11 @@ func TestDoneForYouHidesAnIntroductionAskFromAColleagueOutsideIt(t *testing.T) {
 	})
 	mustWrite(t, err)
 	perms := withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})
-	asker, _ := placedLines(t, f.e, f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, perms))
+	asker, _ := placedLines(f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, perms), t, f.e)
 	if asker["magic.action.create_introduction"] != f.contact {
 		t.Fatalf("the colleague who asked is not shown the ask: %v", asker)
 	}
-	teammate, worklist := placedLines(t, f.e, f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, perms))
+	teammate, worklist := placedLines(f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, perms), t, f.e)
 	if _, shown := teammate["magic.action.create_introduction"]; shown {
 		t.Error("Home shows an ask to a colleague outside it")
 	}

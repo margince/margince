@@ -17,6 +17,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -30,7 +32,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// placement places one child type on one parent type.
+// placement places one child type on one parent type. The join reads the
+// child's parent as it is now, so a line follows the child's current parent.
 type placement struct {
 	// child is the audited entity type, also its table.
 	child string
@@ -58,17 +61,20 @@ const (
 	childAttachment   = "attachment"
 )
 
+// onDeal joins a child that carries its deal's id.
+const onDeal = "e.id = placed.deal_id"
+
 // placements lists where the done lane places each child type, in the order a
 // row tries them. A contract with a deal is placed on the deal, one without on its
 // company, as the contract's own visibility anchors it.
 var placements = []placement{
-	{child: childOffer, parent: typeDeal, grant: childOffer, on: "e.id = placed.deal_id"},
-	{child: childContract, parent: typeDeal, grant: childContract, on: "e.id = placed.deal_id", readable: auth.ContractVisibleClause},
+	{child: childOffer, parent: typeDeal, grant: childOffer, on: onDeal},
+	{child: childContract, parent: typeDeal, grant: childContract, on: onDeal, readable: auth.ContractVisibleClause},
 	{child: childContract, parent: typeCompany, grant: childContract, on: "e.id = placed.company_id AND placed.deal_id IS NULL", readable: auth.ContractVisibleClause},
-	{child: childDealRoom, parent: typeDeal, grant: childDealRoom, on: "e.id = placed.deal_id"},
-	{child: childEvidence, parent: typeDeal, on: "e.id = placed.deal_id"},
+	{child: childDealRoom, parent: typeDeal, grant: childDealRoom, on: onDeal},
+	{child: childEvidence, parent: typeDeal, on: onDeal},
 	{child: childIntroduction, parent: typeContact, grant: introductions.Object, on: "e.id = placed.contact_id", readable: introductions.ReadableSQL},
-	{child: childAssignment, parent: typeDeal, on: "e.id = placed.deal_id"},
+	{child: childAssignment, parent: typeDeal, on: onDeal},
 	{child: childAssignment, parent: typeCompany, on: "e.id = placed.company_id"},
 	{child: childAssignment, parent: typeProject, on: "e.id = placed.project_id"},
 	{child: childAttachment, parent: typeContact, on: "placed.entity_type = 'contact' AND e.id = placed.entity_id"},
@@ -107,6 +113,11 @@ var placedSentences = map[string]map[string]string{
 // armPlaced names the read placed children come from. One read serves every
 // placement, so a cut marks all of their lines as a floor.
 const armPlaced = "placed"
+
+// placedVerbs are the audit actions a child has a sentence for.
+func placedVerbs(child string) []string {
+	return slices.Sorted(maps.Keys(placedSentences[child]))
+}
 
 // describePlaced answers the sentence for a placed child's row. An update that
 // moved only bookkeeping says nothing a reader can use, as on any record.
@@ -218,13 +229,14 @@ func (p placement) branch(ctx context.Context, arg func(any) int) (string, bool,
 
 // placeableSQL is the predicate for an audit row `a` some placement can place,
 // whoever reads. The unplaced count leaves these out, so placing a type takes
-// it off System health's list.
-func placeableSQL() string {
+// it off System health's list. A verb with no sentence is not placed, so it
+// stays counted.
+func placeableSQL(arg func(any) int) string {
 	matches := make([]string, 0, len(placements))
 	for _, p := range placements {
 		matches = append(matches, fmt.Sprintf(
-			`(a.entity_type = '%s' AND EXISTS (SELECT 1 FROM %s placed JOIN %s e ON %s WHERE placed.id = a.entity_id))`,
-			p.child, p.child, p.parent, p.on))
+			`(a.entity_type = '%s' AND a.action = ANY($%d) AND EXISTS (SELECT 1 FROM %s placed JOIN %s e ON %s WHERE placed.id = a.entity_id))`,
+			p.child, arg(placedVerbs(p.child)), p.child, p.parent, p.on))
 	}
 	return "(" + strings.Join(matches, " OR ") + ")"
 }

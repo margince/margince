@@ -88,7 +88,7 @@ func unplacedChangesSince(ctx context.Context, tx pgx.Tx, since time.Time) ([]Un
 		 GROUP BY 1, 2
 		 ORDER BY 3 DESC, 1, 2`,
 		action, arg(since), arg(MachineActors()), arg(admittedActions(false)),
-		arg(auditentity.MaintenanceTypes()), linked, arg(placed), placeableSQL())
+		arg(auditentity.MaintenanceTypes()), linked, arg(placed), placeableSQL(arg))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("count the machine actions this build cannot place: %w", err)
