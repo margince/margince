@@ -148,8 +148,7 @@ func TestRenderOfferPDF_RefusesACommittedFigureItCannotHold(t *testing.T) {
 	line.LineNetMinor, line.IntervalCount = &net, &periods
 
 	_, err := RenderOfferPDF(testRenderOffer(8749, 1662, 10411), []crmcontracts.OfferLineItem{line}, nil, issuedBy("Margince GmbH"), "en", nil)
-	var tooLarge *MoneyRangeError
-	if !errors.As(err, &tooLarge) {
+	if _, ok := errors.AsType[*MoneyRangeError](err); !ok {
 		t.Fatalf("RenderOfferPDF() error = %v, want a MoneyRangeError", err)
 	}
 }
