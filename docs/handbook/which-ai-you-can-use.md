@@ -42,8 +42,8 @@ Also called: which AI tool works with Margince, Claude, Codex, Gemini, ChatGPT, 
 | Assistant | How we connected it | Jobs done reliably | Can I trust it? |
 |---|---|---:|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 77 of 81 (1 not yet run) | 🟡 Mostly |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 70 of 70 (12 not yet run) | 🟢 Yes |
-| `gpt-5.6-sol` | Codex CLI | 69 of 70 (12 not yet run) | 🟡 Mostly |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 79 of 81 (1 not yet run) | 🟡 Mostly |
+| `gpt-5.6-sol` | Codex CLI | 35 of 37 (45 not yet run) | ⚪ Not enough tested yet |
 
 ### Can I use an AI assistant that is not in the table?
 Yes. An AI assistant that is not in the table can still connect to Margince. It can do what you could do yourself, and nothing more. We have not measured how well it does the jobs, so check what it does before you rely on it.
