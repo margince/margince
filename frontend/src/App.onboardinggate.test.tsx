@@ -925,9 +925,10 @@ describe("the reads of a member held on onboarding", () => {
     ["saved progress", wizardRow("voice")],
   ])("reads the row once through the first save, with %s", async (_, row) => {
     window.location.hash = GATE_TARGET;
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const api = memberApi(row);
     renderApp();
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Skip voice for now." }),
     );
     await waitFor(() => expect(api.count("PUT /onboarding/state")).toBe(1));
@@ -948,6 +949,7 @@ describe("the reads of a member held on onboarding", () => {
 
   it("sends neither the outbox's nor the bell's read on Settings > Account until let in", async () => {
     window.location.hash = "#/settings/account";
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const api = memberApi(wizardRow("connect"));
     renderApp();
     await screen.findByRole("button", { name: "Sign out" });
@@ -959,7 +961,7 @@ describe("the reads of a member held on onboarding", () => {
     act(() => window.dispatchEvent(new PopStateEvent("popstate")));
     const skip = await screen.findByRole("button", { name: "Skip for now" });
     await waitFor(() => expect(skip).toHaveProperty("disabled", false));
-    await userEvent.click(skip);
+    await user.click(skip);
     await waitFor(() => expect(window.location.hash).toBe(BRIEF));
     await restLong();
     expect(api.count("GET /notices")).toBeGreaterThan(0);
@@ -968,6 +970,7 @@ describe("the reads of a member held on onboarding", () => {
 
   it("starts the full app's reads once finishing lets the member in", async () => {
     window.location.hash = GATE_TARGET;
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const api = memberApi(wizardRow("connect"));
     renderApp();
     const skip = await screen.findByRole("button", { name: "Skip for now" });
@@ -975,7 +978,7 @@ describe("the reads of a member held on onboarding", () => {
     await restLong();
     expect(api.sideReads()).toEqual([]);
 
-    await userEvent.click(skip);
+    await user.click(skip);
     await waitFor(() => expect(window.location.hash).toBe(BRIEF));
     await restLong();
     await waitFor(() => expect(api.sideReads()).toEqual(SIDE_READS));

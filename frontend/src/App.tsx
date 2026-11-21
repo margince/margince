@@ -183,12 +183,14 @@ type HomeReadState = Readonly<{
   refused: boolean;
   confined: boolean;
   heldForOnboarding: boolean;
-  journeyPending: boolean;
+  rememberedFinished: boolean;
+  gatesPending: boolean;
 }>;
 
-// On a browser that had a session, Home's reads start with the session probe.
-// Waiting for the gates it opens costs two round trips. An answer that sends the
-// reader elsewhere stops them, and the cleanup aborts them.
+// On a browser that saw this reader finish onboarding, Home's reads start with
+// the session probe. Waiting for the gates it opens costs two round trips. An
+// answer that sends the reader elsewhere stops them, and the cleanup aborts
+// them. Any other reader's reads wait for the gates to admit them.
 function homeMayRead(state: HomeReadState): boolean {
   return (
     state.screen === "home" &&
@@ -197,22 +199,8 @@ function homeMayRead(state: HomeReadState): boolean {
     !state.refused &&
     !state.confined &&
     !state.heldForOnboarding &&
-    !state.journeyPending
+    (state.rememberedFinished || (state.signedIn && !state.gatesPending))
   );
-}
-
-// Reads not yet out wait for the journey's answer, which may hold the reader on
-// onboarding; reads already out keep going until it does.
-function useHomeOpens(state: HomeReadState): boolean {
-  const [asked, setAsked] = useState(false);
-  const opens = homeMayRead({
-    ...state,
-    journeyPending: state.journeyPending && !asked,
-  });
-  if (opens !== asked) {
-    setAsked(opens);
-  }
-  return opens;
 }
 
 type OnboardingHold = Readonly<{ held: boolean; turnedAway: boolean }>;
@@ -326,7 +314,7 @@ function AuthedApp({
   const gatesPending =
     companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
-  const opensHome = useHomeOpens({
+  const opensHome = homeMayRead({
     homeAvailable: screenEnabled("home", disabled),
     screen: route.screen,
     signedIn: me.data !== undefined,
@@ -334,7 +322,8 @@ function AuthedApp({
     refused: me.isError,
     confined: confinement !== null,
     heldForOnboarding: hold.held,
-    journeyPending: progress.pending,
+    rememberedFinished: progress.remembered,
+    gatesPending,
   });
   useEffect(() => {
     if (shellReady) {
