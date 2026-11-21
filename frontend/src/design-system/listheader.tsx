@@ -9,8 +9,8 @@ import { nextSortValue, type SortControl } from "./listsurface";
 
 /**
  * The narrowest a dragged column gets. An identity cell's logo and badge fit at
- * this width and the badge label ends in an ellipsis; any narrower and the
- * badge was cut at the cell edge with no ellipsis.
+ * this width and the label ends in an ellipsis. Any narrower cut the badge at
+ * the cell edge.
  */
 export const MIN_COLUMN_WIDTH = 96;
 

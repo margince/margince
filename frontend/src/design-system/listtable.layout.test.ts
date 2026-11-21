@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { MIN_COLUMN_WIDTH } from "./listheader";
 import { columnLayout, type SizedColumn } from "./listtable.layout";
 
 const catalogue: SizedColumn[] = [
@@ -23,8 +22,12 @@ const figures = (price: number) => ({
 describe("columnLayout", () => {
   it("clamps a stored width narrower than the drag minimum", () => {
     const layout = columnLayout(catalogue, { billing: 40 }, 900);
-    expect(MIN_COLUMN_WIDTH).toBe(96);
-    expect(px(layout.widthOf(catalogue[2]))).toBe(MIN_COLUMN_WIDTH);
+    expect(px(layout.widthOf(catalogue[2]))).toBe(96);
+  });
+
+  it("keeps the declared width of a row menu after a resize stored it", () => {
+    const layout = columnLayout(catalogue, { actions: 56 }, 900);
+    expect(layout.widthOf(catalogue[4])).toBe("56px");
   });
 
   it("gives a row menu its narrow fixed width", () => {

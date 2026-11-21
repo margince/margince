@@ -207,13 +207,11 @@ export function columnLayout(
     const resized = widths[column.key];
     // A width the reader set is theirs. A figure on screen raises it, since a
     // figure cut short reads as a different number.
-    // A width stored before the minimum rose is clamped here, on every read.
     if (resized) {
-      return Math.max(
-        resized,
-        MIN_COLUMN_WIDTH,
-        floors.onScreen[column.key] ?? 0,
-      );
+      // A width stored before the minimum rose is clamped on every read. A verbs
+      // column states its own width, so it keeps what it measured.
+      const least = column.verbs ? 0 : MIN_COLUMN_WIDTH;
+      return Math.max(resized, least, floors.onScreen[column.key] ?? 0);
     }
     const { share, min } = sizeOf(column);
     return share === null ? min : undefined;
