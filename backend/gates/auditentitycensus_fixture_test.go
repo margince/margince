@@ -27,7 +27,8 @@ const (
 	fixtureAppPkg  = modulePath + "/fixture/app"
 )
 
-// fixtureSeedSource is a storekit in miniature: one INSERT, one door.
+// fixtureSeedSource is a storekit in miniature: one INSERT, a door that takes
+// no image and one that takes only an after-image.
 const fixtureSeedSource = `package sk
 
 import "context"
@@ -43,6 +44,10 @@ func insertRows(ctx context.Context, tx Tx, action, entityType string) error {
 }
 
 func Audit(ctx context.Context, tx Tx, action, entityType string) error {
+	return insertRows(ctx, tx, action, entityType)
+}
+
+func AuditEvent(ctx context.Context, tx Tx, action, entityType string, id int, after any) error {
 	return insertRows(ctx, tx, action, entityType)
 }
 `
@@ -237,6 +242,12 @@ func TestTheAuditCensusReadsEachShape(t *testing.T) {
 				"func i() { _ = fixed[0]; for _, t := range fixed { _ = k.Audit(ctx, tx, \"u\", t) }; for _, t := range grown { _ = k.Audit(ctx, tx, \"u\", t) }\n" +
 				"for _, t := range copied { _ = k.Audit(ctx, tx, \"u\", t) }; for _, t := range Shared { _ = k.Audit(ctx, tx, \"u\", t) } }\n",
 			want: fixtureRead{values: []string{"lambda", "mu"}, opaque: []string{"t", "t", "t"}},
+		},
+		{
+			name: "an element of a package map is read by its literal, and one the package changes is not",
+			body: "var verbs = map[string]string{\"a\": \"delta\", \"b\": \"epsilon\"}\nvar moved = map[string]string{\"a\": \"no\"}\n" +
+				"func init() { moved[\"b\"] = \"no\" }\nfunc q(key string) { _ = k.Audit(ctx, tx, \"u\", verbs[key]); _ = k.Audit(ctx, tx, \"u\", moved[key]) }\n",
+			want: fixtureRead{values: []string{"delta", "epsilon"}, opaque: []string{"moved[key]"}},
 		},
 		{
 			name: "a write to audit_log built by fmt.Sprintf or strings.Join from constants is reported",

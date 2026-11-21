@@ -6,7 +6,8 @@ package gates
 // What an audit writer's record-type argument can hold, read off the type
 // checker. It reads a constant, a conversion, and a parameter of the calling
 // function. It reads a local variable or an unexported field by its
-// assignments, and a call by its function's returns. Anything else is not read,
+// assignments, and a call by its function's returns. It reads an element of a
+// package-level list by the list's literal. Anything else is not read,
 // and the census reports it.
 
 import (
@@ -73,6 +74,8 @@ func (r *auditResolver) resolve(expr ast.Expr) (auditResolved, bool) {
 		r.visiting[v] = true
 		defer delete(r.visiting, v)
 		return r.resolveLocal(v)
+	case *ast.IndexExpr:
+		return r.packageListNamed(node.X)
 	case *ast.SelectorExpr:
 		field, ok := info.Uses[node.Sel].(*types.Var)
 		if !ok || !field.IsField() || r.visiting[field.Origin()] {
@@ -300,13 +303,19 @@ func (r *auditResolver) packageLevel(value ast.Expr) (auditResolved, bool) {
 }
 
 // rangedOver reads a range statement's value variable over a package-level
-// slice or array. Its package must never change the list, and its initializer
-// must list only constants.
+// list. Its package must never change the list, and its initializer must list
+// only constants.
 func (r *auditResolver) rangedOver(ident *ast.Ident, node *ast.RangeStmt) (auditResolved, bool) {
 	if node.Tok != token.DEFINE || node.Value != ident {
 		return auditResolved{}, false
 	}
-	name, ok := ast.Unparen(node.X).(*ast.Ident)
+	return r.packageListNamed(node.X)
+}
+
+// packageListNamed reads every element of the package-level slice, array or
+// map that expr names.
+func (r *auditResolver) packageListNamed(expr ast.Expr) (auditResolved, bool) {
+	name, ok := ast.Unparen(expr).(*ast.Ident)
 	if !ok {
 		return auditResolved{}, false
 	}

@@ -17,14 +17,9 @@ package gates
 // would then silence.
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestAKeyNoMapNamesIsReported(t *testing.T) {
@@ -77,28 +72,28 @@ func TestEveryImageShapeTheTreeUsesIsFollowed(t *testing.T) {
 	}{
 		{
 			name: "spelled at the call",
-			body: `func w(ctx C, tx T) { storekit.AuditEvent(ctx, tx, "update", "contact", id, map[string]any{"spelled": 1}) }`,
+			body: `func w() { _ = k.AuditEvent(ctx, tx, "update", "contact", 1, map[string]any{"spelled": 1}) }`,
 			want: "spelled",
 		},
 		{
 			name: "a local a few lines up",
-			body: `func w(ctx C, tx T) {
+			body: `func w() {
 				after := map[string]any{"local": 1}
-				storekit.AuditEvent(ctx, tx, "update", "contact", id, after)
+				_ = k.AuditEvent(ctx, tx, "update", "contact", 1, after)
 			}`,
 			want: "local",
 		},
 		{
 			name: "a parameter its own callers fill",
-			body: `func w(ctx C, tx T, after map[string]any) {
-				storekit.AuditEvent(ctx, tx, "update", "contact", id, after)
+			body: `func w(after map[string]any) {
+				_ = k.AuditEvent(ctx, tx, "update", "contact", 1, after)
 			}
-			func caller(ctx C, tx T) { w(ctx, tx, map[string]any{"from_caller": 1}) }`,
+			func caller() { w(map[string]any{"from_caller": 1}) }`,
 			want: "from_caller",
 		},
 		{
 			name: "a small builder's return",
-			body: `func w(ctx C, tx T) { storekit.AuditEvent(ctx, tx, "update", "contact", id, image()) }
+			body: `func w() { _ = k.AuditEvent(ctx, tx, "update", "contact", 1, image()) }
 			func image() map[string]any { return map[string]any{"from_builder": 1} }`,
 			want: "from_builder",
 		},
@@ -112,29 +107,14 @@ func TestEveryImageShapeTheTreeUsesIsFollowed(t *testing.T) {
 	}
 }
 
-// keysOfPlantedWriter runs the gate's own reader over one planted source file.
+// keysOfPlantedWriter runs the gate's own reader over one planted package,
+// read through the census the gate reads.
 func keysOfPlantedWriter(t *testing.T, body string) []string {
 	t.Helper()
-	file, err := parser.ParseFile(gatekit.SourceFileSet(), "planted.go", "package planted\n\nimport \""+storekitPath+"\"\n\n"+body, 0)
-	if err != nil {
-		t.Fatalf("parsing the planted writer: %v", err)
-	}
-	index := callIndex{calls: map[string][]*ast.CallExpr{}, returns: map[string][]*ast.CompositeLit{}}
-	ast.Inspect(file, func(n ast.Node) bool {
-		if call, isCall := n.(*ast.CallExpr); isCall {
-			if name, isPlain := call.Fun.(*ast.Ident); isPlain {
-				index.calls[name.Name] = append(index.calls[name.Name], call)
-			}
-			return true
-		}
-		if fn, isFunc := n.(*ast.FuncDecl); isFunc && fn.Body != nil {
-			index.returns[fn.Name.Name] = append(index.returns[fn.Name.Name], returnedComposites(fn.Body)...)
-		}
-		return true
-	})
+	census := fixtureCensus(t, fixtureSeed, map[string]string{"a.go": fixtureHeader + body})
 	var keys []string
-	for _, site := range auditSitesIn(gatekit.ParsedFile{Path: "planted.go", File: file}) {
-		keys = append(keys, site.imageKeys(t, nil, index)...)
+	for _, site := range census.doorSites() {
+		keys = append(keys, site.imageKeys(t, callsWithin(site.use.pkg))...)
 	}
 	return keys
 }
@@ -153,60 +133,4 @@ func mentionsAll(findings []string, parts ...string) bool {
 		}
 	}
 	return false
-}
-
-func TestAnAuditSubjectUsesItsImportedConstantWithoutGuessing(t *testing.T) {
-	t.Parallel()
-	for _, tc := range []struct {
-		name, path, field string
-		want              bool
-	}{
-		{"shared subject", modulePath + "/internal/shared/kernel/auditentity", "Tag", true},
-		{"unknown constant", modulePath + "/internal/shared/kernel/auditentity", "NotDeclared", false},
-		{"same alias on another package", "example.test/auditentity", "Tag", false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", "package probe\nimport subjects \""+tc.path+"\"\nvar entity = subjects."+tc.field, 0)
-			if err != nil {
-				t.Fatal(err)
-			}
-			declaration, ok := file.Decls[1].(*ast.GenDecl)
-			if !ok {
-				t.Fatal("missing entity declaration")
-			}
-			value, ok := declaration.Specs[0].(*ast.ValueSpec)
-			if !ok {
-				t.Fatal("missing entity value")
-			}
-			got, known := resolveAuditEntity(t, file, value.Values[0], nil)
-			if known != tc.want || known && got != "tag" {
-				t.Fatalf("subject=%q known=%v want known=%v", got, known, tc.want)
-			}
-		})
-	}
-}
-
-func TestAShadowedAuditImportDoesNotResolveToThePackageConstant(t *testing.T) {
-	t.Parallel()
-	source := "package probe\nimport subjects \"" + modulePath + "/internal/shared/kernel/auditentity\"\nfunc f(subjects struct { Tag string }) { sink(subjects.Tag) }"
-	file, err := parser.ParseFile(token.NewFileSet(), "probe.go", source, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	checked := false
-	ast.Inspect(file, func(node ast.Node) bool {
-		selector, ok := node.(*ast.SelectorExpr)
-		if !ok {
-			return true
-		}
-		checked = true
-		if value, known := resolveAuditEntity(t, file, selector, nil); known {
-			t.Fatalf("shadowed import became %q", value)
-		}
-		return true
-	})
-	if !checked {
-		t.Fatal("fixture had no selector")
-	}
 }
