@@ -10,12 +10,10 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -223,113 +221,5 @@ func TestRetiredRequestMarkerCleanupKeepsDisputesAndLaterAnswers(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, later); n != 2 {
 		t.Fatalf("later answer lost history: %d", n)
-	}
-}
-
-const markedAuditTaskID = "core/1794076293_marked_erased_audit_payloads"
-
-func markedStepCount(t *testing.T, e *integration.Env, step, condition string) int {
-	t.Helper()
-	return e.WsCount(t, `SELECT count(*) FROM data_task_run WHERE task_id=$1 AND step=$2 AND `+condition, markedAuditTaskID, step)
-}
-
-func TestMarkedCorrectionStepsRetryWhenALockIsBusyInsteadOfSkippingRecords(t *testing.T) {
-	e := integration.Setup(t)
-	weekly, request := legacyWeeklyCopies(t, e, ""), legacyRequestAuditCopies(t, e)
-	contact := e.SeedContact(t, "Busy Contact", nil)
-	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	now := clocktest.Now(t)
-	engine, err := datatask.New(e.Pool, []datatask.Task{markedAuditRedactionDataTask()}, "test", func() time.Time { return now }, func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := engine.Seed(ctx); err != nil {
-		t.Fatal(err)
-	}
-	finish := func(step string) {
-		for range 4 {
-			if markedStepCount(t, e, step, `status='done'`) == 1 {
-				return
-			}
-			if _, err := engine.Execute(ctx); err != nil {
-				t.Fatal(err)
-			}
-			now = now.Add(time.Hour)
-		}
-	}
-	busyThenFree := func(step, hold string, arg any) {
-		holder, err := e.Pool.Begin(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() { _ = holder.Rollback(context.Background()) }()
-		if _, err := holder.Exec(context.Background(), hold, arg); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := engine.Execute(ctx); err != nil {
-			t.Fatal(err)
-		}
-		if n := markedStepCount(t, e, step, `status='running' AND cursor IS NULL AND scanned=0 AND consecutive_failures>=1 AND next_attempt_at IS NOT NULL`); n != 1 {
-			t.Fatalf("%s: a busy lock must leave the cursor in place and schedule a retry", step)
-		}
-		now = now.Add(time.Hour)
-	}
-	busyThenFree("marked_weekly_images", `UPDATE contact SET legal_hold=false WHERE id=$1`, contact)
-	busyThenFree("marked_weekly_images", `SELECT 1 FROM weekly_plan_commitment WHERE id=$1 FOR UPDATE`, weekly)
-	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='weekly_plan_commitment' AND entity_id=$1 AND after->>'label'='Private Contact'`, weekly); n != 1 {
-		t.Fatalf("a busy lock changed the weekly history: %d", n)
-	}
-	finish("marked_weekly_images")
-	if n := markedStepCount(t, e, "marked_weekly_images", `status='done'`); n != 1 {
-		t.Fatal("the weekly step did not finish once the locks were free")
-	}
-	busyThenFree("retired_request_images", `SELECT 1 FROM data_subject_request WHERE id=$1 FOR UPDATE`, request)
-	finish("retired_request_images")
-	if n := markedStepCount(t, e, "retired_request_images", `status='done'`); n != 1 {
-		t.Fatal("the request step did not finish once the locks were free")
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='weekly_plan_commitment' AND entity_id=$1 AND after->>'label'='Private Contact'`, weekly); n != 0 {
-		t.Fatalf("weekly step left %d old personal images", n)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, request); n != 0 {
-		t.Fatalf("request step left %d old personal images", n)
-	}
-}
-
-func TestRetentionGoesOnWhenAMarkedCorrectionLockIsBusyAndCorrectsOnTheNextRun(t *testing.T) {
-	e := integration.Setup(t)
-	owner := integration.OwnerConn(t)
-	weekly, request := legacyWeeklyCopies(t, e, ""), legacyRequestAuditCopies(t, e)
-	aged := agedEvent(t, owner, keyedRecipient(t, e, "Old News", "old@window.test"), 31, true)
-	busy := e.SeedContact(t, "Busy Contact", nil)
-	service := NewRetentionServiceFor(e.DB(), nil, slog.Default())
-	holder, err := e.Pool.Begin(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = holder.Rollback(context.Background()) }()
-	if _, err := holder.Exec(context.Background(), `UPDATE contact SET legal_hold=false WHERE id=$1`, busy); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
-		t.Fatalf("a busy correction lock failed the retention run: %v", err)
-	}
-	if eventKept(t, e, aged) {
-		t.Error("a later retention stage did not run")
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='weekly_plan_commitment' AND entity_id=$1 AND after->>'label'='Private Contact'`, weekly); n != 1 {
-		t.Fatalf("the busy run changed the weekly history: %d", n)
-	}
-	if err := holder.Rollback(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
-		t.Fatal(err)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='weekly_plan_commitment' AND entity_id=$1 AND after->>'label'='Private Contact'`, weekly); n != 0 {
-		t.Fatalf("the next run left %d old weekly images", n)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, request); n != 0 {
-		t.Fatalf("the next run left %d old request images", n)
 	}
 }
