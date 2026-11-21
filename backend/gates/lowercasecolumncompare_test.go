@@ -65,9 +65,10 @@ func lowerCaseColumns(t *testing.T) map[string]map[string]bool {
 }
 
 // unboundLowerCaseNames holds the files whose bare column shares a name with a
-// lower-case column but is spliced into a statement on another table.
+// lower-case column but is spliced into a statement on another table. Keyed by
+// file and operand, so a second wrapped operand in one file is still read.
 var unboundLowerCaseNames = gatekit.Waive(map[string]string{
-	"internal/modules/projects/keymatch.go": "compares project.key, which has no lower-case CHECK, in a WHERE fragment the census cannot bind to its table. Cost: a new wrapped key comparison in this file goes unread",
+	"internal/modules/projects/keymatch.go lower(key)": "compares project.key, which has no lower-case CHECK, in a WHERE fragment the census cannot bind to its table. Cost: a second lower(key) comparison in this file goes unread",
 })
 
 func TestNoLowerCaseColumnIsComparedThroughLower(t *testing.T) {
@@ -83,11 +84,12 @@ func TestNoLowerCaseColumnIsComparedThroughLower(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		sites := wrappedLowerCaseCompares(path, string(body), columns)
-		if len(sites) > 0 && unboundLowerCaseNames.Waived(t, path) {
-			continue
+		for _, site := range wrappedLowerCaseCompares(path, string(body), columns) {
+			if unboundLowerCaseNames.Waived(t, site.path+" "+site.operand) {
+				continue
+			}
+			wrapped = append(wrapped, site.String())
 		}
-		wrapped = append(wrapped, sites...)
 	}
 	if len(wrapped) > 0 {
 		sort.Strings(wrapped)
@@ -98,9 +100,19 @@ func TestNoLowerCaseColumnIsComparedThroughLower(t *testing.T) {
 	}
 }
 
+// lowerCaseSite is one comparison that wraps a lower-case column.
+type lowerCaseSite struct {
+	path, operand string
+	line          int
+}
+
+func (s lowerCaseSite) String() string {
+	return s.path + ":" + strconv.Itoa(s.line) + " " + s.operand
+}
+
 // wrappedLowerCaseCompares reads one file's comparisons that wrap a lower-case
 // column in lower(). An alias the file never binds counts, as in the seat census.
-func wrappedLowerCaseCompares(path, source string, columns map[string]map[string]bool) []string {
+func wrappedLowerCaseCompares(path, source string, columns map[string]map[string]bool) []lowerCaseSite {
 	names := make([]string, 0, len(columns))
 	for name := range columns {
 		names = append(names, regexp.QuoteMeta(name))
@@ -110,7 +122,7 @@ func wrappedLowerCaseCompares(path, source string, columns map[string]map[string
 	// is the name right before the column.
 	operand := regexp.MustCompile(`(?i)lower\s*\(\s*(?:(?:[a-z_]\w*\.)?([a-z_]\w*)\.)?(` + strings.Join(names, "|") + `)\s*\)`)
 	aliases := boundTables(source)
-	var sites []string
+	var sites []lowerCaseSite
 	for _, at := range operand.FindAllStringSubmatchIndex(source, -1) {
 		if !lowerCaseComparedAfter.MatchString(source[at[1]:]) && !lowerCaseComparedBefore.MatchString(source[:at[0]]) {
 			continue
@@ -123,7 +135,7 @@ func wrappedLowerCaseCompares(path, source string, columns map[string]map[string
 		if !tables[alias] && !operandReads(source[:at[0]], alias, aliases, tables) {
 			continue
 		}
-		sites = append(sites, path+":"+strconv.Itoa(strings.Count(source[:at[0]], "\n")+1)+" "+source[at[0]:at[1]])
+		sites = append(sites, lowerCaseSite{path: path, line: strings.Count(source[:at[0]], "\n") + 1, operand: source[at[0]:at[1]]})
 	}
 	return sites
 }
