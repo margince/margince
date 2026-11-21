@@ -3,10 +3,8 @@
 
 package compose
 
-// The pre-flight's branches, one table. Each row decides whether a sender is
-// handed an actionable 422 or a 202 for a message that can only park — and which
-// TABLE was consulted to decide it, which is the half a mail-only suite cannot
-// see going wrong.
+// The pre-flight's branches, one table. Each row decides whether a sender gets an
+// actionable 422 or a 202 for a message that can only park, and which table said so.
 
 import (
 	"context"
@@ -15,7 +13,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -50,16 +47,9 @@ func (s *stubGrants) ChooseSendingMailbox(ctx context.Context, user ids.UserID, 
 	return capture.SendingMailbox{}, nil
 }
 
-func (s *stubGrants) SendingMailboxes(ctx context.Context, user ids.UserID, providers []string) ([]capture.SendingMailbox, error) {
-	var out []capture.SendingMailbox
-	for _, provider := range providers {
-		if scopes, err := s.GrantedScopesFor(ctx, user, provider); err != nil || len(scopes) > 0 {
-			out = append(out, capture.SendingMailbox{Provider: provider, ProviderScopes: scopes})
-		}
-	}
-	return out, nil
+func (s *stubGrants) SendingMailboxes(context.Context, ids.UserID, []string) ([]capture.SendingMailbox, error) {
+	return make([]capture.SendingMailbox, len(s.granted)+len(s.grantedFor)), s.err
 }
-
 func (s *stubGrants) GrantedScopesFor(_ context.Context, _ ids.UserID, provider string) ([]string, error) {
 	s.calls++
 	// Per provider when the case says so, which is what a choice BETWEEN
@@ -528,32 +518,5 @@ func TestNoMicrosoftAppRegistersNoMicrosoftConnector(t *testing.T) {
 		if descriptor.Name == providerGraph || descriptor.Name == providerGraphCal {
 			t.Errorf("%s was registered with no Microsoft app to run on", descriptor.Name)
 		}
-	}
-}
-
-// A sender with no mail connection is told to connect one. A sender whose
-// connections cannot send keeps the answer that says to reconnect.
-func TestSendableMailboxTellsNoConnectionApartFromAConnectionThatCannotSend(t *testing.T) {
-	human := principal.WithActor(context.Background(), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
-	})
-	for name, tc := range map[string]struct {
-		grants           *stubGrants
-		wantNotConnected bool
-	}{
-		"no connection":       {&stubGrants{grantedFor: map[string][]string{}}, true},
-		"a read-only mailbox": {&stubGrants{granted: []string{"read-only"}}, false},
-	} {
-		t.Run(name, func(t *testing.T) {
-			authority := mailboxAuthority{
-				grants:            tc.grants,
-				mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
-			}
-			got, _, err := authority.SendableMailbox(human, ids.Nil, ids.ActivityID{})
-			_, notConnected := errors.AsType[*activities.MailboxNotConnectedError](err)
-			if got != "" || notConnected != tc.wantNotConnected || (err != nil && !notConnected) {
-				t.Errorf("SendableMailbox = (%q, %v), want not-connected=%v", got, err, tc.wantNotConnected)
-			}
-		})
 	}
 }

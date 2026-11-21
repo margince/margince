@@ -21,7 +21,7 @@ func Reviewable() []string {
 }
 
 // Holder is an error that names the hold reason it stops a scheduled message
-// with, so the module that holds the message need not import the module that
+// with. The module holding the message then needs no import of the module that
 // raised the error.
 type Holder interface {
 	error

@@ -286,7 +286,7 @@ reason says which, and what to do:
 - **Your seat or mailbox changed**, so it cannot be sent as you.
 - **Its send time passed** while the system was not running, and it is now too late to send. Reschedule or withdraw it.
 - **The send job ran out of attempts.** Reschedule it to try again.
-- **A check blocked it when it was due.** Nothing was sent. This includes a "Send anyway" approval that no longer matches the message because the recipients, the wording or the warnings changed. Open the review and approve the message again.
+- **A check blocked it when it was due.** Nothing was sent. This includes a "Send anyway" approval that no longer matches the message because the recipients, the wording or the checks changed. Open the review and approve the message again.
 
 When a check blocked a held message and you may still send it, the row offers **Send with a recorded exception**. The dialog asks when to send. **Send now** sends it at once. **At a later time** records your decision now and keeps the message waiting for the date and time you pick. The checks run again then, and your decision is used once.
 
