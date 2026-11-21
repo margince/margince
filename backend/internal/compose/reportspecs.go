@@ -119,8 +119,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:     colAmountMinor,
 			fieldAmountBaseMinor: pipelineBaseValueExpr,
 		},
-		sumCoverage:    baseMoneyCoverage(fieldAmountBaseMinor),
-		nativeMeasures: nativeMoney(fieldAmountMinor),
+		sumCoverage: baseMoneyCoverage(fieldAmountBaseMinor),
 		filters: map[string]string{
 			fieldOwnerID:    colOwnerID,
 			fieldPipelineID: colPipelineID,
@@ -216,9 +215,8 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
-		sumCoverage:    baseMoneyCoverage(),
-		partialSums:    true,
-		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
+		sumCoverage: baseMoneyCoverage(),
+		partialSums: true,
 		// No stage_id filter: nothing serves it (the screen groups BY stage_id
 		// instead), and a filter key this report has no caller for is public
 		// agent surface (the run_report catalog, mcp-info.{json,md}) with no
@@ -436,9 +434,8 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
-		sumCoverage:    baseMoneyCoverage(),
-		partialSums:    true,
-		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
+		sumCoverage: baseMoneyCoverage(),
+		partialSums: true,
 		filters: map[string]string{
 			fieldOwnerID:            colOwnerID,
 			fieldStageID:            colStageID,

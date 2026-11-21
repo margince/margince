@@ -70,7 +70,7 @@ func TestAnEditionExportGuardsAQuestionsAlias(t *testing.T) {
 // A kept money measure is written with its unit and its one currency. Without
 // a single currency it has no value and says why.
 func TestAKeptMoneyMeasureStatesItsUnitAndCurrency(t *testing.T) {
-	native := answerMoney{spec: reportSpec{nativeMeasures: nativeMoney(fieldAmountMinor)}, base: "EUR"}
+	native := answerMoney{spec: reportSpec{measures: map[string]string{fieldAmountMinor: colAmountMinor}}, base: "EUR"}
 	noBase := answerMoney{spec: native.spec}
 	sum := func(field string) analyticsquery.Measure {
 		return analyticsquery.Measure{Fn: analyticsquery.Sum, Field: field}
