@@ -31,6 +31,7 @@ import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useRecordCarriesTags } from "../../lib/tags.queries";
+import { EditAccessRequest } from "../records/editaccessrequest";
 import { CompanyContactCard } from "./companycontactcard";
 import {
   companyWebsite,
@@ -131,7 +132,14 @@ function RailBody({
     <>
       <RecordDetails
         sections={sections}
-        footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
+        footnote={
+          refusal && (
+            <>
+              <span id={refusal.id}>{refusal.text}</span>
+              <EditAccessRequest kind="company" record={company} />
+            </>
+          )
+        }
       />
       {about.element}
       {address.element}

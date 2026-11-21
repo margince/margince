@@ -32,6 +32,7 @@ import { BriefQueue } from "../brief/brief.queue";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { useWaitingDraftBand } from "../mail/composewaitingdraft";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
+import { EditAccessRequest } from "../records/editaccessrequest";
 import { useContact360 } from "./contact360";
 import { ContactActions } from "./contactactions";
 import { ArchivedContactPage } from "./contactarchived";
@@ -83,6 +84,7 @@ function refusalsOf(
   readOnlyReason: string | undefined,
   readOnlyReasonId: string,
   activity: ActivityGate,
+  row: Contact | undefined,
   t: ReturnType<typeof useT>,
 ): ReactNode {
   const activityRefused = activity.refusedId !== undefined;
@@ -97,6 +99,9 @@ function refusalsOf(
         <span id={activity.sentenceId}>
           {t(activity.refusalKey ?? "record.logActivityRefused")}
         </span>
+      )}
+      {readOnlyReason && row && (
+        <EditAccessRequest kind="contact" record={row} />
       )}
     </>
   );
@@ -234,7 +239,13 @@ export function ContactPageV2({
   // What the record refuses this reader, stated once at the foot of the left
   // card: every refused verb points at its sentence by id. The rail adds the
   // Email verb's own refusal, which it reads from the same transports.
-  const refusals = refusalsOf(readOnlyReason, readOnlyReasonId, activity, t);
+  const refusals = refusalsOf(
+    readOnlyReason,
+    readOnlyReasonId,
+    activity,
+    shownRow,
+    t,
+  );
   const contactDetails = (
     <ContactRail
       view={view.data}

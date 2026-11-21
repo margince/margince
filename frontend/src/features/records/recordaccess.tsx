@@ -34,8 +34,9 @@ import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
+import { EditAccessRequest } from "./editaccessrequest";
 import { HandoverOffer } from "./handoveroffer";
-import { EditAccessRequest, HandoverRequest } from "./handoverrequest";
+import { HandoverRequest } from "./ownerask";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled

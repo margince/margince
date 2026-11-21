@@ -8,7 +8,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import { useMe } from "../../lib/session";
 import type { EditAccessRecordType } from "./editaccessapi";
-import { EditAccessRequest } from "./handoverrequest";
+import { EditAccessRequest } from "./editaccessrequest";
 
 type Seat = "full" | "read";
 
@@ -116,7 +116,7 @@ afterEach(() => {
 });
 
 describe("EditAccessRequest", () => {
-  it.each(["lead", "deal"] as const)(
+  it.each(["lead", "deal", "project"] as const)(
     "asks the owner of a %s, then takes the request back",
     async (kind) => {
       const sent = serve(kind);
@@ -126,7 +126,7 @@ describe("EditAccessRequest", () => {
       await user.click(await screen.findByRole("button", { name: askLabel }));
       expect(sent).toContain(`POST /records/${kind}/le-1/edit-access-request`);
       const withdraw = await screen.findByRole("button", {
-        name: en["handover.withdraw"],
+        name: en["editAccess.withdraw"],
       });
       expect(
         screen.getByText(/You asked Mira Voss for edit access/),
@@ -146,7 +146,7 @@ describe("EditAccessRequest", () => {
     serve("lead", "full", true);
     draw("lead", colleaguesLead);
     expect(
-      await screen.findByRole("button", { name: en["handover.withdraw"] }),
+      await screen.findByRole("button", { name: en["editAccess.withdraw"] }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: askLabel })).toBeNull();
   });

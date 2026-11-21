@@ -12,7 +12,7 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { EditAccessRequest } from "../records/handoverrequest";
+import { EditAccessRequest } from "../records/editaccessrequest";
 import type { LeadWriter } from "./leads";
 
 type Lead = components["schemas"]["Lead"];

@@ -19801,11 +19801,13 @@ export interface paths {
          * Ask a record's owner for edit access.
          * @description For a record the caller can see but not change, because a colleague owns it. The request is an
          *     `edit_access` approval in the owner's inbox; only the owner can decide it, and it stays open for
-         *     7 days. When the owner approves, the caller gets a write share on the record and the owner stays
-         *     its owner. A declined or expired request is told to the caller. A second press while a request is
-         *     open answers that request with `200`; a new request answers `201`. `409` names why nothing can be
-         *     asked for: `unowned`, `already_yours_to_change`, or `owner_unavailable` (the owner is suspended or
-         *     has left; ask an administrator).
+         *     7 days. Only the owner can approve it, in person; their agent may decline it. When the owner
+         *     approves, the caller gets a write share on the record and the owner stays its owner. The caller is
+         *     told when it is declined or expires, or closed because the record changed owner. A second press
+         *     while a request is open answers that request with `200`; a new request answers `201`. `409` names
+         *     why nothing can be asked for: `unowned`, `already_yours_to_change`, `owner_unavailable` (the owner
+         *     is suspended or has left; ask an administrator), or `declined` (this owner declined the same
+         *     request before).
          */
         post: operations["requestEditAccess"];
         /**
@@ -95079,7 +95081,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`). */
+            /** @description Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `declined`). */
             409: {
                 headers: {
                     [name: string]: unknown;

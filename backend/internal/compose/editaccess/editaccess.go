@@ -11,8 +11,6 @@ package editaccess
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,12 +24,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const (
@@ -42,10 +40,16 @@ const (
 	withdrawn = "the colleague who asked withdrew it"
 )
 
-var errOwnerUnavailable = &contacts.TransferRefusal{
-	Code:    "owner_unavailable",
-	Message: "The owner of this record cannot be asked, because they are suspended or have left. Ask an administrator for edit access.",
-}
+var (
+	errOwnerUnavailable = &contacts.OwnerAskRefusal{
+		Code:    "owner_unavailable",
+		Message: "The owner of this record cannot be asked, because they are suspended or have left. Ask an administrator for edit access.",
+	}
+	errDeclined = &contacts.OwnerAskRefusal{
+		Code:    "declined",
+		Message: "The owner declined your request for edit access to this record, so it is not sent again. Talk to them if something changed.",
+	}
+)
 
 // Engine files, reads and withdraws a colleague's own request.
 type Engine struct {
@@ -82,10 +86,15 @@ func (e Engine) Ask(ctx context.Context, recordType string, id ids.UUID) (Reques
 		if err != nil {
 			return err
 		}
+		// A lead and a project tell nobody when they change owner. So a
+		// request put to a former owner is closed here, before it is answered.
+		if err := FollowOwnerTx(ctx, tx, recordType, id, &record.OwnerID); err != nil {
+			return err
+		}
 		if out, err = ownTx(ctx, tx, recordType, id); !errors.Is(err, apperrors.ErrNotFound) {
 			return err
 		}
-		if err := e.stageTx(ctx, tx, recordType, id, record.OwnerID); err != nil {
+		if err := e.fileTx(ctx, tx, recordType, id, record.OwnerID); err != nil {
 			return err
 		}
 		created = true
@@ -95,58 +104,54 @@ func (e Engine) Ask(ctx context.Context, recordType string, id ids.UUID) (Reques
 	return out, created, err
 }
 
-// stageTx files the caller's request in the owner's inbox. A second press by
-// the same colleague joins the open one.
-func (e Engine) stageTx(ctx context.Context, tx pgx.Tx, recordType string, id, owner ids.UUID) error {
+// fileTx files the caller's request in the owner's inbox, unless this owner
+// already declined it.
+func (e Engine) fileTx(ctx context.Context, tx pgx.Tx, recordType string, id, owner ids.UUID) error {
 	asker, ok := principal.Actor(ctx)
 	if !ok {
 		return errors.New("editaccess: a request without a caller")
 	}
-	askable, err := approvals.CanBeAsked(ctx, tx, owner)
+	if err := recordowner.AskableTx(ctx, tx, owner); err != nil {
+		return ownerRefusal(err)
+	}
+	name, err := recordowner.ColleagueNameTx(ctx, tx, asker.UserID)
 	if err != nil {
 		return err
 	}
-	if !askable {
-		return errOwnerUnavailable
-	}
-	body, err := json.Marshal(approvalsubject.EditAccess{
-		RecordType: recordType, RecordID: id, OwnerID: owner, RequesterID: asker.UserID,
+	filed, err := recordowner.FileTx(ctx, tx, e.staging, recordowner.Request{
+		Kind: Kind, RecordType: recordType, RecordID: id,
+		Payload: approvalsubject.EditAccess{RecordType: recordType, RecordID: id, OwnerID: owner, RequesterID: asker.UserID},
+		// The owner is part of the request, so a new owner may be asked after
+		// the last one declined.
+		Identity:     map[string]ids.UUID{"requester_id": asker.UserID, "owner_id": owner},
+		Summary:      fmt.Sprintf(systemtext.Copy("editAccess.Asked", identity.BaseLanguageForRecord(ctx, tx)), name),
+		SystemText:   &systemtext.Message{Version: 1, Subject: systemtext.Sentence("editAccess.Asked", systemtext.Label(name))},
+		TTL:          window,
+		OnceDeclined: true,
 	})
 	if err != nil {
-		return fmt.Errorf("editaccess: encoding the request: %w", err)
+		return ownerRefusal(err)
 	}
-	identityKey, err := json.Marshal(map[string]ids.UUID{"requester_id": asker.UserID})
-	if err != nil {
-		return fmt.Errorf("editaccess: encoding the request's identity: %w", err)
+	if !filed {
+		return errDeclined
 	}
-	name, err := colleagueName(ctx, tx, asker.UserID)
-	if err != nil {
-		return err
-	}
-	digest := sha256.Sum256(body)
-	ttl := window
-	_, err = e.staging.StageOrJoinPendingInTx(ctx, tx, approvals.StageInput{
-		Kind:           Kind,
-		ProposedChange: body,
-		DiffHash:       hex.EncodeToString(digest[:]),
-		TargetType:     recordType,
-		TargetID:       id,
-		Summary:        fmt.Sprintf(phrase("editAccess.Asked", identity.BaseLanguageForRecord(ctx, tx)), name),
-		SystemText:     &systemtext.Message{Version: 1, Subject: systemtext.Sentence("editAccess.Asked", systemtext.Label(name))},
-		JoinPending:    true,
-		Identity:       identityKey,
-		TTL:            &ttl,
-	})
-	if errors.Is(err, approvals.ErrNoDecider) {
+	return nil
+}
+
+func ownerRefusal(err error) error {
+	if errors.Is(err, recordowner.ErrOwnerCannotBeAsked) {
 		return errOwnerUnavailable
 	}
 	return err
 }
 
-// Own answers the caller's open request on the record.
+// Own answers the caller's open request on a record they may still read.
 func (e Engine) Own(ctx context.Context, recordType string, id ids.UUID) (Request, error) {
 	var out Request
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisibleLive(ctx, tx, recordType, id); err != nil {
+			return err
+		}
 		var err error
 		out, err = ownTx(ctx, tx, recordType, id)
 		return err
@@ -154,9 +159,13 @@ func (e Engine) Own(ctx context.Context, recordType string, id ids.UUID) (Reques
 	return out, err
 }
 
-// Withdraw takes the caller's open request back out of the owner's inbox.
+// Withdraw takes the caller's open request back out of the owner's inbox. An
+// archived record still takes it back: withdrawing writes nothing on it.
 func (e Engine) Withdraw(ctx context.Context, recordType string, id ids.UUID) error {
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisible(ctx, tx, recordType, id); err != nil {
+			return err
+		}
 		gone, err := approvals.WithdrawOwnRequestTx(ctx, tx, Kind, recordType, id, withdrawn)
 		if err != nil {
 			return err
@@ -179,15 +188,3 @@ func ownTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID) (Requ
 	}
 	return out, nil
 }
-
-// colleagueName is a member's display name, for a sentence naming them.
-func colleagueName(ctx context.Context, tx pgx.Tx, member ids.UUID) (string, error) {
-	var name string
-	if err := tx.QueryRow(ctx, `SELECT display_name FROM app_user WHERE id = $1`, member).Scan(&name); err != nil {
-		return "", fmt.Errorf("editaccess: naming a colleague: %w", err)
-	}
-	return name, nil
-}
-
-// phrase is one sentence of this request's copy in lang.
-func phrase(code string, lang textlang.Lang) string { return systemtext.Copy(code, lang) }

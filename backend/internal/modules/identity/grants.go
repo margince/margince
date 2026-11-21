@@ -37,6 +37,9 @@ var shareableRecordTypes = map[string]bool{
 // grantSubjectTeam is the subject type naming a team, and the table it lives in.
 const grantSubjectTeam = "team"
 
+// grantSubjectUser is the subject type naming one member.
+const grantSubjectUser = "user"
+
 const grantColumns = `id, record_type, record_id, subject_type, subject_id, access, granted_by, reason, expires_at, created_at, version`
 
 type grantRow struct {
@@ -401,7 +404,7 @@ func seatOf(ctx context.Context, tx pgx.Tx, member ids.UUID) (principal.SeatType
 // not ask for. A TEAM grant is not covered — its subject is the team, not the
 // member reading it — so removing one is the record's business.
 func mayRevoke(ctx context.Context, tx pgx.Tx, actor principal.Principal, grant grantRow) error {
-	if grant.SubjectType == "user" && grant.SubjectID == actor.UserID {
+	if grant.SubjectType == grantSubjectUser && grant.SubjectID == actor.UserID {
 		return nil
 	}
 	// Both gates sit INSIDE this branch, and that placement is the exception

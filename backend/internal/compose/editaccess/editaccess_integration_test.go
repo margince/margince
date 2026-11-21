@@ -110,7 +110,7 @@ func seedLead(t *testing.T, e *integration.Env, owner *ids.UserID) ids.UUID {
 }
 
 func refusalCode(err error) string {
-	var refusal *contacts.TransferRefusal
+	var refusal *contacts.OwnerAskRefusal
 	if errors.As(err, &refusal) {
 		return refusal.Code
 	}
@@ -166,7 +166,8 @@ func TestEditAccessIsAskedAndGivenOnEveryShareableKind(t *testing.T) {
 	}
 }
 
-// Declining shares nothing and tells the colleague who asked, who may ask again.
+// Declining shares nothing and tells the colleague who asked. The same owner is
+// not asked the same thing a second time.
 func TestADeclinedEditAccessRequestTellsTheColleagueWhoAsked(t *testing.T) {
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
@@ -184,8 +185,11 @@ func TestADeclinedEditAccessRequestTellsTheColleagueWhoAsked(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE recipient_user_id = $1 AND kind = 'edit_access_declined'`, e.Rep3); n != 1 {
 		t.Errorf("decline notices to the colleague who asked = %d, want 1", n)
 	}
-	if _, created, err := engine(e).Ask(asker, "lead", lead); err != nil || !created {
-		t.Errorf("asking after a decline: created %v, err %v, want a new request", created, err)
+	if _, _, err := engine(e).Ask(asker, "lead", lead); refusalCode(err) != "declined" {
+		t.Errorf("asking after a decline: %v, want declined", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'edit_access'`); n != 1 {
+		t.Errorf("requests filed = %d, want only the declined one", n)
 	}
 }
 
@@ -233,10 +237,10 @@ func TestEditAccessIsNotAskedWhereThereIsNothingToAsk(t *testing.T) {
 	}
 }
 
-// A request cannot be approved once the record has moved to another owner. A
-// former owner who may still change it is refused too. The card stays pending,
-// so it can still be declined.
-func TestEditAccessIsNotGivenOnceTheRecordChangedOwner(t *testing.T) {
+// A lead tells nobody when it moves, so its request stays open until the next
+// ask. Until then a former owner who may still change the lead cannot approve
+// it. The card stays pending, so it can still be declined.
+func TestAFormerOwnerCannotApproveALeadThatMoved(t *testing.T) {
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	lead := seedRecord(t, e, "lead", e.Rep1)

@@ -241,7 +241,6 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // where a reviewer checks it â this census resolves gates FORWARD and cannot
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/transferrequest.go:transferableRecords":     "the owner and name of a contact or company a colleague asks to be handed. Read inside OwnerAskableTx, after requireOwnerAsker asked the read and update grants and EnsureVisibleLive the row scope",
 	"internal/modules/contacts/employerchangeapply.go:requireContactOwner": "Called only by ApplyEmployerChangeTx after auth.HoldWritableLive on the contact. It reads owner_id to compare with the deciding member and returns no contact field.",
 	"internal/modules/contacts/signaturerole.go:roleFromSignatureTitleTx":  "Called only by applySignature after contact.update and HoldWritableLive. It reads the persisted title for the gated relationship writer and returns no contact data.",
 

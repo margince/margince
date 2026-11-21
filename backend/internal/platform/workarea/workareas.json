@@ -357,6 +357,7 @@
     "getDealSuggestion": "business",
     "getDealWinEvidence": "business",
     "getDedupeCandidate": "business",
+    "getEditAccessRequest": "business",
     "getEmailPresentation": "business",
     "getEmailSignatureTemplate": "workspace_settings",
     "getExtensionIngestHealth": "operator",
@@ -761,6 +762,7 @@
     "requestAttachmentAccess": "business",
     "requestCompanyVatCheck": "business",
     "requestDetailsConfirmation": "compliance",
+    "requestEditAccess": "business",
     "requestLegalReview": "business",
     "requestOwnershipTransfer": "business",
     "rescheduleScheduledSend": "business",
@@ -920,6 +922,7 @@
     "useDealEstimate": "business",
     "validateImportRun": "business",
     "visitList": "business",
+    "withdrawEditAccessRequest": "business",
     "withdrawLegalReview": "business",
     "withdrawOwnershipOffer": "business",
     "withdrawOwnershipRequest": "business"
@@ -2792,6 +2795,9 @@
     "get_deal_win_evidence": [
       "deals"
     ],
+    "get_edit_access_request": [
+      "sharing"
+    ],
     "get_extension_settings": [
       "extensions"
     ],
@@ -3730,6 +3736,9 @@
     "request_details_confirmation": [
       "consent"
     ],
+    "request_edit_access": [
+      "sharing"
+    ],
     "request_legal_review": [
       "legal_reviews"
     ],
@@ -4174,6 +4183,9 @@
     ],
     "withdraw_capture_sender_decision": [
       "capture_triage"
+    ],
+    "withdraw_edit_access_request": [
+      "sharing"
     ],
     "withdraw_legal_review": [
       "legal_reviews"
@@ -4915,6 +4927,9 @@
       "business"
     ],
     "get_deal_win_evidence": [
+      "business"
+    ],
+    "get_edit_access_request": [
       "business"
     ],
     "get_extension_settings": [
@@ -5815,6 +5830,9 @@
     "request_details_confirmation": [
       "compliance"
     ],
+    "request_edit_access": [
+      "business"
+    ],
     "request_legal_review": [
       "business"
     ],
@@ -6253,6 +6271,9 @@
     ],
     "withdraw_capture_sender_decision": [
       "capture"
+    ],
+    "withdraw_edit_access_request": [
+      "business"
     ],
     "withdraw_legal_review": [
       "business"

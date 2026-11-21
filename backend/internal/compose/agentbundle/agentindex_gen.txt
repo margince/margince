@@ -685,6 +685,9 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /records/{record_type}/{id}/ownership-request` | requestOwnershipTransfer | Ask a record's owner to hand it over to the caller. | Change records | at once |
 | `GET /records/{record_type}/{id}/ownership-request` | getOwnershipRequest | The caller's open request to be handed this record. | Read records | at once |
 | `DELETE /records/{record_type}/{id}/ownership-request` | withdrawOwnershipRequest | Withdraw the caller's open request to be handed this record. | Change records | at once |
+| `POST /records/{record_type}/{id}/edit-access-request` | requestEditAccess | Ask a record's owner for edit access. | Change records | at once |
+| `GET /records/{record_type}/{id}/edit-access-request` | getEditAccessRequest | The caller's open request for edit access to this record. | Read records | at once |
+| `DELETE /records/{record_type}/{id}/edit-access-request` | withdrawEditAccessRequest | Withdraw the caller's open request for edit access to this record. | Change records | at once |
 | `POST /records/{record_type}/{id}/ownership-offer` | offerOwnershipTransfer | Offer the caller's own record to a colleague. | Change records | at once |
 | `GET /records/{record_type}/{id}/ownership-offer` | getOwnershipOffer | The caller's open offer of this record. | Read records | at once |
 | `DELETE /records/{record_type}/{id}/ownership-offer` | withdrawOwnershipOffer | Withdraw the caller's open offer of this record. | Change records | at once |

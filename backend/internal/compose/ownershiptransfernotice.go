@@ -61,11 +61,11 @@ func tellRequester(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, tr
 		subject, body = outcome.offerSubject, outcome.offerBody
 		code = "ownership.Offer" + outcome.code
 	}
-	other, err := colleagueName(ctx, tx, transfer.DeciderID)
+	other, err := recordowner.ColleagueNameTx(ctx, tx, transfer.DeciderID)
 	if err != nil {
 		return err
 	}
-	_, record, err := transferRecordTx(ctx, tx, transfer.RecordType, transfer.RecordID)
+	record, err := recordowner.NameForTx(ctx, tx, transfer.RequestedBy, transfer.RecordType, transfer.RecordID, lang)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func tellRequester(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, tr
 // names what stayed with the giver because its own write refused the move.
 func tellAccepted(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, transfer approvalsubject.OwnershipTransfer, moved transferHandOver) error {
 	lang := identity.BaseLanguageForRecord(ctx, tx)
-	giver, err := colleagueName(ctx, tx, transfer.FromID)
+	giver, err := recordowner.ColleagueNameTx(ctx, tx, transfer.FromID)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func tellAccepted(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, tra
 	titleMetadata := systemtext.Sentence("ownership.Accepted", systemtext.Label(giver), systemtext.Text(moved.record))
 	bodyCode := "ownership.AcceptedMoved"
 	if transfer.Offered() {
-		receiver, err := colleagueName(ctx, tx, transfer.ToID)
+		receiver, err := recordowner.ColleagueNameTx(ctx, tx, transfer.ToID)
 		if err != nil {
 			return err
 		}

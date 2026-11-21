@@ -31,7 +31,7 @@ import { catalogOfRecord } from "../../lib/customfields.logic";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";
-import { EditAccessRequest } from "../records/handoverrequest";
+import { EditAccessRequest } from "../records/editaccessrequest";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { project360Key } from "./project360.key";

@@ -399,7 +399,7 @@ var replayableOperations = map[string]replayTarget{
 		objectNote: "authority is the record's own — auth.Require update plus auth.EnsureVisibleLive when the request is filed",
 		tableField: "record_type", idPath: "record_id",
 	},
-	"POST /v1/records/{record_type}/{id}/edit-access-request": {
+	"POST /v1/records/{record_type}/{id}/edit-access-request": { //nolint:goconst // the route key; its other spellings are generated
 		objectNote: "authority is the record's own — auth.Require update plus auth.EnsureVisibleLive when the request is filed",
 		tableField: "record_type", idPath: "record_id",
 	},

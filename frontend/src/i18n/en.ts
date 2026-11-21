@@ -8180,6 +8180,9 @@ export const en = {
   "editAccess.ask": "Ask {owner} for edit access",
   "editAccess.requested":
     "You asked {owner} for edit access. The request stays open until {date}.",
+  "editAccess.withdraw": "Withdraw edit access request",
+  "editAccess.sent": "Edit access requested from {owner}",
+  "editAccess.withdrawn": "Edit access request withdrawn",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Hand over to…",
   "handover.offerTo": "Hand over to",

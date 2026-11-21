@@ -20,14 +20,21 @@ import (
 func Register(svc *approvals.Service, db *database.DB, grants *identity.Service) {
 	svc.WithEffect(Kind, acceptEffect(svc, grants))
 	svc.WithPrecheck(Kind, precheck(db))
-	svc.WithDeclinedEffect(Kind, func(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, proposedChange json.RawMessage) error {
-		return tellOutcome(ctx, tx, approvalID, proposedChange, declined)
-	})
+	svc.WithDeclinedEffect(Kind, tell(declined))
 }
 
 // RegisterExpiry puts the expiry line on the service the clock's sweep runs.
 func RegisterExpiry(svc *approvals.Service) *approvals.Service {
-	return svc.WithExpiredEffect(Kind, func(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, proposedChange json.RawMessage) error {
-		return tellOutcome(ctx, tx, approvalID, proposedChange, expired)
-	})
+	return svc.WithExpiredEffect(Kind, tell(expired))
+}
+
+// tell is the effect that only tells the colleague who asked how it ended.
+func tell(end outcome) func(context.Context, pgx.Tx, ids.ApprovalID, json.RawMessage) error {
+	return func(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, proposedChange json.RawMessage) error {
+		ask, err := decode(proposedChange)
+		if err != nil {
+			return err
+		}
+		return tellOutcome(ctx, tx, approvalID, ask, end)
+	}
 }

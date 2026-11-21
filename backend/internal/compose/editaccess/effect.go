@@ -25,26 +25,9 @@ import (
 
 // errOwnerMoved refuses an approval once the record has left the owner the
 // request was put to.
-var errOwnerMoved = &contacts.TransferRefusal{
+var errOwnerMoved = &contacts.OwnerAskRefusal{
 	Code:    "owner_changed",
 	Message: "This record has changed owner since the request was made, so its access cannot be given from here. Decline the request.",
-}
-
-// ShareWithRequesterTx shares a record with the colleague who asked for it:
-// write, or read for a seat that may not write. The share is checked against
-// the caller's grants as if they pressed Share.
-func ShareWithRequesterTx(ctx context.Context, tx pgx.Tx, grants *identity.Service, recordType string, recordID, requester ids.UUID) error {
-	access, err := identity.ShareAccessForTx(ctx, tx, requester)
-	if err != nil {
-		return err
-	}
-	return grants.CreateRecordGrantTx(ctx, tx, identity.CreateGrantInput{
-		RecordType:  recordType,
-		RecordID:    recordID,
-		SubjectType: "user",
-		SubjectID:   requester,
-		Access:      access,
-	})
 }
 
 // acceptEffect shares the record with the colleague who asked, as the owner
@@ -63,10 +46,10 @@ func acceptEffect(svc *approvals.Service, grants *identity.Service) approvals.Ap
 			if err := ownerUnmovedTx(ctx, tx, ask); err != nil {
 				return err
 			}
-			if err := ShareWithRequesterTx(ctx, tx, grants, ask.RecordType, ask.RecordID, ask.RequesterID); err != nil {
+			if err := grants.ShareWithRequesterTx(ctx, tx, ask.RecordType, ask.RecordID, ask.RequesterID); err != nil {
 				return err
 			}
-			return tellOutcome(ctx, tx, approvalID, proposedChange, accepted)
+			return tellOutcome(ctx, tx, approvalID, ask, accepted)
 		})
 	}
 }
@@ -94,6 +77,30 @@ func ownerUnmovedTx(ctx context.Context, tx pgx.Tx, ask approvalsubject.EditAcce
 	return nil
 }
 
+// FollowOwnerTx closes every open request on the record that was put to an
+// owner other than to, on the transaction that moved it. The owner's line about
+// each is taken back, and the colleague who asked is told. to is nil for a
+// record nobody owns.
+func FollowOwnerTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, to *ids.UUID) error {
+	gone, err := approvals.FollowEditAccessOwnerInTx(ctx, tx, recordType, id, to)
+	if err != nil {
+		return err
+	}
+	for _, request := range gone {
+		if _, err := notices.NewStore(nil).Retract(ctx, tx, notices.ApprovalNoticeKey(request.ID.UUID)); err != nil {
+			return err
+		}
+		ask, err := decode(request.ProposedChange)
+		if err != nil {
+			return err
+		}
+		if err := tellOutcome(ctx, tx, request.ID, ask, closed); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // outcome is how a request ended, told to the colleague who asked.
 type outcome struct{ kind, subject, body string }
 
@@ -101,24 +108,21 @@ var (
 	accepted = outcome{"edit_access_accepted", "editAccess.Accepted", "editAccess.AcceptedBody"}
 	declined = outcome{"edit_access_declined", "editAccess.Declined", "editAccess.DeclinedBody"}
 	expired  = outcome{"edit_access_expired", "editAccess.Expired", "editAccess.ExpiredBody"}
+	closed   = outcome{"edit_access_withdrawn", "editAccess.Withdrawn", "editAccess.WithdrawnBody"}
 )
 
-// tellOutcome gives the colleague who asked one line naming the owner and the
-// record, once per request and outcome.
-func tellOutcome(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, proposedChange json.RawMessage, end outcome) error {
-	ask, err := decode(proposedChange)
-	if err != nil {
-		return err
-	}
-	owner, err := colleagueName(ctx, tx, ask.OwnerID)
-	if err != nil {
-		return err
-	}
-	_, record, err := recordowner.ReadTx(ctx, tx, ask.RecordType, ask.RecordID)
+// tellOutcome gives the colleague who asked one line naming the owner, once per
+// request and outcome. It names the record only while they may still read it.
+func tellOutcome(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, ask approvalsubject.EditAccess, end outcome) error {
+	owner, err := recordowner.ColleagueNameTx(ctx, tx, ask.OwnerID)
 	if err != nil {
 		return err
 	}
 	lang := identity.BaseLanguageForRecord(ctx, tx)
+	record, err := recordowner.NameForTx(ctx, tx, ask.RequesterID, ask.RecordType, ask.RecordID, lang)
+	if err != nil {
+		return err
+	}
 	_, err = notices.NewStore(nil).CreateTx(ctx, tx, notices.NewNotice{
 		Recipient: ids.From[ids.UserKind](ask.RequesterID),
 		Kind:      end.kind,
@@ -129,8 +133,8 @@ func tellOutcome(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, prop
 			Subject: systemtext.Sentence(end.subject, systemtext.Label(owner), systemtext.Label(record)),
 			Body:    systemtext.Sentence(end.body),
 		},
-		Subject: fmt.Sprintf(phrase(end.subject, lang), owner, record),
-		Body:    phrase(end.body, lang),
+		Subject: fmt.Sprintf(systemtext.Copy(end.subject, lang), owner, record),
+		Body:    systemtext.Copy(end.body, lang),
 	})
 	return err
 }

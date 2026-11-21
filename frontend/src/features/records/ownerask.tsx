@@ -22,17 +22,12 @@ import { problemMessageOf } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
-  type EditAccessRecordType,
-  useEditAccessRequest,
-  useEditAccessRequestActions,
-} from "./editaccessapi";
-import {
   type TransferableRecordType,
   useOwnershipRequest,
   useOwnershipRequestActions,
 } from "./ownershiprequest";
 
-type AskedRecord = Readonly<{
+export type AskedRecord = Readonly<{
   id?: string;
   owner_id?: string | null;
   writable?: boolean;
@@ -43,7 +38,7 @@ type AskedRecord = Readonly<{
  * The owner to ask, for a reader who could change this kind of record but not
  * this one because a colleague owns it. Undefined for anyone else.
  */
-function useOwnerToAsk(kind: EntityKind, record: AskedRecord) {
+export function useOwnerToAsk(kind: EntityKind, record: AskedRecord) {
   const viewerId = useViewerId();
   const granted = useCan(kind, "update");
   const mayHold = useCanMutate() && granted;
@@ -57,7 +52,10 @@ function useOwnerToAsk(kind: EntityKind, record: AskedRecord) {
   return asks ? ownerId : undefined;
 }
 
-/** The ask to be handed a contact or company. */
+/**
+ * The ask to be handed a contact or company. Beside the edit access ask it is
+ * the second choice, so it draws as a link.
+ */
 export function HandoverRequest({
   kind,
   record,
@@ -74,41 +72,25 @@ export function HandoverRequest({
       open={open}
       actions={actions}
       words={HANDOVER_WORDS}
+      variant="link"
     />
   );
 }
 
-/** The ask for edit access to a record, which leaves its owner as it is. */
-export function EditAccessRequest({
-  kind,
-  record,
-}: Readonly<{ kind: EditAccessRecordType; record: AskedRecord }>) {
-  const ownerId = useOwnerToAsk(kind, record);
-  const id = record.id ?? "";
-  const open = useEditAccessRequest(kind, id, ownerId !== undefined);
-  const actions = useEditAccessRequestActions();
-  return (
-    <OwnerAsk
-      kind={kind}
-      id={id}
-      ownerId={ownerId}
-      open={open}
-      actions={actions}
-      words={EDIT_ACCESS_WORDS}
-    />
-  );
-}
-
-type AskWords = Readonly<{ ask: MessageKey; requested: MessageKey }>;
+export type AskWords = Readonly<{
+  ask: MessageKey;
+  requested: MessageKey;
+  sent: MessageKey;
+  withdraw: MessageKey;
+  withdrawn: MessageKey;
+}>;
 
 const HANDOVER_WORDS: AskWords = {
   ask: "handover.ask",
   requested: "handover.requested",
-};
-
-const EDIT_ACCESS_WORDS: AskWords = {
-  ask: "editAccess.ask",
-  requested: "editAccess.requested",
+  sent: "handover.sent",
+  withdraw: "handover.withdraw",
+  withdrawn: "handover.withdrawn",
 };
 
 type Target<K> = Readonly<{ recordType: K; id: string }>;
@@ -126,13 +108,14 @@ type AskActions<K> = Readonly<{
 
 // Nothing renders until the open request and the owner's name are read. So the
 // button does not turn from Ask into Withdraw under the pointer.
-function OwnerAsk<K extends string>({
+export function OwnerAsk<K extends string>({
   kind,
   id,
   ownerId,
   open,
   actions,
   words,
+  variant,
 }: Readonly<{
   kind: K;
   id: string;
@@ -140,6 +123,7 @@ function OwnerAsk<K extends string>({
   open: OpenRequest;
   actions: AskActions<K>;
   words: AskWords;
+  variant: "primary" | "link";
 }>) {
   const owner = useMemberName(ownerId ?? null);
   const readerZone = useViewerZone();
@@ -168,11 +152,11 @@ function OwnerAsk<K extends string>({
           pending={withdraw.isPending}
           onClick={() =>
             withdraw.mutate(target, {
-              onSuccess: () => toast.show(t("handover.withdrawn")),
+              onSuccess: () => toast.show(t(words.withdrawn)),
             })
           }
         >
-          {t("handover.withdraw")}
+          {t(words.withdraw)}
         </Button>
         {failure && (
           <ErrorLine inline>{problemMessageOf(failure, t)}</ErrorLine>
@@ -183,11 +167,11 @@ function OwnerAsk<K extends string>({
   return (
     <div>
       <Button
+        variant={variant}
         pending={ask.isPending}
         onClick={() =>
           ask.mutate(target, {
-            onSuccess: () =>
-              toast.show(t("handover.sent", { owner: ownerName })),
+            onSuccess: () => toast.show(t(words.sent, { owner: ownerName })),
           })
         }
       >

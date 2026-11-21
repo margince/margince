@@ -9,7 +9,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -20,58 +19,33 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// transferableRecords are the record types a colleague may ask to be handed,
-// each with the statement that reads its owner and its name.
-var transferableRecords = map[string]string{
-	entityContact: `SELECT owner_id, full_name FROM contact WHERE id = $1 FOR SHARE`,
-	entityCompany: `SELECT owner_id, display_name FROM company WHERE id = $1 FOR SHARE`,
-}
-
-// TransferRefusal is a record the caller may see but may not ask for. Code is
+// OwnerAskRefusal is a record the caller may see but may not ask about. Code is
 // the contract's machine code; the status is 409.
-type TransferRefusal struct{ Code, Message string }
+type OwnerAskRefusal struct{ Code, Message string }
 
-func (e *TransferRefusal) Error() string { return e.Message }
+func (e *OwnerAskRefusal) Error() string { return e.Message }
 
 // MessageFault answers the code and the sentence the caller acts on.
-func (e *TransferRefusal) MessageFault() (code, message string) { return e.Code, e.Message }
+func (e *OwnerAskRefusal) MessageFault() (code, message string) { return e.Code, e.Message }
 
-func (e *TransferRefusal) Unwrap() error { return apperrors.ErrConflict }
+func (e *OwnerAskRefusal) Unwrap() error { return apperrors.ErrConflict }
 
 var (
-	errTransferUnowned = &TransferRefusal{
+	errAskUnowned = &OwnerAskRefusal{
 		Code:    "unowned",
 		Message: "Nobody owns this record yet. Take ownership of it instead.",
 	}
-	errTransferAlreadyYours = &TransferRefusal{
+	errAskAlreadyYours = &OwnerAskRefusal{
 		Code:    "already_yours_to_change",
 		Message: "You can already change this record, so there is nothing to ask for.",
 	}
 )
 
-// TransferableRecord is the record a request asks for, read under a share lock
+// AskedRecord is the record a request asks about, read under a share lock
 // so its owner cannot move until the request is filed.
-type TransferableRecord struct {
+type AskedRecord struct {
 	OwnerID ids.UUID
 	Label   string
-}
-
-// TransferRequestableTx answers the record's owner when the calling human may
-// ask them to hand it over. Only a contact or a company can be handed over.
-func TransferRequestableTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID) (TransferableRecord, error) {
-	readOwner, ok := transferableRecords[recordType]
-	if !ok {
-		return TransferableRecord{}, &InvalidRecordTypeError{RecordType: recordType}
-	}
-	return OwnerAskableTx(ctx, tx, recordType, id, func() (*ids.UUID, string, error) {
-		var owner *ids.UUID
-		var label string
-		err := tx.QueryRow(ctx, readOwner, id).Scan(&owner, &label)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, "", apperrors.ErrNotFound
-		}
-		return owner, label, err
-	})
 }
 
 // OwnerAskableTx answers the record's owner when the calling human may ask
@@ -82,31 +56,31 @@ func TransferRequestableTx(ctx context.Context, tx pgx.Tx, recordType string, id
 // 403. An unowned record, or one already theirs to change, answers 409.
 func OwnerAskableTx(
 	ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, readOwner func() (*ids.UUID, string, error),
-) (TransferableRecord, error) {
+) (AskedRecord, error) {
 	if err := requireOwnerAsker(ctx, recordType); err != nil {
-		return TransferableRecord{}, err
+		return AskedRecord{}, err
 	}
 	if err := auth.EnsureVisibleLive(ctx, tx, recordType, id); err != nil {
-		return TransferableRecord{}, err
+		return AskedRecord{}, err
 	}
 	owner, label, err := readOwner()
 	if err != nil {
-		return TransferableRecord{}, fmt.Errorf("contacts: reading the owner of the record asked about: %w", err)
+		return AskedRecord{}, fmt.Errorf("contacts: reading the owner of the record asked about: %w", err)
 	}
-	if err := auth.RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, errTransferAlreadyYours); err != nil {
-		return TransferableRecord{}, err
+	if err := auth.RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, errAskAlreadyYours); err != nil {
+		return AskedRecord{}, err
 	}
 	writable, err := auth.WritableLiveBy(ctx, tx, recordType, id)
 	if err != nil {
-		return TransferableRecord{}, err
+		return AskedRecord{}, err
 	}
 	if writable {
-		return TransferableRecord{}, errTransferAlreadyYours
+		return AskedRecord{}, errAskAlreadyYours
 	}
 	if owner == nil {
-		return TransferableRecord{}, errTransferUnowned
+		return AskedRecord{}, errAskUnowned
 	}
-	return TransferableRecord{OwnerID: *owner, Label: label}, nil
+	return AskedRecord{OwnerID: *owner, Label: label}, nil
 }
 
 // requireOwnerAsker admits a user or their agent on a seat that can write,

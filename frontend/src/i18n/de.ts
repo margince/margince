@@ -8178,6 +8178,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "editAccess.ask": "{owner} um Schreibzugriff bitten",
   "editAccess.requested":
     "Du hast {owner} um Schreibzugriff gebeten. Die Anfrage bleibt bis {date} offen.",
+  "editAccess.withdraw": "Anfrage zum Schreibzugriff zurückziehen",
+  "editAccess.sent": "Schreibzugriff bei {owner} angefragt",
+  "editAccess.withdrawn": "Anfrage zum Schreibzugriff zurückgezogen",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Übergeben an…",
   "handover.offerTo": "Übergeben an",

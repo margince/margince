@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import { useMe } from "../../lib/session";
-import { HandoverRequest } from "./handoverrequest";
+import { HandoverRequest } from "./ownerask";
 
 type Seat = "full" | "read";
 

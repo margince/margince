@@ -7980,6 +7980,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "editAccess.ask": "Xin {owner} quyền chỉnh sửa",
   "editAccess.requested":
     "Bạn đã xin {owner} quyền chỉnh sửa. Yêu cầu còn hiệu lực đến {date}.",
+  "editAccess.withdraw": "Rút yêu cầu quyền chỉnh sửa",
+  "editAccess.sent": "Đã xin {owner} quyền chỉnh sửa",
+  "editAccess.withdrawn": "Đã rút yêu cầu quyền chỉnh sửa",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Chuyển giao cho…",
   "handover.offerTo": "Giao cho",

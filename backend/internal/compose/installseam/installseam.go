@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/editaccess"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -65,7 +66,8 @@ func Deals() deals.Installation {
 		EnsureContractsShareCompany: contracts.EnsureDealContractsShareCompany,
 		// approvals owns the pending proposals that follow a deal to its new
 		// owner, so the hand-over lives there and the edge is injected here.
-		FollowOwner: approvals.FollowDealOwnerInTx,
+		// An edit access request put to the previous owner closes with it.
+		FollowOwner: followDealOwner,
 		// contracts owns the contract row rule, which stage evidence asks
 		// before it calls a cited contract openable.
 		ContractVisible: contracts.VisibleClause,
@@ -168,4 +170,13 @@ func dealForNewProject(ctx context.Context, tx pgx.Tx, store *deals.Store, dealI
 		return deal, &projects.DealCompanyMismatchError{}
 	}
 	return deal, nil
+}
+
+// followDealOwner hands the deal's proposals on and closes the edit access
+// requests put to its previous owner.
+func followDealOwner(ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *ids.UUID) error {
+	if err := approvals.FollowDealOwnerInTx(ctx, tx, dealID, from, to); err != nil {
+		return err
+	}
+	return editaccess.FollowOwnerTx(ctx, tx, "deal", dealID, to)
 }
