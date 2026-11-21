@@ -50,33 +50,36 @@ type summaryContext struct {
 // the given time. A project has no company or contacts here.
 func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link, record chatRecord, before time.Time) (summaryContext, error) {
 	var out summaryContext
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		owner, err := liveOwner(ctx, tx, record)
-		if err != nil {
-			return err
-		}
-		if owner != "" {
-			out.facts = append(out.facts, "Owner: "+owner)
-		}
-		readers, err := noteReaders(ctx, tx, link)
-		if err != nil {
-			return err
-		}
-		if link.DealID != nil {
-			facts, err := dealParties(ctx, tx, *link.DealID, readers)
+	// One snapshot, so every group of readers judges the same company and edges.
+	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			owner, err := liveOwner(ctx, tx, record)
 			if err != nil {
 				return err
 			}
-			out.facts = append(out.facts, facts...)
-		}
-		if out.earlier, err = previousNote(ctx, tx, link, before); err != nil {
+			if owner != "" {
+				out.facts = append(out.facts, "Owner: "+owner)
+			}
+			readers, err := noteReaders(ctx, tx, link)
+			if err != nil {
+				return err
+			}
+			if link.DealID != nil {
+				facts, err := dealParties(ctx, tx, *link.DealID, readers)
+				if err != nil {
+					return err
+				}
+				out.facts = append(out.facts, facts...)
+			}
+			if out.earlier, err = previousNote(ctx, tx, link, before); err != nil {
+				return err
+			}
+			if out.place.seats, err = storekit.WorkspaceSeatAddresses(ctx, tx); err != nil {
+				return err
+			}
+			out.place.own, err = capture.TrustedColleagueDomainsTx(ctx, tx)
 			return err
-		}
-		if out.place.seats, err = storekit.WorkspaceSeatAddresses(ctx, tx); err != nil {
-			return err
-		}
-		out.place.own, err = capture.TrustedColleagueDomainsTx(ctx, tx)
-		return err
+		})
 	})
 	return out, err
 }
@@ -151,22 +154,17 @@ func dealParties(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []prin
 	return facts, nil
 }
 
-// readersPerStatement bounds the readers one statement judges. Each reader adds
-// its own scope clauses. One statement for every member of a large workspace
-// outgrows the database's memory.
-const readersPerStatement = 16
-
 // companyName is the deal's company when every reader may read it.
 func companyName(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []principal.Principal) (string, error) {
 	if err := auth.RequireReadForReaders(ctx, "company", readers...); err != nil {
 		return "", withheld(err)
 	}
 	var name string
-	for chunk := range slices.Chunk(readers, readersPerStatement) {
+	for group := range auth.ReaderGroups(readers) {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		deal := arg(dealID)
-		scope, err := auth.ScopeClauseForReaders(ctx, "company", "c", arg, chunk...)
+		scope, err := auth.ScopeClauseForReaders(ctx, "company", "c", arg, group...)
 		if err != nil {
 			return "", withheld(err)
 		}
@@ -192,24 +190,47 @@ type stakeholder struct {
 // in the order the first group of readers sees them.
 func stakeholderNames(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []principal.Principal) ([]string, error) {
 	var shared []stakeholder
-	for chunk := range slices.Chunk(readers, readersPerStatement) {
-		seen, err := stakeholdersReadBy(ctx, tx, dealID, chunk)
-		if err != nil || len(seen) == 0 {
+	first := true
+	for group := range auth.ReaderGroups(readers) {
+		seen, err := stakeholdersReadBy(ctx, tx, dealID, group)
+		if err != nil {
 			return nil, err
 		}
-		if shared == nil {
-			shared = seen
-			continue
+		if first {
+			shared, first = distinctStakeholders(seen), false
+		} else {
+			shared = seenByAll(shared, seen)
 		}
-		shared = slices.DeleteFunc(shared, func(s stakeholder) bool {
-			return !slices.ContainsFunc(seen, func(other stakeholder) bool { return other.id == s.id })
-		})
+		if len(shared) == 0 {
+			return nil, nil
+		}
 	}
 	names := make([]string, 0, min(len(shared), maxContactFacts))
 	for _, s := range shared[:min(len(shared), maxContactFacts)] {
 		names = append(names, s.name)
 	}
 	return names, nil
+}
+
+// distinctStakeholders keeps each contact once, at its first edge.
+func distinctStakeholders(rows []stakeholder) []stakeholder {
+	kept := map[ids.UUID]bool{}
+	return slices.DeleteFunc(rows, func(s stakeholder) bool {
+		if kept[s.id] {
+			return true
+		}
+		kept[s.id] = true
+		return false
+	})
+}
+
+// seenByAll keeps the stakeholders a later group of readers saw too.
+func seenByAll(shared, seen []stakeholder) []stakeholder {
+	later := make(map[ids.UUID]bool, len(seen))
+	for _, s := range seen {
+		later[s.id] = true
+	}
+	return slices.DeleteFunc(shared, func(s stakeholder) bool { return !later[s.id] })
 }
 
 // stakeholdersReadBy are the deal's current stakeholders each of readers may

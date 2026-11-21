@@ -182,7 +182,7 @@ func configSeeders(post func(string, integration.AnyMap) string, unique func(str
 			return post("/v1/record-roles", integration.AnyMap{"label": unique("Sweep"), "record_types": []string{"company"}, "assignee_kinds": []string{"user"}})
 		},
 		"legal_entity": func() string {
-			return post("/v1/legal-entities", integration.AnyMap{"display_name": unique("Sweep"), "legal_name": unique("Sweep GmbH"), "country": "de", "jurisdiction": "zq"})
+			return post("/v1/legal-entities", integration.AnyMap{"display_name": unique("Sweep"), "legal_name": unique("Sweep GmbH"), "country": "de", "jurisdiction": namedValues["jurisdiction"]})
 		},
 		"list": func() string {
 			return post("/v1/lists", integration.AnyMap{"name": unique("Sweep"), "entity_type": "company"})
