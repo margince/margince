@@ -10,14 +10,66 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "01e7199e5e6f2593",
+    "tools": "b5c8835ea37cb420",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:48:29Z"
+  },
   "usage": {
-    "input_tokens": 24,
-    "output_tokens": 2437,
-    "cache_creation_input_tokens": 25341,
-    "cache_read_input_tokens": 972535,
+    "input_tokens": 22,
+    "output_tokens": 2883,
+    "cache_creation_input_tokens": 26865,
+    "cache_read_input_tokens": 881414,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.223
+    "cost_usd": 0.2245
+  },
+  "tools_called": [
+    "create_record",
+    "describe_record_fields",
+    "find_records",
+    "list_tags",
+    "read_tags",
+    "read_workspace",
+    "resolve_entities"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6.5,
+      "min": 6,
+      "max": 7
+    },
+    "turns": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "refused": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 454150.5,
+      "min": 411788,
+      "max": 496513
+    },
+    "output_tokens": {
+      "median": 1441.5,
+      "min": 1375,
+      "max": 1508
+    },
+    "duration_ms": {
+      "median": 14005,
+      "min": 12993,
+      "max": 15017
+    }
   }
 }

@@ -1,0 +1,74 @@
+{
+  "scenario": "case10_finish_the_import",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "7722249916cbb2cd",
+    "tools": "217493b8ed2c34dc",
+    "instructions": "56e0f8ff07afe7d7",
+    "judge": "",
+    "harness": "7901d2face754748",
+    "commit": "3e8b06484a135f3852cc0f216c6034e1c54a29f4",
+    "ran_at": "2026-11-21T13:06:34Z"
+  },
+  "usage": {
+    "input_tokens": 36,
+    "output_tokens": 4366,
+    "cache_creation_input_tokens": 43903,
+    "cache_read_input_tokens": 190411,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.2384
+  },
+  "tools_called": [
+    "create_record",
+    "find_records",
+    "list_approvals",
+    "list_records",
+    "skill_file"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 14,
+      "min": 14,
+      "max": 14
+    },
+    "turns": {
+      "median": 15,
+      "min": 15,
+      "max": 15
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 117175,
+      "min": 109312,
+      "max": 125038
+    },
+    "output_tokens": {
+      "median": 2183,
+      "min": 2121,
+      "max": 2245
+    },
+    "duration_ms": {
+      "median": 24321,
+      "min": 22591,
+      "max": 26051
+    }
+  }
+}

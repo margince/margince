@@ -1,0 +1,79 @@
+{
+  "scenario": "case31_wrong_word_on_the_record",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "e9f2306e4920a36a",
+    "tools": "217493b8ed2c34dc",
+    "instructions": "56e0f8ff07afe7d7",
+    "judge": "",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:14:01Z"
+  },
+  "usage": {
+    "input_tokens": 56,
+    "output_tokens": 5600,
+    "cache_creation_input_tokens": 35637,
+    "cache_read_input_tokens": 364440,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.2351
+  },
+  "tools_called": [
+    "change_tags",
+    "find_records",
+    "get_record_tags",
+    "list_approvals",
+    "list_records",
+    "list_tags",
+    "read_tags",
+    "read_view",
+    "remove_tag",
+    "skill_file"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 19,
+      "min": 18,
+      "max": 20
+    },
+    "turns": {
+      "median": 20,
+      "min": 19,
+      "max": 21
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 200066.5,
+      "min": 180475,
+      "max": 219658
+    },
+    "output_tokens": {
+      "median": 2800,
+      "min": 2661,
+      "max": 2939
+    },
+    "duration_ms": {
+      "median": 33970,
+      "min": 29951,
+      "max": 37989
+    }
+  }
+}

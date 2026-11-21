@@ -10,14 +10,63 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "1230d1b26a0a56d1",
+    "tools": "8b7f08f09bc4505e",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T09:02:23Z"
+  },
   "usage": {
-    "input_tokens": 12,
-    "output_tokens": 994,
-    "cache_creation_input_tokens": 4333,
-    "cache_read_input_tokens": 456485,
+    "input_tokens": 14,
+    "output_tokens": 810,
+    "cache_creation_input_tokens": 4815,
+    "cache_read_input_tokens": 540232,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0729
+    "cost_usd": 0.0814
+  },
+  "tools_called": [
+    "add_capture_exclusion",
+    "change_capture",
+    "describe_router_actions",
+    "read_workspace"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 2.5,
+      "min": 1,
+      "max": 4
+    },
+    "turns": {
+      "median": 3.5,
+      "min": 2,
+      "max": 5
+    },
+    "refused": {
+      "median": 1,
+      "min": 0,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 272530.5,
+      "min": 154956,
+      "max": 390105
+    },
+    "output_tokens": {
+      "median": 405,
+      "min": 229,
+      "max": 581
+    },
+    "duration_ms": {
+      "median": 6694.5,
+      "min": 4342,
+      "max": 9047
+    }
   }
 }

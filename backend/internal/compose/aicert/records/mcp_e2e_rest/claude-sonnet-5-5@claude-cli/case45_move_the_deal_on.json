@@ -1,0 +1,78 @@
+{
+  "scenario": "case45_move_the_deal_on",
+  "criteria": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "b8934ba17c77ac6e",
+    "tools": "217493b8ed2c34dc",
+    "instructions": "56e0f8ff07afe7d7",
+    "judge": "claude-haiku-5-5",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:20:15Z"
+  },
+  "usage": {
+    "input_tokens": 40,
+    "output_tokens": 5354,
+    "cache_creation_input_tokens": 32800,
+    "cache_read_input_tokens": 181251,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.2029
+  },
+  "tools_called": [
+    "change_state",
+    "find_records",
+    "list_approvals",
+    "list_records",
+    "progress_deal",
+    "read_view",
+    "skill_file"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 14.5,
+      "min": 13,
+      "max": 16
+    },
+    "turns": {
+      "median": 15.5,
+      "min": 14,
+      "max": 17
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 107045.5,
+      "min": 103659,
+      "max": 110432
+    },
+    "output_tokens": {
+      "median": 2677,
+      "min": 2470,
+      "max": 2884
+    },
+    "duration_ms": {
+      "median": 25684,
+      "min": 24574,
+      "max": 26794
+    }
+  }
+}

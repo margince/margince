@@ -10,14 +10,66 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "bc3c36379b22a3ad",
+    "tools": "6a00a274020a56ea",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:09:10Z"
+  },
   "usage": {
-    "input_tokens": 12,
-    "output_tokens": 1101,
-    "cache_creation_input_tokens": 7728,
-    "cache_read_input_tokens": 459103,
+    "input_tokens": 20,
+    "output_tokens": 1679,
+    "cache_creation_input_tokens": 20342,
+    "cache_read_input_tokens": 800771,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0879
+    "cost_usd": 0.1783
+  },
+  "tools_called": [
+    "change_settings",
+    "describe_router_actions",
+    "describe_views",
+    "list_notification_preferences",
+    "read_view",
+    "read_workspace",
+    "update_automation"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "turns": {
+      "median": 7,
+      "min": 7,
+      "max": 7
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 410566.5,
+      "min": 410535,
+      "max": 410598
+    },
+    "output_tokens": {
+      "median": 839.5,
+      "min": 825,
+      "max": 854
+    },
+    "duration_ms": {
+      "median": 11228,
+      "min": 10744,
+      "max": 11712
+    }
   }
 }

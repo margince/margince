@@ -11,14 +11,64 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "7722249916cbb2cd",
+    "tools": "bb43c0cbad588045",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "7901d2face754748",
+    "commit": "3e8b06484a135f3852cc0f216c6034e1c54a29f4",
+    "ran_at": "2026-11-21T13:05:04Z"
+  },
   "usage": {
-    "input_tokens": 30,
-    "output_tokens": 3544,
-    "cache_creation_input_tokens": 33279,
-    "cache_read_input_tokens": 1244267,
+    "input_tokens": 20,
+    "output_tokens": 2165,
+    "cache_creation_input_tokens": 97704,
+    "cache_read_input_tokens": 740431,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.293
+    "cost_usd": 0.4865
+  },
+  "tools_called": [
+    "commit_import",
+    "describe_import_format",
+    "preview_import",
+    "read_import",
+    "read_import_report"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 419077.5,
+      "min": 419068,
+      "max": 419087
+    },
+    "output_tokens": {
+      "median": 1082.5,
+      "min": 1017,
+      "max": 1148
+    },
+    "duration_ms": {
+      "median": 13510,
+      "min": 12250,
+      "max": 14770
+    }
   }
 }

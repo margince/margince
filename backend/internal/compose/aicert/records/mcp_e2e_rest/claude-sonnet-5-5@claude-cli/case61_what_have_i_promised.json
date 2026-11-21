@@ -12,13 +12,66 @@
   "search": "semantic",
   "door": "rest",
   "self_judged": true,
+  "stamp": {
+    "scenario": "4a3a4db6731eeacd",
+    "tools": "217493b8ed2c34dc",
+    "instructions": "56e0f8ff07afe7d7",
+    "judge": "",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:25:19Z"
+  },
   "usage": {
-    "input_tokens": 20,
-    "output_tokens": 1624,
-    "cache_creation_input_tokens": 46966,
-    "cache_read_input_tokens": 275138,
+    "input_tokens": 30,
+    "output_tokens": 3398,
+    "cache_creation_input_tokens": 50678,
+    "cache_read_input_tokens": 112135,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.2317
+    "cost_usd": 0.248
+  },
+  "tools_called": [
+    "find_records",
+    "get_worklist",
+    "list_approvals",
+    "list_records",
+    "read_attention",
+    "read_view",
+    "read_workspace",
+    "review_commitments",
+    "skill_file"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 10,
+      "min": 7,
+      "max": 13
+    },
+    "turns": {
+      "median": 11,
+      "min": 8,
+      "max": 14
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 81421.5,
+      "min": 45507,
+      "max": 117336
+    },
+    "output_tokens": {
+      "median": 1699,
+      "min": 943,
+      "max": 2455
+    },
+    "duration_ms": {
+      "median": 18538,
+      "min": 13758,
+      "max": 23318
+    }
   }
 }

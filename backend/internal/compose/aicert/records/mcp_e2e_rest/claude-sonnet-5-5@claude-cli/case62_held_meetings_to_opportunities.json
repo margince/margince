@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 0,
+  "passed": 2,
   "runs": 2,
   "pass_at": 2,
   "driver": "claude:cli",
@@ -12,13 +12,61 @@
   "search": "semantic",
   "door": "rest",
   "self_judged": true,
+  "stamp": {
+    "scenario": "d47f8a817c6ab591",
+    "tools": "217493b8ed2c34dc",
+    "instructions": "56e0f8ff07afe7d7",
+    "judge": "claude-haiku-5-5",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:26:17Z"
+  },
   "usage": {
-    "input_tokens": 28,
-    "output_tokens": 4310,
-    "cache_creation_input_tokens": 101756,
-    "cache_read_input_tokens": 558263,
+    "input_tokens": 42,
+    "output_tokens": 3553,
+    "cache_creation_input_tokens": 22081,
+    "cache_read_input_tokens": 172401,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.506
+    "cost_usd": 0.1412
+  },
+  "tools_called": [
+    "read_reports",
+    "read_view",
+    "run_report",
+    "skill_file"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 11,
+      "min": 10,
+      "max": 12
+    },
+    "turns": {
+      "median": 12,
+      "min": 11,
+      "max": 13
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 97262,
+      "min": 89516,
+      "max": 105008
+    },
+    "output_tokens": {
+      "median": 1776.5,
+      "min": 1763,
+      "max": 1790
+    },
+    "duration_ms": {
+      "median": 20476.5,
+      "min": 20154,
+      "max": 20799
+    }
   }
 }

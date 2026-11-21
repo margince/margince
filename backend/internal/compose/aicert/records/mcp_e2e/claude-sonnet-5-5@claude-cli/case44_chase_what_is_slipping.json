@@ -12,14 +12,73 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "4cb359cf4623858d",
+    "tools": "72ad1c1f63c48fc6",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:36:43Z"
+  },
   "usage": {
-    "input_tokens": 34,
-    "output_tokens": 7808,
-    "cache_creation_input_tokens": 27778,
-    "cache_read_input_tokens": 1483865,
+    "input_tokens": 26,
+    "output_tokens": 7773,
+    "cache_creation_input_tokens": 33582,
+    "cache_read_input_tokens": 1152900,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.3376
+    "cost_usd": 0.3274
+  },
+  "tools_called": [
+    "catch_me_up_on",
+    "change_activities",
+    "draft_email",
+    "draft_outbound",
+    "find_records",
+    "list_records",
+    "preview_account_send_authorization",
+    "preview_send_authorization",
+    "read_attention",
+    "read_context",
+    "read_record",
+    "search_records",
+    "whats_slipping_this_week",
+    "whoami"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 17,
+      "min": 16,
+      "max": 18
+    },
+    "turns": {
+      "median": 18,
+      "min": 17,
+      "max": 19
+    },
+    "refused": {
+      "median": 2.5,
+      "min": 2,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 593254,
+      "min": 546105,
+      "max": 640403
+    },
+    "output_tokens": {
+      "median": 3886.5,
+      "min": 3854,
+      "max": 3919
+    },
+    "duration_ms": {
+      "median": 37525.5,
+      "min": 36727,
+      "max": 38324
+    }
   }
 }

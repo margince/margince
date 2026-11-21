@@ -3,21 +3,72 @@
   "criteria": [
     1
   ],
-  "passed": 2,
+  "passed": 0,
   "runs": 2,
   "pass_at": 2,
   "driver": "claude:cli",
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "ef530ef29a2fb963",
+    "tools": "647e2136a01f59e1",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T09:04:12Z"
+  },
   "usage": {
     "input_tokens": 12,
-    "output_tokens": 2104,
-    "cache_creation_input_tokens": 7202,
-    "cache_read_input_tokens": 484681,
+    "output_tokens": 2114,
+    "cache_creation_input_tokens": 7817,
+    "cache_read_input_tokens": 489883,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0983
+    "cost_usd": 0.1014
+  },
+  "tools_called": [
+    "find_records",
+    "get_contact_consent",
+    "get_contact_consent_guard",
+    "list_contact_stops",
+    "read_details",
+    "search_records"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 248856,
+      "min": 248854,
+      "max": 248858
+    },
+    "output_tokens": {
+      "median": 1057,
+      "min": 1011,
+      "max": 1103
+    },
+    "duration_ms": {
+      "median": 10622,
+      "min": 10114,
+      "max": 11130
+    }
   }
 }

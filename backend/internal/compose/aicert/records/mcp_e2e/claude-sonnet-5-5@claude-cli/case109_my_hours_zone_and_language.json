@@ -1,0 +1,78 @@
+{
+  "scenario": "case109_my_hours_zone_and_language",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "mcp",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "22e893a34cec9b84",
+    "tools": "51bb391cb1dc53fa",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "7901d2face754748",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:11:06Z"
+  },
+  "usage": {
+    "input_tokens": 14,
+    "output_tokens": 1785,
+    "cache_creation_input_tokens": 14343,
+    "cache_read_input_tokens": 552491,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.1305
+  },
+  "tools_called": [
+    "change_my_settings",
+    "describe_router_actions",
+    "read_my_working_hours",
+    "read_workspace",
+    "save_my_locale",
+    "save_my_timezone",
+    "save_my_working_hours",
+    "whoami"
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "turns": {
+      "median": 6.5,
+      "min": 6,
+      "max": 7
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 283424,
+      "min": 242484,
+      "max": 324364
+    },
+    "output_tokens": {
+      "median": 892.5,
+      "min": 825,
+      "max": 960
+    },
+    "duration_ms": {
+      "median": 8983.5,
+      "min": 8103,
+      "max": 9864
+    }
+  }
+}
