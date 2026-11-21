@@ -297,6 +297,7 @@ internal/compose/signalextract_test.go 2
 internal/compose/signalextractwindow_integration_test.go 1
 internal/compose/sitereadstore_integration_test.go 2
 internal/compose/stageevidencetrigger_integration_test.go 19
+internal/compose/strengthdates/zonemove_integration_test.go 2
 internal/compose/systemhealthcost_bench_test.go 1
 internal/compose/systemreminder_integration_test.go 8
 internal/compose/tagscout_integration_test.go 18
@@ -420,7 +421,7 @@ internal/modules/contacts/occurrenceimage_integration_test.go 1
 internal/modules/contacts/profilefieldprecedence_integration_test.go 1
 internal/modules/contacts/promoteconsent_integration_test.go 1
 internal/modules/contacts/strengthasof_integration_test.go 2
-internal/modules/contacts/strengthstored_integration_test.go 5
+internal/modules/contacts/strengthstored_integration_test.go 1
 internal/modules/contacts/vcardimport_integration_test.go 1
 internal/modules/deals/edgegrant_test.go 5
 internal/modules/deals/fxrates_integration_test.go 2

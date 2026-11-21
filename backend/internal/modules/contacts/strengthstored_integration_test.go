@@ -102,7 +102,7 @@ func (e *dedupeEnv) assertStoredIsLive(t *testing.T, what string, contactID ids.
 
 func TestTheStoredStrengthDatesAreTheLiveFold(t *testing.T) {
 	e := setupDedupe(t)
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	now := present()
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
 	contact := e.seedVisibleContact(t, "Stored Strength Contact")
 	if got := e.storedDatesOf(t, contact); !got.folded || got.interaction != nil {
@@ -145,7 +145,7 @@ func TestTheStoredStrengthDatesAreTheLiveFold(t *testing.T) {
 // merges it. After each the stored dates are the history's.
 func TestEveryWriterKeepsTheStoredDatesAtTheFold(t *testing.T) {
 	e := setupDedupe(t)
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	now := present()
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
 	ann := e.seedVisibleContact(t, "Ann Stored")
 	ben := e.seedVisibleContact(t, "Ben Stored")
@@ -197,7 +197,7 @@ func TestEveryWriterKeepsTheStoredDatesAtTheFold(t *testing.T) {
 // that carries no sender row. So the first contact's inbound date comes down.
 func TestAnAddressReassignedLowersTheStoredInbound(t *testing.T) {
 	e := setupDedupe(t)
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	now := present()
 	ann := e.seedVisibleContact(t, "Ann Address")
 	bea := e.seedVisibleContact(t, "Bea Address")
 	e.execTx(e.as(), t, `INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, 'ann@example.test', 'manual', 'human:test')`, ann)
@@ -219,7 +219,7 @@ func TestAnAddressReassignedLowersTheStoredInbound(t *testing.T) {
 // stored dates have not, so it folds the history. One behind it reads the row.
 func TestAReadAheadOfTheDatabaseFoldsTheHistory(t *testing.T) {
 	e := setupDedupe(t)
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	now := present()
 	contact := e.seedVisibleContact(t, "Clock Contact")
 	e.seedInteraction(t, contact, now.AddDate(0, 0, -4), "inbound")
 	planted := now.AddDate(0, 0, -50)
@@ -248,11 +248,15 @@ func TestAReadAheadOfTheDatabaseFoldsTheHistory(t *testing.T) {
 
 func ptr(at time.Time) *time.Time { return &at }
 
+// present is the wall clock: the stored dates answer only for the database's
+// own now(), which a moved fixture clock cannot reach.
+func present() time.Time { return time.Now().UTC().Truncate(time.Microsecond) }
+
 // An import writes a batch of messages in a few statements. Each statement
 // moves the contact's stored dates in one UPDATE, whatever the batch size.
 func TestAnImportBatchUpdatesTheContactOncePerStatement(t *testing.T) {
 	e := setupDedupe(t)
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	now := present()
 	contact := e.seedVisibleContact(t, "Batch Contact")
 	e.seedInteraction(t, contact, now.AddDate(0, 0, -1), "outbound")
 	ctx := e.as()
@@ -301,7 +305,7 @@ func TestAnImportBatchUpdatesTheContactOncePerStatement(t *testing.T) {
 // the mail that seat imported on that thread, and no other pair.
 func TestAStatementHoldingSeveralSeatsThreadsLowersEachContact(t *testing.T) {
 	e := setupDedupe(t)
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	now := present()
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
 	held := map[ids.ContactID]time.Time{}
 	seed := func(name, thread string, seat ids.UUID) ids.ContactID {

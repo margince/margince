@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package strengthdates folds the stored strength dates of every live contact
-// that existed before the dates were stored. Until a contact is folded its
-// strength reads fold its history, so the task changes no number a user sees.
+// whose dates are not folded. Those are the contacts that existed before the
+// dates were stored, and every contact after a move of the installation zone.
+// Until a contact is folded its strength reads fold its history, so no number
+// a user sees changes.
 package strengthdates
 
 import (
@@ -13,8 +15,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
@@ -60,4 +64,33 @@ func foldStep() datatask.Step {
 			return datatask.AdvanceUUID(in, inspected, len(selected))
 		},
 	}
+}
+
+// foldBatch and foldBatches bound one pass of the clock refold job. That folds
+// an installation within hours of a zone move, without holding the job.
+const (
+	foldBatch   = 200
+	foldBatches = 10
+)
+
+// FoldUnfolded folds up to foldBatches batches of unfolded live contacts, one
+// transaction each, and answers how many it folded.
+func FoldUnfolded(ctx context.Context, db *database.DB) (int, error) {
+	folded := 0
+	for range foldBatches {
+		var batch []ids.UUID
+		if err := db.Tx(ctx, func(tx pgx.Tx) (err error) {
+			if batch, err = contacts.UnfoldedContactsTx(ctx, tx, foldBatch); err != nil {
+				return err
+			}
+			return contacts.RefreshStrengthDatesTx(ctx, tx, batch)
+		}); err != nil {
+			return folded, err
+		}
+		folded += len(batch)
+		if len(batch) < foldBatch {
+			break
+		}
+	}
+	return folded, nil
 }

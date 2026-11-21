@@ -21,9 +21,14 @@ import (
 )
 
 // strengthPresentSlack is how far the caller's now may trail the database's
-// and still be the present the stored dates were folded at. A caller ahead of
-// the database folds live: its now may already admit what the dates left out.
+// and still be the present the stored dates were folded at.
 const strengthPresentSlack = 5 * time.Minute
+
+// strengthClockSkew is how far the caller's now may run ahead of the
+// database's: the skew between the two hosts' clocks. A request takes its now
+// before its transaction begins and can still show it. A caller further ahead
+// folds the history, because its now may admit what the dates left out.
+const strengthClockSkew = time.Second
 
 // storedPrecisionSQL reads a stored day flag back as the precision it records.
 func storedPrecisionSQL(day string) string {
@@ -47,7 +52,8 @@ func storedStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, n
 	}
 	from, at := fmt.Sprintf("$%d", arg(now.AddDate(0, 0, -relStrengthWindowDays))), fmt.Sprintf("$%d::timestamptz", arg(now))
 	slack := fmt.Sprintf("make_interval(secs => $%d)", arg(strengthPresentSlack.Seconds()))
-	usable := `(p.strength_folded AND ` + at + ` BETWEEN now() - ` + slack + ` AND now()
+	skew := fmt.Sprintf("make_interval(secs => $%d)", arg(strengthClockSkew.Seconds()))
+	usable := `(p.strength_folded AND ` + at + ` BETWEEN now() - ` + slack + ` AND now() + ` + skew + `
 		          AND (p.strength_last_interaction_at IS NULL OR p.strength_last_interaction_at <= ` + at + `))`
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT p.id, `+usable+`,
@@ -109,4 +115,41 @@ func RefreshStrengthDatesTx(ctx context.Context, tx pgx.Tx, contacts []ids.UUID)
 		return fmt.Errorf("contacts: refolding stored strength dates: %w", err)
 	}
 	return nil
+}
+
+// UnfoldStrengthDatesTx marks every live contact's stored dates unfolded, so
+// readers fold the history until the clock refold has folded them again. A
+// move of the installation zone calls it. Whether a day entry has happened
+// depends on the zone's today, so dates folded in the old zone may be wrong.
+func UnfoldStrengthDatesTx(ctx context.Context, tx pgx.Tx) error {
+	if err := auth.Require(ctx, "installation_settings", principal.ActionUpdate); err != nil {
+		return err
+	}
+	for _, statement := range []string{
+		`SELECT set_config('margince.last_activity_move', 'on', true)`,
+		`UPDATE contact SET strength_folded = false WHERE strength_folded AND archived_at IS NULL`,
+		`SELECT set_config('margince.last_activity_move', '', true)`,
+	} {
+		if _, err := tx.Exec(ctx, statement); err != nil {
+			return fmt.Errorf("contacts: marking stored strength dates unfolded: %w", err)
+		}
+	}
+	return nil
+}
+
+// UnfoldedContactsTx answers up to limit live contacts whose stored dates
+// are not folded, in id order.
+func UnfoldedContactsTx(ctx context.Context, tx pgx.Tx, limit int) ([]ids.UUID, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM contact WHERE NOT strength_folded AND archived_at IS NULL ORDER BY id LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading unfolded strength dates: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }

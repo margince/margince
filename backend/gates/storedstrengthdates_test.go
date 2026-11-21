@@ -26,8 +26,8 @@ var strengthDatesFunctionRe = regexp.MustCompile(`(?i)(CREATE\s+(?:OR\s+REPLACE\
 // strengthDatesUntriggered are the tables the read reaches with no trigger
 // that refolds the dates, each with why.
 var strengthDatesUntriggered = gatekit.Waive(map[string]string{
-	"setting": "the installation zone moves day boundaries for every stored clock at once; " +
-		"no last-activity clock refolds on it either",
+	"setting": "the fold reads only the installation.timezone row, and its writer marks every contact's " +
+		"dates unfolded through identity's zone hook, so readers fold the history until the clock refold has folded them again",
 })
 
 func TestStoredStrengthDatesFoldAsTheLiveRead(t *testing.T) {
