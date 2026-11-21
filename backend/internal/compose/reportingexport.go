@@ -48,7 +48,7 @@ func (s reportingExportHandlers) ExportReportingEdition(w http.ResponseWriter, r
 		httperr.Write(w, r, err)
 		return
 	}
-	names, err := s.service.ReaderCopy(r.Context())
+	names, err := s.service.ReaderLanguage(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
