@@ -4614,6 +4614,10 @@ export interface paths {
          *     deal as it stands: a retried call must not close a closed deal again and move its
          *     close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
          *     A `to_stage_id` that names a stage nobody has answers 422 naming `to_stage_id`.
+         *     A move past a stage that waits for legal answers 422 `legal_review_required` on
+         *     `to_stage_id`. Its `params.review_state` names the next step: `none` (request a review),
+         *     `pending` (legal has not answered yet), `changes_needed` (make the changes and request
+         *     again) or `terms_changed` (the amount or offer changed since the approval).
          */
         post: operations["advanceDeal"];
         delete?: never;
@@ -50502,7 +50506,7 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
-            /** @description Active memberships; populated by listTeams. */
+            /** @description Active and invited memberships; populated by listTeams. */
             member_count?: number;
         };
         AssistantProfile: {

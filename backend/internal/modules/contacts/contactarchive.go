@@ -51,12 +51,12 @@ func (s *Store) ArchiveContact(
 	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
 	var out crmcontracts.Contact
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		if err := archiveContactInTx(ctx, tx, id, ifVersion, options); err != nil {
 			return err
 		}

@@ -273,7 +273,7 @@ func (s *Store) writeLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in Link
 	stamp := []storekit.FieldStamp{{Field: fieldTitle, EvidenceRef: &evidence}}
 	if f.UseAsTitle && f.Position != "" && f.Position != f.ContactTitle {
 		contact := ids.ContactID{UUID: in.ContactID}
-		if _, err := s.updateContactInTx(ctx, tx, contact, UpdateContactInput{Title: &f.Position}, in.Columns.cols); err != nil {
+		if _, err := s.writeContactInTx(ctx, tx, contact, UpdateContactInput{Title: &f.Position}, in.Columns.cols); err != nil {
 			return out, err
 		}
 		if err := storekit.StampFields(ctx, tx, entityContact, in.ContactID, provenance.LinkedInExportSource, capturedBy, stamp); err != nil {

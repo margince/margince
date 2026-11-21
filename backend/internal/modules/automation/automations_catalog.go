@@ -227,8 +227,8 @@ func Catalog() []CatalogEntry {
 }
 
 // seededCatalogEntries is UAT.md:72's pinned six — the exact set
-// SeedStarterAutomationsTx (automations.go) enrolls, ENABLED, into
-// every fresh workspace. Each Key names the workflow.Handler
+// SeedStarterAutomationsTx (automations.go) enrolls into
+// every fresh workspace, switched on only when its setup is complete. Each Key names the workflow.Handler
 // automation's own StarterWorkflows registers under it.
 func seededCatalogEntries() []CatalogEntry {
 	return []CatalogEntry{

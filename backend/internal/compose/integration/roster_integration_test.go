@@ -80,7 +80,7 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	e.BootstrapWorkspace(t) // workspace "fable-e2e" + admin ada@example.com, session in the jar
 
 	wsA := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
-	rep, bob, deskTeam := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	rep, bob, deskTeam, invited, gone := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	seedInWorkspace(
 		t, e, wsA,
 		stmt(`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'rep@example.com', 'Rep One')`, rep),
@@ -88,6 +88,10 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 		stmt(`INSERT INTO team (id, name) VALUES ($1, 'Deal Desk')`, deskTeam),
 		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, deskTeam, rep),
 		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, deskTeam, bob),
+		stmt(`INSERT INTO app_user (id, email, display_name, status) VALUES ($1, 'inv@example.com', 'Inv Three', 'invited')`, invited),
+		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, deskTeam, invited),
+		stmt(`INSERT INTO app_user (id, email, display_name, status) VALUES ($1, 'gone@example.com', 'Gone Four', 'deactivated')`, gone),
+		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, deskTeam, gone),
 	)
 
 	// A second workspace's member used to be seeded here, holding a uniquely
@@ -159,7 +163,7 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 		t.Fatalf("q=REP → %+v, want only rep@example.com", filtered.Data)
 	}
 
-	// (d) Teams carry the active membership count.
+	// (d) Teams carry the active and invited membership count.
 	var teams struct {
 		Data []rosterTeam `json:"data"`
 	}
@@ -175,8 +179,9 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	if desk == nil {
 		t.Fatalf("teams missing Deal Desk: %+v", teams.Data)
 	}
-	if desk.MemberCount != 2 {
-		t.Errorf("Deal Desk member_count = %d, want 2", desk.MemberCount)
+	// Two active members and one invited; the deactivated seat is not counted.
+	if desk.MemberCount != 3 {
+		t.Errorf("Deal Desk member_count = %d, want 3", desk.MemberCount)
 	}
 }
 
@@ -277,6 +282,42 @@ func assertRosterUnauthorized(t *testing.T, e *apptest.AppEnv) {
 		}
 		if err := resp.Body.Close(); err != nil {
 			t.Errorf("closing body for %s: %v", path, err)
+		}
+	}
+}
+
+// The count is the seats the team dialog lists: humans, active or invited. An
+// agent, a suspended and an archived seat on the team count for nobody.
+func TestTeamMemberCountLeavesOutAgentSuspendedAndArchivedSeats(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	wsA := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
+	team, rep, invited, bot, suspended, archived := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	seedInWorkspace(
+		t, e, wsA,
+		stmt(`INSERT INTO team (id, name) VALUES ($1, 'Counted')`, team),
+		stmt(`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'rep@example.com', 'Rep One')`, rep),
+		stmt(`INSERT INTO app_user (id, email, display_name, status) VALUES ($1, 'inv@example.com', 'Inv Two', 'invited')`, invited),
+		stmt(`INSERT INTO app_user (id, email, display_name, is_agent) VALUES ($1, 'bot@example.com', 'Bot Five', true)`, bot),
+		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, team, bot),
+		stmt(`INSERT INTO app_user (id, email, display_name, status) VALUES ($1, 'sus@example.com', 'Sus Six', 'suspended')`, suspended),
+		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, team, suspended),
+		stmt(`INSERT INTO app_user (id, email, display_name, archived_at) VALUES ($1, 'arch@example.com', 'Arch Seven', now())`, archived),
+		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, team, archived),
+		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, team, rep),
+		stmt(`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, team, invited),
+	)
+
+	var teams struct {
+		Data []rosterTeam `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/teams", nil, nil, &teams); status != http.StatusOK {
+		t.Fatalf("list teams → %d, want 200", status)
+	}
+	for _, tm := range teams.Data {
+		if tm.Name == "Counted" && tm.MemberCount != 2 {
+			t.Errorf("Counted member_count = %d, want 2 (active and invited human seats)", tm.MemberCount)
 		}
 	}
 }

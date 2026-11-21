@@ -3,10 +3,22 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
-import { throwProblem } from "../../lib/problem";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { useBookingTitle } from "./booking-common";
+
+// The contract answers a spent or unknown token with 422; any other failure
+// (rate limit, network, 5xx) says nothing about the link.
+class SpentLinkError extends Error {}
+
+function refuse(error: unknown, status: number): never {
+  if (status === 422) {
+    throw new SpentLinkError();
+  }
+  throwProblem(error);
+}
 
 type Preview = components["schemas"]["BookingReturnPreview"];
 
@@ -24,24 +36,27 @@ export function BookingReturnScreen({
     queryKey: ["booking-return", hostSlug, token],
     retry: false,
     queryFn: async (): Promise<Preview> => {
-      const { data, error } = await api.POST(
+      const { data, error, response } = await api.POST(
         "/public/booking/{host_slug}/return/preview",
         link,
       );
-      if (error) throwProblem(error);
+      if (error) refuse(error, response.status);
       return data;
     },
   });
   const confirm = useMutation({
     mutationFn: async () => {
-      const { error } = await api.POST(
+      const { error, response } = await api.POST(
         "/public/booking/{host_slug}/return/confirm",
         link,
       );
-      if (error) throwProblem(error);
+      if (error) refuse(error, response.status);
     },
   });
-  const spent = preview.isError || confirm.isError;
+  const spent =
+    preview.error instanceof SpentLinkError ||
+    confirm.error instanceof SpentLinkError;
+  const failure = spent ? null : (preview.error ?? confirm.error);
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
@@ -60,6 +75,19 @@ export function BookingReturnScreen({
                 kind="outcome"
                 title={t("book.returnSpent")}
               />
+            )}
+            {failure && (
+              <ErrorLine
+                actions={
+                  preview.error ? (
+                    <Button onClick={() => preview.refetch()}>
+                      {t("prefs.unsub.retry")}
+                    </Button>
+                  ) : undefined
+                }
+              >
+                {problemMessageOf(failure, t)}
+              </ErrorLine>
             )}
             {preview.data && !confirm.isSuccess && !spent && (
               <>

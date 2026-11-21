@@ -69076,7 +69076,7 @@ type Team struct {
 	CreatedAt  *time.Time         `json:"created_at,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 
-	// MemberCount Active memberships; populated by listTeams.
+	// MemberCount Active and invited memberships; populated by listTeams.
 	MemberCount  *int                `json:"member_count,omitempty"`
 	Name         string              `json:"name"`
 	ParentTeamId *openapi_types.UUID `json:"parent_team_id,omitempty"`

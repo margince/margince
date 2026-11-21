@@ -322,7 +322,7 @@ describe("the page speaks the language the mail was sent in", () => {
   });
 });
 
-const VI_INVALID_LINK = VIETNAMESE["confirm.invalidLink"];
+const VI_INVALID_LINK = VIETNAMESE["confirm.deadLinkBody"];
 
 describe("an expired link still speaks the language its mail was sent in", () => {
   afterEach(() => {

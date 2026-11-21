@@ -114,6 +114,17 @@ func (e *DetailedError) WithMax(limit int) *DetailedError {
 	return e
 }
 
+// fieldMaxer is a FieldFault that also states the limit it refused at. It is
+// declared here rather than in apperrors because only this mapping reads it.
+type fieldMaxer interface {
+	FieldMax() int
+}
+
+// fieldParamser is a FieldFault that also states the values its code names.
+type fieldParamser interface {
+	FieldParams() map[string]string
+}
+
 // WithParams states the values a one-field refusal's code names, so a screen
 // can word the code in the reader's language without reading the message.
 func (e *DetailedError) WithParams(params map[string]string) *DetailedError {

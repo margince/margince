@@ -4,6 +4,7 @@
 package httperr
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -101,5 +102,29 @@ func TestAFieldRefusalPutsItsParamsOnTheWire(t *testing.T) {
 	}
 	if fault := firstFieldFault(t, Validation("file", "not_utf8", "Save it as UTF-8.").WithParams(nil)); fault["params"] != nil {
 		t.Errorf("params = %v, want no key for a refusal that names no value", fault["params"])
+	}
+}
+
+// namedStateRefusal is a typed refusal whose code names a value.
+type namedStateRefusal struct{}
+
+func (e *namedStateRefusal) Error() string { return "the review is still waiting" }
+func (e *namedStateRefusal) FieldFault() (field, code, message string) {
+	return "to_stage_id", "legal_review_required", e.Error()
+}
+
+func (e *namedStateRefusal) FieldParams() map[string]string {
+	return map[string]string{"review_state": "pending"}
+}
+
+func TestATypedFieldRefusalPutsItsParamsOnTheWire(t *testing.T) {
+	t.Parallel()
+	fault := firstFieldFault(t, fmt.Errorf("advance: %w", &namedStateRefusal{}))
+	params, ok := fault["params"].(map[string]any)
+	if !ok || params["review_state"] != "pending" || len(params) != 1 {
+		t.Errorf("params = %v, want {review_state: pending}", fault["params"])
+	}
+	if fault := firstFieldFault(t, &unlimitedNote{}); fault["params"] != nil {
+		t.Errorf("params = %v, want no key for a type that names no value", fault["params"])
 	}
 }
