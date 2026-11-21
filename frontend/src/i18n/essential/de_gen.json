@@ -2044,6 +2044,7 @@
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
+  "approval.kind.edit_access": "Schreibzugriff geben",
   "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",

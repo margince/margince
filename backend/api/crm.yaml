@@ -29075,6 +29075,78 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /records/{record_type}/{id}/edit-access-request:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company, deal, lead, project] }
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: requestEditAccess
+      x-mcp-tool: { verb: request_edit_access, router: change_access, action: request_edit_access, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Ask a record's owner for edit access.
+      description: |
+        For a record the caller can see but not change, because a colleague owns it. The request is an
+        `edit_access` approval in the owner's inbox; only the owner can decide it, and it stays open for
+        7 days. Only the owner can approve it, in person; their agent may decline it. When the owner
+        approves, the caller gets a write share on the record and the owner stays its owner. The caller is
+        told when it is declined or expires, or closed because the record changed owner. A second press
+        while a request is open answers that request with `200`; a new request answers `201`. `409` names
+        why nothing can be asked for: `unowned`, `already_yours_to_change`, `owner_unavailable` (the owner
+        is suspended or has left; ask an administrator), or `declined` (this owner declined the same
+        request before).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The request already open for this record and caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '201':
+          description: The request is in the owner's inbox.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `declined`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Identity]
+      operationId: getEditAccessRequest
+      x-mcp-tool: { verb: get_edit_access_request, router: read_details, action: edit_access_request, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The caller's open request for edit access to this record.
+      responses:
+        '200':
+          description: The caller's open request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: withdrawEditAccessRequest
+      x-mcp-tool: { verb: withdraw_edit_access_request, router: change_access, action: withdraw_edit_access_request, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Withdraw the caller's open request for edit access to this record.
+      description: The card leaves the owner's inbox. `404` when the caller has no open request.
+      responses:
+        '204': { description: The request is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /records/{record_type}/{id}/ownership-offer:
     parameters:
       - name: record_type
@@ -76279,6 +76351,16 @@ components:
         record_type: { type: string, enum: [contact, company], x-extensible-enum: true }
         record_id: { type: string, format: uuid }
         to_id: { type: string, format: uuid, description: The colleague the offer is put to. }
+        status: { type: string, enum: [pending], x-extensible-enum: true }
+        expires_at: { type: string, format: date-time }
+    EditAccessRequest:
+      type: object
+      required: [approval_id, record_type, record_id, owner_id, status, expires_at]
+      properties:
+        approval_id: { type: string, format: uuid }
+        record_type: { type: string, enum: [contact, company, deal, lead, project], x-extensible-enum: true }
+        record_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid, description: The owner the request is put to. }
         status: { type: string, enum: [pending], x-extensible-enum: true }
         expires_at: { type: string, format: date-time }
     OwnershipRequest:

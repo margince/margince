@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/editaccess"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -46,13 +47,16 @@ func contactShareRequests(pool *pgxpool.Pool) contactShareQueue {
 type contactShareQueue struct{ pool *pgxpool.Pool }
 
 // FollowOwnerTx withdraws the record's requests that name another owner. A
-// withdrawn handover request leaves its decider's queue, and the colleague who
-// asked is told the record changed hands.
+// withdrawn handover or edit access request leaves its decider's queue, and the
+// colleague who asked is told the record changed hands.
 func (q contactShareQueue) FollowOwnerTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, to *ids.UUID) error {
 	if recordType == string(recordTypeContact) {
 		if _, err := approvals.FollowContactOwnerInTx(ctx, tx, id, to); err != nil {
 			return err
 		}
+	}
+	if err := editaccess.FollowOwnerTx(ctx, tx, recordType, id, to); err != nil {
+		return err
 	}
 	withdrawn, err := approvals.FollowTransferOwnerInTx(ctx, tx, recordType, id, to)
 	if err != nil {
@@ -139,15 +143,7 @@ func contactShareAcceptEffect(svc *approvals.Service, grants *identity.Service) 
 		// Executed as the deciding owner, whose grants the share is checked
 		// against as if they pressed Share.
 		return svc.RedeemAndApply(ctx, approvalID, contactShareKind, diffHash, func(tx pgx.Tx) error {
-			_, err := grants.CreateRecordGrantTx(ctx, tx, identity.CreateGrantInput{
-				RecordType:     string(recordTypeContact),
-				RecordID:       req.ContactID,
-				SubjectType:    entityUser,
-				SubjectID:      req.RequesterID,
-				Access:         identity.GrantAccessWrite,
-				FitToRecipient: true,
-			})
-			return err
+			return grants.ShareWithRequesterTx(ctx, tx, string(recordTypeContact), req.ContactID, req.RequesterID)
 		})
 	}
 }

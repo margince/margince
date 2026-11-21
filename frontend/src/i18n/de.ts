@@ -4923,6 +4923,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
+  "approval.kind.edit_access": "Schreibzugriff geben",
   "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
@@ -8183,6 +8184,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "handover.withdraw": "Anfrage zurückziehen",
   "handover.sent": "Anfrage an {owner} gesendet",
   "handover.withdrawn": "Anfrage zurückgezogen",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "{owner} um Schreibzugriff bitten",
+  "editAccess.requested":
+    "Du hast {owner} um Schreibzugriff gebeten. Die Anfrage bleibt bis {date} offen.",
+  "editAccess.withdraw": "Anfrage zum Schreibzugriff zurückziehen",
+  "editAccess.sent": "Schreibzugriff bei {owner} angefragt",
+  "editAccess.withdrawn": "Anfrage zum Schreibzugriff zurückgezogen",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Übergeben an…",
   "handover.offerTo": "Übergeben an",
