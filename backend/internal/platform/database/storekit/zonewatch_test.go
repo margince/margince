@@ -33,9 +33,12 @@ func TestEffectiveZoneAnswersUTCForANameGoCannotLoad(t *testing.T) {
 	}
 }
 
-func TestEffectiveZoneNeedsNoWatch(t *testing.T) {
-	if got := EffectiveZone(context.Background(), zoneNoDatabaseHolds); got != FallbackZone {
-		t.Errorf("an unwatched read answers %q, want %q", got, FallbackZone)
+func TestEffectiveZoneKeepsTheStoredNameOutsideAWatch(t *testing.T) {
+	if got := EffectiveZone(context.Background(), zoneNoDatabaseHolds); got != zoneNoDatabaseHolds {
+		t.Errorf("an unwatched read answers %q, want the stored name, which its caller then refuses", got)
+	}
+	if ZoneLoads(zoneNoDatabaseHolds) || !ZoneLoads("Europe/Berlin") {
+		t.Error("ZoneLoads misreads a name Go lacks or one it holds")
 	}
 }
 

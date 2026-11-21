@@ -618,9 +618,10 @@ whose rules have moved. It fails naming the first moment they place
 differently.
 
 A stored zone name can also stop loading in Go, as after a move to a binary with older zone
-data. `storekit.EffectiveZone` then answers UTC to every Go reader of the installation zone, and a
-reader binds that same name into the SQL it writes. Nothing stops. An operator sees it in two
-places:
+data. Inside a background pass, `storekit.EffectiveZone` then answers UTC to each Go reader of the
+installation zone. A reader binds that same name into the SQL it writes. So no pass stops. A read
+a user asks for still fails on the name, because one answer must not count in two zones. An operator
+sees the fault in two places:
 
 - Each background pass that fell back writes one `system_log` row with the action
   `installation_zone.unresolved`. Its detail names the stored zone and the zone applied.

@@ -84,8 +84,8 @@ func restoreNoonMeetingsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	return datatask.AdvanceUUID(in, scanned, changed)
 }
 
-// storedZoneForRepair reads the stored zone name, which only SQL reads here.
-// A repair is kept, so it never runs in the UTC a failed Go load falls back to.
+// storedZoneForRepair reads the stored zone name. A repair is kept, so it
+// counts in the stored zone and never in the UTC a background pass falls back to.
 func storedZoneForRepair(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.ApplyTx(ctx, tx, identity.Timezone)
 }

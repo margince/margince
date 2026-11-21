@@ -25,16 +25,15 @@ func TestForecastCaptureFailureKeepsItsWrittenLanguage(t *testing.T) {
 	store := newForecastStoreFor(e.Pool)
 	writer := principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:capture-language"), ids.NewV7())
 	at := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
-	// A missing zone row exercises the worker's failed-capture path. An unloadable
-	// name would not: the reader answers UTC for one and the capture goes on.
-	if _, err := e.owner.Exec(t.Context(), `DELETE FROM setting WHERE key = 'installation.timezone'`); err != nil {
+	// Corrupt persisted configuration exercises the worker's failed-capture path.
+	if _, err := e.owner.Exec(t.Context(), `UPDATE setting SET value = '"Margince/Nowhere"'::jsonb WHERE key = 'installation.timezone'`); err != nil {
 		t.Fatal(err)
 	}
 	worker := &forecastSnapshotSweepWorker{pool: e.Pool, now: func() time.Time { return at }, log: slog.New(slog.DiscardHandler)}
 	for _, tc := range []struct{ language, words string }{{"en", "Capture failed"}, {"de", "Erfassung ist fehlgeschlagen"}, {"vi", "Không thể ghi nhận"}} {
 		integration.SetBaseLanguage(reportingActor(e), t, e.Pool, tc.language)
 		if err := worker.freeze(writer, e.WS); err == nil {
-			t.Fatal("a missing stored timezone must fail capture")
+			t.Fatal("invalid stored timezone must fail capture")
 		}
 		integration.SetBaseLanguage(reportingActor(e), t, e.Pool, "en")
 		if err := store.InTx(reportingActor(e), func(ctx context.Context, tx pgx.Tx) error {

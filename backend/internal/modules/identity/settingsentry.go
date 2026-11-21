@@ -359,7 +359,7 @@ func BaseCurrencyOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // caller already holds: the zone a "today" is computed in.
 //
 // RequireTx, like BaseCurrencyOf: an absent row is an error, never a silent UTC.
-// A stored name Go cannot load reads as UTC, and storekit.EffectiveZone says why.
+// storekit.EffectiveZone says when a stored name Go cannot load reads as UTC.
 func TimezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	stored, err := settings.RequireTx(ctx, tx, Timezone)
 	if err != nil {

@@ -35,19 +35,25 @@ func WatchZones(ctx context.Context) (context.Context, *ZoneWatch) {
 	return context.WithValue(ctx, zoneWatchKey{}, watch), watch
 }
 
-// EffectiveZone is the zone name the installation's days are counted in: the
-// stored name, or UTC when Go cannot load it.
+// EffectiveZone is the zone name a reader counts the installation's days in.
+// Inside a watched background pass, a stored name Go cannot load reads as UTC.
 //
-// A caller binds the answer into SQL as well, so Go and that statement count
-// the same day. The stored name is kept for the admin to correct.
+// Outside a watch the stored name is returned as it is, so an interactive read
+// still fails on it. One answer that mixed UTC with SQL's stored zone would be
+// wrong with no sign.
 func EffectiveZone(ctx context.Context, stored string) string {
-	if _, err := time.LoadLocation(stored); err == nil {
+	watch, watched := ctx.Value(zoneWatchKey{}).(*ZoneWatch)
+	if !watched || ZoneLoads(stored) {
 		return stored
 	}
-	if watch, ok := ctx.Value(zoneWatchKey{}).(*ZoneWatch); ok {
-		watch.note(stored)
-	}
+	watch.note(stored)
 	return FallbackZone
+}
+
+// ZoneLoads reports whether Go's zone data holds the name.
+func ZoneLoads(name string) bool {
+	_, err := time.LoadLocation(name)
+	return err == nil
 }
 
 func (w *ZoneWatch) note(name string) {

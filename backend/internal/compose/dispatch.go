@@ -240,7 +240,8 @@ func runPerWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(context.C
 // cannot come to differ about what a tenant's failure does to the rest.
 //
 // A pass that could not load the installation zone counted its days in UTC.
-// The walk records that once per pass, whatever the pass itself answered.
+// The walk records that once per pass. A fault row that cannot be written
+// fails the pass, so the retry writes it.
 func runEach(ctx context.Context, pool *pgxpool.Pool, workspaces []ids.UUID, run func(context.Context, ids.UUID) error) error {
 	var failures []error
 	for _, ws := range workspaces {

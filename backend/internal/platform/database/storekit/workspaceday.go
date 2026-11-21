@@ -12,9 +12,6 @@ import (
 
 // LoadZone resolves an IANA zone name to a *time.Location, wrapping the failure
 // with the name so an operator sees which zone did not resolve.
-//
-// The installation's own zone reaches here through EffectiveZone, which has
-// already answered UTC for a name Go cannot load. So this fails for other zones.
 func LoadZone(name string) (*time.Location, error) {
 	loc, err := time.LoadLocation(name)
 	if err != nil {

@@ -55,7 +55,7 @@ func databaseKnowsZoneTx(ctx context.Context, tx pgx.Tx, zone string) (bool, err
 // or the database does not know.
 //
 // The claim form sends the zone the browser reports, and a browser can hold
-// newer zone data than the server. The admin picks the zone again in Settings.
+// newer zone data than the server.
 func claimedZone(sent string, databaseKnows func(zone string) (bool, error)) (string, error) {
 	zone, err := values.ParseTimezone(sent)
 	var refusal *values.ParseError
@@ -67,17 +67,17 @@ func claimedZone(sent string, databaseKnows func(zone string) (bool, error)) (st
 	}
 	known, err := databaseKnows(zone.String())
 	if err != nil || known {
-		return sent, err
+		return zone.String(), err
 	}
 	return storekit.FallbackZone, nil
 }
 
 // ZoneFallsBackTx reports whether the stored installation zone will not load
-// in Go, so the installation's days are counted in UTC.
+// in Go, so background passes count the installation's days in UTC.
 func ZoneFallsBackTx(ctx context.Context, tx pgx.Tx) (bool, error) {
 	stored, err := settings.ApplyTx(ctx, tx, Timezone)
 	if err != nil {
 		return false, err
 	}
-	return storekit.EffectiveZone(ctx, stored) != stored, nil
+	return !storekit.ZoneLoads(stored), nil
 }
