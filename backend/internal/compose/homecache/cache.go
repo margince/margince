@@ -83,34 +83,55 @@ type Answer interface {
 	crmcontracts.Worklist | crmcontracts.MagicReceipt
 }
 
-// Kept says how old a kept answer is and whether its reader has written since
-// it was assembled.
+// Kept says how a kept answer stands: its age, whether its reader has written
+// since, and whether the walk its first page started has ended.
 type Kept struct {
-	Age     time.Duration
-	Written bool
+	Age       time.Duration
+	Written   bool
+	WalkEnded bool
+}
+
+// Walk is how an answer's first page relates to the walk it started. A walk
+// lives four hours and a day answer up to a day, so an answer outlives its walk.
+type Walk[A Answer] struct {
+	// Started names the walk the answer's first page started, or nil.
+	Started func(A) (*ids.UUID, error)
+	// Ended is the answer once that walk has ended: it pages without the walk.
+	Ended func(A) (A, error)
+}
+
+// NoWalk is the Walk of an answer that never starts one.
+func NoWalk[A Answer]() Walk[A] {
+	return Walk[A]{
+		Started: func(A) (*ids.UUID, error) {
+			return nil, nil
+		},
+		Ended: func(answer A) (A, error) { return answer, nil },
+	}
 }
 
 // Lookup answers the reader's kept answer to read and key, how it stands, and
 // whether one was still valid. An answer behind the reader's write stays valid
-// and says so in Kept.Written. The access fence, expiry and the walk end it.
+// and says so in Kept.Written, and one whose walk has ended says so in
+// Kept.WalkEnded. The access fence and expiry end it.
 func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, Kept, bool, error) {
 	var out A
 	var payload []byte
 	var ageSeconds float64
-	var written bool
+	var standing Kept
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT c.payload, extract(epoch FROM now() - c.computed_at)::float8,
 			       EXISTS (SELECT 1 FROM home_read_forgotten fg
-			                WHERE fg.reader_id = c.reader_id AND fg.at >= c.computed_at)
+			                WHERE fg.reader_id = c.reader_id AND fg.at >= c.computed_at),
+			       c.walk_id IS NOT NULL AND NOT EXISTS (
+			         SELECT 1 FROM worklist_snapshot w
+			          WHERE w.id = c.walk_id AND w.reader_id = c.reader_id AND w.expires_at > now())
 			  FROM home_read_cache c
 			  JOIN home_read_fence f ON f.generation = c.fence
 			 WHERE c.reader_id = $1 AND c.read = $2 AND c.request_key = $3
-			   AND c.valid_until > now()
-			   AND (c.walk_id IS NULL OR EXISTS (
-			         SELECT 1 FROM worklist_snapshot w
-			          WHERE w.id = c.walk_id AND w.reader_id = c.reader_id AND w.expires_at > now()))`,
-			reader, string(read), key).Scan(&payload, &ageSeconds, &written)
+			   AND c.valid_until > now()`,
+			reader, string(read), key).Scan(&payload, &ageSeconds, &standing.Written, &standing.WalkEnded)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, Kept{}, false, nil
@@ -121,23 +142,28 @@ func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 	if err := json.Unmarshal(payload, &out); err != nil {
 		return out, Kept{}, false, fmt.Errorf("homecache: decoding a cached %s: %w", read, err)
 	}
-	return out, Kept{Age: time.Duration(ageSeconds * float64(time.Second)), Written: written}, true, nil
+	standing.Age = time.Duration(ageSeconds * float64(time.Second))
+	return out, standing, true, nil
 }
 
 // Serve answers read from the reader's kept answer while it holds, and from
-// fresh otherwise, keeping what fresh answered. An answer served near or past
-// the end of its Life, or one the reader has written past, is read again in the
-// background. Stale says it is past its Life or behind a write. Only the
-// Worklist is served stale; a receipt is read fresh. The cache only saves work.
-// One that cannot be read or written is logged and passed over, and the answer is the fresh read's. walkOf names the
-// walk an answer's first page started.
+// fresh otherwise, keeping what fresh answered. An answer near or past the end
+// of its Life, behind a write, or past its walk is read again in the background.
+// Stale says it is past its Life or behind a write; only the Worklist is served
+// stale. A cache fault is logged and the fresh read answers.
 func Serve[A Answer](
 	ctx context.Context, c *Cache, reader ids.UUID, read Read, key string,
-	fresh func(context.Context) (A, error), walkOf func(A) (*ids.UUID, error),
+	fresh func(context.Context) (A, error), walk Walk[A],
 ) (answer A, stale bool, err error) {
 	kept, standing, hit, err := Lookup[A](ctx, c, reader, read, key)
 	if err != nil {
 		logFault(ctx, "a kept Home answer could not be read; reading it fresh", read, err)
+	}
+	if hit && standing.WalkEnded {
+		if kept, err = walk.Ended(kept); err != nil {
+			logFault(ctx, "a kept Home answer could not drop its ended walk; reading it fresh", read, err)
+			hit = false
+		}
 	}
 	stale = hit && (standing.Age > Life || standing.Written)
 	served := hit && (!stale || read == Worklist)
@@ -150,12 +176,12 @@ func Serve[A Answer](
 		countServed(read, outcomeHit)
 	}
 	if !served {
-		answer, err = keepFresh(ctx, c, reader, read, key, fresh, walkOf)
+		answer, err = keepFresh(ctx, c, reader, read, key, fresh, walk.Started)
 		return answer, false, err
 	}
-	if stale || standing.Age > Life-refreshAhead {
+	if stale || standing.WalkEnded || standing.Age > Life-refreshAhead {
 		c.refresh(ctx, string(read)+"\x00"+reader.String()+"\x00"+key, func(ctx context.Context) error {
-			_, err := keepFresh(ctx, c, reader, read, key, fresh, walkOf)
+			_, err := keepFresh(ctx, c, reader, read, key, fresh, walk.Started)
 			return err
 		})
 	}

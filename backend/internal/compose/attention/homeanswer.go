@@ -5,6 +5,7 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -51,7 +52,7 @@ func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQu
 	if err != nil || !home {
 		return fresh(ctx)
 	}
-	out, stale, err := homecache.Serve(ctx, h.home, reader, homecache.Worklist, key, fresh, walkStartedBy)
+	out, stale, err := homecache.Serve(ctx, h.home, reader, homecache.Worklist, key, fresh, homeWalk)
 	if stale {
 		out.ServedStale = &stale
 	}
@@ -82,8 +83,14 @@ func (s *Service) homeKey(ctx context.Context, q worklistQuestion) (string, bool
 		loc.String(), day.Format(time.DateOnly), !q.owner.IsZero(), pageLimit(q.limit), systemtext.Locale(ctx), q.home), true, nil
 }
 
-// walkStartedBy is the walk a first page's cursor resumes, so a cached page is
-// never served once its walk can no longer be continued.
+// errNoRankedOffset refuses a kept page whose cursor cannot page on without its walk.
+var errNoRankedOffset = errors.New("attention: the kept page's cursor holds no ranked offset")
+
+// homeWalk is the walk Home's first page starts. A kept page outlives it.
+var homeWalk = homecache.Walk[crmcontracts.Worklist]{Started: walkStartedBy, Ended: pagedWithoutWalk}
+
+// walkStartedBy is the walk a first page's cursor resumes, so the cache knows
+// when that walk can no longer be continued.
 func walkStartedBy(out crmcontracts.Worklist) (*ids.UUID, error) {
 	if out.NextCursor == nil {
 		return nil, nil //nolint:nilnil // no cursor is a page that started no walk, which Store reads as nil
@@ -98,4 +105,31 @@ func walkStartedBy(out crmcontracts.Worklist) (*ids.UUID, error) {
 		return &id, nil
 	}
 	return nil, nil //nolint:nilnil // a cursor with no walk is an offset page, which Store reads as nil
+}
+
+// pagedWithoutWalk is a kept first page whose walk has ended. Its cursor names
+// no walk, so the next page is an offset into a freshly ranked day.
+func pagedWithoutWalk(out crmcontracts.Worklist) (crmcontracts.Worklist, error) {
+	out.Walk = nil
+	if out.NextCursor == nil {
+		return out, nil
+	}
+	cursor, err := openCursor(*out.NextCursor)
+	if err != nil {
+		return out, fmt.Errorf("attention: reading the cursor of a page whose walk ended: %w", err)
+	}
+	if cursor.Snapshot.IsZero() {
+		return out, nil
+	}
+	// A token from a build that did not mint Ranked has no offset to page on.
+	if cursor.Ranked == 0 && cursor.Rest == nil {
+		return out, errNoRankedOffset
+	}
+	cursor.At, cursor.Ranked, cursor.Snapshot = cursor.Ranked, 0, ids.UUID{}
+	token, err := storekit.EncodeSigned(cursor, cursorKey())
+	if err != nil {
+		return out, fmt.Errorf("attention: minting a cursor without the ended walk: %w", err)
+	}
+	out.NextCursor = &token
+	return out, nil
 }

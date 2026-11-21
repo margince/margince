@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -561,4 +562,45 @@ func aDayOfTasksWithout(n int, dealtWith ...string) crmcontracts.Attention {
 		out.Planned = append(out.Planned, at)
 	}
 	return out
+}
+
+// A kept first page outlives its walk, and its cursor then pages on as an
+// offset. A group on page one counts once there, so page two skips nothing.
+func TestAPageThatDropsItsEndedWalkResumesAfterAGroupWithoutASkip(t *testing.T) {
+	t.Parallel()
+	day := aDayOfAlikeDecisions(batchFloor)
+	day.Planned = aDayOfTasks(4).Planned
+	// Pinned, so the group leads page one instead of closing the day.
+	unwalked := &Service{now: func() time.Time { return rankInstant }}
+	for _, row := range walkFrom(t, unwalked, day, 10, worklistCursor{}).Queue {
+		if row.Batch != nil {
+			unwalked.pinned = map[RowRef]bool{{Source: string(row.Source), RowID: row.Id}: true}
+		}
+	}
+	walking := *unwalked
+	svc := walking.WithWalks(&walkStore{})
+
+	first := walkFrom(t, svc, day, 3, worklistCursor{})
+	if first.NextCursor == nil || first.Walk == nil {
+		t.Fatal("the fixture did not page under a walk, so there is no walk to drop")
+	}
+	if frozen := decodedCursor(t, *first.NextCursor); frozen.At <= frozen.Ranked {
+		t.Fatalf("page one holds no group (walk position %d, ranked %d), so the counts cannot differ", frozen.At, frozen.Ranked)
+	}
+	kept, err := pagedWithoutWalk(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	next := walkFrom(t, unwalked, day, 10, decodedCursor(t, *kept.NextCursor))
+
+	var paged, whole []string
+	for _, row := range append(first.Queue, next.Queue...) {
+		paged = append(paged, row.Id)
+	}
+	for _, row := range walkFrom(t, unwalked, day, 10, worklistCursor{}).Queue {
+		whole = append(whole, row.Id)
+	}
+	if !slices.Equal(paged, whole) {
+		t.Errorf("the two pages hold %v, want the day %v with no row skipped or repeated", paged, whole)
+	}
 }
