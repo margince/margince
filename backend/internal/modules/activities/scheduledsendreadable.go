@@ -15,11 +15,11 @@ import (
 // ScheduledSendReadableSQL is the predicate over the scheduled_send row alias
 // for the rows the caller may read. An unsent message is its author's alone:
 // its body and blind copies are not workspace-readable the way a sent one is.
-// A principal with no human behind it reads none. alias is a compile-time
-// literal.
+// The author is the seat that scheduled it, an agent's own seat included, and
+// a principal with no seat reads none. alias is a compile-time literal.
 func ScheduledSendReadableSQL(ctx context.Context, alias string, arg func(any) int) (string, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
+	if !ok || actor.UserID.IsZero() {
 		return scopeNothing, nil
 	}
 	return fmt.Sprintf("%s.scheduled_by = $%d", pgx.Identifier{alias}.Sanitize(), arg(actor.UserID)), nil

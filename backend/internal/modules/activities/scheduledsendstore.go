@@ -177,20 +177,20 @@ func (s *Store) GetScheduledSend(ctx context.Context, id ids.UUID) (ScheduledSen
 	return one[0], nil
 }
 
-// readScheduledSendTx is the detail read inside a caller's transaction.
+// readScheduledSendTx is the detail read inside a caller's transaction, under
+// the list's own read rule.
 func readScheduledSendTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (ScheduledSend, error) {
-	actor, err := storekit.Actor(ctx)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	own, err := ScheduledSendReadableSQL(ctx, "scheduled_send", arg)
 	if err != nil {
 		return ScheduledSend{}, err
 	}
-	return readScheduledSendForSeatTx(ctx, tx, id, actor.UserID)
-}
-
-func readScheduledSendForSeatTx(ctx context.Context, tx pgx.Tx, id, seat ids.UUID) (ScheduledSend, error) {
-	rows, err := tx.Query(ctx, `
+	query := fmt.Sprintf(`
 		SELECT`+scheduledSendColumns+`
 		  FROM scheduled_send
-		 WHERE id = @id AND scheduled_by = @seat`, pgx.NamedArgs{"id": id, argSeat: seat})
+		 WHERE id = $%d AND %s`, arg(id), own)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading: %w", err)
 	}

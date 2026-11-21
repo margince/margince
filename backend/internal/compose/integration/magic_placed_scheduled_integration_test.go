@@ -39,14 +39,14 @@ func (p *preflightEnv) scheduledReader(t *testing.T, user ids.UUID, teams []ids.
 }
 
 // scheduleForTheUser has an agent acting for the workspace's user schedule a
-// reply on the anchor, which stakeADeal linked to the deal.
-func (p *preflightEnv) scheduleForTheUser(t *testing.T) {
+// reply on the anchor, which stakeADeal linked to the deal, and answers it.
+func (p *preflightEnv) scheduleForTheUser(t *testing.T) ids.UUID {
 	t.Helper()
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 	user := uuidOf(t, p.user)
 	passport := p.issuePassport(t)
-	p.scheduleAsAgent(t, principal.Principal{
+	return p.scheduleAsAgent(t, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + passport.String(), PassportID: passport,
 		UserID: user, OnBehalfOf: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{

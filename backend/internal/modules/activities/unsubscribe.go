@@ -25,8 +25,8 @@ import (
 
 // UnsubscribeLinker resolves a recipient address to their preference-center
 // token so the send path can build the List-Unsubscribe URL. ok is false
-// for an address with no unsubscribe surface: a locked (transactional)
-// purpose, or an address no contact holds. The send then carries no
+// when the send could be given no stop link, such as for a locked
+// (transactional) purpose or an empty address. The send then carries no
 // unsubscribe header, and one that owed it records the missing link as a
 // footer finding.
 type UnsubscribeLinker interface {
@@ -327,7 +327,8 @@ func (s *Store) deliverability(
 	if !s.offersUnsubscribe(recipients, surface) {
 		return untokenized, nil
 	}
-	token, purpose, ok, err := s.unsubscribe.UnsubscribeToken(ctx, recipients[0], surface.purposeKey)
+	recipient := soleAddress(recipients)
+	token, purpose, ok, err := s.unsubscribe.UnsubscribeToken(ctx, recipient, surface.purposeKey)
 	if err != nil {
 		return sendDeliverability{}, err
 	}
@@ -342,7 +343,7 @@ func (s *Store) deliverability(
 	// Asked AFTER the stop token, and its failure is not the send's. A
 	// recipient who cannot be given a preference centre can still be given a
 	// way to stop, which is the link that matters.
-	manageToken, _, err := s.unsubscribe.ManageToken(ctx, recipients[0])
+	manageToken, _, err := s.unsubscribe.ManageToken(ctx, recipient)
 	if err != nil {
 		return sendDeliverability{}, err
 	}
@@ -359,6 +360,17 @@ func (s *Store) deliverability(
 		transmitted:     appendUnsubscribeFooter(body, live, words),
 		recorded:        appendUnsubscribeFooter(body, redacted, words),
 	}, nil
+}
+
+// soleAddress is the one normalized address a single-addressee send reaches,
+// whichever of its listed spellings came first.
+func soleAddress(recipients []string) string {
+	for _, addr := range recipients {
+		if key := normalizeAddress(addr); key != "" {
+			return key
+		}
+	}
+	return ""
 }
 
 // distinctAddresses counts who a rendered message actually reaches. Addresses

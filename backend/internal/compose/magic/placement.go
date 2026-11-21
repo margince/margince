@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -106,8 +107,8 @@ var placements = []placement{
 	{child: childScheduled, parent: typeContact, grant: typeActivity, on: scheduledOn(typeContact), readable: activities.ScheduledSendReadableSQL},
 	{child: childScheduled, parent: typeLead, grant: typeActivity, on: scheduledOn(typeLead), readable: activities.ScheduledSendReadableSQL},
 	{child: childScheduled, parent: typeProject, grant: typeActivity, on: scheduledOn(typeProject), readable: activities.ScheduledSendReadableSQL},
-	{child: childInvoice, parent: typeCompany, grant: grantFinance, on: onCompany},
-	{child: childPayment, parent: typeCompany, grant: grantFinance, on: onCompany},
+	{child: childInvoice, parent: typeCompany, grant: grantFinance, on: onCompany, readable: finance.LedgerRowReadableSQL},
+	{child: childPayment, parent: typeCompany, grant: grantFinance, on: onCompany, readable: finance.LedgerRowReadableSQL},
 }
 
 // placedSentences name what a machine did to a child, by audit action. The

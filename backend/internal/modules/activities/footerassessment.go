@@ -10,7 +10,7 @@ import (
 )
 
 // footerKindUnsubscribeLink names a send that owed a stop link and could be
-// given none: the linker found no holder for the address.
+// given none.
 const footerKindUnsubscribeLink = "unsubscribe_link"
 
 func (s *Store) footerFindings(lines []DisclosureLine, recipients []string, advertising bool) []commsauthz.FooterFinding {
