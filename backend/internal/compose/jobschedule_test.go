@@ -397,7 +397,7 @@ func TestARunningAdmissionTickDoesNotSuppressItsReplacement(t *testing.T) {
 			t.Fatalf("pending ticks no longer coalesce in state %s", state)
 		}
 	}
-	if !slices.Contains(periodicInsertOpts(CaptureDigestArgs{}).UniqueOpts.ByState, rivertype.JobStateRunning) {
+	if !slices.Contains(periodicInsertOpts(CaptureTraceSweepArgs{}).UniqueOpts.ByState, rivertype.JobStateRunning) {
 		t.Fatal("admission changed another pass's uniqueness policy")
 	}
 }

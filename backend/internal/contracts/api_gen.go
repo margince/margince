@@ -79892,12 +79892,6 @@ type ListContactCasesParams struct {
 // ListContactCasesParamsScope defines parameters for ListContactCases.
 type ListContactCasesParamsScope string
 
-// GetMorningDigestParams defines parameters for GetMorningDigest.
-type GetMorningDigestParams struct {
-	// Date A specific digest day; default: the latest generated.
-	Date *openapi_types.Date `form:"date,omitempty" json:"date,omitempty"`
-}
-
 // SendCompanyEmailParams defines parameters for SendCompanyEmail.
 type SendCompanyEmailParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -101176,7 +101170,7 @@ type ServerInterface interface {
 	UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request)
 	// The calling user's morning digest — what capture did overnight.
 	// (GET /digest)
-	GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams)
+	GetMorningDigest(w http.ResponseWriter, r *http.Request)
 	// The workspace's signature template.
 	// (GET /email-signature-template)
 	GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
@@ -106186,7 +106180,7 @@ func (_ Unimplemented) UpdateContactCaseSettings(w http.ResponseWriter, r *http.
 
 // The calling user's morning digest — what capture did overnight.
 // (GET /digest)
-func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams) {
+func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -135502,33 +135496,14 @@ func (siw *ServerInterfaceWrapper) UpdateContactCaseSettings(w http.ResponseWrit
 // GetMorningDigest operation middleware
 func (siw *ServerInterfaceWrapper) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetMorningDigestParams
-
-	// ------------- Optional query parameter "date" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "date", r.URL.Query(), &params.Date, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "date"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetMorningDigest(w, r, params)
+		siw.Handler.GetMorningDigest(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

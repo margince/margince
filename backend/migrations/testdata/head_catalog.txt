@@ -2454,17 +2454,6 @@ public.capture_counterparty_hold.user_id uuid NOT NULL gen=- def=-
 public.capture_counterparty_hold.value text NOT NULL gen=- def=-
 public.capture_counterparty_hold_pkey CREATE UNIQUE INDEX capture_counterparty_hold_pkey ON public.capture_counterparty_hold USING btree (id)
 public.capture_counterparty_hold_user_value_key CREATE UNIQUE INDEX capture_counterparty_hold_user_value_key ON public.capture_counterparty_hold USING btree (user_id, kind, value)
-public.capture_digest acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.capture_digest.capture_digest_pkey PRIMARY KEY (id)
-public.capture_digest.capture_digest_user_id_digest_date_key UNIQUE (user_id, digest_date)
-public.capture_digest.capture_digest_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.capture_digest.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.capture_digest.digest_date date NOT NULL gen=- def=-
-public.capture_digest.id uuid NOT NULL gen=- def=uuidv7()
-public.capture_digest.payload jsonb NOT NULL gen=- def=-
-public.capture_digest.user_id uuid NOT NULL gen=- def=-
-public.capture_digest_pkey CREATE UNIQUE INDEX capture_digest_pkey ON public.capture_digest USING btree (id)
-public.capture_digest_user_id_digest_date_key CREATE UNIQUE INDEX capture_digest_user_id_digest_date_key ON public.capture_digest USING btree (user_id, digest_date)
 public.capture_exclusion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_exclusion.capture_exclusion_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
 public.capture_exclusion.capture_exclusion_container_is_personal CHECK (((kind <> 'container'::text) OR (scope = 'user'::text) OR (value = ANY (ARRAY['gmail:CATEGORY_PROMOTIONS'::text, 'gmail:CATEGORY_SOCIAL'::text, 'gmail:CATEGORY_UPDATES'::text, 'gmail:CATEGORY_FORUMS'::text]))))
@@ -3514,17 +3503,6 @@ public.company_domain_disposition.text_bound_update CREATE TRIGGER text_bound_up
 public.company_domain_disposition.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_domain_disposition_pkey CREATE UNIQUE INDEX company_domain_disposition_pkey ON public.company_domain_disposition USING btree (id)
 public.company_domain_pkey CREATE UNIQUE INDEX company_domain_pkey ON public.company_domain USING btree (id)
-public.company_domain_question_reader acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_domain_question_reader.company_domain_question_reader_domain_fkey FOREIGN KEY (domain) REFERENCES company_domain_disposition(domain) ON DELETE CASCADE
-public.company_domain_question_reader.company_domain_question_reader_pkey PRIMARY KEY (domain, reader_id)
-public.company_domain_question_reader.company_domain_question_reader_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.company_domain_question_reader.domain text NOT NULL gen=- def=-
-public.company_domain_question_reader.evidence_at timestamp with time zone gen=- def=-
-public.company_domain_question_reader.reader_id uuid NOT NULL gen=- def=-
-public.company_domain_question_reader.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_domain_question_reader FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"domain": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"domain":20000}')
-public.company_domain_question_reader.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_domain_question_reader FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"domain": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"domain":20000}')
-public.company_domain_question_reader_pkey CREATE UNIQUE INDEX company_domain_question_reader_pkey ON public.company_domain_question_reader USING btree (domain, reader_id)
-public.company_domain_question_reader_reader_idx CREATE INDEX company_domain_question_reader_reader_idx ON public.company_domain_question_reader USING btree (reader_id, domain)
 public.company_dossier acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company_dossier.company_dossier_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_dossier.company_dossier_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
@@ -4677,16 +4655,6 @@ public.data_task_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER IN
 public.data_task_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.data_task_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"step": 20000, "status": 20000, "task_id": 20000, "first_release": 20000, "last_error_class": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"first_release":20000,"last_error_class":20000,"status":20000,"step":20000,"task_id":20000}')
 public.data_task_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.data_task_run.version bigint NOT NULL gen=- def=1
-public.data_task_run_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.data_task_run_history.data_task_run_history_pkey PRIMARY KEY (run_id)
-public.data_task_run_history.preserved_at timestamp with time zone NOT NULL gen=- def=-
-public.data_task_run_history.progress jsonb NOT NULL gen=- def=-
-public.data_task_run_history.run_id uuid NOT NULL gen=- def=-
-public.data_task_run_history.step text NOT NULL gen=- def=-
-public.data_task_run_history.task_id text NOT NULL gen=- def=-
-public.data_task_run_history.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.data_task_run_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"step": 20000, "task_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"step":20000,"task_id":20000}')
-public.data_task_run_history.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.data_task_run_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"step": 20000, "task_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"step":20000,"task_id":20000}')
-public.data_task_run_history_pkey CREATE UNIQUE INDEX data_task_run_history_pkey ON public.data_task_run_history USING btree (run_id)
 public.data_task_run_pkey CREATE UNIQUE INDEX data_task_run_pkey ON public.data_task_run USING btree (task_id, step)
 public.data_task_run_run_id_key CREATE UNIQUE INDEX data_task_run_run_id_key ON public.data_task_run USING btree (run_id)
 public.deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -6570,12 +6538,6 @@ public.idx_sigres_signal CREATE INDEX idx_sigres_signal ON public.signal_resolut
 public.idx_site_read_company CREATE INDEX idx_site_read_company ON public.site_read USING btree (company_id, created_at DESC)
 public.idx_site_read_retry_due CREATE INDEX idx_site_read_retry_due ON public.site_read USING btree (next_attempt_at, id) WHERE ((status = ANY (ARRAY['deferred'::text, 'failed'::text])) AND (next_attempt_at IS NOT NULL))
 public.idx_stage_pipeline CREATE INDEX idx_stage_pipeline ON public.stage USING btree (pipeline_id)
-public.idx_stage_progression_outcome_deal_target CREATE INDEX idx_stage_progression_outcome_deal_target ON public.stage_progression_outcome USING btree (deal_id, to_stage_id, decided_at DESC)
-public.idx_stage_progression_outcome_from_stage CREATE INDEX idx_stage_progression_outcome_from_stage ON public.stage_progression_outcome USING btree (from_stage_id)
-public.idx_stage_progression_outcome_to_stage CREATE INDEX idx_stage_progression_outcome_to_stage ON public.stage_progression_outcome USING btree (to_stage_id)
-public.idx_stage_progression_outcome_transition CREATE INDEX idx_stage_progression_outcome_transition ON public.stage_progression_outcome USING btree (pipeline_id, from_stage_id, to_stage_id, decided_at DESC)
-public.idx_stage_progression_policy_from_stage CREATE INDEX idx_stage_progression_policy_from_stage ON public.stage_progression_policy USING btree (from_stage_id)
-public.idx_stage_progression_policy_to_stage CREATE INDEX idx_stage_progression_policy_to_stage ON public.stage_progression_policy USING btree (to_stage_id)
 public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC)
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
@@ -10062,75 +10024,6 @@ public.stage_exit_criterion_stage_ix CREATE INDEX stage_exit_criterion_stage_ix 
 public.stage_exit_criterion_stage_key_live_ux CREATE UNIQUE INDEX stage_exit_criterion_stage_key_live_ux ON public.stage_exit_criterion USING btree (stage_id, key) WHERE (archived_at IS NULL)
 public.stage_id_pipeline_unique CREATE UNIQUE INDEX stage_id_pipeline_unique ON public.stage USING btree (id, pipeline_id)
 public.stage_pkey CREATE UNIQUE INDEX stage_pkey ON public.stage USING btree (id)
-public.stage_progression_outcome acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.stage_progression_outcome.accepted_at timestamp with time zone gen=- def=-
-public.stage_progression_outcome.approval_id uuid NOT NULL gen=- def=-
-public.stage_progression_outcome.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.stage_progression_outcome.deal_id uuid NOT NULL gen=- def=-
-public.stage_progression_outcome.decided_at timestamp with time zone NOT NULL gen=- def=now()
-public.stage_progression_outcome.decided_by_system boolean NOT NULL gen=- def=false
-public.stage_progression_outcome.evidence_corrected boolean NOT NULL gen=- def=false
-public.stage_progression_outcome.evidence_kinds text[] NOT NULL gen=- def='{}'::text[]
-public.stage_progression_outcome.from_stage_id uuid NOT NULL gen=- def=-
-public.stage_progression_outcome.id uuid NOT NULL gen=- def=uuidv7()
-public.stage_progression_outcome.outcome text NOT NULL gen=- def=-
-public.stage_progression_outcome.pipeline_id uuid NOT NULL gen=- def=-
-public.stage_progression_outcome.rejection_reason text gen=- def=-
-public.stage_progression_outcome.reversed_at timestamp with time zone gen=- def=-
-public.stage_progression_outcome.reversed_by uuid gen=- def=-
-public.stage_progression_outcome.stage_progression_outcome_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
-public.stage_progression_outcome.stage_progression_outcome_from_stage_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE CASCADE
-public.stage_progression_outcome.stage_progression_outcome_kind CHECK ((outcome = ANY (ARRAY['proposed'::text, 'approved_clean'::text, 'approved_edited'::text, 'rejected'::text, 'auto_applied'::text, 'reversed'::text, 'expired'::text, 'superseded'::text])))
-public.stage_progression_outcome.stage_progression_outcome_pipeline_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE CASCADE
-public.stage_progression_outcome.stage_progression_outcome_pkey PRIMARY KEY (id)
-public.stage_progression_outcome.stage_progression_outcome_reason_is_a_rejections CHECK (((rejection_reason IS NULL) OR (outcome = 'rejected'::text)))
-public.stage_progression_outcome.stage_progression_outcome_reversal_is_timed CHECK (((reversed_by IS NULL) OR (reversed_at IS NOT NULL)))
-public.stage_progression_outcome.stage_progression_outcome_reversed_by_fkey FOREIGN KEY (reversed_by) REFERENCES app_user(id) ON DELETE SET NULL
-public.stage_progression_outcome.stage_progression_outcome_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE CASCADE
-public.stage_progression_outcome.stage_progression_outcome_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.stage_progression_outcome.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.stage_progression_outcome FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000, "evidence_kinds": 20000, "rejection_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"evidence_kinds":20000,"outcome":20000,"rejection_reason":2000}')
-public.stage_progression_outcome.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.stage_progression_outcome FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "evidence_kinds": 20000, "rejection_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"evidence_kinds":20000,"outcome":20000,"rejection_reason":2000}')
-public.stage_progression_outcome.to_stage_id uuid NOT NULL gen=- def=-
-public.stage_progression_outcome.trg_stage_progression_outcome_updated CREATE TRIGGER trg_stage_progression_outcome_updated BEFORE UPDATE ON public.stage_progression_outcome FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.stage_progression_outcome.undo_window_hours integer gen=- def=-
-public.stage_progression_outcome.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.stage_progression_outcome.version bigint NOT NULL gen=- def=1
-public.stage_progression_outcome_approval_ux CREATE UNIQUE INDEX stage_progression_outcome_approval_ux ON public.stage_progression_outcome USING btree (approval_id)
-public.stage_progression_outcome_pkey CREATE UNIQUE INDEX stage_progression_outcome_pkey ON public.stage_progression_outcome USING btree (id)
-public.stage_progression_policy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.stage_progression_policy.clean_acceptance_threshold numeric(4,3) NOT NULL gen=- def=0.950
-public.stage_progression_policy.correction_reversal_threshold numeric(4,3) NOT NULL gen=- def=0.010
-public.stage_progression_policy.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.stage_progression_policy.enabled_at timestamp with time zone gen=- def=-
-public.stage_progression_policy.enabled_by uuid gen=- def=-
-public.stage_progression_policy.from_stage_id uuid NOT NULL gen=- def=-
-public.stage_progression_policy.id uuid NOT NULL gen=- def=uuidv7()
-public.stage_progression_policy.min_observation_days integer NOT NULL gen=- def=28
-public.stage_progression_policy.min_reviewed integer NOT NULL gen=- def=200
-public.stage_progression_policy.mode text NOT NULL gen=- def='propose'::text
-public.stage_progression_policy.pipeline_id uuid NOT NULL gen=- def=-
-public.stage_progression_policy.stage_progression_policy_enabled_by_fkey FOREIGN KEY (enabled_by) REFERENCES app_user(id) ON DELETE SET NULL
-public.stage_progression_policy.stage_progression_policy_enabling_is_timed CHECK (((enabled_by IS NULL) OR (enabled_at IS NOT NULL)))
-public.stage_progression_policy.stage_progression_policy_from_stage_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE CASCADE
-public.stage_progression_policy.stage_progression_policy_mode CHECK ((mode = ANY (ARRAY['propose'::text, 'auto'::text])))
-public.stage_progression_policy.stage_progression_policy_pipeline_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE CASCADE
-public.stage_progression_policy.stage_progression_policy_pkey PRIMARY KEY (id)
-public.stage_progression_policy.stage_progression_policy_suspension_whole CHECK (((suspended_at IS NULL) = (suspended_reason IS NULL)))
-public.stage_progression_policy.stage_progression_policy_thresholds_are_shares CHECK (((clean_acceptance_threshold >= (0)::numeric) AND (clean_acceptance_threshold <= (1)::numeric) AND (correction_reversal_threshold >= (0)::numeric) AND (correction_reversal_threshold <= (1)::numeric)))
-public.stage_progression_policy.stage_progression_policy_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE CASCADE
-public.stage_progression_policy.stage_progression_policy_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.stage_progression_policy.stage_progression_policy_volume_is_a_bar CHECK (((min_reviewed > 0) AND (min_observation_days > 0) AND (window_days > 0) AND (undo_window_hours > 0)))
-public.stage_progression_policy.suspended_at timestamp with time zone gen=- def=-
-public.stage_progression_policy.suspended_reason text gen=- def=-
-public.stage_progression_policy.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.stage_progression_policy FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mode": 20000, "suspended_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"mode":20000,"suspended_reason":2000}')
-public.stage_progression_policy.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.stage_progression_policy FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "suspended_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"mode":20000,"suspended_reason":2000}')
-public.stage_progression_policy.to_stage_id uuid NOT NULL gen=- def=-
-public.stage_progression_policy.undo_window_hours integer NOT NULL gen=- def=72
-public.stage_progression_policy.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.stage_progression_policy.version bigint NOT NULL gen=- def=1
-public.stage_progression_policy.window_days integer NOT NULL gen=- def=30
-public.stage_progression_policy_pkey CREATE UNIQUE INDEX stage_progression_policy_pkey ON public.stage_progression_policy USING btree (id)
-public.stage_progression_policy_transition_key CREATE UNIQUE INDEX stage_progression_policy_transition_key ON public.stage_progression_policy USING btree (pipeline_id, from_stage_id, to_stage_id)
 public.stamp_participant_domain_evidence() secdef=false cfg=- acl=- 
 BEGIN
  IF TG_OP='INSERT' OR NEW.activity_id IS DISTINCT FROM OLD.activity_id

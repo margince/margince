@@ -65,3 +65,8 @@ func (Server) CloseLostInputCheck(w http.ResponseWriter, r *http.Request, _ open
 func (Server) GetDealViability(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
 	httperr.NotImplementedBecause(w, r, retiredRouteDetail)
 }
+
+// GetMorningDigest refuses reading the nightly capture digest.
+func (Server) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
+	httperr.NotImplementedBecause(w, r, retiredRouteDetail)
+}

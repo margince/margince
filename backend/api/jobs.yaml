@@ -526,20 +526,6 @@ kinds:
       starts a pass when no active recovery pass remains. It freezes its horizon and
       resumes through bounded pages instead of rescanning the first page on each tick.
 
-  capture_digest:
-    role: worker
-    fleet: true
-    go_type: CaptureDigestArgs
-    queue: default
-    timeout: 5m
-    opts_owner: caller
-    cadence: 24h
-    registration: {when: [GmailRegistry], absent: registers_nothing}
-    reason: >-
-      Daily, after the overnight passes it summarizes. The boot pass backfills
-      a missed night, so a morning is never silently empty.
-
-
   brief_generate:
     role: worker
     fleet: true
