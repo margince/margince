@@ -248,11 +248,11 @@ func TestSendRefusesWhenNoMailboxIsConnected(t *testing.T) {
 
 	status, code, detail := p.send(t)
 
-	if status != http.StatusUnprocessableEntity || code != "mailbox_not_send_capable" {
-		t.Fatalf("send with no connected mailbox → %d %q, want 422 mailbox_not_send_capable", status, code)
+	if status != http.StatusUnprocessableEntity || code != "mailbox_not_connected" {
+		t.Fatalf("send with no connected mailbox → %d %q, want 422 mailbox_not_connected", status, code)
 	}
-	if !strings.Contains(detail, "reconnect") {
-		t.Fatalf("refusal detail %q does not tell the user what to do about it", detail)
+	if strings.Contains(detail, "reconnect") {
+		t.Fatalf("refusal detail %q sends the user to reconnect a mailbox they never connected", detail)
 	}
 	if n := p.stagedDeliveries(t); n != 0 {
 		t.Fatalf("%d deliveries staged behind a refused send, want 0", n)
