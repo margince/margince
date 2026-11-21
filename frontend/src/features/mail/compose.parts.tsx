@@ -10,6 +10,7 @@ import { RichText } from "../../design-system/richtext";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useNoMailboxConnected } from "../../lib/connectors";
 import {
   authorName,
   correspondenceSide,
@@ -31,7 +32,7 @@ import { ScheduleMenu, scheduledSendLabel } from "./composeschedule";
 import type { ComposeSend } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
 import type { VoiceDraft } from "./composevoicedraft";
-import { SendRefusal } from "./sendrefusal";
+import { NoMailboxLine, SendRefusal } from "./sendrefusal";
 
 // The composer's window: docked beside the page, at its own size, grown or
 // folded. Each opening starts at its own size.
@@ -263,10 +264,14 @@ export function ComposeOutcome({
   refusal: Refusal;
 }>) {
   const t = useT();
+  const noMailbox = useNoMailboxConnected();
   return (
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
+      {!isChannelReply && noMailbox && refusal !== "noMailbox" && (
+        <NoMailboxLine standing />
+      )}
       <SendRefusal refusal={refusal} />
     </>
   );

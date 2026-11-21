@@ -242,18 +242,6 @@
   gap: var(--space-2);
 }
 
-/* The block a refusal lands in: the consent gate and the two send pre-flight
- * refusals share one treatment, because to the rep they are the same thing —
- * the send did not happen, and here is what to do about it. */
-.compose-refusal {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--r-sm);
-  background: var(--dangerBg);
-}
-
 /* What the draft was written from: a quiet hint under the band's line, and
    the card only once opened. The chevron sits beside the words, so the hint
    reads as one small control rather than a section header. */

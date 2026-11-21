@@ -8795,6 +8795,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapable":
     "Dein Postfach ist nur zum Erfassen verbunden, ohne Berechtigung zum Senden. Verbinde das Postfach neu und erlaube das Senden. Ein Postfach, das vor Einführung des Versands verbunden wurde, lässt sich nicht nachträglich erweitern.",
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
+  "compose.mailboxNotConnected":
+    "Es ist kein Postfach verbunden. Verbinde eines, um aus Margince zu senden.",
+  "compose.mailboxNotConnectedGoto": "Postfach verbinden",
   "compose.sharedUnsubscribeToken":
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",

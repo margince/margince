@@ -8568,6 +8568,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapable":
     "Hộp thư chỉ được kết nối để thu thập, không có quyền gửi. Kết nối lại và cho phép gửi; hộp thư kết nối từ trước khi có tính năng gửi không thể nâng cấp trực tiếp.",
   "compose.mailboxNotSendCapableGoto": "Kết nối lại hộp thư",
+  "compose.mailboxNotConnected":
+    "Chưa kết nối hộp thư nào. Hãy kết nối một hộp thư để gửi từ Margince.",
+  "compose.mailboxNotConnectedGoto": "Kết nối hộp thư",
   "compose.sharedUnsubscribeToken":
     "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",

@@ -8777,6 +8777,9 @@ export const en = {
   "compose.mailboxNotSendCapable":
     "Your mailbox is connected for capture only, without permission to send. Reconnect it and approve sending; a mailbox connected before sending existed cannot be upgraded in place.",
   "compose.mailboxNotSendCapableGoto": "Reconnect your mailbox",
+  "compose.mailboxNotConnected":
+    "No mailbox is connected. Connect one to send from Margince.",
+  "compose.mailboxNotConnectedGoto": "Connect a mailbox",
   "compose.sharedUnsubscribeToken":
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
