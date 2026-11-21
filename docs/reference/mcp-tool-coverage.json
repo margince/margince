@@ -90,22 +90,6 @@
         "self_judged": true,
         "calls_per_case": "13.75 over 20",
         "slow_cases": []
-      },
-      {
-        "model": "gpt-5.6-sol@codex-cli",
-        "name": "gpt-5.6-sol",
-        "trust": "⚪ Not enough tested yet",
-        "cases_with_a_committed_run": 1,
-        "cases_that_reached_their_bar": 1,
-        "cases_below_their_bar": 0,
-        "runs": 2,
-        "passed": 2,
-        "reliability": 1,
-        "cases_below_their_bar_named": [],
-        "route": "Codex CLI",
-        "self_judged": false,
-        "calls_per_case": "-",
-        "slow_cases": []
       }
     ],
     "cases": [
@@ -621,15 +605,6 @@
                 "max": 14
               }
             }
-          },
-          {
-            "model": "gpt-5.6-sol@codex-cli",
-            "runs": 2,
-            "passed": 2,
-            "pass_at": 2,
-            "held": true,
-            "driver": "gpt:cli",
-            "search": "semantic"
           }
         ]
       },

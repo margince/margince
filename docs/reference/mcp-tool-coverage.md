@@ -124,35 +124,34 @@ No job has been run through the neutral harness yet.
 
 ## The same jobs through the REST API
 
-An assistant can also reach Margince through the REST API, with the downloadable skill and one tool that makes HTTP calls. These runs use the same jobs and the same checks as the tables above.
+An assistant can also reach Margince through the REST API, with the downloadable skill and one tool that makes HTTP calls. These runs use the same jobs and the same checks as the tables above. The REST door is tested on Claude only, by decision: the other models are tested through the MCP tools, and no column here is missing for them.
 
 | Assistant | How we connected it | Jobs tried | Reliable on |
 |---|---|---:|---:|
 | `claude-sonnet-5-5` | Claude Code CLI, REST | 20 of 82 | 17 |
-| `gpt-5.6-sol` | Codex CLI, REST | 1 of 82 | 1 |
 
-| Job | What a good answer does | Who asks | `claude-sonnet-5-5`<br>Claude Code CLI | `gpt-5.6-sol`<br>Codex CLI |
-|---|---|---|:---:|:---:|
-| Log it while it is fresh | Promises come back as suggestions | an admin | ✅ | - |
-| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ | - |
-| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ✅ | - |
-| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ❌ | - |
-| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ | - |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ | - |
-| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ❌ | - |
-| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ | - |
-| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ | - |
-| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | an admin | ✅ | - |
-| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | an admin | ✅ | - |
-| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ | - |
-| A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ | - |
-| What have I promised | Promised and still open is the commitments view | an admin | ✅ | ✅ |
-| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ | - |
-| Is she already here | Is this contact already here is the identify engine | an admin | ✅ | - |
-| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ❌ | - |
-| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ | - |
-| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ | - |
-| Mark that company as seen | Marking seen when asked | an admin | ✅ | - |
+| Job | What a good answer does | Who asks | `claude-sonnet-5-5`<br>Claude Code CLI |
+|---|---|---|:---:|
+| Log it while it is fresh | Promises come back as suggestions | an admin | ✅ |
+| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ |
+| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ✅ |
+| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ❌ |
+| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ |
+| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ❌ |
+| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ |
+| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ |
+| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | an admin | ✅ |
+| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | an admin | ✅ |
+| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ |
+| A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ |
+| What have I promised | Promised and still open is the commitments view | an admin | ✅ |
+| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ |
+| Is she already here | Is this contact already here is the identify engine | an admin | ✅ |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ❌ |
+| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ |
+| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ |
+| Mark that company as seen | Marking seen when asked | an admin | ✅ |
 
 ---
 
@@ -173,6 +172,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | Reliability | Of the runs on the cases that require this tool, the share that passed. Each case is run several times because the lane is not deterministic. |
 | Bar | Each case carries its own `pass_at`: how many of its runs must pass. Cases are not equally hard, so one shared number would flatter the easy ones. |
 | Calls, turns | How directly the runs finished: the median tool calls and model turns, with their range. `slow` marks a case past its `expected_calls`. A score, never a fail. |
+| Re-graded | A later checker graded the saved transcripts of an earlier run. The model ran once, at the run's commit, and the verdict names both commits. |
 
 ## The short version
 

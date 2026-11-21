@@ -67,7 +67,9 @@ func writeCoverageHowToRead(p *strings.Builder) {
 	p.WriteString("| Bar | Each case carries its own `pass_at`: how many of its runs must pass. " +
 		"Cases are not equally hard, so one shared number would flatter the easy ones. |\n")
 	p.WriteString("| Calls, turns | How directly the runs finished: the median tool calls and model turns, " +
-		"with their range. `slow` marks a case past its `expected_calls`. A score, never a fail. |\n\n")
+		"with their range. `slow` marks a case past its `expected_calls`. A score, never a fail. |\n")
+	p.WriteString("| Re-graded | A later checker graded the saved transcripts of an earlier run. The model ran " +
+		"once, at the run's commit, and the verdict names both commits. |\n\n")
 }
 
 func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
@@ -138,6 +140,9 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 			}
 			if run.Slow {
 				result += ", slow"
+			}
+			if run.Regraded {
+				result += ", re-graded"
 			}
 			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s | %s | %s |\n",
 				link, run.Model, result, run.Passed, run.Runs, run.PassAt,
@@ -376,6 +381,12 @@ func summariseDoors(t *testing.T, cases []caseRow, ran []string) ([]modelCoverag
 	if err != nil {
 		t.Fatalf("reading the REST door's verdicts at %s: %v", e2eLLMRESTDir, err)
 	}
+	// The page says the REST door is tested on Claude alone; this keeps that true.
+	for _, m := range rest.Models {
+		if !strings.HasPrefix(m.Model, "claude") {
+			t.Fatalf("%s holds a REST verdict, and the REST door is tested on Claude only; remove it", m.Model)
+		}
+	}
 	return models, rest
 }
 
@@ -490,7 +501,8 @@ func writeCoverageREST(p *strings.Builder, r mcpToolCoverage) {
 	}
 	p.WriteString("An assistant can also reach Margince through the REST API, with the downloadable " +
 		"skill and one tool that makes HTTP calls. These runs use the same jobs and the same checks " +
-		"as the tables above.\n\n")
+		"as the tables above. The REST door is tested on Claude only, by decision: the other models " +
+		"are tested through the MCP tools, and no column here is missing for them.\n\n")
 	p.WriteString("| Assistant | How we connected it | Jobs tried | Reliable on |\n|---|---|---:|---:|\n")
 	for _, m := range r.REST.Models {
 		fmt.Fprintf(p, "| `%s` | %s, REST | %d of %d | %d |\n", m.Name, m.Route, m.CasesRecorded, r.Totals.Cases, m.CasesHeld)
