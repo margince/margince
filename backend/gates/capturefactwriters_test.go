@@ -16,6 +16,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,26 +52,29 @@ var (
 	setListEnd    = regexp.MustCompile(`(?i)\b(WHERE|RETURNING|FROM)\b`)
 )
 
-// changes reports whether body sends a statement that changes the fact.
+// changes reports whether body sends a statement that changes the fact. A SET
+// list the literal leaves open for a concatenated column counts as changing it.
 func (f captureFact) changes(body string) bool {
 	write := regexp.MustCompile(`(?i)\b(INSERT INTO|UPDATE|DELETE FROM)\s+` + f.table + `\b`)
 	for _, at := range write.FindAllStringSubmatchIndex(body, -1) {
 		verb := strings.ToUpper(body[at[2]:at[3]])
-		statement := body[at[1]:]
+		if verb != "UPDATE" || f.columns == nil {
+			return true
+		}
+		statement, assembled := body[at[1]:], false
 		if end := sqlLiteralEnd.FindStringIndex(statement); end != nil {
+			assembled = strings.HasPrefix(strings.TrimSpace(statement[end[1]:]), "+")
 			statement = statement[:end[0]]
 		}
-		switch {
-		case verb != "UPDATE", f.columns == nil:
+		if end := setListEnd.FindStringIndex(statement); end != nil {
+			statement, assembled = statement[:end[0]], false
+		}
+		if assembled {
 			return true
-		default:
-			if end := setListEnd.FindStringIndex(statement); end != nil {
-				statement = statement[:end[0]]
-			}
-			for _, column := range f.columns {
-				if regexp.MustCompile(`(?i)\b` + column + `\s*=`).MatchString(statement) {
-					return true
-				}
+		}
+		for _, column := range f.columns {
+			if regexp.MustCompile(`(?i)\b` + column + `\s*=`).MatchString(statement) {
+				return true
 			}
 		}
 	}
@@ -79,13 +83,17 @@ func (f captureFact) changes(body string) bool {
 
 func TestEveryWriterOfACaptureFactSaysItChanged(t *testing.T) {
 	t.Parallel()
-	writers := map[string]int{}
+	packages := map[string][]string{}
 	for _, path := range handWrittenGoSources(t) {
 		where := filepath.ToSlash(path)
 		if strings.HasSuffix(where, "_test.go") || !strings.HasPrefix(where, "internal/") {
 			continue
 		}
-		for _, finding := range judgeCaptureFactWriters(t, path, writers) {
+		packages[filepath.Dir(path)] = append(packages[filepath.Dir(path)], path)
+	}
+	writers := map[string]int{}
+	for _, paths := range packages {
+		for _, finding := range judgeCaptureFactWriters(t, paths, writers) {
 			t.Error(finding)
 		}
 	}
@@ -97,54 +105,128 @@ func TestEveryWriterOfACaptureFactSaysItChanged(t *testing.T) {
 	}
 }
 
-// judgeCaptureFactWriters judges one file's functions. A file built only for
-// the integration lane is test support: it seeds a database no capture reads yet.
-func judgeCaptureFactWriters(t *testing.T, path string, writers map[string]int) []string {
+// factSource is one parsed file of a package and its text.
+type factSource struct {
+	path   string
+	file   *ast.File
+	source string
+}
+
+// judgeCaptureFactWriters judges one package's functions. SQL held in a
+// package-level declaration, such as an archive shape, is judged at every
+// function that names it. A file built only for the integration lane is test
+// support: it seeds a database no capture reads yet.
+func judgeCaptureFactWriters(t *testing.T, paths []string, writers map[string]int) []string {
 	t.Helper()
-	source, err := gatekit.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(source), "//go:build integration") {
-		return nil
-	}
-	file, err := gatekit.ParseFile(path, 0)
-	if err != nil {
-		t.Fatalf("parsing %s: %v", path, err)
-	}
-	var findings []string
-	for _, decl := range file.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Body == nil {
+	var files []factSource
+	for _, path := range paths {
+		source, err := gatekit.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(source), "//go:build integration") {
 			continue
 		}
-		body := string(source[fn.Body.Pos()-file.FileStart : fn.Body.End()-file.FileStart])
-		for _, fact := range captureFacts {
-			if !fact.changes(body) {
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		files = append(files, factSource{path: path, file: file, source: string(source)})
+	}
+	shapes := packageFactShapes(files)
+	var findings []string
+	for _, f := range files {
+		for _, decl := range f.file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil {
 				continue
 			}
-			writers[fact.table]++
-			if !captureFactsChanged.MatchString(body) {
-				findings = append(findings, filepath.ToSlash(path)+": "+fn.Name.Name+" writes "+fact.table+
-					" and never calls storekit.CaptureFactsChanged")
+			body := f.source[fn.Body.Pos()-f.file.FileStart : fn.Body.End()-f.file.FileStart]
+			for _, fact := range captureFacts {
+				if !fact.changes(body) && !namesShapeOf(body, shapes[fact.table]) {
+					continue
+				}
+				writers[fact.table]++
+				if !captureFactsChanged.MatchString(body) {
+					findings = append(findings, filepath.ToSlash(f.path)+": "+fn.Name.Name+" writes "+fact.table+
+						" and never calls storekit.CaptureFactsChanged")
+				}
 			}
 		}
 	}
 	return findings
 }
 
-func TestACaptureFactWriterThatSaysNothingIsJudged(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "writer.go")
-	source := "package p\n\nfunc archive() {\n\t_ = `UPDATE capture_connection SET status = 'disconnected' WHERE id = $1`\n}\n\n" +
-		"func cursor() {\n\t_ = `UPDATE capture_connection SET cursor = $2 WHERE id = $1 AND status = 'connected'`\n}\n"
+// packageFactShapes names each package-level var or const whose SQL changes a
+// fact, by the fact's table.
+func packageFactShapes(files []factSource) map[string][]string {
+	shapes := map[string][]string{}
+	for _, f := range files {
+		for _, decl := range f.file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || (gen.Tok != token.VAR && gen.Tok != token.CONST) {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				value, ok := spec.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
+				text := f.source[value.Pos()-f.file.FileStart : value.End()-f.file.FileStart]
+				for _, fact := range captureFacts {
+					if !fact.changes(text) {
+						continue
+					}
+					for _, name := range value.Names {
+						shapes[fact.table] = append(shapes[fact.table], name.Name)
+					}
+				}
+			}
+		}
+	}
+	return shapes
+}
+
+func namesShapeOf(body string, names []string) bool {
+	for _, name := range names {
+		if regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\b`).MatchString(body) {
+			return true
+		}
+	}
+	return false
+}
+
+func judgeFixture(t *testing.T, source string) []string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "writer.go")
 	if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	writers := map[string]int{}
-	findings := judgeCaptureFactWriters(t, path, writers)
+	return judgeCaptureFactWriters(t, []string{path}, map[string]int{})
+}
+
+func TestACaptureFactWriterThatSaysNothingIsJudged(t *testing.T) {
+	t.Parallel()
+	findings := judgeFixture(t, "package p\n\nfunc archive() {\n\t_ = `UPDATE capture_connection SET status = 'disconnected' WHERE id = $1`\n}\n\n"+
+		"func cursor() {\n\t_ = `UPDATE capture_connection SET cursor = $2 WHERE id = $1 AND status = 'connected'`\n}\n")
 	if len(findings) != 1 || !strings.Contains(findings[0], "archive") {
 		t.Fatalf("findings = %v, want the status writer alone", findings)
+	}
+}
+
+func TestAFactWriteInAPackageShapeIsJudgedWhereItRuns(t *testing.T) {
+	t.Parallel()
+	findings := judgeFixture(t, "package p\n\nvar restore = shape{Statement: `UPDATE company_domain SET archived_at = NULL WHERE id = $1`}\n\n"+
+		"func Restore() { run(restore) }\n\nfunc Unrelated() {}\n")
+	if len(findings) != 1 || !strings.Contains(findings[0], "Restore writes company_domain") {
+		t.Fatalf("findings = %v, want the function that runs the shape", findings)
+	}
+}
+
+func TestAnAssembledSetListIsJudged(t *testing.T) {
+	t.Parallel()
+	findings := judgeFixture(t, "package p\n\nfunc set(column string) {\n\t_ = `UPDATE app_user SET `+column+` = $2 WHERE id = $1`\n}\n")
+	if len(findings) != 1 {
+		t.Fatalf("findings = %v, want the assembled update judged", findings)
 	}
 }
