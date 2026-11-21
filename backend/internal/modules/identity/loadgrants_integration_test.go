@@ -40,11 +40,19 @@ func TestASeatWithTwoRolesHoldsTheUnionOfTheirMasks(t *testing.T) {
 	tier := principal.FieldMask{Object: "partner", Field: "margin_tier", Condition: principal.MaskOutsideWriteAuthority}
 	e.authorMasks(t, first, amount, currency)
 	e.authorMasks(t, second, amount, tier)
+	// An archived role grants nothing, so its masks must not count either.
+	archived := e.customRole(t, "Masked archived", "rep", nil)
+	e.authorMasks(t, archived, principal.FieldMask{Object: "deal", Field: "project_id", Condition: principal.MaskAlways})
+	if _, err := e.svc.ArchiveRole(e.wsCtx(e.admin), e.admin, archived); err != nil {
+		t.Fatal(err)
+	}
 
 	both := e.seat(t, "both", first).UserID
-	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`, e.roleID(t, second), both); err != nil {
-		t.Fatal(err)
+	for _, extra := range []string{second, archived} {
+		if _, err := e.owner.Exec(context.Background(),
+			`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`, e.roleID(t, extra), both); err != nil {
+			t.Fatal(err)
+		}
 	}
 	onlySecond := e.seat(t, "only-second", second).UserID
 

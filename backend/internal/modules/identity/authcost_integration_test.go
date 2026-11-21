@@ -19,11 +19,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-// The most one sign-in costs once the session stamp is fresh. That is begin,
-// session, the batch of roles, teams and masks, both settings, and commit.
+// What one sign-in costs once the session stamp is fresh: begin, session, the
+// batch of roles and teams, both settings, and commit. Fewer means a read was skipped.
 const (
-	authenticateStatementCeiling = 7
-	authenticateRoundTripCeiling = 5
+	authenticateStatementCeiling = 6
+	authenticateRoundTrips       = 5
 )
 
 // meteredIdentityPool is a pool on the same database whose connections count
@@ -91,8 +91,8 @@ func TestAuthenticateStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
 			if seen.Statements > authenticateStatementCeiling {
 				t.Errorf("authenticate sent %d statements, budget %d", seen.Statements, authenticateStatementCeiling)
 			}
-			if roundTrips < seen.Exchanges || roundTrips > authenticateRoundTripCeiling {
-				t.Errorf("authenticate used %d round trips for %d pgx calls, budget %d", roundTrips, seen.Exchanges, authenticateRoundTripCeiling)
+			if roundTrips < seen.Exchanges || roundTrips != authenticateRoundTrips {
+				t.Errorf("authenticate used %d round trips for %d pgx calls, want %d", roundTrips, seen.Exchanges, authenticateRoundTrips)
 			}
 		})
 	}

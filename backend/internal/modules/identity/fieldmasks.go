@@ -15,7 +15,7 @@ import (
 
 // loadFieldMasks reads the columns the principal's roles withhold. It is the
 // union over every role held: a role that masks a field masks it for the seat.
-// seatFieldMasksSQL answers the same per seat, and
+// roleDocumentsSQL answers the same per seat, and
 // TestASeatWithTwoRolesHoldsTheUnionOfTheirMasks holds the two together.
 func loadFieldMasks(ctx context.Context, tx pgx.Tx, roleKeys []string) ([]principal.FieldMask, error) {
 	if len(roleKeys) == 0 {

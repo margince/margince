@@ -14,6 +14,9 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // mfaAlwaysRequired is the admission reader with require-MFA on, which a stored
@@ -25,6 +28,37 @@ func mfaAlwaysRequired(ctx context.Context, tx pgx.Tx) (AdmissionSettings, error
 
 func (e *revocationEnv) requireMFAOn() {
 	e.svc.admissionSettings = mfaAlwaysRequired
+}
+
+// The stored policy, read through the production reader, confines a password
+// session of a member with no factor.
+func TestAStoredRequireMFAConfinesAFactorlessPasswordSession(t *testing.T) {
+	e := setupRevocationEnv(t, "require-mfa-stored")
+	e.withVault()
+	cfg := unlockedConfig(t, e.pool)
+	store := NewInstallationSettings(e.svc.db, settings.New(e.pool, settings.NewRegistry(append(Definitions(), cfg.StoredDefinitions()...)...)), cfg)
+	e.svc.WithAdmissionSettings(store.AdmissionSettings)
+	if err := config.Save(e.wsCtx(e.admin), cfg, RequireMFA, true); err != nil {
+		t.Fatalf("turning require-MFA on: %v", err)
+	}
+	// The setting row has no workspace column, so it would outlive this test.
+	t.Cleanup(func() {
+		if err := config.Save(e.wsCtx(e.admin), cfg, RequireMFA, false); err != nil {
+			t.Errorf("turning require-MFA off again: %v", err)
+		}
+	})
+
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+	if err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), login.Token)
+	if err != nil {
+		t.Fatalf("authenticate: %v", err)
+	}
+	if !id.MustEnrolMFA {
+		t.Fatal("a stored require-MFA did not confine a member with no factor")
+	}
 }
 
 func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
