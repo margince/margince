@@ -619,9 +619,11 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `deleted_participant_clears_reply_settled`: `AFTER DELETE REFERENCING OLD TABLE AS written_participant FOR EACH STATEMENT EXECUTE FUNCTION written_participant_clears_reply_settled()`
 - `home_read_fence_participant`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_participant_removed`: `AFTER DELETE FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()`
-- `participant_clears_reply_settled`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION participant_clears_reply_settled()`
+- `inserted_participant_clears_reply_settled`: `AFTER INSERT REFERENCING NEW TABLE AS written_participant FOR EACH STATEMENT EXECUTE FUNCTION written_participant_clears_reply_settled()`
+- `participant_clears_reply_settled`: `AFTER UPDATE OF activity_id, role, address, contact_id FOR EACH ROW EXECUTE FUNCTION participant_clears_reply_settled()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()`
 - `stamp_participant_domain_evidence`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION stamp_participant_domain_evidence()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"role": 20000, "address": 20000, "response": 20000, "channel_user_id": 20000, "address_domain_folded": 20000, "domain_evidence_precision": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"address_domain_folded":20000,"channel_user_id":20000,"domain_evidence_precision":20000,"response":20000,"role":20000}')`
