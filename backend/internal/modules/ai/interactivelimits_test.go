@@ -262,8 +262,8 @@ func TestTheWalkBoundStartsAtTheFirstTry(t *testing.T) {
 	r.callSettings(lc, TaskColdStart)
 	clock.at = clock.at.Add(time.Hour)
 	r.startWalk(lc, TaskColdStart, &binding{routeMeta: map[Tier]routeMeta{TierCheapCloud: {provider: "openai", model: string(TierCheapCloud)}}}, []Tier{TierCheapCloud})
-	if got, err := r.tryTimeout(lc, TaskColdStart); err != nil || got != time.Minute {
-		t.Fatalf("the first try after an hour of preparation gets %s, %v; want the whole minute", got, err)
+	if got := r.tryTimeout(lc, TaskColdStart); got != time.Minute {
+		t.Fatalf("the first try after an hour of preparation gets %s; want the whole minute", got)
 	}
 }
 

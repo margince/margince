@@ -199,13 +199,9 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		}
 		// Each rung gets its own deadline, so one slow host spends at most its
 		// share and the walk still reaches the rung above it.
-		timeout, spent := r.tryTimeout(lc, task)
-		if spent != nil {
-			return model.Response{}, lastTier, false, spent
-		}
 		// The rail's lease covers one model call, and this is the next one.
 		lc.renewRailLease(ctx)
-		callCtx, cancel := r.tryContext(ctx, timeout)
+		callCtx, cancel := r.tryContext(ctx, r.tryTimeout(lc, task))
 		out, callErr := b.clients[t].Complete(callCtx, req)
 		cancel()
 		if callErr != nil {

@@ -98,18 +98,27 @@ func (r *Router) startWalk(lc *logicalCall, task Task, b *binding, rungs []Tier)
 }
 
 // tryTimeout is how long lc's next try may take: its per-try limit, cut to
-// what is left of the walk bound. A try needs at least the floor, or its own
-// limit when that is lower; with less left the walk is spent.
-func (r *Router) tryTimeout(lc *logicalCall, task Task) (time.Duration, error) {
+// what is left of the walk bound. Whether a try may start at all is
+// walkSpent's to say, asked after every failed or refused try.
+func (r *Router) tryTimeout(lc *logicalCall, task Task) time.Duration {
 	settings := r.callSettings(lc, task)
 	if settings.WalkTimeout == 0 || !lc.walking {
-		return settings.AttemptTimeout, nil
+		return settings.AttemptTimeout
 	}
-	left := settings.WalkTimeout - r.now().Sub(lc.started)
-	if left < min(InteractiveAttemptFloor, settings.AttemptTimeout) {
-		return 0, WalkSpentError(task, settings.WalkTimeout)
+	return min(settings.AttemptTimeout, settings.WalkTimeout-r.now().Sub(lc.started))
+}
+
+// walkSpent says the walk has too little of its bound left for another try:
+// less than the floor, or than the per-try limit when that is lower.
+func (r *Router) walkSpent(lc *logicalCall, task Task) error {
+	settings := r.callSettings(lc, task)
+	if settings.WalkTimeout == 0 || !lc.walking {
+		return nil
 	}
-	return min(settings.AttemptTimeout, left), nil
+	if settings.WalkTimeout-r.now().Sub(lc.started) < min(InteractiveAttemptFloor, settings.AttemptTimeout) {
+		return WalkSpentError(task, settings.WalkTimeout)
+	}
+	return nil
 }
 
 // tryContext is the context one try runs under.
@@ -126,6 +135,5 @@ func (r *Router) stopped(ctx context.Context, lc *logicalCall, task Task) error 
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	_, err := r.tryTimeout(lc, task)
-	return err
+	return r.walkSpent(lc, task)
 }

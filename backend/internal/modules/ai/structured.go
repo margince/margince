@@ -152,7 +152,7 @@ func (r *Router) stopAfterRefusal(ctx context.Context, lc *logicalCall, task Tas
 		lc.markTerminal(sentinelFor(ctx, err))
 		return err
 	}
-	if _, spent := r.tryTimeout(lc, task); spent != nil {
+	if r.walkSpent(lc, task) != nil {
 		lc.markTerminal(sentinelOutputRejected)
 		return rejected(task, info, rejectedOnceTheWalkWasSpent, refusal, truncated(resp))
 	}

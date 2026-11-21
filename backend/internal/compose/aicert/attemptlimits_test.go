@@ -151,8 +151,8 @@ func TestTheLaneMeasuresAWaitedTaskWithoutItsLimit(t *testing.T) {
 	scenario := testScenario("basic", wideBands)
 	scenario.Task = string(row.Task)
 	candidate := &deadlineSpy{FakeClient: ai.NewFakeClient().Script("the widget is blue")}
-	// A deadline set before the run, a second short of the ceiling: any try sent
-	// at the ceiling ends after it, and one held to the row's limit before it.
+	// A deadline set before the run, a second short of the ceiling. A try sent at
+	// the ceiling ends after it. A try held to the row's limit ends before it.
 	reference, cancel := context.WithTimeout(context.Background(), ai.CallCeiling-time.Second)
 	defer cancel()
 	referenceDeadline, _ := reference.Deadline()
