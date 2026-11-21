@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 276.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 72100 |
+| Approx. wire tokens | 72105 |
 | Largest tool | `read_details` (17.6 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2825 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1915 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1920 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
@@ -11691,7 +11691,7 @@ find_records to find or list records, and read_reports for the standard metrics 
       "type": "string"
     },
     "record_id": {
-      "description": "views: record_assignments",
+      "description": "views: dedupe_candidates, record_assignments",
       "type": "string"
     },
     "record_type": {
