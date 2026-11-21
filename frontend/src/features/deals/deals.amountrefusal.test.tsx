@@ -81,9 +81,7 @@ describe("a deal amount the currency cannot hold", () => {
         target: { value: typed },
       });
       expect(screen.getByText(sentence)).toBeInTheDocument();
-      const saveButton = screen.getByRole("button", { name: "Save" });
-      expect(saveButton).toBeDisabled();
-      fireEvent.submit(saveButton.closest("form") as HTMLFormElement);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
       expect(save).not.toHaveBeenCalled();
     },
   );

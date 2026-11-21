@@ -46,7 +46,7 @@ To add a new contact in Margince, open **Contacts** in the sidebar and choose **
 1. Enter the **Full name** and at least one email, phone number or LinkedIn profile link.
 2. If you like, fill **First name**, **Last name**, **Title**, **Company** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
-4. Fill any custom fields, then choose **Create**. Create stays off until the name and a contact channel are filled.
+4. Fill any custom fields, then choose **Create**. If something is missing, Create says so under each field and takes you to the first one.
 
 The **Company** box lists the companies that match what you type: pick one to link it. A typed name links the company of that name, or creates one if there is none. Until you use the box, a work email fills it with the company whose domain covers the address, such as `example.com` for `dana@eu.example.com`. Margince never makes up a company from a domain alone. On a company's **Contacts** tab, **New contact** files the contact under that company, without the box.
 

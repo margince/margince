@@ -56,3 +56,37 @@ describe("a field's own validate on an untouched form", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });
+
+describe("Create pressed with required fields empty", () => {
+  const required: CreateField[] = [
+    { key: "note", labelText: "Note", type: "text" },
+    { key: "name", labelText: "Name", type: "text", required: true },
+    { key: "city", labelText: "City", type: "text", required: true },
+  ];
+
+  it("says each is required, focuses the first, and sends nothing", () => {
+    const onSubmit = vi.fn();
+    render(
+      <LocaleProvider initial="en">
+        <CreateRecordModal
+          open
+          onClose={() => {}}
+          title="New thing"
+          fields={required}
+          pending={false}
+          error={null}
+          onSubmit={onSubmit}
+        />
+      </LocaleProvider>,
+    );
+    const create = screen.getByRole("button", { name: "Create" });
+    expect(create).toBeEnabled();
+    fireEvent.click(create);
+    expect(screen.getByText("Name is required.")).toBeVisible();
+    expect(screen.getByText("City is required.")).toBeVisible();
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: /^Name/ }),
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});

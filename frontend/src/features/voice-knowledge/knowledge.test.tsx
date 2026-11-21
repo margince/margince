@@ -336,18 +336,15 @@ describe("KnowledgeCard", () => {
     );
     const dialog = within(await screen.findByRole("dialog"));
     const create = dialog.getByRole("button", { name: "Create" });
-    expect(create).toBeDisabled();
+    const topic = dialog.getByLabelText(/what this set covers/i);
 
     await user.type(dialog.getByLabelText(/^name/i), "Handbook");
     // Still refused: a set with no topic statement has nothing to quote back
     // when it refuses a question, which is the one moment it is read.
-    expect(create).toBeDisabled();
-
-    await user.type(
-      dialog.getByLabelText(/what this set covers/i),
-      "How the product is operated.",
-    );
-    expect(create).toBeEnabled();
+    await user.click(create);
+    expect(dialog.getByText("What this set covers is required.")).toBeVisible();
+    expect(topic).toHaveFocus();
+    expect(dialog.getByRole("button", { name: "Create" })).toBe(create);
   });
 
   it("asks before archiving a set, and sends nothing until the reader agrees", async () => {

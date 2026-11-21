@@ -69,7 +69,6 @@ describe("Quick capture", () => {
 
     await user.click(screen.getByTestId("quick-capture"));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
-    expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
     await user.type(screen.getByLabelText("Email"), "dana@example.test");
     await user.type(
       screen.getByRole("combobox", { name: "Company" }),
