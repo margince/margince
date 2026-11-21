@@ -23,13 +23,13 @@ case "$*" in
 "run list"*)
   [[ "${LIST_FAILS:-}" == 1 ]] && { echo "HTTP 502" >&2; exit 1; }
   # No --event: a run started by hand or by the cron has to count too.
-  [[ "$*" == *"--workflow $WANT_WORKFLOW "* && "$*" == *"--branch main"* && "$*" != *"--event"* ]] || {
+  [[ "$*" == *"--workflow $WANT_WORKFLOW "* && "$*" == *"--branch $WANT_BRANCH "* && "$*" != *"--event"* ]] || {
     echo "unexpected run list: $*" >&2
     exit 1
   }
   printf '%s' "${LAST_CREATED:-}"
   ;;
-"workflow run $WANT_WORKFLOW --repo margince/margince --ref main")
+"workflow run $WANT_WORKFLOW --repo margince/margince --ref $WANT_BRANCH")
   echo dispatched >>"$DISPATCH_LOG"
   ;;
 *) echo "unexpected gh call: $*" >&2; exit 1 ;;
@@ -46,8 +46,9 @@ iso_seconds_ago() {
 }
 
 # check <name> <want-exit> <want-dispatches> [pacer args…], with LAST_CREATED,
-# LIST_FAILS and WANT_WORKFLOW in the environment. The stub refuses any other
-# workflow, so a pacer that read or started the wrong one fails the case.
+# LIST_FAILS, WANT_WORKFLOW and WANT_BRANCH in the environment. The stub refuses
+# any other workflow or branch, so a pacer that read or started the wrong one
+# fails the case.
 check() {
   local name="$1" want_exit="$2" want_dispatches="$3" got_exit=0 got_dispatches=0
   shift 3
@@ -60,8 +61,8 @@ check() {
   fi
 }
 
-export WANT_WORKFLOW=main-health.yml
-health=(main-health.yml 7200)
+export WANT_WORKFLOW=main-health.yml WANT_BRANCH=main
+health=(main-health.yml 7200 main)
 LAST_CREATED="$(iso_seconds_ago 600)" check "a recent run holds off" 0 0 "${health[@]}"
 LAST_CREATED="$(iso_seconds_ago 7199)" check "one second under the interval holds off" 0 0 "${health[@]}"
 LAST_CREATED="$(iso_seconds_ago 7200)" check "exactly the interval starts a run" 0 1 "${health[@]}"
@@ -72,11 +73,18 @@ LAST_CREATED="not-a-date" check "a date that does not parse fails and starts not
 
 # The interval is the caller's: the same age is due for one workflow and not for another.
 export WANT_WORKFLOW=cache-warm.yml
-LAST_CREATED="$(iso_seconds_ago 7200)" check "cache-warm holds off under its own interval" 0 0 cache-warm.yml 10800
-LAST_CREATED="$(iso_seconds_ago 10800)" check "cache-warm starts at its own interval" 0 1 cache-warm.yml 10800
+LAST_CREATED="$(iso_seconds_ago 7200)" check "cache-warm holds off under its own interval" 0 0 cache-warm.yml 10800 main
+LAST_CREATED="$(iso_seconds_ago 10800)" check "cache-warm starts at its own interval" 0 1 cache-warm.yml 10800 main
+
+# A cron runs only on the default branch, so develop's writer is started from
+# here, and both the read and the dispatch name develop.
+export WANT_BRANCH=develop
+LAST_CREATED="$(iso_seconds_ago 600)" check "a recent develop run holds off" 0 0 cache-warm.yml 10800 develop
+LAST_CREATED="$(iso_seconds_ago 10800)" check "cache-warm starts on develop at its interval" 0 1 cache-warm.yml 10800 develop
 
 LAST_CREATED="" check "no interval is a usage error, not a run" 2 0 cache-warm.yml
-LAST_CREATED="" check "an interval that is not a number is a usage error" 2 0 cache-warm.yml 3h
+LAST_CREATED="" check "an interval that is not a number is a usage error" 2 0 cache-warm.yml 3h develop
+LAST_CREATED="" check "no branch is a usage error, not a run on main" 2 0 cache-warm.yml 10800
 
 if ((failures > 0)); then
   echo "pace-workflow.test: $failures case(s) failed"
