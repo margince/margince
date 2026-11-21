@@ -10,8 +10,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 )
 
-// The review stores its bars as one jsonb value with no CHECK on the
-// elements, so this writer is what holds the horizon and bar vocabularies.
+// The review stores its bars as one jsonb value with no CHECK on the elements.
+// So this writer is what holds the horizon and bar vocabularies.
 func TestEveryBridgeBarOfEveryHorizonIsFrozen(t *testing.T) {
 	var moved []Movement
 	for _, kind := range []forecasting.PeriodKind{forecasting.PeriodWeek, forecasting.PeriodMonth, forecasting.PeriodQuarter} {
