@@ -2,7 +2,7 @@
 
 The digests are computed by backend/internal/compose/mcpe2e and tested there;
 this holds the half that files them: the right scenario's stamp, the commit and
-the time it ran, and no stamp at all where the lane wrote none.
+the time it ran and was graded, and no stamp at all where the lane wrote none.
 """
 
 import datetime
@@ -57,6 +57,27 @@ class RecordedStampTest(unittest.TestCase):
         with unittest.mock.patch.dict(os.environ, {"E2E_LLM_STAMPS": stamps, "E2E_LLM_JUDGE_MODEL": "gpt-judge"}):
             self.assertEqual(check.recorded_stamp("case1_x")["judge"], "gpt-judge")
             self.assertEqual(check.recorded_stamp("case2_y")["judge"], "")
+
+    def test_a_live_grade_names_the_run_commit_twice(self):
+        stamps = written(json.dumps({"case1_x": STAMP}), ".json")
+        moment = datetime.datetime(2026, 11, 20, 9, 8, 53, tzinfo=datetime.timezone.utc)
+        with unittest.mock.patch.dict(os.environ, {"E2E_LLM_STAMPS": stamps, "E2E_LLM_COMMIT": "run1"}):
+            os.environ.pop("E2E_LLM_GRADED_COMMIT", None)
+            os.environ.pop("E2E_LLM_RAN_AT", None)
+            stamp = check.recorded_stamp("case1_x", clock=lambda: moment)
+        self.assertEqual((stamp["commit"], stamp["graded_commit"]), ("run1", "run1"))
+        self.assertEqual(stamp["ran_at"], stamp["graded_at"])
+
+    def test_a_regrade_keeps_the_runs_commit_and_time_beside_its_own(self):
+        stamps = written(json.dumps({"case1_x": STAMP}), ".json")
+        moment = datetime.datetime(2026, 11, 21, 10, 0, 0, tzinfo=datetime.timezone.utc)
+        env = {"E2E_LLM_STAMPS": stamps, "E2E_LLM_COMMIT": "run1", "E2E_LLM_RAN_AT": "2026-11-20T09:08:53Z",
+               "E2E_LLM_GRADED_COMMIT": "grade2"}
+        with unittest.mock.patch.dict(os.environ, env):
+            stamp = check.recorded_stamp("case1_x", clock=lambda: moment)
+        self.assertEqual({k: stamp[k] for k in STAMP}, STAMP)
+        self.assertEqual((stamp["commit"], stamp["ran_at"]), ("run1", "2026-11-20T09:08:53Z"))
+        self.assertEqual((stamp["graded_commit"], stamp["graded_at"]), ("grade2", "2026-11-21T10:00:00Z"))
 
     def test_the_time_is_utc_to_the_second(self):
         stamps = written(json.dumps({"case1_x": STAMP}), ".json")

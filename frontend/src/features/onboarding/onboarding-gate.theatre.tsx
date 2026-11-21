@@ -24,6 +24,7 @@ import {
   ScanTickerEntry,
   useLatestArrivedPage,
 } from "./onboarding-gate.ticker";
+import { OnboardingSignOut } from "./onboarding-signout";
 
 /**
  * What the stage says above the column, for both faces of this screen.
@@ -152,6 +153,7 @@ export function GateColumn({
       // minutes). The name only, with no marks: this surface is prop-driven and
       // cannot see the flow around it. So it says what it is and does not invent
       // how many stops the passage has.
+      account={<OnboardingSignOut />}
       step={t("ob.stop.read")}
       where={scan === undefined ? undefined : head.where}
       title={head.title}

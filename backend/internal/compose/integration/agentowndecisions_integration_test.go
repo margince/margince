@@ -278,7 +278,8 @@ func TestATimeZoneAnAgentSetsHoldsAndNamesIt(t *testing.T) {
 	}
 	for _, source := range []string{"chosen", "browser"} {
 		refusal := d.toolRefused(t, "change_my_settings", map[string]any{"action": "save_timezone", "request_body": AnyMap{"timezone": "Asia/Tokyo", "source": source}})
-		if !strings.Contains(refusal, "an agent does not choose") {
+		// The agent is told the value to send, not sent to ask for a grant.
+		if !strings.Contains(refusal, "call again with source agent") || strings.Contains(refusal, "Refused on authority") {
 			t.Errorf("sending source %s answered %q", source, refusal)
 		}
 	}

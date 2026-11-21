@@ -3,12 +3,12 @@ import type { components } from "../../../api/schema";
 import { Button } from "../../../design-system/atoms";
 import { Heading } from "../../../design-system/heading";
 import { formatNumber } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
+import { useLocale, usePlural, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { labelFor } from "../../../lib/labelfor";
 import type { BuildStage } from "./conversation-machine";
 import { bandLabelKeys } from "./narration";
-import type { CorpusManifestEntry } from "./use-voice-corpus";
+import { type CorpusManifestEntry, manifestCount } from "./voice-manifest";
 import { WayOnward } from "./way-onward";
 
 // The right panel of the voice act: the corpus manifest, the honest meter,
@@ -35,10 +35,9 @@ const stageLabelKeys = {
 
 // Which outcome the reader is leaving the voice act from: picks the pinned
 // bar's status line, and only "failed" ever offers a retry beside Continue.
-export type VoiceContinueReason = "skipped" | "failed" | "deferred";
+export type VoiceContinueReason = "failed" | "deferred";
 
 const continueStatusKeys: Record<VoiceContinueReason, MessageKey> = {
-  skipped: "ob.conv.voice.continueSkippedStatus",
   failed: "ob.conv.voice.continueFailedStatus",
   deferred: "ob.conv.voice.continueDeferredStatus",
 };
@@ -71,6 +70,7 @@ export function VoiceActArtifact({
   continueBar,
 }: VoiceActArtifactProps) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   return (
     <div className="ob-conv-artifact">
@@ -93,16 +93,7 @@ export function VoiceActArtifact({
                   <Check aria-hidden />
                   <span>
                     <strong>{entry.label}</strong>
-                    <small>
-                      {entry.transcript
-                        ? t("ob.conv.voice.manifestKept", {
-                            kept: formatNumber(entry.keptWords, locale),
-                            total: formatNumber(entry.inputWords, locale),
-                          })
-                        : t("ob.conv.voice.manifestWords", {
-                            words: formatNumber(entry.keptWords, locale),
-                          })}
-                    </small>
+                    <small>{manifestCount(entry, plural, locale)}</small>
                   </span>
                 </li>
               ))}

@@ -56,11 +56,15 @@ files record that a model of its own family judged it.
 
 ## How an assistant is connected
 
-An assistant can be reached two ways, and the result page says which one each row used.
+An assistant can be reached three ways, and the result page says which one each row used.
 
 - **Through its own app**, such as the Claude Code or Codex command line. That is how a user meets it,
   with the instructions of its own maker. Each try starts in an empty folder. It holds no settings,
   files or memory of ours, so the assistant knows only what the server tells it.
+- **Through a host we control**, for Claude through the Claude Agent SDK. It is the
+  same Claude Code app. The host answers the questions the server asks in the chat, such as the
+  yes before a change to many records. It answers as the job says the user does. The command line cannot
+  answer them, so a job that needs such an answer is measured this way.
 - **Through a neutral bridge**, which gives every model the same tools, the same instructions and the
   same limit of turns. Only this way compares one model with another on the same footing.
 

@@ -221,13 +221,6 @@ BEGIN
   RETURN NULL;
 END;
 
-public.activity_clock_refold_mark acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.activity_clock_refold_mark.activity_clock_refold_mark_pkey PRIMARY KEY (singleton)
-public.activity_clock_refold_mark.activity_clock_refold_mark_singleton_check CHECK (singleton)
-public.activity_clock_refold_mark.passed_id uuid NOT NULL gen=- def=-
-public.activity_clock_refold_mark.passed_up_to timestamp with time zone NOT NULL gen=- def=-
-public.activity_clock_refold_mark.singleton boolean NOT NULL gen=- def=true
-public.activity_clock_refold_mark_pkey CREATE UNIQUE INDEX activity_clock_refold_mark_pkey ON public.activity_clock_refold_mark USING btree (singleton)
 public.activity_commitment_admission acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_commitment_admission.activity_commitment_admission_check CHECK (((renewed_by IS NULL) = (renewed_at IS NULL)))
 public.activity_commitment_admission.activity_commitment_admission_pkey PRIMARY KEY (source_activity_id, locator)
@@ -923,14 +916,6 @@ public.activity_ts_config(lang text) secdef=false cfg=- acl=-
 public.activity_unfolded_counterparty(address text) secdef=false cfg=- acl=- 
     SELECT CASE WHEN address <> lower(address) THEN lower(address) END
 
-public.activity_waiting_horizon acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.activity_waiting_horizon.activity_waiting_horizon_days_check CHECK ((horizon_days > 0))
-public.activity_waiting_horizon.activity_waiting_horizon_pkey PRIMARY KEY (singleton)
-public.activity_waiting_horizon.activity_waiting_horizon_singleton_check CHECK (singleton)
-public.activity_waiting_horizon.horizon_days integer NOT NULL gen=- def=-
-public.activity_waiting_horizon.measured_at timestamp with time zone NOT NULL gen=- def=-
-public.activity_waiting_horizon.singleton boolean NOT NULL gen=- def=true
-public.activity_waiting_horizon_pkey CREATE UNIQUE INDEX activity_waiting_horizon_pkey ON public.activity_waiting_horizon USING btree (singleton)
 public.advance_activity_domain_evidence_version() secdef=false cfg=- acl=- 
 BEGIN
  IF ROW(NEW.occurred_at, NEW.occurred_precision, NEW.archived_at, NEW.restricted_at)
@@ -2078,7 +2063,7 @@ public.automation.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSER
 public.automation.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.automation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "tier": 20000, "origin": 20000, "paused_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120,"origin":20000,"paused_reason":2000,"tier":20000}')
 public.automation.tier text NOT NULL gen=- def='confirmation_required'::text
 public.automation.trigger jsonb NOT NULL gen=- def=-
-public.automation.updated_at timestamp with time zone gen=- def=-
+public.automation.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.automation.version bigint NOT NULL gen=- def=1
 public.automation_effect_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.automation_effect_claim.applied_at timestamp with time zone gen=- def=-
@@ -2283,13 +2268,6 @@ public.capture_alias_sighting.user_id uuid NOT NULL gen=- def=-
 public.capture_alias_sighting.value text NOT NULL gen=- def=-
 public.capture_alias_sighting_once_per_message CREATE UNIQUE INDEX capture_alias_sighting_once_per_message ON public.capture_alias_sighting USING btree (user_id, value, source)
 public.capture_alias_sighting_pkey CREATE UNIQUE INDEX capture_alias_sighting_pkey ON public.capture_alias_sighting USING btree (id)
-public.capture_answered_sweep_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.capture_answered_sweep_cursor.after_contact_id uuid gen=- def=-
-public.capture_answered_sweep_cursor.capture_answered_sweep_cursor_one_row CHECK (singleton)
-public.capture_answered_sweep_cursor.capture_answered_sweep_cursor_pkey PRIMARY KEY (singleton)
-public.capture_answered_sweep_cursor.singleton boolean NOT NULL gen=- def=true
-public.capture_answered_sweep_cursor.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.capture_answered_sweep_cursor_pkey CREATE UNIQUE INDEX capture_answered_sweep_cursor_pkey ON public.capture_answered_sweep_cursor USING btree (singleton)
 public.capture_auto_enrich_budget acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_auto_enrich_budget.budget_date date NOT NULL gen=- def=-
 public.capture_auto_enrich_budget.capture_auto_enrich_budget_pkey PRIMARY KEY (budget_date)
@@ -2542,14 +2520,6 @@ public.capture_owner_identity_withdrawn.withdrawn_by text NOT NULL gen=- def=-
 public.capture_owner_identity_withdrawn_at_idx CREATE INDEX capture_owner_identity_withdrawn_at_idx ON public.capture_owner_identity_withdrawn USING btree (withdrawn_at)
 public.capture_owner_identity_withdrawn_pkey CREATE UNIQUE INDEX capture_owner_identity_withdrawn_pkey ON public.capture_owner_identity_withdrawn USING btree (id)
 public.capture_owner_identity_withdrawn_user_idx CREATE INDEX capture_owner_identity_withdrawn_user_idx ON public.capture_owner_identity_withdrawn USING btree (user_id)
-public.capture_party_admission_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.capture_party_admission_cursor.after_activity uuid NOT NULL gen=- def=-
-public.capture_party_admission_cursor.after_user uuid NOT NULL gen=- def=-
-public.capture_party_admission_cursor.capture_party_admission_cursor_pkey PRIMARY KEY (singleton)
-public.capture_party_admission_cursor.capture_party_admission_cursor_singleton_check CHECK (singleton)
-public.capture_party_admission_cursor.ceiling uuid NOT NULL gen=- def=-
-public.capture_party_admission_cursor.singleton boolean NOT NULL gen=- def=true
-public.capture_party_admission_cursor_pkey CREATE UNIQUE INDEX capture_party_admission_cursor_pkey ON public.capture_party_admission_cursor USING btree (singleton)
 public.capture_party_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_party_source.activity_id uuid NOT NULL gen=- def=-
 public.capture_party_source.admission_blocked boolean NOT NULL gen=- def=-
@@ -3176,10 +3146,16 @@ public.communication_instruction_by_director CREATE INDEX communication_instruct
 public.communication_instruction_pkey CREATE UNIQUE INDEX communication_instruction_pkey ON public.communication_instruction USING btree (id)
 public.communication_instruction_refuse_rewrite() secdef=false cfg=- acl=- 
 BEGIN
+  -- A row goes only with the review it decided, through the CASCADE. A direct
+  -- delete is refused. The CASCADE has already removed the review by the time
+  -- this fires, so the review is gone when the delete is its own.
   IF TG_OP = 'DELETE' THEN
-    RAISE EXCEPTION 'a communication instruction is the record of a decision and is never deleted'
-      USING ERRCODE = 'check_violation',
-            CONSTRAINT = 'communication_instruction_immutable';
+    IF EXISTS (SELECT 1 FROM communication_review r WHERE r.id = OLD.review_id) THEN
+      RAISE EXCEPTION 'a communication instruction is the record of a decision and is removed only with the review it decided'
+        USING ERRCODE = 'check_violation',
+              CONSTRAINT = 'communication_instruction_immutable';
+    END IF;
+    RETURN OLD;
   END IF;
   IF NEW.acknowledged_wording IS DISTINCT FROM OLD.acknowledged_wording THEN
     RAISE EXCEPTION 'a communication instruction records the message that was acknowledged and cannot be re-pointed at another'
@@ -4772,13 +4748,6 @@ public.deal_acquisition_source.updated_at timestamp with time zone NOT NULL gen=
 public.deal_acquisition_source.version bigint NOT NULL gen=- def=1
 public.deal_acquisition_source_key_key CREATE UNIQUE INDEX deal_acquisition_source_key_key ON public.deal_acquisition_source USING btree (key)
 public.deal_acquisition_source_pkey CREATE UNIQUE INDEX deal_acquisition_source_pkey ON public.deal_acquisition_source USING btree (id)
-public.deal_authorship_sweep_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.deal_authorship_sweep_cursor.after_evidence_id uuid gen=- def=-
-public.deal_authorship_sweep_cursor.deal_authorship_sweep_cursor_one_row CHECK (singleton)
-public.deal_authorship_sweep_cursor.deal_authorship_sweep_cursor_pkey PRIMARY KEY (singleton)
-public.deal_authorship_sweep_cursor.singleton boolean NOT NULL gen=- def=true
-public.deal_authorship_sweep_cursor.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal_authorship_sweep_cursor_pkey CREATE UNIQUE INDEX deal_authorship_sweep_cursor_pkey ON public.deal_authorship_sweep_cursor USING btree (singleton)
 public.deal_clear_partner_attribution_on_company_delete() secdef=false cfg=- acl=- 
 BEGIN
   UPDATE deal
@@ -6521,7 +6490,6 @@ public.idx_site_read_company CREATE INDEX idx_site_read_company ON public.site_r
 public.idx_site_read_retry_due CREATE INDEX idx_site_read_retry_due ON public.site_read USING btree (next_attempt_at, id) WHERE ((status = ANY (ARRAY['deferred'::text, 'failed'::text])) AND (next_attempt_at IS NOT NULL))
 public.idx_stage_pipeline CREATE INDEX idx_stage_pipeline ON public.stage USING btree (pipeline_id)
 public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC)
-public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
 public.idx_system_log_unkeyed_email CREATE INDEX idx_system_log_unkeyed_email ON public.system_log USING btree (id) WHERE ((action = 'login'::text) AND (detail ? 'email_hash'::text) AND (NOT (detail ? 'email_key_id'::text)))
 public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
@@ -6618,6 +6586,16 @@ public.import_run_one_active_per_source_name CREATE UNIQUE INDEX import_run_one_
 public.import_run_one_live_per_source_ref CREATE UNIQUE INDEX import_run_one_live_per_source_ref ON public.import_run USING btree (source_ref) WHERE ((connector = 'csv'::text) AND (source_released_at IS NULL))
 public.import_run_one_test_per_agent CREATE UNIQUE INDEX import_run_one_test_per_agent ON public.import_run USING btree (((actor ->> 'id'::text))) WHERE ((status = 'validating'::text) AND ((actor ->> 'type'::text) = 'agent'::text))
 public.import_run_pkey CREATE UNIQUE INDEX import_run_pkey ON public.import_run USING btree (id)
+public.installation_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.installation_state.installation_state_key_present CHECK ((btrim(key) <> ''::text))
+public.installation_state.installation_state_pkey PRIMARY KEY (key)
+public.installation_state.installation_state_value_is_an_object CHECK ((jsonb_typeof(value) = 'object'::text))
+public.installation_state.key text NOT NULL gen=- def=-
+public.installation_state.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.installation_state FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000}')
+public.installation_state.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.installation_state FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000}')
+public.installation_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.installation_state.value jsonb NOT NULL gen=- def=-
+public.installation_state_pkey CREATE UNIQUE INDEX installation_state_pkey ON public.installation_state USING btree (key)
 public.intro_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.intro_request.archived_at timestamp with time zone gen=- def=-
 public.intro_request.captured_by text NOT NULL gen=- def=-
@@ -9343,7 +9321,7 @@ public.runner_job.trigger_ref text NOT NULL gen=- def=-
 public.runner_job_pkey CREATE UNIQUE INDEX runner_job_pkey ON public.runner_job USING btree (id)
 public.runner_job_trigger_unique CREATE UNIQUE INDEX runner_job_trigger_unique ON public.runner_job USING btree (agent_spec, trigger_ref)
 public.sales_goal_plan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.sales_goal_plan.created_at timestamp with time zone NOT NULL gen=- def=-
+public.sales_goal_plan.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.sales_goal_plan.currency currency_code NOT NULL gen=- def=-
 public.sales_goal_plan.draft_revision bigint gen=- def=-
 public.sales_goal_plan.id uuid NOT NULL gen=- def=uuidv7()
@@ -9358,7 +9336,7 @@ public.sales_goal_plan.sales_goal_plan_published_revision_js_safe CHECK (((publi
 public.sales_goal_plan.sales_goal_plan_version_js_safe CHECK (((version >= 1) AND (version <= '9007199254740991'::bigint)))
 public.sales_goal_plan.sales_goal_plan_withdrawn_revision_js_safe CHECK (((withdrawn_revision >= 1) AND (withdrawn_revision <= '9007199254740991'::bigint)))
 public.sales_goal_plan.sales_goal_plan_year_check CHECK (((year >= 2000) AND (year <= 2200)))
-public.sales_goal_plan.updated_at timestamp with time zone NOT NULL gen=- def=-
+public.sales_goal_plan.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.sales_goal_plan.version bigint NOT NULL gen=- def=-
 public.sales_goal_plan.withdrawn_revision bigint gen=- def=-
 public.sales_goal_plan.year integer NOT NULL gen=- def=-
@@ -10073,6 +10051,8 @@ public.system_log.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSER
 public.system_log.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.system_log FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"action": 20000, "actor_id": 20000, "actor_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"actor_id":20000,"actor_type":20000}')
 public.system_log.trg_system_log_no_mutate CREATE TRIGGER trg_system_log_no_mutate BEFORE DELETE OR UPDATE ON public.system_log FOR EACH ROW EXECUTE FUNCTION system_log_immutable()
 public.system_log_immutable() secdef=false cfg=- acl=- 
+DECLARE
+  entry_age interval := now() - OLD.occurred_at;
 BEGIN
   IF TG_OP = 'UPDATE' AND OLD.action = 'login'
      AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'
@@ -10081,6 +10061,17 @@ BEGIN
      AND (NEW.detail - ARRAY['email_hash','email_key_id']) = (OLD.detail - 'email_hash')
      AND (to_jsonb(NEW) - 'detail') = (to_jsonb(OLD) - 'detail') THEN
     RETURN NEW;
+  END IF;
+  IF TG_OP = 'DELETE' AND (
+       (entry_age > interval '90 days' AND OLD.action IN (
+          'capture_sync_error', 'capture_ensure_fault', 'capture_deal_attribution_fault',
+          'capture_project_attribution_fault', 'data_task.batch_failed', 'home_repair.skipped',
+          'contact_employer_repair.skipped', 'dedupe_recheck', 'dedupe_near_match',
+          'comms_identity_reconcile_failed', 'ai_task.state_changed'))
+    OR (entry_age > interval '400 days' AND OLD.action IN (
+          'login', 'password_reset', 'password_reset_requested', 'capture.credential_rotated')
+        AND NOT (OLD.action = 'login' AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'))) THEN
+    RETURN OLD;
   END IF;
   RAISE EXCEPTION 'system_log is append-only (attempted % on row %)', TG_OP, OLD.id
     USING ERRCODE = 'check_violation';
@@ -10810,7 +10801,6 @@ public.uq_weekly_plan_owner_week CREATE UNIQUE INDEX uq_weekly_plan_owner_week O
 public.uq_weekly_review_driver_deal CREATE UNIQUE INDEX uq_weekly_review_driver_deal ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar, deal_id)
 public.uq_weekly_review_learning_citation CREATE UNIQUE INDEX uq_weekly_review_learning_citation ON public.weekly_review_learning_citation USING btree (learning_id, subject_type, subject_id)
 public.uq_weekly_review_learning_slot CREATE UNIQUE INDEX uq_weekly_review_learning_slot ON public.weekly_review_learning USING btree (weekly_review_id, "position")
-public.uq_weekly_review_movement_bar CREATE UNIQUE INDEX uq_weekly_review_movement_bar ON public.weekly_review_movement USING btree (weekly_review_id, period_kind, bar)
 public.uq_weekly_review_outlook_period CREATE UNIQUE INDEX uq_weekly_review_outlook_period ON public.weekly_review_outlook USING btree (weekly_review_id, period_kind)
 public.uq_weekly_review_user_week CREATE UNIQUE INDEX uq_weekly_review_user_week ON public.weekly_review USING btree (user_id, local_week_start)
 public.user_mfa acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -10906,7 +10896,7 @@ public.voice_build.status_code text gen=- def=-
 public.voice_build.status_detail text gen=- def=-
 public.voice_build.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_build FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"stage": 20000, "reason": 2000, "status": 20000, "source_hash": 20000, "status_code": 20000, "status_detail": 20000, "candidate_action": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"candidate_action":20000,"reason":2000,"source_hash":20000,"stage":20000,"status":20000,"status_code":20000,"status_detail":20000}')
 public.voice_build.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_build FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"stage": 20000, "reason": 2000, "status": 20000, "source_hash": 20000, "status_code": 20000, "status_detail": 20000, "candidate_action": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"candidate_action":20000,"reason":2000,"source_hash":20000,"stage":20000,"status":20000,"status_code":20000,"status_detail":20000}')
-public.voice_build.updated_at timestamp with time zone gen=- def=-
+public.voice_build.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_build.version bigint NOT NULL gen=- def=1
 public.voice_build.voice_build_attempt_check CHECK ((attempt >= 1))
 public.voice_build.voice_build_candidate_action_check CHECK ((candidate_action = ANY (ARRAY['none'::text, 'auto_activated'::text, 'review_required'::text])))
@@ -10950,7 +10940,7 @@ public.voice_corpus_source.source_label text NOT NULL gen=- def=-
 public.voice_corpus_source.source_ref text NOT NULL gen=- def=-
 public.voice_corpus_source.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_corpus_source FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "origin": 20000, "source": 20000, "register": 20000, "source_ref": 20000, "captured_by": 20000, "content_hash": 20000, "source_label": 500, "exclusion_reason": 2000, "extractor_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"content_hash":20000,"exclusion_reason":2000,"extractor_version":20000,"kind":20000,"origin":20000,"register":20000,"source":20000,"source_label":500,"source_ref":20000}')
 public.voice_corpus_source.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_corpus_source FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "origin": 20000, "source": 20000, "register": 20000, "source_ref": 20000, "captured_by": 20000, "content_hash": 20000, "source_label": 500, "exclusion_reason": 2000, "extractor_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"content_hash":20000,"exclusion_reason":2000,"extractor_version":20000,"kind":20000,"origin":20000,"register":20000,"source":20000,"source_label":500,"source_ref":20000}')
-public.voice_corpus_source.updated_at timestamp with time zone gen=- def=-
+public.voice_corpus_source.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_corpus_source.uq_voice_corpus_source_ref UNIQUE (voice_profile_id, source_ref)
 public.voice_corpus_source.version bigint NOT NULL gen=- def=1
 public.voice_corpus_source.voice_corpus_source_exclusion_check CHECK (((excluded AND (exclusion_reason IS NOT NULL)) OR (NOT excluded)))
@@ -10986,7 +10976,7 @@ public.voice_learning_signal.source text NOT NULL gen=- def=-
 public.voice_learning_signal.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_learning_signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000,"source":20000}')
 public.voice_learning_signal.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_learning_signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000,"source":20000}')
 public.voice_learning_signal.transformations jsonb NOT NULL gen=- def='[]'::jsonb
-public.voice_learning_signal.updated_at timestamp with time zone gen=- def=-
+public.voice_learning_signal.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_learning_signal.uq_voice_learning_signal_draft UNIQUE (draft_ref_hash)
 public.voice_learning_signal.version bigint NOT NULL gen=- def=1
 public.voice_learning_signal.voice_learning_signal_outcome_check CHECK ((outcome = ANY (ARRAY['drafted'::text, 'accepted'::text, 'edited_sent'::text, 'rejected'::text])))
@@ -11019,7 +11009,7 @@ public.voice_profile.status text NOT NULL gen=- def='collecting'::text
 public.voice_profile.team_id uuid gen=- def=-
 public.voice_profile.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_profile FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}')
 public.voice_profile.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_profile FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}')
-public.voice_profile.updated_at timestamp with time zone gen=- def=-
+public.voice_profile.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_profile.version bigint NOT NULL gen=- def=1
 public.voice_profile.voice_profile_derived_versioned CHECK (((voice_profile_md = ''::text) OR (profile_version >= 1)))
 public.voice_profile.voice_profile_md text NOT NULL gen=- def=''::text
@@ -11043,7 +11033,7 @@ public.voice_profile_delta.id uuid NOT NULL gen=- def=uuidv7()
 public.voice_profile_delta.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_profile_delta FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"classification": 20000, "activation_outcome": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activation_outcome":20000,"classification":20000}')
 public.voice_profile_delta.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_profile_delta FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"classification": 20000, "activation_outcome": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activation_outcome":20000,"classification":20000}')
 public.voice_profile_delta.to_version integer NOT NULL gen=- def=-
-public.voice_profile_delta.updated_at timestamp with time zone gen=- def=-
+public.voice_profile_delta.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_profile_delta.uq_voice_profile_delta_version UNIQUE (voice_profile_id, to_version)
 public.voice_profile_delta.voice_profile_delta_activation_outcome_check CHECK ((activation_outcome = ANY (ARRAY['auto_activated'::text, 'review_required'::text, 'manually_activated'::text, 'rejected'::text, 'rollback'::text])))
 public.voice_profile_delta.voice_profile_delta_classification_check CHECK ((classification = ANY (ARRAY['routine'::text, 'material'::text])))
@@ -11083,7 +11073,7 @@ public.voice_profile_version.stats_json jsonb NOT NULL gen=- def=-
 public.voice_profile_version.status text NOT NULL gen=- def=-
 public.voice_profile_version.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_profile_version FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "source": 20000, "status": 20000, "model_name": 120, "captured_by": 20000, "source_hash": 20000, "model_provider": 20000, "review_reasons": 2000, "builder_version": 20000, "activation_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activation_policy_version":20000,"builder_version":20000,"captured_by":20000,"model_name":120,"model_provider":20000,"reason":2000,"review_reasons":2000,"source":20000,"source_hash":20000,"status":20000}')
 public.voice_profile_version.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_profile_version FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "source": 20000, "status": 20000, "model_name": 120, "captured_by": 20000, "source_hash": 20000, "model_provider": 20000, "review_reasons": 2000, "builder_version": 20000, "activation_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activation_policy_version":20000,"builder_version":20000,"captured_by":20000,"model_name":120,"model_provider":20000,"reason":2000,"review_reasons":2000,"source":20000,"source_hash":20000,"status":20000}')
-public.voice_profile_version.updated_at timestamp with time zone gen=- def=-
+public.voice_profile_version.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_profile_version.uq_voice_profile_version_number UNIQUE (voice_profile_id, profile_version)
 public.voice_profile_version.version bigint NOT NULL gen=- def=1
 public.voice_profile_version.voice_profile_id uuid NOT NULL gen=- def=-
@@ -11346,6 +11336,7 @@ public.weekly_review.meetings_with_next_step integer NOT NULL gen=- def=0
 public.weekly_review.narrated_at timestamp with time zone gen=- def=-
 public.weekly_review.narrative text gen=- def=-
 public.weekly_review.numeric_summary jsonb gen=- def=-
+public.weekly_review.outlook_movement jsonb gen=- def=-
 public.weekly_review.pipeline_created_minor bigint gen=- def=-
 public.weekly_review.pipeline_lost_minor bigint gen=- def=-
 public.weekly_review.pipeline_won_minor bigint gen=- def=-
@@ -11442,20 +11433,6 @@ public.weekly_review_learning_citation.weekly_review_learning_citation_pkey PRIM
 public.weekly_review_learning_citation.weekly_review_learning_citation_subject_check CHECK ((subject_type = ANY (ARRAY['deal'::text, 'commitment'::text])))
 public.weekly_review_learning_citation_pkey CREATE UNIQUE INDEX weekly_review_learning_citation_pkey ON public.weekly_review_learning_citation USING btree (id)
 public.weekly_review_learning_pkey CREATE UNIQUE INDEX weekly_review_learning_pkey ON public.weekly_review_learning USING btree (id)
-public.weekly_review_movement acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.weekly_review_movement.bar text NOT NULL gen=- def=-
-public.weekly_review_movement.delta_minor bigint NOT NULL gen=- def=-
-public.weekly_review_movement.id uuid NOT NULL gen=- def=uuidv7()
-public.weekly_review_movement.period_kind text NOT NULL gen=- def=-
-public.weekly_review_movement.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review_movement FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"bar": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"bar":20000,"period_kind":20000}')
-public.weekly_review_movement.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review_movement FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bar": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"bar":20000,"period_kind":20000}')
-public.weekly_review_movement.weekly_review_id uuid NOT NULL gen=- def=-
-public.weekly_review_movement.weekly_review_movement_bar_check CHECK ((bar = ANY (ARRAY['created'::text, 'advanced'::text, 'slipped'::text, 'excluded'::text, 'reinstated'::text, 'not_checked'::text, 'won'::text, 'lost'::text, 'other'::text])))
-public.weekly_review_movement.weekly_review_movement_delta_minor_js_safe CHECK (((delta_minor >= '-9007199254740991'::bigint) AND (delta_minor <= '9007199254740991'::bigint)))
-public.weekly_review_movement.weekly_review_movement_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text])))
-public.weekly_review_movement.weekly_review_movement_pkey PRIMARY KEY (id)
-public.weekly_review_movement.weekly_review_movement_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
-public.weekly_review_movement_pkey CREATE UNIQUE INDEX weekly_review_movement_pkey ON public.weekly_review_movement USING btree (id)
 public.weekly_review_outlook acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review_outlook.base_currency currency_code NOT NULL gen=- def=-
 public.weekly_review_outlook.best_case_minor bigint gen=- def=-

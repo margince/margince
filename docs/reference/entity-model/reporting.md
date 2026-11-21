@@ -370,8 +370,8 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 | `published_revision` | `bigint` |  |  |
 | `withdrawn_revision` | `bigint` |  |  |
 | `year` | `integer` | yes |  |
-| `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
+| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | The plan version a write sends in If-Match; 0 before the first draft. |
 
 **Points at**

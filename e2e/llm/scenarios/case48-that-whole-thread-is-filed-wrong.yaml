@@ -27,8 +27,6 @@ prompt: |
   but it is Rhön Hydraulik's order. Move the whole thread over — all of it, not
   one mail — and get it off Kieler.
 
-must_call:
-  - relink_activities
 may_call:
   - search_context
   - search_records
@@ -37,13 +35,7 @@ may_call:
   - resolve_entities
   - catch_me_up_on
   - query_workspace
-
-# entity_type pins the destination as a company; a project is a retention mark and
-# is not what was asked. replace_existing_of_type is the "get it off Kieler" half:
-# without it the mails are ADDED to Rhön and left on Kieler too.
-must_call_with:
-  - relink_activities.entity_type=company
-  - relink_activities.replace_existing_of_type=true
+  - relink_activities
 
 must_mention:
   - "Rhön Hydraulik"

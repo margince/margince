@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 276.2 KB |
+| Tool catalog | 276.3 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 72100 |
+| Approx. wire tokens | 72140 |
 | Largest tool | `read_details` (17.6 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.9 KB | 19% | Yes, every step |
+| Descriptions (incl. governance clause) | 54.0 KB | 19% | Yes, every step |
 | Input schemas | 158.8 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **212.7 KB** | **77%** | **the recurring cost** |
+| **Description + input schema** | **212.8 KB** | **77%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2877 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2918 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1775 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1870 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
@@ -1315,21 +1315,22 @@ without its exact words. relink files one activity under another record too, and
 set; with replace_existing_of_type they move it off the old record of that type instead. relink and
 relink_many usually run at once; filing under a project, or a move the installation's policy holds,
 answers staged with an approval id, and nothing has moved until the retry answers. Tell the user
-before you file under a project, which only a member can undo from the activity. attach checks the
-record first; read list_documents before attaching the same file again. A logged meeting names who
-takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting
-still to come, change_state with move_deal when the same event moves a deal, so move and note are
-one change, and change_reports record_decision for a sales review's decision, which a note cannot
-track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry
-carries. (Governance: runs immediately for accept_document_fields, archive_document, assign_inquiry,
-attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance,
-decline_deal, discard_draft, file_channel_message, hide_document, log, preview_inquiry_assignment,
-preview_sign_off, read_document_fields, read_transcript, ready, request_document_access,
-reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience,
-show_document, task, unready; decided per call from its arguments for relink, relink_many; the
-user's yes is needed for the actions archive_document, assign_inquiry, so tell them what the call
-will change and get it before calling, unless they asked for this call themselves; requires passport
-scope "write".)
+before you file under a project, which only a member can undo from the activity. Before log, read
+the record's recent activity with read_context about catch_up: a call or meeting already on it is
+reported as there, never logged a second time. attach checks the record first; read list_documents
+before attaching the same file again. A logged meeting names who takes part: leave off anyone whose
+invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with
+move_deal when the same event moves a deal, so move and note are one change, and change_reports
+record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a
+relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs
+immediately for accept_document_fields, archive_document, assign_inquiry, attach, attach_link,
+bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_deal, discard_draft,
+file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off,
+read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft,
+set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready;
+decided per call from its arguments for relink, relink_many; the user's yes is needed for the
+actions archive_document, assign_inquiry, so tell them what the call will change and get it before
+calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>

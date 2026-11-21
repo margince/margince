@@ -31,6 +31,12 @@ func (e *flushEnv) seedRoles(t *testing.T, roles map[ids.UUID]string) {
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
+	e.assignRoles(t, roles)
+}
+
+// assignRoles gives each user the system role named, once seedRoles has seeded them.
+func (e *flushEnv) assignRoles(t *testing.T, roles map[ids.UUID]string) {
+	t.Helper()
 	for user, key := range roles {
 		e.exec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT id, $1 FROM role WHERE key = $2 AND is_system`, user, key)
 	}

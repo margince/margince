@@ -11,9 +11,18 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// partyRecoveryPlace is where the sweep stands: the last pair it offered, and
+// the newest activity the sweep in progress reaches. All zero starts a sweep.
+type partyRecoveryPlace struct {
+	AfterActivity ids.UUID `json:"after_activity"`
+	AfterUser     ids.UUID `json:"after_user"`
+	Ceiling       ids.UUID `json:"ceiling"`
+}
 
 type partyRecoveryTarget struct {
 	Activity ids.ActivityID
@@ -47,21 +56,18 @@ func (s *Sink) RecoverPartyAdmissions(ctx context.Context, limit int) error {
 }
 
 func partyRecoveryPageTx(ctx context.Context, tx pgx.Tx, limit int) ([]partyRecoveryTarget, error) {
-	args := []any{ids.Nil}
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`INSERT INTO capture_party_admission_cursor(singleton,after_activity,after_user,ceiling)
- VALUES(true,$%[1]d,$%[1]d,$%[1]d) ON CONFLICT(singleton) DO NOTHING`, len(args)), args...); err != nil {
+	// The row lock makes two recoveries take turns over one sweep.
+	place, err := storekit.LockInstallationStateTx(ctx, tx, storekit.StateCapturePartyAdmissionCursor, partyRecoveryPlace{})
+	if err != nil {
 		return nil, err
 	}
-	var after, user, ceiling ids.UUID
-	if err := tx.QueryRow(ctx, `SELECT after_activity,after_user,ceiling FROM capture_party_admission_cursor WHERE singleton FOR UPDATE`).Scan(&after, &user, &ceiling); err != nil {
-		return nil, err
-	}
+	after, user, ceiling := place.AfterActivity, place.AfterUser, place.Ceiling
 	if ceiling.IsZero() {
 		if err := tx.QueryRow(ctx, `SELECT coalesce((SELECT id FROM activity ORDER BY id DESC LIMIT 1),'00000000-0000-0000-0000-000000000000'::uuid)`).Scan(&ceiling); err != nil {
 			return nil, err
 		}
 	}
-	args = []any{after, user, ceiling, limit}
+	args := []any{after, user, ceiling, limit}
 	query := fmt.Sprintf(`WITH sources AS (
  (SELECT DISTINCT ps.activity_id,ps.user_id FROM capture_party_source ps
  WHERE ps.admission_pending AND (ps.activity_id,ps.user_id)>($%[1]d::uuid,$%[2]d::uuid) AND ps.activity_id<=$%[3]d
@@ -87,7 +93,6 @@ func partyRecoveryPageTx(ctx context.Context, tx pgx.Tx, limit int) ([]partyReco
 		after, user = last.Activity.UUID, last.User
 	}
 	// Advancing before admission bounds faults too; the next complete sweep retries them.
-	args = []any{after, user, ceiling}
-	_, err = tx.Exec(ctx, fmt.Sprintf(`UPDATE capture_party_admission_cursor SET after_activity=$%d,after_user=$%d,ceiling=$%d WHERE singleton`, len(args)-2, len(args)-1, len(args)), args...)
-	return targets, err
+	return targets, storekit.StoreInstallationStateTx(ctx, tx, storekit.StateCapturePartyAdmissionCursor,
+		partyRecoveryPlace{AfterActivity: after, AfterUser: user, Ceiling: ceiling})
 }

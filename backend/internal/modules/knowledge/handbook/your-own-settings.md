@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/signeddevices.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/signeddevices.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts frontend/src/lib/setup-checklist.ts frontend/src/features/onboarding/onboarding-conversation/voice-scenes.tsx frontend/src/features/onboarding/onboarding-conversation/connect-scene.tsx frontend/src/features/onboarding/onboarding-signout.tsx frontend/src/app/onboarding-gate.ts frontend/src/features/onboarding/onboarding-journey.ts -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Notifications**, **Meetings**, **Writing voice**, **AI assistants** and **Connections**. Everything here changes your own seat and nobody else's.
@@ -13,8 +13,22 @@ The pages are **Account**, **Notifications**, **Meetings**, **Writing voice**, *
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
+### What happens the first time I sign in?
+The first time you sign in with a full seat, two steps come before the rest of Margince. They are **Train your writing voice** and **Connect your mail and calendar**. If your role may not build a writing voice, you start on the second step. If it may do neither, as with **Read-only**, Home opens with no setup.
+1. On **Train your writing voice**, drop files you wrote, choose **Browse files**, or choose **Paste text instead**. For a file with several speakers, the step names the file and asks which speaker is you. Choose **Skip this file** when none of them is.
+2. Every sample you added is listed under **Sources**, and **Remove** takes one out again. Then choose **Build my voice profile**, or **Skip for now** to go straight to the second step.
+3. If no AI is connected yet, the step says **Connect an AI first**. **Build my voice profile** then waits until an administrator connects one, and your samples are kept.
+4. On **Connect your mail and calendar**, pick Google, Microsoft or **Other mail provider**. **Also worth doing now** offers your LinkedIn profile and your AI tool. Once a mailbox is connected, it also offers **Prepare my Morning brief overnight**.
+5. A profile you saved stays on its row, with **Change** to correct it. Choose **Continue**, or **Skip for now**. **Back**, or your browser's Back button, returns you to the first step.
+6. If the step cannot check your mailboxes, it says so and offers **Retry**, and **Skip for now** still works. If mail capture is not set up on your Margince, the step says so instead of offering accounts.
+
+**Sign out** sits at the top of both steps, and the next sign-in opens setup again. Until setup is done, the other pages of Margince stay closed. Home opens after the second step.
+
+Samples you added are kept even if you skip or the build does not finish. Whatever you skipped waits under **Finish setup**. You can change all of it later in Settings under **Writing voice**, **Connections** and **Account**.
+Also called: onboarding, first sign-in, welcome steps.
+
 ### How do I finish setting up Margince?
-To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists the steps. Connect your mail and your calendar, choose where you work and your language, and see what Margince may do. Then add writing samples and turn on your booking link.
+To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists up to nine steps. First come **Set up AI**, **Connect your mail** and **Connect your calendar**. Then come **Choose where you work**, **Choose your language** and **See what Margince may do**. Last come **Connect your AI tool**, **Train your writing voice** and **Turn on your booking link**. Which of them you see depends on your role: a step whose page you cannot change is left out.
 
 Every member sees the three personal steps, so a colleague invited to an existing workspace has them too. **Choose where you work** sets your time zone, and **Choose your language** sets the language, both on **Account**; the step's button takes you there. **See what Margince may do** opens a short note on what Margince reads and writes. It is done once you choose **Got it**, and this browser keeps it.
 
@@ -281,7 +295,7 @@ The best samples are emails you sent, then proposals and posts, then the written
 
 **Learn from sent mail** reads only mail sent from your own mailbox, never a colleague's mail or a copy of it. It leaves out mail kept private to its participants, and mail whose subject marks it confidential. From each mail it keeps only what you wrote: quoted replies, forwards and signatures are cut. Each mail becomes one sample, named by its subject and date. A sample you remove stays out when you choose the button again.
 
-Margince reads a PDF or Word document to its text in the browser before it sends anything. It skips a file with no text in it. It names a file it cannot open (one with a password, or one that is broken), so you can paste its text in instead.
+Margince reads a PDF or Word document to its text in the browser before it sends anything. It skips a file with no text in it. It names a file it cannot open (one with a password, or one that is broken), so you can paste its text in instead. A file must stay just under 1 MB as sent. Text with many quotation marks or new lines reaches that sooner. A larger file is named and left out, so you can split it into smaller files.
 
 When at least half of a file comes from named speakers, Margince reads it as a conversation. The page asks which speaker is you, and keeps only your parts. Under that share, the file counts as plain text and is taken whole. So an email with a line that opens with a heading and a colon, such as "Frage: …", is not asked about.
 

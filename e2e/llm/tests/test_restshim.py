@@ -72,6 +72,37 @@ class ShimTest(unittest.TestCase):
         text, _ = self.call("skill_file", {"path": "INDEX.md"})
         self.assertTrue(text.startswith(f"INDEX.md lines 1-{restshim.MAX_LINES} of 1000"))
 
+    def test_a_long_found_line_shows_the_word_searched_for(self):
+        row = "| `POST /reports/{report}` | runReport | Run a report. `{report}` is one of " + ", ".join(
+            f"report-{n}" for n in range(40)) + ", meeting-conversion, win-loss. |"
+        with open(os.path.join(self.root.name, "INDEX.md"), "w", encoding="utf-8") as handle:
+            handle.write(row)
+        text, _ = self.call("skill_file", {"path": "INDEX.md", "find": "meeting-conversion"})
+        hit = text.splitlines()[1]
+        self.assertIn("meeting-conversion", hit)
+        self.assertIn("runReport", hit)
+        self.assertLess(len(hit), len(row))
+
+    def find_in(self, row, find):
+        with open(os.path.join(self.root.name, "INDEX.md"), "w", encoding="utf-8") as handle:
+            handle.write(row)
+        text, _ = self.call("skill_file", {"path": "INDEX.md", "find": find})
+        return text.splitlines()[1]
+
+    def test_a_long_match_is_shown_whole(self):
+        needle = "".join(chr(ord("a") + n % 26) for n in range(60))
+        row = "x" * 300 + needle + "y" * 300
+        hit = self.find_in(row, needle.upper())
+        self.assertIn(needle, hit)
+        self.assertLess(len(hit), len(row))
+
+    def test_a_letter_whose_lower_case_is_longer_does_not_move_the_match(self):
+        # "İ".lower() is two characters, so an index found in the lowered line
+        # points 300 characters short of the match in the line as written.
+        row = "İ" * 300 + "meeting-conversion" + "z" * 300
+        hit = self.find_in(row, "MEETING-CONVERSION")
+        self.assertIn("meeting-conversion", hit)
+
     def test_no_path_lists_the_files(self):
         self.assertEqual(self.call("skill_file", {}), ("INDEX.md", False))
 

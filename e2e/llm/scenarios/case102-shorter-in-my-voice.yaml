@@ -7,11 +7,10 @@ writes: true
 prompt: |
   My drafts come out too long. Add to my Voice DNA that I keep mails under five sentences. Create it if I have none.
 
+# The end state reads the Voice DNA by one glob word and cannot tell five from
+# 5, so the number the user gave is held on the call that saved it.
 must_call:
   - change_my_settings
-
-must_call_with:
-  - change_my_settings.action=update_voice_profile|change_my_settings.action=create_voice_profile
 
 must_call_matching:
   - 'change_my_settings~(?i)(five|5)[- ]sentences?'

@@ -1,0 +1,92 @@
+{
+  "scenario": "case123_take_over_sofias_deal",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "mcp",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "a893ab89a3fd3ef0",
+    "tools": "220941525a2f3975",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T14:51:55Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:51:55Z"
+  },
+  "usage": {
+    "input_tokens": 16,
+    "output_tokens": 3771,
+    "cache_creation_input_tokens": 78338,
+    "cache_read_input_tokens": 469101,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.398
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "read_view",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "read_view",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 8.5,
+      "min": 8,
+      "max": 9
+    },
+    "turns": {
+      "median": 9.5,
+      "min": 9,
+      "max": 10
+    },
+    "refused": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 273727.5,
+      "min": 202852,
+      "max": 344603
+    },
+    "output_tokens": {
+      "median": 1885.5,
+      "min": 1688,
+      "max": 2083
+    },
+    "duration_ms": {
+      "median": 18982.5,
+      "min": 16907,
+      "max": 21058
+    }
+  }
+}

@@ -2415,6 +2415,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_trace_sweep": "Bereinigung der E-Mail-Spuren",
   "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
   "systemJob.close_date": "Prüfung der Abschlussdaten",
+  "systemJob.installation_zone": "Prüfung der Zeitzone",
   "systemJob.commission_accrual": "Provisionsabgrenzung",
   "systemJob.partner_activation": "Partneraktivierung",
   "systemJob.commitment_settle": "Abschluss von Zusagen",
@@ -12738,7 +12739,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Margince kann deinen Morgenbericht weder lesen noch mit Anmerkungen versehen. Deine Datensätze, die Worklist und der geplante Wochenrückblick bleiben verfügbar.",
   "overnightGrant.saveFailedTitle": "Antwort nicht gespeichert",
   "overnightGrant.saveFailed":
-    "Alles andere ist verbunden. Lege das nach der Anmeldung in den Einstellungen unter Verbindungen fest.",
+    "Alles andere ist verbunden. Lege das nach der Anmeldung in den Einstellungen unter Nutzerkonto fest.",
   "overnightGrant.renewTitle": "Vollmacht für die Nacht abgelaufen",
   "overnightGrant.renew":
     "Deaktiviere die Option und aktiviere sie erneut, um die Vollmacht zu erneuern. Bis dahin wird dein Morgenbericht nicht vorbereitet.",
@@ -13430,22 +13431,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.company.confirmed":
     "Unternehmensprofil bestätigt. Jeder gespeicherte Wert hält seine Quelle fest.",
   "ob.conv.manual.chosen": "Ich gebe es manuell ein.",
-  "ob.conv.voice.skipped": "Schreibstil vorerst überspringen.",
+  "ob.conv.voice.skipped": "Vorerst überspringen",
   "ob.conv.voice.uploadAdded": "{name} hinzugefügt.",
   "ob.conv.voice.speakerQuestion":
-    "Dieses Transkript hat mehrere Sprechende. Wer davon bist du? Nur deine eigenen Worte zählen.",
+    "„{name}“ enthält mehrere Sprechende. Wer davon bist du? Nur deine eigenen Worte zählen.",
+  "ob.conv.voice.speakerSkip": "Datei überspringen",
   "ob.conv.voice.speakerOptionDetail": "Wörter: {words} · Beiträge: {turns}",
   "ob.conv.voice.speakerFoot": "Deine Wahl gilt nur für diese Datei.",
   "ob.conv.voice.speakerContinue": "Diese Person verwenden",
-  "ob.conv.voice.continueSkippedStatus":
-    "Übersprungen. Später in den Einstellungen hinzufügen.",
   "ob.conv.voice.continueFailedStatus":
     "Dein Material bleibt erhalten. Bitte versuche es jetzt erneut oder mache weiter und schließe den Aufbau später ab.",
   "ob.conv.voice.continueDeferredStatus":
     "Nichts zu tun. Mache weiter. Der Aufbau wird automatisch abgeschlossen.",
   "ob.conv.voice.composer": "Füge hier einen Text ein, den du geschrieben hast",
   "ob.conv.voice.dropHint":
-    "Du kannst Dateien auch an jeder Stelle in diesem Gespräch ablegen: .txt, .md, .pdf, .docx oder ein Transkript als .vtt, .srt oder .json.",
+    "Du kannst Dateien auch an jeder Stelle in diesem Gespräch ablegen: .txt, .md, .pdf, .docx oder ein Transkript als .vtt, .srt oder .json. Jede Datei muss beim Senden knapp unter {limit} bleiben. Text mit vielen Anführungszeichen oder Zeilenumbrüchen erreicht das früher.",
   "ob.conv.voice.fileSkipped":
     "Ich kann {name} nicht lesen. Unterstützte Formate: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "ob.conv.voice.fileUnreadable":
@@ -13457,13 +13457,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.reactionDocument":
     "Gezählte Wörter: {words}. Alle Wörter in dieser Datei stammen von dir.",
   "ob.conv.voice.refusalUnattributed":
-    "Das sieht nach einem Gespräch aus. Es wurde nichts gezählt, da ich nicht erkennen kann, welche Wörter von dir stammen.",
+    "{name} sieht nach einem Gespräch aus. Es wurde nichts gezählt, da ich nicht erkennen kann, welche Wörter von dir stammen.",
   "ob.conv.voice.refusalSpeaker":
-    "Ich konnte diesen Namen im Transkript nicht finden. Es wurde nichts gezählt.",
+    "Ich konnte diesen Namen in {name} nicht finden. Es wurde nichts gezählt.",
   "ob.conv.voice.refusalUnsupported":
-    "Ich konnte diese Datei weder als Text noch als Transkript lesen. Es wurde nichts gezählt.",
+    "Ich konnte {name} weder als Text noch als Transkript lesen. Es wurde nichts gezählt.",
+  "ob.conv.voice.refusalTooLarge":
+    "{name} ist zu groß. Eine Datei muss beim Senden knapp unter {limit} bleiben, und Anführungszeichen und Zeilenumbrüche brauchen zusätzlich Platz. Teile sie in kleinere Dateien auf.",
   "ob.conv.voice.ingestFailed":
-    "Die Quelle konnte nicht hinzugefügt werden: {detail}",
+    "{name} konnte nicht hinzugefügt werden: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "Die Quelle konnte nicht hinzugefügt werden. Bitte versuche es gleich erneut.",
   "ob.conv.voice.pasteAdd": "Zu den Schreibproben hinzufügen",
@@ -13487,8 +13489,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch nichts gesammelt. Hänge ein Transkript oder einen selbst geschriebenen Text an.",
   "ob.conv.voice.meterWords": "Eigene Wörter: {words} von {target}",
   "ob.conv.voice.meterBand": "Qualität: {band}",
-  "ob.conv.voice.manifestKept": "{kept} von {total} Wörtern behalten",
-  "ob.conv.voice.manifestWords": "Wörter: {words}",
+  "ob.conv.voice.manifestKept_one": "{kept} von {total} Wort behalten",
+  "ob.conv.voice.manifestKept_other": "{kept} von {total} Wörtern behalten",
+  "ob.conv.voice.manifestWords_one": "{words} Wort",
+  "ob.conv.voice.manifestWords_other": "{words} Wörter",
+  "ob.conv.voice.floorShort_one": "Noch {words} Wort bis zum Aufbau.",
+  "ob.conv.voice.floorShort_other": "Noch {words} Wörter bis zum Aufbau.",
+  "ob.conv.voice.waitForSamples":
+    "Warte, bis deine Schreibproben hinzugefügt sind.",
   "ob.conv.voice.registerMix": "Register: {mix}",
   "ob.conv.voice.stageTitle": "Fortschritt des Aufbaus",
   "ob.conv.corpus.words": "Eigene Wörter jetzt in deinem Korpus: {words}.",
@@ -13596,6 +13604,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.browse": "Dateien auswählen",
   "ob.conv.voice.pasteInstead": "Stattdessen Text einfügen",
   "ob.conv.voice.sourcesTitle": "Quellen",
+  "ob.conv.voice.removeSource": "Entfernen",
+  "ob.conv.voice.removeSourceNamed": "{name} entfernen",
+  "ob.conv.voice.removeFailed": "{name} konnte nicht entfernt werden: {detail}",
   "ob.conv.voice.printLabel": "Dein Stimmabdruck",
   "voice.kinds.label": "Was am besten passt",
   "voice.kinds.best": "Bester Start",
@@ -13607,6 +13618,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "voice.kinds.docBody": "Jeder Text, den du selbst geschrieben hast",
   "ob.conv.voice.meterLabel": "Fortschritt zum Minimum von {min} Wörtern",
   "ob.conv.voice.meterProgress": "{words} von {min} Wörtern",
+  "ob.conv.voice.meterUnknown":
+    "Wortzahl nicht verfügbar. Mit der nächsten Schreibprobe wird sie aktualisiert.",
   "ob.conv.voice.meterReady":
     "{words} Wörter: genug für den Aufbau. Mehr Wörter verbessern das Stilprofil.",
   "ob.conv.voice.footReady":
@@ -13716,6 +13729,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Lade stattdessen das erste Mitglied ein, das hier arbeiten wird. Dann ist die Einrichtung abgeschlossen.",
   "ob.conv.invite.foot":
     "Schreibstil und Konten lassen sich auch später in den Einstellungen einrichten.",
+  "ob.conv.invite.bodyConnect":
+    "Das Unternehmen ist eingerichtet. Der nächste Schritt betrifft dich und gilt nur, wenn du Margince selbst nutzen wirst.",
+  "ob.conv.invite.yesBodyConnect":
+    "Verbinde Postfach und Kalender: 1 kurzer Schritt.",
+  "ob.conv.invite.footConnect":
+    "Konten lassen sich auch später in den Einstellungen verbinden.",
   "ob.conv.invite.continue": "Weiter",
   "ob.conv.invite.accepted": "Ja, ich werde selbst damit arbeiten.",
   "ob.conv.invite.declined": "Nein, ich richte es nur ein.",
@@ -16092,7 +16111,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.addSource": "Schreibproben hinzufügen",
   "settings.voice.addFirstLabel": "Erste Schreibprobe",
   "settings.voice.dropHint":
-    "Dateien ablegen oder auswählen (.txt, .md, .pdf, .docx, .vtt, .srt oder .json), auch mehrere auf einmal.",
+    "Dateien ablegen oder auswählen (.txt, .md, .pdf, .docx, .vtt, .srt oder .json), auch mehrere auf einmal. Jede Datei muss beim Senden knapp unter {limit} bleiben. Text mit vielen Anführungszeichen oder Zeilenumbrüchen erreicht das früher.",
   "settings.voice.dropLabel": "Dateien hochladen",
   "settings.voice.dropEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
   "settings.voice.pasteLabel": "Text einfügen",
@@ -16142,6 +16161,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wurde nichts hinzugefügt, da diese Person in {name} nicht vorkommt.",
   "settings.voice.refusalUnsupported":
     "{name} liegt in einem nicht unterstützten Format vor.",
+  "settings.voice.refusalTooLarge":
+    "{name} ist zu groß. Eine Datei muss beim Senden knapp unter {limit} bleiben, und Anführungszeichen und Zeilenumbrüche brauchen zusätzlich Platz. Teile sie in kleinere Dateien auf.",
   "settings.voice.buildsTitle": "Aufbau des Stilprofils",
   "settings.voice.buildRowLabel": "Aus Proben aufbauen",
   "settings.voice.building": "Wird aufgebaut…",
@@ -17575,6 +17596,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.connect.useImap": "Anderen E-Mail-Anbieter nutzen",
   "ob.conv.connect.skipCaptionWaiting":
     "Deine Einrichtungsliste erinnert dich ans Verbinden, sobald {vendor} bereit ist.",
+  "ob.conv.connect.skipCaptionNotConfigured":
+    "In dieser Installation lässt sich kein Postfach verbinden, also geht es ohne Postfach weiter.",
   "ob.conv.connect.connectedTitle": "{vendor} ist verbunden",
   "ob.conv.connect.calendarNotConnected":
     "Nicht verbunden. Verbinde ihn jetzt oder später über deine Einrichtungsliste.",
@@ -17594,6 +17617,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Optional. All das kannst du später in den Einstellungen ändern.",
   "ob.conv.connect.linkedinRow": "Dein LinkedIn-Profil",
   "ob.conv.connect.linkedinAdd": "Profil hinzufügen",
+  "ob.conv.connect.linkedinChange": "Ändern",
   "setup.reminder.trigger": "Einrichtung abschließen",
   "setup.reminder.count": "{done} von {total}",
   "setup.reminder.title": "Einrichtung abschließen",
@@ -24126,6 +24150,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Automatische Aufgaben erreichen möglicherweise die falschen Teammitglieder. Folgeaufgaben bleiben dann bis zur Korrektur falsch zugewiesen.",
   "health.effect.receipts":
     "Die Widersprüche gelten, und Werbung an diese Kontakte bleibt gestoppt. Die Kontakte wurden nicht informiert, was die Regeln ihres Landes sofort verlangen.",
+  "health.effect.zone":
+    "Hintergrundarbeit zählt ihre Tage in UTC, bis wieder eine Zeitzone gewählt ist. Um Mitternacht kann ein Bericht einen Zeitpunkt einem anderen Tag zuordnen als diese Arbeit.",
+  "health.zoneNext":
+    "Öffne Region und Kalender und wähle die Zeitzone für Berichte neu.",
+  "health.code.zone_unresolved":
+    "Die Zeitzone für Berichte lässt sich nicht lesen",
   "health.effect.readFailed":
     "Diese Prüfung kann den aktuellen Zustand nicht anzeigen. Eine fehlgeschlagene Prüfung belegt keinen Ausfall der eigentlichen Funktion.",
   "health.reportCopyFailed": "Technischer Bericht konnte nicht kopiert werden",
@@ -24254,6 +24284,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einen erfolgreichen Wiederherstellungstest innerhalb der Zeit- und Datenverlustziele erfassen.",
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
+  "health.recovery.zone":
+    "Der Server liest die gespeicherte Zeitzone für Berichte wieder.",
   "health.recovery.receipts":
     "Zu jedem Widerspruch der letzten 30 Tage muss eine Bestätigung versendet oder die Warnung erledigt sein.",
   "health.ownerHandoff":
@@ -24267,6 +24299,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.inspect": "Problem und nächsten Schritt ansehen",
   "health.openModels": "Modelle öffnen",
   "health.openConnections": "Verbindungen öffnen",
+  "health.openRegional": "Region und Kalender öffnen",
   "health.unit.runs": "Läufe",
   "health.history": "Aufbewahrter Fehlerverlauf",
   "health.historyWindow":

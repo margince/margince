@@ -1,0 +1,98 @@
+{
+  "scenario": "case109_my_hours_zone_and_language",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "mcp",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "22e893a34cec9b84",
+    "tools": "53610ffe6c0a5b53",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T14:48:22Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:48:22Z"
+  },
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 1590,
+    "cache_creation_input_tokens": 14677,
+    "cache_read_input_tokens": 470339,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.1217
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_my_settings",
+        "describe_router_actions",
+        "read_my_working_hours",
+        "read_workspace",
+        "save_my_locale",
+        "save_my_timezone",
+        "save_my_working_hours",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_my_settings",
+        "describe_router_actions",
+        "read_my_working_hours",
+        "read_workspace",
+        "save_my_locale",
+        "save_my_timezone",
+        "save_my_working_hours",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "turns": {
+      "median": 7,
+      "min": 7,
+      "max": 7
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 242514,
+      "min": 242500,
+      "max": 242528
+    },
+    "output_tokens": {
+      "median": 795,
+      "min": 786,
+      "max": 804
+    },
+    "duration_ms": {
+      "median": 9176.5,
+      "min": 8765,
+      "max": 9588
+    }
+  }
+}

@@ -17,7 +17,7 @@ import { captureRefusalOf, useConnectors } from "../../../lib/connectors";
 import { type AdminWait, waitsOnAdmin } from "../../../lib/setup-checklist";
 import { AlsoWorthDoing, type AlsoWorthDoingProps } from "./connect-also";
 import { AppWaitingPanel } from "./connect-app-missing";
-import { ConnectedStep } from "./connect-connected";
+import { ConnectedStep, WayCaption } from "./connect-connected";
 import {
   MAIL_PROVIDERS,
   type MailProvider,
@@ -61,6 +61,9 @@ type ConnectedMailRoster = Readonly<{
   read: boolean;
   verified: boolean;
   failed: boolean;
+  /** This installation never wired mail capture: an answer, not a failure,
+   *  and one no retry changes. */
+  notConfigured: boolean;
   retry: () => void;
 }>;
 
@@ -95,10 +98,10 @@ function useConnectedMailProviders(): ConnectedMailRoster {
       blockers.set(entry.provider, entry.reason);
     }
   }
-  // A deployment that never wired mail capture answers 501, which the shared
-  // read reports as `notConfigured` rather than as a failure. There is no
-  // roster to offer an account from either way, so both say the same thing.
-  const unreadable = roster.isError || roster.data?.notConfigured === true;
+  // Neither a failed read nor capture switched off leaves a roster to offer an
+  // account from; only the failure is worth a retry.
+  const notConfigured = roster.data?.notConfigured === true;
+  const unreadable = roster.isError || notConfigured;
   const shown = roster.data?.data.filter((c) => c.status !== "disconnected");
   return {
     providers: new Set((connected ?? []).map((c) => c.provider)),
@@ -107,7 +110,8 @@ function useConnectedMailProviders(): ConnectedMailRoster {
     captureRefusal: captureRefusalOf(roster.data),
     read: roster.isSuccess && !unreadable,
     verified: roster.isSuccess && !roster.isFetching && !unreadable,
-    failed: unreadable,
+    failed: roster.isError,
+    notConfigured,
     retry: () => void roster.refetch(),
   };
 }
@@ -121,6 +125,7 @@ export function ConnectScene({
   returnPanel,
   onFinish,
   finishing,
+  finishFailed,
   ...also
 }: Readonly<
   {
@@ -143,6 +148,8 @@ export function ConnectScene({
      */
     onFinish: (skipped: boolean) => void;
     finishing: boolean;
+    /** The last finish could not be saved. */
+    finishFailed: boolean;
   } & AlsoWorthDoingProps
 >) {
   const t = useT();
@@ -162,6 +169,11 @@ export function ConnectScene({
   // Held while the roster has not answered: an ask opened against it could
   // connect a second mailbox the read has not reported.
   const held = !mailRoster.verified || connected !== null || askBusy;
+  // The skip waits only while the roster or a connect is in flight. The gate
+  // sends every other address back here, so a held skip would trap the reader.
+  const settled =
+    mailRoster.verified || mailRoster.failed || mailRoster.notConfigured;
+  const skipHeld = !settled || connected !== null || askBusy;
   const asking =
     vendor !== null &&
     mailRoster.read &&
@@ -183,14 +195,19 @@ export function ConnectScene({
         <ConnectedStep
           account={live.account}
           mailbox={live.mailbox}
-          also={<AlsoWorthDoing {...also} />}
+          also={<AlsoWorthDoing {...also} mailConnected />}
           finishing={finishing}
+          finishFailed={finishFailed}
           onFinish={() => onFinish(false)}
         />
       ) : (
         <>
           <AccountPick
-            refusal={mailRoster.captureRefusal}
+            refusal={
+              mailRoster.notConfigured
+                ? "connectors.notConfigured"
+                : mailRoster.captureRefusal
+            }
             vendor={vendor}
             onVendorChange={onVendorChange}
             held={held}
@@ -218,27 +235,37 @@ export function ConnectScene({
             />
           )}
 
-          <AlsoWorthDoing {...also} />
+          <AlsoWorthDoing {...also} mailConnected={false} />
 
           <SkipWayOnward
-            caption={
-              waitingOn
-                ? t("ob.conv.connect.skipCaptionWaiting", {
-                    vendor:
-                      providerBrandName(waitingOn.vendor) ?? waitingOn.vendor,
-                  })
-                : t("ob.conv.connect.skipCaption")
-            }
-            // Recording "no mailbox" before the roster answers, or while a
-            // connect is in flight, could persist a fact that is not so.
-            held={held}
+            caption={skipCaption(mailRoster, waitingOn, t)}
+            held={skipHeld}
             finishing={finishing}
+            finishFailed={finishFailed}
             onSkip={() => onFinish(true)}
           />
         </>
       )}
     </div>
   );
+}
+
+/** What skipping costs. With capture off the checklist drops the mail steps,
+ *  so the caption promises no reminder there. */
+function skipCaption(
+  roster: ConnectedMailRoster,
+  waitingOn: Waiting | undefined,
+  t: ReturnType<typeof useT>,
+): string {
+  if (roster.notConfigured) {
+    return t("ob.conv.connect.skipCaptionNotConfigured");
+  }
+  if (waitingOn) {
+    return t("ob.conv.connect.skipCaptionWaiting", {
+      vendor: providerBrandName(waitingOn.vendor) ?? waitingOn.vendor,
+    });
+  }
+  return t("ob.conv.connect.skipCaption");
 }
 
 /** The live mailbox's account, found in the same read that said it is live.
@@ -296,8 +323,8 @@ function nameOf(key: MailProvider): MessageKey {
     : "ob.conv.connect.tileImap";
 }
 
-/** Where the work account lives; for a role the server refuses every connect,
- *  the one sentence that says why none is offered. */
+/** Where the work account lives; where no connect can succeed (a refused role,
+ *  capture off), the one sentence that says why none is offered. */
 function AccountPick({
   refusal,
   vendor,
@@ -342,17 +369,19 @@ function SkipWayOnward({
   caption,
   held,
   finishing,
+  finishFailed,
   onSkip,
 }: Readonly<{
   caption: string;
   held: boolean;
   finishing: boolean;
+  finishFailed: boolean;
   onSkip: () => void;
 }>) {
   const t = useT();
   return (
     <StageActions>
-      <span className="t-caption">{caption}</span>
+      <WayCaption caption={caption} finishFailed={finishFailed} />
       <Button
         variant="ghost"
         pending={finishing}
