@@ -48,6 +48,11 @@ func handbookStorageKey(filename string) string { return handbookKeyPrefix + fil
 // because nobody should go looking in a bucket for it.
 var ErrHandbookPageGone = errors.New("knowledge: this release does not ship that handbook page")
 
+// HandbookPageStaleDetail is the ingest_detail a page carries when its ingest
+// failed only because the worker held other bytes than the row names. It is the
+// one failure a later boot of the api may retry, so it is matched by value.
+const HandbookPageStaleDetail = "This handbook page is missing from, or differs in, the handbook the worker holds, so it could not be indexed. An administrator has to update every worker to the current release, or the page has been withdrawn."
+
 // openContent streams a document's bytes, whichever side of the split it is on.
 func (s *Store) openContent(ctx context.Context, storageKey string) (io.ReadCloser, error) {
 	if page, ok := strings.CutPrefix(storageKey, handbookKeyPrefix); ok {

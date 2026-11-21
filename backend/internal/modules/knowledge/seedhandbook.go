@@ -214,7 +214,8 @@ func reconcilePages(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, pages []h
 
 // requeueUnsettled queues the ingest of a page whose bytes are current but
 // whose ingest did not finish. A failed row goes back to queued first, since
-// the worker reads only a queued or running document.
+// the worker reads only a queued or running document. Only the release
+// mismatch is retried: a provider or capacity failure would cost again.
 func requeueUnsettled(ctx context.Context, tx pgx.Tx, doc managedDoc, queue QueueIngest) error {
 	switch doc.status {
 	case ingestRunning:
@@ -222,7 +223,8 @@ func requeueUnsettled(ctx context.Context, tx pgx.Tx, doc managedDoc, queue Queu
 		tag, err := tx.Exec(ctx,
 			`UPDATE knowledge_document
 			    SET ingest_status = 'queued', ingest_started_at = NULL, ingest_detail = NULL
-			  WHERE id = $1 AND archived_at IS NULL AND ingest_status = 'failed'`, doc.id)
+			  WHERE id = $1 AND archived_at IS NULL AND ingest_status = 'failed' AND ingest_detail = $2`,
+			doc.id, HandbookPageStaleDetail)
 		if err != nil {
 			return fmt.Errorf("queue the failed handbook page again: %w", err)
 		}

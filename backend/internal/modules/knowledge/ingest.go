@@ -46,6 +46,10 @@ const chunkCountColumn = "chunk_count"
 // is unusable — which makes every chunk in the corpus work the question does.
 const maxCorpusChunks = 20000
 
+// ErrIngestSuperseded is an attempt whose row changed under it: the page was
+// replaced, so the attempt's passages belong to bytes the row no longer names.
+var ErrIngestSuperseded = errors.New("knowledge: the document changed while this ingest ran")
+
 // CorpusFullError is a document refused because the corpus it would join has no
 // room. It names the ceiling, because "too large" without a number leaves the
 // uploader guessing at which file to remove.
@@ -131,7 +135,8 @@ func (s *Store) BeginIngest(ctx context.Context, documentID ids.UUID) (IngestSou
 // that raced the attempt wins: the archive stamps the chunks that exist when it
 // runs, and without this re-read an attempt already past that point would write
 // live chunks under an archived document a moment later.
-func (s *Store) WriteChunks(ctx context.Context, documentID ids.UUID, corpusID ids.UUID, chunks []Chunk) error {
+func (s *Store) WriteChunks(ctx context.Context, documentID ids.UUID, src IngestSource, chunks []Chunk) error {
+	corpusID := src.CorpusID
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		// The CORPUS row first, and the order matters twice.
 		//
@@ -149,13 +154,17 @@ func (s *Store) WriteChunks(ctx context.Context, documentID ids.UUID, corpusID i
 		}
 		var archived *string
 		var wasCount int
+		var checksum, status string
 		if err := tx.QueryRow(ctx,
-			`SELECT archived_at::text, chunk_count FROM knowledge_document WHERE id = $1 FOR UPDATE`, documentID).
-			Scan(&archived, &wasCount); err != nil {
+			`SELECT archived_at::text, chunk_count, checksum, ingest_status FROM knowledge_document WHERE id = $1 FOR UPDATE`, documentID).
+			Scan(&archived, &wasCount, &checksum, &status); err != nil {
 			return notFoundOr(err, "re-read the document before writing its chunks")
 		}
 		if archived != nil {
 			return apperrors.ErrNotFound
+		}
+		if checksum != src.Checksum || status != ingestRunning {
+			return ErrIngestSuperseded
 		}
 		var have int
 		if err := tx.QueryRow(ctx,
@@ -202,18 +211,27 @@ func insertChunks(ctx context.Context, tx pgx.Tx, documentID, corpusID ids.UUID,
 }
 
 // FinishIngest closes a successful attempt.
-func (s *Store) FinishIngest(ctx context.Context, documentID ids.UUID, chunkCount int) error {
+func (s *Store) FinishIngest(ctx context.Context, documentID ids.UUID, src IngestSource, chunkCount int) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx,
 			`UPDATE knowledge_document SET ingest_status = 'done', ingest_detail = NULL, chunk_count = $2
-			 WHERE id = $1 AND archived_at IS NULL`, documentID, chunkCount)
+			 WHERE id = $1 AND archived_at IS NULL AND checksum = $3 AND ingest_status = 'running'`,
+			documentID, chunkCount, src.Checksum)
 		if err != nil {
 			return fmt.Errorf("close the document's ingest: %w", err)
 		}
-		if tag.RowsAffected() != 1 {
-			return apperrors.ErrNotFound
+		if tag.RowsAffected() == 1 {
+			return nil
 		}
-		return nil
+		var live bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM knowledge_document WHERE id = $1 AND archived_at IS NULL)`, documentID).Scan(&live); err != nil {
+			return fmt.Errorf("read the document after its ingest: %w", err)
+		}
+		if live {
+			return ErrIngestSuperseded
+		}
+		return apperrors.ErrNotFound
 	})
 }
 
