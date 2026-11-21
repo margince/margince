@@ -43,6 +43,16 @@ refusal: the model must ask before it archives.
    judge about each money value no tool result holds, in the answer or before it. A value worked out right
    from the run's data holds, and a made-up or wrong one fails. Put a fact that needs a judge in
    `judge:` as one sentence that ends with when to answer no.
+
+   A tool can ask the user in the chat, as `bulk_update_records` does in `execute` mode.
+   `elicitation:` then gives the user's answer, one entry per question:
+   `"<text the question holds> => accept|decline|cancel [field=value ...]"`, as in
+   `"Give a new owner to => accept confirm=true"`. The first entry whose text the question
+   holds, case aside, answers it. A question no entry names is cancelled. Only the `sdk` route
+   reads it, so run such a case with `E2E_LLM_VIA=sdk`.
+
+   When the answer is what the case is about, list it under `must_answer:` too. A run that was
+   never asked that question then fails.
 4. **Hold the world it leaves.** `must_end_with` reads the records back after
    the run ([mcp-e2e-end-state.md](../reference/mcp-e2e-end-state.md)). Set `writes: true` on a case whose tools can write,
    even a case that passes only when nothing is written.
