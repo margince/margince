@@ -2452,7 +2452,8 @@ export interface paths {
          *     All money converts to the workspace base currency. An open deal whose currency has no
          *     stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
          *     substituting a rate of 1. A won deal is valued at the base amount frozen when it was
-         *     won; one won deal in the period with no base value makes `closed_won` null.
+         *     won. `closed_won` adds the won deals that have one, and `closed_won_coverage` says how many
+         *     it leaves out and why. It is null only when no won deal in the period converts.
          *     Totals are server-computed and reconcile exactly to their parts — never client-summed.
          *     Requires read on companies, deals, and activities; figures aggregate every deal
          *     and activity of each readable company — per-record row visibility within a
@@ -35347,7 +35348,8 @@ export interface components {
             formula_sql: string;
             dependencies: string[];
             computable: boolean;
-            /** @description Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx". */
+            coverage?: components["schemas"]["ReportRowCoverage"];
+            /** @description Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx", "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked. */
             reason?: string | null;
         };
         /** @description A company. Mirrors the `company` table. */
@@ -35617,9 +35619,9 @@ export interface components {
          *
          *     `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
          *     weighted by its stage's win probability, and never a past period's pipeline.
-         *     `closed_won` is the deals won in `closed_won_period`; a null amount means at least
-         *     one of them has no base value on file, so the total is incomplete rather than
-         *     smaller. `activity_count_30d` counts the activities that reached a counted account
+         *     `closed_won` is the deals won in `closed_won_period` that have a base value on file.
+         *     `closed_won_coverage` counts the others by cause, for the deals this reader may read, and
+         *     its `partial` flag is true when any deal is left out. A null amount means none converts. `activity_count_30d` counts the activities that reached a counted account
          *     in `activity_window`, the 30 days before the read, which no period parameter moves.
          */
         CompanyHierarchyRollup: {
@@ -35634,6 +35636,7 @@ export interface components {
              */
             pipeline_state_at: string;
             closed_won: components["schemas"]["Money"];
+            closed_won_coverage?: components["schemas"]["ReportRowCoverage"];
             closed_won_period: components["schemas"]["CompanyRollupWonPeriod"];
             activity_count_30d: number;
             activity_window: components["schemas"]["ReportingWindow"];
@@ -40922,9 +40925,10 @@ export interface components {
             open_deals?: number;
             /**
              * Format: int64
-             * @description Their amounts, in the installation currency, when every one carries a rate.
+             * @description Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`.
              */
             open_amount_minor?: number;
+            open_amount_coverage?: components["schemas"]["ReportRowCoverage"];
             won_deal?: components["schemas"]["AccountCoverageDeal"];
             /** Format: date-time */
             last_inbound?: string;
@@ -51000,6 +51004,8 @@ export interface components {
          *     NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
          */
         ForecastSufficiency: {
+            /** @description For each comparable period behind a historical median, newest first, the won deals its total leaves out for want of an amount or an exchange rate. */
+            comparable_unpriced?: number[];
             /**
              * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
              * @enum {string}
@@ -59787,11 +59793,13 @@ export interface components {
             as_of: string;
             counts: components["schemas"]["TeamWeeklyCounts"];
             /**
-             * @description What the team's week did to the pipeline. ABSENT when any member's week could not
-             *     be converted — summing only the ones that did would be a confident number quietly
-             *     missing a rep.
+             * @description What the team's week did to the pipeline: the members' figures added together. ABSENT when
+             *     a member's week is unread or has a figure no deal converts into, or members differ in
+             *     currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+             *     review was frozen before it said what it leaves out.
              */
             pipeline?: components["schemas"]["WeeklyReviewPipeline"];
+            pipeline_coverage?: components["schemas"]["ReportRowCoverage"];
             /**
              * @description Members whose week could not be read at all. Zero is the claim that every member's
              *     week was counted.
@@ -60320,13 +60328,15 @@ export interface components {
              * @description What the week did to the pipeline, in the installation's base currency at the rate that
              *     applied when the review was written.
              *
-             *     ABSENT when the week held a deal that could not be converted — an open deal freezes no
-             *     rate, so a currency with no usable rate makes the whole figure unanswerable. A total
-             *     covering three of four deals would be a confident number that is quietly short, and
-             *     nothing is ever converted at an invented rate of 1. Absent is also the answer when the
-             *     installation names no base currency.
+             *     Each figure adds the deals that convert. ABSENT when no deal of one of the three figures
+             *     converts, or when the installation names no base currency. Nothing is ever converted at an
+             *     invented rate of 1.
+             *
+             *     `pipeline_coverage` says how many deals the figures leave out, by cause, and which
+             *     currencies have no rate. It is absent for a review frozen before it said so.
              */
             pipeline?: components["schemas"]["WeeklyReviewPipeline"];
+            pipeline_coverage?: components["schemas"]["ReportRowCoverage"];
             /**
              * @description The same rep's previous review, so a reader can see what CHANGED rather than only what
              *     happened. Absent for their first week.
@@ -63703,9 +63713,10 @@ export interface components {
             undone: number;
             /**
              * Format: int64
-             * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+             * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
              */
             value_base_minor: number;
+            value_coverage?: components["schemas"]["ReportRowCoverage"];
             /**
              * Format: int64
              * @description How much value these changes moved, in the base currency's minor units. Each deal's

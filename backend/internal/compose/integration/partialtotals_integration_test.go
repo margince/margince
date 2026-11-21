@@ -1,0 +1,186 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+// Totals outside the report engine add the deals that convert. Each says which
+// deals it left out. These run the account coverage view and the team change
+// report through their own read paths.
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+func TestAnAccountsOpenAmountAddsTheDealsThatConvertAndCountsTheRest(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		deals    []partialSumDeal
+		amount   *int64
+		noRate   int
+		currency []string
+	}{
+		{"mixed", []partialSumDeal{{10_000, "EUR"}, {20_000, "EUR"}, {5_000, "CHF"}}, new(int64(30_000)), 1, []string{"CHF"}},
+		{"all without a rate", []partialSumDeal{{5_000, "CHF"}, {7_000, "CHF"}}, nil, 2, []string{"CHF"}},
+		{"a real zero beside a gap", []partialSumDeal{{0, "EUR"}, {5_000, "CHF"}}, new(int64(0)), 1, []string{"CHF"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := newTwoDoors(t, "account-partial", "read")
+			stages := apptest.DiscoverSeededPipeline(t, d.e)
+			company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Partial Account", "source": "manual"})
+			for _, deal := range tc.deals {
+				createdID(t, d.e, "/v1/deals", AnyMap{
+					"name": "Deal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "company_id": company,
+					"source": "manual", "amount_minor": deal.amount, "currency": deal.currency,
+				})
+			}
+			var out struct {
+				Rows []crmcontracts.AccountCoverageRow `json:"rows"`
+			}
+			if err := json.Unmarshal(d.rest(t, "GET", "/v1/analytics/account-coverage?view=untouched", nil), &out); err != nil {
+				t.Fatal(err)
+			}
+			if len(out.Rows) != 1 {
+				t.Fatalf("rows = %+v, want the one account", out.Rows)
+			}
+			row := out.Rows[0]
+			if (row.OpenAmountMinor == nil) != (tc.amount == nil) || (tc.amount != nil && *row.OpenAmountMinor != *tc.amount) {
+				t.Errorf("open amount = %v, want %v", row.OpenAmountMinor, tc.amount)
+			}
+			c := row.OpenAmountCoverage
+			if c == nil || !c.Partial || c.NoRateDeals != tc.noRate || strings.Join(c.MissingCurrencies, ",") != strings.Join(tc.currency, ",") {
+				t.Errorf("coverage = %+v, want partial with %d deals with no rate in %v", c, tc.noRate, tc.currency)
+			}
+		})
+	}
+}
+
+func TestATeamChangeGroupAddsTheDealsThatConvertAndCountsTheRest(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		deals           []partialSumDeal
+		value           int64
+		noValue, noRate int
+	}{
+		{"mixed", []partialSumDeal{{10_000, "EUR"}, {5_000, "CHF"}, {0, ""}}, 10_000, 1, 1},
+		{"all without a rate", []partialSumDeal{{5_000, "CHF"}, {7_000, "CHF"}}, 0, 0, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := Setup(t)
+			pipeline, open, _ := DealFixture(t, e)
+			for _, deal := range tc.deals {
+				id := ids.NewV7()
+				var amount, currency any
+				if deal.currency != "" {
+					amount, currency = deal.amount, deal.currency
+				}
+				e.WsExec(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, source, captured_by)
+					VALUES ($1, 'Changed', $2, $3, $4, $5, $6, 'manual', 'human:x')`, id, pipeline, open, e.Rep1, amount, currency)
+				audit := ids.NewV7()
+				e.WsExec(t, `INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id)
+					VALUES ($1, 'agent', 'agent:x', 'update', 'deal', $2)`, audit, id)
+				e.WsExec(t, `INSERT INTO deal_correction (deal_id, audit_log_id, correction, fields, remaining_open_stages, asking, standing_close_date, captured_by)
+					VALUES ($1, $2, $3, ARRAY['amount_minor'], '1', '1', '2026-01-01', 'agent:x')`, id, audit, deals.VerdictAmountCorrection)
+			}
+			report, err := e.Deals.TeamChanges(e.Admin(), []ids.UUID{e.Rep1}, clocktest.Now(t).Add(-24*time.Hour))
+			if err != nil || len(report.Groups) != 1 {
+				t.Fatalf("groups = %+v, %v, want the one amount group", report.Groups, err)
+			}
+			g := report.Groups[0]
+			if g.ValueBaseMinor != tc.value || g.ValueNoAmount != tc.noValue || g.ValueNoRate != tc.noRate || (tc.noRate > 0 && g.ValueMissingCurrencies != "CHF") {
+				t.Errorf("group = %+v, want value %d with %d without an amount and %d without a rate in CHF", g, tc.value, tc.noValue, tc.noRate)
+			}
+		})
+	}
+}
+
+// A reader whose amount and currency are masked learns nothing from the won
+// figure's coverage. A masked deal counts as one with no amount. Its currency
+// is never listed.
+func TestTheHierarchyWonCoverageNamesNoCurrencyOfAMaskedDeal(t *testing.T) {
+	e := Setup(t)
+	st := seedRollupStages(t, e)
+	now := clocktest.Now(t)
+	root := seedRollupCompany(t, e, "Masked Root", &e.Rep1, nil)
+	perms := rollupCompanyReadPerms(principal.RowScopeOwn)
+	perms.FieldMasks = []principal.FieldMask{
+		{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways},
+		{Object: "deal", Field: "currency", Condition: principal.MaskAlways},
+	}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+	read := func() compose.CompanyRollupResult {
+		t.Helper()
+		res, err := compose.CompanyHierarchyRollup(rep, e.Pool, root, "tree", compose.CompanyRollupPeriod{}, fixedClock(now))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	start := read().ClosedWonPeriod.Start
+	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, currency, fx_rate_to_base, pipeline_id, stage_id, company_id, status, closed_at, source, captured_by)
+		VALUES ($1, 'Masked win', 700, 'GBP', '1.0', $2, $3, $4, 'won', $5, 'manual', 'human:test')`,
+		ids.NewV7(), st.pipeline, st.won, root, start)
+
+	c := read().ClosedWonCoverage
+	if len(c.MissingCurrencies) != 0 || c.NoRateDeals != 0 {
+		t.Errorf("coverage = %+v names the currency of a deal whose amount this reader cannot see", c)
+	}
+}
+
+// A reader whose deal currency is masked learns no currency and no count from
+// the company's open pipeline coverage. The figure still says it is partial.
+func TestACompanyOpenPipelineNamesNothingToAReaderWhoseCurrencyIsMasked(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	company := e.SeedCompany(t, "Masked Pipeline", &e.Rep1)
+	companyID := ids.From[ids.CompanyKind](company)
+	for _, deal := range []partialSumDeal{{10_000, "EUR"}, {5_000, "JPY"}} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Deal", AmountMinor: &deal.amount, Currency: &deal.currency,
+			PipelineID: pipeline, StageID: open, CompanyID: &companyID, Source: "manual",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read := func(masks []principal.FieldMask) crmcontracts.ComputedField {
+		t.Helper()
+		reader := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"company": {Read: true}, "deal": {Read: true}, "computed_field": {Read: true}, "installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeOwn, FieldMasks: masks,
+		})
+		got, err := e.Contacts.GetCompany(reader, companyID, storekit.IncludeArchived)
+		if err != nil || got.ComputedFields == nil {
+			t.Fatalf("reading the company: %+v, %v", got.ComputedFields, err)
+		}
+		return computedFieldByKey(*got.ComputedFields, "open_pipeline")
+	}
+	if total := read(nil); !total.Computable || total.ValueMinor == nil || *total.ValueMinor != 10_000 {
+		t.Fatalf("an unmasked reader's open pipeline = %+v, want the 10000 that converts", total)
+	}
+	if c := read(nil).Coverage; c == nil || !c.Partial || c.NoRateDeals != 1 || len(c.MissingCurrencies) != 1 || c.MissingCurrencies[0] != "JPY" {
+		t.Fatalf("an unmasked reader's coverage = %+v, want one deal with no rate in JPY", c)
+	}
+	hidden := read([]principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}})
+	if hidden.Computable || hidden.ValueMinor != nil || hidden.Reason == nil || *hidden.Reason != "amount_withheld" {
+		t.Errorf("a reader whose amount is masked sees %+v, want no total and the withheld reason", hidden)
+	}
+	masked := read([]principal.FieldMask{{Object: "deal", Field: "currency", Condition: principal.MaskAlways}}).Coverage
+	if masked == nil || !masked.Partial || masked.NoRateDeals != 0 || masked.NoValueDeals != 0 || len(masked.MissingCurrencies) != 0 {
+		t.Errorf("a masked reader's coverage = %+v, want partial and no count or currency", masked)
+	}
+}

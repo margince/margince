@@ -2216,7 +2216,8 @@ paths:
         All money converts to the workspace base currency. An open deal whose currency has no
         stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
         substituting a rate of 1. A won deal is valued at the base amount frozen when it was
-        won; one won deal in the period with no base value makes `closed_won` null.
+        won. `closed_won` adds the won deals that have one, and `closed_won_coverage` says how many
+        it leaves out and why. It is null only when no won deal in the period converts.
         Totals are server-computed and reconcile exactly to their parts — never client-summed.
         Requires read on companies, deals, and activities; figures aggregate every deal
         and activity of each readable company — per-record row visibility within a
@@ -32842,9 +32843,12 @@ components:
           type: array
           items: {type: string}
         computable: {type: boolean}
+        coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         reason:
           type: [string, 'null']
-          description: Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx".
+          description: >-
+            Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx", "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked.
     Company:
       type: object
       description: A company. Mirrors the `company` table.
@@ -33122,6 +33126,7 @@ components:
           format: date-time
           description: The instant the pipeline is read at. It is the moment of the read, whatever period is named.
         closed_won: {$ref: '#/components/schemas/Money'}
+        closed_won_coverage: {$ref: '#/components/schemas/ReportRowCoverage'}
         closed_won_period: {$ref: '#/components/schemas/CompanyRollupWonPeriod'}
         activity_count_30d: {type: integer}
         activity_window: {$ref: '#/components/schemas/ReportingWindow'}
@@ -38622,7 +38627,8 @@ components:
         engaged_seats: {type: integer, description: "Contacts engaged on the deal, for a single-threaded row."}
         named_seats: {type: integer, description: "Contacts named on the deal, engaged or not."}
         open_deals: {type: integer, description: "Open deals on the account, for an untouched row."}
-        open_amount_minor: {type: integer, format: int64, description: "Their amounts, in the installation currency, when every one carries a rate."}
+        open_amount_minor: {type: integer, format: int64, description: "Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`."}
+        open_amount_coverage: {$ref: '#/components/schemas/ReportRowCoverage'}
         won_deal: {$ref: '#/components/schemas/AccountCoverageDeal'}
         last_inbound: {type: string, format: date-time}
         last_outbound: {type: string, format: date-time}
@@ -48317,6 +48323,11 @@ components:
       description: >-
         Whether the open pipeline supports the reference landing, and what the reference is.
       properties:
+        comparable_unpriced:
+          type: array
+          items: {type: integer}
+          description: >-
+            For each comparable period behind a historical median, newest first, the won deals its total leaves out for want of an amount or an exchange rate.
         absent:
           type: string
           enum: [insufficient_basis, call_withheld, insufficient_history]
@@ -50876,6 +50887,29 @@ components:
         derivation_url:
           type: [string, 'null']
           description: Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell.
+    ReportRowCoverage:
+      type: object
+      required: [aggregates, partial, no_value_deals, no_rate_deals, missing_currencies]
+      description: >-
+        What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+      properties:
+        aggregates:
+          type: array
+          items: {type: string}
+          description: The aliases of the row's partial sums, which this coverage qualifies.
+        partial:
+          type: boolean
+          description: True when at least one deal is left out of those sums.
+        no_value_deals:
+          type: integer
+          description: Deals in the group with no amount.
+        no_rate_deals:
+          type: integer
+          description: Deals in the group with an amount whose currency has no exchange rate as of the answer's date.
+        missing_currencies:
+          type: array
+          items: {type: string}
+          description: The currencies with no exchange rate, from the same statement as the sums.
     ReportDerivation:
       type: object
       description: |-
@@ -55610,10 +55644,13 @@ components:
         counts: {$ref: '#/components/schemas/TeamWeeklyCounts'}
         pipeline:
           description: |-
-            What the team's week did to the pipeline. ABSENT when any member's week could not
-            be converted — summing only the ones that did would be a confident number quietly
-            missing a rep.
+            What the team's week did to the pipeline: the members' figures added together. ABSENT when
+            a member's week is unread or has a figure no deal converts into, or members differ in
+            currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+            review was frozen before it said what it leaves out.
           allOf: [{$ref: '#/components/schemas/WeeklyReviewPipeline'}]
+        pipeline_coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         reps_unread:
           type: integer
           minimum: 0
@@ -56170,6 +56207,8 @@ components:
             What the week did to the pipeline, in the installation's base currency at the rate that
             applied when the review was written.
           allOf: [{$ref: '#/components/schemas/WeeklyReviewPipeline'}]
+        pipeline_coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         prior:
           description: |-
             The same rep's previous review, so a reader can see what CHANGED rather than only what
@@ -58229,7 +58268,8 @@ components:
         value_base_minor:
           type: integer
           format: int64
-          description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+          description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
+        value_coverage: {$ref: '#/components/schemas/ReportRowCoverage'}
         value_moved_base_minor:
           type: integer
           format: int64
