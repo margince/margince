@@ -1635,6 +1635,7 @@
   "nav.tags": "Thẻ",
   "shell.railAria": "Điều hướng chính",
   "shell.skipToContent": "Chuyển đến nội dung",
+  "shell.pageLoading": "Đang tải {page}…",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",

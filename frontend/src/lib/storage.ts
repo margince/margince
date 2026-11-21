@@ -328,6 +328,18 @@ function registeredAs(area: StorageArea, name: string): Registered | undefined {
   );
 }
 
+/** Whether this browser holds any member of the family. */
+export function storedInFamily(family: KeyFamily): boolean {
+  return withStorage(
+    family.area,
+    (storage) =>
+      Array.from({ length: storage.length }, (_, index) =>
+        storage.key(index),
+      ).some((name) => name?.startsWith(family.prefix) === true),
+    false,
+  );
+}
+
 /** Erase every `seat` key, in both areas and every family, at sign-out. */
 export function forgetSeat(): void {
   for (const area of ["local", "session"] as const) {
