@@ -16,9 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// exportedQuestionRows downloads an edition's CSV as reader and returns its
-// question card's rows.
-func exportedQuestionRows(reader context.Context, t *testing.T, q *questionEditions, edition crmcontracts.ReportingEdition) [][]string {
+// exportedEditionRows downloads an edition's CSV as reader and returns the
+// rows of its block, the header left out.
+func exportedEditionRows(reader context.Context, t *testing.T, q *questionEditions, edition crmcontracts.ReportingEdition, block string) [][]string {
 	t.Helper()
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/v1/analytics/editions/x/export.csv", nil).WithContext(reader)
@@ -32,11 +32,16 @@ func exportedQuestionRows(reader context.Context, t *testing.T, q *questionEditi
 	}
 	out := [][]string{}
 	for _, record := range records {
-		if record[1] == "question:open-deals" {
+		if record[1] == block {
 			out = append(out, record)
 		}
 	}
 	return out
+}
+
+func exportedQuestionRows(reader context.Context, t *testing.T, q *questionEditions, edition crmcontracts.ReportingEdition) [][]string {
+	t.Helper()
+	return exportedEditionRows(reader, t, q, edition, "question:open-deals")
 }
 
 // The edition's export carries the kept answer, judged for whoever downloads

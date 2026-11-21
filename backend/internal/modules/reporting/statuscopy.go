@@ -35,6 +35,14 @@ func (s *Service) readerCopy(ctx context.Context, tx pgx.Tx) langcopy.Spoken {
 	return langcopy.For(string(s.reader(ctx, tx)))
 }
 
+// ReaderCopy is readerCopy in a transaction of its own. A file the caller
+// downloads names catalog entries in it, as the catalog on their screen does.
+func (s *Service) ReaderCopy(ctx context.Context) (langcopy.Spoken, error) {
+	var out langcopy.Spoken
+	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error { out = s.readerCopy(ctx, tx); return nil })
+	return out, err
+}
+
 func (s *Service) statusCopy(ctx context.Context, tx pgx.Tx) langcopy.Spoken {
 	language := textlang.English
 	if s.language != nil {

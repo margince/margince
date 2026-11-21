@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -49,7 +50,7 @@ func TestAReaderWhoMayNotSeeTheCallGetsTheLandingWithoutIt(t *testing.T) {
 
 func assertNoCallInCSV(t *testing.T, evaluation crmcontracts.ReportingEvaluation) {
 	t.Helper()
-	for _, row := range reportingCSVRows(evaluation) {
+	for _, row := range reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context)) {
 		if slices.Contains(row, "manager_call") || slices.Contains(row, "76000000") {
 			t.Fatalf("the CSV holds the call: %v", row)
 		}

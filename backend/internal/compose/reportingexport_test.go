@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -24,7 +25,7 @@ func TestReportingCSVNamesACurrencyOnlyForMoney(t *testing.T) {
 		{Id: reportingBookingsWon, Unit: "EUR", Value: &sales},
 		{Id: reportingLeadsCreated, Unit: reportingCountUnit, Value: &leads},
 	}
-	rows := reportingCSVRows(evaluation)
+	rows := reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context))
 	header := rows[0]
 	unit, currency := slices.Index(header, "unit"), slices.Index(header, reportingCurrency)
 	if rows[1][unit] != reportingMoney || rows[1][currency] != "EUR" {
@@ -48,7 +49,7 @@ func TestReportingCSVLabelsAHeadlineWithTheCatalogName(t *testing.T) {
 	german := string(textlang.German)
 	evaluation.Context.ProseLanguage = &german
 	evaluation.Metrics = []crmcontracts.ReportingMetric{{Id: reportingBookingsWon, Unit: reportingMoney, Value: &sales}}
-	rows := reportingCSVRows(evaluation)
+	rows := reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context))
 	metric, label := slices.Index(rows[0], "metric"), slices.Index(rows[0], "label")
 	shown := catalog.Metrics[slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == reportingBookingsWon })].Label
 	if rows[1][metric] != reportingBookingsWon || rows[1][label] != shown || shown != "Gewonnener Umsatz" {
@@ -63,7 +64,7 @@ func TestReportingCSVNamesARetiredMetricAsGone(t *testing.T) {
 	german := string(textlang.German)
 	evaluation.Context.ProseLanguage = &german
 	evaluation.Metrics = []crmcontracts.ReportingMetric{{Id: "retired_metric", Unit: reportingCountUnit}}
-	rows := reportingCSVRows(evaluation)
+	rows := reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context))
 	label := slices.Index(rows[0], "label")
 	if rows[1][label] != "Kennzahl nicht mehr verfügbar" {
 		t.Fatalf("retired metric row %v", rows[1])
@@ -87,7 +88,7 @@ func TestReportingCSVCarriesTheLandingsBasisAndRange(t *testing.T) {
 		},
 	}
 	evaluation.Metrics = []crmcontracts.ReportingMetric{metric}
-	rows := reportingCSVRows(evaluation)
+	rows := reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context))
 	block, label, value, context := slices.Index(rows[0], "block"), slices.Index(rows[0], "label"), slices.Index(rows[0], extractionValueKey), slices.Index(rows[0], "context")
 	got := map[string][2]string{}
 	for _, row := range rows[1:] {
@@ -110,7 +111,7 @@ func TestReportingCSVCarriesTheLandingsBasisAndRange(t *testing.T) {
 	}
 	metric.ForecastBasis = nil
 	evaluation.Metrics = []crmcontracts.ReportingMetric{metric}
-	for _, row := range reportingCSVRows(evaluation)[1:] {
+	for _, row := range reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context))[1:] {
 		if reportingcsv.IDOf(row[label]) == "measure" {
 			t.Fatalf("a reading without a basis wrote a measure row: %v", row)
 		}
@@ -129,7 +130,7 @@ func TestReportingCSVCarriesAWithheldChartsFlagAndReason(t *testing.T) {
 		Coverage: crmcontracts.ReportingCoverage{Status: "ok", Withheld: true, Reason: &reason},
 		Points:   []crmcontracts.ReportingPoint{{Key: "owner:me", Label: "Me", Value: &sold, Status: "ok"}},
 	}}
-	rows := reportingCSVRows(evaluation)
+	rows := reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context))
 	block, withheld, why := slices.Index(rows[0], "block"), slices.Index(rows[0], "withheld"), slices.Index(rows[0], "coverage_reason")
 	if withheld < 0 || why < 0 {
 		t.Fatalf("header %v has no withheld or coverage_reason column", rows[0])
