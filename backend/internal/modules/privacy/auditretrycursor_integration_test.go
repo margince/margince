@@ -113,6 +113,45 @@ func TestAuditRetrySweepReturnsToHeldLinkedCopiesAfterRelease(t *testing.T) {
 	})
 }
 
+// Each phase reads only the audit rows it can act on. A history of ordinary
+// writes with no erasure in it costs one page per phase.
+func TestAnAuditPassOverOrdinaryWritesTakesOnePagePerPhase(t *testing.T) {
+	e := setupAuditBoundary(t)
+	withAuditRetryFixture(t, e, func(ctx context.Context) {
+		start := ids.NewV7()
+		if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
+			for i := range 5 * retentionBatch {
+				kind := []string{"contact", "company", "deal"}[i%3]
+				if _, err := storekit.AuditWithEvidence(ctx, tx, "create", kind, ids.NewV7(), nil,
+					map[string]string{"full_name": "Ordinary write"}, nil); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		service := NewRetentionService(e.db, nil, slog.Default(), nil)
+		cursor := HistoricalAuditCursor{After: start}
+		for call := 1; ; call++ {
+			next, done, err := service.RetryHistoricalAuditPage(ctx, cursor)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if done {
+				if call != 3 {
+					t.Fatalf("the pass over %d ordinary writes took %d pages, want 3: a phase pages over rows it can never change", 5*retentionBatch, call)
+				}
+				return
+			}
+			if call == 3 {
+				t.Fatalf("the pass over %d ordinary writes is not done after 3 pages (cursor %+v)", 5*retentionBatch, next)
+			}
+			cursor = next
+		}
+	})
+}
+
 func runAuditRetrySweep(ctx context.Context, t *testing.T, service *RetentionService) {
 	t.Helper()
 	var cursor HistoricalAuditCursor

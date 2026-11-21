@@ -42,15 +42,14 @@ func redactLinkedHistoricalPage(ctx context.Context, tx pgx.Tx, after, until ids
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
-	entries, err := legacyAuditEntries(ctx, tx, after, until, limit)
+	entries, err := legacyAuditEntries(ctx, tx, after, until, limit, legacyAuditKinds(), identitiesOnly)
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
 	page := HistoricalAuditPage{}
 	for _, entry := range entries {
 		page.Scanned = append(page.Scanned, entry.id)
-		identity := entry.kind == rightsRequestEntity && entry.action == actionCreate
-		if !entry.needed || identity != identitiesOnly {
+		if !entry.needed {
 			continue
 		}
 		changed, err := redactLinkedHistoricalEntry(ctx, tx, entry, floor)
@@ -64,15 +63,29 @@ func redactLinkedHistoricalPage(ctx context.Context, tx pgx.Tx, after, until ids
 	return page, nil
 }
 
-func legacyAuditEntries(ctx context.Context, tx pgx.Tx, after, until ids.UUID, limit int) ([]legacyAuditEntry, error) {
+// legacyAuditEntries pages over the audit rows of the given entity types.
+// identities picks the request-create rows; false takes the rest.
+func legacyAuditEntries(ctx context.Context, tx pgx.Tx, after, until ids.UUID, limit int, kinds []string, identities bool) ([]legacyAuditEntry, error) {
+	// Spelled as plain equalities for the identity pass, so it can read the
+	// request rows through idx_audit_entity.
+	split := `NOT (history.entity_type=@request_entity AND history.action=@create)`
+	if identities {
+		split = `history.entity_type=@request_entity AND history.action=@create`
+	}
 	rows, err := tx.Query(ctx, `SELECT history.id,history.entity_type,history.entity_id,history.action,history.actor_type,history.actor_id,history.occurred_at,
  NOT(history.action=ANY(@verbs))
  AND NOT EXISTS(SELECT 1 FROM audit_log own WHERE own.entity_type=history.entity_type AND own.entity_id=history.entity_id
   AND `+storekit.PhysicalErasureCertificateSQL("own", "@verbs")+`) AND (
  `+storekit.AuditRedactionNeededSQL+`
  OR EXISTS(SELECT 1 FROM event_outbox retained WHERE retained.envelope->'trace'->>'audit_log_id'=history.id::text))
- FROM audit_log history WHERE history.id>@after AND history.id<@until ORDER BY history.id LIMIT @limit`,
-		pgx.StrictNamedArgs{"verbs": storekit.AuditRedactionActions(), "after": after, "until": until, auditPageLimitParameter: limit})
+ FROM audit_log history WHERE history.id>@after AND history.id<@until
+ AND history.entity_type=ANY(@kinds)
+ AND `+split+`
+ ORDER BY history.id LIMIT @limit`,
+		pgx.StrictNamedArgs{
+			"verbs": storekit.AuditRedactionActions(), "after": after, "until": until, auditPageLimitParameter: limit,
+			"kinds": kinds, "request_entity": rightsRequestEntity, "create": actionCreate,
+		})
 	if err != nil {
 		return nil, err
 	}
