@@ -50,6 +50,7 @@ import { FilterOutcome } from "./filtermatches";
 import { usePlainWords } from "./filterpropose";
 import { type SavedKind, SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { filterSentence, useSentenceWords } from "./filtersentence";
+import { referencedIdsOf } from "./filtersentence.names";
 import { type Reread, useReload } from "./filterview.reload";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 import "./filters.css";
@@ -192,7 +193,6 @@ function OpenedView({
 }>) {
   const t = useT();
   const toast = useToast();
-  const sentenceWords = useSentenceWords();
   const listsOn = useListsAvailable();
   const { saveQuery } = useSaveView();
   // Advanced only by this page's own writes: a later read that answers a
@@ -202,6 +202,9 @@ function OpenedView({
     baseline: wireSignature(tree),
   }));
   const [draft, dispatch] = useFilterDraft(() => rootGroup(tree));
+  const sentenceWords = useSentenceWords(
+    referencedIdsOf([draft.tree], vocabulary.data?.fields),
+  );
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState<Saving | null>(null);
   const focus = useFoldFocus();
