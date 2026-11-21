@@ -167,6 +167,29 @@ it("writes nothing for an unchanged name and sends the typed one", async () => {
   expect(onSave).toHaveBeenCalledExactlyOnceWith("Eingehende Anfragen");
 });
 
+it("says an empty name is required on Save, focuses it, and writes nothing", async () => {
+  const onSave = vi.fn();
+  const user = userEvent.setup({ delay: null });
+  render(
+    <LocaleProvider initial="en">
+      <NameDialog
+        open
+        onClose={() => undefined}
+        title="New view"
+        label="View name"
+        confirmLabel="Create"
+        onSave={onSave}
+      />
+    </LocaleProvider>,
+  );
+
+  await user.click(screen.getByRole("button", { name: "Create" }));
+
+  expect(screen.getByText("View name is required.")).toBeVisible();
+  expect(screen.getByRole("textbox", { name: /View name/ })).toHaveFocus();
+  expect(onSave).not.toHaveBeenCalled();
+});
+
 function Titled({ title, label }: Readonly<{ title: string; label: string }>) {
   return (
     <LocaleProvider initial="en">

@@ -362,7 +362,7 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
-	if err := s.FailLease(ctx, Lease{Run: running.ID, Status: StatusRunning, Attempt: running.JobAttempt}, CauseStopped); err != nil {
+	if err := s.FailLease(ctx, Lease{Run: running.ID, Status: StatusRunning, Attempt: running.JobAttempt}, stopWith(CauseStopped)); err != nil {
 		t.Fatalf("FailLease: %v", err)
 	}
 	resumed, err := s.ResumeApproved(ctx, approved.ID, 0, queueNothing)

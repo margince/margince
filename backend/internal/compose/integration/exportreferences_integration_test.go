@@ -86,12 +86,9 @@ func TestAFilteredExportWithholdsACompanyTheExporterCannotOpen(t *testing.T) {
 		t.Fatalf("exported ids = %v, want the one visible deal %s", ids, deal)
 	}
 
-	for _, got := range CSVColumn(t, result.Body, "company_id") {
-		if got == hidden.String() {
-			t.Errorf("the export names company %s, which this exporter's own company read would refuse — the id alone is an existence oracle over a capture-private company", hidden)
-		}
+	for _, got := range CSVColumn(t, result.Body, "company_ref") {
 		if got != "" {
-			t.Errorf("company_id = %q, want empty for a company this exporter cannot open", got)
+			t.Errorf("company_ref = %q, want empty: this exporter's own company read refuses company %s, and its name is as much an existence oracle as its id", got, hidden)
 		}
 	}
 }
@@ -109,8 +106,8 @@ func TestAFilteredExportKeepsACompanyTheExporterCanOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("filtered export: %v", err)
 	}
-	named := CSVColumn(t, result.Body, "company_id")
-	if len(named) != 1 || named[0] != hidden.String() {
-		t.Errorf("company_id = %v, want %s — the company is private TO this reader, so the export owes them the reference", named, hidden)
+	named := CSVColumn(t, result.Body, "company_ref")
+	if len(named) != 1 || named[0] != "Meridian Labs" {
+		t.Errorf("company_ref = %v, want Meridian Labs — the company is private TO this reader, so the export owes them its name (id %s)", named, hidden)
 	}
 }

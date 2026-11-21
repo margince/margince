@@ -14,9 +14,10 @@ import {
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
-import { useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
 import { statusLabel, statusTone } from "../../lib/connector-status";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import "../../design-system/querystates.css";
 import { BOT_COPY, type BotProvider } from "./botcopy";
 
@@ -64,6 +65,12 @@ export function BotConnectForm({
   const formId = useId();
   const queryClient = useQueryClient();
   const [botToken, setBotToken] = useState("");
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
+  const labels = {
+    address: t("connectors.bot.dispactAddress"),
+    token: t("connectors.telegramBotToken"),
+  };
   const [address, setAddress] = useState("");
   const [eventsSecret, setEventsSecret] = useState("");
   const copy = BOT_COPY[provider];
@@ -123,6 +130,7 @@ export function BotConnectForm({
   // admin meets on the next rotation — a bot username and a Done button,
   // with no way back to the token field.
   const { reset: resetConnect } = connect;
+  const clearFaults = faults.show;
   const wasOpen = useRef(false);
   useEffect(() => {
     if (open && !wasOpen.current) {
@@ -130,12 +138,10 @@ export function BotConnectForm({
       setAddress("");
       setEventsSecret("");
       resetConnect();
+      clearFaults(new Map());
     }
     wasOpen.current = open;
-  }, [open, resetConnect]);
-
-  const ready =
-    botToken.trim() !== "" && (!asksAddress || address.trim() !== "");
+  }, [open, resetConnect, clearFaults]);
   // RFC 7807 `detail` carries the actionable reason (e.g. which of the two
   // conflicts a 409 is — this bot is bound elsewhere, or this workspace already
   // has one) — surfaced verbatim rather than flattened into a generic "failed
@@ -180,10 +186,18 @@ export function BotConnectForm({
         <>
           <form
             id={formId}
+            ref={faultsRoot}
             className="form-stack"
+            noValidate
             onSubmit={(event) => {
               event.preventDefault();
-              if (!ready || connect.isPending) {
+              const blank = blankRequired(locale, {
+                ...(asksAddress
+                  ? { address: [labels.address, address] as const }
+                  : {}),
+                token: [labels.token, botToken],
+              });
+              if (faults.show(blank) || connect.isPending) {
                 return;
               }
               connect.mutate({
@@ -203,9 +217,10 @@ export function BotConnectForm({
             )}
             {asksAddress && (
               <Field
-                label={t("connectors.bot.dispactAddress")}
+                label={labels.address}
                 required
                 hint={t("connectors.bot.dispactAddressHint")}
+                error={faults.of("address")}
               >
                 {(control) => (
                   <TextInput
@@ -213,15 +228,19 @@ export function BotConnectForm({
                     type="url"
                     autoComplete="off"
                     value={address}
-                    onChange={(event) => setAddress(event.target.value)}
+                    onChange={(event) => {
+                      setAddress(event.target.value);
+                      faults.edited("address");
+                    }}
                   />
                 )}
               </Field>
             )}
             <Field
-              label={t("connectors.telegramBotToken")}
+              label={labels.token}
               required
               hint={t(copy.tokenHint)}
+              error={faults.of("token")}
             >
               {(control) => (
                 <TextInput
@@ -229,7 +248,10 @@ export function BotConnectForm({
                   type="password"
                   autoComplete="off"
                   value={botToken}
-                  onChange={(event) => setBotToken(event.target.value)}
+                  onChange={(event) => {
+                    setBotToken(event.target.value);
+                    faults.edited("token");
+                  }}
                 />
               )}
             </Field>
@@ -262,7 +284,6 @@ export function BotConnectForm({
               variant="primary"
               type="submit"
               form={formId}
-              disabled={!connect.isPending && !ready}
               pending={connect.isPending}
               busyLabel={t("create.saving")}
             >

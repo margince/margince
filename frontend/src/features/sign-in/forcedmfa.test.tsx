@@ -89,6 +89,23 @@ describe("the forced two-step setup", () => {
     ]);
   });
 
+  it("says the code is required when Turn on is pressed empty, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const asked = serve({ "POST /v1/me/mfa/totp": [enrolment] });
+    mount();
+
+    await user.click(screen.getByRole("button", { name: "Set up" }));
+    const code = await screen.findByRole("textbox", {
+      name: /code from the app/i,
+    });
+    await user.click(screen.getByRole("button", { name: "Turn on" }));
+    expect(
+      screen.getByText("Code from the app is required."),
+    ).toBeInTheDocument();
+    expect(code).toHaveFocus();
+    expect(asked).toEqual(["POST /v1/me/mfa/totp"]);
+  });
+
   it("signs out without setting anything up", async () => {
     const user = userEvent.setup();
     const asked = serve({

@@ -125,22 +125,20 @@ describe("the deadline field", () => {
   });
 
   it("refuses an earlier deadline that is not earlier", async () => {
-    stub();
+    const sent = stub();
     const user = userEvent.setup();
     await openCorrectionForm(user);
-    await user.type(
-      screen.getByRole("textbox", { name: /earlier deadline/i }),
-      "20/08/2026",
-    );
+    const deadline = screen.getByRole("textbox", { name: /earlier deadline/i });
+    await user.type(deadline, "20/08/2026");
     await user.tab();
     expect(screen.getByText(/choose a date before/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /open request/i }),
-    ).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: /open request/i }));
+    expect(deadline).toHaveFocus();
+    expect(sent.filter((call) => call.key.startsWith("POST"))).toHaveLength(0);
   });
 
   it("refuses an earlier deadline before the day the request arrived", async () => {
-    stub();
+    const sent = stub();
     const user = userEvent.setup();
     await openCorrectionForm(user);
     await user.type(
@@ -155,9 +153,11 @@ describe("the deadline field", () => {
     expect(
       await screen.findByText("Choose a date on or after 01/07/2026."),
     ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /open request/i }));
     expect(
-      screen.getByRole("button", { name: /open request/i }),
-    ).toBeDisabled();
+      screen.getByRole("textbox", { name: /earlier deadline/i }),
+    ).toHaveFocus();
+    expect(sent.filter((call) => call.key.startsWith("POST"))).toHaveLength(0);
   });
 
   it("sends the day a late request arrived, and asks the deadline from that day", async () => {

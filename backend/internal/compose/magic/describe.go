@@ -70,6 +70,9 @@ var bookkeepingFields = map[string]bool{
 // describe answers what an admitted audit row means to a reader, and whether it
 // means anything at all.
 func describe(e entry) (description, bool) {
+	if e.ParentType != nil {
+		return describePlaced(e)
+	}
 	if e.Action != actionUpdate {
 		meaning, ok := meaningOf(e.Action)
 		if !ok {

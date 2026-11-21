@@ -135,7 +135,8 @@ describe("renaming the record", () => {
     const field = screen.getByRole("textbox", { name: "Full name" });
     await user.clear(field);
     await user.type(field, "   {Enter}");
-    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByText("Full name is required.")).toBeVisible();
+    expect(field).toHaveFocus();
     expect(screen.getByRole("dialog", { name: "Full name" })).toBeVisible();
     expect(onSave).not.toHaveBeenCalled();
   });

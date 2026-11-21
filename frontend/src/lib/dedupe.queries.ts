@@ -5,13 +5,19 @@ import {
   type QueryClient,
   type QueryKey,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { fileListKeys } from "./attachmentkeys";
 import { problemCodeOf, problemStatus, unwrap } from "./problem";
 import { invalidateRecord } from "./recordwritekeys";
-import { contactCasesKey, dsrsKey, worklistKey } from "./workkeys";
+import {
+  companyPairsKey,
+  contactCasesKey,
+  dsrsKey,
+  worklistKey,
+} from "./workkeys";
 
 export type PairDisposition = "merge" | "not_a_duplicate";
 
@@ -21,6 +27,7 @@ function invalidatePairReads(client: QueryClient): Promise<unknown> {
   return Promise.all([
     client.invalidateQueries({ queryKey: worklistKey }),
     client.invalidateQueries({ queryKey: contactCasesKey }),
+    client.invalidateQueries({ queryKey: companyPairsKey }),
   ]);
 }
 
@@ -134,4 +141,39 @@ export function pairDecisionFailure(error: unknown): PairDecisionFailure {
   }
   if (code === "already_disposed" || code === "not_undoable") return "settled";
   return "failed";
+}
+
+/** The ids of the other companies an open pair puts beside this one, every page of them. */
+export async function readCompanyPairs(companyId: string): Promise<string[]> {
+  const others: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = unwrap(
+      await api.GET("/dedupe/candidates", {
+        params: {
+          query: {
+            status: "open",
+            entity_type: "company",
+            record_id: companyId,
+            limit: 100,
+            cursor,
+          },
+        },
+      }),
+    );
+    for (const pair of page.data) {
+      others.push(pair.left_id === companyId ? pair.right_id : pair.left_id);
+    }
+    cursor = page.page.has_more
+      ? (page.page.next_cursor ?? undefined)
+      : undefined;
+  } while (cursor !== undefined);
+  return others;
+}
+
+export function useCompanyPairs(companyId: string) {
+  return useQuery({
+    queryKey: [...companyPairsKey, companyId],
+    queryFn: () => readCompanyPairs(companyId),
+  });
 }

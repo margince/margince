@@ -180,7 +180,7 @@ func StrengthForCompanyContacts(
 	if len(contacts) == 0 {
 		return nil, nil
 	}
-	return contactStrengths(ctx, tx, contacts, now, within)
+	return contactStrengths(ctx, tx, contacts, now, within, true)
 }
 
 // contactScopePredicate is the caller's contact row-scope predicate for a query
@@ -201,7 +201,7 @@ func contactScopePredicate(ctx context.Context, arg func(any) int) (string, erro
 // deal stakeholders together, and asking per contact would open one
 // transaction each and read a different instant for every node.
 func StrengthForContacts(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, now time.Time) ([]ContactStrength, error) {
-	return strengthForContactsAt(ctx, tx, contacts, now)
+	return strengthForContactsAt(ctx, tx, contacts, now, true)
 }
 
 // StrengthForContactsAsOf answers what §4 WOULD have said at a past instant:
@@ -218,11 +218,12 @@ func StrengthForContacts(ctx context.Context, tx pgx.Tx, contacts []ids.ContactI
 // read deleted data. What the caller is entitled to say is "strength then,
 // judged by what we may still count today" — and no more than that.
 func StrengthForContactsAsOf(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, asOf time.Time) ([]ContactStrength, error) {
-	return strengthForContactsAt(ctx, tx, contacts, asOf)
+	return strengthForContactsAt(ctx, tx, contacts, asOf, false)
 }
 
 // strengthForContactsAt is the shared body; nothing dated after now counts.
-func strengthForContactsAt(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, now time.Time) ([]ContactStrength, error) {
+// present is contactStrengths'.
+func strengthForContactsAt(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, now time.Time, present bool) ([]ContactStrength, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -254,19 +255,27 @@ func strengthForContactsAt(ctx context.Context, tx pgx.Tx, contacts []ids.Contac
 	if len(visible) == 0 {
 		return nil, nil
 	}
-	return contactStrengths(ctx, tx, visible, now, nil)
+	return contactStrengths(ctx, tx, visible, now, nil, present)
 }
 
 // contactStrengths folds the strength inputs for a contact set in a fixed
-// number of statements, whatever the size of their history.
+// number of statements, whatever the size of their history. present says now
+// is the moment of the request, so the stored dates may answer. A read narrowed
+// to a project, or at a past instant, folds the history.
 // The evidence ids are the contact page's receipts and stay out of this read.
 // Up to relStrengthEvidenceCap of them per contact would make an account list
 // grow with each contact's history.
 func contactStrengths(
 	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID,
-	now time.Time, within *ids.ProjectID,
+	now time.Time, within *ids.ProjectID, present bool,
 ) ([]ContactStrength, error) {
-	byContact, err := liveStrengths(ctx, tx, contacts, foldScope{admit: now, within: within})
+	var byContact map[ids.ContactID]*RelationshipStrength
+	var err error
+	if present && within == nil {
+		byContact, err = storedStrengths(ctx, tx, contacts, now)
+	} else {
+		byContact, err = liveStrengths(ctx, tx, contacts, foldScope{admit: now, within: within})
+	}
 	if err != nil {
 		return nil, err
 	}

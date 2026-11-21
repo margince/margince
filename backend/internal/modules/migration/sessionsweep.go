@@ -24,6 +24,13 @@ const sweepBatch = 100
 // errorColumn is the column that keeps why a run stopped, as the run shows it.
 const errorColumn = "error"
 
+// refusalColumn keeps the code and values of errorColumn's sentence, when it
+// has them. A write of errorColumn writes it too, so the two never disagree.
+const refusalColumn = "error_refusal"
+
+// errorCleared is the assignment that clears both.
+const errorCleared = "error = NULL, error_refusal = NULL"
+
 // sweepRule selects the csv runs one sweep rule settles.
 type sweepRule struct {
 	statuses []string
@@ -178,7 +185,7 @@ func (s *RunStore) settleStale(ctx context.Context, d dueAttempt, staleAfter tim
 			return err
 		}
 		if d.resumes >= maxResumes {
-			return failLeaseInTx(ctx, tx, d.lease, staleCause(d.lease.Status))
+			return failLeaseInTx(ctx, tx, d.lease, staleCause(d.lease.Status), nil)
 		}
 		return reopenStale(ctx, tx, d.lease, requeue)
 	})

@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // The two ways a stored actor can have lost the authority it acted with. Both
@@ -48,28 +49,19 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 		return principal.Principal{}, errors.New("rebuilding a stored actor outside workspace context")
 	}
 	human := stored.UserID
-	rbac, seat, err := s.authority.EffectiveAuthority(ctx, ws, human)
+	actor, err := authz.MemberPrincipal(ctx, s.authority, ws, human)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return principal.Principal{}, errActorSeatGone
 	}
 	if err != nil {
 		return principal.Principal{}, fmt.Errorf("reading the authority of %s: %w", human, err)
 	}
-	if !seat.CanMutate() {
+	if !actor.SeatType.CanMutate() {
 		return principal.Principal{}, errActorSeatGone
 	}
-
-	actor := principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + human.String(),
-		UserID:      human,
-		TeamIDs:     rbac.TeamIDs,
-		SeatType:    seat,
-		Permissions: rbac.Permissions,
-		// Queued work names whose it is even when they act themselves, so its
-		// audit rows say who it was for, not only who ran it.
-		OnBehalfOf: human,
-	}
+	// Queued work names whose it is even when they act themselves, so its
+	// audit rows say who it was for, not only who ran it.
+	actor.OnBehalfOf = human
 	if !stored.OnBehalfOf.IsZero() {
 		actor.OnBehalfOf = stored.OnBehalfOf
 	}

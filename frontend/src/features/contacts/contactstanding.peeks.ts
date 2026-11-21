@@ -48,24 +48,29 @@ export function contactPeeks(
 
 function promisesPeek(
   view: Contact360,
-  { t, locale, zone }: PeekWords,
+  words: PeekWords,
   open: () => void,
 ): StandingPeek | undefined {
+  const { t, locale } = words;
   const asOf = Date.parse(view.as_of);
-  const items = (owedPromises(view, t) ?? []).map(({ key, title, due }) => {
-    const day = due ? formatDayMonth(due, locale, zone) : undefined;
-    const late = due ? daysPast(Date.parse(due), asOf).late : false;
-    return {
-      key,
-      title,
-      sub: !day
-        ? t("standing.next.peek.undated")
-        : late
-          ? t("standing.next.peek.overdue", { date: day })
-          : day,
-      onOpen: open,
-    };
-  });
+  const items = (owedPromises(view, t, words) ?? []).map(
+    ({ key, title, due, zone }) => {
+      const day = due
+        ? formatDayMonth(due, locale, zone ?? words.zone)
+        : undefined;
+      const late = due ? daysPast(Date.parse(due), asOf).late : false;
+      return {
+        key,
+        title,
+        sub: !day
+          ? t("standing.next.peek.undated")
+          : late
+            ? t("standing.next.peek.overdue", { date: day })
+            : day,
+        onOpen: open,
+      };
+    },
+  );
   return items.length > 0
     ? { head: t("contact.standing.peek.promises"), items }
     : undefined;

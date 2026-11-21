@@ -1,23 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Field } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { ConfirmModal } from "../../design-system/confirmmodal";
 import { FactList } from "../../design-system/factlist";
 import { FileChip } from "../../design-system/filechip";
 import { Markdown } from "../../design-system/markdown";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatBytes, formatDate, formatNumber } from "../../format/format";
-import {
-  jurisdictionName,
-  parsePeriod,
-  ruleText,
-} from "../../format/jurisdiction";
+import { jurisdictionName, ruleText } from "../../format/jurisdiction";
 import { lockFor } from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -30,15 +23,14 @@ import {
 } from "../../lib/jurisdictiontext";
 import { labelFor } from "../../lib/labelfor";
 import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
-import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   JURISDICTION_QUERY_KEY,
   JurisdictionEntitiesPanel,
-  jurisdictionOptions,
   useInstallationJurisdiction,
 } from "./jurisdictionentities";
+import { ChangeJurisdiction } from "./settings.jurisdiction.change";
 
 // Settings → Governance → Jurisdiction: which country's pack this installation
 // runs under, what that selection puts in force, and the documents the pack
@@ -46,11 +38,6 @@ import {
 // (handlers_installation_jurisdiction.go); this screen only draws it.
 
 type Jurisdiction = components["schemas"]["InstallationJurisdiction"];
-type RetentionClass = components["schemas"]["JurisdictionRetentionClass"];
-
-// The Select's value for "no pack". The empty string is the Select's "nothing
-// chosen", so the explicit choice needs a value of its own; it is sent as "".
-const NO_PACK = "none";
 
 const QUERY_KEY = JURISDICTION_QUERY_KEY;
 
@@ -165,139 +152,6 @@ function SelectionPanel({
       </SettingList>
     </Panel>
   );
-}
-
-function ChangeJurisdiction({
-  jurisdiction,
-  reasonId,
-}: Readonly<{ jurisdiction: Jurisdiction; reasonId: string | undefined }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const queryClient = useQueryClient();
-  const [choice, setChoice] = useState("");
-  const [open, setOpen] = useState(false);
-  const current = jurisdiction.selected ?? "";
-  const change = useMutation({
-    mutationFn: async (country: string) =>
-      unwrap(await api.PATCH("/installation/settings", { body: { country } })),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      setOpen(false);
-      setChoice("");
-    },
-  });
-  const close = () => {
-    setOpen(false);
-    setChoice("");
-    change.reset();
-  };
-  const target = choice === NO_PACK ? "" : choice;
-  const options = [
-    ...jurisdictionOptions(jurisdiction.available, locale),
-    { value: NO_PACK, label: t("jurisdiction.option.none") },
-  ].filter(
-    (option) => (option.value === NO_PACK ? "" : option.value) !== current,
-  );
-  return (
-    <>
-      <Button
-        aria-haspopup="dialog"
-        aria-label={t("jurisdiction.change.label")}
-        // The row's description is the lock's reason while it holds.
-        reasonId={reasonId}
-        onClick={() => setOpen(true)}
-      >
-        {t("jurisdiction.change.action")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={close}
-        title={t("jurisdiction.change.label")}
-        confirmLabel={t("jurisdiction.confirm.confirm")}
-        confirmDisabled={choice === ""}
-        onConfirm={() => change.mutate(target)}
-        pending={change.isPending}
-        error={change.isError ? problemMessageOf(change.error, t) : null}
-      >
-        <Field
-          label={t("jurisdiction.card.title")}
-          hint={t("jurisdiction.change.description")}
-        >
-          {(control) => (
-            <Select
-              {...control}
-              options={options}
-              value={choice}
-              placeholder={t("jurisdiction.change.placeholder")}
-              onChange={(next) => {
-                setChoice(next);
-                change.reset();
-              }}
-            />
-          )}
-        </Field>
-        {choice !== "" && (
-          <ChangeConsequences jurisdiction={jurisdiction} target={target} />
-        )}
-      </ConfirmModal>
-    </>
-  );
-}
-
-/** What the confirm dialog lists: the floor before and after, and the rest. */
-export function ChangeConsequences({
-  jurisdiction,
-  target,
-}: Readonly<{ jurisdiction: Jurisdiction; target: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const before = jurisdiction.floor.known
-    ? floorText(
-        {
-          name: jurisdiction.floor.class ?? "",
-          keep: jurisdiction.floor.keep ?? "P0D",
-          from_year_end: jurisdiction.floor.from_year_end,
-        },
-        locale,
-        t,
-      )
-    : t("jurisdiction.floor.none");
-  const afterClass = targetFloor(jurisdiction, target);
-  const after = afterClass
-    ? floorText(afterClass, locale, t)
-    : t("jurisdiction.floor.none");
-  const weakens = jurisdiction.floor.known && !afterClass;
-  return (
-    <>
-      <p>{t("jurisdiction.confirm.floor", { from: before, to: after })}</p>
-      {weakens && (
-        <p>{t("jurisdiction.confirm.floorCarried", { from: before })}</p>
-      )}
-      <p>{t("jurisdiction.confirm.deadlines")}</p>
-      <p>{t("jurisdiction.confirm.messaging")}</p>
-    </>
-  );
-}
-
-// The floor a target puts in force. "No pack" puts the strictest compiled-in
-// one in force, which is the longest floor among the available packs.
-function targetFloor(
-  jurisdiction: Jurisdiction,
-  target: string,
-): RetentionClass | undefined {
-  if (target !== "") {
-    return jurisdiction.available.find((unit) => unit.code === target)
-      ?.correspondence_floor;
-  }
-  return jurisdiction.available
-    .map((unit) => unit.correspondence_floor)
-    .filter((floor): floor is RetentionClass => floor !== undefined)
-    .sort((a, b) => periodMonths(b.keep) - periodMonths(a.keep))[0];
-}
-
-function periodMonths(iso: string): number {
-  const period = parsePeriod(iso);
-  return period ? period.years * 12 + period.months + period.days / 31 : 0;
 }
 
 function EffectsPanel({

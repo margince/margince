@@ -40,12 +40,8 @@ func reportingWorkerIdentity(t *testing.T, e *forecastEnv) {
 		t.Fatal(err)
 	}
 	role := e.seedID(t, `INSERT INTO role(id,key,name,permissions) VALUES($1,'reporting-test','Reporting test',$2)`, raw)
-	if _, err := e.owner.Exec(context.Background(), `INSERT INTO role_assignment(role_id,user_id) VALUES($1,$2)`, role, e.Rep1); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET seat_type='full' WHERE id=$1`, e.Rep1); err != nil {
-		t.Fatal(err)
-	}
+	e.ownerExec(t, `INSERT INTO role_assignment(role_id,user_id) VALUES($1,$2)`, role, e.Rep1)
+	e.ownerExec(t, `UPDATE app_user SET seat_type='full' WHERE id=$1`, e.Rep1)
 }
 
 func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testing.T) {
@@ -157,9 +153,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 	if _, err := service.CreateSchedule(human, ids.UUID(report.Id), rule); err == nil {
 		t.Fatal("enabled without retention")
 	}
-	if _, err := e.owner.Exec(context.Background(), `INSERT INTO retention_policy(object_type,retain_days,action,enabled) VALUES('report_edition',730,'erase',true)`); err != nil {
-		t.Fatal(err)
-	}
+	e.ownerExec(t, `INSERT INTO retention_policy(object_type,retain_days,action,enabled) VALUES('report_edition',730,'erase',true)`)
 	schedule, err := service.CreateSchedule(human, ids.UUID(report.Id), rule)
 	if err != nil {
 		t.Fatal(err)
@@ -191,9 +185,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 		t.Fatal("paused schedule restarted")
 	}
 	reportingRetentionLifecycle(human, t, e, service, ids.UUID(*complete.EditionId))
-	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET archived_at=now() WHERE id=$1`, e.Rep1); err != nil {
-		t.Fatal(err)
-	}
+	e.ownerExec(t, `UPDATE app_user SET archived_at=now() WHERE id=$1`, e.Rep1)
 	request, err = service.Freeze(human, ids.UUID(report.Id), report.Revision, "revoked-user")
 	if err != nil {
 		t.Fatal(err)
@@ -212,32 +204,40 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 
 func reportingRetentionLifecycle(human context.Context, t *testing.T, e *forecastEnv, service *reporting.Service, editionID ids.UUID) {
 	t.Helper()
-	if _, err := e.owner.Exec(context.Background(), `UPDATE retention_policy SET retain_days=1 WHERE object_type='report_edition'`); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.owner.Exec(context.Background(), `UPDATE report_edition SET captured_at=now()-interval '3 days' WHERE id=$1`, editionID); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET legal_hold=true WHERE id IN(SELECT source_id FROM report_edition_contribution WHERE edition_id=$1 AND source_type='deal')`, editionID); err != nil {
-		t.Fatal(err)
-	}
+	e.ownerExec(t, `UPDATE retention_policy SET retain_days=1 WHERE object_type='report_edition'`)
+	e.ownerExec(t, `UPDATE report_edition SET captured_at=now()-interval '3 days' WHERE id=$1`, editionID)
+	e.ownerExec(t, `UPDATE deal SET legal_hold=true WHERE id IN(SELECT source_id FROM report_edition_contribution WHERE edition_id=$1 AND source_type='deal')`, editionID)
 	retention := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.New(slog.DiscardHandler))
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:privacy-retention")
 	if err := retention.EvaluateInstallation(system); err != nil {
 		t.Fatal(err)
 	}
 	held, err := service.GetEdition(human, editionID)
-	if err != nil || held.Expired != nil && *held.Expired {
-		t.Fatalf("held edition expired: %+v %v", held, err)
+	if err != nil || held.Expired != nil && *held.Expired || editionImages(t, e, editionID) == 0 {
+		t.Fatalf("held edition expired or lost its audit images: %+v %v", held, err)
 	}
-	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET legal_hold=false WHERE id IN(SELECT source_id FROM report_edition_contribution WHERE edition_id=$1 AND source_type='deal')`, editionID); err != nil {
-		t.Fatal(err)
-	}
+	e.ownerExec(t, `UPDATE deal SET legal_hold=false WHERE id IN(SELECT source_id FROM report_edition_contribution WHERE edition_id=$1 AND source_type='deal')`, editionID)
 	if err := retention.EvaluateInstallation(system); err != nil {
 		t.Fatal(err)
 	}
 	expired, err := service.GetEdition(human, editionID)
-	if err != nil || expired.Expired == nil || !*expired.Expired || len(expired.Evaluation.Metrics) != 0 || len(expired.Evaluation.Charts) != 0 {
-		t.Fatalf("expiry did not preserve a safe tombstone: %+v %v", expired, err)
+	if err != nil || expired.Expired == nil || !*expired.Expired || len(expired.Evaluation.Metrics) != 0 || len(expired.Evaluation.Charts) != 0 || editionImages(t, e, editionID) != 0 {
+		t.Fatalf("expiry did not preserve a safe tombstone or left an audit image: %+v %v", expired, err)
 	}
+}
+
+func (e *forecastEnv) ownerExec(t *testing.T, sql string, args ...any) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), sql, args...); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func editionImages(t *testing.T, e *forecastEnv, editionID ids.UUID) (images int) {
+	t.Helper()
+	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM audit_log WHERE entity_type = 'report_edition'
+		AND entity_id = $1 AND (before IS NOT NULL OR after IS NOT NULL)`, editionID).Scan(&images); err != nil {
+		t.Fatal(err)
+	}
+	return images
 }

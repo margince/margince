@@ -36,6 +36,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["role_cannot_capture", "connectors.roleCannotCapture"],
   // The installation switched off individual performance; the detail is English.
   ["individual_performance_off", "common.individualPerformanceOff"],
+  // An owner filter naming someone the reader may not measure; the detail is English.
+  ["owner_not_measurable", "common.ownerNotMeasurable"],
   // The server's skew detail is English, worded for API and agent readers.
   ["version_skew", "common.versionSkew"],
   // The detail names a stage or a kind of stage in English.

@@ -102,6 +102,8 @@ lift() { # function name
 
 # shellcheck source=scripts/lib-devstate.sh
 . "$root/scripts/lib-devstate.sh"
+# shellcheck source=scripts/lib-devready.sh
+. "$root/scripts/lib-devready.sh"
 # still_ours reads this to decide whether a recorded pid is one of OURS. It is a
 # variable of dev.sh, so a lifted function needs it supplied — and supplying the
 # real repository root is what makes the fixtures below have to look like real
@@ -697,7 +699,6 @@ scope_probe
 echo "dev.sh: a process that dies during boot is reported at once, with its reason"
 
 lift log_as
-lift wait_ready
 lift fail_exited_during_boot
 boot_dir="$(mktemp -d)"
 log="$boot_dir/dev.log" log_colour=0 label="dev 'probe'" slug=probe
@@ -791,6 +792,10 @@ STUB
     chmod +x "$infra_dir/make"
 }
 infra_calls() { wc -l <"$infra_dir/calls" | tr -d ' '; }
+# The Docker preflight ensure_infra runs first has its own suite
+# (scripts/lib-devready.test.sh); here a docker that answers lets the make stub be reached.
+printf '#!/usr/bin/env bash\nexit 0\n' >"$infra_dir/docker"
+chmod +x "$infra_dir/docker"
 infra_retry_count=2 infra_retry_pause=0
 
 stub_make 1

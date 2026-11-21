@@ -164,14 +164,28 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// read counts all pending proposals beyond the displayed page. One more
 	// names who created the company, which its rail shows. The commitment
 	// evidence read switches to its generic plan first, which is one more
-	// statement and spares a plan of the gate on every page. Strength reads
-	// the history's dates and the window's counts in two statements.
-	const budget = 61
+	// statement and spares a plan of the gate on every page. The clock here is a
+	// past instant the stored strength dates cannot answer. So strength reads
+	// the stored row and then the history's dates and the window's counts.
+	const budget = 62
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
+	}
+	// At the present the strength fold reads the dates each contact stores.
+	// The page then spends fewer statements than at a past instant.
+	present := company360svc.NewService(pool, contacts.NewStore(traced),
+		deals.NewStore(traced, installseam.Deals()), integration.ProjectsStore(traced),
+		approvals.NewService(traced), time.Now)
+	before = tracer.total()
+	if _, err := present.Assemble(ctx, large); err != nil {
+		t.Fatalf("assemble the large account at the present: %v", err)
+	}
+	if presentCost := tracer.total() - before; presentCost >= largeCost {
+		t.Errorf("assembling at the present cost %d queries, at a past instant %d: the stored strength dates were not read",
+			presentCost, largeCost)
 	}
 }
 

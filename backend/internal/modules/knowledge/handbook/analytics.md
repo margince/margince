@@ -76,7 +76,7 @@ When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets
 
 Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, this section counts one person’s own records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet. The section is part of the address, so a link to one opens it.
 
-**Company coverage** lists the companies at risk among the records you chose, in three views. **Single-contact deals** are open deals where messages or meetings went both ways with at most one contact on the deal within 90 days. **Untouched in pipeline** are companies with an open deal and no exchange either way in the last 21 days. **Won but silent** are companies with a deal won in the last 180 days, no open deal and no exchange in the last 30 days. The line under the filters prints these limits, and an admin changes them under **Setup** → **Metric definitions**. A row opens a side panel with the facts behind the verdict, and a deal whose contacts you may not all see is not judged.
+**Company coverage** lists the companies at risk among the records you chose, in three views. **Single-contact deals** are open deals with a logged activity, where messages or meetings went both ways with at most one contact within 90 days. **Untouched in pipeline** are companies with an open deal and no exchange either way in the last 21 days. **Won but silent** are companies with a deal won in the last 180 days, no open deal and no exchange in the last 30 days. The line under the filters prints these limits, and an admin changes them under **Setup** → **Metric definitions**. A row opens a side panel with the facts behind the verdict, and a deal whose contacts you may not all see is not judged.
 
 ## Overview
 
@@ -173,7 +173,8 @@ for the whole open pipeline. **Forecast by probability** sits beside the tables.
 **Open deals by stage**: one row per stage, in pipeline order. It shows the
 stage, how many deals, and the value without and with weighting. Every figure
 is turned into one base currency, so a stage is one row with no currency
-column.
+column. A deal with no exchange rate or no value is left out of a total, and a
+note says how many deals and why. Such a figure carries a **Partial** mark.
 
 **Forecast by probability**: a tile per band (0%, 1 to 29%, 30 to 59%, 60 to
 89%, 90% or more). Each shows the raw total as the value
@@ -194,8 +195,6 @@ two rows.
 
 The share is of the open pipeline in the same currency. It shows only when the
 list holds every row and no deal is hidden from you.
-
-Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 

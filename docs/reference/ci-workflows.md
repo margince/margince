@@ -373,9 +373,8 @@ test dist release, and needs only `sbom`. So an open blocker holds the GitHub re
 and a failed dist release leaves the GitHub release alone. A failed SBOM job stops both.
 
 The tag is the version, read and checked by [`scripts/release-tag-version.sh`](../../scripts/release-tag-version.sh)
-(`make test-release-tag-version`). A plain `v1.0.0` becomes the download the page offers by
-default; a tag with an ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A tag the script cannot
-read is refused in seconds, before anything is published.
+(`make test-release-tag-version`). A plain `v1.0.0` becomes the download the page offers by default; a tag with an
+ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A tag the script cannot read is refused in seconds, before anything is published.
 
 More checks share that first job. The tag points at a commit on `main`, and Go recorded no other commit for it
 ([`scripts/release-tag-go-proxy.sh`](../../scripts/release-tag-go-proxy.sh)). `LICENSE` carries the release's Change Date
@@ -387,8 +386,7 @@ The same job reads the `source-checked` date of each messaging policy layer ([`s
 The `draft` job then checks that a plain tag has a draft release with notes. It holds
 `contents: write` only to read: GitHub shows a draft to no token that cannot write.
 
-The `verdict` check picks releases, and does not gate merges. To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
-but is not done yet refuses.
+The `verdict` check picks releases, and does not gate merges. To merge past `ci` is a standing decision here, so a missing result passes. A result that exists but is not done yet refuses.
 
 The release job publishes the draft, or creates the release for a pre-release that has no draft. The `sign`
 job alone holds `id-token: write`, and runs no build code.

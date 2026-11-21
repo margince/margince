@@ -59,7 +59,6 @@ src/design-system/visibility.css: .visibility-withheld { background: linear-grad
 src/components/meetingrows.css: .meetingrows-date { background: var(--bgElevated) }
 src/design-system/documenttile.css: .board-doc-kind { background: var(--bgElevated) }
 src/design-system/documenttile.css: .board-doc-page { background: var(--bgElevated) }
-src/features/mail/compose.css: .schedule-hour { background: var(--bgElevated) }
 src/features/onboarding/onboarding-build-scene.css: .ob-build { background: radial-gradient( 760px 520px at 50% 32%, color-mix(in srgb, var(--coreLight) 34%, transparent) 0%, transparent 62% ), linear-gradient( 180deg, color-mix(in srgb, var(--accent) 5%, var(--bgElevated)) 0%, var(--bgElevated) 100% ) }
 src/features/onboarding/onboarding-conversation/conversation.css: .ob-decision-path { background: var(--bgElevated) }
 src/features/onboarding/onboarding-conversation/conversation.css: .ob-triage-continue { background: var(--bgElevated) }

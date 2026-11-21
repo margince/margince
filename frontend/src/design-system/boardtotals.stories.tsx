@@ -51,18 +51,27 @@ export const WithNotes: Story = {
       rawMinor: 26_500_000,
       weightedMinor: 7_969_110,
       probabilityPct: 30,
-      unpricedCount: 6,
+      coverage: {
+        partial: true,
+        noValue: 0,
+        noRate: 6,
+        rateCurrencies: ["JPY"],
+      },
       asOf: "2026-11-03T08:00:00Z",
     }),
     scaleMinor: 106_254_800,
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("6 not priced")).toBeInTheDocument();
+    await expect(
+      canvas.getByText("6 deals have no exchange rate (JPY)"),
+    ).toBeInTheDocument();
     await userEvent.tab();
     await expect(canvas.getByText("€265k")).toHaveFocus();
     const tip = await within(document.body).findByRole("tooltip");
-    await expect(tip).toHaveTextContent(/6 deals have no price/);
+    await expect(tip).toHaveTextContent(
+      /6 deals have no exchange rate \(JPY\)/,
+    );
   },
 };
 

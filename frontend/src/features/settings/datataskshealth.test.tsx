@@ -355,3 +355,73 @@ it("keeps completed earlier steps out of a task's initial pending view", async (
   fireEvent.click(screen.getByText("Completed updates"));
   expect(screen.getByText("Step: earlier")).toBeVisible();
 });
+
+const leftOpen = {
+  ...runningDataTask,
+  status: "done",
+  version: 9,
+  action_needed: {
+    reason: "privacy_reviewer_missing",
+    sentence: "No reviewer could be told.",
+    remedy: "Grant review access, then press Retry.",
+    count: 2,
+    records: [
+      { type: "approval_history", id: "0190a1b2-0000-7000-8000-000000000001" },
+    ],
+  },
+} satisfies typeof runningDataTask;
+
+it("keeps a finished step with records left in view, names them and offers a rerun", async () => {
+  const { writes } = routes({ data: [leftOpen] });
+  render(<DataTasksHealthCard />);
+  expect(await screen.findByText("Done, action needed")).toBeInTheDocument();
+  expect(screen.queryByText("Completed updates")).toBeNull();
+  expect(
+    screen.getByText(
+      "No reviewer could be told. Grant review access, then press Retry.",
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByText("2 records left to act on")).toBeInTheDocument();
+  expect(screen.queryByText(/0190a1b2-0000-7000-8000-000000000001/)).toBeNull();
+  expect(screen.queryByRole("button", { name: "Estimate rows" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() =>
+    expect(writes).toEqual([
+      {
+        task_id: runningDataTask.task_id,
+        step: "classify",
+        version: 9,
+        action: "retry",
+      },
+    ]),
+  );
+});
+
+it("offers a read-only reader no rerun of a step with records left", async () => {
+  routes({ data: [leftOpen] }, { data_task: ["read"] });
+  render(<DataTasksHealthCard />);
+  await screen.findByText("Done, action needed");
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+});
+
+it("does not show a malformed action as a finished step", async () => {
+  routes({
+    data: [
+      {
+        ...leftOpen,
+        action_needed: { ...leftOpen.action_needed, count: -1 },
+      },
+    ],
+  });
+  render(<DataTasksHealthCard />);
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  expect(screen.queryByText("Done, action needed")).toBeNull();
+});
+
+it("offers no rerun on a finished step with nothing left open", async () => {
+  routes({ data: [{ ...runningDataTask, status: "done" }] });
+  render(<DataTasksHealthCard />);
+  fireEvent.click(await screen.findByText("Completed updates"));
+  await screen.findByText("Done");
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+});

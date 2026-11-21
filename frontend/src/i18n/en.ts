@@ -528,6 +528,7 @@ export const en = {
   "dataTasks.status.running": "Running",
   "dataTasks.status.paused": "Paused",
   "dataTasks.status.done": "Done",
+  "dataTasks.status.doneWithAction": "Done, action needed",
   "dataTasks.status.failed": "Failed",
   "dataTasks.action.pause": "Pause",
   "dataTasks.action.resume": "Resume",
@@ -543,6 +544,8 @@ export const en = {
   "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
   "dataTasks.blocked.missing_prerequisite":
     "Required updates must finish first.",
+  "dataTasks.actionRecords_one": "{count} record left to act on",
+  "dataTasks.actionRecords_other": "{count} records left to act on",
   "approval.preview.createEmployer":
     "Create the missing company and link this contact as an employee.",
   "approval.preview.reuseEmployer":
@@ -2534,6 +2537,14 @@ export const en = {
   "history.reversal.undoneBy": "Undone by {undoer}",
   "history.reversal.unpaired": "Undoes an earlier change",
   "history.edge.marker": "Link",
+  "history.edge.linked": "{subject} linked {name} as {role}",
+  "history.edge.roleChanged":
+    "{subject} changed the role at {name} from {previous} to {role}",
+  "history.edge.roleSet": "{subject} changed the role at {name} to {role}",
+  "history.edge.changed": "{subject} changed {name}: {fields}",
+  "history.edge.unlinked": "{subject} unlinked {name}",
+  "history.edge.roleRemoved": "{subject} removed the role {previous} at {name}",
+  "history.edge.alsoChanged": "also changed: {fields}",
   "history.subject.viaClient": "{name}, via {client},",
   "history.subject.viaAgent": "{name}, via an agent,",
   "history.subject.viaConnector": "{name}, via a connector,",
@@ -2673,6 +2684,11 @@ export const en = {
   "history.field.stage_id": "Stage",
   "history.field.disqualify_reason_id": "Disqualify reason",
   "history.field.trigger": "Qualified by",
+  "history.field.role": "Role",
+  "history.field.is_current_primary": "Primary employer",
+  "history.field.employment_status": "Employment status",
+  "history.field.started_precision": "Start date precision",
+  "history.field.ended_precision": "End date precision",
   "history.field.win_probability_override": "Probability set on the deal",
   "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
@@ -3070,14 +3086,14 @@ export const en = {
   "board.count_other": "{count} deals",
   "board.weightedLabel": "weighted",
   "board.ratesOn": "Exchange rates {date}",
-  "board.unpriced_one": "{count} not priced",
-  "board.unpriced_other": "{count} not priced",
+  "coverage.noRate_one": "{count} deal has no exchange rate{currencies}",
+  "coverage.noRate_other": "{count} deals have no exchange rate{currencies}",
+  "coverage.noValue_one": "{count} deal has no value",
+  "coverage.noValue_other": "{count} deals have no value",
+  "coverage.partial": "Partial",
+  "coverage.partialTip": "Partial total: it leaves out these deals.",
   "board.totalsTip":
     "{total} open, {weighted} weighted by each deal’s probability.",
-  "board.unpricedTip_one":
-    "{count} deal has no price and is left out of both totals.",
-  "board.unpricedTip_other":
-    "{count} deals have no price and are left out of both totals.",
   "board.convertedTip": "Converted at exchange rates as of {date}.",
   "board.matchesIn_one": "{count} result in {columns}",
   "board.matchesIn_other": "{count} results in {columns}",
@@ -3510,6 +3526,8 @@ export const en = {
   // about. Two sentences, no dash (VOICE-RULE-5).
   "common.individualPerformanceOff":
     "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two. A forecast is withheld in full if any of its groups would show one colleague’s figures.",
+  "common.ownerNotMeasurable":
+    "This owner’s figures are outside what you may measure. Remove the owner filter, or ask an administrator to widen your reach.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -4159,8 +4177,10 @@ export const en = {
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "In contact, but one contact carries the whole company relationship.",
+  "co.health.reason.singleThreaded_other":
+    "In contact, but only {count} contacts carry the whole company relationship.",
   "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
   "co.health.reason.severalContacts_other":
     "{count} contacts here are in touch.",
@@ -5486,6 +5506,12 @@ export const en = {
   "co.domainContacts.changed":
     "The list changed while it was open. Check the ticks and link again.",
   "co.domainContacts.dismiss": "Not now",
+  "company.duplicates.entry_one": "Possible duplicate ({count})",
+  "company.duplicates.entry_other": "Possible duplicates ({count})",
+  "company.duplicates.title": "Possible duplicates",
+  "company.duplicates.lead":
+    "These companies look like this one. Open one to compare.",
+  "company.duplicates.created": "A company with this name already exists.",
   "co.domainContacts.link_one": "Link {count} contact",
   "co.domainContacts.link_other": "Link {count} contacts",
   "co.domainContacts.linkNone": "Link contacts",
@@ -6000,6 +6026,8 @@ export const en = {
   "lead.bulkAssignedDone_other": "{count} leads assigned to {owner}.",
   "lead.bulkDisqualifiedDone_one": "{count} lead disqualified.",
   "lead.bulkDisqualifiedDone_other": "{count} leads disqualified.",
+  "lead.bulkAssignTitle_one": "Assign this lead to {owner}?",
+  "lead.bulkAssignTitle_other": "Assign {count} leads to {owner}?",
   "lead.bulkFailed": "{count} not applied:",
   "lead.bulkFailedRow": "not saved",
   "lead.bulkOutcomeConflict": "changed by someone else in the meantime",
@@ -6340,6 +6368,9 @@ export const en = {
   "deal.committee.missing.secondContact": "Only one contact. Add a second one.",
   "deal.committee.missing.secondEngaged":
     "Fewer than two engaged. Reach a second contact.",
+  "deal.committee.missing.anotherContact": "Too few contacts. Add another one.",
+  "deal.committee.missing.anotherEngaged":
+    "Too few engaged. Reach another contact.",
   "deal.committee.foot": "{named} named · {engaged} of {named} engaged",
   "deal.brief.title": "What this deal is",
   "deal.brief.byModel": "Written by Margince from the customer’s email",
@@ -6842,6 +6873,10 @@ export const en = {
   "deals.bulkStage": "Move to stage",
   "deals.bulkStagePick": "Pick a stage",
   "deals.bulkMove": "Move",
+  "deals.bulkMoveTitle_one": "Move {count} deal to {stage}?",
+  "deals.bulkMoveTitle_other": "Move {count} deals to {stage}?",
+  "deals.bulkMoveWill_one": "{count} deal will move to {stage}.",
+  "deals.bulkMoveWill_other": "{count} deals will move to {stage}.",
   "deals.bulkMoved_one": "{count} deal moved to {stage}.",
   "deals.bulkMoved_other": "{count} deals moved to {stage}.",
   "deals.bulkAlreadyThere_one": "{count} was already in {stage}.",
@@ -8066,6 +8101,11 @@ export const en = {
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
     "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room.",
+  "files.edit": "Edit",
+  "files.editTitle": "Edit {name}",
+  "files.editState": "State",
+  "files.save": "Save",
+  "files.deleteBodyRecord": "The file is removed from this record’s documents.",
   "files.showHidden": "Show hidden files",
   "files.hideHidden": "Hide hidden files",
   "dealfiles.origin.from": "From {who}",
@@ -8864,7 +8904,6 @@ export const en = {
   "analytics.count": "Open deals",
   "analytics.unweighted": "Deal value",
   "analytics.weighted": "Probability-adjusted value",
-  "analytics.priced": "{priced} of {total} priced",
   "analytics.planNote":
     "The executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Open deals by stage",
@@ -9410,7 +9449,6 @@ export const en = {
   "analytics.forecastDeals_other": "{count} deals",
   "analytics.forecastNoAmount": "No amount",
   "analytics.forecastWeighted": "{amount} weighted",
-  "analytics.forecastPriced": "{priced} of {count} priced",
   "analytics.readingNone": "None",
   "analytics.readingLoading": "Loading",
   "analytics.readingUnavailable": "Unavailable",
@@ -10999,10 +11037,16 @@ export const en = {
     "“{value}” cannot be written: this field is no longer active.",
   "import.reason.id_not_a_company_id":
     "“{value}” is not a company id. Export the companies to get theirs, or leave the column empty to import this row as a new company.",
+  "import.reason.id_not_a_record_id":
+    "“{value}” is not a record id. Export the list to get the ids, or leave the column empty to import this row as a new record.",
+  "import.reason.id_record_not_visible":
+    "No record you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+  "import.reason.ref_taken_by_another_record":
+    "The reference “{ref}” already stands for another record from an earlier import, so this row is not applied. Use a new reference for this row or fix the id column.",
   "import.reason.id_not_visible":
     "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
   "import.reason.id_on_non_company":
-    "Only a company row can name an “{column}”. A {object} row is identified by its own key.",
+    "Only a company, contact, lead or deal row can name an “{column}”. A {object} row is identified by its own key.",
   "import.reason.link_ambiguous":
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
   "import.reason.link_ambiguous_dropped":
@@ -11382,6 +11426,40 @@ export const en = {
   "settings.recoveryHealth": "Restore drills",
   "settings.recoveryHealthSub":
     "When the restore from backup was last rehearsed, and how long it took.",
+  "settings.vacuumHealth": "Table space",
+  "settings.vacuumHealthSub":
+    "Tables whose files hold much space without live rows. Margince does not run the fix itself.",
+  "vacuumHealth.adminOnly":
+    "Table space covers the whole installation and needs a permission your role does not have.",
+  "vacuumHealth.scope":
+    "Only the table’s own file is counted. Its indexes and the separate store for long values (TOAST) are not.",
+  "vacuumHealth.thresholds":
+    "A table is listed when at least {percent} of its file, and at least {size}, holds no live row. The sizes are estimates from the database statistics.",
+  "vacuumHealth.empty":
+    "No table has that much space without live rows. There is nothing to run.",
+  "vacuumHealth.unmeasured_one":
+    "{count} large table has no statistics yet, so it has no estimate. The database collects them when it next analyzes the table.",
+  "vacuumHealth.unmeasured_other":
+    "{count} large tables have no statistics yet, so they have no estimate. The database collects them when it next analyzes each table.",
+  "vacuumHealth.col.table": "Table",
+  "vacuumHealth.col.size": "Size",
+  "vacuumHealth.col.waste": "Space without live rows",
+  "vacuumHealth.col.run": "What to run",
+  "vacuumHealth.runAs": "Run as {owner}.",
+  "vacuumHealth.copy": "Copy statement",
+  "vacuumHealth.copied": "Copied",
+  "vacuumHealth.copyRemedy": "Select the statement and copy it by hand.",
+  "vacuumHealth.howTitle": "How to run it",
+  "vacuumHealth.step.window":
+    "Plan a maintenance window. VACUUM FULL locks the table while it runs, so nothing can read or change it until it ends.",
+  "vacuumHealth.step.disk":
+    "Check the free disk space. The rewrite needs room for a new copy of the table and its indexes.",
+  "vacuumHealth.step.owner":
+    "Connect to the database as the role named in the row. It owns the table; the role Margince runs as cannot do this.",
+  "vacuumHealth.step.run":
+    "Run the statement. It also refreshes the statistics, so the table leaves this list on the next read.",
+  "vacuumHealth.repack":
+    "To avoid the lock, the pg_repack tool rewrites a table while it stays in use. It must be installed on the database server.",
   "settings.automaticWork": "Automatic work",
   "settings.automaticWorkSub":
     "What Margince gave each colleague by itself, and how much of it they said was not theirs.",
@@ -12626,6 +12704,10 @@ export const en = {
   "backfill.narrowingNote":
     "This mailbox already went back further. Pick the same time or longer.",
   "backfill.staleUpdated": "No progress for {duration}.",
+  "backfill.restartedNote":
+    "The import started over because the mailbox lost its place. The email count begins again; contacts already found stay.",
+  "backfill.retryNote":
+    "The import hit a connection problem and is trying again. The last page is read again, so its emails are counted again.",
   "backfill.countScanned_one": "{count} email checked",
   "backfill.countScanned_other": "{count} emails checked",
   "backfill.errorResumeNote":
@@ -14983,6 +15065,7 @@ export const en = {
   "cf.audit.footer":
     "Every addition, edit and archive is recorded permanently in the audit log.",
   "cf.retired": "Retired",
+  "cf.retiredLabel": "{label} (retired)",
   "cf.retire.title": "Archive “{label}”?",
   "cf.retire.body":
     "It is hidden from new records and filters. The values already stored are kept. Archiving cannot be undone.",
@@ -16990,6 +17073,10 @@ export const en = {
     "Measured against the call for this period.",
   "forecast.pipelineBasisWhy.historical_median":
     "Measured against the median of the last 4 comparable periods.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} won deal in those periods has no amount or exchange rate and is left out of the median.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} won deals in those periods have no amount or exchange rate and are left out of the median.",
   "forecast.pipelineAbsentTitle": "No coverage figure for this period",
   "forecast.pipelineAbsent.call_withheld":
     "The manager’s call is not shown here, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",
@@ -22542,6 +22629,27 @@ export const en = {
   "magic.action.archive_deal": "Archived deal",
   "magic.action.archive_lead": "Archived lead",
   "magic.action.archive_project": "Archived project",
+  "magic.action.create_offer": "Created an offer on",
+  "magic.action.update_offer": "Changed an offer on",
+  "magic.action.archive_offer": "Archived an offer on",
+  "magic.action.create_contract": "Added a contract to",
+  "magic.action.update_contract": "Changed a contract on",
+  "magic.action.archive_contract": "Archived a contract on",
+  "magic.action.create_deal_room": "Opened a deal room for",
+  "magic.action.update_deal_room": "Changed the deal room for",
+  "magic.action.archive_deal_room": "Archived the deal room for",
+  "magic.action.create_stage_evidence": "Recorded stage evidence on",
+  "magic.action.update_stage_evidence": "Changed stage evidence on",
+  "magic.action.archive_stage_evidence": "Withdrew stage evidence on",
+  "magic.action.create_introduction": "Asked for an introduction to",
+  "magic.action.update_introduction": "Changed an introduction to",
+  "magic.action.archive_introduction": "Archived an introduction to",
+  "magic.action.create_assignment": "Assigned a responsibility on",
+  "magic.action.update_assignment": "Changed a responsibility on",
+  "magic.action.archive_assignment": "Removed a responsibility on",
+  "magic.action.create_attachment": "Added a file to",
+  "magic.action.update_attachment": "Changed a file on",
+  "magic.action.archive_attachment": "Archived a file on",
   "magic.action.archive_activity": "Archived email or meeting",
   "magic.action.archive_activity_email": "Archived an email",
   "magic.action.archive_activity_meeting": "Archived a meeting",
@@ -23786,6 +23894,8 @@ export const en = {
     "Search may miss records until indexing catches up. The records themselves remain saved.",
   "health.effect.updates":
     "The changes handled by this update remain incomplete. Already saved changes stay saved; some records may still have their previous values.",
+  "health.effect.updatesAction":
+    "The update finished. Some records it found still wait for someone to act on them.",
   "health.effect.recovery":
     "Normal CRM work can continue. During an outage, restoring service may take longer or lose more recent data than the recovery targets allow.",
   "health.effect.automatic":
@@ -23992,6 +24102,8 @@ export const en = {
   "health.code.updates_failed": "A data update needs technical attention",
   "health.code.updates_retrying": "A data update has another attempt recorded",
   "health.code.updates_review": "A data update needs administrator review",
+  "health.code.updates_action":
+    "A data update finished and left records for someone to act on",
   "health.code.recovery_missing": "No restore test recorded",
   "health.code.recovery_verified":
     "The recorded restore drill met its recovery targets",

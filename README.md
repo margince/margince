@@ -34,6 +34,8 @@ This is the stack for working on the code. It runs in `dev` mode: it has no tria
 a real install must pass, so do not use it for real work.
 
 You need Go 1.27 or later, Docker with Compose, `jq`, `golangci-lint`, Node 24 and pnpm.
+On Windows, work in WSL, as
+[docs/how-to/set-up-windows-wsl-development.md](docs/how-to/set-up-windows-wsl-development.md) says.
 
 1. Install the tools and the git hooks once: `make install`.
 2. Start the stack: `make dev`. It starts Postgres, Redis, the API and the web app, then returns.

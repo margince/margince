@@ -186,8 +186,9 @@ export function stubBackend(
     stageTotalsRows?: Record<string, unknown>[];
     stageTotalsAsOf?: string;
     stageTotalsTimezone?: string;
-    // Answers the totals report with this status and a problem body instead.
+    // Answers the totals report with this status and problem code instead.
     stageTotalsStatus?: number;
+    stageTotalsCode?: string;
     onStageTotalsBody?: (body: unknown) => void;
     savedViews?: Record<string, unknown>[];
     onCreateView?: (body: unknown) => void;
@@ -304,7 +305,11 @@ export function stubBackend(
       opts.onStageTotalsBody?.(body);
       if (opts.stageTotalsStatus) {
         return jsonResponse(
-          { status: opts.stageTotalsStatus, title: "Forbidden" },
+          {
+            status: opts.stageTotalsStatus,
+            title: "Forbidden",
+            code: opts.stageTotalsCode,
+          },
           opts.stageTotalsStatus,
         );
       }

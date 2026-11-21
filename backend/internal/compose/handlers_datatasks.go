@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
+	"github.com/margince/margince/backend/internal/compose/datataskhealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -18,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 type dataTaskHandlers struct {
@@ -34,10 +37,10 @@ func (h dataTaskHandlers) now() time.Time {
 }
 
 func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) {
-	if !admitOperator(w, r, "data_task", principal.ActionRead) {
+	if !adminadmit.Operator(w, r, "data_task", principal.ActionRead) {
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
 	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
@@ -55,14 +58,14 @@ func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h dataTaskHandlers) ControlDataTask(w http.ResponseWriter, r *http.Request) {
-	if !admitOperator(w, r, "data_task", principal.ActionUpdate) {
+	if !adminadmit.Operator(w, r, "data_task", principal.ActionUpdate) {
 		return
 	}
 	var in crmcontracts.DataTaskControl
 	if !httperr.Decode(w, r, &in) {
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
 	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
@@ -98,6 +101,7 @@ func dataTaskProgressWire(p datatask.Progress) crmcontracts.DataTaskProgress {
 		Scanned: p.Scanned, Changed: p.Changed, Batches: p.Batches, Estimate: p.Estimate, EstimateCapped: p.EstimateCapped,
 		EstimatedAt: p.EstimatedAt, ConsecutiveFailures: p.ConsecutiveFailures, LastErrorClass: p.LastErrorClass,
 		NextAttemptAt: p.NextAttemptAt, LastProgressAt: p.LastProgressAt, MissingPrerequisites: append([]string{}, p.MissingPrerequisites...),
+		ActionNeeded: datataskhealth.Action(p.Action, textlang.English, true),
 	}
 	if p.TaskID == homeRepairTaskID {
 		kind := crmcontracts.DataTaskProgressReviewKind("home_attention")
@@ -135,8 +139,10 @@ func dataTaskFailure(p datatask.Progress) (jobs.FailureDetail, bool) {
 func dataTaskProgressForReader(ctx context.Context, progress []datatask.Progress) []crmcontracts.DataTaskProgress {
 	out := DataTaskProgressReport(progress)
 	language := systemtext.Locale(ctx)
+	withRecords := datataskhealth.MaySeeRecords(ctx)
 	for i, p := range progress {
 		out[i].Title = systemtext.LocalizedLiteral(dataTaskTitleCode(p.TaskID), p.Title, language)
+		out[i].ActionNeeded = datataskhealth.Action(p.Action, language, withRecords)
 		if detail, ok := dataTaskFailure(p); ok {
 			detail = detail.InLanguage(language)
 			out[i].ErrorSentence = &detail.Sentence

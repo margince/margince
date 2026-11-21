@@ -480,23 +480,20 @@ func TestFilteredExportWithholdsAMaskedAmount(t *testing.T) {
 		t.Fatalf("filtered export: %v", err)
 	}
 	rowIDs := CSVColumn(t, result.Body, "id")
-	amounts := CSVColumn(t, result.Body, "amount_minor")
-	baseAmounts := CSVColumn(t, result.Body, "amount_minor_base")
-	rates := CSVColumn(t, result.Body, "fx_rate_to_base")
+	amounts := CSVColumn(t, result.Body, "amount")
+	currencies := CSVColumn(t, result.Body, "currency")
 	if len(rowIDs) != 2 {
 		t.Fatalf("exported rows = %v, want both matching deals (a deal is readable by every seat)", rowIDs)
 	}
 	for i, id := range rowIDs {
 		switch id {
 		case f.matchOwn.String():
-			if amounts[i] != "100000" || baseAmounts[i] != "50000" || rates[i] == "" {
-				t.Errorf("the rep's own amount, base amount, rate = %q, %q, %q, want 100000, 50000 and the rate",
-					amounts[i], baseAmounts[i], rates[i])
+			if amounts[i] != "1000.00" || currencies[i] != "USD" {
+				t.Errorf("the rep's own amount and currency = %q, %q, want 1000.00 and USD", amounts[i], currencies[i])
 			}
 		case f.matchOther.String():
-			if amounts[i] != "" || baseAmounts[i] != "" || rates[i] != "" {
-				t.Errorf("the other team's amount, base amount, rate = %q, %q, %q, want all empty — "+
-					"the export printed a masked value", amounts[i], baseAmounts[i], rates[i])
+			if amounts[i] != "" {
+				t.Errorf("the other team's amount = %q, want empty — the export printed a masked value", amounts[i])
 			}
 		default:
 			t.Errorf("unexpected row %s", id)

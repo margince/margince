@@ -20,6 +20,7 @@ import {
   roleCannotCaptureCopy,
 } from "./problemcodecopy";
 
+export { blankRequired } from "./blankrequired";
 export type { FieldLabel, FieldLabels } from "./faultsentence";
 export {
   faultSentence,
@@ -325,6 +326,12 @@ export function isVersionSkew(problem: unknown): boolean {
 // telling a reader somebody changed the record when the request never landed.
 export function isVersionSkewOf(error: unknown): boolean {
   return error instanceof ProblemError && isVersionSkew(error.problem);
+}
+
+// A 403 whose code says an owner filter names someone the reader may not
+// measure. A report the reader may not run at all has another code.
+export function isOwnerNotMeasurable(problem: unknown): boolean {
+  return problemCode(problem) === "owner_not_measurable";
 }
 
 // A 409 whose code names the "already decided" race. Another caller (or the

@@ -154,9 +154,10 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	destPos := arg(dest)
 
 	// An owner a case admission names already holds a merged contact. The
-	// run-as scope is not asked of them, and an invited seat is not admitted.
+	// run-as scope is not asked of them, and an invited seat counts as it does
+	// for a new record.
 	if admittedCaseGrantee(ctx, dest) {
-		eligible = recordOwnerSQL
+		eligible = newRecordOwnerSQL
 	}
 	status := "status"
 	if consolidatingInto(ctx, dest) {

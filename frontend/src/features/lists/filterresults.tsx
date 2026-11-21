@@ -32,7 +32,7 @@ import {
   fieldLabel,
   type VocabularyField,
 } from "../../lib/filterdata";
-import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import { hasFieldWord, historyFieldLabel } from "../../lib/historyfieldlabels";
 import { navigate, routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ReferenceCell } from "./filterresultcell";
@@ -154,12 +154,22 @@ export function FilterResults({
   const { locale } = useLocale();
   const zone = useViewerZone();
   const rows: readonly PreviewRow[] = preview?.rows ?? [];
-  const opening = previewColumnNames(preview?.columns ?? [], named);
+  const fieldOf = (name: string) => fields.find((field) => field.name === name);
+  // A record type's preview carries the stored table, so its picker offers a
+  // column only when the product has a word for it. That keeps the audit and
+  // erasure columns out. An extension kind sends only the fields it declared.
+  const offered = (name: string) =>
+    !isEntityKind(resource) ||
+    name === "id" ||
+    fieldOf(name) !== undefined ||
+    columnLabels?.[name] !== undefined ||
+    hasFieldWord(name);
+  const shown = (preview?.columns ?? []).filter(offered);
+  const opening = previewColumnNames(shown, named);
   const names = [
     ...opening,
-    ...(preview?.columns ?? []).filter((name) => !opening.includes(name)),
+    ...shown.filter((name) => !opening.includes(name)),
   ];
-  const fieldOf = (name: string) => fields.find((field) => field.name === name);
   const referenceOf = (name: string) => fieldOf(name)?.references;
   // Every company the page names, read in one batch rather than one request
   // per cell.

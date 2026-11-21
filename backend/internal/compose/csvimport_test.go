@@ -22,10 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// Every advertised target must survive BOTH paths — the create and the patch.
-// A field the import offers, accepts, and then drops on one of the two is worse
-// than one the screen never showed, and the only way that stays true as the
-// stores change is to check the round trip rather than the list.
+// Every advertised target must survive both the create and the patch path.
+// A field the import accepts and then drops is worse than one it never showed.
 func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 	// Swept here because this is the test that walks every object's full target
 	// set: an exemption matching nothing would otherwise sit on ratifying a
@@ -146,11 +144,8 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			created, patched := build(fields, typed)
 			for _, target := range targets {
 				if nonFieldTargets.Waived(t, target) {
-					// Not a field, so the round-trip rule does not apply. Each
-					// exemption is asserted the other way round below: advertised,
-					// and reaching neither input on purpose. Naming the reason here
-					// is what stops a future target being exempted by accident —
-					// a target with no entry is held to the rule.
+					// Not a field. Each exemption is asserted below as reaching neither
+					// input, so a target with no entry is held to the rule.
 					continue
 				}
 				if isCreateOnly(object, target) && createOnlyTargets.Waived(t, target) {

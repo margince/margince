@@ -65,6 +65,8 @@ type BatchOut struct {
 	Scanned int
 	Changed int
 	Done    bool
+	// Action names records this batch left for someone; see ActionNeeded.
+	Action *ActionNeeded
 }
 
 var (

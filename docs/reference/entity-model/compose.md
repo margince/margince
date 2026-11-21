@@ -1034,7 +1034,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## team_weekly_review
 
-29 columns · primary key `(id)` · referenced by 4 foreign keys
+30 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1057,6 +1057,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `meetings_with_next_step` | `integer`, default `0` | yes |  |
 | `numeric_summary` | `jsonb` |  |  |
 | `pipeline_created_minor` | `bigint` |  |  |
+| `pipeline_gaps` | `jsonb` |  |  |
 | `pipeline_lost_minor` | `bigint` |  |  |
 | `pipeline_won_minor` | `bigint` |  |  |
 | `proposals_accepted` | `integer` |  |  |
@@ -1392,7 +1393,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## weekly_review
 
-38 columns · primary key `(id)` · referenced by 6 foreign keys
+39 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1424,6 +1425,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `numeric_summary` | `jsonb` |  |  |
 | `outlook_movement` | `jsonb` |  |  |
 | `pipeline_created_minor` | `bigint` |  |  |
+| `pipeline_gaps` | `jsonb` |  |  |
 | `pipeline_lost_minor` | `bigint` |  |  |
 | `pipeline_won_minor` | `bigint` |  |  |
 | `prior_review_id` | `uuid` |  | Points at `weekly_review.id`. |

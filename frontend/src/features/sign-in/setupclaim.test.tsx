@@ -57,12 +57,8 @@ describe("SetupClaimScreen", () => {
     await user.type(screen.getByLabelText(/your email/i), "ops@acme.test");
     await user.type(screen.getByLabelText(/^Password/), "short");
 
-    // The button is the gate, and the hint says why — a form that lets you
-    // press submit and then reports a 422 has wasted the round trip and the
-    // contact's attention.
-    expect(
-      screen.getByRole("button", { name: /create company/i }),
-    ).toBeDisabled();
+    // The form says why before the server would: a 422 wastes the round trip.
+    await user.click(screen.getByRole("button", { name: /create company/i }));
     expect(screen.getByText(/at least 12 characters/i)).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -105,7 +101,10 @@ describe("SetupClaimScreen", () => {
       "a bootstrap password!",
     );
     const submit = screen.getByRole("button", { name: /create company/i });
-    expect(submit).toBeDisabled();
+    await user.click(submit);
+    expect(screen.getByText("Jurisdiction is required.")).toBeVisible();
+    expect(screen.getByLabelText(/jurisdiction/i)).toHaveFocus();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
     await pickOption(
       user,
       screen.getByLabelText(/jurisdiction/i),

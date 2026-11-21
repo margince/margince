@@ -8458,6 +8458,24 @@ func (e ContactCaseOwnerSeat) Valid() bool {
 	}
 }
 
+// Defines values for ContactCaseOwnerStatus.
+const (
+	ContactCaseOwnerStatusActive  ContactCaseOwnerStatus = "active"
+	ContactCaseOwnerStatusInvited ContactCaseOwnerStatus = "invited"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseOwnerStatus enum.
+func (e ContactCaseOwnerStatus) Valid() bool {
+	switch e {
+	case ContactCaseOwnerStatusActive:
+		return true
+	case ContactCaseOwnerStatusInvited:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactCaseShareAccess.
 const (
 	ContactCaseShareAccessRead  ContactCaseShareAccess = "read"
@@ -11077,6 +11095,21 @@ func (e DataSubjectRequestSubjectKind) Valid() bool {
 	case DataSubjectRequestSubjectKindContact:
 		return true
 	case DataSubjectRequestSubjectKindLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DataTaskActionNeededReason.
+const (
+	DataTaskActionNeededReasonPrivacyReviewerMissing DataTaskActionNeededReason = "privacy_reviewer_missing"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskActionNeededReason enum.
+func (e DataTaskActionNeededReason) Valid() bool {
+	switch e {
+	case DataTaskActionNeededReasonPrivacyReviewerMissing:
 		return true
 	default:
 		return false
@@ -15194,8 +15227,10 @@ const (
 	ImportReasonCodeFieldInactive                ImportReasonCode = "field_inactive"
 	ImportReasonCodeFxRateMissing                ImportReasonCode = "fx_rate_missing"
 	ImportReasonCodeIdNotACompanyId              ImportReasonCode = "id_not_a_company_id"
+	ImportReasonCodeIdNotARecordId               ImportReasonCode = "id_not_a_record_id"
 	ImportReasonCodeIdNotVisible                 ImportReasonCode = "id_not_visible"
 	ImportReasonCodeIdOnNonCompany               ImportReasonCode = "id_on_non_company"
+	ImportReasonCodeIdRecordNotVisible           ImportReasonCode = "id_record_not_visible"
 	ImportReasonCodeLeadNotFound                 ImportReasonCode = "lead_not_found"
 	ImportReasonCodeLeadNotFoundDropped          ImportReasonCode = "lead_not_found_dropped"
 	ImportReasonCodeLeadStatusNotImportable      ImportReasonCode = "lead_status_not_importable"
@@ -15239,6 +15274,7 @@ const (
 	ImportReasonCodePipelineUnnamed              ImportReasonCode = "pipeline_unnamed"
 	ImportReasonCodeRecordArchived               ImportReasonCode = "record_archived"
 	ImportReasonCodeRefTakenByAnotherCompany     ImportReasonCode = "ref_taken_by_another_company"
+	ImportReasonCodeRefTakenByAnotherRecord      ImportReasonCode = "ref_taken_by_another_record"
 	ImportReasonCodeRowKeyEmpty                  ImportReasonCode = "row_key_empty"
 	ImportReasonCodeRowKeyRepeated               ImportReasonCode = "row_key_repeated"
 	ImportReasonCodeRunInFlight                  ImportReasonCode = "run_in_flight"
@@ -15384,9 +15420,13 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeIdNotACompanyId:
 		return true
+	case ImportReasonCodeIdNotARecordId:
+		return true
 	case ImportReasonCodeIdNotVisible:
 		return true
 	case ImportReasonCodeIdOnNonCompany:
+		return true
+	case ImportReasonCodeIdRecordNotVisible:
 		return true
 	case ImportReasonCodeLeadNotFound:
 		return true
@@ -15473,6 +15513,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeRecordArchived:
 		return true
 	case ImportReasonCodeRefTakenByAnotherCompany:
+		return true
+	case ImportReasonCodeRefTakenByAnotherRecord:
 		return true
 	case ImportReasonCodeRowKeyEmpty:
 		return true
@@ -33202,7 +33244,10 @@ type AccountCoverageRow struct {
 	// NamedSeats Contacts named on the deal, engaged or not.
 	NamedSeats *int `json:"named_seats,omitempty"`
 
-	// OpenAmountMinor Their amounts, in the installation currency, when every one carries a rate.
+	// OpenAmountCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	OpenAmountCoverage *ReportRowCoverage `json:"open_amount_coverage,omitempty"`
+
+	// OpenAmountMinor Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`.
 	OpenAmountMinor *int64 `json:"open_amount_minor,omitempty"`
 
 	// OpenDeals Open deals on the account, for an untouched row.
@@ -33212,7 +33257,7 @@ type AccountCoverageRow struct {
 
 // AccountCoverageThresholds What the coverage section counts as at risk. Absent fields take the defaults the answer prints.
 type AccountCoverageThresholds struct {
-	// MaxEngagedSeats A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1.
+	// MaxEngagedSeats A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. The coverage section and the deal page both judge by it. Default 1.
 	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" maximum:"10" minimum:"0"`
 
 	// SilentDays A won company with no exchange within this many days is silent. Default 30.
@@ -38226,9 +38271,9 @@ type AuditAction string
 // masked to the viewer's readable fields — an absent key was hidden, not null.
 // `summary` is server-composed plain language in English. A client that
 // renders the line in its reader's language builds it from `action` and the
-// actor fields. It falls back to `summary` for an edge row, whose role
-// travels only in the sentence, and for an action or actor kind it does
-// not know.
+// actor fields. For an edge row it builds from `edge.role` and
+// `edge.changed_fields`, and falls back to `summary` when an older server
+// omits them, and for an action or actor kind it does not know.
 // Field-level detail lives in before/after for the client to render.
 type AuditHistoryEntry struct {
 	// Action The verb of one audit row, as both the audit log and a record's history
@@ -38997,13 +39042,19 @@ type BackfillStatus struct {
 	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
 
 	// Resumable The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.
-	Resumable *bool               `json:"resumable,omitempty"`
-	StartedAt *time.Time          `json:"started_at,omitempty"`
-	State     BackfillStatusState `json:"state"`
+	Resumable *bool `json:"resumable,omitempty"`
+
+	// RetryAttempts Pages in a row that failed and will be tried again; 0 once a page succeeds. The committed counts are kept across a retry, and only the unfinished page is read again.
+	RetryAttempts *int                `json:"retry_attempts,omitempty"`
+	StartedAt     *time.Time          `json:"started_at,omitempty"`
+	State         BackfillStatusState `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
 	Window    *BackfillStatusWindow `json:"window,omitempty"`
+
+	// WindowRestarts How many times the scan began again from the newest message because the provider no longer accepted its place. `counts.messages_scanned`, `captured` and `skipped` start again from zero each time; the contacts and companies already created stay counted. A client says so rather than showing the lower count as lost work.
+	WindowRestarts *int `json:"window_restarts,omitempty"`
 }
 
 // BackfillStatusOfferedWindows defines model for BackfillStatus.OfferedWindows.
@@ -41746,7 +41797,7 @@ type Company360Health struct {
 	// ReplyBalance Of the interactions in the strength window, the share that came from them. 0.5 is an even exchange; near 0 is us talking to ourselves. Null when nothing was captured.
 	ReplyBalance *float32 `json:"reply_balance,omitempty" maximum:"1" minimum:"0"`
 
-	// SingleThreaded The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
+	// SingleThreaded The relationship rests on no more contacts in touch than the published `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding follows too. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
 	SingleThreaded *bool `json:"single_threaded,omitempty"`
 }
 
@@ -43262,9 +43313,9 @@ type CompanyGrowthFit struct {
 //
 // `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
 // weighted by its stage's win probability, and never a past period's pipeline.
-// `closed_won` is the deals won in `closed_won_period`; a null amount means at least
-// one of them has no base value on file, so the total is incomplete rather than
-// smaller. `activity_count_30d` counts the activities that reached a counted account
+// `closed_won` is the deals won in `closed_won_period` that have a base value on file.
+// `closed_won_coverage` counts the others by cause, for the deals this reader may read, and
+// its `partial` flag is true when any deal is left out. A null amount means none converts. `activity_count_30d` counts the activities that reached a counted account
 // in `activity_window`, the 30 days before the read, which no period parameter moves.
 type CompanyHierarchyRollup struct {
 	ActivityCount30d int             `json:"activity_count_30d"`
@@ -43275,6 +43326,9 @@ type CompanyHierarchyRollup struct {
 
 	// ClosedWon Money as integer minor-units + ISO-4217 currency. Never a float.
 	ClosedWon Money `json:"closed_won"`
+
+	// ClosedWonCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	ClosedWonCoverage *ReportRowCoverage `json:"closed_won_coverage,omitempty"`
 
 	// ClosedWonPeriod The period `closed_won` sums: one bucket of the period reports, cut in the
 	// installation's reporting zone and fiscal calendar. A period still under way holds
@@ -44052,8 +44106,11 @@ type ComposedExtensionRoute struct {
 // `reason` is the honest floor for a field with no backend data model yet — the row is
 // still returned, never omitted or fabricated.
 type ComputedField struct {
-	Computable   bool     `json:"computable"`
-	Dependencies []string `json:"dependencies"`
+	Computable bool `json:"computable"`
+
+	// Coverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	Coverage     *ReportRowCoverage `json:"coverage,omitempty"`
+	Dependencies []string           `json:"dependencies"`
 
 	// FormulaSql The literal GENERATED-column/view SQL definition; empty string when computable=false.
 	FormulaSql string            `json:"formula_sql"`
@@ -44061,7 +44118,7 @@ type ComputedField struct {
 	Kind       ComputedFieldKind `json:"kind"`
 	Label      string            `json:"label"`
 
-	// Reason Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx".
+	// Reason Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx", "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked.
 	Reason *string `json:"reason,omitempty"`
 
 	// Value Present (and non-null) only when kind is count/duration_months/percent and computable=true.
@@ -45278,11 +45335,17 @@ type ContactCaseOwner struct {
 	MemberIds []openapi_types.UUID `json:"member_ids"`
 	Name      string               `json:"name"`
 	Seat      ContactCaseOwnerSeat `json:"seat"`
-	UserId    openapi_types.UUID   `json:"user_id"`
+
+	// Status `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+	Status ContactCaseOwnerStatus `json:"status"`
+	UserId openapi_types.UUID     `json:"user_id"`
 }
 
 // ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
 type ContactCaseOwnerSeat string
+
+// ContactCaseOwnerStatus `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+type ContactCaseOwnerStatus string
 
 // ContactCasePreference Where the selected members disagree, the member whose value the remaining contact takes.
 // Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
@@ -48338,6 +48401,28 @@ type DataSubjectRequestProof struct {
 	Result            string         `json:"result"`
 }
 
+// DataTaskActionNeeded Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total.
+type DataTaskActionNeeded struct {
+	Count   int64                      `json:"count" minimum:"0"`
+	Reason  DataTaskActionNeededReason `json:"reason"`
+	Records []DataTaskActionRecord     `json:"records"`
+
+	// Remedy What to do about it, in the reader's language.
+	Remedy string `json:"remedy"`
+
+	// Sentence What was left open, in the reader's language.
+	Sentence string `json:"sentence"`
+}
+
+// DataTaskActionNeededReason defines model for DataTaskActionNeeded.Reason.
+type DataTaskActionNeededReason string
+
+// DataTaskActionRecord defines model for DataTaskActionRecord.
+type DataTaskActionRecord struct {
+	Id   openapi_types.UUID `json:"id"`
+	Type string             `json:"type"`
+}
+
 // DataTaskControl defines model for DataTaskControl.
 type DataTaskControl struct {
 	Action  DataTaskControlAction `json:"action"`
@@ -48351,6 +48436,8 @@ type DataTaskControlAction string
 
 // DataTaskProgress defines model for DataTaskProgress.
 type DataTaskProgress struct {
+	// ActionNeeded Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total.
+	ActionNeeded        *DataTaskActionNeeded          `json:"action_needed,omitempty"`
 	BatchLimit          int                            `json:"batch_limit"`
 	Batches             int64                          `json:"batches" minimum:"0"`
 	BlockedBy           *string                        `json:"blocked_by,omitempty"`
@@ -48833,6 +48920,11 @@ type DealCoverage struct {
 	// cannot read has none. Absent, not empty, when the caller has no `activity` grant or
 	// the edge sections are withheld: absence says nothing about who has talked.
 	Lines *[]DealCoverageLine `json:"lines,omitempty"`
+
+	// MaxEngagedSeats The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+	// judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+	// Absent when the edge sections are withheld, since no finding is judged then.
+	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" minimum:"0"`
 
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
@@ -52576,6 +52668,9 @@ type ForecastSufficiency struct {
 	// Basis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
 	Basis *ForecastSufficiencyBasis `json:"basis,omitempty"`
 
+	// ComparableUnpriced For each comparable period behind a historical median, newest first, the won deals its total leaves out for want of an amount or an exchange rate.
+	ComparableUnpriced *[]int `json:"comparable_unpriced,omitempty"`
+
 	// CoverageBp Current over needed in BASIS POINTS, so the server chooses no rounding for the client. Nothing needed is 10000 (full) rather than a division by zero or an unbounded ratio, because "covered" is actionable and "infinity" is not.
 	CoverageBp       *int64 `json:"coverage_bp,omitempty"`
 	CurrentOpenMinor *int64 `json:"current_open_minor,omitempty"`
@@ -52828,7 +52923,8 @@ type HealthDimension struct {
 	//   `at`, the last of the two.
 	// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 	// - `last_met`: in touch through a meeting `days` days ago.
-	// - `single_threaded`: in touch, but one contact carries the whole account.
+	// - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+	//   the published `account_coverage.max_engaged_seats`.
 	// - `several_contacts`: `count` contacts here are in touch with us.
 	// - `deals_all_stalled`: all `count` open deals have stalled.
 	// - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -52850,7 +52946,8 @@ type HealthDimensionRating string
 //     `at`, the last of the two.
 //   - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 //   - `last_met`: in touch through a meeting `days` days ago.
-//   - `single_threaded`: in touch, but one contact carries the whole account.
+//   - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+//     the published `account_coverage.max_engaged_seats`.
 //   - `several_contacts`: `count` contacts here are in touch with us.
 //   - `deals_all_stalled`: all `count` open deals have stalled.
 //   - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -53231,6 +53328,9 @@ type HiddenBacklogRowsRule string
 // fields would invent fields it does not have — which is also why edge entries never
 // appear in `/field-history`.
 type HistoryEdge struct {
+	// ChangedFields Names of the link fields an update moved, sorted, masked like `role`. Absent on create and unlink. An older server omits it, and the client then shows `summary`.
+	ChangedFields *[]string `json:"changed_fields,omitempty"`
+
 	// Kind The relationship kind, e.g. `employment`, `co_sell_with`, `deal_stakeholder`.
 	Kind            string                     `json:"kind"`
 	OtherEntityId   openapi_types.UUID         `json:"other_entity_id"`
@@ -53238,6 +53338,12 @@ type HistoryEdge struct {
 
 	// OtherLabel The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it.
 	OtherLabel *string `json:"other_label,omitempty"`
+
+	// PreviousRole The role an update replaced, or removed when `role` is then absent. Set only when the role changed.
+	PreviousRole *string `json:"previous_role,omitempty"`
+
+	// Role The role the link was made with (create) or changed to (update), as the reader's field mask allows. Absent when the link has no role, when the reader's mask withholds it, and on an unlink; a client then falls back to `kind` or to `summary`.
+	Role *string `json:"role,omitempty"`
 }
 
 // HistoryEdgeOtherEntityType defines model for HistoryEdge.OtherEntityType.
@@ -53753,6 +53859,9 @@ type ImportRun struct {
 	// Error Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string `json:"error,omitempty"`
 
+	// ErrorRefusal `error` as the field error an upload refusal carries, for a draft whose test run refused its file: a screen words it in the reader's language and keeps `error` for a code it does not know. Absent for any other stop, and on a run stored before it was kept.
+	ErrorRefusal *ImportRunRefusal `json:"error_refusal,omitempty"`
+
 	// EtaScope `object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.
 	EtaScope *ImportRunEtaScope `json:"eta_scope,omitempty"`
 
@@ -53999,6 +54108,21 @@ type ImportRunProgress struct {
 		RowsDone  int    `json:"rows_done" minimum:"0"`
 		RowsTotal int    `json:"rows_total" minimum:"0"`
 	} `json:"objects"`
+}
+
+// ImportRunRefusal A refusal of a run's file by field and code, with the values its sentence names.
+type ImportRunRefusal struct {
+	// Code The refusal code, as in a 422 `errors` entry.
+	Code string `json:"code"`
+
+	// Field The field the refusal names, as in a 422 `errors` entry.
+	Field string `json:"field"`
+
+	// Max The limit the refusal names. Absent when it names none.
+	Max *int `json:"max,omitempty" minimum:"1"`
+
+	// Params The values the code's sentence names, by name. Absent when it names none.
+	Params *map[string]string `json:"params,omitempty"`
 }
 
 // ImportRunReport The same shape before and after approval: a dry run reports what the
@@ -55770,6 +55894,12 @@ type Lead struct {
 	// NextTaskDueAt Due time of the earliest open task linked to this lead; undated tasks follow dated ones.
 	NextTaskDueAt *time.Time `json:"next_task_due_at,omitempty"`
 
+	// NextTaskDueHasTime True when next_task_due_at names a time of day; false when the next task is due on a date with no time.
+	NextTaskDueHasTime *bool `json:"next_task_due_has_time,omitempty"`
+
+	// NextTaskDueIntent The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader.
+	NextTaskDueIntent *IntentTime `json:"next_task_due_intent,omitempty"`
+
 	// NextTaskSubject Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written.
 	NextTaskSubject *string `json:"next_task_subject,omitempty"`
 
@@ -56561,7 +56691,13 @@ type LegalReviewPacketStage struct {
 type LegalReviewPacketTask struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 	DueAt      *time.Time         `json:"due_at,omitempty"`
-	Subject    *string            `json:"subject,omitempty"`
+
+	// DueHasTime True when due_at names a time of day; false when the task was due on a date with no time.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   *string     `json:"subject,omitempty"`
 }
 
 // LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
@@ -58957,7 +59093,7 @@ type MorningDigest struct {
 			Other *int `json:"other,omitempty"`
 		} `json:"classify,omitempty"`
 
-		// DedupeOpen Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
+		// DedupeOpen Every open duplicate review item on the reader's own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
 		DedupeOpen *int `json:"dedupe_open,omitempty"`
 	} `json:"review"`
 }
@@ -63621,7 +63757,7 @@ type ReportResult struct {
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 	Report             string              `json:"report"`
 
-	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
+	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
@@ -63632,6 +63768,24 @@ type ReportResult struct {
 
 	// TotalRows Groups that matched. `rows` is capped at the report row limit, so a total above its length means this answer is the top of a longer one rather than all of it. The drill-through's `total_rows` counts source rows for the same reason.
 	TotalRows *int `json:"total_rows,omitempty"`
+}
+
+// ReportRowCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+type ReportRowCoverage struct {
+	// Aggregates The aliases of the row's partial sums, which this coverage qualifies.
+	Aggregates []string `json:"aggregates"`
+
+	// MissingCurrencies The currencies with no exchange rate, from the same statement as the sums.
+	MissingCurrencies []string `json:"missing_currencies"`
+
+	// NoRateDeals Deals in the group with an amount whose currency has no exchange rate as of the answer's date.
+	NoRateDeals int `json:"no_rate_deals"`
+
+	// NoValueDeals Deals in the group with no amount.
+	NoValueDeals int `json:"no_value_deals"`
+
+	// Partial True when at least one deal is left out of those sums.
+	Partial bool `json:"partial"`
 }
 
 // ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
@@ -65895,7 +66049,13 @@ type SalesProgressNextTask struct {
 	// AssigneeId Who the task is for. It may differ from the deal's owner.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
-	Subject    string              `json:"subject"`
+
+	// DueHasTime True when due_at names a time of day; false when the task is due on a date with no time.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   string      `json:"subject"`
 }
 
 // SalesProgressScenario defines model for SalesProgressScenario.
@@ -69268,8 +69428,11 @@ type TeamMarginceChangeGroup struct {
 	// before Margince kept the amount it was valued from.
 	Unvalued int `json:"unvalued"`
 
-	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
 	ValueBaseMinor int64 `json:"value_base_minor"`
+
+	// ValueCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	ValueCoverage *ReportRowCoverage `json:"value_coverage,omitempty"`
 
 	// ValueMovedBaseMinor How much value these changes moved, in the base currency's minor units. Each deal's
 	// changes of this kind net out first and the group adds the size of each net move.
@@ -69573,10 +69736,14 @@ type TeamWeeklyReview struct {
 	// from age out under retention.
 	Outlook *[]WeeklyReviewOutlook `json:"outlook,omitempty"`
 
-	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
-	// be converted — summing only the ones that did would be a confident number quietly
-	// missing a rep.
+	// Pipeline What the team's week did to the pipeline: the members' figures added together. ABSENT when
+	// a member's week is unread or has a figure no deal converts into, or members differ in
+	// currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+	// review was frozen before it said what it leaves out.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// PipelineCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	PipelineCoverage *ReportRowCoverage `json:"pipeline_coverage,omitempty"`
 
 	// Quality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
 	// snapshot frozen before it was measured, which is not zero.
@@ -71733,6 +71900,44 @@ type VCardImportResult struct {
 // matches a contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
 
+// VacuumRecommendation defines model for VacuumRecommendation.
+type VacuumRecommendation struct {
+	// Owner The database role that owns the table. Only it can run the statement.
+	Owner  string `json:"owner"`
+	Schema string `json:"schema"`
+
+	// Statement The statement to run, with the names quoted.
+	Statement string `json:"statement"`
+	Table     string `json:"table"`
+
+	// TableBytes The size of the table's file at its last `VACUUM` or `ANALYZE`, without its indexes or TOAST.
+	TableBytes int `json:"table_bytes"`
+
+	// WasteBytes The estimated space in that file that holds no live row.
+	WasteBytes int `json:"waste_bytes"`
+
+	// WastePercent `waste_bytes` as a whole percent of `table_bytes`, rounded down.
+	WastePercent int `json:"waste_percent"`
+}
+
+// VacuumRecommendations The tables a full vacuum would shrink by enough to be worth a maintenance window. Sizes are
+// estimates from the statistics the database keeps for its query planner.
+type VacuumRecommendations struct {
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// MinWasteBytes The smallest empty space, in bytes, for a table to be listed.
+	MinWasteBytes int `json:"min_waste_bytes"`
+
+	// MinWastePercent The smallest share of a table's file, in percent, that must be empty for it to be listed.
+	MinWastePercent int `json:"min_waste_percent"`
+
+	// Tables The tables over both thresholds, most empty space first.
+	Tables []VacuumRecommendation `json:"tables"`
+
+	// UnmeasuredTables Tables large enough to qualify that have no statistics yet, so no estimate.
+	UnmeasuredTables int `json:"unmeasured_tables"`
+}
+
 // VoiceBuild defines model for VoiceBuild.
 type VoiceBuild struct {
 	ArchivedAt      *time.Time                `json:"archived_at"`
@@ -72885,12 +73090,16 @@ type WeeklyReview struct {
 	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
 	// applied when the review was written.
 	//
-	// ABSENT when the week held a deal that could not be converted — an open deal freezes no
-	// rate, so a currency with no usable rate makes the whole figure unanswerable. A total
-	// covering three of four deals would be a confident number that is quietly short, and
-	// nothing is ever converted at an invented rate of 1. Absent is also the answer when the
-	// installation names no base currency.
+	// Each figure adds the deals that convert. ABSENT when no deal of one of the three figures
+	// converts, or when the installation names no base currency. Nothing is ever converted at an
+	// invented rate of 1.
+	//
+	// `pipeline_coverage` says how many deals the figures leave out, by cause, and which
+	// currencies have no rate. It is absent for a review frozen before it said so.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// PipelineCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	PipelineCoverage *ReportRowCoverage `json:"pipeline_coverage,omitempty"`
 
 	// Prior The same rep's previous review, so a reader can see what CHANGED rather than only what
 	// happened. Absent for their first week.
@@ -73234,7 +73443,9 @@ type WeeklyScorecardDealBlock struct {
 	// stage: a median of nothing is absent, never zero.
 	MedianDaysInStage *int `json:"median_days_in_stage,omitempty" minimum:"0"`
 
-	// MultiThreaded Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+	// MultiThreaded Open deals with more distinct contacts in the last 30 days than the published
+	// `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+	// more), as of when the week was frozen. Thirty rather than
 	// the review's own week: the risk measured is the single point of failure, and a deal
 	// worked steadily for a month is multi-threaded whether or not the second contact
 	// happened to appear in these seven days.
@@ -80086,6 +80297,9 @@ type GetDealStatusParams struct {
 type ListDedupeCandidatesParams struct {
 	Status     *ListDedupeCandidatesParamsStatus     `form:"status,omitempty" json:"status,omitempty"`
 	EntityType *ListDedupeCandidatesParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
+
+	// RecordId Only the pairs naming this record on either end. Needs `entity_type`, the record's type; without it the answer is 422.
+	RecordId *openapi_types.UUID `form:"record_id,omitempty" json:"record_id,omitempty"`
 
 	// Cursor Opaque keyset cursor.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
@@ -94762,6 +94976,22 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "next_task_due_at")
 	}
 
+	if raw, found := object["next_task_due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.NextTaskDueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'next_task_due_has_time': %w", err)
+		}
+		delete(object, "next_task_due_has_time")
+	}
+
+	if raw, found := object["next_task_due_intent"]; found {
+		err = json.Unmarshal(raw, &a.NextTaskDueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'next_task_due_intent': %w", err)
+		}
+		delete(object, "next_task_due_intent")
+	}
+
 	if raw, found := object["next_task_subject"]; found {
 		err = json.Unmarshal(raw, &a.NextTaskSubject)
 		if err != nil {
@@ -95242,6 +95472,20 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["next_task_due_at"], err = json.Marshal(a.NextTaskDueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'next_task_due_at': %w", err)
+		}
+	}
+
+	if a.NextTaskDueHasTime != nil {
+		object["next_task_due_has_time"], err = json.Marshal(a.NextTaskDueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'next_task_due_has_time': %w", err)
+		}
+	}
+
+	if a.NextTaskDueIntent != nil {
+		object["next_task_due_intent"], err = json.Marshal(a.NextTaskDueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'next_task_due_intent': %w", err)
 		}
 	}
 
@@ -99946,6 +100190,9 @@ type ServerInterface interface {
 	// Scoped capability readings and evidence coverage for System health.
 	// (GET /admin/system-health)
 	GetSystemHealth(w http.ResponseWriter, r *http.Request)
+	// Which tables would win back enough space from a full vacuum run out of band.
+	// (GET /admin/vacuum-recommendations)
+	GetVacuumRecommendations(w http.ResponseWriter, r *http.Request)
 	// Download the Margince skill for an AI tool, as a ZIP.
 	// (GET /agent-bundle)
 	DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request)
@@ -103498,6 +103745,12 @@ func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
 // Scoped capability readings and evidence coverage for System health.
 // (GET /admin/system-health)
 func (_ Unimplemented) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which tables would win back enough space from a full vacuum run out of band.
+// (GET /admin/vacuum-recommendations)
+func (_ Unimplemented) GetVacuumRecommendations(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -112395,6 +112648,26 @@ func (siw *ServerInterfaceWrapper) GetSystemHealth(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSystemHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetVacuumRecommendations operation middleware
+func (siw *ServerInterfaceWrapper) GetVacuumRecommendations(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetVacuumRecommendations(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -135481,6 +135754,19 @@ func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
 		}
 		return
 	}
@@ -159939,6 +160225,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/system-health", wrapper.GetSystemHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/vacuum-recommendations", wrapper.GetVacuumRecommendations)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent-bundle", wrapper.DownloadAgentSkillBundle)

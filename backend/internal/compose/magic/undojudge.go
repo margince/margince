@@ -74,7 +74,7 @@ const unwiredUndoReason = "undo_not_evaluated"
 // happened and who did it, which is most of its value, and one unreadable entry
 // must not cost a rep the whole morning's receipt — the same reasoning fieldsOf
 // applies to an unreadable audit blob.
-func (s *Service) judgeUndoOn(ctx context.Context, tx pgx.Tx, lines []crmcontracts.MagicLine) error {
+func (s *Service) judgeUndoOn(ctx context.Context, tx pgx.Tx, lines []crmcontracts.MagicLine, entries []entry) error {
 	if s.undo == nil || len(lines) == 0 {
 		for i := range lines {
 			lines[i].Undo = refusedUndo(unwiredUndoReason)
@@ -87,7 +87,7 @@ func (s *Service) judgeUndoOn(ctx context.Context, tx pgx.Tx, lines []crmcontrac
 	// that already knows every id it needs. The per-page shape also lets the
 	// judge resolve what is constant — the overlay posture is a property of the
 	// workspace, not of the line — exactly once.
-	answers, err := s.undo.JudgeUndoPage(ctx, tx, entriesOf(lines))
+	answers, err := s.undo.JudgeUndoPage(ctx, tx, entriesOf(lines, entries))
 	if err != nil {
 		return err
 	}
@@ -103,17 +103,20 @@ func (s *Service) judgeUndoOn(ctx context.Context, tx pgx.Tx, lines []crmcontrac
 }
 
 // entriesOf names what the page needs judged: the audit entry each line is
-// about, and the record type that entry sits on.
-func entriesOf(lines []crmcontracts.MagicLine) []UndoSubject {
+// about, and the record type that entry sits on. That is the audited type, not
+// the line's: a placed child's line names its parent.
+func entriesOf(lines []crmcontracts.MagicLine, entries []entry) []UndoSubject {
+	audited := make(map[ids.UUID]string, len(entries))
+	for _, e := range entries {
+		audited[e.ID] = e.EntityType
+	}
 	out := make([]UndoSubject, 0, len(lines))
 	for _, line := range lines {
-		if line.Entity == nil {
+		entityType, ok := audited[ids.UUID(line.Id)]
+		if line.Entity == nil || !ok {
 			continue
 		}
-		out = append(out, UndoSubject{
-			AuditID:    ids.UUID(line.Id),
-			EntityType: line.Entity.Type,
-		})
+		out = append(out, UndoSubject{AuditID: ids.UUID(line.Id), EntityType: entityType})
 	}
 	return out
 }
