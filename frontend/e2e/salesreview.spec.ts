@@ -242,10 +242,11 @@ test("a click in the middle of a plate reading opens its records at 1440×900", 
     .locator("section.stat-card")
     .filter({ hasText: "Sales won" });
   const box = await salesWon.boundingBox();
-  expect(box, "the Sales won reading has a box").not.toBeNull();
-  if (!box) return;
+  if (!box) throw new Error("the Sales won reading has no box");
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByRole("dialog").getByText("Harbourline depot retrofit"),
+  ).toBeVisible();
 });
 
 test("every stage bar starts and ends at one x whatever its amount at 1440×900", async ({
@@ -271,13 +272,17 @@ test("every stage bar starts and ends at one x whatever its amount at 1440×900"
   await expect(rows).toHaveCount(3);
   const tracks = await rows.evaluateAll((elements) =>
     elements.map((row) => {
-      const amount = document.createRange();
-      amount.selectNodeContents(row.querySelector(".barlist-amount") ?? row);
-      const track = row.querySelector(".meterbar")?.getBoundingClientRect();
+      const amount = row.querySelector(".barlist-amount");
+      const track = row.querySelector(".meterbar");
+      if (!amount || !track)
+        throw new Error(`bar row ${row.textContent} lacks its amount or track`);
+      const ink = document.createRange();
+      ink.selectNodeContents(amount);
+      const bar = track.getBoundingClientRect();
       return {
-        amount: Math.round(amount.getBoundingClientRect().width),
-        x: Math.round(track?.x ?? -1),
-        width: Math.round(track?.width ?? -1),
+        amount: Math.round(ink.getBoundingClientRect().width),
+        x: Math.round(bar.x),
+        width: Math.round(bar.width),
       };
     }),
   );
