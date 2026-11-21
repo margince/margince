@@ -450,6 +450,25 @@ describe("back from connect", () => {
     });
   });
 
+  it("returns a voice sent back for more writing to collecting, not its old result", () => {
+    const state = run(
+      [
+        { type: "BUILD_STARTED", buildId: "b1" },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: "b1",
+          status: "succeeded",
+          detail: null,
+        },
+        { type: "VOICE_REVISE" },
+        { type: "VOICE_SKIPPED" },
+        { type: "CONNECT_BACK" },
+      ],
+      member("vo.collecting"),
+    );
+    expect(state).toMatchObject({ act: "voice", phase: "vo.collecting" });
+  });
+
   it("is refused where the journey offers no voice step", () => {
     const state = run([
       {

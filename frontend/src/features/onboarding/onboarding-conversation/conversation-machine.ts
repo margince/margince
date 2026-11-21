@@ -451,13 +451,17 @@ function applyEvent(
       // The corpus is kept; only the verdict on the build is withdrawn, so
       // the next build starts from everything already in hand plus what the
       // reader adds now.
-      return withEntries(state, { phase: "vo.collecting" }, [
-        {
-          kind: "user",
-          id: "voice:revise",
-          i18nKey: "ob.conv.voice.revise",
-        },
-      ]);
+      return withEntries(
+        state,
+        { phase: "vo.collecting", lastBuildStatus: null },
+        [
+          {
+            kind: "user",
+            id: "voice:revise",
+            i18nKey: "ob.conv.voice.revise",
+          },
+        ],
+      );
     case "CONNECT_BACK":
       return withEntries(state, {
         act: "voice",
