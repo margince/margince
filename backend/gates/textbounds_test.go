@@ -117,7 +117,7 @@ func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
 	}
 	for _, column := range columns {
 		policy := policies[column.Key]
-		if policy.Limit == 0 {
+		if policy.Limit == 0 || textbounds.NamesColumns(column.Table) {
 			continue
 		}
 		for _, operation := range []string{"insert", "update"} {
@@ -136,6 +136,59 @@ func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
 			}
 		}
 	}
+}
+
+// A guard that names its columns says the changed-value rule once per column.
+// So it must be, column for column, the condition the registry generates today.
+func TestAGuardThatNamesItsColumnsIsTheConditionTheRegistryGenerates(t *testing.T) {
+	t.Parallel()
+	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted, err := textbounds.PolicyBounds(string(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conditions := map[string]string{}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if match := catalogTextGuard.FindStringSubmatch(line); match != nil {
+			conditions[match[1]] = strippedCondition(match[2])
+		}
+	}
+	named := 0
+	for table, limits := range wanted {
+		if !textbounds.NamesColumns(table) {
+			continue
+		}
+		named++
+		bounds := textbounds.TableBounds(table, limits, columns)
+		for _, operation := range []string{textbounds.OnInsert, textbounds.OnUpdate} {
+			key := table + ".text_bound_" + operation
+			if conditions[key] != strippedCondition(textbounds.Condition(table, bounds, operation)) {
+				t.Errorf("%s does not check each bounded column of its table for a new or changed value; run gen-textbounds -tables %s", key, table)
+			}
+		}
+	}
+	if named == 0 {
+		t.Fatal("no bounded table names its columns: the list in textbounds no longer matches the catalog")
+	}
+}
+
+var catalogTextGuard = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*\.text_bound_(?:insert|update)) CREATE TRIGGER .* FOR EACH ROW WHEN \((.*)\) EXECUTE FUNCTION refuse_oversized_text\(`)
+
+// strippedCondition removes what Postgres adds when it prints a condition
+// back: its own parentheses, the schema, and the type of a bare NULL.
+func strippedCondition(condition string) string {
+	stripped := strings.ToLower(strings.Join(strings.Fields(condition), ""))
+	for _, added := range []string{"public.", "::text[]", "(", ")", "\""} {
+		stripped = strings.ReplaceAll(stripped, added, "")
+	}
+	return stripped
 }
 
 func normalizedTextGuard(definition string) string {

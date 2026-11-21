@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/index.html frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/App.screens.tsx frontend/src/App.screencode.ts frontend/src/app/startup-reads.ts frontend/src/app/reservedpages.ts frontend/src/lib/essentialscreens.ts frontend/src/lib/session.ts frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -154,21 +154,45 @@ refuses a second one while the first is in flight.
   `x-extensible-enum` markers in `crm.yaml`. A value counts only when its type
   comes from `src/api/schema.d.ts`, so a union the app writes itself does not.
 
-  `catalogs.ts` loads the language in use. `bootstrap.ts` starts that read while the app loads.
-  `LocaleProvider` waits for the catalog before drawing its content.
+  `catalogs.ts` loads the language in use at one of two levels. The `essential` level holds the
+  messages the first screen can draw, and the `complete` level holds every message.
+  `bootstrap.ts` starts the `essential` level while the app loads, and `main.tsx` waits only for it
+  before the first render. So `LocaleProvider` draws the shell from the `essential` level on every address.
   The error fallback uses a small copy generated from `en`, so a failed load can still offer Retry.
   Retry clears the failed catalog request before reading it again.
 
-  The `Analytics` route starts with the messages reached by its static imports and deferred
-  components that request the copy their first screen needs through `frontend/src/i18n/lazy.tsx`.
-  `frontend/scripts/gen-essential-copy.mjs` follows those imports from the same entry paths as
-  the bundle groups. `fe-drift` checks the generated copy. Other routes and dialogs wait for the
-  complete catalog through `CompleteLocale` and `frontend/src/i18n/lazy.tsx`.
-  A language change also loads the complete catalog.
+  `frontend/scripts/gen-essential-copy.mjs` builds the `essential` level from the static imports of the
+  bundle groups' entry paths. It also follows each deferred component that asks for that level through
+  `frontend/src/i18n/lazy.tsx`. Sign-in, the `availability` page, the setup claim and the lock screens
+  ask for it. So a reader with no session never waits for the `complete` level. `fe-drift` checks the
+  generated copy.
 
-  `frontend/src/bootstrap.ts` starts the session read through `frontend/src/lib/session.read.ts`
-  while the app loads. `frontend/src/main.tsx` waits for `frontend/src/app/startup-session.ts` to
-  register the prepared query before it renders the app.
+  Home and `Analytics` draw from the `essential` level alone (`frontend/src/lib/essentialscreens.ts`).
+  On those two, `bootstrap.ts` loads the `complete` level once the page has loaded and the browser is free.
+  On every other address it starts the `complete` level beside the `essential` one.
+  `App.views.tsx` puts every other screen behind `CompleteLocale`. So the shell shows first, and the
+  column of the screen shows its loading state until the `complete` level is in. Dialogs wait
+  through `frontend/src/i18n/lazy.tsx`.
+
+  A language change keeps the page in the old language until the new one is loaded. It asks for the
+  new `complete` level at once when the page had already asked for the old one.
+
+  `bootstrap.ts` also starts the code of the screen the address names, through the map in
+  `frontend/src/App.screencode.ts`. `App.screens.tsx` builds every screen it loads late from that map,
+  so the two ask for the same file. The map tells a list from a record with `opensReservedPage` in
+  `frontend/src/app/reservedpages.ts`, the rule `nav.ts` uses too.
+
+  On a browser that had a session (`margince.session.seen`), `bootstrap.ts` starts the reads the shell
+  waits for, all at once. They are the session, the installation settings, the company-context rollout
+  and the onboarding state (`frontend/src/app/startup-reads.ts`). Each lands under the query options its
+  hook reads, so the hook does not ask again. On `Analytics`, it starts the prepared session read through
+  `frontend/src/lib/session.read.ts` instead. `frontend/src/main.tsx` waits for
+  `frontend/src/app/startup-session.ts` to register these reads before it renders the app.
+
+  When a read other than the session answers 401 or 403, `sessionRefusalWatch` in
+  `frontend/src/lib/session.ts` asks for the session again. It does not ask when the last answer of the
+  session already explains the refusal: a signed-out session explains any, a locked one a 403. So an
+  expired session sends one session read, in whatever order its other reads answer.
 
   `frontend/src/app/analytics-prefetch.ts` keeps the response time when
   filling the shared query cache. Expired responses are read again.
@@ -338,10 +362,16 @@ those parts, it points the text, link and focus tokens at the field's own colour
 under it. A new part on the field goes in that list; `frontend/census/rules/inkfield.census.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
-`main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
-lives in `src/lib/theme.ts` and in no other file. A stated choice
+`main.tsx` calls `startTheme()` above `createRoot(...).render(...)`, and
+`src/lib/theme.ts` resolves the choice. A stated choice
 (`margince.theme` in `localStorage`, `light` or `dark`) wins; otherwise the OS
 `prefers-color-scheme` decides.
+
+The page first shows before any module runs. So a script in `index.html` that
+is not a module sets a stored `light` or `dark` on `<html>` first. The inline
+style there draws the ground of that theme. `src/app/prepaint.test.ts` holds the
+script's key and values to `storage.ts` and `theme.ts`. `nginx.conf` admits the
+script by its sha256 in `script-src`, which `src/app/webtier.test.ts` derives.
 
 A third value, `system`, says to keep following the OS. An install that has
 never made a choice resolves as `system`, and so does any value the build does not
@@ -480,7 +510,7 @@ merge gate and needs Node and pnpm.
 | what a route renders | `src/App.views.tsx` (`ScreenView`), then the screen file |
 | a colour, a `border-radius`, a spacing step | `src/design-system/tokens.css` (and `tokens.test.ts`), never a call site |
 | a derived colour role | `src/design-system/brand.css`: a `color-mix()`, never a new hex value |
-| light and dark themes | `src/lib/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
+| light and dark themes | `src/lib/theme.ts`, the inline script and style in `index.html`, and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
 | how a derived value shows its evidence | `src/design-system/evidencemark.tsx` |
 | a staging or approval surface | `src/design-system/trust.tsx` and `src/features/worklist/worklist.tsx` |
 | copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts`; the type check holds their keys the same |
@@ -493,7 +523,7 @@ merge gate and needs Node and pnpm.
 | | |
 |---|---|
 | The API seam and the generated contract types | `frontend/src/api/{client.ts,schema.d.ts,public-events.ts}` |
-| Start, before the app's code loads: install offer, service worker, first session read, language | `frontend/src/bootstrap.ts` |
+| Start, before the app's code loads: install offer, service worker, the first reads, the screen's code, language | `frontend/src/bootstrap.ts` |
 | Boot: theme, the first render | `frontend/src/main.tsx` |
 | The query client and its 403 handling | `frontend/src/app/queryclient.ts` |
 | Registering the service worker, install state / the worker and its offline page | `frontend/src/lib/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |

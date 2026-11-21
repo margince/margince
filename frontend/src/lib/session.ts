@@ -49,6 +49,9 @@ export const sessionOptions = queryOptions({
   // window is the one this needs to close.
   refetchOnWindowFocus: "always",
   retry: false,
+  // A refused probe is asked again by sign-in or Retry. A mount after the
+  // startup prefetch was refused would only repeat the refusal.
+  retryOnMount: false,
   queryFn: ({ signal }) => readSession(signal),
 });
 
@@ -137,6 +140,18 @@ export function useViewerId(enabled = true): string | undefined {
   return useMe(enabled).data?.user.id;
 }
 
+// Whether the probe's last refusal already says what `status` would: sign-in
+// answers every refusal, a lock answers a 403 but not a lapse.
+function refusalKnown(queryClient: QueryClient, status: number): boolean {
+  const { error } = queryClient.getQueryState(sessionOptions.queryKey) ?? {};
+  if (!(error instanceof AuthProbeError)) return false;
+  if (error.kind === "unauthorized") return true;
+  return (
+    status === 403 &&
+    (error.kind === "must-change-password" || error.kind === "must-enrol-mfa")
+  );
+}
+
 // A 403 means the session snapshot is stale: grants changed, or the account is
 // now confined. A 401 may be a wrong code or a lapsed session, and the contract
 // gives both one answer. So /me is asked again at once, not at the next focus.
@@ -145,7 +160,8 @@ export function sessionRefusalWatch(queryClient: QueryClient): Middleware {
     onResponse({ request, response }) {
       if (
         (response.status === 401 || response.status === 403) &&
-        !new URL(request.url).pathname.endsWith("/me")
+        !new URL(request.url).pathname.endsWith("/me") &&
+        !refusalKnown(queryClient, response.status)
       ) {
         // Exact, and never cancelling: a prefix match re-asks the ["me", …] read
         // that just 403'd, and a cancel discards the probe's own answer.

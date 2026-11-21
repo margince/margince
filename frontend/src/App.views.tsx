@@ -57,7 +57,7 @@ import {
   useDisabledCoreFeatures,
   useHiddenCoreFeatures,
 } from "./lib/corefeatures";
-import { bootsOnEssentialCopy } from "./lib/essentialscreens";
+import { paintsFromEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { traversalInFlight, traverseTo } from "./lib/historydepth";
 import { routeIdentity } from "./lib/routeidentity";
@@ -202,9 +202,11 @@ export const screenOfAddress = (address: string) => {
   return SCREEN_VIEWS[route.screen](route);
 };
 
-function screenWithLocale(address: string) {
+// The shell paints from the essential catalog, and the screen's column waits
+// here for the complete one.
+export function screenWithLocale(address: string) {
   const view = screenOfAddress(address);
-  return bootsOnEssentialCopy(address) ? (
+  return paintsFromEssentialCopy(address) ? (
     view
   ) : (
     <CompleteLocale>{view}</CompleteLocale>

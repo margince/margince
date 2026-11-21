@@ -144,6 +144,18 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
+	var out Instruction
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = DirectSendTx(ctx, tx, reviewID, in)
+		return err
+	})
+	return out, err
+}
+
+// DirectSendTx is DirectSend in the caller's transaction, so a caller can
+// record the decision and act on the held message as one fact.
+func DirectSendTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, in DirectInput) (Instruction, error) {
 	in, err := admitDirector(ctx, in)
 	if err != nil {
 		return Instruction{}, err
@@ -154,7 +166,7 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		return Instruction{}, apperrors.ErrPermissionDenied
 	}
 	var out Instruction
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+	record := func(tx pgx.Tx) error {
 		review, err := claimReviewForDirectionTx(ctx, tx, reviewID)
 		if err != nil {
 			return err
@@ -249,8 +261,8 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 			return err
 		}
 		return nil
-	})
-	return out, err
+	}
+	return out, record(tx)
 }
 
 // RevokeInstruction takes a decision back before anything acts on it.
