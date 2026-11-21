@@ -63,13 +63,15 @@ mail. A backup owner who leaves the reader team, or leaves the company, gets no 
 membership each time it runs. Moving the mailbox to another reader team removes a backup owner that team does not
 hold.
 
-A reply reminder needs a model to judge that the mail asks for an answer. A model reads held mail for that while
-the setting **Check private mail for requests** is on, and it is on by default. With it off, held mail gets no reply
-reminder. The waiting list does not depend on that setting. A promise follow-up needs the same model read of the
-thread, so it follows the setting. The question which deal a mail is about is asked for held mail too, and only the
-colleague who gets it sees it.
+A reply reminder needs a model to judge that the mail asks for an answer. A model reads held mail for that while the
+setting **Check private mail for requests** (`activities.private_mail_requests`, under Settings → AI models → Tasks)
+is on, and it is on by default. With it off, held mail gets no new reply reminder. A verdict written before the switch
+went off can still file one within 14 days. With it off, held mail is waiting only when the colleague who owes the
+reply sent mail on its conversation first. A promise follow-up is never made from held mail. The question which deal
+a mail is about is asked for held mail too, and only the colleague who gets it sees it.
 
-A sender with no contact is filed under nothing and gets no contact, with or without a backup owner.
+Mail is filed under a contact or lead that already has the sender's address. A sender with neither is filed under
+nothing and gets no contact, with or without a backup owner.
 
 ## IMAP
 
