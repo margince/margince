@@ -664,6 +664,19 @@ _REFUSALS = re.compile(
 # it had called before.
 _MODEL_API_FAILED = re.compile(r"^(?:Failed to authenticate\.\s*)?API Error:", re.IGNORECASE)
 
+# The server's answer when the client declined a question it put in the chat
+# (backend/internal/modules/agents/inputrequired.go, errDeclinedInChat). Nobody
+# sits at a lane run to answer one: a CLI that can show the form declines it by
+# itself, so the run could not have done what the user asked.
+_DECLINED_IN_CHAT = re.compile(r"the user said no in the chat", re.IGNORECASE)
+
+
+def _tool_result_text(block):
+    content = block.get("content")
+    if isinstance(content, list):
+        return " ".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
+    return str(content or "")
+
 
 def unrun(path):
     """Why this run never happened, or "" when it did.
@@ -683,7 +696,7 @@ def unrun(path):
     a real answer thrown away as a harness fault, and the rest of the lane
     abandoned with it.
     """
-    saw_assistant, called_tool, saw_result = False, False, False
+    saw_assistant, called_tool, saw_result, declined = False, False, False, False
     failure = ""
     for line in _open_checked(path):
         line = line.strip()
@@ -698,6 +711,11 @@ def unrun(path):
             for block in (event.get("message") or {}).get("content") or []:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
                     called_tool = True
+        if event.get("type") == "user":
+            for block in (event.get("message") or {}).get("content") or []:
+                if isinstance(block, dict) and block.get("type") == "tool_result" \
+                        and _DECLINED_IN_CHAT.search(_tool_result_text(block)):
+                    declined = True
         if event.get("type") == "result":
             saw_result = True
             if event.get("is_error"):
@@ -718,6 +736,9 @@ def unrun(path):
         return failure
     if _MODEL_API_FAILED.match(failure):
         return "the model's API stopped answering mid-run: " + failure
+    if declined:
+        return ("the client declined a question the server asked in the chat, and no one in "
+                "the lane can answer one, so the run could not do what was asked")
     return ""
 
 
