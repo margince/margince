@@ -3,15 +3,24 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import { forgetSeat } from "../../lib/storage";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
+import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import {
   openOverview as open,
   prospectingEvaluation,
   salesEvaluation,
 } from "./analytics.overview.testkit";
+import { ReportingOverview } from "./reporting.overview";
+import {
+  reportingStoryRoutes,
+  reportingStoryScope,
+} from "./reporting.story-fixtures";
 
 const originalFetch = globalThis.fetch;
 beforeEach(() => forgetSeat());
@@ -76,5 +85,26 @@ describe("A custom interval with no days yet", () => {
     await user.tab();
     expect(await screen.findByText(/There is no 31\/02\/2026/)).toBeVisible();
     expect(screen.getByText(PROMPT)).toBeVisible();
+  });
+
+  it("shows the prompt on the report overview and no loading bars", async () => {
+    const user = userEvent.setup({ delay: null });
+    installFetchStub(reportingStoryRoutes());
+    render(
+      <StoryProviders>
+        <CompanyZoneProvider zone={REPORTING_FIXTURE_ZONE}>
+          <ReportingOverview view="sales" scope={reportingStoryScope} />
+        </CompanyZoneProvider>
+      </StoryProviders>,
+    );
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Date range" }),
+      "Custom interval",
+    );
+    expect(await screen.findByText(PROMPT)).toBeVisible();
+    await waitFor(() =>
+      expect(document.querySelector('[aria-busy="true"]')).toBeNull(),
+    );
   });
 });

@@ -24,7 +24,7 @@ import { Modal } from "../../design-system/modal";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { formatDate } from "../../format/format";
+import { formatDate, isRenderableZone } from "../../format/format";
 import { useNow } from "../../format/now";
 import { dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
@@ -32,6 +32,7 @@ import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import type { ReportingSelection } from "./reporting.model";
 
 export type SalesDecision = components["schemas"]["SalesDecision"];
@@ -273,7 +274,11 @@ export function RecordDecisionDialog({
   const formId = useId();
   const client = useQueryClient();
   // The server refuses a review day before today in the installation's zone.
-  const today = isoOrBlank(dayInZone(useNow(0), useCompanyZone()));
+  // Without that zone the field stays open and the server's refusal shows.
+  const zone = useInstallationSettings().data?.timezone;
+  const now = useNow(0);
+  const today =
+    zone && isRenderableZone(zone) ? isoOrBlank(dayInZone(now, zone)) : "";
   const [key] = useState(() => crypto.randomUUID());
   const [draft, setDraft] = useState<Draft>({
     decision: "",

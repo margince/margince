@@ -142,12 +142,14 @@ it("can record the first manual decision without drawing an empty table", async 
   expect(await screen.findByRole("dialog")).toBeVisible();
 });
 
-it("refuses a review day before today where the date is typed", async () => {
-  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-21T09:00:00Z") });
+async function typePastReviewDay(settings: Record<string, string>) {
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-21T12:00:00Z") });
+  const read = vi.fn(() => jsonResponse(settings));
   installFetchStub({
     ...reportingStoryRoutes(),
     "GET /me": meRoute({ activity: ["read", "create"], deal: ["read"] }),
     "GET /analytics/decisions": () => jsonResponse({ data: [] }),
+    "GET /installation/settings": read,
   });
   render(
     <StoryProviders>
@@ -161,11 +163,23 @@ it("refuses a review day before today where the date is typed", async () => {
   await user.click(
     await screen.findByRole("button", { name: "Record decision" }),
   );
-  await user.type(
-    await screen.findByRole("textbox", { name: /^Review on/ }),
-    "01/01/2020",
-  );
+  const field = await screen.findByRole("textbox", { name: /^Review on/ });
+  await waitFor(() => expect(read).toHaveBeenCalled());
+  await new Promise((settled) => setTimeout(settled, 50));
+  await user.type(field, "01/01/2020");
   await user.tab();
-  expect(await screen.findByText("Earliest date: 21/11/2026")).toBeVisible();
+}
+
+it("refuses a review day before today in the installation's zone", async () => {
+  await typePastReviewDay({ timezone: "Pacific/Auckland" });
+  expect(await screen.findByText("Earliest date: 22/11/2026")).toBeVisible();
+  vi.useRealTimers();
+});
+
+it("leaves the review day open when the installation zone is unknown", async () => {
+  await typePastReviewDay({});
+  await waitFor(() =>
+    expect(screen.queryByText(/Earliest date/)).not.toBeInTheDocument(),
+  );
   vi.useRealTimers();
 });
