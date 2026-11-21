@@ -102,7 +102,7 @@ describe("ProjectScreen", () => {
     expect(
       screen.getAllByRole("button", { name: "Move to Pursuing" }),
     ).toContain(screen.getByTestId("project-step-pursuing"));
-    expect(screen.getByRole("button", { name: "Close project" })).toBe(
+    expect(screen.getByRole("button", { name: "Move to Closed" })).toBe(
       screen.getByTestId("project-step-closed"),
     );
 

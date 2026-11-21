@@ -262,8 +262,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
 
   // 7. Close with a reason. The close button stays disabled until a reason
   // is typed, and the reason is what the history shows afterwards.
-  // The Closed step is named for the move it makes, as the dialog's verb is.
-  await phase.getByRole("button", { name: "Projekt abschließen" }).click();
+  // The Closed step is named for the move it makes, as the dialog's heading is.
+  await phase.getByRole("button", { name: "Wechsel zu Abgeschlossen" }).click();
   await expect(
     page.getByRole("heading", { name: "Wechsel zu Abgeschlossen" }),
   ).toBeVisible();
