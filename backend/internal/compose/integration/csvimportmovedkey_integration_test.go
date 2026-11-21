@@ -75,10 +75,10 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 		want: []string{"created=0 updated=0 unchanged=0 skipped=1", "companies.csv:2:linkedin_held"},
 	}, {
 		name:  "a stored contact holds the address a later row moves a lead onto",
-		prior: map[string]string{"leads.csv": "ref,full_name,email\nl1,Lee One,lee@moved.test\n"},
+		prior: map[string]string{"leads.csv": "ref,full_name,email,linkedin\nl1,Lee One,lee@moved.test,\n"},
 		parts: leadParts,
 		file: func(_, _ string) string {
-			return "ref,full_name,email\nl1,Lee One,held@moved.test\n"
+			return "ref,full_name,email,linkedin\nl1,Lee One,held@moved.test,\n"
 		},
 		want: []string{"created=0 updated=0 unchanged=0 skipped=1", "leads.csv:2:contact_holds_lead"},
 	}, {
