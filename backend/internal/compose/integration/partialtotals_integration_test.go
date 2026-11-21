@@ -15,11 +15,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAnAccountsOpenAmountAddsTheDealsThatConvertAndCountsTheRest(t *testing.T) {
@@ -32,6 +34,7 @@ func TestAnAccountsOpenAmountAddsTheDealsThatConvertAndCountsTheRest(t *testing.
 	}{
 		{"mixed", []partialSumDeal{{10_000, "EUR"}, {20_000, "EUR"}, {5_000, "CHF"}}, new(int64(30_000)), 1, []string{"CHF"}},
 		{"all without a rate", []partialSumDeal{{5_000, "CHF"}, {7_000, "CHF"}}, nil, 2, []string{"CHF"}},
+		{"a real zero beside a gap", []partialSumDeal{{0, "EUR"}, {5_000, "CHF"}}, new(int64(0)), 1, []string{"CHF"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := newTwoDoors(t, "account-partial", "read")
@@ -100,5 +103,38 @@ func TestATeamChangeGroupAddsTheDealsThatConvertAndCountsTheRest(t *testing.T) {
 				t.Errorf("group = %+v, want value %d with %d without an amount and %d without a rate in CHF", g, tc.value, tc.noValue, tc.noRate)
 			}
 		})
+	}
+}
+
+// A reader whose amount and currency are masked learns nothing from the won
+// figure's coverage. A masked deal counts as one with no amount. Its currency
+// is never listed.
+func TestTheHierarchyWonCoverageNamesNoCurrencyOfAMaskedDeal(t *testing.T) {
+	e := Setup(t)
+	st := seedRollupStages(t, e)
+	now := clocktest.Now(t)
+	root := seedRollupCompany(t, e, "Masked Root", &e.Rep1, nil)
+	perms := rollupCompanyReadPerms(principal.RowScopeOwn)
+	perms.FieldMasks = []principal.FieldMask{
+		{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways},
+		{Object: "deal", Field: "currency", Condition: principal.MaskAlways},
+	}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+	read := func() compose.CompanyRollupResult {
+		t.Helper()
+		res, err := compose.CompanyHierarchyRollup(rep, e.Pool, root, "tree", compose.CompanyRollupPeriod{}, fixedClock(now))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	start := read().ClosedWonPeriod.Start
+	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, currency, fx_rate_to_base, pipeline_id, stage_id, company_id, status, closed_at, source, captured_by)
+		VALUES ($1, 'Masked win', 700, 'GBP', '1.0', $2, $3, $4, 'won', $5, 'manual', 'human:test')`,
+		ids.NewV7(), st.pipeline, st.won, root, start)
+
+	c := read().ClosedWonCoverage
+	if len(c.MissingCurrencies) != 0 || c.NoRateDeals != 0 {
+		t.Errorf("coverage = %+v names the currency of a deal whose amount this reader cannot see", c)
 	}
 }

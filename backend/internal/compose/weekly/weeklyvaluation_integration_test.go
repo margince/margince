@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T) {
+func TestWeeklyClosedMoneyAddsTheWinsThatConvertAndNamesTheOnesThatCannotBePriced(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	date := time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)
@@ -35,6 +35,7 @@ func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T
 	if _, err := e.Deals.AdvanceDeal(ctx, deal, deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: new("other"), WonWithoutContractDetail: new("Existing written agreement outside the system")}); err != nil {
 		t.Fatal(err)
 	}
+	var last Money
 	read := func(wantKnown bool) {
 		t.Helper()
 		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -42,6 +43,7 @@ func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T
 			if err != nil {
 				return err
 			}
+			last = money
 			if money.Known != wantKnown {
 				t.Errorf("weekly money = %+v, want known=%v", money, wantKnown)
 			}
@@ -57,6 +59,23 @@ func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T
 	// A historical close without its freeze and rate cannot be created by the current writer.
 	e.WsExec(t, `UPDATE deal SET amount_minor_base=NULL, currency='GBP' WHERE id=$1`, deal)
 	read(false)
+	if last.NoRateDeals != 1 || last.MissingCurrencies != "GBP" || !last.Assessed {
+		t.Errorf("a week no win converts into = %+v, want no figure and the one deal with no rate stated", last)
+	}
+
+	// A second win that converts brings the figure back, with the gap beside it.
+	usd := "USD"
+	second, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{Name: "Second win", PipelineID: pipeline, StageID: open, AmountMinor: new(int64(20000)), Currency: &usd, OwnerID: new(ids.From[ids.UserKind](e.Rep1)), Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Deals.AdvanceDeal(ctx, ids.From[ids.DealKind](ids.UUID(second.Id)), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: new("other"), WonWithoutContractDetail: new("Existing written agreement outside the system")}); err != nil {
+		t.Fatal(err)
+	}
+	read(true)
+	if last.NoRateDeals != 1 || last.MissingCurrencies != "GBP" {
+		t.Errorf("a week with one win converting = %+v, want the one deal with no rate stated beside the figure", last)
+	}
 }
 
 // A week is valued at its last day. A rate effective on the following Monday

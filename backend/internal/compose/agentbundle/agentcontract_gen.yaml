@@ -2216,7 +2216,8 @@ paths:
         All money converts to the workspace base currency. An open deal whose currency has no
         stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
         substituting a rate of 1. A won deal is valued at the base amount frozen when it was
-        won; one won deal in the period with no base value makes `closed_won` null.
+        won. `closed_won` adds the won deals that have one, and `closed_won_coverage` says how many
+        it leaves out and why. It is null only when no won deal in the period converts.
         Totals are server-computed and reconcile exactly to their parts — never client-summed.
         Requires read on companies, deals, and activities; figures aggregate every deal
         and activity of each readable company — per-record row visibility within a
@@ -55642,10 +55643,13 @@ components:
         counts: {$ref: '#/components/schemas/TeamWeeklyCounts'}
         pipeline:
           description: |-
-            What the team's week did to the pipeline. ABSENT when any member's week could not
-            be converted — summing only the ones that did would be a confident number quietly
-            missing a rep.
+            What the team's week did to the pipeline: the members' figures added together. ABSENT when
+            a member's week is unread or has a figure no deal converts into, or members differ in
+            currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+            review was frozen before it said what it leaves out.
           allOf: [{$ref: '#/components/schemas/WeeklyReviewPipeline'}]
+        pipeline_coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         reps_unread:
           type: integer
           minimum: 0
@@ -56202,6 +56206,8 @@ components:
             What the week did to the pipeline, in the installation's base currency at the rate that
             applied when the review was written.
           allOf: [{$ref: '#/components/schemas/WeeklyReviewPipeline'}]
+        pipeline_coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         prior:
           description: |-
             The same rep's previous review, so a reader can see what CHANGED rather than only what

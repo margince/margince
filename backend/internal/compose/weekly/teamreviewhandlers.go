@@ -75,8 +75,9 @@ func teamReviewToWire(review TeamReview) crmcontracts.TeamWeeklyReview {
 			MeetingsHeld:  c.MeetingsHeld, MeetingsWithNextStep: c.MeetingsWithNextStep,
 			CommitmentsDue: c.CommitmentsDue, CommitmentsKept: c.CommitmentsKept,
 		},
-		Pipeline: pipelineToWire(review.Money),
-		Reps:     reps,
+		Pipeline:         pipelineToWire(review.Money),
+		PipelineCoverage: pipelineCoverageToWire(review.Money),
+		Reps:             reps,
 		// Derived here rather than stored: it is an order over the reps this
 		// same call assembled, so it cannot go stale, and a snapshot written
 		// before the agenda existed answers one anyway.

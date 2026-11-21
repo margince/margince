@@ -2452,7 +2452,8 @@ export interface paths {
          *     All money converts to the workspace base currency. An open deal whose currency has no
          *     stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
          *     substituting a rate of 1. A won deal is valued at the base amount frozen when it was
-         *     won; one won deal in the period with no base value makes `closed_won` null.
+         *     won. `closed_won` adds the won deals that have one, and `closed_won_coverage` says how many
+         *     it leaves out and why. It is null only when no won deal in the period converts.
          *     Totals are server-computed and reconcile exactly to their parts — never client-summed.
          *     Requires read on companies, deals, and activities; figures aggregate every deal
          *     and activity of each readable company — per-record row visibility within a
@@ -35618,9 +35619,9 @@ export interface components {
          *
          *     `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
          *     weighted by its stage's win probability, and never a past period's pipeline.
-         *     `closed_won` is the deals won in `closed_won_period`; a null amount means at least
-         *     one of them has no base value on file, so the total is incomplete rather than
-         *     smaller. `activity_count_30d` counts the activities that reached a counted account
+         *     `closed_won` is the deals won in `closed_won_period` that have a base value on file.
+         *     `closed_won_coverage` counts the others by cause, for the deals this reader may read, and
+         *     its `partial` flag is true when any deal is left out. A null amount means none converts. `activity_count_30d` counts the activities that reached a counted account
          *     in `activity_window`, the 30 days before the read, which no period parameter moves.
          */
         CompanyHierarchyRollup: {
@@ -59792,11 +59793,13 @@ export interface components {
             as_of: string;
             counts: components["schemas"]["TeamWeeklyCounts"];
             /**
-             * @description What the team's week did to the pipeline. ABSENT when any member's week could not
-             *     be converted — summing only the ones that did would be a confident number quietly
-             *     missing a rep.
+             * @description What the team's week did to the pipeline: the members' figures added together. ABSENT when
+             *     a member's week is unread or has a figure no deal converts into, or members differ in
+             *     currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+             *     review was frozen before it said what it leaves out.
              */
             pipeline?: components["schemas"]["WeeklyReviewPipeline"];
+            pipeline_coverage?: components["schemas"]["ReportRowCoverage"];
             /**
              * @description Members whose week could not be read at all. Zero is the claim that every member's
              *     week was counted.
@@ -60325,13 +60328,15 @@ export interface components {
              * @description What the week did to the pipeline, in the installation's base currency at the rate that
              *     applied when the review was written.
              *
-             *     ABSENT when the week held a deal that could not be converted — an open deal freezes no
-             *     rate, so a currency with no usable rate makes the whole figure unanswerable. A total
-             *     covering three of four deals would be a confident number that is quietly short, and
-             *     nothing is ever converted at an invented rate of 1. Absent is also the answer when the
-             *     installation names no base currency.
+             *     Each figure adds the deals that convert. ABSENT when no deal of one of the three figures
+             *     converts, or when the installation names no base currency. Nothing is ever converted at an
+             *     invented rate of 1.
+             *
+             *     `pipeline_coverage` says how many deals the figures leave out, by cause, and which
+             *     currencies have no rate. It is absent for a review frozen before it said so.
              */
             pipeline?: components["schemas"]["WeeklyReviewPipeline"];
+            pipeline_coverage?: components["schemas"]["ReportRowCoverage"];
             /**
              * @description The same rep's previous review, so a reader can see what CHANGED rather than only what
              *     happened. Absent for their first week.

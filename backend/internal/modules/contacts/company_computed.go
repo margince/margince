@@ -12,6 +12,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -72,6 +73,10 @@ type openPipeline struct {
 	minorBase   *int64
 	dealCount   int
 	pricedCount int
+	// noValue and noRate split the deals the total leaves out by cause, and
+	// noRateCurrencies lists the currencies that have no rate.
+	noValue, noRate  int
+	noRateCurrencies *string
 }
 
 // openPipelineRollup reads the company_open_pipeline_rollup view
@@ -105,9 +110,12 @@ type openPipeline struct {
 // covering half the pipeline would be reported as the pipeline.
 func openPipelineRollup(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, asOf time.Time) (roll openPipeline, err error) {
 	err = tx.QueryRow(ctx,
-		`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
-		 FROM company_open_pipeline_rollup(`+occurredday.TodaySQL("$2::timestamptz")+`) WHERE company_id = $1`,
-		companyID, asOf).Scan(&roll.minorBase, &roll.dealCount, &roll.pricedCount)
+		`SELECT r.open_pipeline_minor_base, r.open_deal_count, r.priced_deal_count,
+		        g.no_value_deal_count, g.no_rate_deal_count, g.no_rate_currencies
+		 FROM company_open_pipeline_rollup(`+occurredday.TodaySQL("$2::timestamptz")+`) r
+		 JOIN company_open_pipeline_gaps(`+occurredday.TodaySQL("$2::timestamptz")+`) g USING (company_id)
+		 WHERE company_id = $1`,
+		companyID, asOf).Scan(&roll.minorBase, &roll.dealCount, &roll.pricedCount, &roll.noValue, &roll.noRate, &roll.noRateCurrencies)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Scan never ran, so roll is still its zero value — return it, not
 		// literal zeroes: the honest "nothing to sum" case above, not a
@@ -120,6 +128,22 @@ func openPipelineRollup(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	return roll, nil
 }
 
+// openPipelineCoverage says which open deals the total leaves out. Absent when
+// the company has no open deal.
+func openPipelineCoverage(open openPipeline) *crmcontracts.ReportRowCoverage {
+	if open.dealCount == 0 {
+		return nil
+	}
+	currencies := []string{}
+	if open.noRateCurrencies != nil && *open.noRateCurrencies != "" {
+		currencies = strings.Split(*open.noRateCurrencies, ",")
+	}
+	return &crmcontracts.ReportRowCoverage{
+		Aggregates: []string{"open_pipeline"}, Partial: open.pricedCount < open.dealCount,
+		NoValueDeals: open.noValue, NoRateDeals: open.noRate, MissingCurrencies: currencies,
+	}
+}
+
 // companyComputedFields assembles the 5 display rows RD-T08 names.
 // It takes the view's two output columns (rule T8: no dead returns —
 // openDealCount now has a real consumer, the three-way branch below).
@@ -128,12 +152,11 @@ func openPipelineRollup(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 //   - openDealCount == 0 (no view row: a company with no open
 //     deals at all) is the honest "nothing to sum" case: computable:true,
 //     value_minor:0 — a real zero, not a missing one.
-//   - Every open deal reached the total (priced == open) and the aggregate is
-//     non-NULL: computable:true, value_minor:sum.
-//   - Some deals reached it and others did not: the sum is SHORT, and a short
-//     figure presented as a total is worse than no figure — a reader cannot
-//     see what is missing from it. It floors to computable:false with the
-//     partial reason.
+//   - The aggregate is non-NULL: computable:true, value_minor:sum. When some
+//     open deals did not reach it the sum is partial, and coverage says how
+//     many were left out and why.
+//   - The aggregate is NULL although some deals were priced: the sum does not
+//     fit a bigint. computable:false with the partial reason.
 //   - No deal reached it (aggregate NULL, open deals exist): not one of them
 //     could be priced. It floors to computable:false, reason:"awaiting_fx",
 //     with no value_minor on the wire. formula_sql stays populated either way:
@@ -156,7 +179,7 @@ func companyComputedFields(open openPipeline) []crmcontracts.ComputedField {
 		zero := int64(0)
 		openPipelineRow.Computable = true
 		openPipelineRow.ValueMinor = &zero
-	case open.minorBase != nil && open.pricedCount == open.dealCount:
+	case open.minorBase != nil:
 		value := *open.minorBase
 		openPipelineRow.Computable = true
 		openPipelineRow.ValueMinor = &value
@@ -169,6 +192,8 @@ func companyComputedFields(open openPipeline) []crmcontracts.ComputedField {
 		openPipelineRow.Computable = false
 		openPipelineRow.Reason = &reason
 	}
+
+	openPipelineRow.Coverage = openPipelineCoverage(open)
 
 	return []crmcontracts.ComputedField{
 		openPipelineRow,

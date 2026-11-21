@@ -426,14 +426,20 @@ func closedWonMinorIn(ctx context.Context, tx pgx.Tx, included []ids.UUID, perio
 	if err != nil {
 		return nil, none, err
 	}
+	// The total counts every deal of the tree. Its coverage names only the deals
+	// this reader may read, so it never says a thing about one they may not.
+	visible, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil {
+		return nil, none, err
+	}
 	anchor := wonSalesAnchor("d")
 	var total *int64
-	var gaps dealcoverage.Counts
+	var gaps dealcoverage.ScopedCounts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT %s, %s
 		FROM deal d
 		WHERE d.company_id = ANY($1) AND %s AND d.status = 'won'
-		  AND %s >= $2 AND %s < $3 AND %s <= $4`, moneytotal.PartialSumSQL("sum("+amount+")"), moneytotal.CoverageSQL(amount, nativeAmount, currency),
+		  AND %s >= $2 AND %s < $3 AND %s <= $4`, moneytotal.PartialSumSQL("sum("+amount+")"), dealcoverage.ScopedTerms(amount, nativeAmount, currency, visible),
 		closedDealWhere("d"), anchor, anchor, anchor),
 		args...).Scan(append([]any{&total}, gaps.Dest()...)...)
 	return total, gaps.Wire("closed_won"), err

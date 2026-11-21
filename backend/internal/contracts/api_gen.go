@@ -43295,9 +43295,9 @@ type CompanyGrowthFit struct {
 //
 // `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
 // weighted by its stage's win probability, and never a past period's pipeline.
-// `closed_won` is the deals won in `closed_won_period`; a null amount means at least
-// one of them has no base value on file, so the total is incomplete rather than
-// smaller. `activity_count_30d` counts the activities that reached a counted account
+// `closed_won` is the deals won in `closed_won_period` that have a base value on file.
+// `closed_won_coverage` counts the others by cause, for the deals this reader may read, and
+// its `partial` flag is true when any deal is left out. A null amount means none converts. `activity_count_30d` counts the activities that reached a counted account
 // in `activity_window`, the 30 days before the read, which no period parameter moves.
 type CompanyHierarchyRollup struct {
 	ActivityCount30d int             `json:"activity_count_30d"`
@@ -69674,10 +69674,14 @@ type TeamWeeklyReview struct {
 	// from age out under retention.
 	Outlook *[]WeeklyReviewOutlook `json:"outlook,omitempty"`
 
-	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
-	// be converted — summing only the ones that did would be a confident number quietly
-	// missing a rep.
+	// Pipeline What the team's week did to the pipeline: the members' figures added together. ABSENT when
+	// a member's week is unread or has a figure no deal converts into, or members differ in
+	// currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+	// review was frozen before it said what it leaves out.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// PipelineCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	PipelineCoverage *ReportRowCoverage `json:"pipeline_coverage,omitempty"`
 
 	// Quality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
 	// snapshot frozen before it was measured, which is not zero.
@@ -73024,12 +73028,16 @@ type WeeklyReview struct {
 	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
 	// applied when the review was written.
 	//
-	// ABSENT when the week held a deal that could not be converted — an open deal freezes no
-	// rate, so a currency with no usable rate makes the whole figure unanswerable. A total
-	// covering three of four deals would be a confident number that is quietly short, and
-	// nothing is ever converted at an invented rate of 1. Absent is also the answer when the
-	// installation names no base currency.
+	// Each figure adds the deals that convert. ABSENT when no deal of one of the three figures
+	// converts, or when the installation names no base currency. Nothing is ever converted at an
+	// invented rate of 1.
+	//
+	// `pipeline_coverage` says how many deals the figures leave out, by cause, and which
+	// currencies have no rate. It is absent for a review frozen before it said so.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// PipelineCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	PipelineCoverage *ReportRowCoverage `json:"pipeline_coverage,omitempty"`
 
 	// Prior The same rep's previous review, so a reader can see what CHANGED rather than only what
 	// happened. Absent for their first week.
