@@ -86,10 +86,8 @@ type RelationshipStrength struct {
 	// never happened. Nil is therefore the common case on a cold account, and
 	// it is the honest one.
 	//
-	// Read as a correlated LIMIT 1 rather than an aggregate over the history:
-	// array_agg(...)[1] materialised every inbound id a contact had ever sent
-	// in order to use one of them, which is the payload growing with history
-	// that this fold exists to avoid.
+	// Taken from the window read's own rows, so the array it picks from holds
+	// 90 days of inbound ids, never the whole history.
 	LastInboundActivity *ids.ActivityID
 	// LastInboundMove is the History badge's move on LastInboundActivity when
 	// that is a mail, filled by compose from activities. Nil leaves the
@@ -98,18 +96,8 @@ type RelationshipStrength struct {
 }
 
 // strengthInteractionUnit is what one interaction is, from relstrength's shared
-// definition. The folds alias activity as `a`; the cited read uses `i`.
+// definition. The folds alias activity as `a`.
 var strengthInteractionUnit = relstrength.InteractionUnitSQL("a")
-
-// strengthCountsAt and strengthCitedCountsAt count contact at the instant in $nowPos.
-// A later interaction has not happened, so it feeds no recency, count or citation.
-func strengthCountsAt(nowPos int) string {
-	return relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))
-}
-
-func strengthCitedCountsAt(nowPos int) string {
-	return relstrength.InteractionCountsAtSQL("i", fmt.Sprintf("$%d::timestamptz", nowPos))
-}
 
 // afterEngaged admits an interaction of a fold row `a` after the contact last
 // took part, or any one when they never did. The fold's derived table carries
@@ -118,14 +106,6 @@ var afterEngaged = relstrength.AfterEngagedSQL("a", "engaged_at")
 
 // foldColumns are the activity columns the folds' derived tables project.
 var foldColumns = relstrength.FoldColumnsSQL("a")
-
-// strengthDirectionPrecisions reads the precision behind each direction's last
-// date for the contact, empty where that date is null. Ours reads as a day at a
-// tie, so EngagementOf sees the day entry that answers theirs.
-func strengthDirectionPrecisions(contact string) string {
-	return `coalesce(` + occurredday.LatestPrecisionSQL("a", relstrength.TheyWroteSQL(contact, "a")) + `, ''),
-		coalesce(` + occurredday.LatestAnswerPrecisionSQL("a", relstrength.WeWroteSQL("a")) + `, '')`
-}
 
 // ContactStrength computes the §4 baseline for one contact. The contact
 // read is row-scoped exactly like GetContact: a contact the caller cannot
@@ -175,10 +155,9 @@ type ContactStrength struct {
 	Strength  RelationshipStrength
 }
 
-// StrengthForCompanyContacts computes §4 for every current employee of one
-// company that the caller can read, inside the caller's OWN
-// transaction and in a fixed number of queries — two, regardless of how
-// many contacts the account has.
+// StrengthForCompanyContacts computes the strength of every current employee
+// of one company that the caller can read. It runs inside the caller's own
+// transaction, in a number of queries that does not grow with the account.
 //
 // It exists because the per-contact path opens a transaction each: the
 // company view needs a score beside every contact, and doing that through
@@ -278,71 +257,19 @@ func strengthForContactsAt(ctx context.Context, tx pgx.Tx, contacts []ids.Contac
 	return contactStrengths(ctx, tx, visible, now, nil)
 }
 
-// contactStrengths folds the §4 inputs for a whole contact set out of ONE
-// grouped pass over their qualifying activities. The evidence ids are
-// deliberately NOT collected here: they are the contact page's receipts, and
-// carrying up to relStrengthEvidenceCap of them per contact would make an
-// account list payload grow with its history rather than its contact count.
+// contactStrengths folds the strength inputs for a contact set in a fixed
+// number of statements, whatever the size of their history.
+// The evidence ids are the contact page's receipts and stay out of this read.
+// Up to relStrengthEvidenceCap of them per contact would make an account list
+// grow with each contact's history.
 func contactStrengths(
 	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID,
 	now time.Time, within *ids.ProjectID,
 ) ([]ContactStrength, error) {
-	const nowPos = 3
-	args := []any{contacts, now.AddDate(0, 0, -relStrengthWindowDays), now}
-	// BOTH aliases, or the score and the message it cites answer different
-	// questions: `a` is what the counts are computed over and `i` is the
-	// citation the card shows, so a page narrowed to one project could report a
-	// number from that project beside a message from another.
-	scoreWithin, citedWithin := "", ""
-	if within != nil {
-		args = append(args, *within)
-		scoreWithin = " AND " + activityWithinProject("a", len(args))
-		citedWithin = " AND " + activityWithinProject("i", len(args))
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT a.link_contact,
-		       max(a.occurred_at),
-		       max(a.engaged_at),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("a.link_contact", "a")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+` AND `+relstrength.WeWroteSQL("a")+`),
-		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("a.link_contact", "a")+`),
-		       max(a.occurred_at) FILTER (WHERE `+relstrength.WeWroteSQL("a")+`),
-		       `+strengthDirectionPrecisions("a.link_contact")+`,
-		       (SELECT i.id FROM activity i
-		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = a.link_contact
-		         WHERE `+relstrength.TheyWroteSQL("a.link_contact", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
-		           AND i.archived_at IS NULL AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
-		         ORDER BY i.occurred_at DESC, i.id DESC
-		         LIMIT 1)
-		FROM (SELECT `+foldColumns+`, l.contact_id AS link_contact,
-		             max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`)
-		               OVER (PARTITION BY l.contact_id) AS engaged_at
-		        FROM activity a
-		        JOIN activity_link l ON l.activity_id = a.id
-		       WHERE l.contact_id = ANY($1) AND `+strengthCountsAt(nowPos)+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+scoreWithin+`) a
-		GROUP BY a.link_contact`, args...)
+	byContact, err := liveStrengths(ctx, tx, contacts, now, within)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	byContact := make(map[ids.ContactID]*RelationshipStrength, len(contacts))
-	for rows.Next() {
-		var contactID ids.ContactID
-		var rs RelationshipStrength
-		if err := rows.Scan(&contactID, &rs.LastInteraction, &rs.LastEngaged, &rs.InteractionCount90d,
-			&rs.Inbound90d, &rs.Outbound90d, &rs.lateCount90d, &rs.lateOutbound90d, &rs.LastInbound, &rs.LastOutbound,
-			&rs.LastInboundPrecision, &rs.LastOutboundPrecision, &rs.LastInboundActivity); err != nil {
-			return nil, err
-		}
-		byContact[contactID] = &rs
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
 	out := make([]ContactStrength, 0, len(contacts))
 	for _, contactID := range contacts {
 		// A contact with no qualifying interaction is still a contact: it
@@ -357,55 +284,23 @@ func contactStrengths(
 	return out, nil
 }
 
+// strengthInputs is liveStrengths for one contact plus its contributing ids.
+// Every read is narrowed by within. The counts, the cited message and the
+// contributing ids are one reading. Narrowing only some would show a number
+// from one body of work beside evidence from another.
 func strengthInputs(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	now time.Time, within *ids.ProjectID, out *RelationshipStrength,
 ) error {
-	windowStart := now.AddDate(0, 0, -relStrengthWindowDays)
-	const nowPos = 3
-	foldArgs := []any{contactID, windowStart, now}
-	// Every alias the fold reads, for the reason contactStrengths gives: the
-	// counts, the cited message and the contributing ids are one reading, and
-	// narrowing some of them would report a number over one body of work with
-	// evidence from another.
-	scoreWithin, citedWithin := "", ""
-	if within != nil {
-		foldArgs = append(foldArgs, *within)
-		scoreWithin = " AND " + activityWithinProject("a", len(foldArgs))
-		citedWithin = " AND " + activityWithinProject("i", len(foldArgs))
-	}
-
-	// One pass over the contact's qualifying interactions: overall last
-	// touch, the 90-day direction counts, and the contributing ids.
-	if err := tx.QueryRow(ctx, `
-		SELECT max(a.occurred_at),
-		       max(a.engaged_at),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("$1", "a")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+` AND `+relstrength.WeWroteSQL("a")+`),
-		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("$1", "a")+`),
-		       max(a.occurred_at) FILTER (WHERE `+relstrength.WeWroteSQL("a")+`),
-		       `+strengthDirectionPrecisions("$1")+`,
-		       (SELECT i.id FROM activity i
-		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = $1
-		         WHERE `+relstrength.TheyWroteSQL("$1", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
-		           AND i.archived_at IS NULL AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
-		         ORDER BY i.occurred_at DESC, i.id DESC
-		         LIMIT 1)
-		FROM (SELECT `+foldColumns+`,
-		             max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("$1", "a")+`) OVER () AS engaged_at
-		        FROM activity a
-		        JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		       WHERE `+strengthCountsAt(nowPos)+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+scoreWithin+`) a`,
-		foldArgs...).Scan(&out.LastInteraction, &out.LastEngaged, &out.InteractionCount90d,
-		&out.Inbound90d, &out.Outbound90d, &out.lateCount90d, &out.lateOutbound90d, &out.LastInbound, &out.LastOutbound,
-		&out.LastInboundPrecision, &out.LastOutboundPrecision, &out.LastInboundActivity); err != nil {
+	folded, err := liveStrengths(ctx, tx, []ids.ContactID{contactID}, now, within)
+	if err != nil {
 		return err
 	}
+	if rs, ok := folded[contactID]; ok {
+		*out = *rs
+	}
 
-	citeArgs := []any{contactID, windowStart, relStrengthEvidenceCap, now}
+	citeArgs := []any{contactID, now.AddDate(0, 0, -relStrengthWindowDays), relStrengthEvidenceCap, now}
 	contributingWithin := ""
 	if within != nil {
 		citeArgs = append(citeArgs, *within)
@@ -414,7 +309,7 @@ func strengthInputs(
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		WHERE `+strengthCountsAt(4)+` AND a.archived_at IS NULL AND `+occurredday.FromSQL("a", "$2")+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
+		WHERE `+strengthAdmittedSQL("$4::timestamptz")+` AND `+occurredday.FromSQL("a", "$2")+contributingWithin+`
 		ORDER BY a.occurred_at DESC
 		LIMIT $3`, citeArgs...)
 	if err != nil {
@@ -439,7 +334,17 @@ func strengthInputs(
 // in one copy and not the other would read as a contradiction rather than a
 // rounding difference, so there is one copy.
 func (r *RelationshipStrength) finish(now time.Time) {
-	score := relstrength.Compute(relstrength.Inputs{
+	score := relstrength.Compute(r.inputs(), now)
+	r.Strength = score.Strength
+	r.Bucket = score.Bucket
+	r.Recency = score.Recency
+	r.Frequency = score.Frequency
+	r.Reciprocity = score.Reciprocity
+}
+
+// inputs is what the fold gathered, as the formula takes it.
+func (r *RelationshipStrength) inputs() relstrength.Inputs {
+	return relstrength.Inputs{
 		LastTouch:       r.LastInteraction,
 		LastEngaged:     r.LastEngaged,
 		Count90d:        r.InteractionCount90d,
@@ -447,10 +352,5 @@ func (r *RelationshipStrength) finish(now time.Time) {
 		Outbound90d:     r.Outbound90d,
 		LateCount90d:    r.lateCount90d,
 		LateOutbound90d: r.lateOutbound90d,
-	}, now)
-	r.Strength = score.Strength
-	r.Bucket = score.Bucket
-	r.Recency = score.Recency
-	r.Frequency = score.Frequency
-	r.Reciprocity = score.Reciprocity
+	}
 }
