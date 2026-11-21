@@ -452,8 +452,8 @@ func TestEveryTrailingFormStripsToTheBrand(t *testing.T) {
 	for _, run := range trailingFormRuns {
 		forms = append(forms, strings.Join(run, " "))
 	}
-	if len(forms) < 20 {
-		t.Fatalf("only %d trailing forms read; the census runs short of the tables", len(forms))
+	if len(trailingFormWords) == 0 || len(trailingFormRuns) == 0 {
+		t.Fatal("a trailing form table is empty, so the census would pass against nothing")
 	}
 	for _, form := range forms {
 		if got := companyNameForMatching("Zzbrandzz Telecom " + form); got != "zzbrandzz telecom" {

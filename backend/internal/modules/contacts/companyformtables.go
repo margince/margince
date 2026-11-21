@@ -321,17 +321,17 @@ var hebrew = marketForms{
 	suffixRuns: [][]string{{"בע", "מ"}},
 }
 
-// trailingFormWords are legal forms that close a name in DACH, the rest of the
-// EU and Southeast Asia, and that legalSuffixes leaves out. That map is a
-// stored grouping key. These are only compared, so a wrong word here costs a
-// review suggestion and never a key.
+// trailingFormWords are legal forms that close a name, and that legalSuffixes
+// leaves out: DACH, the EU, Latin America, South and Southeast Asia, Japan.
+// That map is a stored grouping key. These are only compared, so a wrong word
+// here costs a review suggestion and never a key.
 //
 // A form that is also an everyday last word is listed only as its dotted run
 // below: "Day Spa" keeps "spa", while "S.p.A." is removed.
 var trailingFormWords = map[string]bool{
 	"ohg": true, "kgaa": true, "gbr": true, "mbh": true, "se": true, "eg": true,
 	"ab": true, "aps": true, "sarl": true, "ltda": true, "kft": true, "zrt": true,
-	"pte": true, "pvt": true,
+	"pte": true, "pvt": true, "bhd": true,
 }
 
 // trailingFormRuns are trailing forms that arrive as several words, because
@@ -340,6 +340,9 @@ var trailingFormRuns = [][]string{
 	{"e", "v"},
 	{"e", "k"},
 	{"ug", "haftungsbeschrankt"},
+	{"ug", "haftungsbeschraenkt"},
+	{"e", "g"},
+	{"s", "a"},
 	{"s", "p", "a"},
 	{"s", "a", "r", "l"},
 	{"s", "l"},

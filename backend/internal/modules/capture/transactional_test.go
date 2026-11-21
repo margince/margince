@@ -28,6 +28,12 @@ func TestTransactionalListSuppress(t *testing.T) {
 			wantReason:   "transactional_infra:docusign.net",
 		},
 		{
+			name:         "a relay-only domain is infrastructure, so it gets no company",
+			in:           TransactionalInput{Domain: "pipedrivemail.com", Localpart: "acme+deal42"},
+			wantSuppress: true,
+			wantReason:   "transactional_infra:pipedrivemail.com",
+		},
+		{
 			name:         "sendgrid relay suppressed",
 			in:           TransactionalInput{Domain: "bounces.sendgrid.net", Localpart: "bounce"},
 			wantSuppress: true,

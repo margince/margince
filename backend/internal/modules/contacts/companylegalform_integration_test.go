@@ -15,7 +15,9 @@ import (
 
 // A company created again under its legal form lands on the review queue
 // through the create path. The two share no domain or fact, and neither is
-// merged. Each form is one some market writes after the name.
+// merged. Each form is one some market writes after the name. A pair outside
+// the caller's row scope stays hidden, which
+// TestDedupeQueueHidesPairsOutsideTheCallersRowScope holds for every pair.
 func TestACompanyNamedAgainWithItsLegalFormIsSuggestedForReview(t *testing.T) {
 	for i, form := range []string{
 		"Inc", "OHG", "KGaA", "e.V.", "UG (haftungsbeschränkt)", "GmbH & Co. KGaA",

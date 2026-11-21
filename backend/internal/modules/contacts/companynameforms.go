@@ -249,6 +249,8 @@ func matchingFormOf(s string) (string, *marketForms) {
 func stripTrailingForms(fields []string) []string {
 	for {
 		before := len(fields)
+		// Runs first, so "Sdn Bhd" goes whole before the word "bhd" leaves "sdn".
+		fields = stripTrailingRuns(fields, trailingFormRuns)
 		for len(fields) > 1 {
 			last := fields[len(fields)-1]
 			if !legalSuffixes[last] && !trailingFormWords[last] {
@@ -256,7 +258,6 @@ func stripTrailingForms(fields []string) []string {
 			}
 			fields = fields[:len(fields)-1]
 		}
-		fields = stripTrailingRuns(fields, trailingFormRuns)
 		if len(fields) == before {
 			return fields
 		}

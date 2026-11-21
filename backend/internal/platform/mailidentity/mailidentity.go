@@ -29,7 +29,6 @@ var transactionalBaseline = map[string]struct{}{
 	"sparkpostmail.com": {}, // SparkPost
 	"createsend.com":    {}, // Campaign Monitor
 	"cmail19.com":       {},
-	"docusign.net":      {}, // DocuSign envelope infrastructure
 }
 
 // foldLocalpart lowercases a local part and drops the separators that spell
@@ -131,7 +130,7 @@ func isTokenReplyLocalpart(local string) bool {
 // machineShape is the one rule for "this address belongs to a sending
 // system". It matches a marker local part, a token reply address or a
 // notification host. It also matches a technical destination host, such as a
-// CRM's BCC logging address.
+// CRM's BCC logging address, and any address on a relay-only domain.
 func machineShape(address string) bool {
 	at := strings.LastIndex(address, "@")
 	if at <= 0 || at == len(address)-1 {
@@ -147,6 +146,7 @@ func machineShape(address string) bool {
 // relayOnlyDomains are registrable domains that hold no human mailbox at all:
 // a CRM's per-deal logging relay and an e-signature envelope sender. The
 // vendor's own staff write from another domain, so no human is refused here.
+// Infrastructure counts them as well, so they also get no company.
 var relayOnlyDomains = map[string]bool{
 	"pipedrivemail.com": true,
 	"docusign.net":      true,
@@ -188,9 +188,9 @@ func technicalDestinationHost(host string) bool {
 }
 
 // HasMachineLocalpart reports whether an address names a sending system rather
-// than a human, by its local part, its notification host or a technical
-// destination host. No domain allowlist overrules it: nobody answers at
-// noreply@ on any domain.
+// than a human. It reads the local part, a notification host, a technical
+// destination host and the relay-only domains. No domain allowlist overrules
+// it, because nobody answers at noreply@ or at a relay-only domain.
 func HasMachineLocalpart(address string) bool { return machineShape(address) }
 
 // IsMachineAddress reports mail infrastructure and machine-only sender addresses.
@@ -206,12 +206,15 @@ func IsMachineAddress(address string) bool {
 	if base == "" {
 		return false
 	}
-	_, transactional := transactionalBaseline[base]
-	return transactional
+	return Infrastructure(base)
 }
 
 // Infrastructure reports a registrable domain reserved for transactional mail.
-func Infrastructure(domain string) bool { _, ok := transactionalBaseline[domain]; return ok }
+// A relay-only domain is infrastructure too, so it gets no company question.
+func Infrastructure(domain string) bool {
+	_, ok := transactionalBaseline[domain]
+	return ok || relayOnlyDomains[domain]
+}
 
 // BareAddress extracts the address from a provider display label.
 func BareAddress(label string) string {
