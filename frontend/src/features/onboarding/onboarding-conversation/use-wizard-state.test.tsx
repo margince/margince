@@ -143,6 +143,20 @@ describe("a journey finished in another tab", () => {
     });
   });
 
+  it("goes Home when a step's checkpoint finds the journey finished", async () => {
+    window.location.hash = "#/onboarding/voice";
+    let stored = stateAt("voice", 2);
+    installFetchStub({
+      "GET /onboarding/state": () => jsonResponse(stored),
+      "PUT /onboarding/state": () => jsonResponse({ code: "conflict" }, 409),
+    });
+    const { persist } = renderPersist();
+    stored = stateAt("complete", 9);
+
+    await persist({ step: "connect", values: EMPTY_DRAFT.values });
+    expect(window.location.hash).toBe("#/home");
+  });
+
   it("still reports a write refused while the journey is unfinished", async () => {
     installFetchStub({
       "GET /onboarding/state": () => jsonResponse(stateAt("connect", 3)),

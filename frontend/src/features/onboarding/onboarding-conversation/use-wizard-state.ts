@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import type { components } from "../../../api/schema";
+import { useAddressWriters } from "../../../lib/urlstate";
 import type { CompanyForm } from "../onboarding";
 import { wizardStateBody, writeWizardState } from "../onboarding";
 import { onboardingProgressOptions } from "../onboarding-progress";
@@ -125,6 +126,7 @@ export function useWizardStatePersist() {
   const saved = useRef<SavedState | null>(null);
   const queue = useRef<Promise<boolean>>(Promise.resolve(true));
   const client = useQueryClient();
+  const { navigateReplacing } = useAddressWriters();
 
   const persist = useCallback(
     (input: WizardPersistInput): Promise<boolean> => {
@@ -158,9 +160,12 @@ export function useWizardStatePersist() {
           // The app shell gates on this same entry: a completion it never
           // learned of would send the finished journey straight back here.
           client.setQueryData(onboardingProgressOptions.queryKey, written);
-          // A finish that finds the journey complete has nothing left to say,
-          // so it hands off; any other step did not land.
-          return written.step !== "complete" || input.step === "complete";
+          if (written.step === "complete" && input.step !== "complete") {
+            // Another tab finished the journey, so this one goes Home too.
+            navigateReplacing({ screen: "home" });
+            return false;
+          }
+          return true;
         } catch {
           // Best-effort by design: the act must never stall on state
           // persistence. The caller learns via the false result (the proposal
@@ -176,7 +181,7 @@ export function useWizardStatePersist() {
       });
       return queue.current;
     },
-    [client],
+    [client, navigateReplacing],
   );
 
   return { persist };
