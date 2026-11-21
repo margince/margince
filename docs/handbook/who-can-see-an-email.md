@@ -86,8 +86,9 @@ readers of that message.
 
 A shared mailbox can be a source too. The list names it by its address. Its
 mail is also read by the mailbox's reader team, including members who are not
-on the message. Admins outside that team do not read it. A shared mailbox has
-no owner to start a history import, so it captures new mail only.
+on the message. Admins outside that team do not read it. This switch keeps
+only new mail from a shared mailbox. To bring in its older mail, use **Import
+older mail**, see [Shared mailboxes](#shared-mailboxes).
 
 Sharing one message does not share its thread or give a team access.
 Other members see no message or count. A link to a company, deal or project
@@ -352,8 +353,23 @@ at their next read. Their Home stops showing it at once, too.
 **A delete in the shared mailbox.** Deleting a message in the mail service
 removes nothing in Margince.
 
-Mail that came in only through a shared mailbox adds no contact, company, task
-or Worklist row. It is still filed under records that already exist.
+**Older mail.** An admin opens **Import older mail** in the mailbox's row menu
+and chooses how far back to go.
+
+**Contacts.** Mail that came in only through a shared mailbox adds no contact,
+company or lead. A sender with no contact stays filed under nothing. It is
+filed under records that already exist.
+
+**Work from it.** Such mail can still make work. That is a reply reminder, a row on the
+waiting list, a follow-up on a promise, or a question about its deal.
+One colleague gets each, picked in this order:
+
+1. The owner of the contact it came from, or went to.
+2. The owner of that contact's company.
+3. The mailbox's backup owner, if an admin named one.
+
+The colleague must be able to hold work and must already read the mail. When
+nobody fits, the mail makes no work. Held mail gets no reply reminder.
 
 When you open such an email, the reason under its subject says **In a shared
 mailbox**. The line below it names the mailbox and the team that reads it.
