@@ -38,14 +38,10 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 		rec.ThreadKey == "" || seat == ids.Nil {
 		return rec.ThreadKey, nil
 	}
-	own := strings.TrimSuffix(strings.TrimPrefix(rec.NaturalKey.SourceID, "<"), ">")
-	var stored, taken bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)
-		    OR EXISTS (SELECT 1 FROM activity_identity WHERE identity_kind = $3 AND identity_key = $4),
-		       EXISTS (SELECT 1 FROM activity WHERE thread_key = $4)`,
-		connector.EmailSourceSystem, rec.NaturalKey.SourceID, s.mailIdentityKind, own).Scan(&stored, &taken); err != nil {
-		return "", fmt.Errorf("capture: reading whether a reply is already stored: %w", err)
+	own := ownThreadKey(rec)
+	stored, taken, err := s.mailHeldTx(ctx, tx, rec)
+	if err != nil {
+		return "", err
 	}
 	if stored {
 		return rec.ThreadKey, nil
@@ -72,6 +68,24 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 		return parentKey, nil
 	}
 	return own, CarryThreadVerdictsTx(ctx, tx, parentKey, own)
+}
+
+// ownThreadKey is the conversation key a mail would open: its own Message-ID.
+func ownThreadKey(rec connector.NormalizedRecord) string {
+	return strings.TrimSuffix(strings.TrimPrefix(rec.NaturalKey.SourceID, "<"), ">")
+}
+
+// mailHeldTx reports whether a mail is stored already, under its key or its
+// mail identity, and whether another mail's thread already carries its own key.
+func (s *Sink) mailHeldTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (stored, taken bool, err error) {
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)
+		    OR EXISTS (SELECT 1 FROM activity_identity WHERE identity_kind = $3 AND identity_key = $4),
+		       EXISTS (SELECT 1 FROM activity WHERE thread_key = $4)`,
+		connector.EmailSourceSystem, rec.NaturalKey.SourceID, s.mailIdentityKind, ownThreadKey(rec)).Scan(&stored, &taken); err != nil {
+		return false, false, fmt.Errorf("capture: reading whether a mail is already stored: %w", err)
+	}
+	return stored, taken, nil
 }
 
 // heldParentTx answers the conversation of the message a reply names as its parent, and

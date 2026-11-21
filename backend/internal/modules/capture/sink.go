@@ -260,6 +260,9 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 	}
 
 	s = s.withRetryFileStage()
+	if err := s.prestageFiles(ctx, rec); err != nil {
+		return datasource.EntityRef{}, err
+	}
 	// The counterparty ensure acts as the connector, not under the member
 	// authority the admission below binds into the transaction's context.
 	ensureCtx := ctx
@@ -267,6 +270,7 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 	txStart := time.Now()
 	original := rec
 	err = storekit.RetryLockCycles(ctx, func() error {
+		s.beginFileAttempt()
 		return s.db.Tx(ctx, func(tx pgx.Tx) error {
 			rec = original
 			attempt = captureAttempt{}
@@ -318,6 +322,7 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
 	}
+	s.discardUnnamedFiles(ctx)
 	return s.finishCapture(ctx, rec, attempt)
 }
 

@@ -230,17 +230,11 @@ func (s *Sink) finishNewActivity(
 	// read from the activity's own company link, which does not exist until
 	// the line above has run.
 	//
-	// Staged HERE, inside the transaction and only once the message is known to
-	// be new. The bytes still land before the row that points at them — the put
-	// is not transactional — but two things now cannot happen. Colleague mail
-	// the internal gate drops never has its files written at all, which it did
-	// when staging ran ahead of that gate. And a replayed message writes no
-	// second copy: every pull minted fresh keys and then skipped the insert, so
-	// a routine backfill left an unreferenced object per attachment per pass.
-	// A private message stores no bytes, only the files' names. Decided here,
-	// before staging, because this is the last point where the bodies are
-	// still only in memory: once stageParts has run they are in the object
-	// store, and the raw original points at them rather than carrying them.
+	// Named here, once the message is known to be new. The bytes were stored
+	// before the transaction when the short read found them kept
+	// (sinkprestage.go), and are stored here otherwise. Dropped internal mail,
+	// a replay and a private message keep no bytes: the short read asks the
+	// same gates. What a committed capture names nowhere is deleted after it.
 	rec, err := s.keepPartsAndOriginal(ctx, tx, id, rec, fields)
 	if err != nil {
 		return counterpartyDecision{}, err
