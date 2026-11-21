@@ -11,8 +11,8 @@ import (
 
 // TypeSet is the event types one consumer group's handler acts on. The
 // subscriber acks every other type before a dedupe mark is written. The handler
-// tests its input against the same value, so the two cannot disagree. The zero
-// TypeSet holds every type.
+// tests its input against the same value. The zero TypeSet holds every type.
+// Held by: TestEveryDeclaringHandlerStartsWithItsGroupsTypeTest (backend/gates/consumergrouptypes_test.go)
 type TypeSet struct {
 	types map[string]struct{}
 }
@@ -85,8 +85,8 @@ var (
 // contextGraphEntities are the streams of the records the embedding index holds.
 var contextGraphEntities = []string{contactStreamEntity, companyStreamEntity, dealStreamEntity, activityStreamEntity, leadStreamEntity}
 
-// typesOn is every catalog type riding one of the entities' streams whose verb
-// ends in one of the suffixes.
+// typesOn collects the catalog types that ride one of the entities' streams and
+// end in one of the suffixes.
 func typesOn(entities []string, suffixes ...string) TypeSet {
 	var out []string
 	for eventType, spec := range catalog {

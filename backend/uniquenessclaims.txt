@@ -287,7 +287,6 @@ internal/modules/ai/railemit_test.go#func TestADegradedCallSaysWhyEvenWithNoSent
 internal/modules/ai/sovereignendpoint_test.go#func TestABracketedIPv6EndpointIsAccepted
 internal/modules/ai/voice_sendoutcome_integration_test.go#func TestRecordSendOutcomeCannotReachAnotherWorkspacesSignal
 internal/modules/ai/voicecorpus.go#const CorpusMeterVersion
-internal/modules/aiactivity/handler.go#var eventType
 internal/modules/aiactivity/store.go#method Change.args
 internal/modules/approvals/authority.go#const objectActivity
 internal/modules/approvals/decisioneffect.go#method Service.runDecisionEffect

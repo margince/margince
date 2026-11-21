@@ -48,10 +48,6 @@ func TestAListenersGroupCoversTheStreamsItsTypesRouteTo(t *testing.T) {
 	if !reflect.DeepEqual(group.Streams, want) {
 		t.Errorf("streams = %v, want %v — deduplicated and sorted", group.Streams, want)
 	}
-	types := []string{"activity.archived", "activity.captured", "contact.archived", "ext_notes.note_added"}
-	if got := group.Types.List(); !reflect.DeepEqual(got, types) {
-		t.Errorf("types = %v, want %v: the subscriber acks every other type unread", got, types)
-	}
 }
 
 // One group per SUBSCRIPTION, not per unit: consumers on one group share a

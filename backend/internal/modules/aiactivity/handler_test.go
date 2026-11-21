@@ -22,8 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// eventType is the generated payload's own type, so the declared set cannot
-// drift from the schema.
+// eventType is the generated payload's own type, which the declared set must
+// match.
 var eventType = crmcontracts.InternalEventAiTaskStateChanged{}.EventType()
 
 func TestTheGroupDeclaresTheGeneratedEventType(t *testing.T) {

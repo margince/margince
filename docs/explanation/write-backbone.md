@@ -329,7 +329,7 @@ handler again, and the key layer makes that run do nothing.
 A group may declare the event types its handler acts on (`Group.Types`). The subscriber acks every
 other entry before `Dedupe` runs, in one `XACK` for each read, so such an entry leaves no mark. The
 handler tests its input against the same set. `TestEveryHandlerIgnoresTheTypesItsGroupLeavesOut` in
-`backend/internal/compose/grouptypes_test.go` feeds each handler every type its group leaves out. A
+`backend/gates/consumergrouptypes_test.go` feeds each handler every type its group leaves out. A
 group with no list gets every type on its streams.
 
 ---
