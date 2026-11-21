@@ -208,6 +208,10 @@ func (w *csvWriters) reconcilePrediction(
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
+	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
+	if err != nil || why.Code != "" {
+		return predictUnwritable, why, err
+	}
 	w.predictedChange, err = w.changeOf(ctx, id, changed, current)
 	return predictUpdate, kept, err
 }

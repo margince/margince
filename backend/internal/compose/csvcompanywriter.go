@@ -59,6 +59,47 @@ func (w *csvWriters) claimRow(row migration.Row, typed map[string]any) {
 	w.links.claims.Claim(w.object, w.keysOf(row, typed))
 }
 
+// movedKeyRefusal says why an update cannot move a key onto its record: an
+// earlier row of the run already holds the key. The test run and the import
+// both ask here before they write, so the preview promises only an update the
+// import makes. A company's domain is also checked against stored holders.
+// The store refuses the other stored keys, and the import skips that row.
+func (w *csvWriters) movedKeyRefusal(ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any, changed map[string]string) (migration.Reason, error) {
+	keys, ledger := w.keysOf(row, typed), w.links.claims
+	moved := func(field string) bool { _, ok := changed[field]; return ok }
+	linkedIn := moved(fieldLinkedIn) && w.object != migration.ObjectContact &&
+		ledger.Held(importkeys.LinkedIn, keys[importkeys.LinkedIn], w.object)
+	switch w.object {
+	case migration.ObjectCompany:
+		if !moved(fieldDomain) {
+			break
+		}
+		domain := keys[importkeys.Domain]
+		held, err := importkeys.DomainHeldByAnother(ctx, w.pool, domain, id)
+		if err != nil {
+			return migration.Reason{}, err
+		}
+		if held || ledger.Held(importkeys.Domain, domain, w.object) {
+			return domainClaimedWhy, nil
+		}
+	case migration.ObjectLead:
+		if moved(fieldEmail) && ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectLead) {
+			return naturalKeyTakenWhy, nil
+		}
+	case migration.ObjectContact:
+		if moved(fieldEmail) && ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectContact) {
+			return duplicateEmailWhy, nil
+		}
+		if moved(fieldEmail) && ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectLead) {
+			return contactEmailClaimedWhy, nil
+		}
+	}
+	if linkedIn {
+		return linkedInClaimedWhy, nil
+	}
+	return migration.Reason{}, nil
+}
+
 // keyCheck is one key the create door refuses: held by an earlier row of the
 // run, or by a stored record.
 type keyCheck struct {

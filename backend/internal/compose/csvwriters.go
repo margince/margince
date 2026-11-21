@@ -355,6 +355,13 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return skippedFor(cannotEditWhy(w.object)), nil
 	}
+	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if why.Code != "" {
+		return skippedFor(why), nil
+	}
 	// A reviewed plan lands the row inside one shared transaction, so a refused
 	// write is rolled back to here before the row is skipped.
 	if err := database.WithSavepoint(ctx, func(ctx context.Context) error {

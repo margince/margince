@@ -116,6 +116,22 @@ func DomainHeld(ctx context.Context, pool *pgxpool.Pool, domain string) (bool, e
 	return held, err
 }
 
+// DomainHeldByAnother is DomainHeld for a company that moves a domain onto
+// itself: its own live domains are not a holder.
+func DomainHeldByAnother(ctx context.Context, pool *pgxpool.Pool, domain string, self ids.UUID) (bool, error) {
+	if domain == "" {
+		return false, nil
+	}
+	var held bool
+	err := probe(ctx, pool, fmt.Sprintf("%q", domain), func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM company_domain
+			   WHERE domain = ANY($1) AND archived_at IS NULL AND company_id <> $2)`,
+			owndomain.Spellings(domain), self).Scan(&held)
+	})
+	return held, err
+}
+
 // VisibleDomainHolder finds the live company holding a domain, in any spelling
 // the store keeps, inside the caller's row scope. A domain is unique among
 // live rows, so one row is the whole answer.
