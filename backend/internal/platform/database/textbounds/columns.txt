@@ -1007,6 +1007,7 @@ public.legal_entity.display_name exempt the registered entity identity can inher
 public.legal_entity.iban document
 public.legal_entity.icp document
 public.legal_entity.imprint document
+public.legal_entity.jurisdiction document
 public.legal_entity.legal_name line
 public.legal_entity.logo_object_key document
 public.legal_entity.offer_summary document checked: typed by an admin; refused past 20000

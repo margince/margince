@@ -70,7 +70,7 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // Checks run in Ensure's order: create grant, then cells, then a contact's
 // company link under the run's policy. A dropped link rides on the outcome.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
-	w.predictedWarnings = nil
+	w.predictedWarnings, w.predictedChange = nil, nil
 	if refused := w.createRefusal(ctx, row); refused != nil {
 		return predictUnwritable, refused, nil
 	}
@@ -169,6 +169,9 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 		return predictUnwritable, why, err
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
+	if err == nil && !collides {
+		collides, err = w.collidesInFile(ctx, row)
+	}
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
@@ -212,7 +215,8 @@ func (w *csvWriters) reconcilePrediction(
 	if why, err := w.movedKeyRefusal(ctx, id, row, changed, typed, current); err != nil || why.Code != "" {
 		return predictHeldKey, why, err
 	}
-	return predictUpdate, kept, nil
+	w.predictedChange, err = w.changeOf(ctx, id, changed, current)
+	return predictUpdate, kept, err
 }
 
 // movedKeyRefusal is the skip the commit answers for a row that moves a key

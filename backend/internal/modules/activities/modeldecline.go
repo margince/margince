@@ -23,6 +23,10 @@ package activities
 // prompt is left. Held by: TestTwoPromptsServedSideBySideOfferADeclinedRowOncePerTickEach
 // (backend/internal/modules/activities/declineruleset_integration_test.go).
 //
+// A solo answer below the confidence floor takes the same stamp. It is kept
+// as neither a label nor a verdict. The same prompt would be unsure again, so
+// the row waits for a new prompt as a decline does.
+//
 // The stamp is bookkeeping about the sweep, not a judgement of the message: it
 // states no verdict, so it mints no audit entry and no event, the posture
 // SetCaptureLabel takes for the label beside it.
@@ -31,6 +35,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -50,6 +55,25 @@ var (
 	captureLabelDecline = declineStamp{"capture_label_declined_at", "capture_label_declined_ruleset", "capture_label"}
 	owedVerdictDecline  = declineStamp{"owed_verdict_declined_at", "owed_verdict_declined_ruleset", owedVerdictField}
 )
+
+// declineStampsClearedWhen is the SET list that offers a row to both sweeps
+// again when changed holds. Every write that changes text a model reads uses
+// it, because a stamp answered for the old text says nothing about the new.
+func declineStampsClearedWhen(changed string) string {
+	var sets []string
+	for _, stamp := range []declineStamp{captureLabelDecline, owedVerdictDecline} {
+		for _, column := range []string{stamp.at, stamp.ruleset} {
+			col := pgx.Identifier{column}.Sanitize()
+			sets = append(sets, col+" = CASE WHEN "+changed+" THEN NULL ELSE "+col+" END")
+		}
+	}
+	return strings.Join(sets, ", ")
+}
+
+// patchChangesTextSQL holds when the patch's subject ($%[2]d) or body ($%[3]d)
+// differs from the stored text, in applyActivityPatch's own placeholders.
+const patchChangesTextSQL = `(($%[2]d::text IS NOT NULL AND $%[2]d::text IS DISTINCT FROM subject)
+		    OR ($%[3]d::text IS NOT NULL AND nullif($%[3]d::text, '') IS DISTINCT FROM body))`
 
 // errRulesetUnnamed refuses a read or write that names no prompt digest. Every
 // stamp is stale against an empty digest: a backlog read for none would hand
@@ -71,18 +95,25 @@ func (d declineStamp) offeredSQL(qualifier, param string) string {
 // the models declined to label it under ruleset, reporting whether this write
 // stamped it.
 func (s *Store) MarkCaptureLabelDeclined(ctx context.Context, id ids.UUID, ruleset string) (bool, error) {
-	return s.markDeclined(ctx, id, captureLabelDecline, ruleset)
+	return s.markDeclined(ctx, id, captureLabelDecline, ruleset, nil)
+}
+
+// MarkCaptureLabelUnsure takes one message out of the classify backlog because
+// its solo answer under ruleset fell below the floor. Like SetCaptureLabel it
+// applies only to readVersion: text that changed during the call is asked again.
+func (s *Store) MarkCaptureLabelUnsure(ctx context.Context, id ids.UUID, ruleset string, readVersion int64) (bool, error) {
+	return s.markDeclined(ctx, id, captureLabelDecline, ruleset, &readVersion)
 }
 
 // MarkOwedVerdictDeclined takes one message out of the owed backlog and the
-// re-judge sweep because the models declined to judge it under ruleset. A
-// verdict already on the row stands: declining to re-judge it is not a
-// judgement that it was wrong.
-func (s *Store) MarkOwedVerdictDeclined(ctx context.Context, id ids.UUID, ruleset string) (bool, error) {
+// re-judge sweep because the models declined or stayed unsure under ruleset.
+// A verdict already on the row stands: declining to re-judge it is not a
+// judgement that it was wrong. It applies only to readVersion.
+func (s *Store) MarkOwedVerdictDeclined(ctx context.Context, id ids.UUID, ruleset string, readVersion int64) (bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return false, err
 	}
-	return s.markDeclined(ctx, id, owedVerdictDecline, ruleset)
+	return s.markDeclined(ctx, id, owedVerdictDecline, ruleset, &readVersion)
 }
 
 // markDeclined stamps the question as declined under ruleset. offeredSQL is the
@@ -91,16 +122,23 @@ func (s *Store) MarkOwedVerdictDeclined(ctx context.Context, id ids.UUID, rulese
 // hold and archive clauses are what the backlogs test: activity_refuse_restricted_mutation
 // rejects any write to a held row, and an archived row is out of every backlog
 // already, so neither may fail or be touched by the sweep.
-func (s *Store) markDeclined(ctx context.Context, id ids.UUID, stamp declineStamp, ruleset string) (applied bool, err error) {
+// A non-nil readVersion also requires the row to be the version the model read.
+func (s *Store) markDeclined(ctx context.Context, id ids.UUID, stamp declineStamp, ruleset string, readVersion *int64) (applied bool, err error) {
 	if ruleset == "" {
 		return false, fmt.Errorf("activities: recording a declined %s needs the prompt that was declined: %w", stamp.question, errRulesetUnnamed)
+	}
+	args := []any{id, ruleset}
+	versionClause := ""
+	if readVersion != nil {
+		args = append(args, *readVersion)
+		versionClause = fmt.Sprintf(" AND version = $%d", len(args))
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		at, rulesetCol := pgx.Identifier{stamp.at}.Sanitize(), pgx.Identifier{stamp.ruleset}.Sanitize()
 		tag, err := tx.Exec(ctx, `
 			UPDATE activity SET `+at+` = now(), `+rulesetCol+` = $2
-			WHERE id = $1 AND `+stamp.offeredSQL("", "$2")+`
-			  AND restricted_at IS NULL AND archived_at IS NULL`, id, ruleset)
+			WHERE id = $1 AND `+stamp.offeredSQL("", "$2")+versionClause+`
+			  AND restricted_at IS NULL AND archived_at IS NULL`, args...)
 		if err != nil {
 			return fmt.Errorf("activities: recording that the models declined the %s: %w", stamp.question, err)
 		}

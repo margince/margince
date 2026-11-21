@@ -39,7 +39,7 @@ func (h Handlers) CreateLegalEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	entity, err := h.store.CreateLegalEntity(r.Context(), LegalEntityInput{
-		DisplayName: &body.DisplayName, LegalName: &body.LegalName, Country: &body.Country,
+		DisplayName: &body.DisplayName, LegalName: &body.LegalName, Country: &body.Country, Jurisdiction: body.Jurisdiction,
 		Address: addressInput(body.Address), VatID: body.VatId, RegisterCourt: body.RegisterCourt,
 		RegisterNumber: body.RegisterNumber, DefaultLanguage: body.DefaultLanguage,
 		BankAccountHolder: body.BankAccountHolder, IBAN: body.Iban, BIC: body.Bic, Imprint: body.Imprint,
@@ -74,7 +74,7 @@ func (h Handlers) UpdateLegalEntity(w http.ResponseWriter, r *http.Request, id c
 		return
 	}
 	entity, err := h.store.UpdateLegalEntity(r.Context(), pathID[ids.LegalEntityKind](id), LegalEntityInput{
-		DisplayName: body.DisplayName, LegalName: body.LegalName, Country: body.Country,
+		DisplayName: body.DisplayName, LegalName: body.LegalName, Country: body.Country, Jurisdiction: body.Jurisdiction,
 		Address: addressInput(body.Address), VatID: body.VatId, RegisterCourt: body.RegisterCourt,
 		RegisterNumber: body.RegisterNumber, DefaultLanguage: body.DefaultLanguage,
 		BankAccountHolder: body.BankAccountHolder, IBAN: body.Iban, BIC: body.Bic, Imprint: body.Imprint,
@@ -152,7 +152,7 @@ func LegalEntityWire(e LegalEntity) crmcontracts.LegalEntity {
 		Id: openapi_types.UUID(e.ID.UUID), IsDefault: e.IsDefault, DisplayName: e.DisplayName, LegalName: e.LegalName,
 		Address: crmcontracts.LegalEntityAddress{Line1: a.Line1, Line2: a.Line2, PostalCode: a.PostalCode, City: a.City, Region: a.Region},
 		VatId:   e.VatID, RegisterCourt: e.RegisterCourt, RegisterNumber: e.RegisterNumber,
-		Country: e.Country, DefaultLanguage: e.DefaultLanguage, BankAccountHolder: e.BankAccountHolder,
+		Country: e.Country, Jurisdiction: e.Jurisdiction, DefaultLanguage: e.DefaultLanguage, BankAccountHolder: e.BankAccountHolder,
 		Iban: e.IBAN, Bic: e.BIC, Imprint: e.Imprint, SignatureTemplate: e.SignatureTemplate, Offering: offeringWire(e.Offering), LogoUrl: legalEntityLogoURL(e.EntityIdentity),
 		MemberCount: e.MemberCount, Version: e.Version, CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt,
 		ArchivedAt: e.ArchivedAt,

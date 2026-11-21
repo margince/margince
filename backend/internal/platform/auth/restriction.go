@@ -28,7 +28,7 @@ func ActivityRestrictedSQL(activityExpr string) string {
 		        WHERE restriction_party.activity_id = ` + activityExpr + `
 		       UNION ALL
 		       SELECT restriction_email.contact_id FROM activity_participant restriction_party
-		         JOIN contact_email restriction_email ON lower(restriction_email.email) = lower(restriction_party.address)
+		         JOIN contact_email restriction_email ON restriction_email.email = lower(restriction_party.address)
 		        WHERE restriction_party.activity_id = ` + activityExpr + `
 		       UNION ALL
 		       SELECT restriction_link.contact_id FROM activity_link restriction_link

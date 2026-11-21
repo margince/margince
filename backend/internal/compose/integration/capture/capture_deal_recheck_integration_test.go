@@ -242,3 +242,43 @@ func TestTheRecheckAsksAboutAReplyWhoseThreadWasMarkedNotAboutTheDeal(t *testing
 	recheck(t, refiler(env, w), ids.From[ids.ActivityKind](activityOf(t, e, "rt2@acme.example")))
 	wantMark(t, e, "rt2@acme.example", reporting, "unrelated/classifier")
 }
+
+// A recheck every model declines is remembered like a doubtful answer: the
+// link stands, and a second recheck under the same prompt asks nothing.
+func TestTheRecheckAsksADeclinedMailOnce(t *testing.T) {
+	env := newCaptureEnv(t)
+	w := newDealWorld(t, env.e)
+	w.employee(t, "alice@acme.example", w.customer)
+	deal := w.deal(t, "Acme rollout")
+	mail := unrecheckedLink(t, env, "rcdecl@acme.example", deal)
+	r := refiler(env, w)
+	env.topic.withheld = true
+	before := env.topic.asked()
+	recheck(t, r, mail)
+	recheck(t, r, mail)
+	if asked := env.topic.asked() - before; asked != 1 {
+		t.Fatalf("the model was asked %d times over two rechecks of a declined mail, want once", asked)
+	}
+	wantDeals(t, env.e, "rcdecl@acme.example", deal)
+}
+
+// The refile pass remembers a decline too: a mail the models declined is not
+// asked about again on the next pass.
+func TestTheRefilePassAsksADeclinedMailOnce(t *testing.T) {
+	env := newCaptureEnv(t)
+	w := newDealWorld(t, env.e)
+	w.employee(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme rollout")
+	env.topic.unconfigured = true
+	env.sync(t, mailFrom("alice@acme.example", "rfdecl@acme.example", "", "status"))
+	env.topic.unconfigured, env.topic.withheld = false, true
+	mail := ids.From[ids.ActivityKind](activityOf(t, env.e, "rfdecl@acme.example"))
+	r := refiler(env, w)
+	before := env.topic.asked()
+	refile(t, r, mail)
+	refile(t, r, mail)
+	if asked := env.topic.asked() - before; asked != 1 {
+		t.Fatalf("the model was asked %d times over two refile passes of a declined mail, want once", asked)
+	}
+	wantDeals(t, env.e, "rfdecl@acme.example")
+}

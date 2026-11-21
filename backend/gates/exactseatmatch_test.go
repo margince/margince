@@ -107,11 +107,11 @@ func rawSeatMatches(t *testing.T) []seatMatchSite {
 		sites = append(sites, found...)
 		operands += judged
 	}
-	// A comparison that moves to storekit.SeatLoginIsSQL leaves this census. So
-	// the floor falls as the debt is paid, and it is not a tree-wide count.
-	// It catches the pattern recognising nothing, which reads as zero.
-	if operands < 33 {
-		t.Fatalf("this census judged %d compared email operand(s) and expects at least 33: "+
+	// A comparison that moves to storekit.SeatLoginIsSQL, or to a bare
+	// lower-case column, leaves this census. So the floor falls as those land,
+	// and it is not a tree-wide count. It catches the pattern recognising nothing.
+	if operands < 30 {
+		t.Fatalf("this census judged %d compared email operand(s) and expects at least 30: "+
 			"it has stopped recognising them", operands)
 	}
 	return sites
@@ -204,15 +204,29 @@ func boundTables(source string) map[string]map[string]bool {
 	return aliases
 }
 
-// readsSeatLogin reports whether the operand reads app_user's email. A bare
-// column belongs to the nearest table read before it.
+// readsSeatLogin reports whether the operand reads app_user's email.
 func readsSeatLogin(before, alias string, aliases map[string]map[string]bool) bool {
+	return operandReads(before, alias, aliases, map[string]bool{"app_user": true})
+}
+
+// operandReads reports whether the operand reads a column of one of wanted. A
+// bare column belongs to the nearest table read before it. An operand with no
+// binding at all counts, because reading short is the failure.
+func operandReads(before, alias string, aliases map[string]map[string]bool, wanted map[string]bool) bool {
 	if alias != "" {
 		tables, bound := aliases[alias]
-		return !bound || tables["app_user"]
+		if !bound {
+			return true
+		}
+		for table := range tables {
+			if wanted[table] {
+				return true
+			}
+		}
+		return false
 	}
 	bindings := tableAlias.FindAllStringSubmatch(before, -1)
-	return len(bindings) == 0 || strings.EqualFold(bindings[len(bindings)-1][1], "app_user")
+	return len(bindings) == 0 || wanted[strings.ToLower(bindings[len(bindings)-1][1])]
 }
 
 // The census reads each spelling of a raw seat-login comparison, and none of
