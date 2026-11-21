@@ -189,7 +189,9 @@ func (s *OwnerIdentityStore) AddConfirmed(ctx context.Context, kind, raw string,
 			Scan(&out.ID, &out.UserID, &out.Kind, &out.Value, &out.Source, &out.CreatedAt); err != nil {
 			return fmt.Errorf("capture: adding an owner identity: %w", err)
 		}
-		database.Forget(tx, ownerIdentitiesMemo)
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		// A claim about an address already WAITING on a verdict retires that
 		// question. Without this the gates only bind mail that arrives from
 		// now on: an address deferred moments before the claim keeps its
@@ -234,9 +236,11 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
-		database.Forget(tx, ownerIdentitiesMemo)
 		if err != nil {
 			return fmt.Errorf("capture: removing an owner identity: %w", err)
+		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
 		}
 		// "archive", not a delete verb: the audit vocabulary is closed and
 		// withdrawing a claim IS retiring it, as the exclusion list reads it.
@@ -291,7 +295,7 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 // ownerIdentitiesMemo prefixes a seat's identities in a transaction's memo.
 // Every writer of an owner identity or a connection label forgets it
 // (TestEveryWriterOfAMemoizedReadForgetsIt).
-const ownerIdentitiesMemo = "capture.owner_identities:"
+const ownerIdentitiesMemo = storekit.CaptureFactsMemo + "owner_identities:"
 
 func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfSet, error) {
 	// The MAILBOX OWNER, resolved the way the creation ladder resolves them:

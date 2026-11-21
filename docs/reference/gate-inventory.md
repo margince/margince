@@ -290,6 +290,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `cachedtestinputs_test.go` | H2 | A cached test file that runs a process declares what that process read through gatekit. |
 | `calendaroccurrenceexpansion_test.go` | H2 | Every calendar pull lists occurrences, never recurring series masters. |
 | `capturecontainers_test.go` | H2 | Every mail connector tells the sink where the provider filed a message. |
+| `capturefactwriters_test.go` | H2 | Every writer of a fact capture remembers says so in its own transaction. |
 | `captureseatlessrows_test.go` | H2 | A shared mailbox is a capture\_connection with no user, and its import rows name the connection instead of a seat. |
 | `capturesinkseams_test.go` | H3 | Every optional seam the capture Sink offers is wired by the composition root. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's options. |

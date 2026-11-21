@@ -210,7 +210,9 @@ func (s *FreemailDomainStore) AddConfirmed(ctx context.Context, domain, kind str
 			Scan(&out.ID, &out.Domain, &out.Kind, &out.CreatedAt); err != nil {
 			return err
 		}
-		database.Forget(tx, freemailMemo)
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		if before != nil && *before == kind {
 			// Nothing changed — no audit row for a re-add that said the same
 			// thing, so the trail records decisions rather than clicks.
@@ -260,7 +262,9 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 		if err != nil {
 			return err
 		}
-		database.Forget(tx, freemailMemo)
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		// 'archive', not 'delete': the audit vocabulary is closed (0018) and
 		// carries no delete verb, and withdrawing a list entry IS retiring it.
 		_, auditErr := storekit.Audit(ctx, tx, "archive", freemailDomainObject, id,
@@ -310,7 +314,7 @@ func MatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
 
 // freemailMemo keys the matcher in a transaction's memo. Every writer of the
 // list forgets it (TestEveryWriterOfAMemoizedReadForgetsIt).
-const freemailMemo = "capture.freemail"
+const freemailMemo = storekit.CaptureFactsMemo + "freemail"
 
 func readMatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
 	rows, err := tx.Query(ctx, `SELECT domain, kind FROM capture_freemail_domain`)
