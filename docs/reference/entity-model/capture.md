@@ -747,7 +747,6 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_sender_override_pkey`: `unique, btree (id)`
 - `capture_sender_override_user_address_key`: `unique, btree (user_id, address)`
-- `capture_sender_override_user_idx`: `btree (user_id, created_at DESC)`
 
 **Triggers**
 

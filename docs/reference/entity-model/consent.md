@@ -176,7 +176,6 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `communication_instruction_by_director`: `btree (directed_by, directed_at DESC)`
-- `communication_instruction_live`: `btree (valid_until) WHERE (status = 'directed')`
 - `communication_instruction_pkey`: `unique, btree (id)`
 - `communication_instruction_review_id_key`: `unique, btree (review_id)`
 
@@ -272,7 +271,6 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `communication_review_by_initiator`: `btree (initiated_by, opened_at DESC)`
 - `communication_review_one_live_per_intent`: `unique, btree (delivery_intent_id) WHERE ((delivery_intent_id IS NOT NULL) AND (resolved_at IS NULL))`
-- `communication_review_open`: `btree (opened_at) WHERE (resolved_at IS NULL)`
 - `communication_review_pkey`: `unique, btree (id)`
 - `idx_communication_review_delivery_intent`: `btree (delivery_intent_id)`
 
