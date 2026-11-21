@@ -97,7 +97,15 @@ describe("the deal's products", () => {
       [`GET ${ROUTE}`]: () => jsonResponse({ data: FROM_OFFER, tag: "read-1" }),
       "GET /products": () =>
         jsonResponse({
-          data: [{ id: "p-impl", name: "Implementation" }],
+          data: [
+            {
+              id: "p-impl",
+              name: "Implementation",
+              unit: "day",
+              unit_price_minor: 120_000,
+              currency: "EUR",
+            },
+          ],
           next_cursor: null,
           has_more: false,
         }),

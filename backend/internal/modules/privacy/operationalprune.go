@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // operationalPruneBatch is how many rows one transaction of a prune removes.
@@ -51,7 +53,29 @@ func (s *RetentionService) pruneOperationalRows(ctx context.Context) error {
 				break
 			}
 		}
-		s.log.Info("retention: operational rows past their window removed", "rows", prune.Name, "count", total)
+		if err := s.recordPrune(ctx, prune.Name, total, prune.Days); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+// embedCallPrune names the embedding call traces in a prune's record.
+const embedCallPrune = "embedding call traces"
+
+// prunedAction is the system_log action of a prune that removed rows.
+const prunedAction = "retention.pruned"
+
+// recordPrune writes one system_log row for a prune that removed rows: what
+// was removed, how many and past which window. The rows are bookkeeping with
+// no subject, so they get no audit row each.
+func (s *RetentionService) recordPrune(ctx context.Context, rows string, count int64, days int) error {
+	if count == 0 {
+		return nil
+	}
+	s.log.Info("retention: operational rows past their window removed", "rows", rows, "count", count)
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := storekit.LogSystem(ctx, tx, prunedAction, map[string]any{"rows": rows, "count": count, "retain_days": days})
+		return err
+	})
 }

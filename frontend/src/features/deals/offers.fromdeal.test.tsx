@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
-import type { DealCommercial } from "./deal360/deallines";
+import type { DealCommercial } from "./deal360/deallinestotal";
 import type { Offer } from "./offers";
 import { OfferLinesPanel } from "./offers.fromdeal";
 
@@ -95,5 +95,34 @@ describe("an offer made from the deal", () => {
     expect(
       screen.queryByRole("button", { name: "Refresh from deal" }),
     ).toBeNull();
+  });
+
+  it("lists the lines it took from the deal", async () => {
+    show(
+      {
+        ...OFFER,
+        line_items: [
+          {
+            id: "li-1",
+            position: 1,
+            description: "Platform licence",
+            unit: "piece",
+            quantity: 2,
+            unit_price_minor: 10_000,
+            discount_pct: 0,
+            tax_rate: 0,
+            line_net_minor: 20_000,
+            line_tax_minor: 0,
+            line_total_minor: 20_000,
+            price_grounded: true,
+            created_at: AT,
+            updated_at: AT,
+          },
+        ],
+      },
+      1,
+    );
+    expect(await screen.findByText("Platform licence")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Line items" })).toBeTruthy();
   });
 });
