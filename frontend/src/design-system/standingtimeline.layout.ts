@@ -177,26 +177,39 @@ const TICK_INSET_PX = 8;
  * Which grid-line labels are drawn: a label whose words would run into the
  * one drawn before it is left off, and its line stays. The first label in
  * axis order wins, so the axis's end (which hangs left of its line) is the
- * one that gives way.
+ * one that gives way. A label that names its year outranks one that does
+ * not, because the labels after it name no year at all.
  */
 export function tickLabelsShown(
-  ticks: readonly Readonly<{ pct: number; chars: number }>[],
+  ticks: readonly Readonly<{
+    pct: number;
+    chars: number;
+    namesYear?: boolean;
+  }>[],
   canvasPx: number,
 ): boolean[] {
-  let lastEnd = Number.NEGATIVE_INFINITY;
-  return ticks.map((tick) => {
+  const drawn: { index: number; span: Span; namesYear: boolean }[] = [];
+  const runsInto = (span: Span) => {
+    const last = drawn.at(-1);
+    return last !== undefined && span[0] < last.span[1] + TICK_INSET_PX;
+  };
+  ticks.forEach((tick, index) => {
     const at = (tick.pct / 100) * canvasPx;
     const width = tick.chars * TICK_CHAR_PX;
     const span: Span =
       tick.pct > RIGHT_ALIGN_AFTER
         ? [at - TICK_INSET_PX - width, at - TICK_INSET_PX]
         : [at + TICK_INSET_PX, at + TICK_INSET_PX + width];
-    if (span[0] < lastEnd + TICK_INSET_PX) {
-      return false;
+    const namesYear = tick.namesYear === true;
+    while (namesYear && runsInto(span) && drawn.at(-1)?.namesYear === false) {
+      drawn.pop();
     }
-    lastEnd = span[1];
-    return true;
+    if (!runsInto(span)) {
+      drawn.push({ index, span, namesYear });
+    }
   });
+  const kept = new Set(drawn.map((label) => label.index));
+  return ticks.map((_, index) => kept.has(index));
 }
 
 /** Whether the axis counts weeks rather than months. */

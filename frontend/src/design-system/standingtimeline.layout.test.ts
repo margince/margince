@@ -330,6 +330,15 @@ describe("the grid-line labels", () => {
     ];
     expect(tickLabelsShown(ticks, 400)).toEqual([true, false]);
   });
+
+  it("give way to a later label that names its year", () => {
+    const ticks = [
+      { pct: 0, chars: 12, namesYear: true },
+      { pct: 33, chars: 9 },
+      { pct: 50, chars: 12, namesYear: true },
+    ];
+    expect(tickLabelsShown(ticks, 300)).toEqual([true, false, true]);
+  });
 });
 
 describe("a label's width", () => {

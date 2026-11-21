@@ -12,6 +12,7 @@ import {
 import { formatNumber } from "../format/format";
 import {
   formatDayMonth,
+  formatDayMonthNearYear,
   monthAndYear,
   monthName,
 } from "../format/format.dates";
@@ -351,27 +352,24 @@ function useWidth(
   return width;
 }
 
-// A grid line's words. On a span across New Year, the first month line and
-// each one that opens a year name the year. So the months read in order.
+// A grid line's words. On a span across New Year, the first line and each one
+// that opens a year name the year against `prior`, so the dates read in order.
 function tickText(
   range: TimelineAxis["range"],
-  at: number,
-  before: number | undefined,
+  day: Date,
+  prior: Date | undefined,
   locale: Locale,
 ): string {
-  const day = new Date(at);
-  if (isWeekly(range)) {
-    return formatDayMonth(day.toISOString(), locale, UTC_ZONE);
-  }
   if (isYearly(range)) {
     return String(day.getUTCFullYear());
   }
-  const year = day.getUTCFullYear();
-  const newYear =
-    before === undefined
-      ? new Date(range.end).getUTCFullYear() !== year
-      : new Date(before).getUTCFullYear() !== year;
-  return newYear
+  const iso = day.toISOString();
+  if (isWeekly(range)) {
+    return prior
+      ? formatDayMonthNearYear(iso, locale, UTC_ZONE, prior)
+      : formatDayMonth(iso, locale, UTC_ZONE);
+  }
+  return prior
     ? monthAndYear(day, locale, UTC_ZONE)
     : monthName(day.getUTCMonth() + 1, locale);
 }
@@ -381,13 +379,24 @@ function Ticks({
   locale,
   canvasPx,
 }: Readonly<{ axis: TimelineAxis; locale: Locale; canvasPx: number }>) {
-  const ticks = ticksOf(axis.range).map((tick, index, all) => ({
-    ...tick,
-    pct: axisPct(tick.at, axis),
-    text: tickText(axis.range, tick.at, all[index - 1]?.at, locale),
-  }));
+  const ticks = ticksOf(axis.range).map((tick, index, all) => {
+    const day = new Date(tick.at);
+    const prior = new Date(all[index - 1]?.at ?? axis.range.end);
+    const namesYear = prior.getUTCFullYear() !== day.getUTCFullYear();
+    const text = tickText(
+      axis.range,
+      day,
+      namesYear ? prior : undefined,
+      locale,
+    );
+    return { ...tick, pct: axisPct(tick.at, axis), text, namesYear };
+  });
   const shown = tickLabelsShown(
-    ticks.map((tick) => ({ pct: tick.pct, chars: tick.text.length })),
+    ticks.map(({ pct, text, namesYear }) => ({
+      pct,
+      chars: text.length,
+      namesYear,
+    })),
     canvasPx,
   );
   return ticks.map((tick, index) => (

@@ -333,6 +333,65 @@ describe("an axis over several years", () => {
   });
 });
 
+describe("an axis across New Year", () => {
+  const labels = () =>
+    [...document.querySelectorAll(".standing-timeline-tick-label")].map(
+      (label) => label.textContent,
+    );
+
+  it("keeps the label that opens the new year on a narrow canvas", () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(
+          private readonly measured: (
+            entries: { contentRect: { width: number } }[],
+          ) => void,
+        ) {}
+        observe() {
+          this.measured([{ contentRect: { width: 300 } }]);
+        }
+        disconnect() {}
+      },
+    );
+    try {
+      render(
+        <StandingTimeline
+          label="Brandt over time"
+          asOf="2027-01-10T09:00:00Z"
+          record={UTC_ZONE}
+          events={[
+            { key: "a", at: "2026-02-01", title: "Kickoff", kind: "done" },
+            { key: "z", at: "2027-12-01", title: "Go-live", kind: "end" },
+          ]}
+        />,
+      );
+      expect(labels()[0]).toBe("January 2026");
+      expect(labels()).toContain("January 2027");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("names the year on the week line that opens it", async () => {
+    const user = userEvent.setup();
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2027-01-03T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2026-12-20", title: "Kickoff", kind: "done" },
+          { key: "z", at: "2027-01-03", title: "Review", kind: "last" },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    expect(labels()).toContain("5 Jan 2027");
+    expect(labels()).toContain("8 Dec");
+  });
+});
+
 describe("the zoom", () => {
   // A row the record's list loaded, mark or not; only its date is read.
   const row = (at: string) => ({ occurred_at: `${at}T09:00:00Z` });
