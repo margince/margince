@@ -18,8 +18,8 @@ import (
 
 // The capture decides once whether a message is private. A verdict that lands
 // after that keeps the stored original, the files and the filing on the first
-// answer, and only a record under another key, such as the seat-scoped copy of
-// a collided message, asks again.
+// answer. Only a record under another key asks again, such as the seat-scoped
+// copy of a collided message.
 func TestAVerdictAfterThePrivacyDecisionLeavesEveryReaderOnTheFirstAnswer(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {

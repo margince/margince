@@ -79,7 +79,7 @@ func CaptureFactsChangedBy(ctx context.Context, tx pgx.Tx, written pgconn.Comman
 }
 
 // HoldCaptureFactsTx takes the facts lock shared until tx ends and reads the
-// version under it, so the run's copy is current for the rest of tx. A sequence
+// version under it. The run's copy is then current for the rest of tx. A sequence
 // nobody has advanced reads as 0, since its first nextval leaves last_value.
 func HoldCaptureFactsTx(ctx context.Context, tx pgx.Tx) error {
 	var version int64
