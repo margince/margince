@@ -6,7 +6,7 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## close_date_run
 
-15 columns · primary key `(id)` · referenced by 2 foreign keys
+14 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -24,7 +24,6 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Rules**
 
@@ -32,7 +31,6 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `close_date_run_cursor_is_whole`: `CHECK (((cursor_created_at IS NULL) = (cursor_id IS NULL)))`
 - `close_date_run_finish_matches_status`: `CHECK (((status = 'running') = (finished_at IS NULL)))`
 - `close_date_run_status_check`: `CHECK ((status = ANY (ARRAY['running', 'complete', 'incomplete'])))`
-- `close_date_run_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

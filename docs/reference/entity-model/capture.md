@@ -791,11 +791,10 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_sync_state
 
-11 columns · primary key `(connection_id)` · referenced by 0 foreign keys
+10 columns · primary key `(connection_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `backfill_active` | `boolean`, default `false` | yes |  |
 | `connection_id` | `uuid` | yes | Points at `capture_connection.id`. |
 | `consecutive_failures` | `integer`, default `0` | yes |  |
 | `failing_since` | `timestamp with time zone` |  |  |

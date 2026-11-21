@@ -240,7 +240,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"dedupe_candidate.disposition":                 {"internal/contracts", "DedupeCandidateStatus"},
 	"embed_store_binding.status":                   {"internal/contracts", "EmbedReindexStatusStatus"},
 	"field_mask.condition":                         {"internal/shared/kernel/principal", "MaskCondition"},
-	"forecast_contribution.viability_disposition":  {"internal/contracts", "DealViabilityDisposition"},
 	"forecast_snapshot.scope_kind":                 {"internal/contracts", "ForecastCallScopeKind"},
 	"forecast_snapshot.trigger":                    {"internal/contracts", "ForecastSnapshotRefTrigger"},
 	"home_read_cache.read":                         {"internal/compose/homecache", "Read"},

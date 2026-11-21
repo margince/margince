@@ -235,7 +235,6 @@ public.assurance_run.status document
 public.assurance_source_coverage.captured_by document
 public.assurance_source_coverage.source document
 public.assurance_source_coverage.state document
-public.assurance_task_item.state document
 public.assurance_task_item.subject_kind document
 public.attachment.captured_by document
 public.attachment.category document
@@ -575,7 +574,6 @@ public.consent_qualifying_event.retracted_by document
 public.consent_qualifying_event.source document
 public.consent_qualifying_event.source_entity_type document
 public.consent_text_version.body exempt complete captured or authored source content must retain its original text
-public.consent_text_version.channel document
 public.consent_text_version.content_hash document
 public.consent_text_version.jurisdiction document
 public.consent_text_version.key document
@@ -848,7 +846,6 @@ public.finance_connection.last_error_code document
 public.finance_connection.provider document
 public.finance_connection.source document
 public.finance_connection.status document
-public.finance_connection.sync_cursor document
 public.finance_customer_link.captured_by document
 public.finance_customer_link.external_customer_id document
 public.finance_customer_link.source document
@@ -875,13 +872,10 @@ public.forecast_call.scope_kind document
 public.forecast_capture_status.context_key document
 public.forecast_capture_status.failure document
 public.forecast_contribution.captured_by document
-public.forecast_contribution.category document
 public.forecast_contribution.exclusion_reason note
 public.forecast_contribution.probability_source document
 public.forecast_contribution.qualification document
-public.forecast_contribution.qualified_policy_version document
 public.forecast_contribution.risk_signals document
-public.forecast_contribution.viability_disposition document
 public.forecast_snapshot.captured_by document
 public.forecast_snapshot.definition_version document
 public.forecast_snapshot.forward_measure document
@@ -1530,7 +1524,6 @@ public.withdrawal_credential.address document
 public.withdrawal_credential.revoked_reason note
 public.withdrawal_credential.scope document
 public.withdrawal_credential.token_hash document
-public.workflow_run.error document checked: no code writes it
 public.workflow_run.handler document
 public.workflow_run.idempotency_key document
 public.workflow_run.status document

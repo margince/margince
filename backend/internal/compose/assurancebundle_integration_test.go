@@ -245,9 +245,9 @@ func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
 			    SELECT (SELECT id FROM copy), 'deal', $2
 			)
 			INSERT INTO assurance_task_item
-			       (cycle_id, exception_id, task_activity_id, subject_kind, subject_id, state)
+			       (cycle_id, exception_id, task_activity_id, subject_kind, subject_id)
 			SELECT (SELECT id FROM night), i.exception_id, (SELECT id FROM copy),
-			       i.subject_kind, i.subject_id, 'open'
+			       i.subject_kind, i.subject_id
 			  FROM assurance_task_item i WHERE i.task_activity_id = $1 LIMIT 1`,
 			original.id, original.dealID); err != nil {
 			t.Fatalf("seeding an earlier night's task: %v", err)
