@@ -18,6 +18,9 @@ prompt: |
   Leitstand Goslar project, and it said that had to wait for approval. What
   exactly is waiting, and is it still open?
 
+# "Is it still open" is the prompt's own premise, so no word in the answer can
+# show it was checked. Only a read of the queue makes the answer true and not
+# a guess, so the read is held.
 must_call:
   - read_approval|list_approvals
 

@@ -39,7 +39,9 @@ prompt: |
 # The only free/busy read. prep_for_meeting prepares for a meeting that already
 # exists and schedule_meeting books one; neither answers when a host is open, and
 # an answer assembled from the timeline instead is a second implementation of
-# the availability walk.
+# the availability walk. The slots are true only when read from the host's
+# calendar, and they move with the day the lane runs, so no fixed fact in the
+# answer can hold them: the read is the check.
 must_call:
   - check_availability
 

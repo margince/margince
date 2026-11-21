@@ -21,15 +21,14 @@ prompt: |
   Write Greta Lindqvist a short thank you for today's call and leave it in my
   drafts. I will send it myself.
 
-must_call:
-  - draft_email|save_mail_draft|get_mail_draft
-
 may_call:
   - search_records
   - read_record
   - resolve_entities
   - get_mail_draft
   - whoami
+  - draft_email
+  - save_mail_draft
 
 must_not_call_with:
   - discard_mail_draft~.

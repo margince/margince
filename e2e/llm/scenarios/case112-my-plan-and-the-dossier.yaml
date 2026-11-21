@@ -11,13 +11,6 @@ prompt: |
   Nordholz Anlagenbau GmbH? Only tell me. Change nothing and do not create
   anything new.
 
-must_call:
-  - read_details
-
-must_call_with:
-  - read_details.action=dossier
-  - read_details.action=weekly_plan
-
 may_call:
   - find_records
   - search_records
@@ -27,14 +20,19 @@ may_call:
   - read_attention
   - read_workspace
   - whoami
+  - read_details
 
 must_not_call_with:
   - run_research~.
   - change_attention~.
 
+# The admin has started no plan this week, and the dossier holds no research yet.
+# Both are facts only the reads give, so the answer must carry both.
 must_mention:
   - "Nordholz"
   - "(?i)\bplan\b"
+  - "(?i)dossier[^\n]{0,120}(?:empty|blank|no (?:sections?|content|research|entries|findings)|nothing|not (?:yet )?(?:been )?(?:written|generated|researched|built|filled)|n['’]t (?:yet )?(?:been )?(?:written|generated|researched|built|filled))|(?:empty|no|blank)[^.\n]{0,40}dossier"
+  - "(?i)\bno\b[^.]{0,40}\bplan\b|not (yet )?(started|begun|opened)|hasn't been started|haven't started"
 
 runs: 3
 pass_at: 2

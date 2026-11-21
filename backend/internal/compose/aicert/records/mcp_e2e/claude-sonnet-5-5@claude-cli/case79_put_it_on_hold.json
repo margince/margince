@@ -10,14 +10,85 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "64c7b268b90c0197",
+    "tools": "d3489e3d05911ae2",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T09:01:28Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:48:47Z"
+  },
   "usage": {
-    "input_tokens": 16,
-    "output_tokens": 1901,
-    "cache_creation_input_tokens": 9776,
-    "cache_read_input_tokens": 616410,
+    "input_tokens": 18,
+    "output_tokens": 1984,
+    "cache_creation_input_tokens": 10563,
+    "cache_read_input_tokens": 703748,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1198
+    "cost_usd": 0.1325
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "place_legal_hold",
+        "read_record",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "place_legal_hold",
+        "read_record",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4.5,
+      "min": 4,
+      "max": 5
+    },
+    "turns": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 357164.5,
+      "min": 317351,
+      "max": 396978
+    },
+    "output_tokens": {
+      "median": 992,
+      "min": 969,
+      "max": 1015
+    },
+    "duration_ms": {
+      "median": 11633,
+      "min": 10082,
+      "max": 13184
+    }
   }
 }

@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer states the weighted figure as 1,420,000 EUR, but the run's data gives weighted_display as 1,240,000.00 EUR, so that figure is wrong against the data.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Check these money figures the run stated: 1,420,000 EUR. None of them appears as such in the data Margince returned in this run, so each must be read from that data or correctly worked out from it. A figure the final answer does not state is shown after the answer, in the line the run said it in. The data the run read held these amounts and rates, each named by its field and its record; a field ending in _minor is in the currency's minor units:\n- open_amount_minor: 420000000\n- weighted_display: 1,240,000.00 EUR\n- open_deals: 37\nAnswer yes if each of those figures is read from that data or correctly worked out from it, rounding aside. Answer no if any of them is invented, or wrong against that data, wherever in the run it was said.",
+  "answer": "Board pack section composed off the saved run.\n\nOpen pipeline is EUR 4.2m across 37 open deals; weighted, that is 1,420,000 EUR."
+}

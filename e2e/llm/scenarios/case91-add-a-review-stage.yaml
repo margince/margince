@@ -7,6 +7,8 @@ writes: true
 prompt: |
   We now run a security review on every deal. Add a stage called Security review to the sales pipeline, right after Qualified.
 
+# No end-state form reads a pipeline's stages, so the new stage is held on the
+# call that creates it.
 must_call:
   - change_settings
 
