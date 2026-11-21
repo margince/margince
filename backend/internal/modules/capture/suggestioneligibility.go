@@ -36,8 +36,8 @@ func (s *Sink) suggestiblePartiesTx(ctx context.Context, tx pgx.Tx, parties []ad
 	}
 	rows, err := tx.Query(ctx, `SELECT candidate.email FROM unnest($1::text[]) candidate(email)
  WHERE NOT EXISTS(SELECT 1 FROM contact_email email JOIN contact c ON c.id=email.contact_id
- WHERE lower(email.email)=candidate.email AND email.archived_at IS NULL AND c.archived_at IS NULL)
- AND NOT EXISTS(SELECT 1 FROM lead candidate_lead WHERE lower(candidate_lead.email)=candidate.email AND `+storekit.LiveLeadClause("candidate_lead")+`)
+ WHERE email.email=candidate.email AND email.archived_at IS NULL AND c.archived_at IS NULL)
+ AND NOT EXISTS(SELECT 1 FROM lead candidate_lead WHERE candidate_lead.email=candidate.email AND `+storekit.LiveLeadClause("candidate_lead")+`)
  AND (`+priorDispositionExpression("candidate.email", "$2")+`) NOT IN ('noise','rejected','suppressed','known_noncontact')`, addresses, noiseVerdictReach.Seconds())
 	if err != nil {
 		return nil, err

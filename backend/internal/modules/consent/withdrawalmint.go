@@ -111,7 +111,7 @@ func bindWithdrawalSubject(ctx context.Context, tx pgx.Tx, in *WithdrawalMintInp
 		SELECT pe.contact_id
 		  FROM contact_email pe
 		  JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
-		 WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL`, in.Address)
+		 WHERE pe.email = $1 AND pe.archived_at IS NULL`, in.Address)
 	if err != nil {
 		return fmt.Errorf("consent: resolving the contact the unsubscribe link is for: %w", err)
 	}
@@ -121,7 +121,7 @@ func bindWithdrawalSubject(ctx context.Context, tx pgx.Tx, in *WithdrawalMintInp
 	}
 	lead, err := theOneSubjectHolding(ctx, tx, `
 		SELECT id FROM lead
-		 WHERE lower(email) = $1 AND archived_at IS NULL AND merged_into_id IS NULL`, in.Address)
+		 WHERE email = $1 AND archived_at IS NULL AND merged_into_id IS NULL`, in.Address)
 	if err != nil {
 		return fmt.Errorf("consent: resolving the lead the unsubscribe link is for: %w", err)
 	}

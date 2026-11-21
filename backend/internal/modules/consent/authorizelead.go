@@ -300,7 +300,7 @@ func resolveLead(ctx context.Context, tx pgx.Tx, r connector.Recipient) (string,
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM lead
-		 WHERE lower(email) = lower($1) AND archived_at IS NULL
+		 WHERE `+sameAddressSQL("email", "$1")+` AND archived_at IS NULL
 		 LIMIT 2`, r.Email)
 	if err != nil {
 		return "", false, fmt.Errorf("consent: resolve the lead: %w", err)
