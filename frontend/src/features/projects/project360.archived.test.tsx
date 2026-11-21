@@ -12,6 +12,7 @@ import { jsonResponse } from "../../testing/company.fixtures";
 import { project } from "../../testing/projects.fixtures";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { ProjectScreen } from "./project360";
+import { project360Key } from "./project360.key";
 import type { ArchivedHistory } from "./projectarchived";
 import { projectsBackend } from "./projects.testing";
 
@@ -24,8 +25,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+let client: QueryClient;
+
 function render(ui: ReactNode) {
-  const client = new QueryClient({
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return rtlRender(
@@ -79,6 +82,24 @@ describe("ProjectScreen on a project the 360 refuses", () => {
     expect(
       screen.queryByRole("button", { name: en["common.retry"] }),
     ).toBeNull();
+  });
+
+  it("opens the project once its 360 answers, though the row was refused before", async () => {
+    let refused = true;
+    projectsBackend({
+      respond: async (url) =>
+        refused && url.includes("/projects/pr-1") ? notFound() : null,
+    });
+    render(<ProjectScreen id="pr-1" />);
+    expect(
+      await screen.findByRole("heading", { name: en["project.page.notFound"] }),
+    ).toBeTruthy();
+
+    refused = false;
+    await client.invalidateQueries({ queryKey: project360Key("pr-1") });
+    expect(
+      await screen.findByRole("heading", { name: "CRM rollout" }),
+    ).toBeTruthy();
   });
 
   it("reads an address that names no project as not found", async () => {

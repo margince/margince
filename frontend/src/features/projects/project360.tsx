@@ -85,7 +85,8 @@ export function ProjectScreen({
   const t = useT();
   const { view, row } = useProjectScreenReads(id);
   const archived = archivedContactRow(row);
-  const missing = row.isError && isMissingProject(row.error);
+  // A disabled row keeps its last error, so a 360 that answers since then wins.
+  const missing = view.isError && row.isError && isMissingProject(row.error);
   if (archived || missing) {
     return (
       <div className="wrap">
