@@ -577,21 +577,22 @@ describe("the LinkedIn row", () => {
         }),
       ),
     });
+    const user = userEvent.setup();
     const { dispatch } = renderConnectAct();
     expect(
       await screen.findByText("linkedin.com/in/qa-onboarding"),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Change" }));
+    await user.click(screen.getByRole("button", { name: "Change" }));
     const field = screen.getByLabelText("Your LinkedIn profile URL");
     expect(field).toHaveValue("https://www.linkedin.com/in/qa-onboarding");
     expect(
       screen.queryByRole("button", { name: "Skip LinkedIn for now" }),
     ).toBeNull();
-    await userEvent.clear(field);
-    await userEvent.type(field, "https://www.linkedin.com/in/qa-fixed");
-    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    await user.clear(field);
+    await user.type(field, "https://www.linkedin.com/in/qa-fixed");
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(saves).toEqual([
@@ -614,14 +615,13 @@ describe("the LinkedIn row", () => {
         account("https://www.linkedin.com/in/lars-j"),
       ),
     });
+    const user = userEvent.setup();
     const { dispatch } = renderConnectAct("saved");
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Change" }));
     const field = screen.getByLabelText("Your LinkedIn profile URL");
-    await userEvent.clear(field);
-    await userEvent.type(field, "https://www.linkedin.com/in/lars-j");
-    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    await user.clear(field);
+    await user.type(field, "https://www.linkedin.com/in/lars-j");
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(saves).toHaveLength(1);

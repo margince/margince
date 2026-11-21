@@ -646,9 +646,10 @@ describe("restore into the conversational shell", () => {
       state: stateRow({ step: "voice" }),
       company: savedProfile,
     });
+    const user = userEvent.setup();
     render(<OnboardingScreen />);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
 
@@ -673,17 +674,18 @@ describe("restore into the conversational shell", () => {
       state: stateRow({ step: "voice" }),
       company: savedProfile,
     });
+    const user = userEvent.setup();
     render(<OnboardingScreen />);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "Add profile" }));
-    await userEvent.click(
+    await user.click(screen.getByRole("button", { name: "Add profile" }));
+    await user.click(
       await screen.findByRole("button", { name: "Skip LinkedIn for now" }),
     );
 
