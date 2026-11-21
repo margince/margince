@@ -284,3 +284,32 @@ func TestOnlyAColumnTheOwedCheckReadsClearsTheStamp(t *testing.T) {
 		}
 	}
 }
+
+// One statement that writes rows on two threads clears each thread from its
+// own earliest message, never from the earliest across the statement.
+func TestOneParticipantStatementClearsEachThreadFromItsOwnEarliestMessage(t *testing.T) {
+	e := setupLoad(t)
+	early, late := e.settledThread(t), e.settledThread(t)
+	e.exec(t, `UPDATE activity_participant SET activity_id = $2 WHERE activity_id = $1 AND role = 'from'`, late.answered, late.later)
+	e.stampSettled(t)
+
+	e.exec(t, `INSERT INTO activity_participant (activity_id, address, role)
+		VALUES ($1, 'colleague@customer.test', 'cc'), ($2, 'colleague@customer.test', 'cc')`, early.reply, late.later)
+	if e.stamped(t, early.answered) || e.stamped(t, late.later) {
+		t.Error("a participant row left a stamp at or after its own message in place")
+	}
+	if !e.stamped(t, late.answered) {
+		t.Error("the other thread's earlier message decided where this thread cleared from")
+	}
+
+	e.stampSettled(t)
+	e.exec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
+		VALUES ($1, 'second-early@customer.test', 'manual', 'system'), ($2, 'second-late@customer.test', 'manual', 'system')`,
+		early.sender, late.sender)
+	if e.stamped(t, early.answered) || e.stamped(t, late.later) {
+		t.Error("a sender address left the stamp of the sender's own mail in place")
+	}
+	if !e.stamped(t, late.answered) {
+		t.Error("the other sender's earlier mail decided where this thread cleared from")
+	}
+}
