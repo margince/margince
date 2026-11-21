@@ -63,7 +63,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.recordReferenceHandlers = recordreferences.NewHandlers(s.contactsStore, s.claimHandlers.deals, ProjectsStore(pool))
 	s.ownershipRequestHandlers = ownershipRequestHandlers{
 		transfers: newOwnershipTransfers(pool),
-		Handlers:  editaccess.Handlers{Requests: editaccess.New(InstallationDB(pool), NewApprovalsService(InstallationDB(pool)))},
+		Requests:  editaccess.New(InstallationDB(pool), NewApprovalsService(InstallationDB(pool))),
 	}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
 	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)

@@ -110,8 +110,7 @@ func seedLead(t *testing.T, e *integration.Env, owner *ids.UserID) ids.UUID {
 }
 
 func refusalCode(err error) string {
-	var refusal *contacts.OwnerAskRefusal
-	if errors.As(err, &refusal) {
+	if refusal, ok := errors.AsType[*contacts.OwnerAskRefusal](err); ok {
 		return refusal.Code
 	}
 	return ""
