@@ -185,7 +185,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Pause, resume, retry or estimate a background correction.
       description: |-
-        Requires data_task:update and the observed ledger version. Retry retains the audit run ID.
+        Requires data_task:update and the observed ledger version. Retry retains the audit run ID. On a failed step it continues from the cursor; on a done step with action_needed it starts the step over, so the records left open are tried again.
 
         Needs the passport permission Change records.
 
@@ -50189,6 +50189,30 @@ components:
         missing_prerequisites:
           type: array
           items: {type: string}
+        action_needed:
+          $ref: '#/components/schemas/DataTaskActionNeeded'
+    DataTaskActionNeeded:
+      type: object
+      additionalProperties: false
+      description: >-
+        Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total.
+      required: [reason, sentence, remedy, count, records]
+      properties:
+        reason: {type: string, enum: [privacy_reviewer_missing]}
+        sentence: {type: string, description: "What was left open, in the reader's language."}
+        remedy: {type: string, description: "What to do about it, in the reader's language."}
+        count: {type: integer, format: int64, minimum: 0}
+        records:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/DataTaskActionRecord'}
+    DataTaskActionRecord:
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type: {type: string}
+        id: {type: string, format: uuid}
     SystemHealth:
       type: object
       additionalProperties: false

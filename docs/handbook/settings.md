@@ -334,7 +334,7 @@ Moving to another view asks you to save a draft first. **Search settings** opens
 
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, leads, deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the AI finds.
-- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
+- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it. A step marked **Done, action needed** finished but left records for someone. It says why, what to do and how many records are left. Once that is done, choose **Retry** on the step to handle the records again.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
 - **AI provider status**: recorded provider problems. An empty list does not prove that a provider recently answered. See [AI providers](ai-providers.md).
 - **Mail capture checks**: connections that need attention, with the member, mailbox, condition and last good sync. Admin and Ops see no messages here.

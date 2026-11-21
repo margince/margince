@@ -58,8 +58,8 @@ type entry struct {
 	// retention action, the page a fact was read from.
 	Evidence []byte
 	// BatchID is the bulk change the row belongs to. A data task stamps its
-	// step's run id here (datatask.Execute), so two runs of one correction are
-	// told apart. Nil on rows no batch wrote.
+	// step's run id here (datatask.Execute). A retry of a finished step keeps
+	// that id, so its rerun reads as the same correction. Nil on rows no batch wrote.
 	BatchID *ids.UUID
 	// ActivityKind is what a placed activity is (email, meeting, ...), so a
 	// create says "saved an email" rather than "an email or a meeting".

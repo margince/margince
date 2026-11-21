@@ -552,6 +552,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "dataTasks.status.running": "Đang chạy",
   "dataTasks.status.paused": "Đã tạm dừng",
   "dataTasks.status.done": "Đã hoàn tất",
+  "dataTasks.status.doneWithAction": "Đã hoàn tất, cần xử lý",
   "dataTasks.status.failed": "Có lỗi",
   "dataTasks.action.pause": "Tạm dừng",
   "dataTasks.action.resume": "Tiếp tục",
@@ -568,6 +569,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "dataTasks.blocked.missing_prerequisite":
     "Cần hoàn tất các bản cập nhật bắt buộc trước.",
 
+  "dataTasks.actionRecords_one": "Còn {count} bản ghi cần xử lý",
+  "dataTasks.actionRecords_other": "Còn {count} bản ghi cần xử lý",
   "approval.preview.createEmployer":
     "Tạo công ty còn thiếu và liên kết liên hệ này làm nhân viên.",
   "approval.preview.reuseEmployer": "Liên kết liên hệ này với công ty hiện có.",
@@ -23515,6 +23518,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm kiếm có thể bỏ sót bản ghi cho đến khi chỉ mục bắt kịp. Bản thân các bản ghi vẫn được lưu.",
   "health.effect.updates":
     "Các thay đổi do bản cập nhật này xử lý vẫn chưa hoàn tất. Thay đổi đã lưu vẫn được giữ; một số bản ghi có thể còn giá trị cũ.",
+  "health.effect.updatesAction":
+    "Bản cập nhật đã hoàn tất. Một số bản ghi tìm thấy vẫn đang chờ được xử lý.",
   "health.effect.recovery":
     "Công việc CRM bình thường vẫn có thể tiếp tục. Khi xảy ra sự cố, khôi phục có thể lâu hơn hoặc mất nhiều dữ liệu mới hơn mức mục tiêu cho phép.",
   "health.effect.automatic":
@@ -23714,6 +23719,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.code.updates_retrying":
     "Bản cập nhật dữ liệu đã ghi nhận lần thử khác",
   "health.code.updates_review": "Bản cập nhật dữ liệu cần quản trị viên duyệt",
+  "health.code.updates_action":
+    "Một bản cập nhật dữ liệu đã hoàn tất nhưng còn để lại bản ghi cần được xử lý",
   "health.code.recovery_missing": "Chưa ghi nhận thử khôi phục",
   "health.code.recovery_verified":
     "Diễn tập khôi phục đã ghi nhận đạt mục tiêu",

@@ -560,6 +560,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "dataTasks.status.running": "Läuft",
   "dataTasks.status.paused": "Pausiert",
   "dataTasks.status.done": "Abgeschlossen",
+  "dataTasks.status.doneWithAction": "Abgeschlossen, Aktion nötig",
   "dataTasks.status.failed": "Fehlgeschlagen",
   "dataTasks.action.pause": "Pausieren",
   "dataTasks.action.resume": "Fortsetzen",
@@ -577,6 +578,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
   "dataTasks.blocked.missing_prerequisite":
     "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
+  "dataTasks.actionRecords_one": "{count} Datensatz noch zu bearbeiten",
+  "dataTasks.actionRecords_other": "{count} Datensätze noch zu bearbeiten",
   "approval.preview.createEmployer":
     "Das fehlende Unternehmen erstellen und als Arbeitgeber dieses Kontakts verknüpfen.",
   "approval.preview.reuseEmployer":
@@ -24159,6 +24162,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Suche findet möglicherweise nicht alle Datensätze, bis die Indexierung aufgeholt hat. Die Datensätze bleiben gespeichert.",
   "health.effect.updates":
     "Die Änderungen dieser Aktualisierung bleiben unvollständig. Bereits gespeicherte Änderungen bleiben erhalten; einige Datensätze können noch ihre bisherigen Werte haben.",
+  "health.effect.updatesAction":
+    "Die Aktualisierung ist abgeschlossen. Einige gefundene Datensätze warten noch darauf, dass jemand sie bearbeitet.",
   "health.effect.recovery":
     "Die normale CRM-Arbeit kann weitergehen. Bei einem Ausfall kann die Wiederherstellung länger dauern oder mehr neue Daten verlieren, als die Ziele vorsehen.",
   "health.effect.automatic":
@@ -24366,6 +24371,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für eine Datenaktualisierung ist ein weiterer Versuch erfasst",
   "health.code.updates_review":
     "Eine Datenaktualisierung braucht eine Administratorprüfung",
+  "health.code.updates_action":
+    "Eine Datenaktualisierung ist abgeschlossen und hat Datensätze hinterlassen, die jemand bearbeiten muss",
   "health.code.recovery_missing": "Kein Wiederherstellungstest aufgezeichnet",
   "health.code.recovery_verified":
     "Der erfasste Wiederherstellungstest erfüllte seine Ziele",

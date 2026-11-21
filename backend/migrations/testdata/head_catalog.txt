@@ -4920,6 +4920,7 @@ public.data_task_review.token_hash bytea NOT NULL gen=- def=-
 public.data_task_review_expiry CREATE INDEX data_task_review_expiry ON public.data_task_review USING btree (expires_at)
 public.data_task_review_pkey CREATE UNIQUE INDEX data_task_review_pkey ON public.data_task_review USING btree (token_hash)
 public.data_task_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.data_task_run.action_needed jsonb gen=- def=-
 public.data_task_run.activation jsonb gen=- def=-
 public.data_task_run.batch_limit integer NOT NULL gen=- def=-
 public.data_task_run.batches bigint NOT NULL gen=- def=0
