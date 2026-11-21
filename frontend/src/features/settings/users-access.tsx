@@ -8,6 +8,7 @@ import {
   useRosterPartial,
 } from "../../components/entityref";
 import { PageHeadAction } from "../../components/pageheadaction";
+import { useEveryMember } from "../../components/roster";
 import { Button, EmptyState, OverflowMenu } from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
 import { Callout } from "../../design-system/callout";
@@ -164,8 +165,10 @@ export function TeamsCard() {
   const canSeeMembership = useCan("user_admin", "read");
   const teams = useRoster("team", true);
   const teamsPartial = useRosterPartial("team", true);
-  const users = useRoster("user", canSeeMembership);
-  const usersPartial = useRosterPartial("user", canSeeMembership);
+  // The wide walk, because the Members page lists invited seats and a team
+  // count that includes them must have the same seats behind it.
+  const users = useEveryMember(canSeeMembership);
+  const usersPartial = users.data?.partial === true;
   const [openTeamId, setOpenTeamId] = useState<string | null>(null);
   // The archive invalidated ["teams"], so by the time Undo is pressed the row
   // may be gone and a lookup of its name would miss.
@@ -212,8 +215,11 @@ export function TeamsCard() {
       });
     },
   });
-  const colleagues = (users.data ?? []).flatMap((entry) =>
-    "email" in entry ? [entry] : [],
+  const colleagues = (users.data?.entries ?? []).flatMap((entry) =>
+    "email" in entry &&
+    (entry.status === "active" || entry.status === "invited")
+      ? [entry]
+      : [],
   );
   const verbs = { canRename, canArchive: canEditTeam };
   const rows = (teams.data ?? []).flatMap((entry) =>

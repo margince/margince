@@ -676,6 +676,45 @@ describe("TeamsCard membership", () => {
     expect(offered[0]).toContain("Bo Outside");
   });
 
+  it("lists an invited member with an Invited mark and lets the admin remove them", async () => {
+    const calls = mount({
+      teams: [{ id: "t-1", name: "Nord", member_count: 2 }],
+      users: [
+        ...ROSTER,
+        {
+          id: "u-inv",
+          email: "new@acme.test",
+          display_name: "Di Invited",
+          status: "invited",
+          is_agent: false,
+          team_ids: ["t-1"],
+        },
+        {
+          id: "u-gone",
+          email: "gone@acme.test",
+          display_name: "Ed Gone",
+          status: "deactivated",
+          is_agent: false,
+          team_ids: ["t-1"],
+        },
+      ],
+    });
+    const { user, dialog } = await openTeam();
+
+    const list = within(dialog).getByRole("list", {
+      name: en["users.teamMembersLabel"],
+    });
+    expect(within(list).getByText(/new@acme.test · Invited/)).toBeTruthy();
+    expect(within(list).queryByText("Ed Gone")).toBeNull();
+
+    await user.click(removeVerb(dialog, "Di Invited"));
+    await waitFor(() =>
+      expect(calls.find((call) => call.method === "DELETE")?.path).toBe(
+        "/v1/teams/t-1/members/u-inv",
+      ),
+    );
+  });
+
   it("adds the colleague picked to the team the dialog names", async () => {
     const calls = mount({ teams: NORD, users: ROSTER });
     const { user, dialog } = await openTeam();
