@@ -296,13 +296,13 @@ var companyNameBodies = []string{
 	"CreateLegalEntityRequest", "UpdateLegalEntityRequest",
 }
 
-// memberNameBodies name a seat, not a company; identity owns their limit.
+// memberNameBodies name a seat. Identity refuses each past displayNameMaxRunes.
 var memberNameBodies = []string{
 	"FormerMemberRequest", "InviteUserRequest", "SaveMyDisplayNameRequest",
 	"ServiceMemberRequest", "UpdateMemberRequest",
 }
 
-func TestEveryCompanyNameBodyPublishesTheRecordsLimit(t *testing.T) {
+func TestEveryDisplayNameBodyPublishesItsOwnersLimit(t *testing.T) {
 	t.Parallel()
 	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
@@ -336,6 +336,13 @@ func TestEveryCompanyNameBodyPublishesTheRecordsLimit(t *testing.T) {
 		limit := publishedMaxLength(t, contract, schemaPath("components", "schemas", name, "properties", "display_name"))
 		if limit != values.TextLabelCharacters {
 			t.Errorf("%s.display_name publishes %d, and the company record refuses past %d", name, limit, values.TextLabelCharacters)
+		}
+	}
+	seatLimit := appliedIntConst(t, "internal/modules/identity/userdisplayname.go", "displayNameMaxRunes")
+	for _, name := range memberNameBodies {
+		limit := publishedMaxLength(t, contract, schemaPath("components", "schemas", name, "properties", "display_name"))
+		if limit != seatLimit {
+			t.Errorf("%s.display_name publishes %d, and identity refuses a seat name past %d", name, limit, seatLimit)
 		}
 	}
 }
