@@ -244,8 +244,14 @@ export function BillingCell({
 }>) {
   const [value, setValue] = useState(() => lineBillingOf(line));
   const commit = (next: LineBilling) => {
-    setValue(next);
     const patch = lineBillingPatch(next);
+    // A line just made recurring waits for its period; a saved period is put
+    // back, since the server keeps it until another one is picked.
+    if (!patch && line.billing_interval_months) {
+      setValue(lineBillingOf(line));
+      return;
+    }
+    setValue(next);
     if (patch) {
       onSave(patch);
     }

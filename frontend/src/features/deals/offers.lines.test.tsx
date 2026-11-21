@@ -369,6 +369,28 @@ describe("a line's billing", () => {
     });
   });
 
+  it("puts a saved period back when it is emptied, since a recurring line needs one", async () => {
+    const quarterly: OfferLineItem = {
+      ...line1,
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: 4,
+    };
+    const calls = serve(draft([quarterly]), () => ({
+      status: 200,
+      body: draft([quarterly]),
+    }));
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+    const period = () =>
+      screen.getByRole("combobox", { name: "Billing period, line 1" });
+
+    await pickOption(user, period(), "Not specified");
+    expect(period().textContent).toBe("Quarterly");
+    expect(calls).toEqual([]);
+  });
+
   it("saves a line made recurring only once it has a period", async () => {
     const calls = serve(draft([line1]), () => ({
       status: 200,
