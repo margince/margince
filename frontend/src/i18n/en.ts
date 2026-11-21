@@ -13648,6 +13648,14 @@ export const en = {
     "Invite the first person who will work here instead, and setup is done.",
   "ob.conv.invite.foot":
     "Voice and accounts can also be set up later in Settings.",
+  // The same question for a seat that may not train a voice: connect is the
+  // one step left.
+  "ob.conv.invite.bodyConnect":
+    "The company is set up. The next step is about you and applies only if you will use Margince.",
+  "ob.conv.invite.yesBodyConnect":
+    "Connect your mailbox and calendar: 1 short step.",
+  "ob.conv.invite.footConnect":
+    "Accounts can also be connected later in Settings.",
   "ob.conv.invite.continue": "Continue",
   "ob.conv.invite.accepted": "Yes, I will be working in it.",
   "ob.conv.invite.declined": "No, I am only setting it up.",

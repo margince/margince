@@ -13355,6 +13355,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thay vào đó, mời người đầu tiên sẽ làm việc ở đây để hoàn tất thiết lập.",
   "ob.conv.invite.foot":
     "Giọng văn và tài khoản cũng có thể thiết lập sau trong Cài đặt.",
+  "ob.conv.invite.bodyConnect":
+    "Đã thiết lập xong công ty. Bước tiếp theo dành cho bạn và chỉ áp dụng nếu bạn sẽ dùng Margince.",
+  "ob.conv.invite.yesBodyConnect": "Kết nối hộp thư, lịch: 1 bước ngắn.",
+  "ob.conv.invite.footConnect":
+    "Tài khoản cũng có thể kết nối sau trong Cài đặt.",
   "ob.conv.invite.continue": "Tiếp tục",
   "ob.conv.invite.accepted": "Có, tôi sẽ làm việc trong Margince.",
   "ob.conv.invite.declined": "Không, tôi chỉ thiết lập thôi.",

@@ -13716,6 +13716,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Lade stattdessen das erste Mitglied ein, das hier arbeiten wird. Dann ist die Einrichtung abgeschlossen.",
   "ob.conv.invite.foot":
     "Schreibstil und Konten lassen sich auch später in den Einstellungen einrichten.",
+  "ob.conv.invite.bodyConnect":
+    "Das Unternehmen ist eingerichtet. Der nächste Schritt betrifft dich und gilt nur, wenn du Margince selbst nutzen wirst.",
+  "ob.conv.invite.yesBodyConnect":
+    "Verbinde Postfach und Kalender: 1 kurzer Schritt.",
+  "ob.conv.invite.footConnect":
+    "Konten lassen sich auch später in den Einstellungen verbinden.",
   "ob.conv.invite.continue": "Weiter",
   "ob.conv.invite.accepted": "Ja, ich werde selbst damit arbeiten.",
   "ob.conv.invite.declined": "Nein, ich richte es nur ein.",
