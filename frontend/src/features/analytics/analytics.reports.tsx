@@ -20,6 +20,7 @@ import { formatDateTime } from "../../format/format";
 import { zoneNameAndOffset } from "../../format/timezone";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { scopeDealDials } from "../../lib/dealsaddress";
 import type { ReportRow, Stage } from "./analytics.cells";
 import { CloseMonthTable } from "./analytics.closemonth";
 import { CompanyTable } from "./analytics.company";
@@ -52,7 +53,9 @@ function ReportBody({
   complete,
   stages,
   locale,
+  scope,
 }: Readonly<{
+  scope?: AnalyticsScope;
   report: CardKey;
   run: {
     rows: ReportRow[];
@@ -68,7 +71,12 @@ function ReportBody({
   switch (report) {
     case "forecast":
       return (
-        <ForecastStrip rows={run.rows} baseCurrency={base} locale={locale} />
+        <ForecastStrip
+          rows={run.rows}
+          baseCurrency={base}
+          locale={locale}
+          dealDials={scopeDealDials(scope)}
+        />
       );
     case "open-deals-per-company":
       return (
@@ -90,6 +98,7 @@ function ReportBody({
           stages={stages}
           locale={locale}
           baseCurrency={base}
+          dealDials={scopeDealDials(scope)}
         />
       );
     case "projects-by-phase":
@@ -235,6 +244,7 @@ export function ReportCard({
                     complete={complete}
                     stages={stages}
                     locale={locale}
+                    scope={scope}
                   />
                 )}
               </ReportRemainder>

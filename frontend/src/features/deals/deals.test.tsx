@@ -32,7 +32,13 @@ describe("server-valued stage totals", () => {
         {
           stage_id: "s1",
           deals: 3,
-          priced_deals: 2,
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: true,
+            no_value_deals: 0,
+            no_rate_deals: 1,
+            missing_currencies: ["JPY"],
+          },
           base_minor: 24_686,
           weighted_base_minor: 4_938,
         },
@@ -48,7 +54,12 @@ describe("server-valued stage totals", () => {
       currency: "EUR",
       asOf: "2026-10-01",
       timezone: UTC_ZONE,
-      unpricedCount: 1,
+      coverage: {
+        partial: true,
+        noValue: 0,
+        noRate: 1,
+        rateCurrencies: ["JPY"],
+      },
     });
     const columns = buildColumns(
       stages,
@@ -63,17 +74,28 @@ describe("server-valued stage totals", () => {
       count: 3,
       asOf: "2026-10-01",
       timezone: UTC_ZONE,
-      unpricedCount: 1,
+      coverage: {
+        partial: true,
+        noValue: 0,
+        noRate: 1,
+        rateCurrencies: ["JPY"],
+      },
       sumHidden: false,
     });
   });
-  it("keeps a missing price absent and states how many deals were excluded", () => {
+  it("keeps a missing total absent and says why each deal is left out", () => {
     const totals = buildStageTotals(
       [
         {
           stage_id: "s1",
           deals: 2,
-          priced_deals: 0,
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: true,
+            no_value_deals: 2,
+            no_rate_deals: 0,
+            missing_currencies: [],
+          },
           base_minor: null,
           weighted_base_minor: null,
         },
@@ -84,7 +106,7 @@ describe("server-valued stage totals", () => {
     expect(totals.get("s1")).toMatchObject({
       baseMinor: null,
       weightedBaseMinor: null,
-      unpricedCount: 2,
+      coverage: { partial: true, noValue: 2, noRate: 0, rateCurrencies: [] },
     });
   });
   it("keeps unavailable totals distinct from zero and preserves withholding", () => {

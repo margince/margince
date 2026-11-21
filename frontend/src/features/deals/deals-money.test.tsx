@@ -73,7 +73,7 @@ describe("stage money the report did not state", () => {
       currency: "EUR",
       baseMinor: null,
       weightedBaseMinor: null,
-      unpricedCount: null,
+      coverage: null,
     });
   });
 });

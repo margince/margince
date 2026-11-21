@@ -3067,14 +3067,14 @@ export const en = {
   "board.count_other": "{count} deals",
   "board.weightedLabel": "weighted",
   "board.ratesOn": "Exchange rates {date}",
-  "board.unpriced_one": "{count} not priced",
-  "board.unpriced_other": "{count} not priced",
+  "coverage.noRate_one": "{count} deal has no exchange rate{currencies}",
+  "coverage.noRate_other": "{count} deals have no exchange rate{currencies}",
+  "coverage.noValue_one": "{count} deal has no value",
+  "coverage.noValue_other": "{count} deals have no value",
+  "coverage.partial": "Partial",
+  "coverage.partialTip": "Partial total: it leaves out these deals.",
   "board.totalsTip":
     "{total} open, {weighted} weighted by each deal’s probability.",
-  "board.unpricedTip_one":
-    "{count} deal has no price and is left out of both totals.",
-  "board.unpricedTip_other":
-    "{count} deals have no price and are left out of both totals.",
   "board.convertedTip": "Converted at exchange rates as of {date}.",
   "board.matchesIn_one": "{count} result in {columns}",
   "board.matchesIn_other": "{count} results in {columns}",
@@ -8857,7 +8857,6 @@ export const en = {
   "analytics.count": "Open deals",
   "analytics.unweighted": "Deal value",
   "analytics.weighted": "Probability-adjusted value",
-  "analytics.priced": "{priced} of {total} priced",
   "analytics.planNote":
     "The executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Open deals by stage",
@@ -9403,7 +9402,6 @@ export const en = {
   "analytics.forecastDeals_other": "{count} deals",
   "analytics.forecastNoAmount": "No amount",
   "analytics.forecastWeighted": "{amount} weighted",
-  "analytics.forecastPriced": "{priced} of {count} priced",
   "analytics.readingNone": "None",
   "analytics.readingLoading": "Loading",
   "analytics.readingUnavailable": "Unavailable",

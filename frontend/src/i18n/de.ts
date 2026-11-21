@@ -3164,14 +3164,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "board.count_other": "Deals: {count}",
   "board.weightedLabel": "gewichtet",
   "board.ratesOn": "Wechselkurse vom {date}",
-  "board.unpriced_one": "{count} ohne Preis",
-  "board.unpriced_other": "{count} ohne Preis",
+  "coverage.noRate_one": "{count} Deal hat keinen Wechselkurs{currencies}",
+  "coverage.noRate_other": "{count} Deals haben keinen Wechselkurs{currencies}",
+  "coverage.noValue_one": "{count} Deal hat keinen Wert",
+  "coverage.noValue_other": "{count} Deals haben keinen Wert",
+  "coverage.partial": "Teilsumme",
+  "coverage.partialTip": "Teilsumme: Diese Deals sind nicht enthalten.",
   "board.totalsTip":
     "{total} offen, {weighted} gewichtet mit der Abschlusschance jedes Deals.",
-  "board.unpricedTip_one":
-    "{count} Deal hat keinen Preis und zählt in keiner der beiden Summen.",
-  "board.unpricedTip_other":
-    "{count} Deals haben keinen Preis und zählen in keiner der beiden Summen.",
   "board.convertedTip": "Umgerechnet mit Wechselkursen vom {date}.",
   "board.matchesIn_one": "{count} Treffer in {columns}",
   "board.matchesIn_other": "{count} Treffer in {columns}",
@@ -8878,7 +8878,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.count": "Offene Deals",
   "analytics.unweighted": "Deal-Wert",
   "analytics.weighted": "Wahrscheinlichkeitsbereinigter Wert",
-  "analytics.priced": "{priced} von {total} bepreist",
   "analytics.planNote":
     "Der ausgeführte Plan und die Zeilen, mit denen diese Zahl abgeglichen wird",
   "analytics.reportDeals": "Offene Deals nach Phase",
@@ -9450,7 +9449,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.forecastDeals_other": "{count} Deals",
   "analytics.forecastNoAmount": "Kein Betrag",
   "analytics.forecastWeighted": "{amount} gewichtet",
-  "analytics.forecastPriced": "{priced} von {count} bepreist",
   "analytics.readingNone": "Keine",
   "analytics.readingLoading": "Wird geladen",
   "analytics.readingUnavailable": "Nicht verfügbar",

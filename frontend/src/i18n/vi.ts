@@ -3066,14 +3066,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "board.count_other": "{count} deal",
   "board.weightedLabel": "có trọng số",
   "board.ratesOn": "Tỷ giá {date}",
-  "board.unpriced_one": "{count} chưa định giá",
-  "board.unpriced_other": "{count} chưa định giá",
+  "coverage.noRate_one": "{count} deal chưa có tỷ giá{currencies}",
+  "coverage.noRate_other": "{count} deal chưa có tỷ giá{currencies}",
+  "coverage.noValue_one": "{count} deal chưa có giá trị",
+  "coverage.noValue_other": "{count} deal chưa có giá trị",
+  "coverage.partial": "Một phần",
+  "coverage.partialTip": "Tổng một phần: không gồm các deal này.",
   "board.totalsTip":
     "{total} đang mở, {weighted} có trọng số theo xác suất của từng deal.",
-  "board.unpricedTip_one":
-    "{count} deal chưa có giá và không được tính vào hai tổng.",
-  "board.unpricedTip_other":
-    "{count} deal chưa có giá và không được tính vào hai tổng.",
   "board.convertedTip": "Đã quy đổi theo tỷ giá ngày {date}.",
   "board.matchesIn_one": "{count} kết quả ở cột {columns}",
   "board.matchesIn_other": "{count} kết quả ở cột {columns}",
@@ -8648,7 +8648,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.count": "Deal đang mở",
   "analytics.unweighted": "Giá trị deal",
   "analytics.weighted": "Giá trị điều chỉnh theo xác suất",
-  "analytics.priced": "{priced}/{total} có giá",
   "analytics.planNote":
     "Kế hoạch đã chạy và các dòng dùng để đối chiếu con số này",
   "analytics.reportDeals": "Deal đang mở theo giai đoạn",
@@ -9198,7 +9197,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.forecastDeals_other": "{count} deal",
   "analytics.forecastNoAmount": "Không có số tiền",
   "analytics.forecastWeighted": "{amount} có trọng số",
-  "analytics.forecastPriced": "{priced}/{count} có giá",
   "analytics.readingNone": "Không có",
   "analytics.readingLoading": "Đang tải",
   "analytics.readingUnavailable": "Không khả dụng",
