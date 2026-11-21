@@ -42,6 +42,7 @@ export function ReportingEvidenceDrawer({
   reference: ReportingEvidenceRef;
   editionId?: string;
   // The name of the tile that opened it, where one metric feeds several tiles.
+  // Not MetricLabels: two tiles read one metric under different names.
   title?: string;
   onClose: () => void;
 }>) {

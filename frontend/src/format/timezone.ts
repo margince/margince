@@ -44,7 +44,9 @@
 // parameter from the component that read it — never by importing the fallback
 // below, which is a different value that only happens to agree.
 
+import type { Locale } from "../i18n";
 import { isRealCalendarDay, shiftCalendarDay } from "./calendarday";
+import { INTL_LOCALE } from "./intllocale";
 
 // The zone a record's dates are read in when the installation's own answer is
 // missing. It is only the last resort. `useCompanyZone` in
@@ -134,6 +136,11 @@ export function zoneNameAndOffset(
   return [named("long"), named("shortOffset").replace("GMT", "UTC")]
     .filter(Boolean)
     .join(" · ");
+}
+
+/** The zone a wire instant was read on, named and offset in the reader's language. */
+export function zoneLabelAt(at: string, zone: string, locale: Locale): string {
+  return zoneNameAndOffset(INTL_LOCALE[locale], new Date(at), zone);
 }
 
 // A function, so a change of zone is read on the next call. A runtime that

@@ -1420,7 +1420,7 @@ export const en = {
     "No live products yet. Add products under Settings to report on them.",
   "reporting.actualsThrough": "Actuals through {at} · {zone}",
   "reporting.periodNotStarted":
-    "The period starts {at}; nothing has happened in it yet",
+    "The period starts {at} ({zone}); nothing has happened in it yet",
   "reporting.writtenNoneWon": "No sales won in {period}.",
   "reporting.writtenWon": "Won in {period}: {amount}.",
   "reporting.writtenTarget":
@@ -24017,7 +24017,7 @@ export const en = {
   "progress.productSales": "Product sales",
   "progress.serviceSales": "Services and projects",
   "progress.planned": "Open pipeline closing in period",
-  "progress.plannedAt": "Open deals as of {at}",
+  "progress.plannedAt": "Open deals as of {at} · {zone}",
   "progress.scenarios": "Where the month may finish",
   "progress.scenario.worst": "Worst case",
   "progress.scenario.worstWhy": "If nothing more closes",

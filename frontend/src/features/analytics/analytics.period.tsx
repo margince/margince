@@ -3,8 +3,7 @@
 
 import type { ReactNode } from "react";
 import { formatDateTime, formatDayRange } from "../../format/format";
-import { INTL_LOCALE } from "../../format/intllocale";
-import { zoneNameAndOffset } from "../../format/timezone";
+import { zoneLabelAt } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import {
   type ReportingEvaluation,
@@ -53,7 +52,7 @@ export function actualsThrough(
 ): string {
   return t("reporting.actualsThrough", {
     at: formatDateTime(at, locale, zone),
-    zone: zoneNameAndOffset(INTL_LOCALE[locale], new Date(at), zone),
+    zone: zoneLabelAt(at, zone, locale),
   });
 }
 
@@ -72,6 +71,7 @@ export function periodCaption(
   if (reportingPeriodIsEmpty(interval)) {
     return t("reporting.periodNotStarted", {
       at: formatDateTime(interval.start_at, locale, timezone),
+      zone: zoneLabelAt(interval.start_at, timezone, locale),
     });
   }
   const running = interval.end_at === evaluated_at;

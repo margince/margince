@@ -9,6 +9,7 @@ import {
   sameWallClockOnDay,
   startOfDayInZone,
   wallClockIntent,
+  zoneLabelAt,
   zoneNameAndOffset,
   zoneOffsetMs,
 } from "./timezone";
@@ -304,6 +305,23 @@ describe("timezone choices", () => {
     expect(
       zones.find((zone) => zone.value === "America/New_York")?.keywords,
     ).toContain("America/New_York");
+  });
+});
+
+describe("zoneLabelAt", () => {
+  it("names the zone at a wire instant in the reader's language", () => {
+    expect(zoneLabelAt("2026-11-16T16:45:00Z", "Europe/Berlin", "en")).toBe(
+      "Central European Standard Time · UTC+1",
+    );
+    expect(zoneLabelAt("2026-07-16T16:45:00Z", "Europe/Berlin", "de")).toBe(
+      "Mitteleuropäische Sommerzeit · UTC+2",
+    );
+  });
+
+  it("shows a zone the formatters refuse as it was stored", () => {
+    expect(zoneLabelAt("2026-07-16T16:45:00Z", "Mars/Olympus", "en")).toBe(
+      "Mars/Olympus",
+    );
   });
 });
 

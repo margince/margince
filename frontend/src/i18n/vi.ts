@@ -1446,7 +1446,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
   "reporting.actualsThrough": "Số liệu thực tế đến {at} · {zone}",
   "reporting.periodNotStarted":
-    "Khoảng thời gian bắt đầu lúc {at}; chưa có gì diễn ra trong đó",
+    "Khoảng thời gian bắt đầu lúc {at} ({zone}); chưa có gì diễn ra trong đó",
   "reporting.writtenNoneWon": "Chưa chốt doanh số nào trong {period}.",
   "reporting.writtenWon": "Đã chốt trong {period}: {amount}.",
   "reporting.writtenTarget":
@@ -23738,7 +23738,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.productSales": "Doanh số sản phẩm",
   "progress.serviceSales": "Dịch vụ và dự án",
   "progress.planned": "Pipeline mở dự kiến chốt trong kỳ",
-  "progress.plannedAt": "Deal đang mở tính đến {at}",
+  "progress.plannedAt": "Deal đang mở tính đến {at} · {zone}",
   "progress.scenarios": "Tháng có thể kết thúc ở đâu",
   "progress.scenario.worst": "Trường hợp xấu nhất",
   "progress.scenario.worstWhy": "Nếu không chốt thêm deal nào",

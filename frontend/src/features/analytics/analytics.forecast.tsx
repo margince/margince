@@ -17,6 +17,7 @@ import {
   formatDateTime,
   formatDayRange,
 } from "../../format/format";
+import { zoneLabelAt } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
@@ -332,7 +333,7 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
                 ? t("reporting.frozen")
                 : t("reporting.live")}
               {view.as_of
-                ? ` · ${formatDateTime(view.as_of, locale, zone)}`
+                ? ` · ${formatDateTime(view.as_of, locale, zone)} · ${zoneLabelAt(view.as_of, zone, locale)}`
                 : ""}
             </p>
             {view.withheld && (

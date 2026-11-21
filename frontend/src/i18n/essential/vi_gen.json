@@ -888,7 +888,7 @@
   "reporting.productReportsPurpose": "Mở Đánh giá doanh số cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
   "reporting.noProducts": "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
   "reporting.actualsThrough": "Số liệu thực tế đến {at} · {zone}",
-  "reporting.periodNotStarted": "Khoảng thời gian bắt đầu lúc {at}; chưa có gì diễn ra trong đó",
+  "reporting.periodNotStarted": "Khoảng thời gian bắt đầu lúc {at} ({zone}); chưa có gì diễn ra trong đó",
   "reporting.writtenNoneWon": "Chưa chốt doanh số nào trong {period}.",
   "reporting.writtenWon": "Đã chốt trong {period}: {amount}.",
   "reporting.writtenTarget": "Mục tiêu cho {targetPeriod}: {target}, đã đạt {percent}% với {actual}.",

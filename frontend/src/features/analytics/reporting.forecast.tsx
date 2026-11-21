@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "../../api/client";
 import { Field } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
@@ -54,6 +54,8 @@ export function ReportingForecastGraphs({
     JSON.stringify(selection),
   );
   const evaluated = showCharts ? query.data : undefined;
+  const openClosing = t("analytics.overview.openClosing");
+  const labels = useMemo(() => ({ open_pipeline: openClosing }), [openClosing]);
   return (
     <div className={inSheet ? "reporting-results-part" : "reporting-results"}>
       {/* The snapshot and the verbs that share it, as one row: the choice only
@@ -77,9 +79,7 @@ export function ReportingForecastGraphs({
         />
       </div>
       {showCharts && (
-        <MetricLabels.Provider
-          value={{ open_pipeline: t("analytics.overview.openClosing") }}
-        >
+        <MetricLabels.Provider value={labels}>
           <QueryGate
             query={query}
             pendingLabel={t("reporting.forecast_support")}

@@ -299,7 +299,7 @@ describe("the modelled finish beside the landing", () => {
     ).toBeTruthy();
   });
 
-  it("says every kind of deal it leaves out, in place of the won money", () => {
+  it("says every kind of deal it leaves out, and leaves what the range is to the receipt", () => {
     draw(model({ unpriced: 2, fxMissing: 1 }));
     expect(
       screen.getByText(
@@ -308,6 +308,11 @@ describe("the modelled finish beside the landing", () => {
     ).toBeTruthy();
     expect(
       screen.queryByText(`Includes ${money(400_00)} already won`),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        "Central 80% of modelled outcomes under current chances",
+      ),
     ).toBeNull();
   });
 

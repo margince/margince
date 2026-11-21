@@ -663,6 +663,7 @@ describe("SharedForecastView", () => {
         jsonResponse({
           kind,
           target: "forecast",
+          as_of: "2026-05-14T09:00:00Z",
           withheld: false,
           readings: readings({ ...ranged, ...over }),
         }),
@@ -671,7 +672,7 @@ describe("SharedForecastView", () => {
     render(<SharedForecastView token="fixture" />);
   }
 
-  it("shows a live share's landing basis beside its modelled finish", async () => {
+  it("shows a live share's landing basis beside its modelled finish, and names the zone it was read in", async () => {
     share("live", {
       landing: {
         amount_minor: 160_000,
@@ -682,6 +683,11 @@ describe("SharedForecastView", () => {
     });
     expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
     expect(screen.getByText("Modelled quarter finish")).toBeTruthy();
+    expect(
+      screen.getByText(
+        /^Live report · .+ · Central European Summer Time · UTC\+2$/,
+      ),
+    ).toBeTruthy();
   });
 
   it("says a snapshot from before the landing was kept has no recorded basis", async () => {

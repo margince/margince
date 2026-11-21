@@ -17,8 +17,7 @@ import {
   formatNumber,
   identifierNumber,
 } from "../../format/format";
-import { INTL_LOCALE } from "../../format/intllocale";
-import { zoneNameAndOffset } from "../../format/timezone";
+import { zoneLabelAt } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCompanyZone } from "../../lib/companyzone";
@@ -346,11 +345,7 @@ function PlanHistory({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
         newest && (
           <span className="t-caption">
             {t("goals.history.zone", {
-              zone: zoneNameAndOffset(
-                INTL_LOCALE[locale],
-                new Date(newest.created_at),
-                zone,
-              ),
+              zone: zoneLabelAt(newest.created_at, zone, locale),
             })}
           </span>
         )

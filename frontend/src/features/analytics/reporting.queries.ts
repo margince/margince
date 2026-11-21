@@ -74,13 +74,12 @@ export function useReportingCatalog(enabled = true) {
   return useQuery({ ...reportingCatalogOptions, enabled });
 }
 
-// A view that asks a metric a narrower question than the catalog's label names
-// says so here, and every metric name read inside it agrees.
+// A view's own name for a metric it asks more narrowly than the catalog label.
 export const MetricLabels = createContext<
   Readonly<Partial<Record<ReportingMetricID, string>>>
 >({});
 
-// The catalog's name for each metric, the one the CSV export writes too. It is
+// The catalog's name for each metric, unless `MetricLabels` renames it. It is
 // blank until the catalog answers. A metric the catalog does not offer this
 // reader, retired or not readable, is named as unavailable and never by id.
 export function useMetricNames(): MetricNames {
@@ -89,12 +88,11 @@ export function useMetricNames(): MetricNames {
   const labels = useContext(MetricLabels);
   return (metric) => {
     if (catalog.isPending) return "";
-    return (
-      labels[metric] ??
-      catalog.data?.metrics.find((definition) => definition.id === metric)
-        ?.label ??
-      t("reporting.metricUnavailable")
+    const offered = catalog.data?.metrics.find(
+      (definition) => definition.id === metric,
     );
+    if (!offered) return t("reporting.metricUnavailable");
+    return labels[metric] ?? offered.label;
   };
 }
 

@@ -888,7 +888,7 @@
   "reporting.productReportsPurpose": "Opens Sales review for one product. No setup is needed, and nothing is written.",
   "reporting.noProducts": "No live products yet. Add products under Settings to report on them.",
   "reporting.actualsThrough": "Actuals through {at} · {zone}",
-  "reporting.periodNotStarted": "The period starts {at}; nothing has happened in it yet",
+  "reporting.periodNotStarted": "The period starts {at} ({zone}); nothing has happened in it yet",
   "reporting.writtenNoneWon": "No sales won in {period}.",
   "reporting.writtenWon": "Won in {period}: {amount}.",
   "reporting.writtenTarget": "Goal for {targetPeriod}: {target}, {percent}% reached with {actual}.",

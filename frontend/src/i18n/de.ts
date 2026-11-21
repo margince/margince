@@ -1475,7 +1475,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch keine aktiven Produkte. Erstelle Produkte in den Einstellungen, um darüber zu berichten.",
   "reporting.actualsThrough": "Ist-Werte bis {at} · {zone}",
   "reporting.periodNotStarted":
-    "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",
+    "Der Zeitraum beginnt am {at} ({zone}); darin ist noch nichts geschehen",
   "reporting.writtenNoneWon": "Kein Umsatz gewonnen im Zeitraum {period}.",
   "reporting.writtenWon": "Gewonnen im Zeitraum {period}: {amount}.",
   "reporting.writtenTarget":
@@ -24387,7 +24387,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.productSales": "Produktverkäufe",
   "progress.serviceSales": "Services und Projekte",
   "progress.planned": "Offene Pipeline mit Abschluss im Zeitraum",
-  "progress.plannedAt": "Offene Deals, Stand {at}",
+  "progress.plannedAt": "Offene Deals, Stand {at} · {zone}",
   "progress.scenarios": "Wo der Monat enden kann",
   "progress.scenario.worst": "Schlechtester Fall",
   "progress.scenario.worstWhy": "Wenn nichts mehr abschließt",

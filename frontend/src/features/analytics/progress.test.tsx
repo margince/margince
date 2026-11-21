@@ -154,6 +154,11 @@ describe("ProgressReadings", () => {
   it("names what sold and counts the deals no line could place", () => {
     render(<ProgressReadings progress={sellerMarch} onEvidence={vi.fn()} />);
     expect(
+      screen.getByText(
+        /^Open deals as of .+ · Central European Summer Time · UTC\+2$/,
+      ),
+    ).toBeTruthy();
+    expect(
       screen.getByText("Fleet Suite, Telematics, Driver App and 1 more"),
     ).toBeTruthy();
     expect(screen.getByText("Unclassified")).toBeTruthy();

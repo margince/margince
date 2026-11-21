@@ -16,8 +16,7 @@ import {
   identifierNumber,
   monthName,
 } from "../../format/format";
-import { INTL_LOCALE } from "../../format/intllocale";
-import { zoneNameAndOffset } from "../../format/timezone";
+import { zoneLabelAt } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
@@ -121,10 +120,10 @@ export function ProgressScreen() {
               locale,
               progress.data.timezone,
             ),
-            zone: zoneNameAndOffset(
-              INTL_LOCALE[locale],
-              new Date(progress.data.cutoff),
+            zone: zoneLabelAt(
+              progress.data.cutoff,
               progress.data.timezone,
+              locale,
             ),
           })
         }

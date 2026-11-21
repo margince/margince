@@ -888,7 +888,7 @@
   "reporting.productReportsPurpose": "Öffnet die Umsatzübersicht für ein Produkt. Es ist nichts einzurichten, und nichts wird geschrieben.",
   "reporting.noProducts": "Noch keine aktiven Produkte. Erstelle Produkte in den Einstellungen, um darüber zu berichten.",
   "reporting.actualsThrough": "Ist-Werte bis {at} · {zone}",
-  "reporting.periodNotStarted": "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",
+  "reporting.periodNotStarted": "Der Zeitraum beginnt am {at} ({zone}); darin ist noch nichts geschehen",
   "reporting.writtenNoneWon": "Kein Umsatz gewonnen im Zeitraum {period}.",
   "reporting.writtenWon": "Gewonnen im Zeitraum {period}: {amount}.",
   "reporting.writtenTarget": "Ziel für {targetPeriod}: {target}, zu {percent} % erreicht mit {actual}.",
