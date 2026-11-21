@@ -34,7 +34,7 @@ const (
 	composeRootProductionFiles = 1375
 	composeRootTestFiles       = 1902
 	composeRootProductionLines = 229_011
-	composeRootTestLines       = 357_538
+	composeRootTestLines       = 357_655
 )
 
 // A read under these floors stopped early or read the wrong place, and would
