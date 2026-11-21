@@ -38,7 +38,10 @@ describe("a country stored as a name before the code rule", () => {
   const legacy = { country: "Germany", city: "Berlin" };
 
   it("is prefilled as stored and sent back as stored on a city-only edit", () => {
-    const values = { ...addressFrom(legacy), address_city: "Hamburg" };
+    const values: Record<string, string> = {
+      ...addressFrom(legacy),
+      address_city: "Hamburg",
+    };
     expect(values.address_country).toBe("Germany");
     expect(addressPatch(values)?.country).toBe("Germany");
   });
