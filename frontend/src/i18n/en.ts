@@ -13357,7 +13357,7 @@ export const en = {
     "No action needed. Continue; the build finishes automatically.",
   "ob.conv.voice.composer": "Paste the text you wrote here",
   "ob.conv.voice.dropHint":
-    "You can also drop files anywhere in this conversation: .txt, .md, .pdf, .docx or a .vtt, .srt or .json transcript. Each file can be up to {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
+    "You can also drop files anywhere in this conversation: .txt, .md, .pdf, .docx or a .vtt, .srt or .json transcript. Each file must stay just under {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
   "ob.conv.voice.fileSkipped":
     "I cannot read {name}. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "ob.conv.voice.fileUnreadable":
@@ -13375,7 +13375,7 @@ export const en = {
   "ob.conv.voice.refusalUnsupported":
     "I could not read {name} as text or a transcript. Nothing was counted.",
   "ob.conv.voice.refusalTooLarge":
-    "{name} is too large to add. A file can be up to {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
+    "{name} is too large to add. A file must stay just under {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
   "ob.conv.voice.ingestFailed": "I could not add {name}: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "I could not add that source. Retry shortly.",
@@ -15978,7 +15978,7 @@ export const en = {
   "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":
-    "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once. Each file can be up to {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
+    "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once. Each file must stay just under {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
   "settings.voice.dropLabel": "Upload files",
   "settings.voice.dropEmpty": "Drop files here, or click to choose",
   "settings.voice.pasteLabel": "Paste text",
@@ -16025,7 +16025,7 @@ export const en = {
     "That speaker was not found in {name}, so nothing was added.",
   "settings.voice.refusalUnsupported": "{name} is in an unsupported format.",
   "settings.voice.refusalTooLarge":
-    "{name} is too large to add. A file can be up to {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
+    "{name} is too large to add. A file must stay just under {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
   "settings.voice.buildsTitle": "Builds",
   "settings.voice.buildRowLabel": "Build from samples",
   "settings.voice.building": "Building…",

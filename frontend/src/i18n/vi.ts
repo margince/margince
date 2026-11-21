@@ -13082,7 +13082,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không cần làm gì. Có thể tiếp tục; hồ sơ giọng văn sẽ tự dựng xong.",
   "ob.conv.voice.composer": "Dán văn bản bạn đã viết vào đây",
   "ob.conv.voice.dropHint":
-    "Cũng có thể thả tệp vào bất cứ đâu trong cuộc trò chuyện này: .txt, .md, .pdf, .docx hoặc bản chép lời .vtt, .srt hay .json. Mỗi tệp khi gửi tối đa {limit}. Văn bản có nhiều dấu ngoặc kép hoặc ngắt dòng sẽ chạm giới hạn này sớm hơn.",
+    "Cũng có thể thả tệp vào bất cứ đâu trong cuộc trò chuyện này: .txt, .md, .pdf, .docx hoặc bản chép lời .vtt, .srt hay .json. Mỗi tệp khi gửi phải dưới {limit} một chút. Văn bản có nhiều dấu ngoặc kép hoặc ngắt dòng sẽ chạm giới hạn này sớm hơn.",
   "ob.conv.voice.fileSkipped":
     "Tôi không thể đọc {name}. Định dạng hỗ trợ: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "ob.conv.voice.fileUnreadable":
@@ -13100,7 +13100,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.refusalUnsupported":
     "Tôi không thể đọc {name} dưới dạng văn bản hoặc bản chép lời. Không có gì được tính.",
   "ob.conv.voice.refusalTooLarge":
-    "{name} quá lớn để thêm. Mỗi tệp khi gửi tối đa {limit}, và dấu ngoặc kép cùng ngắt dòng chiếm thêm chỗ. Hãy chia thành các tệp nhỏ hơn.",
+    "{name} quá lớn để thêm. Mỗi tệp khi gửi phải dưới {limit} một chút, và dấu ngoặc kép cùng ngắt dòng chiếm thêm chỗ. Hãy chia thành các tệp nhỏ hơn.",
   "ob.conv.voice.ingestFailed": "Tôi không thể thêm {name}: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "Tôi không thể thêm nguồn đó. Thử lại sau ít phút.",
@@ -15651,7 +15651,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.addSource": "Thêm văn mẫu",
   "settings.voice.addFirstLabel": "Văn mẫu đầu tiên",
   "settings.voice.dropHint":
-    "Thả hoặc chọn tệp (.txt, .md, .pdf, .docx, .vtt, .srt hoặc .json), nhiều tệp cùng lúc. Mỗi tệp khi gửi tối đa {limit}. Văn bản có nhiều dấu ngoặc kép hoặc ngắt dòng sẽ chạm giới hạn này sớm hơn.",
+    "Thả hoặc chọn tệp (.txt, .md, .pdf, .docx, .vtt, .srt hoặc .json), nhiều tệp cùng lúc. Mỗi tệp khi gửi phải dưới {limit} một chút. Văn bản có nhiều dấu ngoặc kép hoặc ngắt dòng sẽ chạm giới hạn này sớm hơn.",
   "settings.voice.dropLabel": "Tải tệp lên",
   "settings.voice.dropEmpty": "Thả tệp vào đây, hoặc bấm để chọn",
   "settings.voice.pasteLabel": "Dán văn bản",
@@ -15698,7 +15698,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không tìm thấy người nói đó trong {name}, nên chưa thêm gì.",
   "settings.voice.refusalUnsupported": "{name} có định dạng không được hỗ trợ.",
   "settings.voice.refusalTooLarge":
-    "{name} quá lớn để thêm. Mỗi tệp khi gửi tối đa {limit}, và dấu ngoặc kép cùng ngắt dòng chiếm thêm chỗ. Hãy chia thành các tệp nhỏ hơn.",
+    "{name} quá lớn để thêm. Mỗi tệp khi gửi phải dưới {limit} một chút, và dấu ngoặc kép cùng ngắt dòng chiếm thêm chỗ. Hãy chia thành các tệp nhỏ hơn.",
   "settings.voice.buildsTitle": "Bản dựng",
   "settings.voice.buildRowLabel": "Dựng từ văn mẫu",
   "settings.voice.building": "Đang dựng…",
