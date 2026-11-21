@@ -50,6 +50,7 @@ type whichAIAssistants struct {
 		Name      string `json:"name"`
 		Route     string `json:"route"`
 		Trust     string `json:"trust"`
+		CasesRun  int    `json:"cases_with_a_committed_run"`
 		CasesHeld int    `json:"cases_that_reached_their_bar"`
 	} `json:"models"`
 	Cases []struct {
@@ -105,6 +106,15 @@ func TestTheWhichAIPageIsPublished(t *testing.T) {
 		if err != nil || !bytes.Equal(got, want) {
 			t.Errorf("%s is out of date with the result payloads; run `cd backend && %s`", path, whichAICommand)
 		}
+	}
+}
+
+func TestAJobNotYetRunIsNotCountedAsFailed(t *testing.T) {
+	if got := jobsDone(70, 70, 82); got != "70 of 70 (12 not yet run)" {
+		t.Errorf("70 held of 70 run among 82 jobs reads %q", got)
+	}
+	if got := jobsDone(69, 70, 70); got != "69 of 70" {
+		t.Errorf("a model that ran every job reads %q", got)
 	}
 }
 
@@ -244,7 +254,7 @@ func writeWhichAIAssistants(p *strings.Builder, r whichAIAssistants, handbook bo
 	} else {
 		p.WriteString("| Assistant | How we connected it | Jobs done reliably | Can I trust it? |\n|---|---|---:|---|\n")
 		for _, m := range r.Models {
-			fmt.Fprintf(p, "| `%s` | %s | %d of %d | %s |\n", m.Name, m.Route, m.CasesHeld, len(r.Cases), m.Trust)
+			fmt.Fprintf(p, "| `%s` | %s | %s | %s |\n", m.Name, m.Route, jobsDone(m.CasesHeld, m.CasesRun, len(r.Cases)), m.Trust)
 		}
 		p.WriteString("\n")
 	}
@@ -258,11 +268,21 @@ func writeWhichAIAssistants(p *strings.Builder, r whichAIAssistants, handbook bo
 	}
 }
 
+// jobsDone counts a job no run has reached apart, so it never reads as failed.
+func jobsDone(held, run, jobs int) string {
+	done := fmt.Sprintf("%d of %d", held, run)
+	if run < jobs {
+		done += fmt.Sprintf(" (%d not yet run)", jobs-run)
+	}
+	return done
+}
+
 func writeWhichAITested(p *strings.Builder, cert whichAICert, r whichAIAssistants) {
 	p.WriteString("### What did you test, and what not?\n")
 	fmt.Fprintf(p, "For Margince AI we ran %d test cases. Each one is an example with a known right answer, in one "+
-		"of the %d places in the product where a feature calls a model. For your AI assistant, each assistant did "+
-		"%d everyday jobs on a test company. A model setup or an assistant missing from the tables above is not "+
+		"of the %d places in the product where a feature calls a model. For your AI assistant, we wrote %d "+
+		"everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet "+
+		"is not counted as failed. A model setup or an assistant missing from the tables above is not "+
 		"tested yet.\n", cert.Totals.TestCases, cert.Totals.Places, len(r.Cases))
 	p.WriteString("Also called: how is the AI tested, test coverage, certification.\n\n")
 }

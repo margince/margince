@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -228,5 +229,69 @@ func TestACanceledBookingLeavesATaskTheHostWroteToSince(t *testing.T) {
 	}
 	if !f.taskIsDone(t, mine) {
 		t.Fatal("the cancel reopened a task the host had edited")
+	}
+}
+
+func (f *invitationFixture) cancelBooking(t *testing.T, meeting crmcontracts.MeetingInvitation) ids.ActivityID {
+	t.Helper()
+	if _, err := f.env.owner.Exec(f.ctx, `UPDATE activity SET meeting_status='canceled' WHERE id=$1`, ids.UUID(meeting.Id)); err != nil {
+		t.Fatal(err)
+	}
+	return ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+}
+
+func TestACanceledBookingLeavesATaskALaterAnswerClosedAgain(t *testing.T) {
+	f := newInvitationFixture(t)
+	mine := f.handTask(t, "Call the guest", "contact", ids.UUID(f.request.ContactId))
+	canceled := f.cancelBooking(t, f.bookThroughThePage(t, invitationIntent{}))
+	if n, err := f.store.ReopenTasksAnsweredByMeeting(f.systemCtx(), canceled); err != nil || n != 1 {
+		t.Fatalf("the cancel reopened %d tasks: %v", n, err)
+	}
+	if err := f.store.tx(f.systemCtx(), func(tx pgx.Tx) error {
+		_, err := f.store.closeAnsweredTasksTx(f.systemCtx(), tx, ids.From[ids.ActivityKind](ids.NewV7()), []ids.UUID{mine})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := f.store.ReopenTasksAnsweredByMeeting(f.systemCtx(), canceled); err != nil || n != 0 {
+		t.Fatalf("a second pass over the old cancel reopened %d tasks: %v", n, err)
+	}
+	if !f.taskIsDone(t, mine) {
+		t.Fatal("the old cancel reopened a task a later answer had closed")
+	}
+}
+
+// The host's edit holds the task's row lock while the reopen waits on it, then
+// commits. The reopen must see that edit and leave the task done.
+func TestACanceledBookingLeavesATaskTheHostEditsWhileTheReopenWaits(t *testing.T) {
+	f := newInvitationFixture(t)
+	mine := f.handTask(t, "Call the guest", "contact", ids.UUID(f.request.ContactId))
+	canceled := f.cancelBooking(t, f.bookThroughThePage(t, invitationIntent{}))
+	var reopened int
+	var reopenErr error
+	returned := make(chan struct{})
+	if err := f.store.tx(f.ctx, func(tx pgx.Tx) error {
+		if _, err := updateActivityInTx(f.ctx, tx, ids.From[ids.ActivityKind](mine), UpdateActivityInput{Subject: new("Call the guest tomorrow")}); err != nil {
+			return err
+		}
+		var holder int32
+		if err := tx.QueryRow(f.ctx, `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
+			return err
+		}
+		go func() {
+			defer close(returned)
+			reopened, reopenErr = f.store.ReopenTasksAnsweredByMeeting(f.systemCtx(), canceled)
+		}()
+		testdb.AwaitQueuedBehind(t, tx, holder, 1, returned, "the reopen")
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	<-returned
+	if reopenErr != nil || reopened != 0 {
+		t.Fatalf("the reopen behind the host's edit reopened %d tasks: %v", reopened, reopenErr)
+	}
+	if !f.taskIsDone(t, mine) {
+		t.Fatal("the cancel reopened a task the host edited while it waited")
 	}
 }

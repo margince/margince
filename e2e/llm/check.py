@@ -136,6 +136,9 @@ _SCHEMA = {
     "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
 }
 _REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
+# The credentials scripts/e2e-llm.sh mints, by the `passport:` value that picks
+# one; absent is the narrow one.
+PASSPORTS = ("", "wide", "research", "rep", "readonly")
 
 
 class ScenarioError(ValueError):
@@ -224,8 +227,8 @@ def lint(path):
     # an absent or misspelled value would leave them comparing against nothing.
     if data["writes"] not in ("true", "false"):
         problems.append(f"writes must be true or false, not {data['writes']!r}")
-    if data.get("passport", "") not in ("", "wide", "research"):
-        problems.append(f"passport must be absent, wide or research, not {data['passport']!r}")
+    if data.get("passport", "") not in PASSPORTS:
+        problems.append(f"passport must be absent or one of {', '.join(PASSPORTS[1:])}, not {data['passport']!r}")
     if data.get("figures_from_results", "true") != "true":
         problems.append(f"figures_from_results is {data['figures_from_results']!r}; the only value is true")
     if data.get("setup"):

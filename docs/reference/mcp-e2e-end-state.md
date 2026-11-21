@@ -14,7 +14,7 @@ must_end_with:
 After each run, `e2e/llm/endstate.py` finds the record by its type and its whole name, as the app shows it
 (every page of `list_records`). It does this before the lane puts back the snapshot.
 
-It reads the field with `read_record`, through the passport of the lane, and compares. A wrong value, a
+It reads the field with `read_record`, through a passport the lane's admin minted, and compares. A wrong value, a
 missing record, or two records with one name fail the run, such as
 `ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect`.
 A read that cannot be made (an error, a field the read does not carry, or a reader that fails) is a
@@ -34,7 +34,8 @@ the records of that type with that whole name. `owner=` and `stage=` compare
 names, not ids, so they hold on any seed. `tagged=` and `untagged=` read the
 words that `read_tags` lists on the record, and a list the seat cannot see is
 a harness stop. `tag "Name" records=N` counts the contacts, companies, deals
-and leads that carry the word. A lead made a contact, or disqualified, leaves
+and leads that carry the word. A word nobody made carries none, so `records=0`
+holds for it. A lead made a contact, or disqualified, leaves
 `list_records`, so an entry tells the two apart with `records` on the lead and
 on the contact.
 
@@ -60,7 +61,19 @@ The reader finds the parent by name. On a project it finds the activity on the t
 `read_project` with `view: overview`. A timeline that read cuts short is a harness stop. On a
 company or a contact it reads every page of `find_records` with `engine: list`, filtered to
 that record. `records=N` counts the activities with that subject there, so `records=0` says a
-mail left the wrong record.
+mail left the wrong record. `contact "Name" activities=N`, or the same on a company, counts every
+activity there whatever its subject, for a case where the run picks the subject.
+
+An `approval` entry counts the staged calls in one state, by a glob over their kind:
+
+```yaml
+must_end_with:
+  - approval "relink_activit*" pending=1
+  - approval "relink_activit*" approved=0
+```
+
+The state is `pending`, `approved` or `rejected`. The reader reads every page of `list_approvals`,
+which lists what the reader's seat may decide.
 
 More names read a panel, and not a stored field:
 
@@ -83,7 +96,7 @@ notices. `capture_excluded=<domain>` holds when the seat's capture excludes that
 reads the seat's newest forecast call for this quarter. A glob matches whatever the case of the
 letters.
 
-Two names in that place read the record's files, and not a field:
+Three names in that place read the record's files, and not a field:
 
 ```yaml
 must_end_with:
@@ -94,7 +107,8 @@ must_end_with:
 `document` holds when one file on the Documents tab, and only one, has that checksum,
 under a name that the glob matches. `documents` holds when the tab has that
 many files. A count catches a refused file that comes back inside an archive, which has
-new bytes and a new name. Both read every page of `list_documents`.
+new bytes and a new name. `link=<address>` holds when one listed link on the record has that
+whole address. All three read every page of `list_documents`.
 
 ```yaml
 must_end_with:
