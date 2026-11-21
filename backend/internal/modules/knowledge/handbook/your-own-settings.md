@@ -20,7 +20,7 @@ Every member sees the three personal steps, so a colleague invited to an existin
 
 While steps are open, **Finish setup** at the top of the screen shows how many are done, and **Hide until next sign-in** puts it away. Once every step is done, **Your setup** and **Finish setup** are gone, and each step's page stays on **Overview**. If a step comes undone, **Your setup** comes back, and so does **Finish setup** unless you chose **Hide until next sign-in**. On a phone, **Finish setup** is a row in the account menu, right after **Help and feedback**. It opens the page of your next step. Also called: setup list, getting started, onboarding steps.
 
-Mail and calendar connect through the company's Google or Microsoft app. Until an administrator sets that app up, those steps say "Waits on an administrator." and offer nothing to press. If you may set the app up yourself, they offer **Set up app** instead, which opens Settings → **Sign-in and security**.
+Google and Microsoft connect through the company's app for each. While no such app is set up, the calendar step says "Waits on an administrator." and offers nothing to press. So does the mail step, unless another mail provider can be connected instead. If you may set the app up yourself, both offer **Set up app**, which opens Settings → **Sign-in and security**.
 
 The writing voice step names what is next for your voice: **Add samples**, **Build voice** or **View progress**. After a failed build it shows the reason and **Try again**. When a build needs your review it shows **Review voice**, which opens the review on **Writing voice**. Your first version is never used on its own. The step is done once you choose **Use this version**. After **Discard this version**, add more samples and build again.
 
