@@ -57,7 +57,7 @@ func malformedDomain() error {
 // the look-alike trick of a Cyrillic "а" inside a Latin name. Han, Kana and
 // Hangul count as one script because those languages write them together.
 func mixedScript(host string) bool {
-	for _, part := range strings.Split(host, ".") {
+	for part := range strings.SplitSeq(host, ".") {
 		if scriptOf(part) == mixed {
 			return true
 		}
