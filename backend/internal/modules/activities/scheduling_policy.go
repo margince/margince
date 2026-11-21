@@ -135,15 +135,31 @@ func mayReadLiveCalendar(ctx context.Context, host ids.UserID) error {
 	return nil
 }
 
+// calendarReadable asks calendarBlocker, the one readiness decision, and words
+// the answer as a refusal. The host can connect a calendar, but only an
+// operator can add a missing calendar service.
+func (s *Store) calendarReadable(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) error {
+	blocker, err := s.calendarBlocker(ctx, host, profile)
+	if err != nil {
+		return err
+	}
+	switch {
+	case blocker == crmcontracts.SchedulingProfileBlockerNoCalendar:
+		return errCalendarNotConnected()
+	case blocker != crmcontracts.SchedulingProfileBlockerCalendarUnavailable:
+		return nil
+	case s.calendar == nil:
+		return connector.NewCalendarUnavailable("", "no_service", nil)
+	}
+	return errCalendarNotConnected()
+}
+
 func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration, team []teamCalendar) ([]slot, bool, error) {
 	profile, err := s.hostSchedulingProfile(ctx, host)
 	if err != nil {
 		return nil, false, err
 	}
-	if profile.Provider == "" || s.calendar == nil {
-		return nil, false, apperrors.ErrPermissionDenied
-	}
-	if err := s.calendar.Check(ctx, host, string(profile.Provider)); err != nil {
+	if err := s.calendarReadable(ctx, host, profile); err != nil {
 		return nil, false, err
 	}
 	if duration <= 0 {

@@ -82,7 +82,7 @@ func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
 				continue
 			}
 			want := tc.want
-			if name == "check" && door == "booking page" {
+			if name == "check" && (door == "booking page" || door == "proposal link") {
 				want = http.StatusNotFound
 			}
 			rec := httptest.NewRecorder()
