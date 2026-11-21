@@ -56,6 +56,7 @@ export const companyZoneSites: { file: string; why: string }[] = [
   },
   { file: "features/settings/rates.tsx", why: SERVER_TODAY },
   { file: "features/settings/taxrates.tsx", why: SERVER_TODAY },
+  { file: "features/deals/offers.header.tsx", why: SERVER_TODAY },
   {
     file: "features/brief/brief.glance.tsx",
     why: "Home holds the server's day and the weekly's week, both bucketed on the company's clock (decision B1), so the day and week it is labelled with are on that clock; the greeting hour is the reader's.",

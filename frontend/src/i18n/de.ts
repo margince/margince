@@ -4591,10 +4591,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur, wenn jemand die Unterschrift bestätigt. Nie aus dem Abschlussdatum des Deals übernommen.",
   "contracts.form.save": "Vertrag erfassen",
   "contracts.form.errNoName": "Gib einen Vertragstitel ein.",
+  "contracts.form.errNegativeAmount":
+    "Wert und jährlich wiederkehrender Umsatz können nicht negativ sein.",
   "contracts.form.errTermOrder":
     "Eine Laufzeit kann nicht vor ihrem Beginn enden.",
   "contracts.add": "Vertrag hinzuf\u00fcgen",
-  "contracts.rowMenu": "Vertragsaktionen",
   "contracts.renew.title": "Vertrag verlängern",
   "contracts.renew.hint":
     "Erstellt einen neuen Vertrag mit eigenen Bedingungen und markiert den bisherigen Vertrag als ersetzt. Übernommen wird nur die Vertragspartei.",
@@ -4703,6 +4704,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.lines.description": "Beschreibung",
   "deal.lines.quantity": "Menge",
   "deal.lines.price": "Verkaufspreis",
+  "deal.lines.priceInOtherCurrency":
+    "Dieses Produkt hat einen Preis in {currency}. Gib seinen Preis ein.",
   "deal.lines.remove": "{name} entfernen",
   "deal.lines.editTitle": "Produkte und Leistungen",
   "deal.lines.save": "Produkte speichern",
@@ -6464,6 +6467,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.standing.figure.offer": "Angebot {number} · Version {revision}",
   "deal.standing.figure.amountByModel": "Von Margince aus der Mail gelesen",
   "deal.standing.figure.currencyGuessed": "Währung angenommen, prüfe sie",
+  "deal.standing.figure.offerInProgress":
+    "Angebot {number} · Version {revision} · {status}",
   "deal.standing.figure.next": "Nächster Schritt",
   "standing.noneYet": "Noch nichts",
   "deal.standing.figure.daysInStage": "Tage in der Phase",
@@ -7017,6 +7022,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.offersEmpty": "Noch keine Angebote",
 
   "offer.backToDeal": "Zurück zum Deal",
+  "offer.deal": "Deal",
   "offer.totals": "Summen",
   "offer.net": "Netto",
   "offer.tax": "Steuer",
@@ -7049,27 +7055,35 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.unit": "Einheit",
   "offer.unitFromProduct": "Wie im Produkt",
   "offer.quantity": "Menge",
+  "offer.unitPriceRequired":
+    "Gib einen Einzelpreis ein oder wähle ein Produkt.",
   "offer.unitPrice": "Einzelpreis",
   "offer.discountPct": "Rabatt %",
   "offer.taxRate": "Steuer %",
   "offer.committedPeriods": "Perioden",
   "offer.lineTotal": "Positionssumme",
   "offer.unpriced": "ohne Preis, nicht in der Summe enthalten",
-  "offer.removeLine": "Entfernen",
+  "offer.lineCell": "{column}, Position {position}",
+  "offer.removeLineNamed": "Position {position} entfernen",
   "offer.pickProduct": "Produkt auswählen",
   "offer.pickProductConfirm": "Produkt: {name}",
   "offer.send": "Senden",
-  "offer.sendConfirm": "Dieses Angebot an die Käuferseite senden?",
+  "offer.sendConfirm": "Dieses Angebot als gesendet markieren?",
   "offer.sendBody":
-    "Das Angebot ist schreibgeschützt, bis die Käuferseite antwortet.",
+    "Es wird keine E-Mail verschickt, und diese Version ist endgültig festgeschrieben. Erzeuge das PDF und sende es selbst an die Käuferseite.",
   "offer.accept": "Annehmen",
   "offer.acceptConfirm": "Dieses Angebot als angenommen markieren?",
   "offer.acceptBody":
     "Wert und Währung des Deals werden an dieses Angebot angepasst.",
   "offer.reject": "Ablehnen",
+  "offer.discard": "Entwurf verwerfen",
+  "offer.discardBody":
+    "Der Entwurf wird archiviert und verschwindet aus den Angeboten des Deals.",
   "offer.rejectConfirm": "Dieses Angebot als abgelehnt markieren?",
   "offer.rejectReason": "Grund (optional)",
   "offer.regenerate": "Revision neu erzeugen",
+  "offer.writeUnsure":
+    "Margince konnte nicht feststellen, ob das geklappt hat. Prüfe die Angebote am Deal, bevor du es noch einmal versuchst.",
   "offer.aiDisclosureTitle": "KI-gestütztes Angebot",
   "offer.diffAdded_one": "{count} Position hinzugefügt",
   "offer.diffAdded_other": "{count} Positionen hinzugefügt",
@@ -16651,6 +16665,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "product.unitOtherRequired":
     "Gib die Einheit ein oder wähle eine aus der Liste.",
   "product.unitPrice": "Einzelpreis",
+  "product.candidatePrice": "{price} / {unit}",
   "product.currency": "Währung",
   "product.taxRate": "Standardsteuersatz %",
   "product.billingModel": "Abrechnung",
@@ -23488,6 +23503,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.closesOn": "Abschluss {date}",
   "legalReview.back": "Alle Rechtsprüfungen",
   "legalReview.packTitle": "Prüfpaket",
+  "legalReview.packDeal": "Deal",
   "legalReview.decideTitle": "Antwort",
   "legalReview.ownRequest":
     "Du hast diese Prüfung angefragt, daher beantwortet sie ein anderes Teammitglied.",
@@ -23510,7 +23526,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.packOffer": "Aktuelles Angebot",
   "legalReview.offerNumber": "Angebot",
   "legalReview.offerRevision": "{number}, Version {revision}",
-  "legalReview.offerTotal": "Gesamt",
+  "legalReview.offerTotal": "Gesamt brutto",
   "legalReview.offerValidUntil": "Gültig bis",
   "legalReview.offerTerms": "Bedingungen",
   "legalReview.packNoOffer": "Kein Angebot zu diesem Deal.",
@@ -23547,6 +23563,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst diese Datei nicht öffnen. Wende dich an das Teammitglied, das die Prüfung angefragt hat.",
   "legalReview.offerLine": "Position {number}",
   "legalReview.offerLineText": "{quantity} × {description} zu {price}",
+  "legalReview.offerLineDiscount": "Rabatt {rate} %",
+  "legalReview.offerLineTax": "Steuer {rate} %",
   "legalReview.offerLineRecurring_one": "{cadence} über {count} Periode",
   "legalReview.offerLineRecurring_other": "{cadence} über {count} Perioden",
   "legalReview.offerLineStaged": "Vorgeschlagen, noch nicht in der Summe",

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
+import { useIdempotencyKey } from "../../api/idempotencykey";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
 import {
   LatestInboundLine,
@@ -66,6 +67,7 @@ import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
 import { useDealStatusCard } from "./dealstatus";
+import { offerWriteRefusal, settleUnsureOfferWrite } from "./offers.actions";
 
 const DEAL_TABS = [
   "overview",
@@ -231,11 +233,20 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
       );
     },
   });
+  const { key: offerKey, renew: renewOfferKey } = useIdempotencyKey();
   const createOffer = useMutation({
-    mutationFn: async (input: { currency: string; fromRevision?: number }) => {
+    mutationFn: async (input: {
+      dealId: string;
+      currency: string;
+      fromRevision?: number;
+      key: string;
+    }) => {
       return unwrap(
         await api.POST("/deals/{id}/offers", {
-          params: { path: { id } },
+          params: {
+            path: { id: input.dealId },
+            header: { "Idempotency-Key": input.key },
+          },
           body: {
             currency: input.currency,
             source: "manual",
@@ -246,9 +257,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     },
     onMutate: fromHere,
     onSuccess: (offer: Offer, _input, from) => {
+      renewOfferKey();
       from.navigate({ screen: "offers", id: offer.id });
     },
+    onError: (error, input) =>
+      settleUnsureOfferWrite(error, queryClient, input.dealId, renewOfferKey),
   });
+  const createRefusal = createOffer.isError
+    ? offerWriteRefusal(createOffer.error, t)
+    : undefined;
   const decide = useMutation({
     mutationFn: async (input: {
       approvalId: string;
@@ -395,9 +412,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       threadQuery.isSuccess && !threadQuery.hasNextPage
                     }
                     creatingOffer={createOffer.isPending}
+                    createRefusal={createRefusal}
                     locale={locale}
                     onCreateOffer={(currency, fromRevision) =>
-                      createOffer.mutate({ currency, fromRevision })
+                      createOffer.mutate({
+                        dealId: id,
+                        currency,
+                        fromRevision,
+                        key: offerKey,
+                      })
                     }
                     readOnly={readOnly}
                     refusedReasonId={refusedReasonId}

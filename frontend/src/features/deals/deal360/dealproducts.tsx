@@ -30,13 +30,13 @@ import {
   unwrap,
 } from "../../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingfigures";
-import { searchProductCandidates } from "../products";
+import { useProductCandidateSearch } from "../products";
+import { DealLinesEditor } from "./deallines";
 import {
   type DealCommercial,
-  DealLinesEditor,
   DealLinesTotal,
   useDealLines,
-} from "./deallines";
+} from "./deallinestotal";
 
 type DealProduct = components["schemas"]["DealProduct"];
 type DealProductList = components["schemas"]["DealProductListResponse"];
@@ -276,6 +276,7 @@ export function DealProductsEditor({
   onClose: () => void;
 }>) {
   const t = useT();
+  const searchProducts = useProductCandidateSearch();
   const client = useQueryClient();
   // The set the list was seeded from. Its tag is the save's precondition, and
   // it moves only when the editor reseeds, never when the card rerenders.
@@ -389,7 +390,7 @@ export function DealProductsEditor({
       )}
       <RecordPicker
         label={t("deal.products.add")}
-        searchTargets={searchProductCandidates}
+        searchTargets={searchProducts}
         unavailableReason={(candidate) =>
           listed.has(candidate.id)
             ? t("deal.products.alreadyListed")

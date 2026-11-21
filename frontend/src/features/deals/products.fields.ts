@@ -3,6 +3,7 @@
 
 import type { CreateField } from "../../components/create";
 import { amountField } from "../../components/currencyfield";
+import { BILLING_MONTHS, CADENCE } from "../../format/billingphrase";
 import {
   currencyOptions,
   type LeadingCurrencies,
@@ -17,12 +18,7 @@ import {
   moneyLimit,
   percentLimit,
 } from "../../lib/problem";
-import {
-  BILLING_MONTHS,
-  CADENCE,
-  COMPONENT_KINDS,
-  COMPONENT_LABEL,
-} from "./products.display";
+import { COMPONENT_KINDS, COMPONENT_LABEL } from "./products.display";
 import { OTHER_UNIT, unitOptions } from "./productunit";
 import { TAX_CATEGORIES, TAX_CATEGORY_LABEL } from "./taxcategory";
 
