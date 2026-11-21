@@ -4010,11 +4010,14 @@ public.consent_qualifying_event_pkey CREATE UNIQUE INDEX consent_qualifying_even
 public.consent_qualifying_event_source_unique CREATE UNIQUE INDEX consent_qualifying_event_source_unique ON public.consent_qualifying_event USING btree (contact_id, source_entity_type, source_entity_id) WHERE (source_entity_id IS NOT NULL)
 public.consent_text_version acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
 public.consent_text_version.body text NOT NULL gen=- def=-
+public.consent_text_version.channel text gen=- def=-
 public.consent_text_version.consent_text_version_no_edit_after_publish CREATE TRIGGER consent_text_version_no_edit_after_publish BEFORE UPDATE ON public.consent_text_version FOR EACH ROW EXECUTE FUNCTION consent_text_version_is_immutable()
 public.consent_text_version.consent_text_version_pkey PRIMARY KEY (id)
 public.consent_text_version.consent_text_version_published_shape CHECK (((published_at IS NULL) OR (content_hash IS NOT NULL)))
+public.consent_text_version.consent_text_version_purpose_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.consent_text_version.consent_text_version_window CHECK (((effective_until IS NULL) OR (effective_from IS NULL) OR (effective_until > effective_from)))
 public.consent_text_version.content_hash text gen=- def=-
+public.consent_text_version.disclosures jsonb NOT NULL gen=- def='{}'::jsonb
 public.consent_text_version.effective_from timestamp with time zone gen=- def=-
 public.consent_text_version.effective_until timestamp with time zone gen=- def=-
 public.consent_text_version.id uuid NOT NULL gen=- def=uuidv7()
@@ -4022,9 +4025,10 @@ public.consent_text_version.jurisdiction text gen=- def=-
 public.consent_text_version.key text NOT NULL gen=- def=-
 public.consent_text_version.locale text gen=- def=-
 public.consent_text_version.published_at timestamp with time zone gen=- def=-
+public.consent_text_version.purpose_id uuid gen=- def=-
 public.consent_text_version.subject_line text gen=- def=-
-public.consent_text_version.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_text_version FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "locale": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')
-public.consent_text_version.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_text_version FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "locale": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')
+public.consent_text_version.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_text_version FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "locale": 20000, "channel": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"channel":20000,"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')
+public.consent_text_version.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_text_version FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "locale": 20000, "channel": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"channel":20000,"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')
 public.consent_text_version.version text NOT NULL gen=- def=-
 public.consent_text_version_is_immutable() secdef=false cfg=- acl=- 
 BEGIN

@@ -24,7 +24,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
 | [compose](compose.md) | 48 | 434 | 3 | 40 | 36 |
-| [consent](consent.md) | 23 | 318 | 2 | 42 | 23 |
+| [consent](consent.md) | 23 | 321 | 2 | 42 | 23 |
 | [contacts](contacts.md) | 49 | 707 | 77 | 35 | 12 |
 | [continuity](continuity.md) | 1 | 8 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |

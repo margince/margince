@@ -484,7 +484,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_purpose
 
-8 columns · primary key `(id)` · referenced by 7 foreign keys
+8 columns · primary key `(id)` · referenced by 8 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -565,21 +565,30 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_text_version
 
-11 columns · primary key `(id)` · referenced by 1 foreign key
+14 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `body` | `text` | yes |  |
+| `channel` | `text` |  |  |
 | `content_hash` | `text` |  |  |
+| `disclosures` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `effective_from` | `timestamp with time zone` |  |  |
 | `effective_until` | `timestamp with time zone` |  |  |
 | `jurisdiction` | `text` |  |  |
 | `key` | `text` | yes |  |
 | `locale` | `text` |  |  |
 | `published_at` | `timestamp with time zone` |  |  |
+| `purpose_id` | `uuid` |  | Points at `consent_purpose.id`. |
 | `subject_line` | `text` |  |  |
 | `version` | `text` | yes |  |
+
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `purpose_id` | `consent_purpose` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
@@ -594,8 +603,8 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `consent_text_version_no_edit_after_publish`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION consent_text_version_is_immutable()`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "locale": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "locale": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "locale": 20000, "channel": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel":20000,"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "locale": 20000, "channel": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel":20000,"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')`
 
 ## contact_confirm_submission
 

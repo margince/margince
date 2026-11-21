@@ -1,4 +1,4 @@
--- The columns come back empty, with the checks and the key they had.
+-- The columns come back empty, with the checks they had.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE forecast_contribution
@@ -11,11 +11,6 @@ ALTER TABLE forecast_contribution
             viability_disposition IS NULL
             OR viability_disposition IN ('none', 'open_review', 'override', 'unsupported')),
     ADD COLUMN category text;
-ALTER TABLE consent_text_version
-    ADD COLUMN channel text,
-    ADD COLUMN disclosures jsonb NOT NULL DEFAULT '{}'::jsonb,
-    ADD COLUMN purpose_id uuid
-        CONSTRAINT consent_text_version_purpose_fkey REFERENCES consent_purpose (id) ON DELETE RESTRICT;
 ALTER TABLE assurance_exception
     ADD COLUMN evidence_refs jsonb NOT NULL DEFAULT '[]'::jsonb,
     ADD COLUMN version bigint NOT NULL DEFAULT 1

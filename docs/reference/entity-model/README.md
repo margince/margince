@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 363 |
-| Columns | 4477 |
-| Foreign keys | 622 |
+| Columns | 4480 |
+| Foreign keys | 623 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -51,7 +51,7 @@ Ranked by how many foreign keys point at them.
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 10 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
-| [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 7 |
+| [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
 | [`weekly_review`](compose.md#weekly_review) | [compose](compose.md) | 37 | 7 |
 
 ```mermaid
@@ -259,9 +259,9 @@ erDiagram
 | [`confirm_token`](consent.md#confirm_token) | consent | 18 | 2 |
 | [`consent_doi_token`](consent.md#consent_doi_token) | consent | 7 | 0 |
 | [`consent_event`](consent.md#consent_event) | consent | 18 | 0 |
-| [`consent_purpose`](consent.md#consent_purpose) | consent | 8 | 7 |
+| [`consent_purpose`](consent.md#consent_purpose) | consent | 8 | 8 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 17 | 2 |
-| [`consent_text_version`](consent.md#consent_text_version) | consent | 11 | 1 |
+| [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
 | [`contact`](contacts.md#contact) | contacts | 39 | 50 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 15 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |

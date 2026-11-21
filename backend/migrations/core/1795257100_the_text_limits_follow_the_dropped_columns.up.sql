@@ -1,9 +1,5 @@
 -- pgmigrate:no-transaction
 SET lock_timeout = '2s';
-CREATE OR REPLACE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."consent_text_version" FOR EACH ROW
-WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}');
-CREATE OR REPLACE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."consent_text_version" FOR EACH ROW
-WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), to_jsonb(OLD), '{"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}');
 CREATE OR REPLACE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."finance_connection" FOR EACH ROW
 WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000}');
 CREATE OR REPLACE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."finance_connection" FOR EACH ROW

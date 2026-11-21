@@ -573,6 +573,7 @@ public.consent_qualifying_event.retracted_by document
 public.consent_qualifying_event.source document
 public.consent_qualifying_event.source_entity_type document
 public.consent_text_version.body exempt complete captured or authored source content must retain its original text
+public.consent_text_version.channel document
 public.consent_text_version.content_hash document
 public.consent_text_version.jurisdiction document
 public.consent_text_version.key document
