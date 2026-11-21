@@ -4,8 +4,11 @@
 package storekit
 
 import (
+	"context"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // DefaultWaitingHorizonDays applies until response history supports a current
@@ -21,5 +24,24 @@ const WaitingHorizonStaleAfter = 24 * time.Hour
 // rule cannot keep old waits current.
 func WaitingHorizonSQL(asOf time.Time, arg func(any) int) string {
 	ceiling := arg(DefaultWaitingHorizonDays)
-	return fmt.Sprintf(`least(coalesce((SELECT horizon_days FROM activity_waiting_horizon WHERE measured_at > $%d), $%d), $%d)`, arg(asOf.Add(-WaitingHorizonStaleAfter)), ceiling, ceiling)
+	return fmt.Sprintf(`least(coalesce((SELECT (value->>'horizon_days')::int FROM installation_state
+		WHERE key = '%s' AND (value->>'measured_at')::timestamptz > $%d), $%d), $%d)`,
+		StateActivityWaitingHorizon, arg(asOf.Add(-WaitingHorizonStaleAfter)), ceiling, ceiling)
+}
+
+// waitingHorizon is the stored measurement. WaitingHorizonSQL reads these two
+// names inside SQL, so they change together with it.
+type waitingHorizon struct {
+	Days       int       `json:"horizon_days"`
+	MeasuredAt time.Time `json:"measured_at"`
+}
+
+// StoreWaitingHorizonTx stores what the worker pass measured. A horizon under
+// one day is refused: it would end each wait on the day the mail went out.
+func StoreWaitingHorizonTx(ctx context.Context, tx pgx.Tx, days int, measuredAt time.Time) error {
+	if days <= 0 {
+		return fmt.Errorf("storekit: a waiting horizon of %d days is not a measurement", days)
+	}
+	return StoreInstallationStateTx(ctx, tx, StateActivityWaitingHorizon,
+		waitingHorizon{Days: days, MeasuredAt: measuredAt})
 }

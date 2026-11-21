@@ -9,6 +9,7 @@ package activities
 // records those activities are filed under.
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"slices"
@@ -33,8 +34,16 @@ const clockRefoldMigration = "1792656701"
 
 // ClockRefoldMark is how far the refold has come, in (occurred_at, id) order.
 type ClockRefoldMark struct {
-	At time.Time
-	ID ids.UUID
+	At time.Time `json:"passed_up_to"`
+	ID ids.UUID  `json:"passed_id"`
+}
+
+// before orders two marks the way the walk orders activities: by instant, then by id.
+func (m ClockRefoldMark) before(other ClockRefoldMark) bool {
+	if order := m.At.Compare(other.At); order != 0 {
+		return order < 0
+	}
+	return bytes.Compare(m.ID[:], other.ID[:]) < 0
 }
 
 // clockRefoldEnd sorts after every id at one instant, so a mark set to it
@@ -59,20 +68,23 @@ func ClockRefoldStartTx(ctx context.Context, tx pgx.Tx) (ClockRefoldMark, time.T
 	if err := auth.RequireSystem(ctx); err != nil {
 		return ClockRefoldMark{}, time.Time{}, err
 	}
-	var mark ClockRefoldMark
-	var asOf time.Time
-	err := tx.QueryRow(ctx, `
-		SELECT coalesce(m.passed_up_to,
-		                (SELECT applied_at FROM schema_migrations_core WHERE version = $2),
-		                '0001-01-01 00:00:00+00'),
-		       coalesce(m.passed_id, '00000000-0000-0000-0000-000000000000'),
-		       least(now() - make_interval(secs => $1),
-		             (SELECT min(xact_start) FROM pg_stat_activity
-		               WHERE datname = current_database() AND pid <> pg_backend_pid()))
-		  FROM (SELECT) one LEFT JOIN activity_clock_refold_mark m ON true`,
-		clockRefoldSettle.Seconds(), clockRefoldMigration).Scan(&mark.At, &mark.ID, &asOf)
+	mark, stored, err := storekit.InstallationStateTx[ClockRefoldMark](ctx, tx, storekit.StateActivityClockRefoldMark)
 	if err != nil {
 		return ClockRefoldMark{}, time.Time{}, fmt.Errorf("activities: reading the clock refold mark: %w", err)
+	}
+	var asOf time.Time
+	var migrated *time.Time
+	err = tx.QueryRow(ctx, `
+		SELECT (SELECT applied_at FROM schema_migrations_core WHERE version = $2),
+		       least(now() - make_interval(secs => $1),
+		             (SELECT min(xact_start) FROM pg_stat_activity
+		               WHERE datname = current_database() AND pid <> pg_backend_pid()))`,
+		clockRefoldSettle.Seconds(), clockRefoldMigration).Scan(&migrated, &asOf)
+	if err != nil {
+		return ClockRefoldMark{}, time.Time{}, fmt.Errorf("activities: reading the clock refold window: %w", err)
+	}
+	if !stored && migrated != nil {
+		mark.At = *migrated
 	}
 	return mark, asOf, nil
 }
@@ -170,11 +182,16 @@ func AdvanceClockRefoldMarkTx(ctx context.Context, tx pgx.Tx, to ClockRefoldMark
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_clock_refold_mark (passed_up_to, passed_id) VALUES ($1, $2)
-		ON CONFLICT (singleton) DO UPDATE SET passed_up_to = EXCLUDED.passed_up_to, passed_id = EXCLUDED.passed_id
-		 WHERE (activity_clock_refold_mark.passed_up_to, activity_clock_refold_mark.passed_id) < (EXCLUDED.passed_up_to, EXCLUDED.passed_id)`,
-		to.At, to.ID); err != nil {
+	// The row lock makes two runs take turns, so the later one compares
+	// against what the earlier one stored.
+	held, err := storekit.LockInstallationStateTx(ctx, tx, storekit.StateActivityClockRefoldMark, to)
+	if err != nil {
+		return fmt.Errorf("activities: reading the clock refold mark: %w", err)
+	}
+	if !held.before(to) {
+		return nil
+	}
+	if err := storekit.StoreInstallationStateTx(ctx, tx, storekit.StateActivityClockRefoldMark, to); err != nil {
 		return fmt.Errorf("activities: advancing the clock refold mark: %w", err)
 	}
 	return nil

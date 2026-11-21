@@ -198,3 +198,7 @@
 1795247585_the_canonical_address_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795257100_the_text_limits_follow_the_dropped_columns.up.sql | * | replaces the two text-bound triggers on four tables, which act on later writes only; no existing row is changed
 1795257100_the_text_limits_follow_the_dropped_columns.down.sql | * | restores the two text-bound triggers on four tables as they stood before; no existing row is changed
+1795278056_five_one_row_tables_share_one_table.up.sql | *, installation_state | copies one row from each of five tables that hold at most one row, into a new table; the procedural marker is the two trigger definitions on that new table
+1795278056_five_one_row_tables_share_one_table.down.sql | activity_clock_refold_mark, activity_waiting_horizon, capture_answered_sweep_cursor, capture_party_admission_cursor, deal_authorship_sweep_cursor | runs only on a rollback and writes at most one row into each of five new one-row tables
+1795278059_a_weekly_review_holds_its_own_bars.up.sql | weekly_review | writes one row per member and week that froze a forecast bridge, at most 52 rows a year for each member, so an installation of 200 members holds about ten thousand after a year; each row gets one array of at most 18 bars
+1795278059_a_weekly_review_holds_its_own_bars.down.sql | *, weekly_review_movement | runs only on a rollback and writes at most 18 rows for each weekly review that froze a bridge, into a new table; the procedural marker is the two trigger definitions on that table

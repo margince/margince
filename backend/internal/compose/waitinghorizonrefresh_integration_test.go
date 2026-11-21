@@ -55,7 +55,7 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 
 	var days int
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT horizon_days FROM activity_waiting_horizon`).Scan(&days)
+		return tx.QueryRow(context.Background(), `SELECT (value->>'horizon_days')::int FROM installation_state WHERE key = 'activity_waiting_horizon'`).Scan(&days)
 	})
 	if err != nil || days != 30 {
 		t.Fatalf("the stored horizon is (%d, %v), want the 30-day ceiling from the customers' answers alone", days, err)
