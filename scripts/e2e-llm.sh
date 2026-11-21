@@ -721,6 +721,15 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       # while a clone is byte-identical to the world it was already looking at.
       (cd "$ROOT" && make dev-restore DEV_SLUG="$SLUG" >/dev/null)
       WORLD_DIRTY=0
+      # The restore cut every database connection under the api; the run starts
+      # once an authenticated call is answered again, never on the outage.
+      if ! why="$(MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/stackready.py" --settled \
+        --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN --wait 30)"; then
+        echo
+        echo "HARNESS: $name run $i: $why"
+        echo "  This is not a use-case failure. Nothing was scored."
+        exit 2
+      fi
     fi
 
     # Dirty BEFORE the run rather than after it. A run that dies mid-way has

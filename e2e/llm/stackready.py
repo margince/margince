@@ -7,6 +7,7 @@ candidate on a degraded tool and scores their recovery from it, so the lane
 asks before it snapshots the world.
 
     stackready.py --mcp-url URL --token-env NAME [--wait SECONDS]
+    stackready.py --settled --mcp-url URL --token-env NAME [--wait SECONDS]
 
 Exit 0 when semantic search answers; 1 only when search is confirmed lexical,
 the one state E2E_LLM_ALLOW_LEXICAL may wave through; 3 for anything else — a
@@ -50,13 +51,38 @@ def semantic_problem(session):
     return "", False
 
 
+def settled(open_session, wait, clock=time.monotonic, pause=time.sleep):
+    """"" once the stack answers an authenticated initialize, or why it did not.
+
+    A snapshot restore drops every database connection under the running api,
+    and a call that draws one before the pool replaces it is answered 503. A run
+    that started then would be scored on an outage, so the lane waits it out;
+    any other refusal is no outage and is not waited on.
+    """
+    deadline = clock() + wait
+    while True:
+        try:
+            open_session()
+            return ""
+        except mcpclient.McpFault as fault:
+            if "HTTP 503" not in str(fault) or clock() >= deadline:
+                return f"the stack did not answer an authenticated call after the restore: {fault}"
+            pause(1)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--mcp-url", required=True)
     parser.add_argument("--token-env", required=True)
-    parser.add_argument("--wait", type=int, default=300, help="seconds to wait for indexing")
+    parser.add_argument("--wait", type=int, default=300, help="seconds to wait for indexing, or to settle")
+    parser.add_argument("--settled", action="store_true", help="only wait until an authenticated call is answered")
     args = parser.parse_args()
     session = mcpclient.Session(args.mcp_url, os.environ.get(args.token_env, ""))
+    if args.settled:
+        why = settled(session.open, args.wait)
+        if why:
+            print(why)
+        return 3 if why else 0
     deadline = time.monotonic() + args.wait
     try:
         session.open()

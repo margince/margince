@@ -80,3 +80,29 @@ class MainTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SettledTest(unittest.TestCase):
+    """After a restore the lane waits out a 503, and only a 503."""
+
+    def settle(self, answers, wait=30):
+        now = [0.0]
+        def open_session():
+            answer = answers.pop(0)
+            if answer:
+                raise mcpclient.McpFault(answer)
+        def pause(seconds):
+            now[0] += seconds
+        return stackready.settled(open_session, wait, clock=lambda: now[0], pause=pause)
+
+    def test_a_503_then_an_answer_is_settled(self):
+        unavailable = "the MCP server answered HTTP 503 to initialize: authentication_unavailable"
+        self.assertEqual(self.settle([unavailable, unavailable, None]), "")
+
+    def test_a_refused_token_is_not_waited_on(self):
+        why = self.settle(["the MCP server answered HTTP 401 to initialize: invalid_token", None])
+        self.assertIn("HTTP 401", why)
+
+    def test_an_outage_past_the_deadline_is_named(self):
+        why = self.settle(["the MCP server answered HTTP 503 to initialize"] * 5, wait=3)
+        self.assertIn("did not answer an authenticated call", why)
