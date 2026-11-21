@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -172,10 +173,17 @@ func (w *csvWriters) reviewSource(ctx context.Context, row migration.Row) error 
 	return nil
 }
 
+// validateReviewSource drops the records the check filed once it ends: from
+// then on the import meets them stored.
 func (b *bundleWriters) validateReviewSource(ctx context.Context, source migration.Source) error {
 	if b.reviewPlan == nil {
 		return nil
 	}
+	defer func() {
+		for _, part := range b.parts {
+			part.links.batch = contacts.Batch{}
+		}
+	}()
 	objects := source.Objects()
 	if len(objects) != len(b.parts) {
 		return apperrors.ErrVersionSkew
@@ -283,11 +291,9 @@ func (w *csvWriters) validateReviewedDisposition(ctx context.Context, row migrat
 	return apperrors.ErrVersionSkew
 }
 
-// validateReviewRows checks every reviewed row before any lands, so a skip it
-// re-predicts meets the file's earlier new records as the test run did. They
-// are dropped once checked: from then on the import meets them stored.
+// validateReviewRows checks every reviewed row before any lands. A skip it
+// re-predicts meets the records earlier rows leave, as the test run did.
 func (w *csvWriters) validateReviewRows(ctx context.Context, source migration.Source, object string) error {
-	defer func() { w.fileCreates = fileCreates{} }()
 	seen := map[string]bool{}
 	for offset := 0; ; offset += importPredictPage {
 		rows, err := source.Rows(ctx, object, offset, importPredictPage)
@@ -302,8 +308,12 @@ func (w *csvWriters) validateReviewRows(ctx context.Context, source migration.So
 			if err := w.reviewSource(ctx, row); err != nil {
 				return err
 			}
-			if outcome := w.reviewRows[row.ExternalID].Outcome; outcome == importRowCreate || outcome == importRowCreateDuplicate {
-				w.rememberCreate(row)
+			if outcome := w.reviewRows[row.ExternalID].Outcome; outcome != importRowSkip && outcome != importRowUnchanged {
+				predicted, err := w.Predict(ctx, row)
+				if err != nil {
+					return err
+				}
+				w.rememberRow(row, predicted)
 			}
 		}
 		if len(rows) < importPredictPage {

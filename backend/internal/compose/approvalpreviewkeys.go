@@ -7,6 +7,7 @@ const (
 	importRowSkip                  = "skip"
 	importRowCreate                = "create"
 	importRowCreateDuplicate       = "create_duplicate"
+	importRowUnchanged             = "unchanged"
 	operationAdvanceProjectPhase   = "advance_project_phase"
 	operationBookMeeting           = "book_meeting"
 	previewHostNamedAttendee       = "attendee_host_named"

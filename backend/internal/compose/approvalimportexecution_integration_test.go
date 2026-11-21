@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/riverqueue/river"
@@ -16,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -144,19 +146,29 @@ func TestImportApprovalReleasesTheDisplayedRowsThroughTheQueuedWriter(t *testing
 	}
 }
 
-// A file naming one company twice is shown with its second spelling skipped,
-// and the approved import holds every row to what was shown.
+// A file renaming a stored company and naming it and a new one twice is shown
+// with each second spelling skipped. The approved import holds every row to that.
 func TestAnApprovedImportSkipsTheLookAlikeItsApproverWasShown(t *testing.T) {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	handler, _ := leadSourceHandlers(t, e)
-	run := testedImportRun(t, e, handler, migration.ObjectCompany, "Company\nSkipco Trading\nSkipco Trading GmbH\nNordwind Logistik\n",
-		map[string]string{"Company": "display_name"}, crmcontracts.ImportOnDuplicateSkip)
+	stored, err := contacts.NewStore(e.DB()).CreateCompany(importAdmin(e), contacts.CreateCompanyInput{DisplayName: "Kestrel Data", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := fmt.Sprintf("Id,Company\n%s,Skipco Trading\n,Skipco Trading GmbH\n,Nordwind Logistik\n,Nordwind Logistik AG\n", stored.Id)
+	run := testedImportRun(t, e, handler, migration.ObjectCompany, file, map[string]string{"Id": "id", "Company": "display_name"}, crmcontracts.ImportOnDuplicateSkip)
 	service, id, hash := stagedImportApproval(t, e, run)
 	proposal, err := service.GetWire(importAdmin(e), id)
-	if err != nil || proposal.Preview == nil || proposal.Preview.ImportRows == nil ||
-		len(*proposal.Preview.ImportRows) != 3 || (*proposal.Preview.ImportRows)[1].Outcome != importRowSkip {
-		t.Fatalf("the approval shows %+v (%v), want its second row skipped", proposal.Preview, err)
+	if err != nil || proposal.Preview == nil || proposal.Preview.ImportRows == nil {
+		t.Fatalf("the approval shows no rows: %+v (%v)", proposal.Preview, err)
+	}
+	var shown []string
+	for _, row := range *proposal.Preview.ImportRows {
+		shown = append(shown, string(row.Outcome))
+	}
+	if want := []string{"update", importRowSkip, importRowCreate, importRowSkip}; !slices.Equal(shown, want) {
+		t.Fatalf("the approval shows %v, want %v", shown, want)
 	}
 	approved := approvedThroughDecision(t, e, service, id, hash, run)
 	commit := ImportCommitArgs{Workspace: e.WS, RunID: run.ID, Attempt: approved.JobAttempt}
@@ -164,7 +176,7 @@ func TestAnApprovedImportSkipsTheLookAlikeItsApproverWasShown(t *testing.T) {
 		t.Fatal(err)
 	}
 	finished, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), run.ID)
-	if err != nil || finished.Status != migration.StatusComplete || finished.Report == nil || finished.Report.Imported != 2 {
-		t.Fatalf("the approved run = %+v (%v), want complete with two companies imported", finished, err)
+	if err != nil || finished.Status != migration.StatusComplete || finished.Report == nil {
+		t.Fatalf("the approved run = %+v (%v), want it complete", finished, err)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The batch half answers about a record not written yet what the ladder
@@ -82,6 +83,10 @@ func TestTheLadderAndItsBatchHalfAgree(t *testing.T) {
 			held:  NewContact{FullName: "Anna Schmidt", Emails: []string{"anna.schmidt@gmail.com"}},
 			asked: ContactCandidate{FullName: "Anna Schmitt", Emails: []string{"a.schmitt@gmail.com"}},
 		},
+		"similar names, one at the other's employer domain": {
+			held:  NewContact{FullName: "Anna Schmidt", Emails: []string{"anna.schmidt@gmail.com"}, EmployerDomains: []string{"twinco.example"}},
+			asked: ContactCandidate{FullName: "Anna Schmitt", Emails: []string{"a.schmitt@twinco.example"}}, pairs: true,
+		},
 		"one name at two employers": {
 			held:  NewContact{FullName: "Anna Schmidt", Emails: []string{"anna@twinco.example"}},
 			asked: ContactCandidate{FullName: "Anna Schmidt", Emails: []string{"anna@otherco.example"}},
@@ -93,6 +98,14 @@ func TestTheLadderAndItsBatchHalfAgree(t *testing.T) {
 			in := CreateContactInput{FullName: tc.held.FullName, Source: "manual"}
 			for _, email := range tc.held.Emails {
 				in.Emails = append(in.Emails, ContactEmailInput{Email: email, EmailType: "work", IsPrimary: true})
+			}
+			if len(tc.held.EmployerDomains) > 0 {
+				employer, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Twinco", Source: "manual",
+					Domains: []CompanyDomainInput{{Domain: tc.held.EmployerDomains[0], IsPrimary: true}}})
+				if err != nil {
+					t.Fatalf("create the employer: %v", err)
+				}
+				in.Employer = EmployerChoice{CompanyID: new(ids.From[ids.CompanyKind](ids.UUID(employer.Id))), Source: "manual"}
 			}
 			if _, err := e.store.CreateContact(ctx, in); err != nil {
 				t.Fatalf("create %s: %v", tc.held.FullName, err)

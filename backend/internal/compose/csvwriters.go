@@ -119,8 +119,8 @@ type csvWriters struct {
 	// predictedWarnings are a predicted row's warnings beyond the one predictRow
 	// returns; predictPages reports and clears them.
 	predictedWarnings []migration.SkippedRow
-	// fileCreates are the new records a test run carries; the import has none.
-	fileCreates fileCreates
+	// predictedChange files the record a predicted update leaves (rememberRow).
+	predictedChange func(*contacts.Batch)
 }
 
 var _ migration.Writers = (*csvWriters)(nil)

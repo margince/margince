@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/importkeys"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -61,6 +62,8 @@ type linkResolver struct {
 	pendingNatural map[linkKey]bool
 	// claims are the unique keys of the run's landing rows (newRecordRefusal).
 	claims importkeys.Ledger
+	// batch is what the test run's landing rows leave, for the duplicate check.
+	batch contacts.Batch
 	// landed holds the rows of this slice that named their record by id, so a
 	// link answers before the identity map is read.
 	landed map[linkKey]ids.UUID
