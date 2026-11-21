@@ -78,9 +78,9 @@ export function useSavedDraft<Draft, Saved>({
   }, []);
 
   useEffect(() => {
-    // `settled` re-runs this once a save answers. The answer can reach here
-    // before the saved value it wrote reaches the props, so the draft is only
-    // replaced after the saved value itself has moved.
+    // `settled` re-runs this once a save answers. That answer can arrive
+    // before its saved value reaches the props. So the draft is replaced only
+    // after the saved value itself has moved.
     void settled;
     if (!Object.is(lastSaved.current, saved)) {
       lastSaved.current = saved;
