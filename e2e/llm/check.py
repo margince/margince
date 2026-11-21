@@ -134,7 +134,7 @@ _SCHEMA = {
     "criteria": "list", "must_call": "list", "may_call": "list", "must_call_with": "list",
     "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
     "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
-    "elicitation": "list",
+    "elicitation": "list", "must_answer": "list",
 }
 _REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
 # The credentials scripts/e2e-llm.sh mints, by the `passport:` value that picks
@@ -285,7 +285,10 @@ def elicitation_replies(entries):
 def _entry_problems(data):
     problems = []
     try:
-        elicitation_replies(data.get("elicitation", []))
+        scripted = {(reply["match"], reply["action"]) for reply in elicitation_replies(data.get("elicitation", []))}
+        for wanted in elicitation_replies(data.get("must_answer", [])):
+            if (wanted["match"], wanted["action"]) not in scripted:
+                problems.append(f"must_answer {wanted['match']!r} => {wanted['action']} is no elicitation entry")
     except ValueError as malformed:
         problems.append(str(malformed))
     for key in ("must_mention", "must_not_mention"):
@@ -937,6 +940,20 @@ def _unmatched_problem(calls, entry):
     return "never called " + " or ".join(f"{tool} carrying anything matching /{pattern}/" for tool, pattern in wanted)
 
 
+def answered(path):
+    """(the entry that answered, the action) for each question the host answered."""
+    found = []
+    with _open_checked(path) as lines:
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict) and event.get("type") == "elicitation":
+                found.append((event.get("scripted_by"), (event.get("reply") or {}).get("action")))
+    return found
+
+
 def check(scenario, transcript_path):
     """The problem lines of one run. The positive checks read the final answer
     and the calls that worked; the forbidding checks read every word and every
@@ -988,6 +1005,14 @@ def check(scenario, transcript_path):
         if problem:
             problems.append(problem)
 
+    # MUST_ANSWER holds a case's premise: the question was asked and the host
+    # gave the scripted answer. A run that never reached the question cannot
+    # show what the answer does.
+    asked = answered(transcript_path)
+    for wanted in elicitation_replies(scenario.get("must_answer", [])):
+        if (wanted["match"], wanted["action"]) not in asked:
+            problems.append(f"the question holding {wanted['match']!r} was never answered {wanted['action']}")
+
     for pattern in scenario.get("must_mention", []):
         if not re.search(pattern, run.final, re.IGNORECASE):
             problems.append(f"never said anything matching /{pattern}/")
@@ -1021,10 +1046,6 @@ def main():
         scenario = parse_scenario(sys.argv[3])
         value = scenario.get(sys.argv[2], "")
         print(value if not isinstance(value, list) else "\n".join(map(str, value)))
-        return 0
-
-    if sys.argv[1] == "--elicitation":
-        print(json.dumps(elicitation_replies(parse_scenario(sys.argv[2]).get("elicitation", []))))
         return 0
 
     if sys.argv[1] == "--candidate":

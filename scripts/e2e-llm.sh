@@ -142,14 +142,31 @@ if [[ "$WIRE" = claude-cli || "$WIRE" = claude-sdk || "$E2E_LLM_JUDGE_VIA" = cli
   command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
 fi
 # The runner is no workspace member and has no lockfile, which would put the
-# Agent SDK in the source SBOM: this lane installs its exact pins and checks them.
+# Agent SDK in the source SBOM. So before every SDK lane: an install whose
+# versions are not package.json's pins is made again, the registry signatures
+# are checked each time (a tree that fails them is removed, so the next lane
+# installs anew), and the runner's own self-check runs against what is installed.
 if [[ "$WIRE" = claude-sdk ]]; then
   command -v node >/dev/null || { echo "node is not on PATH; the SDK route runs e2e/llm/sdk-runner" >&2; exit 1; }
-  if [[ ! -d "$ROOT/e2e/llm/sdk-runner/node_modules/@anthropic-ai/claude-agent-sdk" ]]; then
-    (cd "$ROOT/e2e/llm/sdk-runner" && npm install --no-package-lock --ignore-scripts --no-audit --no-fund >/dev/null &&
-      npm audit signatures >/dev/null) ||
-      { echo "the SDK runner did not install, or a registry signature did not verify" >&2; exit 1; }
+  runner_dir="$ROOT/e2e/llm/sdk-runner"
+  if ! (cd "$runner_dir" && node -e 'const pkg = require("./package.json");
+const pins = { ...pkg.dependencies, ...pkg.devDependencies };
+for (const [name, pin] of Object.entries(pins)) {
+  let have = "";
+  try { have = require(`./node_modules/${name}/package.json`).version; } catch {}
+  if (have !== pin) process.exit(1);
+}'); then
+    rm -rf "$runner_dir/node_modules"
+    (cd "$runner_dir" && npm install --no-package-lock --ignore-scripts --no-audit --no-fund >/dev/null) ||
+      { echo "the SDK runner did not install" >&2; exit 1; }
   fi
+  if ! (cd "$runner_dir" && npm audit signatures >/dev/null); then
+    rm -rf "$runner_dir/node_modules"
+    echo "a registry signature of the SDK runner's packages did not verify; the install was removed" >&2
+    exit 1
+  fi
+  (cd "$runner_dir" && npm run -s selfcheck >/dev/null) ||
+    { echo "the SDK runner's self-check failed: cd $runner_dir && npm run selfcheck" >&2; exit 1; }
 fi
 if [[ "$WIRE" = codex-cli ]]; then
   command -v codex >/dev/null || { echo "the codex CLI is not on PATH" >&2; exit 1; }

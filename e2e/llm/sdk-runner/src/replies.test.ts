@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import { answer, claudeArgs, readReplies } from "./replies.ts";
@@ -53,4 +54,17 @@ test("the clean launch's flags become extraArgs, an empty value kept", () => {
     "disable-slash-commands": null,
   });
   assert.throws(() => claudeArgs(["stray"]), /no flag before it/);
+});
+
+// The answers check.py's parser writes, and the ones it refuses, read the same way here.
+const SHARED = JSON.parse(readFileSync(new URL("../testdata/replies.json", import.meta.url), "utf8"));
+
+test("every reply check.py writes is read back unchanged", () => {
+  assert.deepEqual(readReplies(JSON.stringify(SHARED.replies)), SHARED.replies);
+});
+
+test("every reply check.py refuses to write is refused here too", () => {
+  for (const reply of SHARED.refused_replies) {
+    assert.throws(() => readReplies(JSON.stringify([reply])), Error, JSON.stringify(reply));
+  }
 });

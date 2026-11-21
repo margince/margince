@@ -9,15 +9,19 @@
 // check.py reads the run as it reads a `claude -p` one. Each question and its
 // answer are added as an `elicitation` line, which the checker passes over.
 //
-// Exit 0 when the run happened, whatever the model did; exit 3 when it could
-// not be run. e2e/llm/drive.py starts this through clean.py's launch.
+// Exit 0 when the run happened, whatever the model did, the turn cap included;
+// exit 3 when it could not be run. Like the CLI route, no wall clock bounds a
+// run beyond its turns. e2e/llm/drive.py starts this through clean.py's launch.
 
-import { closeSync, openSync, readFileSync, writeSync } from "node:fs";
+import { closeSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync, writeSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { parseArgs } from "node:util";
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { ElicitationRequest, ElicitationResult } from "@anthropic-ai/claude-agent-sdk";
 
+import { record } from "./record.ts";
 import { answer, claudeArgs, readReplies } from "./replies.ts";
 import type { Reply } from "./replies.ts";
 
@@ -35,7 +39,6 @@ const { values } = parseArgs({
     cwd: { type: "string" },
     claude: { type: "string" },
     "max-turns": { type: "string", default: "20" },
-    "timeout-s": { type: "string", default: "900" },
     // The clean launch's flags, passed on to the binary as they are.
     "claude-arg": { type: "string", multiple: true, default: [] },
   },
@@ -85,35 +88,42 @@ function elicitationHandler(replies: readonly Reply[], out: TranscriptFile) {
   };
 }
 
+// mcpConfigFile writes the lane's one server where only this user can read it.
+// The SDK would put mcpServers, and so the passport, on claude's command line.
+function mcpConfigFile(dir: string, server: string, url: string, token: string): string {
+  const path = join(dir, "mcp.json");
+  const config = { mcpServers: { [server]: { type: "http", url, headers: { Authorization: `Bearer ${token}` } } } };
+  writeFileSync(path, JSON.stringify(config), { mode: 0o600 });
+  return path;
+}
+
 async function main(): Promise<number> {
   const server = required("server");
   const tokenEnv = required("token-env");
   const token = process.env[tokenEnv] ?? "";
   if (token === "") {
-    throw new Error(`${values["token-env"]} is not set`);
+    throw new Error(`${tokenEnv} is not set`);
   }
   const prompt = readFileSync(required("prompt-file"), "utf8");
   const replies = values["replies-file"] ? readReplies(readFileSync(values["replies-file"], "utf8")) : [];
+  const configDir = mkdtempSync(join(tmpdir(), "e2e-llm-sdk-mcp."));
   const out = new TranscriptFile(required("out"));
-  const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), Number(values["timeout-s"]) * 1000);
   try {
     const run = query({
       prompt,
       options: {
-        abortController: abort,
         cwd: required("cwd"),
         model: required("model"),
         pathToClaudeCodeExecutable: required("claude"),
-        extraArgs: claudeArgs(values["claude-arg"] ?? []),
-        // The passport reaches claude in the server's header alone.
+        extraArgs: {
+          ...claudeArgs(values["claude-arg"] ?? []),
+          "mcp-config": mcpConfigFile(configDir, server, required("mcp-url"), token),
+        },
+        // The passport reaches claude in the config file alone.
         env: Object.fromEntries(Object.entries(process.env).filter(([name]) => name !== tokenEnv)),
         // The CLI route's own prompt, so the two routes differ only in who
         // answers the server's questions.
         systemPrompt: { type: "preset", preset: "claude_code" },
-        mcpServers: {
-          [server]: { type: "http", url: required("mcp-url"), headers: { Authorization: `Bearer ${token}` } },
-        },
         strictMcpConfig: true,
         tools: [],
         allowedTools: [`mcp__${server}__*`],
@@ -122,20 +132,10 @@ async function main(): Promise<number> {
         onElicitation: elicitationHandler(replies, out),
       },
     });
-    for await (const message of run) {
-      out.write(message);
-    }
-  } catch (stopped: unknown) {
-    if (!abort.signal.aborted) {
-      throw stopped;
-    }
+    await record(run, (message) => out.write(message));
   } finally {
-    clearTimeout(timer);
     out.close();
-  }
-  if (abort.signal.aborted) {
-    console.error(`the run did not finish within ${values["timeout-s"]} seconds`);
-    return HARNESS;
+    rmSync(configDir, { recursive: true, force: true });
   }
   return 0;
 }

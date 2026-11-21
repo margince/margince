@@ -24,6 +24,9 @@ prompt: |
 
 elicitation:
   - "Give a new owner to => decline"
+# The premise: execute asked, and the user said no.
+must_answer:
+  - "Give a new owner to => decline"
 
 must_call:
   - bulk_update_records
@@ -35,8 +38,12 @@ may_call:
   - resolve_entities
   - whoami
 
+# The execute is refused by the no, and that refusal is the outcome.
+counts_when_refused:
+  - bulk_update_records
 must_call_with:
   - bulk_update_records.mode=preview
+  - bulk_update_records.mode=execute
 
 must_not_call_with:
   - update_record~owner

@@ -3,8 +3,9 @@
 
 // The user's scripted answers to the questions an MCP server asks in the chat.
 //
-// check.py parses a scenario's `elicitation:` entries into the JSON this reads,
-// so the grammar has one parser and this side only applies it.
+// check.py parses a scenario's `elicitation:` entries into the JSON this reads.
+// This side refuses what that parser never writes, and testdata/replies.json
+// holds both sides to the same answers.
 
 export type Action = "accept" | "decline" | "cancel";
 
@@ -71,6 +72,9 @@ export function readReplies(text: string): Reply[] {
     }
     if (content === undefined) {
       return { match, action };
+    }
+    if (action !== "accept") {
+      throw new Error(`reply ${index} gives content to a ${action}, which sends none`);
     }
     if (!isObject(content)) {
       throw new Error(`reply ${index} has content that is not an object`);

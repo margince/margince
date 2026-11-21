@@ -38,9 +38,12 @@ A CLI starts with nothing of yours: `e2e/llm/clean.py` starts it, and the judge,
 server puts up, so a change to many records at once never runs on the `cli` route. The `sdk` route runs the
 same `claude` binary with the same flags and system prompt. Its host answers each form from the
 scenario's `elicitation:` entries, and writes the question and the answer into the transcript as an
-`elicitation` line. The first time the route runs, the lane installs the exact versions that
-`e2e/llm/sdk-runner/package.json` pins, and checks their registry signatures. That folder keeps no
-lockfile, so the source SBOM never lists the Agent SDK.
+`elicitation` line.
+
+Before each run of the lane on this route, it installs again when what is
+installed is not what `e2e/llm/sdk-runner/package.json` pins. It checks the registry signatures, and
+runs `npm run selfcheck` there. That folder keeps no lockfile, so the source SBOM never lists the
+Agent SDK.
 
 Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you run `agy` once and sign in). Each run gets an empty folder that holds one agent file. That agent names the lane's server as its only MCP server, and turns off your own servers, rules and skill files. In print mode `agy` refuses any action it would ask you about, and `--settings` allows only the lane's server.
 
