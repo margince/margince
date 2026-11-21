@@ -272,11 +272,8 @@ func seedEmbedCall(t *testing.T, e *Env, daysBack int) ids.UUID {
 	return callID
 }
 
-// TestEmbedCallRetentionAgesOutOverAgeEmbeddingRows drives the nightly
-// retention evaluator over an over-age embedding-kind ai_call row: it is
-// erased outright at the fixed 90-day cap, unlike a completion-kind row
-// (which the evaluator never touches — it is not policy-configurable and
-// carries no per-workspace opt-in).
+// The nightly pass removes an embedding trace past its fixed 90 days and
+// keeps a younger one.
 func TestEmbedCallRetentionAgesOutOverAgeEmbeddingRows(t *testing.T) {
 	e := Setup(t)
 	overAge := seedEmbedCall(t, e, 91)
@@ -323,7 +320,7 @@ func seedAgedPayload(t *testing.T, e *Env, daysBack int, requestJSON string) ids
 // content row is deleted, the ai_call metadata row survives.
 func TestAICallPayloadRetentionAgesOutContentKeepingMetadata(t *testing.T) {
 	e := Setup(t)
-	callID := seedAgedPayload(t, e, 400, `{"messages":[{"role":"user","content":"old chatter"}]}`)
+	callID := seedAgedPayload(t, e, 380, `{"messages":[{"role":"user","content":"old chatter"}]}`)
 
 	// The bootstrap-seeded payload policy: 365-day erase of the content.
 	e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action)

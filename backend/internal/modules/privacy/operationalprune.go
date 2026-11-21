@@ -36,7 +36,7 @@ func (s *RetentionService) WithOperationalPrunes(prunes ...OperationalPrune) *Re
 // pruneOperationalRows runs each prune a page per transaction until a page
 // comes back short.
 func (s *RetentionService) pruneOperationalRows(ctx context.Context) error {
-	for _, prune := range s.operationalPrunes {
+	for _, prune := range append(systemLogPrunes(), s.operationalPrunes...) {
 		cutoff := time.Now().AddDate(0, 0, -prune.Days)
 		var total int64
 		for {
@@ -60,8 +60,26 @@ func (s *RetentionService) pruneOperationalRows(ctx context.Context) error {
 	return nil
 }
 
-// embedCallPrune names the embedding call traces in a prune's record.
-const embedCallPrune = "embedding call traces"
+// systemLogPrunes is one prune for each window the system log has. The
+// database takes the age itself, so the cutoff this side computes is unused.
+func systemLogPrunes() []OperationalPrune {
+	var prunes []OperationalPrune
+	for _, window := range storekit.SystemLogWindows() {
+		prunes = append(prunes, OperationalPrune{
+			Name: window.Name, Days: window.Days,
+			Remove: func(ctx context.Context, tx pgx.Tx, _ time.Time, limit int) (int64, error) {
+				return storekit.PruneSystemLogTx(ctx, tx, window, limit)
+			},
+		})
+	}
+	return prunes
+}
+
+// The names of the call traces in a prune's record.
+const (
+	embedCallPrune  = "embedding call traces"
+	answerCallPrune = "completion and decision call traces"
+)
 
 // prunedAction is the system_log action of a prune that removed rows.
 const prunedAction = "retention.pruned"
