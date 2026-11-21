@@ -435,32 +435,26 @@ describe("LeadBulkBar — confirm and busy state", () => {
     );
   }
 
-  it("warns Large change above ten leads on Disqualify and not at ten", async () => {
+  async function openDisqualifyConfirm(leadCount: number) {
     stubFetch();
     const user = userEvent.setup();
-    const first = render(
-      <LeadBulkBar leads={many(11)} onDone={() => undefined} />,
-    );
+    render(<LeadBulkBar leads={many(leadCount)} onDone={() => undefined} />);
     await chooseReasonAndOwner(user);
     await waitFor(() =>
       expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
     );
     await user.click(disqualifyButton());
-    expect(
-      within(await screen.findByRole("dialog")).getByText("Large change"),
-    ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    return screen.findByRole("dialog");
+  }
 
-    first.unmount();
-    render(<LeadBulkBar leads={many(10)} onDone={() => undefined} />);
-    await chooseReasonAndOwner(user);
-    await waitFor(() =>
-      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
-    );
-    await user.click(disqualifyButton());
-    expect(
-      within(await screen.findByRole("dialog")).queryByText("Large change"),
-    ).toBeNull();
+  it("warns Large change on Disqualify above ten leads", async () => {
+    const dialog = await openDisqualifyConfirm(11);
+    expect(within(dialog).getByText("Large change")).toBeTruthy();
+  });
+
+  it("shows no Large change warning on Disqualify at ten leads", async () => {
+    const dialog = await openDisqualifyConfirm(10);
+    expect(within(dialog).queryByText("Large change")).toBeNull();
   });
 
   it("asks before assigning, warns above ten and sends nothing on Cancel", async () => {
