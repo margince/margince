@@ -209,8 +209,8 @@ export function mapCompanyUpdate(
 // one nested object and the form channel is flat, so addressFrom and
 // addressPatch map the two. The country is chosen by name, stored as its code.
 //
-// A country stored as free text before the code rule is kept as one more option,
-// so the list shows what the record holds and a save without a pick sends it back.
+// A country stored as free text before the code rule stays as one more option.
+// The list then shows what the record holds, and a save without a pick keeps it.
 export function addressFields(
   locale: Locale,
   stored?: string | null,
