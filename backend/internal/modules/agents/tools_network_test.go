@@ -295,6 +295,32 @@ func TestCoverageForwardsTheFindingsWithTheirEvidence(t *testing.T) {
 	}
 }
 
+// The coverage tool hands a model only built-in seat roles, by their key,
+// whichever CoverageReader built the answer.
+func TestTheCoverageToolCarriesOnlyBuiltInSeatRoles(t *testing.T) {
+	stored := []string{"contact", " Champion ", "economic_buyer"}
+	tool := companyCoverageTool{read: func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
+		answer := DealCoverageAnswer{}
+		for _, role := range stored {
+			answer.Stakeholders = append(answer.Stakeholders, CoverageSeat{ContactID: ids.NewV7(), Role: role})
+		}
+		return answer, nil
+	}}
+	out, err := tool.Handle(context.Background(), json.RawMessage(`{"deal_id":"`+ids.NewV7().String()+`"}`))
+	if err != nil {
+		t.Fatalf("coverage: %v", err)
+	}
+	var got DealCoverageAnswer
+	if err := json.Unmarshal(out, &got); err != nil {
+		t.Fatalf("unreadable payload: %v", err)
+	}
+	for i, want := range []string{"", "champion", "economic_buyer"} {
+		if got.Stakeholders[i].Role != want {
+			t.Errorf("seat stored as %q answers role %q, want %q", stored[i], got.Stakeholders[i].Role, want)
+		}
+	}
+}
+
 // A withheld coverage answer says so IN WORDS, not only in a field.
 //
 // The structured half of this answer — no seats, nobody on our side, no

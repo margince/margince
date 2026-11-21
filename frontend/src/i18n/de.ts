@@ -3605,6 +3605,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.slotTaken":
     "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
   "common.retry": "Erneut versuchen",
+  "common.goneBackToAnalytics": "Zurück zu Analytics",
+  "reporting.sharedForecastGone":
+    "Dieser Link funktioniert nicht mehr. Wer ihn dir geschickt hat, kann dir einen neuen schicken.",
+  "reporting.reportGone":
+    "Diesen Bericht gibt es nicht, oder er ist nicht mit dir geteilt.",
+  "analytics.q.gone":
+    "Diese Frage gibt es nicht, oder sie ist nicht mit dir geteilt.",
+  "book.linkGone":
+    "Diese Buchungsseite ist nicht verfügbar. Frage nach einem neuen Link.",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",
@@ -3721,6 +3730,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Nach {column} sortieren",
   "table.noMatches": "Keine {unit} entsprechen diesen Filtern.",
   "table.clearFilters": "Filter zurücksetzen",
+  "table.dialsRefused":
+    "Mit diesen Filtern lässt sich die Liste nicht anzeigen.",
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
@@ -5642,6 +5653,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.roleLabel.blocker": "Blocker",
   "co.roleLabel.influencer": "Influencer",
   "co.roleLabel.user": "Endnutzende",
+  "co.roleLabel.decision_maker": "Entscheidungstragende",
   "co.evidence.extractedUnconfirmed": "Von KI extrahiert · nicht bestätigt",
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",
@@ -8751,6 +8763,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
 
   "tasks.complete": "Erledigt",
+  "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
   "tasks.log.action": "Ergebnis erfassen",
@@ -20965,6 +20978,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Archivieren entfernt dieses Projekt aus der aktiven Liste und gibt sein Kürzel frei. Das lässt sich hier nicht rückgängig machen.",
   "project.archivedReadOnly":
     "Dieses Projekt ist archiviert und lässt keine Änderungen zu.",
+  "project.page.notFound": "Projekt nicht gefunden",
+  "project.page.notFoundBody":
+    "Dieses Projekt gibt es nicht, oder du kannst es nicht sehen.",
+  "project.page.backToProjects": "Zurück zu den Projekten",
   "project.notYoursToChange":
     "Du kannst dieses Projekt nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "project.phaseLabel": "Phase",

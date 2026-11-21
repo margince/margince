@@ -3499,6 +3499,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.slotTaken":
     "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
+  "common.goneBackToAnalytics": "Quay lại Analytics",
+  "reporting.sharedForecastGone":
+    "Liên kết này không còn dùng được. Hãy hỏi bên gửi để có liên kết mới.",
+  "reporting.reportGone":
+    "Báo cáo này không tồn tại, hoặc chưa được chia sẻ với bạn.",
+  "analytics.q.gone":
+    "Câu hỏi này không tồn tại, hoặc chưa được chia sẻ với bạn.",
+  "book.linkGone":
+    "Trang đặt lịch này không khả dụng. Hãy hỏi bên gửi để có liên kết mới.",
   "common.empty": "Chưa có gì ở đây.",
   "common.saving": "Đang lưu…",
   "common.loading": "Đang tải…",
@@ -3603,6 +3612,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Sắp xếp theo {column}",
   "table.noMatches": "Không có {unit} nào khớp với các bộ lọc này.",
   "table.clearFilters": "Bỏ bộ lọc",
+  "table.dialsRefused": "Không thể hiển thị danh sách với bộ lọc này.",
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "Đã tải {first} đến {last} trong {count} {unit}",
@@ -5492,6 +5502,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.roleLabel.blocker": "Người cản trở",
   "co.roleLabel.influencer": "Người có ảnh hưởng",
   "co.roleLabel.user": "Người dùng cuối",
+  "co.roleLabel.decision_maker": "Người ra quyết định",
   "co.evidence.extractedUnconfirmed": "AI trích xuất · chưa xác nhận",
   "co.evidence.previous": "Thông tin trước",
   "co.evidence.next": "Thông tin sau",
@@ -8523,6 +8534,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 
   "tasks.complete": "Xong",
+  "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
   "tasks.log.action": "Ghi lại kết quả",
@@ -20425,6 +20437,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chuyển vào kho lưu trữ sẽ gỡ dự án này khỏi danh sách đang hoạt động và giải phóng mã của dự án. Không thể hoàn tác ở đây.",
   "project.archivedReadOnly":
     "Dự án này đang trong kho lưu trữ và không thể thay đổi.",
+  "project.page.notFound": "Không tìm thấy dự án",
+  "project.page.notFoundBody":
+    "Dự án này không tồn tại, hoặc bạn không có quyền xem.",
+  "project.page.backToProjects": "Quay lại danh sách dự án",
   "project.notYoursToChange":
     "Bạn không có quyền sửa dự án này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
   "project.phaseLabel": "Giai đoạn dự án",

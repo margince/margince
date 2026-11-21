@@ -205,12 +205,13 @@ Two months in, Nordwind subcontracts the warehouse integration to
 *DACHPartner GmbH*. The project is now more than one company's work, and
 Margince can show that.
 
-1. On the project page, in **Companies**, press **Attach company**.
-2. Under **As**, leave **Partner**. The list opens on Partner, not Customer,
-   because the project already has its customer. Set the role before you pick
-   the company, because picking is what attaches it.
-3. Search for *DACHPartner GmbH* and pick it from the results. The dialog
-   closes and the company is on the project.
+1. On the project page, choose **More actions** → **Companies and contacts**.
+   Under **Companies**, press **Attach company**.
+2. Search for *DACHPartner GmbH* and select it in the results. Selecting does
+   not attach it, and the dialog stays open.
+3. Under **As**, select **Partner**.
+4. Press **Attach company**. The dialog closes and the company is on the
+   project.
 
 The Companies card now shows both: *Nordwind Logistik: Customer* and
 *DACHPartner GmbH: Partner*.
@@ -221,13 +222,12 @@ the partner's own commercial work sits on the same project as the customer's.
 
 Margince refuses the following, and shows the reason on screen:
 
-- **Removing the last company.** *A project keeps at least one company; add
-  another before taking this one off.*
-<!-- prose:allow sentence the refusal message is quoted as the screen shows it -->
-- **Removing a company with deals here.** *This company still has 1
-  `deal(s)` on the project; move or close them before taking the company off.*
-  Winning or losing a deal does not clear this, because the count is of deals
-  that still exist. Point them at another project, or archive them.
+- **Removing the last company.** A project keeps at least one company, so its
+  only company offers no **Detach**.
+- **Removing a company with deals here.** *This company still has 1 deal on
+  the project. Move it to another project or archive it before you take the
+  company off.* Winning or losing a deal does not clear this, because the count
+  is of deals that still exist.
 
 Attaching a company that is already on the project changes its role instead of
 adding it twice. That is how you move DACHPartner from subcontractor to partner

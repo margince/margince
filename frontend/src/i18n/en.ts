@@ -3515,6 +3515,15 @@ export const en = {
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
+  "common.goneBackToAnalytics": "Back to Analytics",
+  "reporting.sharedForecastGone":
+    "This link no longer works. Ask the sender for a new one.",
+  "reporting.reportGone":
+    "This report does not exist, or it is not shared with you.",
+  "analytics.q.gone":
+    "This question does not exist, or it is not shared with you.",
+  "book.linkGone":
+    "This booking page is not available. Ask the sender for a new link.",
   "common.empty": "Nothing here yet.",
   "common.saving": "Saving…",
   "common.loading": "Loading…",
@@ -3650,6 +3659,7 @@ export const en = {
   "table.sortBy": "Sort by {column}",
   "table.noMatches": "No {unit} match these filters.",
   "table.clearFilters": "Clear filters",
+  "table.dialsRefused": "This list cannot be shown with these filters.",
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
@@ -5577,6 +5587,7 @@ export const en = {
   "co.roleLabel.blocker": "Blocker",
   "co.roleLabel.influencer": "Influencer",
   "co.roleLabel.user": "End user",
+  "co.roleLabel.decision_maker": "Decision-maker",
   "co.evidence.extractedUnconfirmed": "Extracted by AI · not confirmed",
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
@@ -8735,6 +8746,7 @@ export const en = {
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",
+  "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
   "tasks.log.action": "Log what happened",
@@ -20749,6 +20761,10 @@ export const en = {
   "project.archiveConfirm":
     "Archiving removes this project from the active list and frees its key. This cannot be undone here.",
   "project.archivedReadOnly": "This project is archived and takes no changes.",
+  "project.page.notFound": "Project not found",
+  "project.page.notFoundBody":
+    "This project does not exist, or you cannot see it.",
+  "project.page.backToProjects": "Back to projects",
   "project.notYoursToChange":
     "You cannot edit this project. Ask its owner to share it, or an administrator for edit rights.",
   "project.phaseLabel": "Phase",

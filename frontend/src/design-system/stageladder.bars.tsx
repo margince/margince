@@ -125,6 +125,7 @@ function BarStep({ step }: Readonly<{ step: StageStep }>) {
       variant="ghost"
       className="stage-ladder-bar-step"
       data-testid={step.testId}
+      aria-label={step.actionLabel}
       disabled={step.disabled}
       reason={step.reason}
       reasonId={step.reasonId}
@@ -155,6 +156,7 @@ function ExitChip({
       variant="ghost"
       className="stage-ladder-exit"
       data-testid={step.testId}
+      aria-label={step.actionLabel}
       disabled={step.disabled}
       reason={step.reason}
       reasonId={step.reasonId}

@@ -31,6 +31,7 @@ import {
 } from "./reporting.model";
 import { useReportDetailQueries } from "./reporting.queries";
 import { PreviewAsSelect } from "./reporting.readerpreview";
+import { ReportGate } from "./reporting.reportgate";
 import { ReportResults } from "./reporting.results";
 import { SaveReportingDialog } from "./reporting.save";
 import { ReportingScheduleDialog } from "./reporting.schedule";
@@ -236,7 +237,7 @@ export function ReportingReportDetail({
       </OverflowMenu>
     );
   return (
-    <QueryGate query={report} pendingLabel={t("reporting.reports")}>
+    <ReportGate query={report}>
       {(report) => (
         <>
           <div className="reporting-header">
@@ -473,7 +474,7 @@ export function ReportingReportDetail({
           )}
         </>
       )}
-    </QueryGate>
+    </ReportGate>
   );
 }
 

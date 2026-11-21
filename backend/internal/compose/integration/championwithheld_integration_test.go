@@ -151,6 +151,28 @@ func TestAVisibleCommitteeIsAnsweredRatherThanWithheld(t *testing.T) {
 	}
 }
 
+// A stored role is free text, so a seat typed " Champion " or padded with a tab
+// names the champion.
+func TestAChampionStoredInOtherCaseIsNamed(t *testing.T) {
+	for _, typed := range []string{" Champion ", "\tChampion\n", "\u00a0champion"} {
+		t.Run(typed, func(t *testing.T) {
+			e := Setup(t)
+			rep := e.Rep1
+			companyID := ids.From[ids.CompanyKind](e.SeedCompany(t, "Turbinenbau", &rep))
+			seatID := ids.From[ids.ContactKind](e.SeedContact(t, "A champion typed by hand", &e.AdminUser))
+			dealID := seedRepDeal(t, e, companyID, rep, "Quarterly renewal")
+			if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+				Kind: "deal_stakeholder", ContactID: &seatID, DealID: &dealID, Role: &typed, Source: "manual",
+			}); err != nil {
+				t.Fatalf("seating the champion: %v", err)
+			}
+			if !championCoverFor(t, e, championSeatReader(), dealID.UUID)[dealID.UUID].ChampionNamed {
+				t.Errorf("a seat stored as %q is not read as the champion", typed)
+			}
+		})
+	}
+}
+
 // A committee this reader can see NO part of is withheld too, not absent.
 //
 // It reaches the answer by a different route from the partial case: with every

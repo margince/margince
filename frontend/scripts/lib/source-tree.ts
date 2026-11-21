@@ -268,7 +268,7 @@ export function moduleSpecifiers(
       edges !== "static" &&
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      node.arguments.length > 0 &&
+      node.arguments[0] !== undefined &&
       ts.isStringLiteralLike(node.arguments[0])
     ) {
       found.push(node.arguments[0].text);

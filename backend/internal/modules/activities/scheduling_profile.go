@@ -30,6 +30,8 @@ type SchedulingCalendar interface {
 	Check(context.Context, ids.UserID, string) error
 	List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error)
 	CheckRecipient(context.Context, ids.UserID, ids.UUID, string) error
+	// HostMayWrite says whether the host may change the live lead or contact now.
+	HostMayWrite(context.Context, pgx.Tx, ids.UserID, string, ids.UUID) (bool, error)
 	// ResolveAttendees says what each address is to the host: a contact they
 	// can see, a live colleague, a lead, or host-named.
 	ResolveAttendees(context.Context, ids.UserID, []string) ([]connector.CalendarAttendee, error)
