@@ -74,6 +74,7 @@ network.
 import collections
 import datetime
 import json
+import math
 import os
 import re
 import shlex
@@ -134,6 +135,7 @@ _SCHEMA = {
     "criteria": "list", "must_call": "list", "may_call": "list", "must_call_with": "list",
     "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
     "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
+    "elicitation": "list", "must_answer": "list",
 }
 _REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
 # The credentials scripts/e2e-llm.sh mints, by the `passport:` value that picks
@@ -239,8 +241,60 @@ def lint(path):
     return problems + _entry_problems(data)
 
 
+# ELICITATION is what the user answers when the server asks in the chat:
+# `<text the question holds> => accept|decline|cancel [field=value ...]`. Only a
+# host that can answer reads it (E2E_LLM_VIA=sdk); a value is JSON when it
+# parses as JSON, and a bare word otherwise.
+_ELICITATION_ACTIONS = ("accept", "decline", "cancel")
+_ELICITATION_FIELD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=\S+")
+
+
+def _form_value(text):
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return text
+    # NaN and Infinity parse here, and no JSON reader the runner uses accepts them.
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError(f"{text} is not a finite number, so no form field holds it")
+    if isinstance(value, (str, bool, int, float)) or (
+        isinstance(value, list) and all(isinstance(item, str) for item in value)
+    ):
+        return value
+    raise ValueError(f"{text} is not a value a form field holds")
+
+
+def elicitation_replies(entries):
+    """The scripted answers as the SDK runner reads them, in the scenario's order."""
+    replies = []
+    for entry in entries:
+        match, _, answer = str(entry).partition("=>")
+        action, *fields = answer.split() or [""]
+        if not match.strip() or action not in _ELICITATION_ACTIONS or not all(
+            _ELICITATION_FIELD.fullmatch(field) for field in fields
+        ):
+            raise ValueError(f"elicitation entry {entry!r} is not `<text> => accept|decline|cancel [field=value ...]`")
+        reply = {"match": match.strip(), "action": action}
+        if fields and reply["action"] != "accept":
+            raise ValueError(f"elicitation entry {entry!r} gives fields to a {reply['action']}, which sends none")
+        if reply["action"] == "accept":
+            reply["content"] = {}
+            for field in fields:
+                key, _, value = field.partition("=")
+                reply["content"][key] = _form_value(value)
+        replies.append(reply)
+    return replies
+
+
 def _entry_problems(data):
     problems = []
+    try:
+        scripted = {(reply["match"], reply["action"]) for reply in elicitation_replies(data.get("elicitation", []))}
+        for wanted in elicitation_replies(data.get("must_answer", [])):
+            if (wanted["match"], wanted["action"]) not in scripted:
+                problems.append(f"must_answer {wanted['match']!r} => {wanted['action']} is no elicitation entry")
+    except ValueError as malformed:
+        problems.append(str(malformed))
     for key in ("must_mention", "must_not_mention"):
         problems += [p for p in (_compiles(key, str(pattern)) for pattern in data.get(key, [])) if p]
     for entry in data.get("must_not_call_with", []):
@@ -890,6 +944,20 @@ def _unmatched_problem(calls, entry):
     return "never called " + " or ".join(f"{tool} carrying anything matching /{pattern}/" for tool, pattern in wanted)
 
 
+def answered(path):
+    """(the entry that answered, the action) for each question the host answered."""
+    found = []
+    with _open_checked(path) as lines:
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict) and event.get("type") == "elicitation":
+                found.append((event.get("scripted_by"), (event.get("reply") or {}).get("action")))
+    return found
+
+
 def check(scenario, transcript_path):
     """The problem lines of one run. The positive checks read the final answer
     and the calls that worked; the forbidding checks read every word and every
@@ -940,6 +1008,14 @@ def check(scenario, transcript_path):
         problem = _unmatched_problem(calls, entry)
         if problem:
             problems.append(problem)
+
+    # MUST_ANSWER holds a case's premise: the question was asked and the host
+    # gave the scripted answer. A run that never reached the question cannot
+    # show what the answer does.
+    asked = answered(transcript_path)
+    for wanted in elicitation_replies(scenario.get("must_answer", [])):
+        if (wanted["match"], wanted["action"]) not in asked:
+            problems.append(f"the question holding {wanted['match']!r} was never answered {wanted['action']}")
 
     for pattern in scenario.get("must_mention", []):
         if not re.search(pattern, run.final, re.IGNORECASE):
