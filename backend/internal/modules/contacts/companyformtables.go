@@ -320,3 +320,31 @@ var hebrew = marketForms{
 	// gershayim inside it becomes a separator, so it arrives as two words.
 	suffixRuns: [][]string{{"בע", "מ"}},
 }
+
+// trailingFormWords are legal forms that close a name in DACH, the rest of the
+// EU and Southeast Asia, and that legalSuffixes leaves out. That map is a
+// stored grouping key. These are only compared, so a wrong word here costs a
+// review suggestion and never a key.
+//
+// A form that is also an everyday last word is listed only as its dotted run
+// below: "Day Spa" keeps "spa", while "S.p.A." is removed.
+var trailingFormWords = map[string]bool{
+	"ohg": true, "kgaa": true, "gbr": true, "mbh": true, "se": true, "eg": true,
+	"ab": true, "aps": true, "sarl": true, "ltda": true, "kft": true, "zrt": true,
+	"pte": true, "pvt": true,
+}
+
+// trailingFormRuns are trailing forms that arrive as several words, because
+// their dots, slash or brackets become separators.
+var trailingFormRuns = [][]string{
+	{"e", "v"},
+	{"e", "k"},
+	{"ug", "haftungsbeschrankt"},
+	{"s", "p", "a"},
+	{"s", "a", "r", "l"},
+	{"s", "l"},
+	{"s", "l", "u"},
+	{"a", "s"},
+	{"k", "k"},
+	{"sdn", "bhd"},
+}

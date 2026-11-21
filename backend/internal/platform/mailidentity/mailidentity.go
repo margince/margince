@@ -140,7 +140,16 @@ func machineShape(address string) bool {
 	local, host := address[:at], strings.ToLower(address[at+1:])
 	return IsMachineLocalpart(local) || HasMachineMarker(local) ||
 		isTokenReplyLocalpart(local) || isRecruitingRelay(local, host) ||
-		notificationHosts[host] || technicalDestinationHost(host)
+		notificationHosts[host] || technicalDestinationHost(host) ||
+		relayOnlyDomains[freemail.Registrable(host)]
+}
+
+// relayOnlyDomains are registrable domains that hold no human mailbox at all:
+// a CRM's per-deal logging relay and an e-signature envelope sender. The
+// vendor's own staff write from another domain, so no human is refused here.
+var relayOnlyDomains = map[string]bool{
+	"pipedrivemail.com": true,
+	"docusign.net":      true,
 }
 
 // IsRecruitingRelayAddress identifies a routing address that must stay available
