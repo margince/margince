@@ -156,7 +156,7 @@ export function EditableLineTable({
         <UnitCell
           key={refusals.cellKey(line, "unit")}
           line={line}
-          label={cellLabel(t("offer.unit"), line)}
+          label={(column) => cellLabel(column, line)}
           onSave={save(line)}
         />
       ),

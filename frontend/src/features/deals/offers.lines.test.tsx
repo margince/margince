@@ -185,6 +185,25 @@ describe("a line row", () => {
       screen.getByTestId("remove-line-li-2"),
     );
   });
+
+  it("names each line's own unit box after its line", async () => {
+    const crates = { ...line1, unit: "crate" };
+    serve(draft([crates, { ...line2, unit: "pallet" }]), () => ({
+      status: 500,
+      body: {},
+    }));
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+
+    expect(screen.getByLabelText("Other unit, line 1")).toHaveProperty(
+      "value",
+      "crate",
+    );
+    expect(screen.getByLabelText("Other unit, line 2")).toHaveProperty(
+      "value",
+      "pallet",
+    );
+  });
 });
 
 describe("a saved line edit", () => {

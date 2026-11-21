@@ -43,13 +43,15 @@ export function UnitCell({
   onSave,
 }: Readonly<{
   line: OfferLineItem;
-  label: string;
+  label: (column: string) => string;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
+  const t = useT();
   const [value, setValue] = useState(() => unitChoiceOf(line.unit));
   return (
     <UnitPicker
-      label={label}
+      label={label(t("offer.unit"))}
+      otherLabel={label(t("product.unitOtherLabel"))}
       testId={`line-unit-${line.id}`}
       value={value}
       onChange={(next, settled) => {

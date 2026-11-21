@@ -35,6 +35,7 @@ export function UnitPicker({
   testId,
   id,
   label,
+  otherLabel,
 }: Readonly<{
   value: UnitChoice;
   onChange: (next: UnitChoice, settled: boolean) => void;
@@ -46,6 +47,8 @@ export function UnitPicker({
   id?: string;
   // The list's name where no Field labels it, such as a cell in a row of lines.
   label?: string;
+  // The typed unit's box name beside such a list, which names its row too.
+  otherLabel?: string;
 }>) {
   const t = useT();
   const options = unitOptions(t);
@@ -66,7 +69,7 @@ export function UnitPicker({
       />
       {value.choice === OTHER_UNIT && (
         <TextInput
-          aria-label={t("product.unitOtherLabel")}
+          aria-label={otherLabel ?? t("product.unitOtherLabel")}
           data-testid={`${testId}-other`}
           className="offers-line-unit"
           value={value.other}
