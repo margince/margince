@@ -150,6 +150,8 @@ func mailFooterFinding(finding commsauthz.FooterFinding) string {
 		label = "a private opt-out link, to protect each recipient's private information"
 	case "public_opt_out_link":
 		label = "an opt-out link because the company has not configured a working public address"
+	case "unsubscribe_link":
+		label = "an opt-out link because no record holds this address"
 	}
 	if finding.Language != "" {
 		label += " in " + finding.Language

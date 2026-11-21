@@ -8586,6 +8586,7 @@ export const en = {
   "sendPermission.footer.objection": "opt-out instructions",
   "sendPermission.footer.privateLink": "a private opt-out link",
   "sendPermission.footer.publicLink": "a working opt-out link",
+  "sendPermission.footer.unsubscribeLink": "an opt-out link for this address",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
   "sendPermission.appliesTo": "This applies to {address}.",

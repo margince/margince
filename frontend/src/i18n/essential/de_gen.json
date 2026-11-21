@@ -3095,6 +3095,7 @@
   "sendPermission.footer.objection": "Abmeldehinweise",
   "sendPermission.footer.privateLink": "ein persönlicher Abmeldelink",
   "sendPermission.footer.publicLink": "ein funktionierender Abmeldelink",
+  "sendPermission.footer.unsubscribeLink": "ein Abmeldelink für diese Adresse",
   "sendPermission.reason.lawfulBasisUnconfirmed": "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",

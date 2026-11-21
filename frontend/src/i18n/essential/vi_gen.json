@@ -3095,6 +3095,7 @@
   "sendPermission.footer.objection": "hướng dẫn từ chối nhận email",
   "sendPermission.footer.privateLink": "liên kết từ chối riêng",
   "sendPermission.footer.publicLink": "liên kết từ chối hoạt động",
+  "sendPermission.footer.unsubscribeLink": "liên kết từ chối cho địa chỉ này",
   "sendPermission.reason.lawfulBasisUnconfirmed": "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
   "sendPermission.appliesTo": "Điều này áp dụng cho {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",

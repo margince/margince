@@ -27,7 +27,8 @@ import (
 // token so the send path can build the List-Unsubscribe URL. ok is false
 // when the address carries no unsubscribe surface — a locked
 // (transactional) purpose, or an address no contact holds — in which case
-// the send carries no unsubscribe header.
+// the send carries no unsubscribe header, and a send that owed one records
+// the missing link as a footer finding.
 type UnsubscribeLinker interface {
 	// UnsubscribeToken answers the credential the STOP links carry, and ok is
 	// false when this address has no unsubscribe surface at all. purpose is
@@ -331,6 +332,9 @@ func (s *Store) deliverability(
 		return sendDeliverability{}, err
 	}
 	if !ok {
+		// Reached only when the surface owes a stop link (offersUnsubscribe), so a
+		// transactional send, which owes none, never records this finding.
+		untokenized.footerFindings = append(untokenized.footerFindings, commsauthz.FooterFinding{Kind: footerKindUnsubscribeLink})
 		return untokenized, nil
 	}
 
