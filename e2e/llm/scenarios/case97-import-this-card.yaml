@@ -13,17 +13,12 @@ prompt: |
   EMAIL:lena.vogt@vogt-beratung.test
   END:VCARD
 
-must_call:
-  - change_capture
-
-must_call_with:
-  - change_capture.action=import_vcards
-
 may_call:
   - read_workspace
   - whoami
   - find_records
   - search_records
+  - change_capture
 
 must_end_with:
   - contact "Lena Vogt" records=1

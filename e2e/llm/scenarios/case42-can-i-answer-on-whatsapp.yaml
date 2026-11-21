@@ -43,8 +43,12 @@ prompt: |
   against her. And before I write back: can a reply actually go out from
   Margince on WhatsApp, or does that have to happen on my phone?
 
+# The run picks the message's subject and may add a task beside it, so no
+# end-state entry can name the message: its kind and its provider are held on
+# the call that logs it, by either door. Both halves: kind alone passes a note
+# that mentions WhatsApp, and the provider must be the one the directory holds.
 must_call:
-  - log_activity
+  - log_activity|create_record
 may_call:
   - list_channel_providers
   - resolve_entities
@@ -54,18 +58,9 @@ may_call:
   - query_workspace
   - whoami
 
-# Both halves of the log, because either alone passes a wrong write.
-#
-# `kind` alone would pass a note that merely mentions WhatsApp in its prose —
-# which files the conversation as something it was not, and leaves it out of
-# every channel-filtered read. `channel_provider` alone cannot be sent without
-# kind=message (the contract refuses it on any other kind), but pinning only it
-# would still green a call that named a provider this installation does not
-# hold: the value has to be the one the directory carries, verbatim, or the
-# write dies on a foreign key.
-must_call_with:
-  - log_activity.kind=message
-  - log_activity.channel_provider=whatsapp
+must_call_matching:
+  - 'log_activity~"kind": "message" || create_record~"kind": "message"'
+  - 'log_activity~"channel_provider": "whatsapp" || create_record~"channel_provider": "whatsapp"'
 
 must_mention:
   # MECHANICAL, both, and neither has ever leaked.

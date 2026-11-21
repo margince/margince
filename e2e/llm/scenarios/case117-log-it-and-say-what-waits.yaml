@@ -41,8 +41,8 @@ prompt: |
 # refused as not over yet. Reading the queue is allowed, never required.
 #
 # The meeting is what the recap answers, so it is pinned the way case 1 pins
-# it. The end-state reader finds an activity only on a project, and this one is
-# on a contact.
+# it. The run picks its subject and adds a task beside it, so no end-state
+# entry can name the meeting: the call that writes it is its only trace.
 must_call_with:
   - log_activity.kind=meeting|create_record.record_type=activity
 may_call:
