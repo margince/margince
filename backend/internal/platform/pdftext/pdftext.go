@@ -108,6 +108,10 @@ func (r *Reader) started() error {
 	return r.err
 }
 
+// Start compiles the engine if no reading has yet. A caller that bounds each
+// file's parse calls it first, so the compile is not charged to one file.
+func (r *Reader) Start() error { return r.started() }
+
 // Close releases the compiled module and every pooled instance. A Reader that
 // was never used closes cleanly, because there is nothing to release.
 func (r *Reader) Close() error {
