@@ -43,6 +43,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "product.candidatePrice",
   "sendPermission.recipientLine",
   "privacynotice.purposeLine",
   "changes.check.outcome",
@@ -272,6 +273,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
+  "offer.deal",
+  "legalReview.packDeal",
 
   // A bare percentage, written the same way in Vietnamese.
   "deal.winProbability.band.zero",

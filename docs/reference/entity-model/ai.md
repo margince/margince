@@ -376,7 +376,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Indexes**
 
-- `idx_voice_corpus_profile`: `btree (voice_profile_id, created_at DESC)`
 - `uq_voice_corpus_source_ref`: `unique, btree (voice_profile_id, source_ref)`
 - `voice_corpus_source_manifest`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_corpus_source_pkey`: `unique, btree (id)`

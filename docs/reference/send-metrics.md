@@ -12,7 +12,7 @@ replicas with `sum`. The code is `backend/internal/compose/sendmetrics`.
 | `margince_email_send_outcomes_total` | counter | `outcome` | Each first Send of a human through the two email send routes. `outcome` is `queued`, `scheduled`, `review` or `repair` |
 | `margince_email_send_reviews_total` | counter | `context` | The refused first Sends that opened a review. `context` is `outreach` or `routine` |
 | `margince_email_send_decision_seconds` | histogram | `verdict` | How long the engine took to decide a fresh Send of a human, at staging. `verdict` is `allowed` or `refused` |
-| `margince_email_send_anyway_total` | counter | `result` | Each Send anyway. `result` is `sent`, `stale_revision`, `wrong_warning` or `refused` |
+| `margince_email_send_anyway_total` | counter | `result` | Each Send anyway. `result` is `sent`, `scheduled`, `already_sent`, `stale_revision`, `wrong_warning` or `refused` |
 
 ## Label values
 
@@ -23,6 +23,9 @@ replicas with `sum`. The code is `backend/internal/compose/sendmetrics`.
 - `context="outreach"`: the engine resolved at least one refused recipient to the `marketing`
   category. Every other resolved category is `routine`. The category the sender claimed plays no part.
 - `verdict`: `refused` when staging stopped the message, `allowed` when it went on to the queue.
+- `result="scheduled"`: the Send anyway named a later moment, so the decision is recorded and the
+  message waits for that moment.
+- `result="already_sent"`: the message had already gone, from another tab or an earlier press.
 - `result="stale_revision"`: the review changed since the sender read it.
 - `result="wrong_warning"`: the request named a warning version the review was not shown with.
 - `result="refused"`: any other refusal, such as the engine refusing the resumed message again. A

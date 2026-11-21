@@ -37,11 +37,12 @@ func (s *RetentionService) WithOutboxReaders(readers storekit.OutboxReaders) *Re
 	return &out
 }
 
-// copyStore is one place copies are kept: how to page the ones past a cutoff
-// and how to clear them.
+// copyStore is one place copies are kept: how to page the ones past a cutoff,
+// which records hold them and how to clear them.
 type copyStore struct {
 	name  string
 	days  int
+	held  func(kind string) (heldRecord, bool)
 	past  func(ctx context.Context, tx pgx.Tx, cutoff time.Time, after ids.UUID, limit int) ([]RecordCopy, error)
 	clear func(ctx context.Context, tx pgx.Tx, copies []ids.UUID) error
 }
@@ -54,14 +55,14 @@ func (s *RetentionService) pruneRecordCopies(ctx context.Context, retainOnly boo
 		return nil
 	}
 	stores := []copyStore{{
-		name: "webhook bodies", days: webhookBodyRetainDays,
+		name: "webhook bodies", days: webhookBodyRetainDays, held: heldRecordRule,
 		past: s.purgeRawCaptures.DeliveryCopiesPastTx, clear: s.purgeRawCaptures.ClearDeliveryCopiesTx,
 	}}
 	if s.outboxReaders == nil {
 		s.log.Warn("retention: published events are kept, because the outbox's readers were not supplied")
 	} else {
 		stores = append(stores, copyStore{
-			name: "published events", days: outboxRetainDays,
+			name: "published events", days: outboxRetainDays, held: relayedEventRule,
 			past: s.publishedEventsPast, clear: storekit.DeleteOutboxCopies,
 		})
 	}
@@ -89,7 +90,7 @@ func (s *RetentionService) pruneCopies(ctx context.Context, store copyStore) err
 			if page, err = store.past(ctx, tx, cutoff, after, retentionBatch); err != nil {
 				return err
 			}
-			held, err := heldCopies(ctx, tx, page, floor)
+			held, err := heldCopies(ctx, tx, page, floor, store.held)
 			if err != nil {
 				return err
 			}

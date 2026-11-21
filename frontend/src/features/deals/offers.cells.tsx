@@ -13,14 +13,17 @@ import { storedUnitOf, UnitPicker, unitChoiceOf } from "./productunit";
 
 export function DescriptionCell({
   line,
+  label,
   onSave,
 }: Readonly<{
   line: OfferLineItem;
+  label: string;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
   const [value, setValue] = useState(line.description);
   return (
     <TextInput
+      aria-label={label}
       data-testid={`line-description-${line.id}`}
       className="offers-line-description"
       value={value}
@@ -36,14 +39,19 @@ export function DescriptionCell({
 
 export function UnitCell({
   line,
+  label,
   onSave,
 }: Readonly<{
   line: OfferLineItem;
+  label: (column: string) => string;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
+  const t = useT();
   const [value, setValue] = useState(() => unitChoiceOf(line.unit));
   return (
     <UnitPicker
+      label={label(t("offer.unit"))}
+      otherLabel={label(t("product.unitOtherLabel"))}
       testId={`line-unit-${line.id}`}
       value={value}
       onChange={(next, settled) => {
@@ -67,12 +75,14 @@ export function NumericCell({
   value: savedValue,
   width,
   testId,
+  label,
   onSave,
   check,
 }: Readonly<{
   value: number;
   width: number;
   testId: string;
+  label: string;
   onSave: (num: number) => void;
   // The field's own refusal of a typed text, bounds included. Absent, any
   // number passes.
@@ -88,6 +98,7 @@ export function NumericCell({
   return (
     <>
       <input
+        aria-label={label}
         type="text"
         inputMode="decimal"
         className="input"
@@ -126,15 +137,18 @@ export function NumericCell({
 export function UnitPriceCell({
   line,
   currency,
+  label,
   onSave,
 }: Readonly<{
   line: OfferLineItem;
   currency: string;
+  label: string;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
   const [minor, setMinor] = useState(line.unit_price_minor);
   return (
     <MoneyInput
+      aria-label={label}
       data-testid={`line-unit-price-${line.id}`}
       className="offers-line-price"
       currency={currency}

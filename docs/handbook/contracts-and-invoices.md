@@ -25,14 +25,14 @@ A new contract starts as **Draft**; without the Create permission there is no bu
 Also called: add an agreement, upload a signed contract.
 
 ### How do I make a contract active or change its status?
-To change a contract's status in Margince, open the company's **Documents** tab and use the contract row's **Contract actions** menu → **Change status**.
-1. Open **Contract actions** (the menu on the contract's row).
+To change a contract's status in Margince, open the company's **Documents** tab and use the contract row's actions menu → **Change status**.
+1. Open the actions menu on the contract's row. A screen reader names it **Actions for** and the contract's title, then its number or, without one, its start day. Two menus that would still read the same end in (1) and (2).
 2. Choose **Change status**, pick the **New status** (Draft, Active, Expired or Canceled), and click **Change status**.
 A contract that is already Expired, Canceled or Superseded offers no status change, because those are final. Superseded cannot be chosen at all; renewing sets it.
 Also called: activate a contract, mark a contract expired.
 
 ### How do I renew a contract?
-To renew a contract in Margince, open the company's **Documents** tab and choose **Contract actions** → **Renew** on the contract's row.
+To renew a contract in Margince, open the company's **Documents** tab and choose **Renew** from the actions menu on the contract's row.
 1. The **Renew contract** form opens: "Creates a new contract with its own terms and marks this one superseded. Only the counterparty is kept."
 2. Pick the **Deal** that won this term, or **No deal**.
 3. Fill the new term (**Title**, value, dates) as for a new contract.
@@ -41,7 +41,7 @@ A contract that is already superseded cannot be renewed again.
 Also called: extend a contract, contract renewal.
 
 ### How do I cancel a contract?
-To cancel a contract in Margince, open the company's **Documents** tab and choose **Contract actions** → **Cancel contract** on the contract's row.
+To cancel a contract in Margince, open the company's **Documents** tab and choose **Cancel contract** from the actions menu on the contract's row.
 1. The **Record cancellation** form opens: "The customer stays under contract until the effective date. This records notice and does not change the status."
 2. Fill **Notice given** and **Takes effect** (both required).
 3. Click **Record cancellation**.
@@ -49,7 +49,7 @@ The status does not change. When the term is over, set it to **Canceled** with *
 Also called: terminate a contract, give notice.
 
 ### How do I edit or archive a contract?
-To edit a contract in Margince, open the company's **Documents** tab and choose **Contract actions** → **Edit**. Change the fields in **Edit contract** and click **Save changes**. To archive it, choose **Contract actions** → **Archive** and confirm "Archive this contract?".
+To edit a contract in Margince, open the company's **Documents** tab and choose **Edit** from the actions menu on the contract's row. Change the fields in **Edit contract** and click **Save changes**. To archive it, choose **Archive** from the same menu and confirm "Archive this contract?".
 "“{title}” leaves the lists and the company totals. The record and its history are kept; nothing is deleted."
 Also called: correct a contract, remove a contract, delete a contract.
 

@@ -184,6 +184,9 @@ func (p *prediction) tally(object string, row migration.Row, outcome predictedOu
 		// refuse this row, and the report says so before a human approves it.
 		p.skipped = append(p.skipped, *problem)
 		return false
+	case predictHeldKey:
+		p.skipped = append(p.skipped, *problem)
+		return true
 	case predictCollidesSkipped:
 		p.absent = append(p.absent, row.ExternalID)
 		// The run asked to skip duplicates, so the preview reports this row as a

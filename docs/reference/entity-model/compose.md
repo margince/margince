@@ -429,8 +429,6 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `bulk_operation_pkey`: `unique, btree (id)`
-- `idx_bulk_operation_created`: `btree (created_at)`
-- `idx_bulk_operation_requested_by`: `btree (requested_by, created_at)`
 - `uq_bulk_operation_undo_of`: `unique, btree (undo_of) WHERE (undo_of IS NOT NULL)`
 
 **Triggers**
@@ -1081,7 +1079,6 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
-- `idx_team_weekly_review_team`: `btree (team_id, local_week_start DESC)`
 - `team_weekly_review_pkey`: `unique, btree (id)`
 - `uq_team_weekly_review_team_week`: `unique, btree (team_id, local_week_start)`
 
@@ -1462,7 +1459,6 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
-- `idx_weekly_review_user`: `btree (user_id, local_week_start DESC)`
 - `uq_weekly_review_user_week`: `unique, btree (user_id, local_week_start)`
 - `weekly_review_pkey`: `unique, btree (id)`
 

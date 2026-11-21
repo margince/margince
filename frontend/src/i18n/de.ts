@@ -3958,7 +3958,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.unconfirmed_double_opt_in":
     "Einwilligung erfasst, aber nie per Double-Opt-in bestätigt",
   "consent.reason.no_connection":
-    "Der Kontakt hat dir nie geschrieben, und kein Deal und keine Anfrage verbindet euch",
+    "Keine erfasste Nachricht, kein erfasstes Treffen und keine erfasste Anfrage verbindet euch",
   "consent.reason.qualifying_event": "Ein erfasster Austausch verbindet euch",
   "consent.reason.consent_confirmed": "Einwilligung erteilt, mit Bestätigung",
   "consent.reason.consent_withdrawn":
@@ -3971,7 +3971,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.qualifying.inbound_message":
     "Der Kontakt hat dir am {date} geschrieben",
   "consent.reason.qualifying.inquiry": "Der Kontakt hat am {date} angefragt",
-  "consent.reason.qualifying.active_deal": "Ein offener Deal verbindet euch",
   "consent.reason.qualifying.in_person":
     "Ein erfasster Austausch am {date}: {note}",
   "consent.reason.qualifying.meeting": "Ein Termin am {date} verbindet euch",
@@ -4591,10 +4590,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur, wenn jemand die Unterschrift bestätigt. Nie aus dem Abschlussdatum des Deals übernommen.",
   "contracts.form.save": "Vertrag erfassen",
   "contracts.form.errNoName": "Gib einen Vertragstitel ein.",
+  "contracts.form.errNegativeAmount":
+    "Wert und jährlich wiederkehrender Umsatz können nicht negativ sein.",
   "contracts.form.errTermOrder":
     "Eine Laufzeit kann nicht vor ihrem Beginn enden.",
   "contracts.add": "Vertrag hinzuf\u00fcgen",
-  "contracts.rowMenu": "Vertragsaktionen",
   "contracts.renew.title": "Vertrag verlängern",
   "contracts.renew.hint":
     "Erstellt einen neuen Vertrag mit eigenen Bedingungen und markiert den bisherigen Vertrag als ersetzt. Übernommen wird nur die Vertragspartei.",
@@ -4703,6 +4703,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.lines.description": "Beschreibung",
   "deal.lines.quantity": "Menge",
   "deal.lines.price": "Verkaufspreis",
+  "deal.lines.priceInOtherCurrency":
+    "Dieses Produkt hat einen Preis in {currency}. Gib seinen Preis ein.",
   "deal.lines.remove": "{name} entfernen",
   "deal.lines.editTitle": "Produkte und Leistungen",
   "deal.lines.save": "Produkte speichern",
@@ -6464,6 +6466,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.standing.figure.offer": "Angebot {number} · Version {revision}",
   "deal.standing.figure.amountByModel": "Von Margince aus der Mail gelesen",
   "deal.standing.figure.currencyGuessed": "Währung angenommen, prüfe sie",
+  "deal.standing.figure.offerInProgress":
+    "Angebot {number} · Version {revision} · {status}",
   "deal.standing.figure.next": "Nächster Schritt",
   "standing.noneYet": "Noch nichts",
   "deal.standing.figure.daysInStage": "Tage in der Phase",
@@ -7017,6 +7021,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.offersEmpty": "Noch keine Angebote",
 
   "offer.backToDeal": "Zurück zum Deal",
+  "offer.deal": "Deal",
   "offer.totals": "Summen",
   "offer.net": "Netto",
   "offer.tax": "Steuer",
@@ -7049,27 +7054,35 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.unit": "Einheit",
   "offer.unitFromProduct": "Wie im Produkt",
   "offer.quantity": "Menge",
+  "offer.unitPriceRequired":
+    "Gib einen Einzelpreis ein oder wähle ein Produkt.",
   "offer.unitPrice": "Einzelpreis",
   "offer.discountPct": "Rabatt %",
   "offer.taxRate": "Steuer %",
   "offer.committedPeriods": "Perioden",
   "offer.lineTotal": "Positionssumme",
   "offer.unpriced": "ohne Preis, nicht in der Summe enthalten",
-  "offer.removeLine": "Entfernen",
+  "offer.lineCell": "{column}, Position {position}",
+  "offer.removeLineNamed": "Position {position} entfernen",
   "offer.pickProduct": "Produkt auswählen",
   "offer.pickProductConfirm": "Produkt: {name}",
   "offer.send": "Senden",
-  "offer.sendConfirm": "Dieses Angebot an die Käuferseite senden?",
+  "offer.sendConfirm": "Dieses Angebot als gesendet markieren?",
   "offer.sendBody":
-    "Das Angebot ist schreibgeschützt, bis die Käuferseite antwortet.",
+    "Es wird keine E-Mail verschickt, und diese Version ist endgültig festgeschrieben. Erzeuge das PDF und sende es selbst an die Käuferseite.",
   "offer.accept": "Annehmen",
   "offer.acceptConfirm": "Dieses Angebot als angenommen markieren?",
   "offer.acceptBody":
     "Wert und Währung des Deals werden an dieses Angebot angepasst.",
   "offer.reject": "Ablehnen",
+  "offer.discard": "Entwurf verwerfen",
+  "offer.discardBody":
+    "Der Entwurf wird archiviert und verschwindet aus den Angeboten des Deals.",
   "offer.rejectConfirm": "Dieses Angebot als abgelehnt markieren?",
   "offer.rejectReason": "Grund (optional)",
   "offer.regenerate": "Revision neu erzeugen",
+  "offer.writeUnsure":
+    "Margince konnte nicht feststellen, ob das geklappt hat. Prüfe die Angebote am Deal, bevor du es noch einmal versuchst.",
   "offer.aiDisclosureTitle": "KI-gestütztes Angebot",
   "offer.diffAdded_one": "{count} Position hinzugefügt",
   "offer.diffAdded_other": "{count} Positionen hinzugefügt",
@@ -8528,7 +8541,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
-  "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.reason.dealFact":
+    "Kein offener Deal mit diesem Kontakt stützt dieses Follow-up.",
   "sendPermission.reason.footerIncomplete":
     "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
   "sendPermission.footer.language": "{detail} auf {language}",
@@ -8685,6 +8699,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "directSend.correctionFailed":
     "Die Korrektur wurde nicht gespeichert. Öffne die Prüfung erneut, um die aktuelle Nachricht und Freigabe zu prüfen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
+  "directSend.alreadySent": "Diese Nachricht wurde bereits gesendet.",
+  "directSend.when": "Wann senden",
+  "directSend.whenLater": "Später",
+  "directSend.whenLaterDetail":
+    "Deine Entscheidung wird jetzt festgehalten. Die Prüfungen laufen erneut, wenn die Nachricht gesendet wird.",
+  "directSend.scheduled": "Als festgehaltene Ausnahme geplant.",
   "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
@@ -16644,6 +16664,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "product.unitOtherRequired":
     "Gib die Einheit ein oder wähle eine aus der Liste.",
   "product.unitPrice": "Einzelpreis",
+  "product.candidatePrice": "{price} / {unit}",
   "product.currency": "Währung",
   "product.taxRate": "Standardsteuersatz %",
   "product.billingModel": "Abrechnung",
@@ -20873,8 +20894,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand unter den Empfangenden hat nach der Planung Werbung gestoppt. An diese Adresse wird sie nicht gesendet.",
   "sched.held.recipientReplied":
     "Nach der Planung kam neue Mail von jemandem unter den Empfangenden. Lies sie, bevor du dieses Follow-up sendest.",
-  "sched.held.confirmSendsNow":
-    "Wenn du bestätigst, wird die Nachricht jetzt gesendet, nicht zur geplanten Zeit.",
+  "sched.held.confirmChoosesWhen":
+    "Die geplante Zeit ist vorbei. Beim Bestätigen wählst du, ob die Nachricht jetzt oder zu einer neuen Zeit gesendet wird.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",
@@ -22675,6 +22696,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.card.askedOpen": "Nachricht öffnen",
   "lead.card.qualified": "Wenn qualifiziert",
   "lead.card.qualifiedContact": "Kontakt",
+  "lead.card.qualifiedCompany": "Unternehmen",
   "lead.card.qualifiedDeal": "Deal",
   "lead.card.qualifiedDealOptional": "Kann im selben Schritt erstellt werden",
   "lead.card.qualifiedNewContact": "Ein neuer Kontakt",
@@ -23480,6 +23502,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.closesOn": "Abschluss {date}",
   "legalReview.back": "Alle Rechtsprüfungen",
   "legalReview.packTitle": "Prüfpaket",
+  "legalReview.packDeal": "Deal",
   "legalReview.decideTitle": "Antwort",
   "legalReview.ownRequest":
     "Du hast diese Prüfung angefragt, daher beantwortet sie ein anderes Teammitglied.",
@@ -23502,7 +23525,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.packOffer": "Aktuelles Angebot",
   "legalReview.offerNumber": "Angebot",
   "legalReview.offerRevision": "{number}, Version {revision}",
-  "legalReview.offerTotal": "Gesamt",
+  "legalReview.offerTotal": "Gesamt brutto",
   "legalReview.offerValidUntil": "Gültig bis",
   "legalReview.offerTerms": "Bedingungen",
   "legalReview.packNoOffer": "Kein Angebot zu diesem Deal.",
@@ -23539,6 +23562,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst diese Datei nicht öffnen. Wende dich an das Teammitglied, das die Prüfung angefragt hat.",
   "legalReview.offerLine": "Position {number}",
   "legalReview.offerLineText": "{quantity} × {description} zu {price}",
+  "legalReview.offerLineDiscount": "Rabatt {rate} %",
+  "legalReview.offerLineTax": "Steuer {rate} %",
   "legalReview.offerLineRecurring_one": "{cadence} über {count} Periode",
   "legalReview.offerLineRecurring_other": "{cadence} über {count} Perioden",
   "legalReview.offerLineStaged": "Vorgeschlagen, noch nicht in der Summe",

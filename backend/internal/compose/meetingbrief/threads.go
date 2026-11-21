@@ -18,7 +18,8 @@ package meetingbrief
 
 import (
 	"sort"
-	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // thread is one conversation, folded.
@@ -52,32 +53,12 @@ type thread struct {
 	Readable int
 }
 
-// replyPrefixes are the openers a reply adds to a subject, in the languages
-// this product is used in. Stripped repeatedly, because a long thread stacks
-// them ("AW: Re: WG: …").
-var replyPrefixes = []string{"re:", "aw:", "fw:", "fwd:", "wg:", "antwort:", "tr:"}
-
-// normalisedSubject reduces a subject to what two messages in one thread share.
-func normalisedSubject(subject string) string {
-	out := strings.ToLower(strings.TrimSpace(subject))
-	for trimmed := true; trimmed; {
-		trimmed = false
-		for _, prefix := range replyPrefixes {
-			if after, ok := strings.CutPrefix(out, prefix); ok {
-				out = strings.TrimSpace(after)
-				trimmed = true
-			}
-		}
-	}
-	return strings.Join(strings.Fields(out), " ")
-}
-
 // threadKeyOf decides which conversation a row belongs to.
 func threadKeyOf(row HistoryIn) string {
 	if row.ThreadKey != "" {
 		return "t:" + row.ThreadKey
 	}
-	if subject := normalisedSubject(row.Subject); subject != "" {
+	if subject := mailsubject.Topic(row.Subject); subject != "" {
 		return "s:" + row.Kind + "|" + subject
 	}
 	// Nothing to merge on. Its own thread, keyed by its own id — a subjectless

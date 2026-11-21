@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { lineBillingBody } from "./offerlinebilling";
+import { lineBillingBody, lineBillingPatch } from "./offerlinebilling";
 
 // What the add-line form sends about repeating, and what it deliberately
 // leaves out.
@@ -78,5 +78,56 @@ describe("lineBillingBody", () => {
         intervalCount: "2",
       }),
     ).toEqual({ billing_model: "recurring", interval_count: 2 });
+  });
+});
+
+// What a line's row sends when its billing changes. An update names all three
+// fields, because the server judges the line as the patch leaves it.
+describe("lineBillingPatch", () => {
+  it("clears the cadence and the term of a line that stops repeating", () => {
+    expect(lineBillingPatch({ ...empty, billingModel: "one_time" })).toEqual({
+      billing_model: "one_time",
+      billing_interval_months: null,
+      interval_count: null,
+    });
+    expect(lineBillingPatch(empty)).toEqual({
+      billing_model: null,
+      billing_interval_months: null,
+      interval_count: null,
+    });
+  });
+
+  it("holds a recurring line back until it has a period", () => {
+    expect(
+      lineBillingPatch({ ...empty, billingModel: "recurring" }),
+    ).toBeNull();
+  });
+
+  it("sends a recurring line with its period, and its term when there is one", () => {
+    const quarterly = {
+      billingModel: "recurring",
+      billingIntervalMonths: "3",
+      intervalCount: "",
+    };
+    expect(lineBillingPatch(quarterly)).toEqual({
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: null,
+    });
+    expect(lineBillingPatch({ ...quarterly, intervalCount: "4" })).toEqual({
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: 4,
+    });
+  });
+
+  it("sends a term the server will refuse as typed, so its reason comes back", () => {
+    expect(
+      lineBillingPatch({
+        billingModel: "recurring",
+        billingIntervalMonths: "1",
+        intervalCount: "0",
+      }),
+    ).toMatchObject({ interval_count: 0 });
   });
 });
