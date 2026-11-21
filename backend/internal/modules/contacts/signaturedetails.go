@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -93,11 +94,82 @@ func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 	return nil
 }
 
+// signatureSource is what the mail a signature was read from proves about its
+// sender, read once for the writes that reach past the contact's own columns.
+type signatureSource struct {
+	// authenticated is an inbound mail whose sender's domain vouched for its From.
+	authenticated bool
+	workspace     bool
+	senderDomain  string
+	// parties are the mail's other addresses, never the signer's own.
+	parties map[string]bool
+}
+
+func readSignatureSourceTx(ctx context.Context, tx pgx.Tx, activity ids.UUID) (signatureSource, error) {
+	var src signatureSource
+	var sender string
+	var parties []string
+	err := tx.QueryRow(ctx, `SELECT a.direction = 'inbound' AND coalesce(a.inbound_sender_authenticated, false),
+	       `+auth.WorkspaceAudienceSQL("a")+`,
+	       coalesce((SELECT lower(fp.address) FROM activity_participant fp
+	                  WHERE fp.activity_id = a.id AND fp.role = 'from' ORDER BY fp.address LIMIT 1), ''),
+	       ARRAY(SELECT DISTINCT lower(p.address) FROM activity_participant p
+	              WHERE p.activity_id = a.id AND p.address IS NOT NULL AND p.role <> 'from')
+	  FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL`, activity).Scan(&src.authenticated, &src.workspace, &sender, &parties)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return signatureSource{}, nil
+	}
+	if err != nil {
+		return signatureSource{}, fmt.Errorf("contacts: reading who sent a signature's mail: %w", err)
+	}
+	src.senderDomain, src.parties = owndomain.OfAddress(sender), map[string]bool{}
+	for _, party := range parties {
+		src.parties[party] = true
+	}
+	return src, nil
+}
+
+// applySignatureDetailsTx lands what reaches past the contact's own columns:
+// further addresses and the employer's street. It returns the field names that
+// landed on the contact.
+func applySignatureDetailsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, activity ids.UUID, sourceRef string,
+	observedAt time.Time, fields []SignatureField, corrected map[string]bool, res *SignatureApplyResult,
+) ([]string, error) {
+	src, err := readSignatureSourceTx(ctx, tx, activity)
+	if err != nil {
+		return nil, err
+	}
+	var emails []SignatureField
+	for _, f := range fields {
+		if f.Name == fieldEmail && !corrected[fieldEmail] {
+			emails = append(emails, f)
+		}
+	}
+	added, err := applySignatureEmails(ctx, tx, contactID, sourceRef, observedAt, src, emails)
+	if err != nil {
+		return nil, err
+	}
+	res.Applied += added
+	res.Skipped += len(emails) - added
+	if !corrected[fieldAddress] && !corrected[fieldCompanyName] {
+		if err := fillEmployerStreetTx(ctx, tx, contactID, sourceRef, src, fields); err != nil {
+			return nil, err
+		}
+	}
+	if added == 0 {
+		return nil, nil
+	}
+	return []string{fieldEmail}, nil
+}
+
 // applySignatureEmails adds each further address a signature lists as a
-// non-primary email of the contact, and reports how many landed. An address a
-// record already holds stays out, as do erased, seat and machine addresses.
-func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField) (int, error) {
-	if len(fields) == 0 {
+// non-primary email of the contact, and reports how many landed. Only an
+// authenticated sender's mail counts, and only an address on the sender's own
+// domain that the signature quotes and no record, seat or other party holds.
+func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time,
+	src signatureSource, fields []SignatureField,
+) (int, error) {
+	if len(fields) == 0 || !src.authenticated || src.senderDomain == "" {
 		return 0, nil
 	}
 	// The subject before the email row, the order Art. 17 erasure takes them in.
@@ -115,6 +187,9 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 			continue
 		}
 		address := parsed.String()
+		if !signatureStatesAddress(src, address, f.Evidence) {
+			continue
+		}
 		free, err := freeSignatureEmail(ctx, tx, address)
 		if err != nil {
 			return 0, err
@@ -142,6 +217,13 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		[]storekit.FieldStamp{{Field: fieldEmail}})
 }
 
+// signatureStatesAddress holds when the address is on the sender's own domain,
+// no other party of the mail uses it, and the quoted signature line prints it.
+func signatureStatesAddress(src signatureSource, address, evidence string) bool {
+	return owndomain.OfAddress(address) == src.senderDomain && !src.parties[address] &&
+		strings.Contains(strings.ToLower(evidence), address)
+}
+
 // freeSignatureEmail answers whether no record, seat or erasure holds one
 // parsed address, and no sending system owns it.
 func freeSignatureEmail(ctx context.Context, tx pgx.Tx, address string) (bool, error) {
@@ -155,7 +237,11 @@ func freeSignatureEmail(ctx context.Context, tx pgx.Tx, address string) (bool, e
 	if err != nil || seats.Covers(address, ids.Nil) {
 		return false, err
 	}
-	holders, err := storekit.IdentityHoldersOf(ctx, tx, storekit.IdentityKeys{Emails: []string{address}})
+	own, err := owndomain.Read(ctx, tx, auth.TrustedOwnDomainsSQL)
+	if err != nil || own.CoversDomain(owndomain.OfAddress(address)) {
+		return false, err
+	}
+	holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: []string{address}})
 	if err != nil {
 		return false, err
 	}
@@ -192,11 +278,12 @@ func withdrawSignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 }
 
 // fillEmployerStreetTx writes a signature's address onto the contact's one
-// current employer when the signature names that employer. The company must
-// hold no address a user stated. It is a company mutation of its own.
-func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, fields []SignatureField) error {
+// current employer when the signature names that employer. The mail must be
+// open to the workspace and sent, authenticated, from one of the company's
+// domains, and the company must hold no address a user stated.
+func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, src signatureSource, fields []SignatureField) error {
 	line, employerName := signatureValue(fields, fieldAddress), signatureValue(fields, fieldCompanyName)
-	if line == "" || employerName == "" {
+	if line == "" || employerName == "" || !src.workspace || !src.authenticated || src.senderDomain == "" {
 		return nil
 	}
 	var employers int
@@ -205,8 +292,10 @@ func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		  JOIN company o ON o.id = j.company_id AND o.archived_at IS NULL AND o.merged_into_id IS NULL
 		 WHERE j.contact_id = $1 AND `+employment.CurrentMembershipSQL("j")+`
 		   AND (f_fold_import_name(o.display_name) = f_fold_import_name($2)
-		        OR f_fold_import_name(o.legal_name) = f_fold_import_name($2))`,
-		contactID, employerName).Scan(&employers, &employer); err != nil {
+		        OR f_fold_import_name(o.legal_name) = f_fold_import_name($2))
+		   AND EXISTS (SELECT 1 FROM company_domain cd WHERE cd.company_id = o.id AND cd.archived_at IS NULL
+		                 AND `+owndomain.CoversSQL("$3::text", "cd.domain_folded")+`)`,
+		contactID, employerName, src.senderDomain).Scan(&employers, &employer); err != nil {
 		return fmt.Errorf("contacts: reading the employer a signature names: %w", err)
 	}
 	if employers != 1 || employer == nil {
@@ -222,10 +311,10 @@ func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 }
 
 func fillCompanyStreetTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, sourceRef, line string) error {
-	// A company the pass may not write, or that went, keeps its address. The
-	// contact's own fields still land.
+	// A company that went keeps nothing to fill, and the contact's own fields
+	// still land. The pass acts as the system principal, which no RBAC refuses.
 	err := auth.HoldWritableLive(ctx, tx, companyEntity, companyID.UUID)
-	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil
 	}
 	if err != nil {
@@ -253,6 +342,45 @@ func fillCompanyStreetTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID
 	return storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, crmcontracts.PublicEventCompanyUpdated{
 		ChangedFields: map[string]any{fieldAddress: signatureFieldFilled, auditKeySource: enrichSource},
 	})
+}
+
+// withdrawEmployerStreetTx clears the street one signature filled on a
+// company, while the company still shows those parts, with the company's own
+// audit row and event.
+func withdrawEmployerStreetTx(ctx context.Context, tx pgx.Tx, line, sourceRef string) error {
+	address, split := SplitAddressText(line)
+	if !split || sourceRef == "" {
+		return nil
+	}
+	rows, err := tx.Query(ctx, `UPDATE company o SET (`+addressColumnsSQL+`) = (NULL, NULL, NULL, NULL, NULL, NULL)
+		 WHERE o.archived_at IS NULL
+		   AND (`+addressColumnsSQL+`) IS NOT DISTINCT FROM ($1::text, $2::text, $3::text, $4::text, $5::text, $6::text)
+		   AND EXISTS (SELECT 1 FROM audit_log filled
+		                WHERE filled.entity_type = 'company' AND filled.entity_id = o.id AND filled.action = 'update'
+		                  AND filled.evidence ->> 'source' = $7 AND filled.evidence ->> 'source_ref' = $8)
+		 RETURNING o.id`,
+		address.Line1, address.Line2, address.Region, address.PostalCode, address.City, address.Country, enrichSource, sourceRef)
+	if err != nil {
+		return fmt.Errorf("contacts: clearing the street a signature filled: %w", err)
+	}
+	cleared, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("contacts: clearing the street a signature filled: %w", err)
+	}
+	for _, company := range cleared {
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", companyEntity, company,
+			map[string]any{fieldAddress: signatureFieldFilled}, map[string]any{fieldAddress: nil},
+			map[string]any{auditKeySource: fillRetractSource, auditKeySourceRef: sourceRef})
+		if err != nil {
+			return err
+		}
+		if err := storekit.EmitEvent(ctx, tx, auditID, company, crmcontracts.PublicEventCompanyUpdated{
+			ChangedFields: map[string]any{fieldAddress: nil, auditKeySource: fillRetractSource},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // signatureValue is the trimmed value of the one field of that name, or empty.

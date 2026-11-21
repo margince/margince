@@ -186,7 +186,7 @@ func takeBackSignatureFieldsTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID
 		}
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value, f.value_key
+		SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value, f.value_key, coalesce(f.source_ref, '')
 		  FROM contact_profile_field f
 		 WHERE f.id = ANY($1) AND f.source = $2
 		   AND NOT EXISTS (
@@ -252,6 +252,7 @@ type retractedField struct {
 	Value      string
 	Superseded *string
 	ValueKey   string
+	SourceRef  string
 }
 
 // withdrawValue takes the field's value off the contact, as a compare and swap
@@ -268,6 +269,9 @@ func (f retractedField) withdrawValue(ctx context.Context, tx pgx.Tx) (bool, err
 	case fieldEmail:
 		return true, withdrawSignatureEmail(ctx, tx, f.ContactID, f.ValueKey)
 	case fieldAddress:
+		if err := withdrawEmployerStreetTx(ctx, tx, f.Value, f.SourceRef); err != nil {
+			return false, err
+		}
 		return true, withdrawSignatureAddress(ctx, tx, f.ContactID, f.Value)
 	}
 	column, mirrored := observedFieldColumn(f.Field)

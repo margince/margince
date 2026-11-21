@@ -199,11 +199,11 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 		if err != nil {
 			return err
 		}
-		if !corrected[fieldAddress] && !corrected[fieldCompanyName] {
-			if err := fillEmployerStreetTx(ctx, tx, contactID, sourceRef, fields); err != nil {
-				return err
-			}
+		details, err := applySignatureDetailsTx(ctx, tx, contactID, sourceActivity, sourceRef, observedAt, fields, corrected, &res)
+		if err != nil {
+			return err
 		}
+		appliedFields = append(appliedFields, details...)
 		if len(appliedFields) == 0 {
 			return nil
 		}
@@ -301,7 +301,7 @@ func olderMailMayFillTitleTx(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 // ruled on, and returns the names of those that landed.
 func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField, corrected map[string]bool, res *SignatureApplyResult) ([]string, []string, error) {
 	var appliedFields, confirmed []string
-	var numbers, emails []SignatureField
+	var numbers []SignatureField
 	for _, f := range fields {
 		if corrected[f.Name] {
 			// A human ruled on this field. Their answer stands until they
@@ -310,13 +310,13 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 			res.Skipped++
 			continue
 		}
-		// A signature lists several numbers and addresses, applied as sets below.
+		// A signature lists several numbers, applied as one set below. Its
+		// further addresses reach past the contact, and applySignatureDetailsTx lands them.
 		switch f.Name {
 		case fieldPhone:
 			numbers = append(numbers, f)
 			continue
 		case fieldEmail:
-			emails = append(emails, f)
 			continue
 		}
 		outcome, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
@@ -344,15 +344,6 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 	res.Skipped += len(numbers) - landed
 	if landed > 0 {
 		appliedFields = append(appliedFields, fieldPhone)
-	}
-	added, err := applySignatureEmails(ctx, tx, contactID, sourceRef, observedAt, emails)
-	if err != nil {
-		return nil, nil, err
-	}
-	res.Applied += added
-	res.Skipped += len(emails) - added
-	if added > 0 {
-		appliedFields = append(appliedFields, fieldEmail)
 	}
 	if slices.Contains(appliedFields, fieldAddress) {
 		if err := fillSignatureAddressTx(ctx, tx, contactID, signatureValue(fields, fieldAddress)); err != nil {
