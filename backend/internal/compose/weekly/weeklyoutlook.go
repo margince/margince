@@ -115,10 +115,8 @@ func writeOutlook(
 			return err
 		}
 	}
-	for _, movement := range movements {
-		if err := insertMovement(ctx, tx, reviewID, movement); err != nil {
-			return err
-		}
+	if err := freezeMovement(ctx, tx, reviewID, movements); err != nil {
+		return err
 	}
 	for _, driver := range drivers {
 		if err := insertDriver(ctx, tx, reviewID, driver); err != nil {
@@ -211,19 +209,6 @@ func insertOutlookInto(
 		table.name, cols.names(), cols.placeholders(), table.parent), args...)
 	if err != nil {
 		return fmt.Errorf("weekly: freezing the %s outlook: %w", out.PeriodKind, err)
-	}
-	return nil
-}
-
-func insertMovement(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, move Movement) error {
-	_, err := tx.Exec(ctx, `
-		INSERT INTO weekly_review_movement
-		    (weekly_review_id, period_kind, bar, delta_minor)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (weekly_review_id, period_kind, bar) DO NOTHING`,
-		reviewID, move.PeriodKind, move.Bar, move.DeltaMinor)
-	if err != nil {
-		return fmt.Errorf("weekly: freezing the %s bar: %w", move.Bar, err)
 	}
 	return nil
 }
@@ -326,26 +311,16 @@ func readMovement(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, horizons []
 		return err
 	}
 
-	rows, err := tx.Query(ctx, `
-		SELECT period_kind, bar, delta_minor
-		  FROM weekly_review_movement
-		 WHERE weekly_review_id = $1`, reviewID)
+	frozen, err := readFrozenBars(ctx, tx, reviewID)
 	if err != nil {
-		return fmt.Errorf("weekly: reading the frozen bridge: %w", err)
+		return err
 	}
-	defer rows.Close()
-
 	bars := map[string][]Movement{}
-	for rows.Next() {
-		var m Movement
-		if err := rows.Scan(&m.PeriodKind, &m.Bar, &m.DeltaMinor); err != nil {
-			return fmt.Errorf("weekly: scanning a frozen bar: %w", err)
-		}
-		m.Drivers = drivers[m.PeriodKind+"/"+m.Bar]
-		bars[m.PeriodKind] = append(bars[m.PeriodKind], m)
-	}
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("weekly: reading the frozen bridge: %w", err)
+	for _, bar := range frozen {
+		bars[bar.PeriodKind] = append(bars[bar.PeriodKind], Movement{
+			PeriodKind: bar.PeriodKind, Bar: bar.Bar, DeltaMinor: bar.DeltaMinor,
+			Drivers: drivers[bar.PeriodKind+"/"+bar.Bar],
+		})
 	}
 
 	for i := range horizons {

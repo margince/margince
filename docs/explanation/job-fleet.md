@@ -255,6 +255,10 @@ A kind takes one of these shapes:
 `runEach` runs each workspace, keeps going after a failure, and returns the joined errors, each
 headed `workspace <id>`. The function a pass hands it binds that workspace for its own turn.
 
+`runEach` also watches the installation zone for each turn. A turn that could not load the stored
+zone counted its days in UTC. `runEach` then writes one `system_log` row for it, with the action
+`installation_zone.unresolved` (`compose/zonefault`).
+
 A tick of a fleet pass carries the `sweep` tag and at most `periodicPassMaxAttempts` attempts
 (`periodicInsertOpts`). Its real retry is still the next tick.
 

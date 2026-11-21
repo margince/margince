@@ -2324,6 +2324,7 @@ export const en = {
   "systemJob.capture_trace_sweep": "Mail trace cleanup",
   "systemJob.capture_which_deal": "Deal question from mail",
   "systemJob.close_date": "Close date check",
+  "systemJob.installation_zone": "Timezone check",
   "systemJob.commission_accrual": "Commission accrual",
   "systemJob.partner_activation": "Partner activation",
   "systemJob.commitment_settle": "Commitment settlement",
@@ -23714,6 +23715,11 @@ export const en = {
     "Automatic work may reach the wrong colleague, leaving follow-ups with the wrong owner until routing is corrected.",
   "health.effect.receipts":
     "The refusals stand and advertising to these contacts stays stopped. The contacts were not told, which the rules of their country require at once.",
+  "health.effect.zone":
+    "Background work counts its days in UTC until a timezone is chosen again. Near midnight a report can place a moment on a different day than that work does.",
+  "health.zoneNext":
+    "Open Regional and calendar and choose the reporting timezone again.",
+  "health.code.zone_unresolved": "The reporting timezone cannot be read",
   "health.effect.readFailed":
     "This check cannot show the current state. A failed check does not establish that the underlying feature has stopped.",
   "health.reportCopyFailed": "Could not copy the technical report",
@@ -23841,6 +23847,8 @@ export const en = {
     "Record a successful restore drill within the recovery and data-loss targets.",
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
+  "health.recovery.zone":
+    "The server reads the stored reporting timezone again.",
   "health.recovery.receipts":
     "Each refusal in the last 30 days must have a sent receipt, or its alert must be settled.",
   "health.ownerHandoff":
@@ -23854,6 +23862,7 @@ export const en = {
   "health.inspect": "See problem and next step",
   "health.openModels": "Open Models",
   "health.openConnections": "Open Connections",
+  "health.openRegional": "Open Regional and calendar",
   "health.unit.runs": "runs",
   "health.history": "Retained failure history",
   "health.historyWindow":

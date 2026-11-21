@@ -339,7 +339,7 @@ func TestASecondRefoldWritesNothing(t *testing.T) {
 	}
 	// The mark goes back a day, so this run reads the meeting again. A second
 	// pass over the same records must rewrite none of them.
-	f.e.WsExec(t, `UPDATE activity_clock_refold_mark SET passed_up_to = now() - interval '1 day'`)
+	f.e.WsExec(t, `UPDATE installation_state SET value = jsonb_set(value, '{passed_up_to}', to_jsonb(now() - interval '1 day')) WHERE key = 'activity_clock_refold_mark'`)
 	runRefold(t, later)
 	for table, id := range map[string]ids.UUID{"contact": f.contact, "company": f.company, "deal": f.deal} {
 		if after := readClockRow(t, f.e, table, id); after != before[table] {

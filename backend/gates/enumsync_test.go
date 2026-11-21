@@ -294,7 +294,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"weekly_plan_commitment.linked_record_type":    {"internal/shared/ports/datasource", "RecordType"},
 	"weekly_review_driver.period_kind":             {"internal/modules/forecasting", "PeriodKind"},
 	"weekly_review_learning_citation.subject_type": {"internal/contracts", "WeeklyLearningCitationSubjectType"},
-	"weekly_review_movement.period_kind":           {"internal/modules/forecasting", "PeriodKind"},
 	"weekly_review_outlook.period_kind":            {"internal/modules/forecasting", "PeriodKind"},
 }
 

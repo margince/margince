@@ -1314,6 +1314,7 @@
   "systemJob.capture_trace_sweep": "Bereinigung der E-Mail-Spuren",
   "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
   "systemJob.close_date": "Prüfung der Abschlussdaten",
+  "systemJob.installation_zone": "Prüfung der Zeitzone",
   "systemJob.commission_accrual": "Provisionsabgrenzung",
   "systemJob.partner_activation": "Partneraktivierung",
   "systemJob.commitment_settle": "Abschluss von Zusagen",

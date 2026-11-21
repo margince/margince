@@ -2415,6 +2415,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_trace_sweep": "Bereinigung der E-Mail-Spuren",
   "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
   "systemJob.close_date": "Prüfung der Abschlussdaten",
+  "systemJob.installation_zone": "Prüfung der Zeitzone",
   "systemJob.commission_accrual": "Provisionsabgrenzung",
   "systemJob.partner_activation": "Partneraktivierung",
   "systemJob.commitment_settle": "Abschluss von Zusagen",
@@ -24072,6 +24073,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Automatische Aufgaben erreichen möglicherweise die falschen Teammitglieder. Folgeaufgaben bleiben dann bis zur Korrektur falsch zugewiesen.",
   "health.effect.receipts":
     "Die Widersprüche gelten, und Werbung an diese Kontakte bleibt gestoppt. Die Kontakte wurden nicht informiert, was die Regeln ihres Landes sofort verlangen.",
+  "health.effect.zone":
+    "Hintergrundarbeit zählt ihre Tage in UTC, bis wieder eine Zeitzone gewählt ist. Um Mitternacht kann ein Bericht einen Zeitpunkt einem anderen Tag zuordnen als diese Arbeit.",
+  "health.zoneNext":
+    "Öffne Region und Kalender und wähle die Zeitzone für Berichte neu.",
+  "health.code.zone_unresolved":
+    "Die Zeitzone für Berichte lässt sich nicht lesen",
   "health.effect.readFailed":
     "Diese Prüfung kann den aktuellen Zustand nicht anzeigen. Eine fehlgeschlagene Prüfung belegt keinen Ausfall der eigentlichen Funktion.",
   "health.reportCopyFailed": "Technischer Bericht konnte nicht kopiert werden",
@@ -24200,6 +24207,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einen erfolgreichen Wiederherstellungstest innerhalb der Zeit- und Datenverlustziele erfassen.",
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
+  "health.recovery.zone":
+    "Der Server liest die gespeicherte Zeitzone für Berichte wieder.",
   "health.recovery.receipts":
     "Zu jedem Widerspruch der letzten 30 Tage muss eine Bestätigung versendet oder die Warnung erledigt sein.",
   "health.ownerHandoff":
@@ -24213,6 +24222,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.inspect": "Problem und nächsten Schritt ansehen",
   "health.openModels": "Modelle öffnen",
   "health.openConnections": "Verbindungen öffnen",
+  "health.openRegional": "Region und Kalender öffnen",
   "health.unit.runs": "Läufe",
   "health.history": "Aufbewahrter Fehlerverlauf",
   "health.historyWindow":
