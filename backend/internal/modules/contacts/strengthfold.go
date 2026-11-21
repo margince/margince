@@ -119,19 +119,25 @@ func (f foldScope) narrowSQL(arg func(any) int) string {
 
 // liveStrengths folds the contacts from their history in scope: the recency
 // read, then the window read for those whose last interaction falls in the
-// window. A contact with nothing qualifying is absent.
+// window. A contact with nothing qualifying, or outside the caller's row
+// scope, is absent.
 func liveStrengths(
 	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, scope foldScope,
 ) (map[ids.ContactID]*RelationshipStrength, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactsPos, admitPos := arg(contacts), arg(scope.admit)
+	visible, err := contactScopePredicate(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
 	narrow := scope.narrowSQL(arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT l.contact_id, `+strengthRecencySQL("l.contact_id")+`
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id
-		 WHERE l.contact_id = ANY($%d) AND `+strengthAdmittedSQL(fmt.Sprintf("$%d::timestamptz", admitPos))+narrow+`
+		 WHERE l.contact_id IN (SELECT p.id FROM contact p WHERE p.id = ANY($%d) AND (`+visible+`))
+		   AND `+strengthAdmittedSQL(fmt.Sprintf("$%d::timestamptz", admitPos))+narrow+`
 		 GROUP BY l.contact_id`, contactsPos), args...)
 	if err != nil {
 		return nil, err
@@ -174,10 +180,15 @@ func windowRead(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactsPos, engagedPos := arg(warm), arg(engaged)
 	from, at := fmt.Sprintf("$%d", arg(scope.windowStart())), fmt.Sprintf("$%d::timestamptz", arg(scope.admit))
+	visible, err := contactScopePredicate(ctx, arg)
+	if err != nil {
+		return err
+	}
 	narrow := scope.narrowSQL(arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT w.contact_id, c.*
 		  FROM unnest($%d::uuid[], $%d::timestamptz[]) AS w(contact_id, engaged_at)
+		  JOIN contact p ON p.id = w.contact_id AND (`+visible+`)
 		 CROSS JOIN LATERAL (`+strengthWindowSQL("w.contact_id", "w.engaged_at", from, at, "", narrow)+`) c`,
 		contactsPos, engagedPos), args...)
 	if err != nil {
