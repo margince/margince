@@ -20,9 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A host with no calendar is told to connect one: a request of theirs, which
-// the tool door reads from the same store error as the REST door. Reading
-// another user's calendar stays a permission denial.
+// A host with no calendar is told to connect one. The tool door reads the same
+// store error as the REST door.
 func TestReliableAvailabilityWithoutACalendarAsksForOne(t *testing.T) {
 	for name, withoutService := range map[string]bool{"no provider chosen": false, "no calendar service": true} {
 		f := newInvitationFixture(t)
