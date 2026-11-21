@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -173,5 +174,18 @@ func TestABudgetStopIsAnsweredAsTheAllowanceUsedUp(t *testing.T) {
 	Write(rec, httptest.NewRequest(http.MethodPost, "/", nil), fmt.Errorf("reading: %w", deferred))
 	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), codeAllowanceUsedUp) {
 		t.Errorf("want 503 %s, got %d %s", codeAllowanceUsedUp, rec.Code, rec.Body.String())
+	}
+}
+
+// A walk that spent its bound left the reader with no draft, as an exhausted
+// ladder does, so it reaches the same 503 and not a 500 or a gateway timeout.
+func TestASpentWalkBoundAnswersAssistantUnavailable(t *testing.T) {
+	t.Parallel()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/deals/d1/status", nil)
+	Write(rec, req, fmt.Errorf("%w (the rung: %w)", ai.WalkSpentError(ai.TaskDealHealth, 3*time.Minute),
+		errors.New("openai-compat: 502 bad gateway")))
+	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), codeAssistantUnavailable) {
+		t.Fatalf("a spent walk bound answered %d %s, want 503 %s", rec.Code, rec.Body, codeAssistantUnavailable)
 	}
 }

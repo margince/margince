@@ -660,6 +660,27 @@ func TestADecisionTaskMustShipAndRunInTheBackground(t *testing.T) {
 	}
 }
 
+// Only a task a user waits on is held to a limit from certified latency, so
+// only one may say its latency scales with input; the emitted table lists it.
+func TestOnlyAWaitedTaskMayDeclareLatencyThatScalesWithInput(t *testing.T) {
+	background := "execution_mode: background\n    status: shipped\n    subject_restriction: honour\n    latency_scales_with_input: true"
+	if _, err := parseContract([]byte(contractWith(background))); err == nil || !strings.Contains(err.Error(), "latency_scales_with_input") {
+		t.Fatalf("a background task declaring latency_scales_with_input: %v, want a refusal naming the field", err)
+	}
+	waited := "execution_mode: interactive\n    status: shipped\n    subject_restriction: honour\n    latency_scales_with_input: true"
+	c, err := parseContract([]byte(contractWith(waited)))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	out, err := emitGo(c, "hash")
+	if err != nil {
+		t.Fatalf("emitGo: %v", err)
+	}
+	if !regexp.MustCompile(`(?s)var inputScaledTasks = map\[Task\]bool\{\s*Task\w+:\s+true,\s*\}`).MatchString(out) {
+		t.Fatalf("the emitted table does not list the task:\n%s", out)
+	}
+}
+
 const decisionContract = `
 tiers: [alpha, beta]
 

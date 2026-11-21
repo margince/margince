@@ -5,11 +5,13 @@ package ai
 
 // A task a user waits on is held to limits its certified models measured. One
 // bounds each try. The other bounds the whole walk across rungs, retries and
-// the escalation. Any other task keeps CallCeiling on each try and no walk bound.
+// the escalation. They hold only while every rung of the walk is a cloud model
+// a record measured for the task; any other walk keeps today's limits.
 
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 )
 
@@ -25,6 +27,19 @@ const (
 	interactiveWalkTries = 2
 )
 
+// boundModel is the provider and model one ladder rung reaches.
+type boundModel struct {
+	provider string
+	model    string
+}
+
+// certifiedLimit is one interactive task's generated per-try limit, with every
+// model a record measured it on (attemptlimits_gen.go).
+type certifiedLimit struct {
+	limit    time.Duration
+	measured []boundModel
+}
+
 // InteractiveAttemptTimeout is the per-try limit of an interactive task whose
 // slowest served model measured p95. It is half again that p95, rounded up to a
 // second. It stays between InteractiveAttemptFloor and CallCeiling.
@@ -33,9 +48,9 @@ func InteractiveAttemptTimeout(p95 time.Duration) time.Duration {
 	return min(max(limit, InteractiveAttemptFloor), CallCeiling)
 }
 
-// walkBound is how long the whole walk of a logical call may run when each of
-// its tries may take attempt. CallCeiling caps it, so no interactive call keeps
-// a user longer than one try of a background task may take.
+// walkBound is how long the whole walk may run under a derived per-try limit.
+// CallCeiling caps it, so no derived default keeps a user longer than one try
+// of a background task may take.
 func walkBound(attempt time.Duration) time.Duration {
 	return min(interactiveWalkTries*attempt, CallCeiling)
 }
@@ -43,25 +58,66 @@ func walkBound(attempt time.Duration) time.Duration {
 // ExecutionModeOf is whether a user waits on task, as ai-tasks.yaml declares.
 func ExecutionModeOf(task Task) ExecutionMode { return taskExecutionModes[task] }
 
-// LatencyScalesWithInput is whether task's time grows with the size of its
-// input, so a p95 over the lane's fixed inputs does not bound it. A transcript
-// takes as long as its recording. A limit from short fixtures would cut every
-// long meeting, so it keeps CallCeiling and no walk bound.
-func LatencyScalesWithInput(task Task) bool { return task == TaskTranscript }
+// interactiveLimit is task's derived per-try limit when every rung is a cloud
+// model a record measured for it. A local model, or one no record measured,
+// may be far slower, so its walk keeps CallCeiling.
+func interactiveLimit(task Task, rungs []boundModel) (time.Duration, bool) {
+	row, ok := certifiedAttemptTimeouts[task]
+	if !ok || len(rungs) == 0 {
+		return 0, false
+	}
+	for _, rung := range rungs {
+		if ProviderIsLocal(rung.provider) || !slices.Contains(row.measured, rung) {
+			return 0, false
+		}
+	}
+	return row.limit, true
+}
 
-// tryTimeout is how long lc's next try may take: its task's per-try limit, cut
-// to what is left of the walk bound. A spent bound is an error that reads as a
-// deadline, so the walk stops there as it does for a caller's own deadline.
+// WalkSpentError is a walk that ran out of its bound. It wraps ErrAllTiersFailed,
+// since no rung is left to try, and reads as a deadline in the trace.
+func WalkSpentError(task Task, bound time.Duration) error {
+	return fmt.Errorf("%w for %s: its %s walk bound is spent: %w", ErrAllTiersFailed, task, bound, context.DeadlineExceeded)
+}
+
+// startWalk fixes lc's per-try limit and walk bound at its first ladder try,
+// from the models that walk reaches. The bound counts from here, so a
+// decision call or a budget read before it spends none of it.
+func (r *Router) startWalk(lc *logicalCall, task Task, b *binding, rungs []Tier) {
+	if lc.walking {
+		return
+	}
+	models := make([]boundModel, 0, len(rungs))
+	for _, tier := range rungs {
+		meta := b.routeMeta[tier]
+		models = append(models, boundModel{provider: meta.provider, model: meta.model})
+	}
+	settings := r.settingsFor(r.callOverrides(lc, task), task, models)
+	lc.settings.AttemptTimeout, lc.settings.WalkTimeout = settings.AttemptTimeout, settings.WalkTimeout
+	lc.walking, lc.started = true, r.now()
+}
+
+// tryTimeout is how long lc's next try may take: its per-try limit, cut to
+// what is left of the walk bound. A try needs at least the floor, or its own
+// limit when that is lower; with less left the walk is spent.
 func (r *Router) tryTimeout(lc *logicalCall, task Task) (time.Duration, error) {
 	settings := r.callSettings(lc, task)
-	if settings.WalkTimeout == 0 {
+	if settings.WalkTimeout == 0 || !lc.walking {
 		return settings.AttemptTimeout, nil
 	}
 	left := settings.WalkTimeout - r.now().Sub(lc.started)
-	if left <= 0 {
-		return 0, fmt.Errorf("ai: %s spent its %s walk bound: %w", task, settings.WalkTimeout, context.DeadlineExceeded)
+	if left < min(InteractiveAttemptFloor, settings.AttemptTimeout) {
+		return 0, WalkSpentError(task, settings.WalkTimeout)
 	}
 	return min(settings.AttemptTimeout, left), nil
+}
+
+// tryContext is the context one try runs under.
+func (r *Router) tryContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if r.tryDeadline != nil {
+		return r.tryDeadline(ctx, timeout)
+	}
+	return context.WithTimeout(ctx, timeout)
 }
 
 // stopped is why lc may make no further try: its caller stopped waiting, or

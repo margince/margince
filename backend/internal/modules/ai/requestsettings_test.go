@@ -155,7 +155,7 @@ func TestTaskOverrideBoundsAreTheSpecs(t *testing.T) {
 func TestAnOverrideForARemovedTaskIsIgnoredAndReportedStale(t *testing.T) {
 	retired := Task("retired_task")
 	v := TaskOverrides{retired: {Thinking: "low"}, TaskColdStart: {Thinking: "high"}}
-	if got := v.Effective(retired); got != (EffectiveTask{AttemptTimeout: CallCeiling, DecisionTimeout: DecisionCallTimeout}) {
+	if got := v.Effective(retired, nil); got != (EffectiveTask{AttemptTimeout: CallCeiling, DecisionTimeout: DecisionCallTimeout}) {
 		t.Fatalf("a removed task is sent %+v, want the defaults", got)
 	}
 	if stale := v.Stale(); len(stale) != 1 || stale[0] != retired {
@@ -336,7 +336,7 @@ func TestTwoTiersRecordTheirOwnWireBlocks(t *testing.T) {
 		if err := json.Unmarshal(snap.ProviderParams, &params); err != nil {
 			t.Fatal(err)
 		}
-		if params.DeadlineMs != TaskDefaults(TaskColdStart).AttemptTimeout.Milliseconds() {
+		if params.DeadlineMs != CallCeiling.Milliseconds() {
 			t.Errorf("deadline_ms = %d", params.DeadlineMs)
 		}
 		if bytes.Contains(snap.ProviderParams, []byte("embed_dimensions")) {

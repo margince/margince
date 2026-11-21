@@ -90,6 +90,9 @@ type Router struct {
 	// unlimited sends every task at CallCeiling with no walk bound
 	// (ai.WithoutInteractiveLimits), for a lane that measures latency.
 	unlimited bool
+	// tryDeadline replaces context.WithTimeout for one try, so a test can read
+	// the timeout a try was given without a real clock.
+	tryDeadline func(context.Context, time.Duration) (context.Context, context.CancelFunc)
 	// overrides is the admin's per-task thinking level and deadlines
 	// (ai.task_overrides), republished by the routing watcher.
 	overrides atomic.Pointer[TaskOverrides]

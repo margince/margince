@@ -53,7 +53,11 @@ type logicalCall struct {
 	// so every attempt, its deadline and its recorded snapshot agree even when
 	// an admin saves new overrides mid-call.
 	settings *EffectiveTask
-	// started is when settings was read, which the walk bound counts from.
+	// overrides is what settings was read from, kept for startWalk.
+	overrides TaskOverrides
+	// walking is set at the first ladder try, and started is when it ran: the
+	// walk bound counts from there.
+	walking bool
 	started time.Time
 }
 

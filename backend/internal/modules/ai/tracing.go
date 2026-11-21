@@ -189,6 +189,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			boundRungs = append(boundRungs, t)
 		}
 	}
+	r.startWalk(lc, task, b, boundRungs)
 	var lastErr, skipped error
 	var lastTier Tier
 	for i, t := range boundRungs {
@@ -204,7 +205,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		}
 		// The rail's lease covers one model call, and this is the next one.
 		lc.renewRailLease(ctx)
-		callCtx, cancel := context.WithTimeout(ctx, timeout)
+		callCtx, cancel := r.tryContext(ctx, timeout)
 		out, callErr := b.clients[t].Complete(callCtx, req)
 		cancel()
 		if callErr != nil {
