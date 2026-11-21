@@ -204,7 +204,7 @@ function fieldName(field: Source["field"], t: Translator): string {
     case "period":
       return t("reporting.period");
     case "metric":
-      return t("reporting.setup.fieldMetric");
+      return t("reporting.metric");
     case "chart":
       return t("reporting.setup.fieldChart");
     case "objective":
