@@ -16,8 +16,8 @@ const PLANTED = [
   "const d = <ConfirmModal confirmDisabled={picked.length === 0} />;",
 ] as const;
 
-// What the rule leaves alone: a held submit that says why, one held for a
-// reason other than an empty value, and a plain disabled control.
+// What the rule leaves alone. A held submit that says why is spared. So is
+// one held for another reason, and a plain disabled control.
 const SPARED = [
   'const a = <ConfirmModal confirmDisabled={name === ""} confirmReason={why} />;',
   'const b = <Button disabled={note === ""} reason={why} />;',

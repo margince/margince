@@ -161,8 +161,8 @@ export function PasswordSettingRow({
 
   const fault = passwordFault(fields.next);
   const mismatch = fields.confirm.length > 0 && fields.confirm !== fields.next;
-  // Each empty field says it is required; a new password the rule refuses or a
-  // confirm that differs already says so, and the press takes focus there.
+  // Each empty field says it is required. A new password the rule refuses, or
+  // a confirm that differs, already says so; the press takes focus there.
   const faultsAtSubmit = () => {
     const found = blankRequired(locale, {
       current: [t("password.current"), fields.current],

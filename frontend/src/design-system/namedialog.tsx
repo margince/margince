@@ -102,8 +102,8 @@ export function NameDialog({
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
   const singlePress = useSinglePress(pending);
-  // An empty name says so on the field, a refused one is already on it, and
-  // an unchanged one has nothing to store, so Save then only closes.
+  // An empty name says so on the field. A refused one is already on it. An
+  // unchanged one has nothing to store, so Save then only closes.
   const save = () => {
     const blank = blankRequired(locale, { [NAME_FIELD]: [label, draft] });
     if (pending || faults.show(blank)) return;

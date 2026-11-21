@@ -70,7 +70,7 @@ export function EmploymentStatusFields({
   );
 }
 
-// A start or end typed in neither shape the hint names, keyed as the dialogs
+// A start or end typed in neither shape the hint names. Keyed as the dialogs
 // key their fields, so a press says which date to fix.
 export function employmentDateFaults(
   locale: Locale,
