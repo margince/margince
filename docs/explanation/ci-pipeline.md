@@ -308,7 +308,7 @@ and with a fixed split the fast shards waited for the slow ones. Parts of about 
 form groups of about 240 seconds, slowest first. A shard with a free slot claims a group: it creates the
 group's cache entry, which only one job of the run can do. It claims its own groups from the front, then
 those of others from the back ([`lib-shardqueue.sh`](../../scripts/lib-shardqueue.sh)). Without cache
-writes the split is fixed. A re-run shard skips what passed, and the fan-in reads its newest attempt.
+writes the split is fixed; on a re-run, shards skip what passed and the fan-in reads each one's newest.
 
 The fan-in uploads each test's time (`test-timing-integration`). On `main`, `cache-warm.yml` saves the
 mean of the five newest as `integration-test-timing-<run>`. The build packs it, or the committed file,

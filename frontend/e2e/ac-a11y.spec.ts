@@ -25,7 +25,7 @@ test.beforeEach(async ({ page }) => {
 // The same panel under the dark palette. At this width the stylesheet paints
 // fills of its own here (the well's ground and the notch's). tokens.css
 // publishes dark as its own set of values, so a pass in light says nothing about it.
-test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark", () => {
+test.describe("WCAG 2.2 AA (axe), the agent's panel at 390px in dark", () => {
   test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
 
   test("no AA violations with the agent's panel open", async ({ page }) => {
@@ -164,7 +164,7 @@ const ADDRESSED_VIEWS = [
 // palettes are different subjects. tokens.css publishes dark as its own set of
 // values: the accent lightens to the ADR-0040 mandate and the surfaces darken.
 // So a screen can pass in one palette and fail in the other with the same markup.
-test.describe("B-EP09.21: WCAG 2.2 AA (axe), dark palette", () => {
+test.describe("WCAG 2.2 AA (axe), dark palette", () => {
   test.use({ colorScheme: "dark" });
 
   // Both lists, not just the nav entries. A record header drawn as icon-only
@@ -204,7 +204,7 @@ test.describe("one page heading per route", () => {
   }
 });
 
-test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
+test.describe("WCAG 2.2 AA (axe)", () => {
   for (const screen of CORE_SCREENS) {
     test(`no AA violations on #/${screen}`, async ({ page }) => {
       await page.goto(`/#/${screen}`);

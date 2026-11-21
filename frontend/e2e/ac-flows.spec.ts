@@ -43,7 +43,7 @@ test("AC-book: the reusable booking link is available for sharing and signatures
   ).toBeEnabled();
 });
 
-test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({
+test("AC-automations-1: create from the catalog arrives paused; enable is the deliberate second step", async ({
   page,
 }) => {
   // Scoped to the editor's own region rather than to the page. The criterion
@@ -81,7 +81,7 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   await expect(active).toHaveAttribute("aria-checked", "true");
 });
 
-test("AC-automations-2 (features/10 §1): anti-DSL — no free-form rule body, no user-defined trigger", async ({
+test("AC-automations-2: anti-DSL — no free-form rule body, no user-defined trigger", async ({
   page,
 }) => {
   // The anti-DSL claim is about the automations surface, so it is counted over

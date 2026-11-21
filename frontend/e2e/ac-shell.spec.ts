@@ -212,7 +212,7 @@ test("AC-shell-7: the top bar's search opens the palette, and Enter on a row clo
 //
 // Appearance sits here too, because a reader changes it to see the current
 // screen differently. Going to a settings tab would mean leaving that screen.
-test("features/10 §7: the account menu holds the settings door, the appearance choice and the way out", async ({
+test("the account menu holds the settings door, the appearance choice and the way out", async ({
   page,
 }) => {
   await page.goto("/#/home");
@@ -461,9 +461,7 @@ test("keyboard shortcuts: N on a contact opens Log activity", async ({
   ).toBeVisible();
 });
 
-test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
-  page,
-}) => {
+test("the locale switch flips the chrome DE↔EN", async ({ page }) => {
   await page.goto("/#/home");
   await expect(page.locator('nav.rail a[aria-label="Kontakte"]')).toBeVisible();
   // The language is a preference, not a destination, so it lives on
@@ -496,9 +494,7 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
 //
 // The language control beside it has to still be there, or an account card that
 // failed to render entirely would pass this.
-test("features/10 §7: Settings → Account offers language and appearance", async ({
-  page,
-}) => {
+test("Settings → Account offers language and appearance", async ({ page }) => {
   await page.goto("/#/settings/account");
   await expect(
     page.getByRole("heading", { name: de["account.browserCard"] }),
@@ -517,7 +513,7 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
  * This is the only in-app language control, so its reader is least able to
  * recover from losing focus.
  */
-test("features/10 §7: Escape closes the language list back onto its control", async ({
+test("Escape closes the language list back onto its control", async ({
   page,
 }) => {
   await page.goto("/#/settings/account");
@@ -530,9 +526,7 @@ test("features/10 §7: Escape closes the language list back onto its control", a
   await expect(trigger).toBeFocused();
 });
 
-test("features/10 §7: Tab closes the language list and carries on", async ({
-  page,
-}) => {
+test("Tab closes the language list and carries on", async ({ page }) => {
   await page.goto("/#/settings/account");
   const trigger = page.getByRole("combobox", { name: "Sprache" });
   await trigger.click();

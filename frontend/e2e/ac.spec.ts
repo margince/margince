@@ -15,10 +15,9 @@ test.beforeAll(async () => {
   await loadLocale("de");
 });
 
-// B-EP09.22a/b: the AC-<screen>-N criteria as named tests, so a failing test
-// names the criterion it breaks. Also covered: the cross-cutting invariants
-// (rail and ⌘K present, 🟡 confirm-first, provenance rendered).
-// Also the 390px no-horizontal-scroll sweep and PERF-1's held-read claim for a record open.
+// The AC-<screen>-N criteria run as named tests, so a failing test names the
+// criterion it breaks. This file holds the 390px no-horizontal-scroll sweep,
+// the signed-out screens and PERF-1's held-read claim for a record open.
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
