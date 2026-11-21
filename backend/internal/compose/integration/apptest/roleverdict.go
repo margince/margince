@@ -46,13 +46,11 @@ func answerRejected(text string) bool {
 	return strings.Contains(text, "(conflict") || strings.Contains(text, "validation_error")
 }
 
-// AnswerRefused reports whether a tool answer is a 403. A gate's refusal is
-// classified, so it carries the taxonomy's code, read here from its owner; an
-// unclassified one carries the sentinel's own text.
+// AnswerRefused reports whether a tool answer is a 403. A refusal carries the
+// taxonomy's code, read here from its owner.
 func AnswerRefused(text string) bool {
 	denied, classified := httperr.Classify(apperrors.ErrPermissionDenied)
-	return classified && strings.Contains(text, denied.Code) ||
-		strings.Contains(text, apperrors.ErrPermissionDenied.Error())
+	return classified && strings.Contains(text, denied.Code)
 }
 
 // AnswerNotFound reports whether a tool answer is a 404.

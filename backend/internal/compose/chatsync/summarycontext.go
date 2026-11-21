@@ -191,9 +191,6 @@ type stakeholder struct {
 // stakeholderNames are the deal's current stakeholders every reader may read,
 // in the order the first group of readers sees them.
 func stakeholderNames(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []principal.Principal) ([]string, error) {
-	if err := auth.RequireReadForReaders(ctx, "contact", readers...); err != nil {
-		return nil, withheld(err)
-	}
 	var shared []stakeholder
 	for chunk := range slices.Chunk(readers, readersPerStatement) {
 		seen, err := stakeholdersReadBy(ctx, tx, dealID, chunk)
@@ -218,6 +215,9 @@ func stakeholderNames(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers [
 // stakeholdersReadBy are the deal's current stakeholders each of readers may
 // read, with the object and row scope of the contact and the edge.
 func stakeholdersReadBy(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []principal.Principal) ([]stakeholder, error) {
+	if err := auth.RequireReadForReaders(ctx, "contact", readers...); err != nil {
+		return nil, withheld(err)
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	deal := arg(dealID)
