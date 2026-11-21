@@ -39,12 +39,11 @@ function renderConnectAct(
   };
   const dispatch = vi.fn();
   const persist = vi.fn(async () => true);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   const view = render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ConnectAct
           state={state}
@@ -56,7 +55,7 @@ function renderConnectAct(
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { ...view, dispatch, persist };
+  return { ...view, dispatch, persist, client };
 }
 
 // A row carries the grant its service needs (sending for the mailbox, writing
@@ -522,6 +521,41 @@ describe("the LinkedIn row", () => {
     await waitFor(() =>
       expect(field).toHaveValue("https://www.linkedin.com/in/qa-late"),
     );
+  });
+
+  // A read that was already on its way when the save landed answers for the
+  // time before the save, so it must not replace the saved profile.
+  it("keeps a saved profile when an older account read answers after it", async () => {
+    let answer = (_: Response) => {};
+    stub({
+      "GET /connectors": roster(),
+      "GET /me/linkedin-account": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+      "PUT /me/linkedin-account": saveRoute(() =>
+        jsonResponse({
+          profile_url: "https://www.linkedin.com/in/qa-new",
+          connected: false,
+          connections: 0,
+        }),
+      ),
+    });
+    const user = userEvent.setup();
+    const { client } = renderConnectAct();
+    await user.click(screen.getByRole("button", { name: "Add profile" }));
+    await user.type(
+      screen.getByLabelText("Your LinkedIn profile URL"),
+      "https://www.linkedin.com/in/qa-new",
+    );
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
+    expect(
+      await screen.findByText("linkedin.com/in/qa-new"),
+    ).toBeInTheDocument();
+
+    answer(jsonResponse({ profile_url: "", connected: false, connections: 0 }));
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(screen.getByText("linkedin.com/in/qa-new")).toBeInTheDocument();
   });
 
   // The stored profile is the server's, not this tab's: a reload shows it, and

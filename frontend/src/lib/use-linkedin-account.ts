@@ -61,6 +61,11 @@ export function useSaveLinkedInAccount() {
     // The server's answer IS the account now, whichever surface asked. Written
     // rather than invalidated: the response carries the stored row, so a
     // refetch would ask again for something already in hand.
-    onSuccess: (data) => client.setQueryData(LINKEDIN_ACCOUNT_KEY, data),
+    // A read already on its way answers for before the save, so it is
+    // cancelled first rather than left to overwrite the stored row.
+    onSuccess: async (data) => {
+      await client.cancelQueries({ queryKey: LINKEDIN_ACCOUNT_KEY });
+      client.setQueryData(LINKEDIN_ACCOUNT_KEY, data);
+    },
   });
 }
