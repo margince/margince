@@ -121,3 +121,57 @@ func TestResolveSVGPaintRefusesAnAmplifyingRewrite(t *testing.T) {
 		t.Fatalf("Decode err = %v, want ErrUnsupported", err)
 	}
 }
+
+func TestDecodeRefusesAReferenceHiddenInACommentInsideARuleValue(t *testing.T) {
+	doc := `<svg ` + paintOpen + `><defs><pattern id="p" width="1" height="1"><rect width="1" height="1"/></pattern></defs>` +
+		`<style>circle{fill:u/**/rl(#p)}</style>` + wholeCanvasCircle + `/></svg>`
+	out, err := resolveSVGPaint([]byte(doc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(out), "url(#p)") {
+		t.Fatalf("a value valid only after comment removal was inlined: %s", out)
+	}
+}
+
+func TestDecodeKeepsAGradientNamedCurrentColor(t *testing.T) {
+	doc := `<svg ` + paintOpen + ` color="#ff6600"><defs><linearGradient id="currentColor"><stop offset="0" stop-color="#0000ff"/>` +
+		`<stop offset="1" stop-color="#0000ff"/></linearGradient></defs>` + wholeCanvasCircle + ` fill="url(#currentColor)"/></svg>`
+	if got, want := centreColor(t, doc), (color.NRGBA{B: 0xff, A: 0xff}); got != want {
+		t.Fatalf("centre pixel = %v, want the gradient %v", got, want)
+	}
+	out, err := resolveSVGPaint([]byte(doc))
+	if err != nil || string(out) != doc {
+		t.Fatalf("a url(#currentColor) reference was rewritten: %s (err %v)", out, err)
+	}
+}
+
+func TestDecodeKeepsAClassNamedCurrentColor(t *testing.T) {
+	doc := `<svg ` + paintOpen + `><style><![CDATA[.currentColor{fill:#ff6600}]]></style>` + wholeCanvasCircle + ` class="currentColor"/></svg>`
+	if got, want := centreColor(t, doc), (color.NRGBA{R: 0xff, G: 0x66, A: 0xff}); got != want {
+		t.Fatalf("centre pixel = %v, want %v", got, want)
+	}
+}
+
+func TestDecodeAppliesSelectorPaintForStopsAndImportant(t *testing.T) {
+	orange := color.NRGBA{R: 0xff, G: 0x66, A: 0xff}
+	gradient := `<defs><linearGradient id="g"><stop offset="0"/><stop offset="1"/></linearGradient></defs>`
+	cases := map[string]struct {
+		doc  string
+		want color.NRGBA
+	}{
+		"stop selector with currentColor": {`<svg ` + paintOpen + ` color="#ff6600"><style>stop{stop-color:currentColor}</style>` +
+			gradient + wholeCanvasCircle + ` fill="url(#g)"/></svg>`, orange},
+		"important selector beats inline style": {`<svg ` + paintOpen + `><style>circle{fill:#ff6600 !important}</style>` +
+			wholeCanvasCircle + ` style="fill:#0000ff"/></svg>`, orange},
+		"important element beats normal id": {`<svg ` + paintOpen + `><style>circle{fill:#ff6600 !important} #m{fill:#0000ff}</style>` +
+			wholeCanvasCircle + ` id="m"/></svg>`, orange},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := centreColor(t, tc.doc); got != tc.want {
+				t.Fatalf("centre pixel = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
