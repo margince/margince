@@ -538,13 +538,14 @@ describe("the LinkedIn row", () => {
           422,
         ),
     });
+    const user = userEvent.setup();
     renderConnectAct();
-    await userEvent.click(screen.getByRole("button", { name: "Add profile" }));
-    await userEvent.type(
+    await user.click(screen.getByRole("button", { name: "Add profile" }));
+    await user.type(
       screen.getByLabelText("Your LinkedIn profile URL"),
       "https://example.com/in/qa",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
 
     expect(
       await screen.findByText(en["common.linkedinProfileInvalid"]),

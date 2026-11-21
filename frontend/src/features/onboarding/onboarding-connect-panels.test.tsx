@@ -8,7 +8,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
@@ -37,16 +37,10 @@ function render(ui: ReactNode, client?: QueryClient) {
   );
 }
 
-async function fillValidForm() {
-  await userEvent.type(
-    screen.getByLabelText("IMAP server *"),
-    "mail.example.org",
-  );
-  await userEvent.type(
-    screen.getByLabelText("Email address *"),
-    "lars@example.org",
-  );
-  await userEvent.type(screen.getByLabelText("App password *"), "app-password");
+async function fillValidForm(user: Pick<UserEvent, "type"> = userEvent) {
+  await user.type(screen.getByLabelText("IMAP server *"), "mail.example.org");
+  await user.type(screen.getByLabelText("Email address *"), "lars@example.org");
+  await user.type(screen.getByLabelText("App password *"), "app-password");
 }
 
 afterEach(() => {
@@ -116,12 +110,13 @@ describe("ImapConnectPanel", () => {
         return jsonResponse({}, 500);
       },
     });
+    const user = userEvent.setup();
     render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
-    await fillValidForm();
+    await fillValidForm(user);
     const port = screen.getByLabelText("Port");
-    await userEvent.clear(port);
-    await userEvent.type(port, "99999");
-    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await user.clear(port);
+    await user.type(port, "99999");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
 
     expect(screen.getByText("From 1 to 65535")).toBeInTheDocument();
     expect(screen.getByText("Out of range: Port")).toBeInTheDocument();
@@ -133,12 +128,13 @@ describe("ImapConnectPanel", () => {
       "POST /connectors/imap/connect": () =>
         jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
     });
+    const user = userEvent.setup();
     render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     await screen.findByText(/could not be reached/i);
 
-    await userEvent.type(screen.getByLabelText("IMAP server *"), "x");
+    await user.type(screen.getByLabelText("IMAP server *"), "x");
     expect(screen.queryByText(/could not be reached/i)).toBeNull();
   });
 

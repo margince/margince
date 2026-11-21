@@ -208,13 +208,14 @@ it("OAuthReturnPanel keeps the generic failure for an unrecognized outcome", asy
 // accounts are offered, and Done puts every failure away.
 it("OAuthReturnPanel sends a failed consent back to the accounts below, with Done", async () => {
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
+  const user = userEvent.setup();
   const onDone = vi.fn();
   render(<OAuthReturnPanel outcome="error" provider="gmail" onDone={onDone} />);
   expect(
     await screen.findByText("Select the account again below."),
   ).toBeInTheDocument();
   expect(screen.queryByText(/Settings/)).toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "Done" }));
+  await user.click(screen.getByRole("button", { name: "Done" }));
   expect(onDone).toHaveBeenCalledTimes(1);
 });
 
