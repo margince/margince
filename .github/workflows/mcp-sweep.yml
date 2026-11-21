@@ -32,9 +32,10 @@ on:
 permissions:
   contents: read
 
-# One sweep at a time: two would share one subscription and its rate limit.
+# One sweep at a time per ref, so a branch dispatch never displaces a pending
+# sweep of main. The sweep also waits out a rate limit two runs would share.
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 # A module the proxy cannot serve is not a broken build; see
@@ -108,11 +109,6 @@ jobs:
       matrix: ${{ fromJSON(needs.llm-plan.outputs.shards) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    # The sweep step's limit, for the outcome that tells a cut-off from a sweep
-    # that stopped early. It equals that step's timeout-minutes, which stays a
-    # literal because workflowtimeouts_test.go reads it as a number.
-    env:
-      LANE_LIMIT_MINUTES: 100
     permissions:
       contents: read
     steps:
@@ -172,7 +168,6 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: |
           set -o pipefail
-          date +%s > "$RUNNER_TEMP/lane-start"
           # A fresh folder per shard holds exactly what this run wrote; the
           # records job files it in the records tree once every shard is in.
           E2E_SWEEP_SINCE="$(date +%s)"
@@ -184,31 +179,25 @@ jobs:
           fi
           # shellcheck disable=SC2086 # CASES is a list of case numbers
           scripts/e2e-llm-sweep.sh "ci$SHARD" $CASES 2>&1 | tee "$RUNNER_TEMP/sweep.log"
-      # What this shard did, read from the sweep's own lines: LANE DONE only once
-      # every case has a verdict, and a FAIL line for a case below its bar. No
-      # LANE DONE is a lane that was stopped or cut off, and it publishes nothing.
+      # What this shard did, read from the sweep's own lines by
+      # scripts/e2e-llm-shard-outcome.sh. Only a finished shard hands on verdicts.
       - name: File this shard's outcome and fresh verdicts
         if: always()
         env:
           SHARD: ${{ matrix.shard }}
-          STEP: ${{ steps.lane.outcome }}
         run: |
           out="$RUNNER_TEMP/shard"
           mkdir -p "$out/verdicts"
-          log="$RUNNER_TEMP/sweep.log"
-          if grep -q '^LANE DONE' "$log" 2>/dev/null; then
-            if grep -qE '^ci[0-9]+ +case[0-9]+_[a-z0-9_]+: FAIL' "$log"; then outcome=scenario-failed; else outcome=ok; fi
+          scripts/e2e-llm-shard-outcome.sh shard "$RUNNER_TEMP/sweep.log" > "$out/shard.env"
+          outcome="$(sed -n 's/^outcome=//p' "$out/shard.env")"
+          driven="$(sed -n 's/^driven=//p' "$out/shard.env")"
+          if [ "$outcome" = ok ] || [ "$outcome" = scenario-failed ]; then
             cp "$RUNNER_TEMP"/verdicts/*.json "$out/verdicts/"
-          elif [ "$STEP" = failure ] && ! grep -q '^LANE STOPPED' "$log" 2>/dev/null \
-            && [ $(( $(date +%s) - $(cat "$RUNNER_TEMP/lane-start" 2>/dev/null || date +%s) )) -ge $(( LANE_LIMIT_MINUTES * 60 - 60 )) ]; then
-            # Only a step that ran out its limit is a cut-off; one that failed
-            # sooner, before any case or at its stamp, could not run.
-            outcome=cut-off
-          else
-            outcome=lane-failed
           fi
           echo "$outcome" > "$out/outcome-$SHARD"
-          echo "shard $SHARD: $outcome, $(find "$out/verdicts" -name '*.json' | wc -l) fresh verdicts"
+          echo "$driven" > "$out/driven-$SHARD"
+          rm "$out/shard.env"
+          echo "shard $SHARD: $outcome, $driven cases driven"
       - name: Keep the shard's outcome and verdicts
         if: always()
         uses: ./.github/actions/upload-artifact-retried
@@ -231,8 +220,8 @@ jobs:
           if-no-files-found: warn
 
   # Publishes the verdicts only when every scenario has a fresh one from a run
-  # by meaning. A shard that was cut off or stopped makes the whole run "could
-  # not finish": nothing is proposed, and on main the reporter files an issue.
+  # by meaning. A run short of that proposes nothing, and on main the reporter
+  # files it as cut off when any case was driven, or as could not run.
   llm-collect:
     name: use cases, driven by a model (collect)
     needs: [llm-plan, llm-use-cases]
@@ -243,6 +232,7 @@ jobs:
       contents: read
     outputs:
       outcome: ${{ steps.collect.outputs.outcome }}
+      driven: ${{ steps.collect.outputs.driven }}
       publish: ${{ steps.collect.outputs.publish }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -264,19 +254,13 @@ jobs:
           planned="$(echo "$SHARDS" | jq '.include | length')"
           outcomes="$(cat "$got"/outcome-* 2>/dev/null | sort | uniq -c | xargs || true)"
           echo "planned $planned shards; outcomes: ${outcomes:-none}"
-          reported="$(find "$got" -maxdepth 1 -name 'outcome-*' | wc -l)"
-          if [ "$reported" -lt "$planned" ] || grep -qx cut-off "$got"/outcome-* 2>/dev/null; then
-            outcome=cut-off
-          elif grep -qx lane-failed "$got"/outcome-*; then
-            outcome=lane-failed
-          elif ! python3 e2e/llm/shards.py collect "$got/verdicts"; then
-            outcome=lane-failed
-          elif grep -qx scenario-failed "$got"/outcome-*; then
-            outcome=scenario-failed
-          else
-            outcome=ok
-          fi
+          complete=no
+          python3 e2e/llm/shards.py collect "$got/verdicts" && complete=yes
+          scripts/e2e-llm-shard-outcome.sh run "$got" "$planned" "$complete" > "$got/run.env"
+          outcome="$(sed -n 's/^outcome=//p' "$got/run.env")"
+          driven="$(sed -n 's/^driven=//p' "$got/run.env")"
           echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+          echo "driven=$driven" >> "$GITHUB_OUTPUT"
           publish=no
           if [ "$SEARCH" = semantic ] && { [ "$outcome" = ok ] || [ "$outcome" = scenario-failed ]; }; then
             publish=yes
@@ -335,10 +319,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           # A planner that failed skips the collector, so its failure stands in
           # for the lane's: the reporter reads it as "could not run".
           LLM_RESULT: ${{ needs['llm-plan'].result == 'failure' && 'failure' || needs['llm-collect'].result }}
           LLM_OUTCOME: ${{ needs['llm-collect'].outputs.outcome }}
+          LLM_DRIVEN: ${{ needs['llm-collect'].outputs.driven }}
           MCP_RECORDS_RESULT: ${{ needs.records.result }}
           MCP_RECORDS_PR_RESULT: ${{ needs.records.outputs.proposed }}
         run: ./scripts/scheduled-report.sh

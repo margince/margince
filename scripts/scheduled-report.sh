@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # scheduled-report.sh — turn a failing scheduled check into a durable issue.
 #
-# Called when a check in scheduled.yml OR main-health.yml failed. A red
+# Called by the report job of every workflow that names this script (grep
+# .github/workflows/ for it), on every run of the default branch. A red
 # scheduled run notifies essentially nobody by default, which is the whole reason
 # these checks moved off the PR path in the first place: nothing was going to make
 # someone look. An issue is the artifact that survives until it is closed.
@@ -14,6 +15,16 @@ set -euo pipefail
 : "${GH_TOKEN:?the reporting step needs a token to file issues}"
 : "${REPO:?REPO must name the repository to file against}"
 : "${RUN_URL:?RUN_URL must link the run that produced this verdict}"
+: "${GITHUB_REF:?GITHUB_REF must name the ref this run measured}"
+: "${DEFAULT_BRANCH:?DEFAULT_BRANCH must name the branch whose issues this files}"
+
+# Every issue here is about the default branch. A run on any other ref measured
+# that ref, so its verdicts neither file nor close one; its run summary says
+# what it found.
+if [[ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+  echo "run on $GITHUB_REF, not refs/heads/$DEFAULT_BRANCH: no issue filed or closed"
+  exit 0
+fi
 
 # EVERY open issue, read ONCE for the whole run — not a first page of them, and
 # not once per finding. A capped read answers "no issue with this title" the
@@ -64,7 +75,7 @@ report() {
   if [[ -n "$existing" ]]; then
     echo "already open as #$existing — commenting"
     gh issue comment "$existing" --repo "$REPO" \
-      --body "Still failing on the $(date -u +%Y-%m-%d) scheduled run: $RUN_URL"
+      --body "Still failing on the run of $(date -u +%Y-%m-%d): $RUN_URL"
     return
   fi
   echo "filing: $title"
@@ -746,9 +757,10 @@ fi
 # The model lane, same two-findings shape and for the same reason. A missing
 # CLI, a stack that will not boot, a seed that fails, or a credential the MCP
 # endpoint rejects all arrive as `failure` — and "the assistant is answering
-# wrongly" is the one conclusion none of them support. LLM_OUTCOME is set by the
-# collect job from each shard's sweep: `ok` and `scenario-failed` only once
-# every scenario has a fresh verdict, `cut-off` when a shard ran out of time.
+# wrongly" is the one conclusion none of them support. LLM_OUTCOME and
+# LLM_DRIVEN come from scripts/e2e-llm-shard-outcome.sh: `ok` and
+# `scenario-failed` only once every scenario has a fresh verdict, `cut-off` when
+# some case was driven and not all, `lane-failed` when none was.
 #
 # A CUT-OFF IS ITS OWN FINDING. The lane did drive scenarios, so "could not run"
 # would be false, and a job the runner stopped ends `cancelled`, which no other
@@ -758,14 +770,16 @@ if [[ "${LLM_OUTCOME:-}" = "cut-off" ]] || [[ "${LLM_RESULT:-}" = "cancelled" ]]
 "A dispatched run of \`make e2e-llm\` on \`main\` stopped before every scenario
 had a verdict: $RUN_URL
 
-A shard of the sweep ran out of its time limit, or the runner stopped it. The
-scenarios it did drive are in the shard's transcripts, kept 30 days; the run
-published no verdict and opened no pull request, because a half result must not
-replace a whole one.
+It drove ${LLM_DRIVEN:-an unknown number of} cases before it stopped. A shard
+ran out of its time limit, the runner stopped it, or the sweep failed after it
+started. The cases it did drive are in the shard's transcripts, kept 30 days;
+the run published no verdict and opened no pull request, because a half result
+must not replace a whole one.
 
-Read the shard's sweep log first: a subscription limit makes the sweep wait, and
-waits that add up past the step's limit look like this. If a shard is simply too
-long, raise the shard count in \`e2e/llm/shards.py plan\` in the workflow."\
+Read the shard's sweep log first. A subscription limit makes the sweep wait,
+and waits that add up past the step's limit look like this; a crash names its
+step. If a shard is simply too long, raise the shard count in
+\`e2e/llm/shards.py plan\` in the workflow."\
     || unreported=1
 elif [[ "${LLM_RESULT:-}" = "failure" ]] && [[ "${LLM_OUTCOME:-}" != "scenario-failed" ]]; then
   report "the model-driven use cases could not run" "priority: normal,area: ci-tests,bug" \
@@ -847,7 +861,7 @@ records_body() {
   printf '%s' "A run recorded a measurement, but no pull request proposes it: $RUN_URL
 
 The \`render\` job of \`_records.yml\` renders the pages the record feeds and
-uploads a patch; \`propose\` commits it on \`records/weekly-$part\` and opens the
+uploads a patch; \`propose\` commits it on \`records/$part\` and opens the
 pull request. The job log names the step that failed.
 
 If \`render\` failed, no patch exists: fix the generator it names and run the

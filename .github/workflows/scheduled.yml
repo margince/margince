@@ -949,6 +949,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           VULN_RESULT: ${{ needs.vuln.result }}
           GATE_RESULT: ${{ needs.quality-gate.result }}
           GATE_STATUS: ${{ needs.quality-gate.outputs.status }}

@@ -309,12 +309,16 @@ variable names who owns it. The run also files an issue on `main` for a run that
 could not run, or has a failing case. Only a later run on `main` that proves the issue wrong closes
 it, so start one after the fix lands.
 
-Started on any other branch, it opens no pull request and files no issue. To publish its verdicts
-in the pull request of that branch:
+Started on any other branch, it opens no pull request and files no issue. It still renders the
+record: the `records-llm` artifact holds `llm.patch`, with the verdicts and the page made again, and
+`llm-table.md`, the scenarios whose result moved. To publish them in the pull request of that branch:
 
-1. Download the `e2e-llm-verdicts` artifact of the run.
-2. Put its JSON files in `backend/internal/compose/aicert/records/mcp_e2e/claude-sonnet-5-5@claude-cli/`.
-3. Generate the page again with the `go test` command at the top of this section, and commit both.
+1. Download the `records-llm` artifact of the run.
+2. On the branch, run `git apply llm.patch` from the root of the tree.
+3. Commit the result, and paste `llm-table.md` into the PR body.
+
+If the branch moved since the run, `git apply` may refuse a page the new commits changed. Generate
+the page again with the `go test` command at the top of this section.
 
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a run to try something.

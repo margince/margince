@@ -118,6 +118,10 @@ jobs:
               echo "::error::unknown records part '$PART'"; exit 1
               ;;
           esac
+          # A record equal to the committed one changes nothing, so it is not recorded.
+          if git diff --cached --quiet; then
+            echo "recorded: nothing"; exit 0
+          fi
           git diff --cached --binary > "$OUT/$PART.patch"
           git diff --cached --stat
           git reset -q --hard
@@ -136,9 +140,9 @@ jobs:
   # the default branch: a run on another branch renders, and proposes nothing.
   #
   # Each part has ONE fixed branch, so a new record updates the open pull
-  # request rather than adding a second. Each gets the `records: weekly` label
-  # and the owner the RECORDS_OWNER repository variable names, who looks after
-  # the records and hands the variable on when away.
+  # request rather than adding a second. Each gets the `records: proposed`
+  # label and the owner the RECORDS_OWNER repository variable names, who looks
+  # after the records and hands the variable on when away.
   propose:
     name: propose the ${{ inputs.part }} record
     needs: render
@@ -216,7 +220,7 @@ jobs:
             echo
             echo "Closes: none"
           } > "$body"
-          branch="records/weekly-$PART"
+          branch="records/$PART"
           git switch -q --force-create "$branch" "origin/$BASE"
           git apply --index "$RECORDS/$PART.patch"
           git commit -q -m "chore(records): $title of $day"
@@ -231,7 +235,7 @@ jobs:
           fi
           # Best effort: a label the repository has not synced, or an owner
           # who cannot be assigned, must not lose the proposal itself.
-          gh pr edit "$existing" --add-label "records: weekly" || echo "::warning::could not label $existing"
+          gh pr edit "$existing" --add-label "records: proposed" || echo "::warning::could not label $existing"
           if [ -n "$OWNER" ]; then
             gh pr edit "$existing" --add-assignee "$OWNER" || echo "::warning::could not assign $existing to $OWNER"
           fi

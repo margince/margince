@@ -73,6 +73,8 @@ esac
 STUB
 chmod +x "$stub_dir/gh"
 export PATH="$stub_dir:$PATH"
+# Every case runs as the default branch unless it says otherwise.
+export GITHUB_REF=refs/heads/main DEFAULT_BRANCH=main
 
 readonly GATE_TITLE="SonarCloud quality gate is not green on main"
 
@@ -868,10 +870,10 @@ for wf in "$sched" "$root/.github/workflows/mcp-sweep.yml"; do
 done
 
 # The other end: every result and outcome the reporter READS is handed in by one
-# of the workflows that CALL it. Three do, and the reporter serves all three from
-# one set of arms — MAIN_* is main-health's, MERGE_VERDICT_* is merge-attest's —
-# so asking scheduled.yml alone for every variable reports the other two
-# workflows' arms as unwired.
+# of the workflows that CALL it. The reporter serves every caller from one set
+# of arms — MAIN_* is main-health's, MERGE_VERDICT_* is merge-attest's, MCP_* is
+# mcp-sweep's — so asking one workflow alone for every variable reports the
+# other callers' arms as unwired.
 #
 # The callers are derived by grepping for the script, and the block searched is
 # the JOB that runs it rather than the whole file: any other job's matching line
@@ -1116,6 +1118,103 @@ if [[ -z "$verdict_pattern" ]] || ! grep -q "$verdict_pattern" <<<"$printed"; th
 else
 	echo "ok: a failed suite at the moved clock prints the line scheduled.yml reads as its verdict"
 fi
+
+# --- only the default branch files or closes ------------------------------------
+#
+# The rule lives in the reporter, so it holds for every caller. A red lane and a
+# green one on another ref must both leave the tracker alone.
+expect_actions "a red check on another branch files nothing" \
+	"" "" GATE_RESULT=failure GATE_STATUS=ERROR GITHUB_REF=refs/heads/feature
+expect_actions "a green check on another branch closes nothing" \
+	"" "$(printf '7\t%s\n' "$GATE_TITLE")" GATE_RESULT=success GITHUB_REF=refs/heads/feature
+set +e
+noref_out="$(env -u DEFAULT_BRANCH OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo \
+	RUN_URL=https://example.test/run/1 GATE_RESULT=failure \
+	"$root/scripts/scheduled-report.sh" 2>&1)"
+noref_status=$?
+set -e
+if [[ "$noref_status" -eq 0 ]]; then
+	echo "FAIL: the reporter ran with no DEFAULT_BRANCH, so it cannot know whose issues it files"
+	printf '  output: %s\n' "$noref_out" | head -3
+	failures=$((failures + 1))
+else
+	echo "ok: the reporter refuses to run without DEFAULT_BRANCH"
+fi
+
+# And every caller hands the default branch in, read from the event rather than
+# typed, so a renamed default branch moves with it.
+for wf in $callers; do
+	wf_job="$(awk '
+		/^  [A-Za-z_][A-Za-z0-9_-]*:/ { if (buf ~ /scheduled-report\.sh/) printf "%s", buf; buf = "" }
+		{ buf = buf $0 "\n" }
+		END { if (buf ~ /scheduled-report\.sh/) printf "%s", buf }
+	' "$wf")"
+	if ! grep -qE '^ *DEFAULT_BRANCH: \$\{\{ github\.event\.repository\.default_branch \}\}' <<<"$wf_job"; then
+		echo "FAIL: $(basename "$wf") calls scheduled-report.sh without DEFAULT_BRANCH from the event"
+		failures=$((failures + 1))
+	fi
+done
+
+# --- what a shard of the model sweep did ------------------------------------------
+#
+# scripts/e2e-llm-shard-outcome.sh reads evidence: verdict lines and LANE DONE.
+# "Could not run" is only true when no case was driven; a shard that drove
+# cases and then stopped, however it stopped, is a cut-off.
+outcome_dir="$stub_dir/outcome"
+mkdir -p "$outcome_dir"
+expect_outcome() {
+	local name="$1" want="$2"
+	shift 2
+	local got
+	got="$("$root/scripts/e2e-llm-shard-outcome.sh" "$@" | paste -sd' ' -)"
+	if [[ "$got" != "$want" ]]; then
+		echo "FAIL: $name"
+		echo "  want '$want' got '$got'"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: $name"
+}
+printf 'BATCH ci1 #1: 2 cases\nci1 case1_a: PASS\nci1 case2_b: PASS\nLANE DONE ci1\n' >"$outcome_dir/done.log"
+expect_outcome "a finished shard with every case passing is ok" "outcome=ok driven=2" shard "$outcome_dir/done.log"
+printf 'ci1 case1_a: PASS\nci1 case2_b: FAIL (1/3)\nLANE DONE ci1\n' >"$outcome_dir/fail.log"
+expect_outcome "a finished shard with a case below its bar is scenario-failed" \
+	"outcome=scenario-failed driven=2" shard "$outcome_dir/fail.log"
+printf 'ci1 case1_a: PASS\nci1 case2_b: FAIL (0/3)\nci1 case2_b: PASS\nci1 case3_c: PASS\n' >"$outcome_dir/crash.log"
+expect_outcome "a shard that drove cases and crashed is cut off, each case counted once" \
+	"outcome=cut-off driven=3" shard "$outcome_dir/crash.log"
+printf 'ci1 case1_a: PASS\nLANE STOPPED ci1: read x\n' >"$outcome_dir/stopped.log"
+expect_outcome "a shard stopped after driving a case is cut off" "outcome=cut-off driven=1" shard "$outcome_dir/stopped.log"
+printf 'BATCH ci1 #1: 2 cases\nHARNESS: no stamp\n' >"$outcome_dir/none.log"
+expect_outcome "a shard that drove nothing could not run" "outcome=lane-failed driven=0" shard "$outcome_dir/none.log"
+expect_outcome "a shard with no log could not run" "outcome=lane-failed driven=0" shard "$outcome_dir/missing.log"
+
+run_dir() {
+	local dir="$outcome_dir/$1"
+	shift
+	rm -rf "$dir" && mkdir -p "$dir"
+	local i=0 pair
+	for pair in "$@"; do
+		i=$((i + 1))
+		echo "${pair%%:*}" >"$dir/outcome-$i"
+		echo "${pair##*:}" >"$dir/driven-$i"
+	done
+	echo "$dir"
+}
+expect_outcome "every shard finished and the verdicts are whole: ok" \
+	"outcome=ok driven=5" run "$(run_dir whole ok:2 ok:3)" 2 yes
+expect_outcome "a finished run with a failing case is scenario-failed" \
+	"outcome=scenario-failed driven=5" run "$(run_dir red ok:2 scenario-failed:3)" 2 yes
+expect_outcome "one shard that could not run beside one that drove makes a cut-off, not could-not-run" \
+	"outcome=cut-off driven=3" run "$(run_dir half lane-failed:0 ok:3)" 2 yes
+expect_outcome "a shard that never reported makes a cut-off when another drove" \
+	"outcome=cut-off driven=3" run "$(run_dir short ok:3)" 2 yes
+expect_outcome "finished shards whose verdicts do not cover every scenario are a cut-off" \
+	"outcome=cut-off driven=5" run "$(run_dir gap ok:2 ok:3)" 2 no
+expect_outcome "no shard drove a case: could not run" \
+	"outcome=lane-failed driven=0" run "$(run_dir dead lane-failed:0 lane-failed:0)" 2 no
+expect_outcome "no shard reported at all: could not run" \
+	"outcome=lane-failed driven=0" run "$(run_dir empty)" 2 no
 
 if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s)" >&2

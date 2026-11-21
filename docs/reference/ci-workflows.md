@@ -260,7 +260,7 @@ The two weekly speed jobs record what they measure, and neither writes to `main`
 
 - Each job uploads its record as an artifact: `bench-perf-record` and `bench-mobile-record`. A failed speed job still uploads, because a budget that is over is recorded before its gate fails.
 - `records` calls `_records.yml`, which `mcp-sweep.yml` calls too. Its `render` job puts the record over a clean tree of the run and runs `make perfdoc`, which renders both speed records into the same pages. A record that matches the committed one counts as not recorded. It holds no write token.
-- Its `propose` job opens one pull request per part, on one fixed branch (`records/weekly-<part>`), so a new record updates the open pull request. It adds the `records: weekly` label and gives the pull request to the maintainer the `RECORDS_OWNER` repository variable names. Both steps only warn when they fail, and with no variable the pull request has no owner. That maintainer gives the variable to another maintainer while on leave. It runs only on `main`, and opens nothing when nothing recorded.
+- Its `propose` job opens one pull request per part, on one fixed branch (`records/<part>`), so a new record updates the open pull request. It adds the `records: proposed` label and gives the pull request to the maintainer the `RECORDS_OWNER` repository variable names. Both steps only warn when they fail, and with no variable the pull request has no owner. That maintainer gives the variable to another maintainer while on leave. It runs only on `main`, and opens nothing when nothing recorded.
 - A token from the records GitHub App (secrets `RECORDS_APP_CLIENT_ID`, `RECORDS_APP_PRIVATE_KEY`) opens that pull request, so CI runs on it. The default workflow token stays read-only.
 
 Findings become issues (`scripts/scheduled-report.sh`): one open issue per check, keyed on a fixed title, because a red scheduled run tells nobody.
@@ -277,19 +277,19 @@ Findings become issues (`scripts/scheduled-report.sh`): one open issue per check
   looking for a slow-down that nobody measured. A lane that ran and measured something bad has
   proved that it could run. So that finding is closed on the same run that files the other one.
 
-The report job is the only holder of `issues: write`, and runs no build code. It files and closes
-issues only on a run on `main`, as a run on any other branch measured that branch. The `propose` job of
+The report job is the only holder of `issues: write`, and runs no build code. `scripts/scheduled-report.sh` files and
+closes issues only on a run on `main`, as a run on any other branch measured that branch. The `propose` job of
 `_records.yml` is the only holder of `contents: write` and `pull-requests: write`, and runs no build code
 either. That is the same permission rule `sbom.yml` uses for signing.
 
 ## `mcp-sweep.yml`
 
-The MCP use cases, driven by a real model (`scripts/e2e-llm-sweep.sh`). Manual dispatch only: each run costs tokens, and its verdicts go stale as soon as the tool copy or the harness changes. Most sweeps run by hand in the pull request that changes them, which then publishes the verdicts ([the guide](../how-to/test-the-mcp-surface-end-to-end.md#8-publish-the-result)). It has its own file and concurrency group, so it starts nothing else and holds up no daily run.
+The MCP use cases, driven by a real model (`scripts/e2e-llm-sweep.sh`). Manual dispatch only: each run costs tokens, and its verdicts go stale as soon as the tool copy or the harness changes. Most sweeps run by hand in the pull request that changes them, which then publishes the verdicts ([the guide](../how-to/test-the-mcp-surface-end-to-end.md#8-publish-the-result)). It has its own file, so it starts nothing else and holds up no daily run. Its concurrency group is per branch, so a branch run never takes the place of one on `main`.
 
 - It skips, and does not fail, when `CLAUDE_CODE_OAUTH_TOKEN` is missing. A skipped job says "not set up" where a red one says "broken".
 - `llm-plan` deals the scenario folder into shards with `e2e/llm/shards.py` (the count is its argument in the workflow). Each shard runs the sweep on a stack bound to `config/presets/openrouter_cloud_eu.yaml`. Its key is the `OPENAI_COMPATIBLE_API_KEY` secret, so search ranks by meaning.
 - The lane does not give the same result each time: it runs each scenario three times, and passes at two. It uploads each transcript, because only the transcript shows what the model did.
-- A shard's sweep step stops at 100 minutes, before its 120-minute job, so a cut-off still files its outcome. `llm-collect` uploads `e2e-llm-verdicts` only when every scenario has a fresh verdict by meaning, outcome `ok` or `scenario-failed`.
+- A shard's sweep step stops at 100 minutes, before its 120-minute job, so a cut-off still files its outcome. `scripts/e2e-llm-shard-outcome.sh` reads the logs. A run that ran some cases and not all is cut off, and one that ran none could not run. `llm-collect` uploads `e2e-llm-verdicts` only when every scenario has a fresh verdict by meaning, outcome `ok` or `scenario-failed`.
 - `records` calls `_records.yml` with the verdicts. It adds a table of the scenarios whose result moved (`e2e/llm/verdictdiff.py`) and, on `main`, opens the pull request.
 - On `main`, the report job files a run that was cut off, a run that could not run, and a failing case. The next run on `main` that proves one wrong closes it. On any other branch it files and closes nothing, and the run summary gives the outcome.
 
