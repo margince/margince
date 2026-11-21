@@ -144,7 +144,7 @@ func (h Handlers) GetPublicProposalAvailability(w http.ResponseWriter, r *http.R
 	}
 	slots, truncated, err := h.store.ReliableAvailability(r.Context(), row.Host, params.From, params.To, time.Duration(row.Request.DurationMinutes)*time.Minute)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		writeGuestAvailabilityErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, struct {

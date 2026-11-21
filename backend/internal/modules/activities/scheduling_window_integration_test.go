@@ -156,3 +156,31 @@ func TestReliableAvailabilityWithNoCalendarAsksForOne(t *testing.T) {
 		t.Fatalf("no calendar answered %v, want the connect-a-calendar refusal", err)
 	}
 }
+
+// A guest is never told to connect a calendar: the host's setup is not theirs
+// to learn. The proposal link answers as a paused page; the host is still asked.
+func TestAGuestIsNotToldTheHostHasNoCalendar(t *testing.T) {
+	f := newInvitationFixture(t)
+	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: f.request.Subject, DurationMinutes: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.store.SaveSchedulingProfile(f.ctx, defaultSchedulingProfile()); err != nil {
+		t.Fatal(err)
+	}
+	h := Handlers{store: f.store}
+	from, to := monday(8), monday(18)
+	guest := httptest.NewRecorder()
+	h.GetPublicProposalAvailability(guest, httptest.NewRequest(http.MethodGet, "/availability", nil).WithContext(f.ctx),
+		strings.Split(link.URL, "proposal-")[1], crmcontracts.GetPublicProposalAvailabilityParams{From: from, To: to})
+	if guest.Code != http.StatusNotFound || strings.Contains(guest.Body.String(), "calendar") {
+		t.Errorf("the proposal link answered %d %s, want 404 as a paused page answers", guest.Code, guest.Body.String())
+	}
+	reliable := true
+	host := httptest.NewRecorder()
+	h.GetAvailability(host, httptest.NewRequest(http.MethodGet, "/availability", nil).WithContext(f.ctx),
+		crmcontracts.GetAvailabilityParams{From: from, To: to, Reliable: &reliable})
+	if host.Code != http.StatusUnprocessableEntity || !strings.Contains(host.Body.String(), "Connect a calendar first") {
+		t.Errorf("the host's own read answered %d %s, want the connect-a-calendar refusal", host.Code, host.Body.String())
+	}
+}
