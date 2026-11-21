@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // WritePlan produces the plan. lane may be nil, which is not an error: it is
@@ -90,13 +91,13 @@ func withPlanFloor(written, floor Plan) Plan {
 func topUpAsks(written, floor []Ask, bound int) []Ask {
 	seen := map[string]bool{}
 	for _, ask := range written {
-		seen[normalisedSubject(ask.Question)] = true
+		seen[mailsubject.Topic(ask.Question)] = true
 	}
 	for _, ask := range floor {
 		if len(written) >= bound {
 			break
 		}
-		if seen[normalisedSubject(ask.Question)] {
+		if seen[mailsubject.Topic(ask.Question)] {
 			continue
 		}
 		written = append(written, ask)
@@ -107,13 +108,13 @@ func topUpAsks(written, floor []Ask, bound int) []Ask {
 func topUpQuestions(written, floor []Question, bound int) []Question {
 	seen := map[string]bool{}
 	for _, question := range written {
-		seen[normalisedSubject(question.Ask)] = true
+		seen[mailsubject.Topic(question.Ask)] = true
 	}
 	for _, question := range floor {
 		if len(written) >= bound {
 			break
 		}
-		if seen[normalisedSubject(question.Ask)] {
+		if seen[mailsubject.Topic(question.Ask)] {
 			continue
 		}
 		written = append(written, question)
@@ -124,13 +125,13 @@ func topUpQuestions(written, floor []Question, bound int) []Question {
 func topUpScenarios(written, floor []Scenario, bound int) []Scenario {
 	seen := map[string]bool{}
 	for _, scenario := range written {
-		seen[normalisedSubject(scenario.Label)] = true
+		seen[mailsubject.Topic(scenario.Label)] = true
 	}
 	for _, scenario := range floor {
 		if len(written) >= bound {
 			break
 		}
-		if seen[normalisedSubject(scenario.Label)] {
+		if seen[mailsubject.Topic(scenario.Label)] {
 			continue
 		}
 		written = append(written, scenario)

@@ -158,14 +158,18 @@ func TestADeclaredNoticeCarriesMarketingToAnExistingCustomer(t *testing.T) {
 	}
 }
 
-// The stakeholder role is free text, so a buyer stored as " Economic_Buyer "
-// is still the buyer of the sale.
+// The stakeholder role is free text, so a buyer stored in other case or with
+// outer whitespace is still the buyer of the sale.
 func TestABuyerRoleInOtherCaseStillMakesACustomer(t *testing.T) {
-	e, newsletter, _ := customerEnv(t)
-	e.ownerExec(t, `UPDATE relationship SET role = ' Economic_Buyer ' WHERE kind = 'deal_stakeholder' AND contact_id = $1`, e.contact)
-	e.declare(t, e.defaultEntity(t), clocktest.Now(t).Add(-3*year), nil, newsletter)
-	if got := e.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
-		t.Fatalf("verdict = %q (%s), want allow for a buyer stored in other case", got.Verdict, got.ReasonCode)
+	for _, typed := range []string{" Economic_Buyer ", "\tEconomic_Buyer\n", "\u00a0economic_buyer"} {
+		t.Run(typed, func(t *testing.T) {
+			e, newsletter, _ := customerEnv(t)
+			e.ownerExec(t, `UPDATE relationship SET role = $2 WHERE kind = 'deal_stakeholder' AND contact_id = $1`, e.contact, typed)
+			e.declare(t, e.defaultEntity(t), clocktest.Now(t).Add(-3*year), nil, newsletter)
+			if got := e.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
+				t.Fatalf("verdict = %q (%s), want allow for a buyer stored as %q", got.Verdict, got.ReasonCode, typed)
+			}
+		})
 	}
 }
 

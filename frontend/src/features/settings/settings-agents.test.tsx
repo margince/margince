@@ -239,7 +239,7 @@ describe("AgentToolsCard", () => {
 // selector's filtering and the reachability computation can be exercised
 // against the same fixture: one live passport, one revoked, and one
 // scope-free tool alongside a scoped one the live passport doesn't cover.
-function agentToolsWithPassportsBackend() {
+function agentToolsWithPassportsBackend(unnamed = false) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/v1/me")) {
@@ -268,6 +268,18 @@ function agentToolsWithPassportsBackend() {
             expires_at: null,
             revoked_at: "2026-07-02T08:00:00Z",
           },
+          ...(unnamed
+            ? [
+                {
+                  id: "pp-3",
+                  label: "  ",
+                  scopes: ["read"],
+                  created_at: "2026-07-03T08:00:00Z",
+                  expires_at: null,
+                  revoked_at: null,
+                },
+              ]
+            : []),
         ],
         page: { next_cursor: null, has_more: false },
       });
@@ -317,6 +329,18 @@ describe("AgentToolsCard passport scoping", () => {
       .map((option) => option.textContent);
     expect(optionLabels).toContain("Reachable by Scout");
     expect(optionLabels).not.toContain("Reachable by Retired");
+  });
+
+  it("names a passport minted without a name in the selector", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", agentToolsWithPassportsBackend(true));
+    render(<AgentToolsCard />);
+    await screen.findByTestId("tool-list_pipelines");
+    await user.click(screen.getByLabelText("All passports"));
+    const optionLabels = screen
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(optionLabels).toContain("Reachable by Unnamed passport");
   });
 
   it("keeps a scope-free tool reachable once a passport is selected", async () => {

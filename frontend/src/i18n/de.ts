@@ -3337,6 +3337,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.revokeConfirm":
     "{access} auf {record} für {name} widerrufen? Der Zugriff endet mit der nächsten Anfrage und kann anschließend nicht mehr rückgängig gemacht werden.",
   "share.granted": "{name} hat jetzt {access} auf {record}.",
+  "share.limitedByRole":
+    "Mit Lesezugriff gespeichert. {name} kann {record} mit der eigenen Rolle nicht bearbeiten.",
+  "share.companyContactsLimitedByRole":
+    "Mit Lesezugriff gespeichert. {name} kann Kontakte mit der eigenen Rolle nicht bearbeiten.",
   "share.thisRecord": "diesen Datensatz",
   "share.until": "Bis {date}",
   "share.approvalRequired":
@@ -3618,7 +3622,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.retry": "Erneut versuchen",
   "common.goneBackToAnalytics": "Zurück zu Analytics",
   "reporting.sharedForecastGone":
-    "Dieser Link funktioniert nicht mehr. Frage nach einem neuen Link.",
+    "Dieser Link funktioniert nicht mehr. Wer ihn dir geschickt hat, kann dir einen neuen schicken.",
   "reporting.reportGone":
     "Diesen Bericht gibt es nicht, oder er ist nicht mit dir geteilt.",
   "analytics.q.gone":
@@ -3950,7 +3954,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.unconfirmed_double_opt_in":
     "Einwilligung erfasst, aber nie per Double-Opt-in bestätigt",
   "consent.reason.no_connection":
-    "Der Kontakt hat dir nie geschrieben, und kein Deal und keine Anfrage verbindet euch",
+    "Der Kontakt hat dir nicht geschrieben, dich nicht getroffen und um nichts gebeten, das erfasst ist",
   "consent.reason.qualifying_event": "Ein erfasster Austausch verbindet euch",
   "consent.reason.consent_confirmed": "Einwilligung erteilt, mit Bestätigung",
   "consent.reason.consent_withdrawn":
@@ -3963,7 +3967,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.qualifying.inbound_message":
     "Der Kontakt hat dir am {date} geschrieben",
   "consent.reason.qualifying.inquiry": "Der Kontakt hat am {date} angefragt",
-  "consent.reason.qualifying.active_deal": "Ein offener Deal verbindet euch",
   "consent.reason.qualifying.in_person":
     "Ein erfasster Austausch am {date}: {note}",
   "consent.reason.qualifying.meeting": "Ein Termin am {date} verbindet euch",
@@ -8677,6 +8680,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "directSend.correctionFailed":
     "Die Korrektur wurde nicht gespeichert. Öffne die Prüfung erneut, um die aktuelle Nachricht und Freigabe zu prüfen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
+  "directSend.alreadySent": "Diese Nachricht wurde bereits gesendet.",
+  "directSend.when": "Wann senden",
+  "directSend.whenLater": "Später",
+  "directSend.whenLaterDetail":
+    "Deine Entscheidung wird jetzt festgehalten. Die Prüfungen laufen erneut, wenn die Nachricht gesendet wird.",
+  "directSend.scheduled": "Als festgehaltene Ausnahme geplant.",
   "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
@@ -9610,6 +9619,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.cancel": "Abbrechen",
   "forecast.saveCall": "Einschätzung speichern",
   "forecast.callAmountNeeded": "Gib zuerst die erwartete Summe ein.",
+  "forecast.callAmountNegative": "Gib einen Betrag ab null ein.",
   "analytics.scopeLabel": "Auswahl der Datensätze",
   "analytics.scopeFixed": "Diese Zahlen umfassen {scope}.",
   "forecast.period": "Zeitraum",
@@ -9889,6 +9899,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Markiere den Passport oben und kopiere ihn manuell.",
   "settings.passportNext": "So nutzt du den Passport",
   "settings.passportLabel": "Agentenname",
+  "settings.passportUnnamed": "Passport ohne Namen",
+  "settings.passportNameRequired": "Gib dem Agenten einen Namen",
+  "settings.passportNameTooLong": "Verwende höchstens 120 Zeichen.",
   "settings.mint": "Passport ausstellen",
   "settings.minting": "Wird ausgestellt…",
   "settings.mintCancel": "Abbrechen",
@@ -20860,8 +20873,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand unter den Empfangenden hat nach der Planung Werbung gestoppt. An diese Adresse wird sie nicht gesendet.",
   "sched.held.recipientReplied":
     "Nach der Planung kam neue Mail von jemandem unter den Empfangenden. Lies sie, bevor du dieses Follow-up sendest.",
-  "sched.held.confirmSendsNow":
-    "Wenn du bestätigst, wird die Nachricht jetzt gesendet, nicht zur geplanten Zeit.",
+  "sched.held.confirmChoosesWhen":
+    "Die geplante Zeit ist vorbei. Beim Bestätigen wählst du, ob die Nachricht jetzt oder zu einer neuen Zeit gesendet wird.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",

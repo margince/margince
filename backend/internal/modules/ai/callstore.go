@@ -373,13 +373,14 @@ func (m *CallMeter) recordAttempts(ctx context.Context, tx pgx.Tx, attempts []Ca
 		if err != nil {
 			return fmt.Errorf("ai: recording call: %w", err)
 		}
-		if c.Payload == nil {
+		payload := storablePayload(c)
+		if payload == nil {
 			continue
 		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO ai_call_payload (ai_call_id, request_payload, response_payload)
 			VALUES ($1, $2, $3)`,
-			callID, c.Payload.Request, c.Payload.Response)
+			callID, payload.Request, payload.Response)
 		if err != nil {
 			return fmt.Errorf("ai: recording call payload: %w", err)
 		}

@@ -53,7 +53,7 @@ func TestARotatedPassportAuthenticatesToTheSameConnection(t *testing.T) {
 // than assumed.
 func TestADirectlyMintedPassportCarriesNoConnection(t *testing.T) {
 	e := setupRevocationEnv(t, "passport-connection-direct")
-	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("minting a passport: %v", err)
 	}

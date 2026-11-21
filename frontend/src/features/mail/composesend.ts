@@ -27,6 +27,10 @@ import {
   type SendRequest,
   sendRequest,
 } from "./composesendrequest";
+import {
+  type DirectSendOutcome,
+  directSendOutcomeKey,
+} from "./directsendmodal";
 import { dealOf, reasonEvidence, useReasonForAnchor } from "./reasonanchor";
 import { SCHEDULED_SCREEN } from "./scheduledqueue";
 
@@ -220,9 +224,9 @@ export function useComposeSend({
     },
   });
   // Clearing the refusal and draft after staging stops a resend of the held message.
-  const directSent = () => {
+  const directSent = (outcome: DirectSendOutcome) => {
     send.reset();
-    toast.show(t("directSend.queued"));
+    toast.show(t(directSendOutcomeKey(outcome)));
     finishSent();
   };
 

@@ -187,8 +187,9 @@ func (p *companyContextDef) validate(task string) error {
 // chat tier, and it has no prompt, no text answer and no completion path, so
 // it carries no sites and no certification obligation.
 type embedDef struct {
-	Tier     string `yaml:"tier"`
-	CostUnit string `yaml:"cost_unit"`
+	Tier      string `yaml:"tier"`
+	CostUnit  string `yaml:"cost_unit"`
+	NoPayload bool   `yaml:"no_payload"`
 }
 
 // taskDef is one tasks.<name> entry: the routing ladder and the execution

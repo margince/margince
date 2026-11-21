@@ -1,0 +1,42 @@
+# CASE 126 — The same move, with the user's yes in the prompt.
+#
+# The mirror of case 125. The move onto the project stages, and the user has
+# already said yes, so the agent may release its own staged call and must then
+# repeat the call with the approval's id: approving alone moves nothing. The end
+# state reads the mail on the project.
+name: case126_file_it_i_approve
+title: File it on the project, I approve
+criteria: [1]
+
+setup: acceptance_mail_on_the_company
+
+writes: true
+
+prompt: |
+  File the Abnahmeprotokoll mail that is sitting on Harzer Steuerungstechnik
+  under the Leitstand Goslar project. I have checked it and I approve the move,
+  so if it needs an approval, approve it for me and finish the job.
+
+must_call:
+  - relink_activity|relink_activities
+  - decide_approvals
+
+must_call_with:
+  - decide_approvals.decision=approve
+
+may_call:
+  - find_records
+  - read_record
+  - read_project
+  - read_approval
+  - list_approvals
+
+must_end_with:
+  - activity "Abnahmeprotokoll Leitstand Goslar" on project "Leitstand Goslar" records=1
+  - approval "relink_activit*" pending=0
+
+judge:
+  - "Criterion 1. The answer says the Abnahmeprotokoll mail is now filed under the Leitstand Goslar project. Answer no if it says the move is still waiting, or leaves the user a step to do."
+
+runs: 3
+pass_at: 2

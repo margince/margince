@@ -28,6 +28,7 @@ import (
 // share writes one grant through the real writer.
 func (c *carryEnv) share(t *testing.T, recordType string, record, grantee ids.UUID, access string, expires *time.Time) {
 	t.Helper()
+	c.e.GrantRole(t, grantee, "rep")
 	if _, err := c.grants.CreateRecordGrant(c.admin, identity.CreateGrantInput{
 		RecordType: recordType, RecordID: record, SubjectType: "user", SubjectID: grantee,
 		Access: access, ExpiresAt: expires,

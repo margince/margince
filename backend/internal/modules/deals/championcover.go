@@ -143,12 +143,13 @@ func championSeats(
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT r.deal_id,
-		       array_remove(array_agg(r.contact_id) FILTER (WHERE lower(trim(r.role)) = '%[2]s'), NULL)
+		       array_remove(array_agg(r.contact_id) FILTER (WHERE %[6]s = '%[2]s'), NULL)
 		  FROM relationship r
 		  JOIN contact p ON %[4]s
 		 WHERE %[5]s AND r.deal_id = ANY($%[1]d)
 		   AND (%[3]s)
-		 GROUP BY r.deal_id`, dealsPos, dealrole.Champion, bound, liveContactSeat, dealseat.CurrentSQL("r")), args...)
+		 GROUP BY r.deal_id`, dealsPos, dealrole.Champion, bound, liveContactSeat, dealseat.CurrentSQL("r"),
+		dealrole.RecordedSQL("r.role")), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading the champion seats on a set of deals: %w", err)
 	}

@@ -121,7 +121,9 @@ export function dealRoleLabel(
   const labels: Readonly<Record<string, MessageKey>> = DEAL_ROLE_LABELS;
   const key = Object.hasOwn(labels, stored)
     ? labels[stored]
-    : LEGACY_DEAL_ROLE_LABELS[stored];
+    : Object.hasOwn(LEGACY_DEAL_ROLE_LABELS, stored)
+      ? LEGACY_DEAL_ROLE_LABELS[stored]
+      : undefined;
   return key ? t(key) : "";
 }
 

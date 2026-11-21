@@ -138,7 +138,7 @@ const bootstrapPassword = "a bootstrap password!"
 func TestStoredWorkSeesARevocationAfterTheSnapshotBegan(t *testing.T) {
 	e := setupRevocationEnv(t, "stored-snapshot")
 	ctx := e.wsCtx(e.member)
-	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +281,7 @@ func TestDeactivateUserRevokesSessionsAndPassportsAndEmits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("member login: %v", err)
 	}
-	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("issue passport: %v", err)
 	}
@@ -360,7 +360,7 @@ func TestRevokedPassportRefusedOnNextCall(t *testing.T) {
 	// bootstrap and therefore owes a password rotation, which is itself a live
 	// cap on every passport they granted — a fresh one would be refused for
 	// that reason and prove nothing about revocation.
-	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read", "write"}})
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read", "write"}})
 	if err != nil {
 		t.Fatal(err)
 	}
