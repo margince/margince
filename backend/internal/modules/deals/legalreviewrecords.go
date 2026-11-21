@@ -51,7 +51,11 @@ type PacketTouch struct {
 type PacketTask struct {
 	ActivityID ids.UUID   `json:"activity_id"`
 	DueAt      *time.Time `json:"due_at,omitempty"`
-	Subject    *string    `json:"-"`
+	// DueHasTime and DueIntent keep the chosen clock a task was frozen with. A
+	// pack frozen before they were stored carries neither and reads as an instant.
+	DueHasTime bool                     `json:"due_has_time,omitempty"`
+	DueIntent  *crmcontracts.IntentTime `json:"due_intent,omitempty"`
+	Subject    *string                  `json:"-"`
 }
 
 // LegalReviewRecords reads the records around a deal for a pack. Every call
@@ -194,9 +198,13 @@ func recordsWire(p reviewPacket, sight recordSight, out *crmcontracts.LegalRevie
 	tasks := make([]crmcontracts.LegalReviewPacketTask, 0, len(p.Tasks))
 	for _, t := range p.Tasks {
 		if subject, ok := sight.activity[t.ActivityID]; ok {
-			tasks = append(tasks, crmcontracts.LegalReviewPacketTask{
-				ActivityId: openapiUUID(t.ActivityID), Subject: subject, DueAt: t.DueAt,
-			})
+			task := crmcontracts.LegalReviewPacketTask{
+				ActivityId: openapiUUID(t.ActivityID), Subject: subject, DueAt: t.DueAt, DueIntent: t.DueIntent,
+			}
+			if t.DueAt != nil && (t.DueHasTime || t.DueIntent != nil) {
+				task.DueHasTime = &t.DueHasTime
+			}
+			tasks = append(tasks, task)
 		}
 	}
 	out.Contracts, out.Touches, out.Tasks = &contracts, &touches, &tasks

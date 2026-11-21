@@ -124,7 +124,7 @@ var audienceReadersAdmitted = gatekit.Waive(map[string]string{
 
 	"internal/modules/activities/legacysystemtext.go:LegacySystemTasksTx": "System-only bounded repair reads native task text to recover its catalog descriptor. No row is returned to a user; archived and held rows are excluded.",
 
-	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupFrom":             mailCopyGroupReader,
+	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupBoundedFrom":      mailCopyGroupReader,
 	"internal/compose/credentialrepair/credentialrepair.go:estimateMaskableMailText": credentialRepairReader,
 	"internal/compose/credentialrepair/credentialrepair.go:maskMailTextBatch":        credentialRepairReader,
 	"internal/modules/activities/credentialrepair.go:MaskStoredMailTextTx":           credentialRepairReader,

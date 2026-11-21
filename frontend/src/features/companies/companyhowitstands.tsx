@@ -114,7 +114,7 @@ export function CompanyHowItStands({
     unrated: companyActivityVerdict(view, { t, locale, zone }),
   });
   const word = t(verdict.word);
-  const words = { t, plural, locale, zone };
+  const words = { t, plural, locale, zone, companyZone };
   const { events, gap } = companyTimeline(view, words);
   const peeks: Partial<Record<RatedDimension["key"], StandingPeek>> = {
     relationship: contactsInTouch(view, words),

@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import { provenanceOf } from "../../design-system/provenanceof";
 import type { Translator } from "../../i18n";
+import { dueOnDay } from "../../lib/standingpeeks";
 import { displayedSubject } from "../../lib/systemdisplay";
 import { omitted } from "./contact360";
 
@@ -16,6 +17,8 @@ export type OwedPromise = Readonly<{
   key: string;
   title: string;
   due?: string;
+  /** The zone the due day reads in: the company's for a task with only a date. */
+  zone?: string;
 }>;
 
 /**
@@ -28,6 +31,7 @@ export type OwedPromise = Readonly<{
 export function owedPromises(
   view: Contact360,
   t: Translator,
+  words?: Readonly<{ zone: string; companyZone?: string }>,
 ): OwedPromise[] | null {
   if (omitted(view, "claims") || omitted(view, "next_steps")) {
     return null;
@@ -37,11 +41,18 @@ export function owedPromises(
       (task) =>
         !task.is_done && provenanceOf(task.captured_by).kind !== "system",
     )
-    .map((task) => ({
-      key: task.id,
-      title: displayedSubject(task) ?? t("task.untitled"),
-      due: task.due_at ?? undefined,
-    }));
+    .map((task) => {
+      const due =
+        words && task.due_at
+          ? dueOnDay(words, task.due_at, task.due_has_time, task.due_intent)
+          : undefined;
+      return {
+        key: task.id,
+        title: displayedSubject(task) ?? t("task.untitled"),
+        due: due?.at ?? task.due_at ?? undefined,
+        zone: due?.zone,
+      };
+    });
   const listed = listedTaskIds(view);
   const claims = (view.claims ?? [])
     .filter(
