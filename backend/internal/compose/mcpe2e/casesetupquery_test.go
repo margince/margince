@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package mcpe2e
 
 import (
 	"net/url"
@@ -13,7 +13,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-const e2eLLMCaseSetup = "../../../e2e/llm/casesetup.py"
+const e2eLLMCaseSetup = "../../../../e2e/llm/casesetup.py"
 
 var (
 	// A GET the setup steps make with a query string: the path, then the query.
@@ -29,7 +29,7 @@ func TestTheLaneSetupStepsSendOnlyQueryParametersTheContractTakes(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc, err := openapi3.NewLoader().LoadFromFile(contractFile)
+	doc, err := openapi3.NewLoader().LoadFromFile("../../../api/crm.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestTheLaneSetupStepsSendOnlyQueryParametersTheContractTakes(t *testing.T) 
 // f-string placeholders.
 func queryNames(query string) []string {
 	var out []string
-	for _, pair := range strings.Split(query, "&") {
+	for pair := range strings.SplitSeq(query, "&") {
 		name, _, _ := strings.Cut(pair, "=")
 		if unescaped, err := url.QueryUnescape(name); err == nil && unescaped != "" {
 			out = append(out, unescaped)

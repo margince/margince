@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package contractshape
 
 import (
 	"net/http"
@@ -31,7 +31,7 @@ import (
 // "imap" accepts the literal "imap" segment; a uuid-format parameter never
 // accepts "catalog".
 func TestNoOperationPathIsShadowedByAnother(t *testing.T) {
-	doc, err := openapi3.NewLoader().LoadFromFile("../../api/crm.yaml")
+	doc, err := openapi3.NewLoader().LoadFromFile("../../../api/crm.yaml")
 	if err != nil {
 		t.Fatalf("loading the contract: %v", err)
 	}
@@ -197,7 +197,7 @@ func docServerBaseURL(t *testing.T, doc *openapi3.T) string {
 // uuid-format path parameter never accepts the literal "/automations/catalog"
 // segment.
 func TestRouteShadowMatcherFlagsAnEnumCollisionButNotAUUIDOne(t *testing.T) {
-	doc, err := openapi3.NewLoader().LoadFromFile("../../api/crm.yaml")
+	doc, err := openapi3.NewLoader().LoadFromFile("../../../api/crm.yaml")
 	if err != nil {
 		t.Fatalf("loading the contract: %v", err)
 	}

@@ -249,7 +249,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
 | `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
-| `the client declined a question the server asked in the chat` | The server asked for a yes in the chat, such as the go-ahead for a bulk change, and the CLI said no by itself: in print mode nobody can answer the form | A harness stop, never a score. The case cannot be measured on that CLI until the lane can answer an in-chat question |
+| `the client declined a question the server asked in the chat` | The server asked the user to confirm a change in the chat, and the CLI said no by itself: in print mode nobody can answer the form | A harness stop, never a score. The case cannot be measured on that CLI until the lane can answer a question in the chat |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a bug: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) ended part of the way through a run. A CLI that exits with an error code, under a result that reports no error, stops the lane in the same way | A harness stop, never a score. Every driver writes a last result when the model ends the run, at the turn cap too. The stop prints the last lines the driver wrote to stderr |
 
@@ -282,8 +282,8 @@ cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished
 ```
 
 Each verdict carries a `stamp` of what it measured. It holds a short hash of the scenario file and
-of the published entries of the tools its checks name (`docs/reference/mcp-info.json`), with the
-action catalog of each router among them: the bodies `read_workspace topic=actions` serves. It also holds
+of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). For a
+router, that entry includes the bodies `read_workspace topic=actions` serves. It also holds
 a hash of the server instructions and of the grading harness, the judge model, the commit and the
 time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
 
