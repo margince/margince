@@ -91,6 +91,7 @@ function VacuumBody({ report }: Readonly<{ report: Report }>) {
     <>
       <PanelBody>
         <PanelIntro>{t("vacuumHealth.thresholds", thresholds)}</PanelIntro>
+        <p>{t("vacuumHealth.scope")}</p>
         {report.unmeasured_tables > 0 && (
           <p>
             {plural("vacuumHealth.unmeasured", report.unmeasured_tables, {

@@ -71735,7 +71735,7 @@ type VacuumRecommendation struct {
 	Statement string `json:"statement"`
 	Table     string `json:"table"`
 
-	// TableBytes The size of the table's file, without its indexes.
+	// TableBytes The size of the table's file at its last `VACUUM` or `ANALYZE`, without its indexes or TOAST.
 	TableBytes int `json:"table_bytes"`
 
 	// WasteBytes The estimated space in that file that holds no live row.

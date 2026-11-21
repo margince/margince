@@ -11088,6 +11088,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các bảng có tệp chứa nhiều chỗ trống không có hàng còn sống. Margince không tự chạy việc dọn dẹp.",
   "vacuumHealth.adminOnly":
     "Dung lượng bảng áp dụng cho toàn bộ bản cài đặt và cần một quyền mà vai trò của bạn không có.",
+  "vacuumHealth.scope":
+    "Chỉ tính tệp riêng của bảng. Các chỉ mục và vùng lưu riêng cho giá trị dài (TOAST) không được tính.",
   "vacuumHealth.thresholds":
     "Một bảng được liệt kê khi ít nhất {percent} tệp của nó, và ít nhất {size}, không chứa hàng còn sống. Các kích thước là ước tính từ thống kê của cơ sở dữ liệu.",
   "vacuumHealth.empty":

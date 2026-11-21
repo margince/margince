@@ -23,7 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/adminread"
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -40,11 +40,11 @@ type extensionIngestHealthHandlers struct {
 
 // GetExtensionIngestHealth reports what the core has refused, per unit.
 func (h extensionIngestHealthHandlers) GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request) {
-	if !adminread.AdmitHealthReader(w, r) {
+	if !adminadmit.HealthReader(w, r) {
 		return
 	}
 	now := h.now()
-	adminread.ServeReport(w, r, h.pool, "extension ingest health",
+	adminadmit.ServeReport(w, r, h.pool, "extension ingest health",
 		func(ctx context.Context, tx pgx.Tx) (crmcontracts.ExtensionIngestHealth, error) {
 			return readExtensionIngestHealth(ctx, tx, now)
 		})

@@ -76,6 +76,9 @@ it("lists a table with its size, its empty space, the statement and the role to 
   expect(row["What to run"]).toHaveTextContent("Run as margince_owner.");
   expect(screen.getByText(/at least 20% of its file/)).toBeInTheDocument();
   expect(screen.getByText(/VACUUM FULL locks the table/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/indexes and the separate store/),
+  ).toBeInTheDocument();
 });
 
 it("says no table needs it rather than showing an empty table", async () => {

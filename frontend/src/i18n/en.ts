@@ -11367,6 +11367,8 @@ export const en = {
     "Tables whose files hold much space without live rows. Margince does not run the fix itself.",
   "vacuumHealth.adminOnly":
     "Table space covers the whole installation and needs a permission your role does not have.",
+  "vacuumHealth.scope":
+    "Only the table’s own file is counted. Its indexes and the separate store for long values (TOAST) are not.",
   "vacuumHealth.thresholds":
     "A table is listed when at least {percent} of its file, and at least {size}, holds no live row. The sizes are estimates from the database statistics.",
   "vacuumHealth.empty":

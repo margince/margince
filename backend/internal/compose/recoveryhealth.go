@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/adminread"
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/continuity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -25,10 +25,10 @@ type recoveryHealthHandlers struct {
 
 // GetRecoveryHealth reports the most recent drill against the published targets.
 func (h recoveryHealthHandlers) GetRecoveryHealth(w http.ResponseWriter, r *http.Request) {
-	if !adminread.AdmitHealthReader(w, r) {
+	if !adminadmit.HealthReader(w, r) {
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), adminread.ReadTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
 	drill, ever, err := h.ledger.Latest(ctx)
 	if err != nil {

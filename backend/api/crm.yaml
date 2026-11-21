@@ -1097,7 +1097,9 @@ paths:
       summary: Which tables would win back enough space from a full vacuum run out of band.
       description: >
         Admin and ops only (`job_health:read`). Estimates, from the database's own statistics, how much
-        of each table's file holds no live row. A table is listed when that share is at least
+        of each table's file holds no live row. Sizes and row counts are those of the table's last
+        `VACUUM` or `ANALYZE`; indexes and TOAST are not counted, and a table that was never updated or
+        deleted from is left out. A table is listed when that share is at least
         `min_waste_percent` and the space is at least `min_waste_bytes`, largest first. Each entry
         carries the statement to run and the role that owns the table. Margince never runs it:
         `VACUUM FULL` locks the table for reads and writes until it ends. A table the statistics do
@@ -71944,7 +71946,7 @@ components:
           description: The database role that owns the table. Only it can run the statement.
         table_bytes:
           type: integer
-          description: The size of the table's file, without its indexes.
+          description: The size of the table's file at its last `VACUUM` or `ANALYZE`, without its indexes or TOAST.
         waste_bytes:
           type: integer
           description: The estimated space in that file that holds no live row.

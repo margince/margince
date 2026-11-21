@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/adminread"
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -25,10 +25,10 @@ import (
 // decisions as they stand. It needs the right to run a correction and the
 // right to decide the mappings it carries.
 func (h dataTaskHandlers) ApplyLegacyLossReasons(w http.ResponseWriter, r *http.Request) {
-	if !adminread.AdmitOperator(w, r, "data_task", principal.ActionUpdate) {
+	if !adminadmit.Operator(w, r, "data_task", principal.ActionUpdate) {
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), adminread.ReadTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
 	if err := auth.Require(ctx, "custom_field", principal.ActionUpdate); err != nil {
 		httperr.Write(w, r, err)

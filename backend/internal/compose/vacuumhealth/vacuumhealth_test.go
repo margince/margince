@@ -5,20 +5,62 @@ package vacuumhealth
 
 import "testing"
 
-func width(w float64) *float64 { return &w }
+const page = 8192
 
-// 1000 rows of 40 bytes take 68 bytes each with header, padding and pointer,
-// so 120 fit in a full 8 kB page and 9 pages hold them.
+var (
+	boolean = column{align: 'c', length: 1, width: 1}
+	bigint  = column{align: 'd', length: 8, width: 8}
+)
+
+func measured(rows float64, pages int64, columns ...column) tableReading {
+	return tableReading{
+		tableBytes: pages * page, liveRows: rows, fillfactor: 100, blockSize: page,
+		attributes: len(columns), withStats: len(columns), columns: columns,
+	}
+}
+
+// Four bool and bigint pairs store 64 bytes of values, not 36: each bigint
+// starts on an 8-byte boundary. 92 bytes a row puts 88 rows in a page.
+func TestAFreshlyLoadedTableWithPaddedColumnsHasNoWaste(t *testing.T) {
+	reading := measured(8800, 100, boolean, bigint, boolean, bigint, boolean, bigint, boolean, bigint)
+	if got := reading.rowBytes(); got != 92 {
+		t.Fatalf("row = %d bytes, want 92", got)
+	}
+	if waste, known := reading.wasteBytes(); !known || waste != 0 {
+		t.Fatalf("waste = %d (known %v), want none", waste, known)
+	}
+}
+
+func TestANullableColumnAddsTheNullBitmapToTheHeader(t *testing.T) {
+	columns := []column{bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint}
+	without := measured(1, 1, columns...)
+	nullable := append([]column{{align: 'd', length: 8, width: 8, nullFrac: 0.5}}, columns[1:]...)
+	with := measured(1, 1, nullable...)
+	// Nine columns need a 2-byte bitmap, which pushes the 23-byte header past 24.
+	if got, want := with.rowBytes()-without.rowBytes(), int64(8); got != want {
+		t.Fatalf("the bitmap adds %d bytes, want %d", got, want)
+	}
+}
+
+// A short text value has a one-byte header and is not aligned.
+func TestAShortTextValueIsStoredUnaligned(t *testing.T) {
+	text := column{align: 'i', length: -1, width: 5}
+	if got := measured(1, 1, boolean, text).rowBytes(); got != 24+8+4 {
+		t.Fatalf("row = %d bytes, want %d", got, 24+8+4)
+	}
+}
+
+// 1000 rows of a bigint and a 40-byte text take 76 bytes each, so 107 fit in a
+// page and 10 pages hold them.
 func TestTheLiveRowsLeaveTheRestOfTheFileAsWaste(t *testing.T) {
-	reading := tableReading{tableBytes: 100 * 8192, liveRows: 1000, rowWidth: width(40), fillfactor: 100, blockSize: 8192}
-	waste, known := reading.wasteBytes()
-	if !known || waste != 91*8192 {
-		t.Fatalf("waste = %d (known %v), want %d", waste, known, 91*8192)
+	reading := measured(1000, 100, bigint, column{align: 'i', length: -1, width: 40})
+	if waste, known := reading.wasteBytes(); !known || waste != 90*page {
+		t.Fatalf("waste = %d (known %v), want %d", waste, known, 90*page)
 	}
 }
 
 func TestAFillfactorUnderAHundredIsSpaceTheTableAskedFor(t *testing.T) {
-	full := tableReading{tableBytes: 100 * 8192, liveRows: 1000, rowWidth: width(40), fillfactor: 100, blockSize: 8192}
+	full := measured(1000, 100, bigint, column{align: 'i', length: -1, width: 40})
 	half := full
 	half.fillfactor = 50
 	fullWaste, _ := full.wasteBytes()
@@ -28,13 +70,13 @@ func TestAFillfactorUnderAHundredIsSpaceTheTableAskedFor(t *testing.T) {
 	}
 }
 
-func TestATableWithoutStatisticsHasNoEstimate(t *testing.T) {
-	for name, reading := range map[string]tableReading{
-		"never analyzed":       {tableBytes: 8192, liveRows: -1, rowWidth: width(40), fillfactor: 100, blockSize: 8192},
-		"rows without a width": {tableBytes: 8192, liveRows: 10, fillfactor: 100, blockSize: 8192},
-	} {
+func TestATableTheStatisticsDoNotFullyDescribeHasNoEstimate(t *testing.T) {
+	neverAnalyzed := measured(-1, 1, bigint)
+	missingColumn := measured(10, 1, bigint, boolean)
+	missingColumn.withStats = 1
+	for name, reading := range map[string]tableReading{"never analyzed": neverAnalyzed, "a column without statistics": missingColumn} {
 		if _, known := reading.wasteBytes(); known {
-			t.Errorf("%s: an estimate was made from no statistics", name)
+			t.Errorf("%s: an estimate was made", name)
 		}
 	}
 }
@@ -42,8 +84,9 @@ func TestATableWithoutStatisticsHasNoEstimate(t *testing.T) {
 // An analyzed table with every row deleted has no column statistics at all,
 // and the whole file is waste.
 func TestAnEmptiedTableIsAllWaste(t *testing.T) {
-	reading := tableReading{tableBytes: 50 * 8192, liveRows: 0, fillfactor: 100, blockSize: 8192}
-	if waste, known := reading.wasteBytes(); !known || waste != 50*8192 {
+	reading := measured(0, 50, bigint)
+	reading.withStats = 0
+	if waste, known := reading.wasteBytes(); !known || waste != 50*page {
 		t.Fatalf("waste = %d (known %v), want the whole file", waste, known)
 	}
 }
@@ -63,6 +106,13 @@ func TestATableIsListedOnlyOverBothThresholds(t *testing.T) {
 		if got := limits.admit(tc.waste, tc.tableBytes); got != tc.want {
 			t.Errorf("%s: admit(%d, %d) = %v, want %v", tc.name, tc.waste, tc.tableBytes, got, tc.want)
 		}
+	}
+}
+
+// With no thresholds at all, an empty file still has nothing to win back.
+func TestAnEmptyFileIsNeverListed(t *testing.T) {
+	if (Thresholds{}).admit(0, 0) {
+		t.Fatal("an empty file is listed")
 	}
 }
 

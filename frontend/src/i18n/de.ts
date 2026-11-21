@@ -11403,6 +11403,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Tabellen, deren Dateien viel Platz ohne lebende Zeilen enthalten. Margince führt die Bereinigung nicht selbst aus.",
   "vacuumHealth.adminOnly":
     "Der Tabellenspeicher betrifft die ganze Installation und braucht eine Berechtigung, die deine Rolle nicht hat.",
+  "vacuumHealth.scope":
+    "Gezählt wird nur die Datei der Tabelle selbst. Die Indizes der Tabelle und der eigene Speicher für lange Werte (TOAST) zählen nicht.",
   "vacuumHealth.thresholds":
     "Eine Tabelle wird gelistet, wenn mindestens {percent} ihrer Datei und mindestens {size} keine lebende Zeile enthalten. Die Größen sind Schätzungen aus den Statistiken der Datenbank.",
   "vacuumHealth.empty":

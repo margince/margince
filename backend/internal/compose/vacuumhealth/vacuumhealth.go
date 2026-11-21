@@ -11,7 +11,6 @@ package vacuumhealth
 import (
 	"cmp"
 	"context"
-	"math"
 	"net/http"
 	"slices"
 	"time"
@@ -19,7 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/adminread"
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -36,37 +35,64 @@ type Thresholds struct {
 // Default is the one place the thresholds the endpoint uses are set.
 var Default = Thresholds{MinWastePercent: 20, MinWasteBytes: 100_000_000}
 
-// Endpoint serves GET /admin/vacuum-recommendations.
+// Endpoint serves GET /admin/vacuum-recommendations. Server embeds it, and an
+// embedded `Handlers` would clash with briefs.Handlers.
 type Endpoint struct {
-	Pool *pgxpool.Pool
-	Now  func() time.Time
+	pool *pgxpool.Pool
+	now  func() time.Time
+}
+
+// NewEndpoint reads through pool and stamps each report with now.
+func NewEndpoint(pool *pgxpool.Pool, now func() time.Time) Endpoint {
+	return Endpoint{pool: pool, now: now}
 }
 
 // GetVacuumRecommendations reports the tables over both default thresholds.
 func (e Endpoint) GetVacuumRecommendations(w http.ResponseWriter, r *http.Request) {
-	if !adminread.AdmitHealthReader(w, r) {
+	if !adminadmit.HealthReader(w, r) {
 		return
 	}
-	now := e.Now()
-	adminread.ServeReport(w, r, e.Pool, "vacuum recommendations",
+	now := e.now()
+	adminadmit.ServeReport(w, r, e.pool, "vacuum recommendations",
 		func(ctx context.Context, tx pgx.Tx) (crmcontracts.VacuumRecommendations, error) {
 			return Read(ctx, tx, now, Default)
 		})
 }
 
-// tableReading is one table as the catalog describes it.
-type tableReading struct {
-	schema, table, owner string
-	tableBytes           int64
-	// liveRows is the planner's row estimate; below zero, the table was never
-	// analyzed and its row count is unknown.
-	liveRows float64
-	// rowWidth is the average stored width of a row's values, unknown when no
-	// column has statistics.
-	rowWidth   *float64
-	fillfactor int
-	blockSize  int
-}
+// readingsSQL reads every figure from the catalog, never from the table files.
+// relpages and reltuples come from the same VACUUM or ANALYZE, so a table that
+// grew since then does not look empty. No per-table function opens a relation.
+// So a table under the `VACUUM FULL` this advises takes no lock from the read.
+// A table dropped meanwhile cannot fail it either.
+//
+// A table no update or delete ever touched has no dead rows to win back.
+const readingsSQL = `
+	SELECT n.nspname, c.relname, pg_get_userbyid(c.relowner),
+	       c.relpages::bigint * current_setting('block_size')::bigint, c.reltuples::float8,
+	       coalesce((SELECT option_value::int FROM pg_options_to_table(c.reloptions)
+	                  WHERE option_name = 'fillfactor'), 100),
+	       current_setting('block_size')::int,
+	       cols.natts, cols.stats,
+	       coalesce(cols.aligns, '{}'), coalesce(cols.lengths, '{}'),
+	       coalesce(cols.widths, '{}'), coalesce(cols.null_fracs, '{}')
+	  FROM pg_stat_user_tables t
+	  JOIN pg_class c ON c.oid = t.relid
+	  JOIN pg_namespace n ON n.oid = c.relnamespace
+	 CROSS JOIN LATERAL (
+	       SELECT count(*)::int AS natts,
+	              count(s.attname) FILTER (WHERE NOT a.attisdropped)::int AS stats,
+	              array_agg(a.attalign::text ORDER BY a.attnum) FILTER (WHERE NOT a.attisdropped) AS aligns,
+	              array_agg(a.attlen::int ORDER BY a.attnum) FILTER (WHERE NOT a.attisdropped) AS lengths,
+	              array_agg(coalesce(s.avg_width, 0)::float8 ORDER BY a.attnum) FILTER (WHERE NOT a.attisdropped) AS widths,
+	              array_agg(coalesce(s.null_frac, 0)::float8 ORDER BY a.attnum) FILTER (WHERE NOT a.attisdropped) AS null_fracs
+	         FROM pg_attribute a
+	         LEFT JOIN pg_stats s ON s.schemaname = n.nspname AND s.tablename = c.relname
+	                             AND s.attname = a.attname AND NOT s.inherited
+	        WHERE a.attrelid = c.oid AND a.attnum > 0
+	       ) cols
+	 WHERE c.relpersistence <> 't'
+	   AND t.n_tup_upd + t.n_tup_del > 0
+	   AND c.relpages::bigint * current_setting('block_size')::bigint >= $1`
 
 // Read lists the tables over the thresholds, most empty space first.
 //
@@ -79,30 +105,14 @@ func Read(ctx context.Context, tx pgx.Tx, now time.Time, limits Thresholds) (crm
 		MinWasteBytes:   int(limits.MinWasteBytes),
 		Tables:          []crmcontracts.VacuumRecommendation{},
 	}
-	rows, err := tx.Query(ctx, `
-		WITH widths AS (
-			SELECT schemaname, tablename, sum((1 - null_frac) * avg_width)::float8 AS width
-			  FROM pg_stats
-			 GROUP BY schemaname, tablename
-		)
-		SELECT n.nspname, c.relname, pg_get_userbyid(c.relowner),
-		       pg_relation_size(c.oid), c.reltuples::float8, w.width,
-		       coalesce((SELECT option_value::int FROM pg_options_to_table(c.reloptions)
-		                  WHERE option_name = 'fillfactor'), 100),
-		       current_setting('block_size')::int
-		  FROM pg_stat_user_tables t
-		  JOIN pg_class c ON c.oid = t.relid
-		  JOIN pg_namespace n ON n.oid = c.relnamespace
-		  LEFT JOIN widths w ON w.schemaname = n.nspname AND w.tablename = c.relname
-		 WHERE pg_relation_size(c.oid) >= $1`, limits.MinWasteBytes)
+	rows, err := tx.Query(ctx, readingsSQL, limits.MinWasteBytes)
 	if err != nil {
 		return crmcontracts.VacuumRecommendations{}, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var t tableReading
-		if err := rows.Scan(&t.schema, &t.table, &t.owner, &t.tableBytes, &t.liveRows, &t.rowWidth,
-			&t.fillfactor, &t.blockSize); err != nil {
+		t, err := scanReading(rows)
+		if err != nil {
 			return crmcontracts.VacuumRecommendations{}, err
 		}
 		waste, known := t.wasteBytes()
@@ -122,8 +132,27 @@ func Read(ctx context.Context, tx pgx.Tx, now time.Time, limits Thresholds) (crm
 	return out, nil
 }
 
+func scanReading(rows pgx.Rows) (tableReading, error) {
+	var t tableReading
+	var aligns []string
+	var lengths []int32
+	var widths, nullFracs []float64
+	if err := rows.Scan(&t.schema, &t.table, &t.owner, &t.tableBytes, &t.liveRows, &t.fillfactor, &t.blockSize,
+		&t.attributes, &t.withStats, &aligns, &lengths, &widths, &nullFracs); err != nil {
+		return tableReading{}, err
+	}
+	for i := range aligns {
+		var align byte
+		if aligns[i] != "" {
+			align = aligns[i][0]
+		}
+		t.columns = append(t.columns, column{align: align, length: int(lengths[i]), width: widths[i], nullFrac: nullFracs[i]})
+	}
+	return t, nil
+}
+
 func (l Thresholds) admit(waste, tableBytes int64) bool {
-	return waste >= l.MinWasteBytes && waste*100 >= int64(l.MinWastePercent)*tableBytes
+	return waste > 0 && waste >= l.MinWasteBytes && waste*100 >= int64(l.MinWastePercent)*tableBytes
 }
 
 func (t tableReading) recommendation(waste int64) crmcontracts.VacuumRecommendation {
@@ -133,34 +162,4 @@ func (t tableReading) recommendation(waste int64) crmcontracts.VacuumRecommendat
 		WastePercent: int(waste * 100 / t.tableBytes),
 		Statement:    "VACUUM (FULL, ANALYZE) " + pgx.Identifier{t.schema, t.table}.Sanitize() + ";",
 	}
-}
-
-// Postgres stores a row as a 24-byte header plus its values, padded to 8 bytes.
-// Each row also has a 4-byte pointer in its page, which has a 24-byte header.
-const (
-	rowHeaderBytes  = 24
-	rowAlignBytes   = 8
-	rowPointerBytes = 4
-	pageHeaderBytes = 24
-)
-
-// wasteBytes estimates the part of the file that holds no live row. That is the
-// file size less the pages the live rows fill when packed to the fillfactor.
-// It leaves out padding between values, so it reads a little high.
-func (t tableReading) wasteBytes() (int64, bool) {
-	if t.liveRows < 0 {
-		return 0, false
-	}
-	var needed int64
-	if t.liveRows > 0 {
-		if t.rowWidth == nil {
-			return 0, false
-		}
-		row := int64(math.Ceil((rowHeaderBytes+*t.rowWidth)/rowAlignBytes))*rowAlignBytes + rowPointerBytes
-		usable := int64(t.blockSize-pageHeaderBytes) * int64(t.fillfactor) / 100
-		perPage := max(usable/row, 1)
-		pages := int64(math.Ceil(t.liveRows / float64(perPage)))
-		needed = pages * int64(t.blockSize)
-	}
-	return max(t.tableBytes-needed, 0), true
 }

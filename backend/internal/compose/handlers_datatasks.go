@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/adminread"
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -35,10 +35,10 @@ func (h dataTaskHandlers) now() time.Time {
 }
 
 func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) {
-	if !adminread.AdmitOperator(w, r, "data_task", principal.ActionRead) {
+	if !adminadmit.Operator(w, r, "data_task", principal.ActionRead) {
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), adminread.ReadTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
 	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
@@ -56,14 +56,14 @@ func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h dataTaskHandlers) ControlDataTask(w http.ResponseWriter, r *http.Request) {
-	if !adminread.AdmitOperator(w, r, "data_task", principal.ActionUpdate) {
+	if !adminadmit.Operator(w, r, "data_task", principal.ActionUpdate) {
 		return
 	}
 	var in crmcontracts.DataTaskControl
 	if !httperr.Decode(w, r, &in) {
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), adminread.ReadTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
 	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
 	if err != nil {

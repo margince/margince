@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package adminread holds what every operational report on Settings → System
-// health has in common: who may read it, and what a read that fails answers.
+// Package adminadmit admits the operators of Settings → System health: who may
+// read a report or start an operator action, and what a failed read answers.
 //
-// Every System health report asks the same two questions. The ADMISSION must
-// not be spelled per report: it is a fail-closed ladder, and its ORDER is the
-// security property. An unbound actor is refused before RequireHuman, which
-// reports one with an unmapped error that renders as a 500. A second copy is how
-// one report silently loses a rung.
-package adminread
+// The admission is a fail-closed ladder, and its order is the security property.
+// An unbound actor is refused before RequireHuman, which would report one as a 500.
+// One copy keeps every report and action on the same rungs.
+package adminadmit
 
 import (
 	"context"
@@ -27,14 +25,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AdmitHealthReader admits a reader of an operational report, or writes the refusal.
+// HealthReader admits a reader of an operational report, or writes the refusal.
 // Every report gates on `job_health:read`, so one object states the page's access rules.
-func AdmitHealthReader(w http.ResponseWriter, r *http.Request) bool {
-	return AdmitOperator(w, r, "job_health", principal.ActionRead)
+func HealthReader(w http.ResponseWriter, r *http.Request) bool {
+	return Operator(w, r, "job_health", principal.ActionRead)
 }
 
-// AdmitOperator is the same ladder for an operator action on another object.
-func AdmitOperator(w http.ResponseWriter, r *http.Request, object string, action principal.Action) bool {
+// Operator is the same ladder for an operator action on another object.
+func Operator(w http.ResponseWriter, r *http.Request, object string, action principal.Action) bool {
 	ctx := r.Context()
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
