@@ -10,12 +10,16 @@ package integration
 // a row the caller never wrote apart.
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -74,16 +78,25 @@ func TestAnOverlongDealCustomTextFieldSaysWhichFieldIsTooLong(t *testing.T) {
 }
 
 // A CHECK on the outbox row is a fault in our write, never the caller's value.
+//
+// The package's tests share one database, so the CHECK refuses only events that
+// name this test's deal, and it is dropped when the test ends.
 func TestACheckOnARowTheCallerNeverWroteIsAServerFault(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	deal := apptest.CreateOpenDeal(t, e, apptest.DiscoverSeededPipeline(t, e))
-	if _, err := e.Owner.Exec(t.Context(),
-		`ALTER TABLE event_outbox ADD CONSTRAINT event_outbox_refuses_everything CHECK (false) NOT VALID`); err != nil {
-		t.Fatalf("refusing every outbox row: %v", err)
+	deal := ids.MustParse(apptest.CreateOpenDeal(t, e, apptest.DiscoverSeededPipeline(t, e)))
+	refuses := pgx.Identifier{"event_outbox_refuses_" + strings.ReplaceAll(deal.String(), "-", "")}.Sanitize()
+	if _, err := e.Owner.Exec(t.Context(), `ALTER TABLE event_outbox ADD CONSTRAINT `+refuses+
+		` CHECK (strpos(envelope::text, '`+deal.String()+`') = 0) NOT VALID`); err != nil {
+		t.Fatalf("refusing the deal's outbox rows: %v", err)
 	}
+	t.Cleanup(func() {
+		if _, err := e.Owner.Exec(context.Background(), `ALTER TABLE event_outbox DROP CONSTRAINT `+refuses); err != nil {
+			t.Errorf("dropping the outbox refusal: %v", err)
+		}
+	})
 	var refused checkRefusal
-	if status := e.Call(t, "PATCH", "/v1/deals/"+deal, AnyMap{"name": "Renamed"}, nil, &refused); status != http.StatusInternalServerError {
+	if status := e.Call(t, "PATCH", "/v1/deals/"+deal.String(), AnyMap{"name": "Renamed"}, nil, &refused); status != http.StatusInternalServerError {
 		t.Errorf("a write whose outbox row the schema refuses = %d %+v, want 500", status, refused)
 	}
 }
