@@ -31,6 +31,7 @@ import { catalogOfRecord } from "../../lib/customfields.logic";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";
+import { EditAccessRequest } from "../records/handoverrequest";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { project360Key } from "./project360.key";
@@ -193,7 +194,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         // One sentence and nothing else: why this record takes no changes, so
         // every control it refuses points at it.
         readOnlyReason ? (
-          <p id={readOnlyReasonId}>{readOnlyReason}</p>
+          <>
+            <p id={readOnlyReasonId}>{readOnlyReason}</p>
+            <EditAccessRequest kind="project" record={project} />
+          </>
         ) : undefined
       }
     >

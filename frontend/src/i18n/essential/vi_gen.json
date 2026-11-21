@@ -2044,6 +2044,7 @@
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
+  "approval.kind.edit_access": "Cấp quyền chỉnh sửa",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.legal_review_request": "Yêu cầu rà soát pháp lý",
   "approval.kind.task_due_date": "Kiểm tra hạn",

@@ -12,6 +12,7 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { EditAccessRequest } from "../records/handoverrequest";
 import type { LeadWriter } from "./leads";
 
 type Lead = components["schemas"]["Lead"];
@@ -78,6 +79,7 @@ export function leadBand({
           reader was on History said nothing at all. */}
       <WriteRefused titleKey="lead.writeRefused" error={refusal} />
       {sentence && <p id={reasonId}>{sentence}</p>}
+      {sentence && <EditAccessRequest kind="lead" record={lead} />}
     </>
   );
 }

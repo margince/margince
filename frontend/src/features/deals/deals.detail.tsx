@@ -35,6 +35,7 @@ import { useMe, useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
+import { EditAccessRequest } from "../records/handoverrequest";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import {
   type ClosedDeal,
@@ -141,7 +142,12 @@ function dealBand({
   if (deal.archived_at) {
     return <ArchivedDealBand deal={deal} reason={reason} reasonId={reasonId} />;
   }
-  return <p id={reasonId}>{reason}</p>;
+  return (
+    <>
+      <p id={reasonId}>{reason}</p>
+      <EditAccessRequest kind="deal" record={deal} />
+    </>
+  );
 }
 
 // The pills under the deal's name. They say whose move it is and when a buyer

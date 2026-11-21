@@ -4791,6 +4791,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
+  "approval.kind.edit_access": "Cấp quyền chỉnh sửa",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.legal_review_request": "Yêu cầu rà soát pháp lý",
   "approval.kind.task_due_date": "Kiểm tra hạn",
@@ -7975,6 +7976,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "handover.withdraw": "Rút lại đề nghị",
   "handover.sent": "Đã gửi đề nghị tới {owner}",
   "handover.withdrawn": "Đã rút lại đề nghị",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "Xin {owner} quyền chỉnh sửa",
+  "editAccess.requested":
+    "Bạn đã xin {owner} quyền chỉnh sửa. Yêu cầu còn hiệu lực đến {date}.",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Chuyển giao cho…",
   "handover.offerTo": "Giao cho",

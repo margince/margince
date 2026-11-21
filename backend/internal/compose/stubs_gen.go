@@ -3699,6 +3699,18 @@ func (stubs) ClaimRecord(w nethttp.ResponseWriter, r *nethttp.Request, recordTyp
 	httperr.NotImplemented(w, r, "ClaimRecord")
 }
 
+func (stubs) WithdrawEditAccessRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "WithdrawEditAccessRequest")
+}
+
+func (stubs) GetEditAccessRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetEditAccessRequest")
+}
+
+func (stubs) RequestEditAccess(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.RequestEditAccessParams) {
+	httperr.NotImplemented(w, r, "RequestEditAccess")
+}
+
 func (stubs) WithdrawOwnershipOffer(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "WithdrawOwnershipOffer")
 }

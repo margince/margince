@@ -251,7 +251,7 @@ Also called: contact already exists, email already taken, hidden contact.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**. Margince confirms who now has which access, for example "Mira Voss now has Read access to Acme renewal."
-You cannot share more than you hold, and **Grant access** needs the right to change the record.
+You cannot share more than you hold, and **Grant access** needs the right to change the record. To change a colleague's record, press **Ask … for edit access** below the line saying it is not yours. If the owner approves on their **Worklist**, the record is shared with you for writing, and they stay its owner.
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
 

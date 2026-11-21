@@ -5,16 +5,15 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/recordowner"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -127,26 +126,15 @@ func recordTransferNotice(ctx context.Context, tx pgx.Tx, approvalID ids.Approva
 	return err
 }
 
-// transferRecords read the owner and the name of each record type a transfer
-// moves.
-var transferRecords = map[string]string{
-	string(recordTypeContact): `SELECT owner_id, full_name FROM contact WHERE id = $1`,
-	string(recordTypeCompany): `SELECT owner_id, display_name FROM company WHERE id = $1`,
-}
+// transferRecords are the record types a transfer moves.
+var transferRecords = map[string]bool{string(recordTypeContact): true, string(recordTypeCompany): true}
 
 // transferRecordTx answers the record's owner, nil for nobody, and its name.
 func transferRecordTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID) (*ids.UUID, string, error) {
-	statement, ok := transferRecords[recordType]
-	if !ok {
+	if !transferRecords[recordType] {
 		return nil, "", fmt.Errorf("compose: a %q cannot be handed over", recordType)
 	}
-	var owner *ids.UUID
-	var name string
-	err := tx.QueryRow(ctx, statement, id).Scan(&owner, &name)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, "", apperrors.ErrNotFound
-	}
-	return owner, name, err
+	return recordowner.ReadTx(ctx, tx, recordType, id)
 }
 
 // retractApprovalNotice takes the decider's line about a request back once the

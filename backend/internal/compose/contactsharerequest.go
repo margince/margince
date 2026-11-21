@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/editaccess"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -139,17 +140,7 @@ func contactShareAcceptEffect(svc *approvals.Service, grants *identity.Service) 
 		// Executed as the deciding owner, whose grants the share is checked
 		// against as if they pressed Share.
 		return svc.RedeemAndApply(ctx, approvalID, contactShareKind, diffHash, func(tx pgx.Tx) error {
-			access, err := identity.ShareAccessForTx(ctx, tx, req.RequesterID)
-			if err != nil {
-				return err
-			}
-			return grants.CreateRecordGrantTx(ctx, tx, identity.CreateGrantInput{
-				RecordType:  string(recordTypeContact),
-				RecordID:    req.ContactID,
-				SubjectType: entityUser,
-				SubjectID:   req.RequesterID,
-				Access:      access,
-			})
+			return editaccess.ShareWithRequesterTx(ctx, tx, grants, string(recordTypeContact), req.ContactID, req.RequesterID)
 		})
 	}
 }

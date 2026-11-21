@@ -24,12 +24,12 @@ func TestAnAgentWithNoUserCannotAskForAHandover(t *testing.T) {
 			entityContact: {Read: true, Update: true},
 		}},
 	}
-	err := requireTransferAsker(principal.WithActor(context.Background(), agent), entityContact)
+	err := requireOwnerAsker(principal.WithActor(context.Background(), agent), entityContact)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("an agent with no user asked: %v, want permission denied", err)
 	}
 	agent.UserID = agent.OnBehalfOf
-	if err := requireTransferAsker(principal.WithActor(context.Background(), agent), entityContact); err != nil {
+	if err := requireOwnerAsker(principal.WithActor(context.Background(), agent), entityContact); err != nil {
 		t.Errorf("an agent acting for its user: %v, want admitted", err)
 	}
 }

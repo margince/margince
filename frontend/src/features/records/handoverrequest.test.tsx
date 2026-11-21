@@ -1,11 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
+import { useMe } from "../../lib/session";
 import { HandoverRequest } from "./handoverrequest";
 
 type Seat = "full" | "read";
@@ -81,6 +82,12 @@ function serve(seat: Seat = "full", asked = false) {
   return sent;
 }
 
+// Shows once the viewer's seat and grants are read, which is when the ask
+// decides whether to read the open request.
+function SeatRead() {
+  return useMe().data ? <span>seat read</span> : null;
+}
+
 function draw(record: Parameters<typeof HandoverRequest>[0]["record"]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -89,6 +96,7 @@ function draw(record: Parameters<typeof HandoverRequest>[0]["record"]) {
     <QueryClientProvider client={client}>
       <ToastProvider>
         <HandoverRequest kind="company" record={record} />
+        <SeatRead />
         <ToastRegion />
       </ToastProvider>
     </QueryClientProvider>,
@@ -152,8 +160,8 @@ describe("HandoverRequest", () => {
   ] as const)("offers nothing on %s", async (_, record, seat) => {
     const sent = serve(seat);
     draw(record);
-    await waitFor(() => expect(sent).toContain("GET /me"));
-    expect(screen.queryByRole("button")).toBeNull();
+    await screen.findByText("seat read");
     expect(sent).not.toContain("GET /records/company/co-1/ownership-request");
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

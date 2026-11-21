@@ -35,7 +35,7 @@ import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { HandoverOffer } from "./handoveroffer";
-import { HandoverRequest } from "./handoverrequest";
+import { EditAccessRequest, HandoverRequest } from "./handoverrequest";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled
@@ -185,6 +185,7 @@ export function RecordAccess({
         {refusal ? (
           <>
             <p className="t-caption">{refusal}</p>
+            <EditAccessRequest kind={kind} record={record} />
             <HandoverRequest kind={kind} record={record} />
           </>
         ) : (

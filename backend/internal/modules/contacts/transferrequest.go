@@ -3,9 +3,9 @@
 
 package contacts
 
-// Whether a colleague may ask a record's owner to hand it over. The ask is for
-// someone who can see a contact or company and may change one. They cannot
-// change this one, because a colleague owns it.
+// Whether a colleague may ask a record's owner to hand it over, or for edit
+// access. The ask is for someone who can see a record and may change one of its
+// kind. They cannot change this one, because a colleague owns it.
 
 import (
 	"context"
@@ -57,28 +57,41 @@ type TransferableRecord struct {
 }
 
 // TransferRequestableTx answers the record's owner when the calling human may
-// ask them to hand it over. A record the caller cannot see answers 404. A
-// caller without the update grant or on a read seat answers 403. A record that
-// is unowned or already theirs to change answers 409.
+// ask them to hand it over. Only a contact or a company can be handed over.
 func TransferRequestableTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID) (TransferableRecord, error) {
 	readOwner, ok := transferableRecords[recordType]
 	if !ok {
 		return TransferableRecord{}, &InvalidRecordTypeError{RecordType: recordType}
 	}
-	if err := requireTransferAsker(ctx, recordType); err != nil {
+	return OwnerAskableTx(ctx, tx, recordType, id, func() (*ids.UUID, string, error) {
+		var owner *ids.UUID
+		var label string
+		err := tx.QueryRow(ctx, readOwner, id).Scan(&owner, &label)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, "", apperrors.ErrNotFound
+		}
+		return owner, label, err
+	})
+}
+
+// OwnerAskableTx answers the record's owner when the calling human may ask
+// them about a record they see and cannot change: a handover or edit access.
+// readOwner reads the owner, nil for nobody, and the record's name.
+//
+// An unseen record answers 404. A missing update grant or a read seat answers
+// 403. An unowned record, or one already theirs to change, answers 409.
+func OwnerAskableTx(
+	ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, readOwner func() (*ids.UUID, string, error),
+) (TransferableRecord, error) {
+	if err := requireOwnerAsker(ctx, recordType); err != nil {
 		return TransferableRecord{}, err
 	}
 	if err := auth.EnsureVisibleLive(ctx, tx, recordType, id); err != nil {
 		return TransferableRecord{}, err
 	}
-	var owner *ids.UUID
-	var out TransferableRecord
-	err := tx.QueryRow(ctx, readOwner, id).Scan(&owner, &out.Label)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return TransferableRecord{}, apperrors.ErrNotFound
-	}
+	owner, label, err := readOwner()
 	if err != nil {
-		return TransferableRecord{}, fmt.Errorf("contacts: reading the owner of the record asked for: %w", err)
+		return TransferableRecord{}, fmt.Errorf("contacts: reading the owner of the record asked about: %w", err)
 	}
 	if err := auth.RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, errTransferAlreadyYours); err != nil {
 		return TransferableRecord{}, err
@@ -93,28 +106,21 @@ func TransferRequestableTx(ctx context.Context, tx pgx.Tx, recordType string, id
 	if owner == nil {
 		return TransferableRecord{}, errTransferUnowned
 	}
-	out.OwnerID = *owner
-	return out, nil
+	return TransferableRecord{OwnerID: *owner, Label: label}, nil
 }
 
-// requireTransferAsker admits a user or their agent on a seat that can write
-// who holds the grant to change this record type.
-func requireTransferAsker(ctx context.Context, recordType string) error {
+// requireOwnerAsker admits a user or their agent on a seat that can write,
+// who holds the grants to read and change this record type.
+func requireOwnerAsker(ctx context.Context, recordType string) error {
 	p, ok := principal.Actor(ctx)
 	if !ok || !p.HumanOrItsAgent() || p.UserID.IsZero() {
-		return fmt.Errorf("a handover is asked for by a colleague: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("a record's owner is asked by a colleague: %w", apperrors.ErrPermissionDenied)
 	}
 	if !p.SeatType.CanMutate() {
 		return fmt.Errorf("a read seat does not take on records: %w", apperrors.ErrPermissionDenied)
 	}
-	if recordType == entityCompany {
-		if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
-			return err
-		}
-		return auth.Require(ctx, entityCompany, principal.ActionUpdate)
-	}
-	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, recordType, principal.ActionRead); err != nil {
 		return err
 	}
-	return auth.Require(ctx, entityContact, principal.ActionUpdate)
+	return auth.Require(ctx, recordType, principal.ActionUpdate)
 }

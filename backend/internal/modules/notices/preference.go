@@ -114,6 +114,10 @@ var classByKind = map[string]string{
 	"ownership_request_declined":  classSystem,
 	"ownership_request_expired":   classSystem,
 	"ownership_request_withdrawn": classSystem,
+	// The answer to a colleague's own request for edit access to a record.
+	"edit_access_accepted": classSystem,
+	"edit_access_declined": classSystem,
+	"edit_access_expired":  classSystem,
 }
 
 // ClassFor answers which class a notice kind is decided about under.
