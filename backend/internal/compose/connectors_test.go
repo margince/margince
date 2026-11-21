@@ -37,7 +37,7 @@ func wiredHandlers() connectorHandlers {
 		// Built through the same newGmailOAuth the production wiring uses, so
 		// a change to the scopes it requests is exercised here too — not
 		// duplicated as a second, driftable literal.
-		oauth:         newGmailOAuth(GmailConfig{ClientID: "cid", ClientSecret: "sec"}),
+		oauth:         newGmailOAuth(GmailConfig{ClientID: "cid", ClientSecret: "sec"}, nil),
 		gmailAPI:      gmail.NewAPI(nil, ""),
 		gcalOAuth:     gcal.NewOAuth(gcal.OAuthConfig{ClientID: "cid", ClientSecret: "sec"}),
 		gcalAPI:       gcal.NewAPI(nil, ""),
