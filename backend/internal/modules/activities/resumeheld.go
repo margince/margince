@@ -20,6 +20,44 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// PrepareHeldSend prepares the message a held row froze, as resuming it would,
+// and sends nothing. A caller may ask the engine about it first.
+func (s *Store) PrepareHeldSend(
+	ctx context.Context, id ids.UUID, gate ConsentGate, stager DeliveryStager,
+) (PreparedSend, error) {
+	_, prepared, err := s.prepareHeld(ctx, id, gate, stager)
+	return prepared, err
+}
+
+// prepareHeld also answers the row as read, whose version the resume holds.
+func (s *Store) prepareHeld(
+	ctx context.Context, id ids.UUID, gate ConsentGate, stager DeliveryStager,
+) (claimedSend, PreparedSend, error) {
+	held, found, err := s.readHeldForResume(ctx, id)
+	if err != nil {
+		return held, PreparedSend{}, err
+	}
+	if !found {
+		// Cancelled, already resumed, or never held. Not found, not a conflict:
+		// the caller has no such message to resume. Naming which would disclose
+		// the row.
+		return held, PreparedSend{}, apperrors.ErrNotFound
+	}
+	if err := refuseAnotherSeatsHold(ctx, held); err != nil {
+		return held, PreparedSend{}, err
+	}
+	origin, in, err := held.replay()
+	if err != nil {
+		return held, PreparedSend{}, err
+	}
+	// The intent travels with the message, so staging can find the review that
+	// names it and the decision standing over it. It is where to look, never
+	// permission by itself.
+	in.ResumingIntentID = id
+	prepared, err := s.PrepareSend(ctx, origin, in, gate, stager)
+	return held, prepared, err
+}
+
 // ResumeHeldSend fires the message a held row froze.
 //
 // TWO STEPS, AND THE ORDER IS FORCED.
@@ -45,31 +83,11 @@ import (
 func (s *Store) ResumeHeldSend(
 	ctx context.Context, id ids.UUID, gate ConsentGate, stager DeliveryStager,
 ) (crmcontracts.Activity, error) {
-	held, found, err := s.readHeldForResume(ctx, id)
+	held, prepared, err := s.prepareHeld(ctx, id, gate, stager)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if !found {
-		// Cancelled, already resumed, or never held. Not found rather than a
-		// conflict: from the caller's side there is no such message to resume,
-		// and saying which of those it was would disclose the row.
-		return crmcontracts.Activity{}, apperrors.ErrNotFound
-	}
-	if err := refuseAnotherSeatsHold(ctx, held); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	origin, in, err := held.replay()
-	if err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	// The intent travels with the message so the staging path can find the
-	// review that names it, and through the review the decision standing over
-	// it. It is where to look, never permission by itself.
-	in.ResumingIntentID = id
-	prepared, err := s.PrepareSend(ctx, origin, in, gate, stager)
-	if err != nil {
-		return crmcontracts.Activity{}, err
-	}
+	origin, in := prepared.origin, prepared.in
 
 	var sent crmcontracts.Activity
 	err = s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
