@@ -495,6 +495,35 @@ describe("the LinkedIn row", () => {
     expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
   });
 
+  // Add can be pressed before the account read answers; the dialog then takes
+  // the stored profile, unless the reader has typed one of their own.
+  it("fills an open dialog with the profile the account read brings back late", async () => {
+    let answer = (_: Response) => {};
+    stub({
+      "GET /connectors": roster(),
+      "GET /me/linkedin-account": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const user = userEvent.setup();
+    renderConnectAct();
+    await user.click(screen.getByRole("button", { name: "Add profile" }));
+    const field = screen.getByLabelText("Your LinkedIn profile URL");
+    expect(field).toHaveValue("");
+
+    answer(
+      jsonResponse({
+        profile_url: "https://www.linkedin.com/in/qa-late",
+        connected: false,
+        connections: 0,
+      }),
+    );
+    await waitFor(() =>
+      expect(field).toHaveValue("https://www.linkedin.com/in/qa-late"),
+    );
+  });
+
   // The stored profile is the server's, not this tab's: a reload shows it, and
   // the member can still correct it on the step.
   it("shows a profile saved before a reload and opens Change on it", async () => {

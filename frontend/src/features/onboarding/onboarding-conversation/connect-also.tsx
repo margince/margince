@@ -229,7 +229,10 @@ function LinkedinPanel({
   error: string | null;
 }>) {
   const t = useT();
-  const [profile, setProfile] = useState(initial);
+  // The stored profile until the reader types, as the Settings row does, so a
+  // late account read fills the field and never replaces an edit.
+  const [draft, setDraft] = useState<string | null>(null);
+  const profile = draft ?? initial;
   const trimmed = profile.trim();
 
   return (
@@ -243,7 +246,7 @@ function LinkedinPanel({
               inputMode="url"
               placeholder={t("ob.conv.linkedin.profilePlaceholder")}
               value={profile}
-              onChange={(event) => setProfile(event.target.value)}
+              onChange={(event) => setDraft(event.target.value)}
             />
           )}
         </Field>
