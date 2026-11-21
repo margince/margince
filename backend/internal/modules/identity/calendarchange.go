@@ -21,6 +21,17 @@ type ReportingCalendar struct {
 	FiscalYearStartMonth int
 }
 
+// ZoneChange is what else must commit with a move of the reporting zone alone:
+// whatever was derived from today's date in the zone being replaced.
+type ZoneChange func(ctx context.Context, tx pgx.Tx) error
+
+// WithZoneChange wires the hook a zone move runs, before the calendar hook.
+func (s *InstallationSettingsStore) WithZoneChange(hook ZoneChange) *InstallationSettingsStore {
+	out := *s
+	out.onZoneChange = hook
+	return &out
+}
+
 // WithCalendarChange wires the hook a calendar move runs. Without it a move
 // changes the setting and nothing else.
 func (s *InstallationSettingsStore) WithCalendarChange(hook CalendarChange) *InstallationSettingsStore {
@@ -32,7 +43,7 @@ func (s *InstallationSettingsStore) WithCalendarChange(hook CalendarChange) *Ins
 // changeCalendarTx runs the calendar hook under both settings' write locks,
 // before either is written, so the hook reads the calendar being replaced.
 func (s *InstallationSettingsStore) changeCalendarTx(ctx context.Context, tx pgx.Tx, zone *string, fiscalStart *int) error {
-	if s.onCalendarChange == nil || (zone == nil && fiscalStart == nil) {
+	if (s.onCalendarChange == nil && s.onZoneChange == nil) || (zone == nil && fiscalStart == nil) {
 		return nil
 	}
 	for _, key := range []string{Timezone.Key(), FiscalYearStartMonth.Key()} {
@@ -50,7 +61,12 @@ func (s *InstallationSettingsStore) changeCalendarTx(ctx context.Context, tx pgx
 	}
 	zoneMoves := zone != nil && *zone != before.Timezone
 	startMoves := fiscalStart != nil && *fiscalStart != before.FiscalYearStartMonth
-	if !zoneMoves && !startMoves {
+	if zoneMoves && s.onZoneChange != nil {
+		if err := s.onZoneChange(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if (!zoneMoves && !startMoves) || s.onCalendarChange == nil {
 		return nil
 	}
 	return s.onCalendarChange(ctx, tx, before)

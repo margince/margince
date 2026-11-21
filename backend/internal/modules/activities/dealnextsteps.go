@@ -48,7 +48,8 @@ func OpenTasksByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, in Li
 	where = append(where, `EXISTS (SELECT 1 FROM activity_link on_deal
 		WHERE on_deal.activity_id = a.id AND on_deal.deal_id = d.id)`)
 	limit := openTasksLimit(in.Limit)
-	rows, err := tx.Query(ctx, `SELECT d.id, `+openTaskColumns()+`
+	columns := openTaskColumns(openTasksMoment(in, arg))
+	rows, err := tx.Query(ctx, `SELECT d.id, `+columns+`
 		FROM deal d CROSS JOIN LATERAL (SELECT a.id FROM activity a
 		WHERE `+joinAnd(where)+` ORDER BY `+openTasksOrder(in.MostRecentlySlippedFirst)+
 		fmt.Sprintf(" LIMIT %d", limit+1)+`) selected JOIN activity a ON a.id = selected.id LEFT JOIN app_user u ON u.id = a.assignee_id
@@ -61,7 +62,7 @@ func OpenTasksByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, in Li
 	for rows.Next() {
 		var dealID ids.UUID
 		var task OpenTask
-		if err := rows.Scan(&dealID, &task.ID, &task.Subject, &task.DueAt, &task.DueHasTime, &task.AssigneeID, &task.AssigneeName, &task.CreatedAt, &task.DueIntent, &task.Version); err != nil {
+		if err := rows.Scan(&dealID, &task.ID, &task.Subject, &task.DueAt, &task.DueHasTime, &task.AssigneeID, &task.AssigneeName, &task.CreatedAt, &task.DueIntent, &task.Version, &task.Overdue); err != nil {
 			return nil, err
 		}
 		task.DueHasTime = task.DueHasTime && task.DueAt != nil
