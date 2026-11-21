@@ -169,8 +169,15 @@ func TestACompanyOpenPipelineNamesNothingToAReaderWhoseCurrencyIsMasked(t *testi
 		}
 		return computedFieldByKey(*got.ComputedFields, "open_pipeline")
 	}
+	if total := read(nil); !total.Computable || total.ValueMinor == nil || *total.ValueMinor != 10_000 {
+		t.Fatalf("an unmasked reader's open pipeline = %+v, want the 10000 that converts", total)
+	}
 	if c := read(nil).Coverage; c == nil || !c.Partial || c.NoRateDeals != 1 || len(c.MissingCurrencies) != 1 || c.MissingCurrencies[0] != "JPY" {
 		t.Fatalf("an unmasked reader's coverage = %+v, want one deal with no rate in JPY", c)
+	}
+	hidden := read([]principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}})
+	if hidden.Computable || hidden.ValueMinor != nil || hidden.Reason == nil || *hidden.Reason != "amount_withheld" {
+		t.Errorf("a reader whose amount is masked sees %+v, want no total and the withheld reason", hidden)
 	}
 	masked := read([]principal.FieldMask{{Object: "deal", Field: "currency", Condition: principal.MaskAlways}}).Coverage
 	if masked == nil || !masked.Partial || masked.NoRateDeals != 0 || masked.NoValueDeals != 0 || len(masked.MissingCurrencies) != 0 {

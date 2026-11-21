@@ -138,3 +138,13 @@ func TestCompanyComputedFields_EveryDealPriced_ReportsTheTotal(t *testing.T) {
 		t.Fatalf("open_pipeline.value_minor = %v, want %d", open.ValueMinor, sum)
 	}
 }
+
+// A reader whose deal amount is masked gets no total: the sum would add what
+// the mask hides. The deal count stays, since the field carries no money.
+func TestCompanyComputedFields_AMaskedReaderGetsNoTotal(t *testing.T) {
+	sum := int64(10_000)
+	open := companyComputedFields(openPipeline{minorBase: &sum, dealCount: 2, pricedCount: 2, withheld: true})[0]
+	if open.Computable || open.ValueMinor != nil || open.Reason == nil || *open.Reason != amountWithheldReason {
+		t.Fatalf("open_pipeline for a masked reader = %+v, want no total and the withheld reason", open)
+	}
+}

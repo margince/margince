@@ -47,7 +47,10 @@ const (
 	// a short figure shown as a total is worse than none: the reader has no way
 	// to see what is missing from it, and the number sits on the page looking
 	// like the whole pipeline.
-	partialPipelineReason  = "partial_pipeline"
+	partialPipelineReason = "partial_pipeline"
+	// amountWithheldReason floors open_pipeline for a reader whose deal amount
+	// or currency is masked: the total would sum what the mask hides.
+	amountWithheldReason   = "amount_withheld"
 	openPipelineFormulaSQL = "company_open_pipeline_rollup: SUM over deal WHERE status = 'open' AND company_id = <this company> AND archived_at IS NULL, each amount converted to the installation base currency at the latest fx_rate on or before today"
 )
 
@@ -78,6 +81,8 @@ type openPipeline struct {
 	// noRateCurrencies lists the currencies that have no rate.
 	noValue, noRate  int
 	noRateCurrencies *string
+	// withheld is set for a reader whose deal amount or currency is masked.
+	withheld bool
 }
 
 // withholdsDealDetail is true for a reader whose deal amount or currency is
@@ -138,6 +143,7 @@ func openPipelineRollup(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 		}
 		if withheld {
 			roll.noValue, roll.noRate, roll.noRateCurrencies = 0, 0, nil
+			roll.minorBase, roll.withheld = nil, true
 		}
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -203,6 +209,10 @@ func companyComputedFields(open openPipeline) []crmcontracts.ComputedField {
 		zero := int64(0)
 		openPipelineRow.Computable = true
 		openPipelineRow.ValueMinor = &zero
+	case open.withheld:
+		reason := amountWithheldReason
+		openPipelineRow.Computable = false
+		openPipelineRow.Reason = &reason
 	case open.minorBase != nil:
 		value := *open.minorBase
 		openPipelineRow.Computable = true

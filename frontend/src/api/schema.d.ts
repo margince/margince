@@ -35349,7 +35349,7 @@ export interface components {
             dependencies: string[];
             computable: boolean;
             coverage?: components["schemas"]["ReportRowCoverage"];
-            /** @description Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx". */
+            /** @description Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx", "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked. */
             reason?: string | null;
         };
         /** @description A company. Mirrors the `company` table. */
