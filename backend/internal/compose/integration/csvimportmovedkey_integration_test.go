@@ -21,15 +21,17 @@ import (
 )
 
 // The column mappings the moved-key cases import with, one per record type.
-var movedKeyLeadParts = []AnyMap{{"file": "leads.csv", "object": "lead", "mapping": AnyMap{
-	"ref": "ref", "full_name": "full_name", "email": "email", "linkedin": "linkedin_url",
-}}}
-var movedKeyContactParts = []AnyMap{{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{
-	"ref": "ref", "full_name": "full_name", "email": "email", "linkedin": "linkedin_url",
-}}}
-var movedKeyCompanyParts = []AnyMap{{"file": "companies.csv", "object": "company", "mapping": AnyMap{
-	"ref": "ref", "id": "id", "name": "display_name", "domain": "domain",
-}}}
+var (
+	movedKeyLeadParts = []AnyMap{{"file": "leads.csv", "object": "lead", "mapping": AnyMap{
+		"ref": "ref", "full_name": "full_name", "email": "email", "linkedin": "linkedin_url",
+	}}}
+	movedKeyContactParts = []AnyMap{{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{
+		"ref": "ref", "full_name": "full_name", "email": "email", "linkedin": "linkedin_url",
+	}}}
+	movedKeyCompanyParts = []AnyMap{{"file": "companies.csv", "object": "company", "mapping": AnyMap{
+		"ref": "ref", "id": "id", "name": "display_name", "domain": "domain",
+	}}}
+)
 
 func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 	for _, tc := range []struct {
