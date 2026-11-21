@@ -108,8 +108,8 @@ func (r *Router) tryTimeout(lc *logicalCall, task Task) time.Duration {
 	return min(settings.AttemptTimeout, settings.WalkTimeout-r.now().Sub(lc.started))
 }
 
-// walkSpent says the walk has too little of its bound left for another try:
-// less than the floor, or than the per-try limit when that is lower.
+// walkSpent says the walk has too little of its bound left for another try.
+// A try needs the floor, or the per-try limit when that is lower.
 func (r *Router) walkSpent(lc *logicalCall, task Task) error {
 	settings := r.callSettings(lc, task)
 	if settings.WalkTimeout == 0 || !lc.walking {
