@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -376,6 +377,26 @@ func TestOnlyTheBuyerOfASaleIsItsCustomer(t *testing.T) {
 	adviser.heldSince(t, adviser.address, soldAt.Add(-time.Hour))
 	if got := adviser.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
 		t.Fatalf("the buyer company's billing contact got %q (%s), want allow", got.Verdict, got.ReasonCode)
+	}
+}
+
+// The buyer is the contact who sat on the deal when the offer was accepted. A
+// seat that had ended by then makes nobody a customer, and a seat that ended
+// later still does.
+func TestASeatThatEndedBeforeTheSaleMakesNoCustomer(t *testing.T) {
+	e, newsletter, soldAt := customerEnv(t)
+	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
+	endSeat := func(days int) {
+		e.ownerExec(t, `UPDATE relationship SET ended_at = `+occurredday.TodaySQL("$2::timestamptz")+` + $3::int
+			WHERE contact_id = $1 AND kind = 'deal_stakeholder'`, e.contact, soldAt, days)
+	}
+	endSeat(0)
+	if got := e.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
+		t.Fatal("a seat that ended on the day of the sale made its contact a customer")
+	}
+	endSeat(1)
+	if got := e.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("a seat that ended after the sale got %q (%s), want allow", got.Verdict, got.ReasonCode)
 	}
 }
 

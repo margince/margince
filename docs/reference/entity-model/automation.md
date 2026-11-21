@@ -74,7 +74,6 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 **Indexes**
 
 - `automation_effect_claim_pkey`: `unique, btree (id)`
-- `automation_effect_claim_unapplied`: `btree (created_at) WHERE (applied_at IS NULL)`
 - `automation_effect_claim_unique`: `unique, btree (handler, occurrence_key, effect_fingerprint)`
 
 **Triggers**

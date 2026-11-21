@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4544 |
+| Columns | 4546 |
 | Foreign keys | 635 |
 | Owning areas | 40 |
 
@@ -49,7 +49,7 @@ Ranked by how many foreign keys point at them.
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 10 |
-| [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 29 | 9 |
+| [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 11 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
@@ -314,7 +314,7 @@ erDiagram
 | [`dedupe_scan_state`](contacts.md#dedupe_scan_state) | contacts | 3 | 0 |
 | [`email_signature`](contacts.md#email_signature) | contacts | 10 | 0 |
 | [`embed_store_binding`](search.md#embed_store_binding) | search | 6 | 0 |
-| [`embedding`](search.md#embedding) | search | 7 | 0 |
+| [`embedding`](search.md#embedding) | search | 8 | 0 |
 | [`erasure_suppression`](privacy.md#erasure_suppression) | privacy | 7 | 0 |
 | [`event_outbox`](platform.md#event_outbox) | platform | 7 | 0 |
 | [`existing_customer_notice`](consent.md#existing_customer_notice) | consent | 14 | 1 |
@@ -358,7 +358,7 @@ erDiagram
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
-| [`legal_entity`](contacts.md#legal_entity) | contacts | 29 | 9 |
+| [`legal_entity`](contacts.md#legal_entity) | contacts | 30 | 9 |
 | [`legal_entity_member`](contacts.md#legal_entity_member) | contacts | 4 | 0 |
 | [`legal_review`](deals.md#legal_review) | deals | 17 | 1 |
 | [`linkedin_account`](contacts.md#linkedin_account) | contacts | 6 | 0 |

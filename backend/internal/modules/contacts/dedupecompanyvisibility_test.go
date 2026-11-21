@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package contacts
 
 // Visibility is asked of EVERY candidate the ladder matched, not of its winner.
 //
@@ -19,7 +19,6 @@ package compose
 import (
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -29,10 +28,10 @@ func TestEveryMatchedCandidateIsAskedAboutNotJustTheWinner(t *testing.T) {
 	// A fuzzy match ranks its candidates; every one of them is a company the row
 	// might mean, and a visibility question skipping any of them lets that one
 	// change the answer without being asked.
-	fuzzy := contacts.CompanyMatch{
-		Decision:  contacts.DecisionFuzzyReview,
+	fuzzy := CompanyMatch{
+		Decision:  DecisionFuzzyReview,
 		CompanyID: ids.From[ids.CompanyKind](first),
-		Ranked: []contacts.CompanyCandidateScore{
+		Ranked: []CompanyCandidateScore{
 			{CompanyID: ids.From[ids.CompanyKind](first), Confidence: 1},
 			{CompanyID: ids.From[ids.CompanyKind](second), Confidence: 1},
 		},
@@ -46,8 +45,8 @@ func TestEveryMatchedCandidateIsAskedAboutNotJustTheWinner(t *testing.T) {
 
 	// An exact (domain) collision carries no ranked set; its answer is the id
 	// itself, and dropping it would make a real collision invisible.
-	exact := contacts.CompanyMatch{
-		Decision:  contacts.DecisionExactCollision,
+	exact := CompanyMatch{
+		Decision:  DecisionExactCollision,
 		CompanyID: ids.From[ids.CompanyKind](first),
 	}
 	if got := candidatesOf(exact); len(got) != 1 || got[0] != ids.From[ids.CompanyKind](first) {

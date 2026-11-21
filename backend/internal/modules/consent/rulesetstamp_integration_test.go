@@ -234,8 +234,8 @@ func TestADecisionRecordsTheDataProtectionCountryOfItsEntity(t *testing.T) {
 
 	branch := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, branch); err != nil {
+		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'vn', 'human:x')`, branch); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `
@@ -271,8 +271,8 @@ func TestTransmitKeepsTheStagedDataProtectionCountry(t *testing.T) {
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return installation, nil }))
 	branch := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, branch); err != nil {
+		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'vn', 'human:x')`, branch); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `

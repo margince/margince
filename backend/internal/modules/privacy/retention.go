@@ -170,6 +170,10 @@ type RetentionService struct {
 	purgeRawCaptures RawCapturePurger
 	// outboxReaders are the modules that still read published events.
 	outboxReaders *storekit.OutboxReaders
+	// operationalPrunes remove other modules' bookkeeping rows past their window.
+	operationalPrunes []OperationalPrune
+	// pruneEmbedCalls is the ai module's delete of old embedding call traces.
+	pruneEmbedCalls EmbedCallPrune
 }
 
 // NewRetentionService wires the nightly evaluator.
@@ -319,8 +323,11 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 		return err
 	}
 	if retainOnly {
-		s.log.Info("retention: retain-only posture suppresses the voice-signal content sweep")
+		s.log.Info("retention: retain-only posture suppresses the operational prunes and the voice-signal content sweep")
 		return nil
+	}
+	if err := s.pruneOperationalRows(ctx); err != nil {
+		return err
 	}
 	return s.evaluateVoiceSignalRetention(ctx)
 }

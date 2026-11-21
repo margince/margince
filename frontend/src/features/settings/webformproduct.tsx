@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
-  searchProductCandidates,
+  useProductCandidateSearch,
   useProductName,
 } from "../../components/productsearch";
 import { Button, Field } from "../../design-system/atoms";
@@ -23,6 +23,7 @@ export function ProductField({
   onChange: (productId: string) => void;
 }>) {
   const t = useT();
+  const searchProducts = useProductCandidateSearch();
   const name = useProductName(productId || null);
   const selected = productId
     ? { id: productId, name: name.data ?? t("webForms.field.productLoading") }
@@ -39,7 +40,7 @@ export function ProductField({
             id={field.id}
             aria-describedby={field["aria-describedby"]}
             aria-invalid={field["aria-invalid"]}
-            searchTargets={searchProductCandidates}
+            searchTargets={searchProducts}
             selected={selected}
             onPick={(candidate) => onChange(candidate.id)}
           />

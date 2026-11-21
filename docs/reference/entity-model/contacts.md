@@ -258,8 +258,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_company_domain_disposition_candidate`: `btree (candidate_company_id) WHERE (candidate_company_id IS NOT NULL)`
 - `idx_company_domain_disposition_company`: `btree (company_id)`
 - `idx_company_domain_disposition_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
-- `idx_domain_disposition_admission`: `btree (admission_at DESC) WHERE (admission IS NOT NULL)`
-- `idx_domain_disposition_unevidenced`: `btree (updated_at DESC) WHERE (pending_reason = 'unevidenced')`
 - `uq_company_domain_disposition`: `unique, btree (domain)`
 
 **Triggers**
@@ -1678,7 +1676,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## legal_entity
 
-29 columns · primary key `(id)` · referenced by 9 foreign keys
+30 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1690,13 +1688,14 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_region` | `text` |  |  |
 | `bank_account_holder` | `text` |  | The name the entity's bank account is held in. |
 | `bic` | `text` |  | The BIC, upper case. |
-| `country` | `text` |  | Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. |
+| `country` | `text` |  | Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. |
 | `default_language` | `text` |  | The ISO 639-1 language the entity's documents default to. |
 | `display_name` | `text` |  | The name the product shows for the entity. |
 | `iban` | `text` |  | The IBAN, upper case, without spaces. |
 | `icp` | `text` |  |  |
 | `imprint` | `text` |  | The legal notice the entity prints, up to 4000 characters. |
 | `is_default` | `boolean`, default `false` | yes | The entity a user with no assignment works for. |
+| `jurisdiction` | `text` |  | The jurisdiction pack whose law the entity follows, as its lower-case code, for example `de`. |
 | `legal_name` | `text` |  | The registered name documents are issued under. |
 | `logo_object_key` | `text` |  |  |
 | `offer_summary` | `text` |  |  |
@@ -1722,6 +1721,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `legal_entity_default_signs_with_the_installation`: `CHECK (((NOT is_default) OR (signature_template IS NULL)))`
 - `legal_entity_iban_shape`: `CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$')))`
 - `legal_entity_imprint_bounded`: `CHECK (((imprint IS NULL) OR (char_length(imprint) <= 20000)))`
+- `legal_entity_jurisdiction_shape`: `CHECK (((jurisdiction IS NULL) OR (jurisdiction ~ '^[a-z]{2}$')))`
 - `legal_entity_language_shape`: `CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$')))`
 - `legal_entity_names_itself`: `CHECK ((is_default OR ((btrim(COALESCE(display_name, '')) <> '') AND (btrim(COALESCE(legal_name, '')) <> '') AND (country IS NOT NULL))))`
 - `legal_entity_offering_bounded`: `CHECK (((char_length(offer_summary) <= 20000) AND (char_length(icp) <= 20000) AND (char_length(value_proposition) <= 20000) AND (char_length(usp) <= 20000)))`
@@ -1736,8 +1736,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"bic": 20000, "icp": 20000, "usp": 20000, "iban": 20000, "vat_id": 20000, "country": 20000, "imprint": 20000, "legal_name": 500, "captured_by": 20000, "address_city": 20000, "address_line1": 500, "address_line2": 500, "offer_summary": 20000, "address_region": 20000, "register_court": 20000, "logo_object_key": 20000, "register_number": 20000, "default_language": 20000, "value_proposition": 20000, "signature_template": 20000, "address_postal_code": 20000, "bank_account_holder": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"bank_account_holder":20000,"bic":20000,"captured_by":20000,"country":20000,"default_language":20000,"iban":20000,"icp":20000,"imprint":20000,"legal_name":500,"logo_object_key":20000,"offer_summary":20000,"register_court":20000,"register_number":20000,"signature_template":20000,"usp":20000,"value_proposition":20000,"vat_id":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bic": 20000, "icp": 20000, "usp": 20000, "iban": 20000, "vat_id": 20000, "country": 20000, "imprint": 20000, "legal_name": 500, "captured_by": 20000, "address_city": 20000, "address_line1": 500, "address_line2": 500, "offer_summary": 20000, "address_region": 20000, "register_court": 20000, "logo_object_key": 20000, "register_number": 20000, "default_language": 20000, "value_proposition": 20000, "signature_template": 20000, "address_postal_code": 20000, "bank_account_holder": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"bank_account_holder":20000,"bic":20000,"captured_by":20000,"country":20000,"default_language":20000,"iban":20000,"icp":20000,"imprint":20000,"legal_name":500,"logo_object_key":20000,"offer_summary":20000,"register_court":20000,"register_number":20000,"signature_template":20000,"usp":20000,"value_proposition":20000,"vat_id":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"bic": 20000, "icp": 20000, "usp": 20000, "iban": 20000, "vat_id": 20000, "country": 20000, "imprint": 20000, "legal_name": 500, "captured_by": 20000, "address_city": 20000, "jurisdiction": 20000, "address_line1": 500, "address_line2": 500, "offer_summary": 20000, "address_region": 20000, "register_court": 20000, "logo_object_key": 20000, "register_number": 20000, "default_language": 20000, "value_proposition": 20000, "signature_template": 20000, "address_postal_code": 20000, "bank_account_holder": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"bank_account_holder":20000,"bic":20000,"captured_by":20000,"country":20000,"default_language":20000,"iban":20000,"icp":20000,"imprint":20000,"jurisdiction":20000,"legal_name":500,"logo_object_key":20000,"offer_summary":20000,"register_court":20000,"register_number":20000,"signature_template":20000,"usp":20000,"value_proposition":20000,"vat_id":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bic": 20000, "icp": 20000, "usp": 20000, "iban": 20000, "vat_id": 20000, "country": 20000, "imprint": 20000, "legal_name": 500, "captured_by": 20000, "address_city": 20000, "jurisdiction": 20000, "address_line1": 500, "address_line2": 500, "offer_summary": 20000, "address_region": 20000, "register_court": 20000, "logo_object_key": 20000, "register_number": 20000, "default_language": 20000, "value_proposition": 20000, "signature_template": 20000, "address_postal_code": 20000, "bank_account_holder": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"bank_account_holder":20000,"bic":20000,"captured_by":20000,"country":20000,"default_language":20000,"iban":20000,"icp":20000,"imprint":20000,"jurisdiction":20000,"legal_name":500,"logo_object_key":20000,"offer_summary":20000,"register_court":20000,"register_number":20000,"signature_template":20000,"usp":20000,"value_proposition":20000,"vat_id":20000}')`
 - `trg_legal_entity_default_is_permanent`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION legal_entity_refuse_default_retirement()`
 - `trg_legal_entity_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -2394,7 +2394,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `idx_technical_lookup_cache_expiry`: `btree (expires_at)`
 - `technical_lookup_cache_pkey`: `unique, btree (query, record_kind)`
 
 **Triggers**

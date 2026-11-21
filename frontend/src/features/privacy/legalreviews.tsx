@@ -43,6 +43,7 @@ import { useMe } from "../../lib/session";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useViewerZone } from "../../lib/viewerzone";
 import { calendarDayLabel, LegalReviewPack } from "./legalreviewpack";
+import "./privacy.css";
 
 /** The door from the deals page, for a reader who reviews. */
 export function LegalReviewQueueLink() {
@@ -199,7 +200,7 @@ function DecidePanel({ review }: Readonly<{ review: LegalReview }>) {
     <Panel title={t("legalReview.decideTitle")}>
       <PanelBody>
         {summary.note && (
-          <PanelIntro>
+          <PanelIntro className="legalreview-note">
             {t("legalReview.noteShown", { note: summary.note })}
           </PanelIntro>
         )}

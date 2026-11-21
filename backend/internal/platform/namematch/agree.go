@@ -20,6 +20,12 @@ const (
 func Corroborate(a, b string) bool {
 	givenA, familyA := SplitName(a)
 	givenB, familyB := SplitName(b)
+	return CorroborateSplit(givenA, familyA, givenB, familyB)
+}
+
+// CorroborateSplit is Corroborate of two names SplitName already split, for a
+// caller that compares one name against many.
+func CorroborateSplit(givenA, familyA, givenB, familyB string) bool {
 	if familyA == "" || familyB == "" {
 		return false
 	}

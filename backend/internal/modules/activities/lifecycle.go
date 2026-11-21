@@ -431,7 +431,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		  -- it again, from the words as they now stand.
 		  language = CASE
 		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN $%[15]d
-		    ELSE language END,
+		    ELSE language END, `+declineStampsClearedWhen(patchChangesTextSQL)+`,
 		  due_wall = coalesce($%[21]d::text::timestamp, due_wall),
 		  due_zone = coalesce($%[22]d, due_zone),
 		  remind_wall = coalesce($%[23]d::text::timestamp, remind_wall),
@@ -493,7 +493,7 @@ func admitPatchedFields(ctx context.Context, tx pgx.Tx, current crmcontracts.Act
 	if err := in.admitPatchTime(current.Kind); err != nil {
 		return err
 	}
-	if err := in.admitPatchDueWindow(current); err != nil {
+	if err := in.admitPatchDueWindow(ctx, tx, current); err != nil {
 		return err
 	}
 	return validateActivityDuration(in.DurationSeconds)

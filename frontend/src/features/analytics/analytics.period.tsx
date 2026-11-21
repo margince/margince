@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { formatDateTime, formatDayRange } from "../../format/format";
+import { zoneLabelAt } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import {
   type ReportingEvaluation,
@@ -42,6 +43,19 @@ export function periodRange(
   return formatDayRange(window.start_at, lastInstant(window), locale, zone);
 }
 
+/** The cutoff a reading's actuals run through, on the clock that counted them. */
+export function actualsThrough(
+  at: string,
+  zone: string,
+  locale: Locale,
+  t: Translator,
+): string {
+  return t("reporting.actualsThrough", {
+    at: formatDateTime(at, locale, zone),
+    zone: zoneLabelAt(at, zone, locale),
+  });
+}
+
 /**
  * The caption of a reading's period. A running period names its whole span
  * and the cutoff. An answer stored before the span was kept names only the
@@ -57,6 +71,7 @@ export function periodCaption(
   if (reportingPeriodIsEmpty(interval)) {
     return t("reporting.periodNotStarted", {
       at: formatDateTime(interval.start_at, locale, timezone),
+      zone: zoneLabelAt(interval.start_at, timezone, locale),
     });
   }
   const running = interval.end_at === evaluated_at;
@@ -66,9 +81,7 @@ export function periodCaption(
       period={whole && periodRange(whole, locale, timezone)}
       through={
         running
-          ? t("reporting.actualsThrough", {
-              at: formatDateTime(interval.end_at, locale, timezone),
-            })
+          ? actualsThrough(interval.end_at, timezone, locale, t)
           : undefined
       }
     />

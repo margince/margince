@@ -153,11 +153,7 @@ function SalesReviewBody({
             filters.setEnd(through);
           },
         }}
-        caption={
-          validDates
-            ? periodCaption(query.data, locale, t)
-            : t("reporting.chooseDates")
-        }
+        caption={validDates ? periodCaption(query.data, locale, t) : undefined}
         evaluation={query.data}
         charts={charts}
         saved={query.data ? { ...query.data.selection, blocks } : undefined}
@@ -184,6 +180,7 @@ function SalesReviewBody({
               )}
               <AnalyticsSheet>
                 <SalesFigures
+                  dated={validDates}
                   query={query}
                   invalid={invalid}
                   forecastHref={forecastHref}

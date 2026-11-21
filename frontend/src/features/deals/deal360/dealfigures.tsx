@@ -24,6 +24,7 @@ import {
   formatPercent,
   identifierNumber,
 } from "../../../format/format";
+import { offerStatusLabel } from "../../../format/offerstatus";
 import {
   type Locale,
   type PluralTranslator,
@@ -47,6 +48,7 @@ import { daysWaiting, waitingSince } from "./dealwaiting";
 
 type Activity = components["schemas"]["Activity"];
 type Deal = components["schemas"]["Deal"];
+type Offer = components["schemas"]["Offer"];
 
 type Words = Readonly<{
   t: Translator;
@@ -97,14 +99,7 @@ function ValueFigure({ inputs, words }: FigureProps) {
     <StatCard
       label={t("deals.amount")}
       value={value}
-      detail={
-        offer
-          ? t("deal.standing.figure.offer", {
-              number: offer.offer_number,
-              revision: identifierNumber(offer.revision),
-            })
-          : modelWrittenAmount(deal, t)
-      }
+      detail={offer ? offerLine(offer, t) : modelWrittenAmount(deal, t)}
     />
   );
 }
@@ -125,6 +120,20 @@ function modelWrittenAmount(
     return t("deal.standing.figure.amountByModel");
   }
   return undefined;
+}
+
+// An offer still in progress says so, so it does not read as the source of the value.
+function offerLine(offer: Offer, t: Translator): string {
+  const named = {
+    number: offer.offer_number,
+    revision: identifierNumber(offer.revision),
+  };
+  return offer.status === "accepted"
+    ? t("deal.standing.figure.offer", named)
+    : t("deal.standing.figure.offerInProgress", {
+        ...named,
+        status: offerStatusLabel(offer.status, t),
+      });
 }
 
 // The deal's own probability where somebody set one, else its stage's. A closed

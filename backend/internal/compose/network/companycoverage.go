@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -284,7 +285,7 @@ func companyStakeholderEdge(ctx context.Context, companyPos int, arg func(any) i
 		projectScope = scopeAll
 	}
 	return fmt.Sprintf(`(
-		   (r.kind = 'deal_stakeholder' AND EXISTS (
+		   (%[4]s AND EXISTS (
 		      SELECT 1 FROM deal d WHERE d.id = r.deal_id
 		        AND d.company_id = $%[1]d AND d.archived_at IS NULL
 		        AND (%[2]s)))
@@ -293,5 +294,5 @@ func companyStakeholderEdge(ctx context.Context, companyPos int, arg func(any) i
 		        JOIN project pr ON pr.id = pc.project_id AND pr.archived_at IS NULL
 		       WHERE pc.kind = '`+auth.ProjectCompanyKind+`' AND pc.project_id = r.project_id
 		         AND pc.company_id = $%[1]d AND pc.archived_at IS NULL
-		         AND (%[3]s))))`, companyPos, dealScope, projectScope), nil
+		         AND (%[3]s))))`, companyPos, dealScope, projectScope, dealseat.CurrentSQL("r")), nil
 }

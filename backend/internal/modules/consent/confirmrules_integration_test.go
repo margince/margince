@@ -293,8 +293,8 @@ func TestARequestRecordedForAnotherEntityIsNotThisMailsRequest(t *testing.T) {
 	placeUnderConfirmRules(t, e)
 	branch := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Co Ltd', 'zk', 'human:x')`, branch); err != nil {
+		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Co Ltd', 'zk', 'zk', 'human:x')`, branch); err != nil {
 		t.Fatalf("adding a second entity: %v", err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `
