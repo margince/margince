@@ -143,6 +143,9 @@ func jobMark(c caseRow, model string) string {
 			if run.Held {
 				mark = "✅"
 			}
+			if run.Regraded {
+				mark += " re-graded"
+			}
 			return mark
 		}
 	}

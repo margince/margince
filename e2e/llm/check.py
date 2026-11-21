@@ -753,6 +753,10 @@ def recorded_stamp(name, clock=None):
 
     A scenario the stamps do not name is a stamp file from another tree, and a
     verdict filed under it would claim to have measured copy it never saw.
+
+    graded_commit and graded_at are the checker's. Grading saved transcripts
+    again sets E2E_LLM_GRADED_COMMIT and keeps the run's E2E_LLM_COMMIT and
+    E2E_LLM_RAN_AT; a live grade leaves them equal.
     """
     path = os.environ.get("E2E_LLM_STAMPS")
     if not path:
@@ -761,9 +765,10 @@ def recorded_stamp(name, clock=None):
         stamps = json.load(handle)
     if name not in stamps:
         raise ValueError(f"the stamps at {path} carry no {name}: they were made for another tree")
-    when = (clock or (lambda: datetime.datetime.now(datetime.timezone.utc)))()
-    stamp = {**stamps[name], "commit": os.environ.get("E2E_LLM_COMMIT", ""),
-             "ran_at": when.strftime("%Y-%m-%dT%H:%M:%SZ")}
+    graded_at = (clock or (lambda: datetime.datetime.now(datetime.timezone.utc)))().strftime("%Y-%m-%dT%H:%M:%SZ")
+    commit = os.environ.get("E2E_LLM_COMMIT", "")
+    stamp = {**stamps[name], "commit": commit, "ran_at": os.environ.get("E2E_LLM_RAN_AT") or graded_at,
+             "graded_commit": os.environ.get("E2E_LLM_GRADED_COMMIT") or commit, "graded_at": graded_at}
     # The judge that graded, which E2E_LLM_JUDGE_MODEL can make another than
     # the table's: a verdict judged by another model is not current.
     if stamp.get("judge"):

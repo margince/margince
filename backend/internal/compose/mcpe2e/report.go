@@ -23,10 +23,19 @@ var VerdictTrees = map[Door]string{
 var doors = []Door{DoorMCP, DoorREST}
 
 // RecordedStamp is the stamp a verdict carries: what it measured, and when.
+// Commit and RanAt are the model run's; GradedCommit and GradedAt are the
+// checker's, which differ when saved transcripts were graded again later.
 type RecordedStamp struct {
 	Stamp
-	Commit string `json:"commit"`
-	RanAt  string `json:"ran_at"`
+	Commit       string `json:"commit"`
+	RanAt        string `json:"ran_at"`
+	GradedCommit string `json:"graded_commit,omitempty"`
+	GradedAt     string `json:"graded_at,omitempty"`
+}
+
+// Regraded is whether a later checker graded the run's saved transcripts.
+func (r *RecordedStamp) Regraded() bool {
+	return r != nil && r.GradedCommit != "" && r.GradedCommit != r.Commit
 }
 
 // Verdict is one committed verdict file: how it went, how it was measured,
@@ -218,11 +227,15 @@ func NewlyStale(baseRoot, headRoot string) ([]Line, error) {
 func Summarise(lines []Line) string {
 	type tally struct{ current, stale int }
 	counts := map[string]*tally{}
-	var stale []string
+	var stale, regraded []string
 	for _, line := range lines {
 		key := line.Tree + "/" + line.Folder
 		if counts[key] == nil {
 			counts[key] = &tally{}
+		}
+		if line.Stamp.Regraded() {
+			regraded = append(regraded, fmt.Sprintf("  re-graded  %s %s: run at %s, graded at %s",
+				key, line.Scenario, line.Stamp.Commit, line.Stamp.GradedCommit))
 		}
 		if len(line.Why) == 0 {
 			counts[key].current++
@@ -240,9 +253,8 @@ func Summarise(lines []Line) string {
 	for _, key := range keys {
 		fmt.Fprintf(&b, "%s: %d current, %d stale\n", key, counts[key].current, counts[key].stale)
 	}
-	b.WriteString(strings.Join(stale, "\n"))
-	if len(stale) > 0 {
-		b.WriteString("\n")
+	for _, detail := range append(stale, regraded...) {
+		b.WriteString(detail + "\n")
 	}
 	return b.String()
 }

@@ -211,6 +211,7 @@ type caseModelRun struct {
 	SelfJudged bool               `json:"self_judged,omitempty"`
 	Efficiency *mcpe2e.Efficiency `json:"efficiency,omitempty"`
 	Slow       bool               `json:"slow,omitempty"`
+	Regraded   bool               `json:"regraded,omitempty"`
 	// ToolsCalled are the tools a passing run used; the page counts them as
 	// driven where the case held.
 	ToolsCalled []string `json:"-"`
@@ -972,7 +973,7 @@ func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string) []caseMode
 		out = append(out, caseModelRun{
 			Model: v.Folder, Runs: v.Runs, Passed: v.Passed, PassAt: v.PassAt,
 			Held: v.PassAt > 0 && v.Passed >= v.PassAt, Driver: v.Driver, Search: v.Search, SelfJudged: v.SelfJudged,
-			Efficiency: v.Efficiency, Slow: v.Slow, ToolsCalled: v.PassingTools(),
+			Efficiency: v.Efficiency, Slow: v.Slow, Regraded: v.Stamp.Regraded(), ToolsCalled: v.PassingTools(),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
