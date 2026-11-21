@@ -233,8 +233,10 @@ export function addressFields(
   );
 }
 
+const ASSIGNED_CODES: ReadonlySet<string> = new Set(ASSIGNED_COUNTRIES);
+
 function isAssignedCountry(value: string): boolean {
-  return ASSIGNED_COUNTRIES.includes(value.toUpperCase());
+  return ASSIGNED_CODES.has(value.toUpperCase());
 }
 
 // An assigned code in its canonical upper case. Any other text is a legacy
