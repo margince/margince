@@ -79,12 +79,12 @@ func legacyAuditEntries(ctx context.Context, tx pgx.Tx, after, until ids.UUID, l
  `+storekit.AuditRedactionNeededSQL+`
  OR EXISTS(SELECT 1 FROM event_outbox retained WHERE retained.envelope->'trace'->>'audit_log_id'=history.id::text))
  FROM audit_log history WHERE history.id>@after AND history.id<@until
- AND history.entity_type=ANY(@kinds)
+ AND history.entity_type=ANY(@entity_kinds)
  AND `+split+`
  ORDER BY history.id LIMIT @limit`,
 		pgx.StrictNamedArgs{
 			"verbs": storekit.AuditRedactionActions(), "after": after, "until": until, auditPageLimitParameter: limit,
-			"kinds": kinds, "request_entity": rightsRequestEntity, "create": actionCreate,
+			"entity_kinds": kinds, "request_entity": rightsRequestEntity, actionCreate: actionCreate,
 		})
 	if err != nil {
 		return nil, err

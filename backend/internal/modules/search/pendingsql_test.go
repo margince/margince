@@ -51,7 +51,11 @@ func TestTheRecentPassBoundsTheOuterTableAndTheFullPassDoesNot(t *testing.T) {
 		recent := src.pendingIDsSQL(entityType, DriftRecent)
 		bound := "t." + src.recentColumn + " >= now() - interval '" + recentDriftWindow + "'"
 		if src.recentColumn != "" {
-			unembedded := recent[:strings.Index(recent, "pending_text AS")]
+			cut := strings.Index(recent, "pending_text AS")
+			if cut < 0 {
+				t.Fatalf("the recent pass over %s has no pending_text CTE:\n%s", entityType, recent)
+			}
+			unembedded := recent[:cut]
 			if !strings.Contains(unembedded, bound) {
 				t.Errorf("the recent pass over %s does not bound the outer table by %s:\n%s", entityType, src.recentColumn, recent)
 			}
