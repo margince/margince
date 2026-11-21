@@ -102,6 +102,8 @@ func redactMarkedAuditPage(ctx context.Context, tx pgx.Tx, source markedAuditSou
 	return page, nil
 }
 
+// markerAuditUnderHold answers whether a legal hold stops the page. A busy
+// table lock returns its 55P03 error so the page is tried again, never "held".
 func markerAuditUnderHold(ctx context.Context, tx pgx.Tx) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
@@ -112,9 +114,6 @@ func markerAuditUnderHold(ctx context.Context, tx pgx.Tx) (bool, error) {
 	}
 	locked, err := storekit.Savepoint(ctx, tx, func(attempt pgx.Tx) (bool, error) {
 		_, err := attempt.Exec(ctx, markerHoldLockSQL)
-		if storekit.IsLockTimeout(err) {
-			return false, nil
-		}
 		return err == nil, err
 	})
 	if err != nil || !locked {
@@ -143,7 +142,7 @@ func lockMarkedAuditRecord(ctx context.Context, tx pgx.Tx, source markedAuditSou
 	return storekit.Savepoint(ctx, tx, func(attempt pgx.Tx) (bool, error) {
 		var cleared bool
 		err := attempt.QueryRow(ctx, source.lockSQL, args).Scan(&cleared)
-		if err == pgx.ErrNoRows || storekit.IsLockTimeout(err) {
+		if err == pgx.ErrNoRows {
 			return false, nil
 		}
 		return cleared, err

@@ -223,3 +223,54 @@ func TestRetiredRequestMarkerCleanupKeepsDisputesAndLaterAnswers(t *testing.T) {
 		t.Fatalf("later answer lost history: %d", n)
 	}
 }
+
+func TestMarkedCorrectionStepsRetryWhenALockIsBusyInsteadOfSkippingRecords(t *testing.T) {
+	e := integration.Setup(t)
+	weekly, request := legacyWeeklyCopies(t, e, ""), legacyRequestAuditCopies(t, e)
+	contact := e.SeedContact(t, "Busy Contact", nil)
+	cases := []struct {
+		name, stepName, hold string
+		args                 []any
+	}{
+		{"table lock busy, weekly step", "marked_weekly_images", `UPDATE contact SET legal_hold=false WHERE id=$1`, []any{contact}},
+		{"table lock busy, request step", "retired_request_images", `UPDATE contact SET legal_hold=false WHERE id=$1`, []any{contact}},
+		{"record lock busy, weekly step", "marked_weekly_images", `SELECT 1 FROM weekly_plan_commitment WHERE id=$1 FOR UPDATE`, []any{weekly}},
+		{"record lock busy, request step", "retired_request_images", `SELECT 1 FROM data_subject_request WHERE id=$1 FOR UPDATE`, []any{request}},
+	}
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	task := markedAuditRedactionDataTask()
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			holder, err := e.Pool.Begin(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = holder.Rollback(context.Background()) }()
+			if _, err := holder.Exec(context.Background(), c.hold, c.args...); err != nil {
+				t.Fatal(err)
+			}
+			for _, step := range task.Steps {
+				if step.Name != c.stepName {
+					continue
+				}
+				err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+					out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 200, RunID: ids.NewV7()})
+					if err == nil {
+						t.Errorf("busy lock reported a finished page: %+v", out)
+					}
+					return err
+				})
+				if !storekit.IsLockTimeout(err) {
+					t.Fatalf("busy lock must surface as a retryable lock timeout, got %v", err)
+				}
+			}
+		})
+	}
+	runMachineAddressTask(ctx, t, e, task)
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='weekly_plan_commitment' AND entity_id=$1 AND after->>'label'='Private Contact'`, weekly); n != 0 {
+		t.Fatalf("weekly step kept %d old personal images after the locks were free", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, request); n != 0 {
+		t.Fatalf("request step kept %d old personal images after the locks were free", n)
+	}
+}
