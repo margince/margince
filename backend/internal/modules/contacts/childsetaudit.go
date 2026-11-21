@@ -113,6 +113,8 @@ func sameDomainRows(a, b []map[string]any) bool {
 // touchChildSetParent moves the owning record's version after a write that
 // changed only its child rows. Without it a Put back judged before the write
 // can run after it with a version that still matches, and replace the set.
+//
+//gate:parent-version-door
 func touchChildSetParent(ctx context.Context, tx pgx.Tx, entity string, id ids.UUID) error {
 	var query string
 	switch entity {

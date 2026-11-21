@@ -320,11 +320,11 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	if tag.RowsAffected() == 0 {
 		return apperrors.ErrConflict
 	}
-	revived, err := revivePhoneTx(ctx, tx, contactID, supersededID)
-	if err != nil {
+	if err := touchChildSetParent(ctx, tx, entityContact, contactID.UUID); err != nil {
 		return err
 	}
-	if err := touchChildSetParent(ctx, tx, entityContact, contactID.UUID); err != nil {
+	revived, err := revivePhoneTx(ctx, tx, contactID, supersededID)
+	if err != nil {
 		return err
 	}
 	if !revived {
@@ -380,5 +380,8 @@ func revivePhoneTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phon
 	if err != nil {
 		return false, fmt.Errorf("contacts: bringing the replaced number back: %w", err)
 	}
-	return tag.RowsAffected() > 0, nil
+	if tag.RowsAffected() == 0 {
+		return false, nil
+	}
+	return true, touchChildSetParent(ctx, tx, entityContact, contactID.UUID)
 }
