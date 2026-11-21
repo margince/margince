@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
 import { taskLine, useTaskHolder } from "../../components/taskassignee";
+import { taskDueOnDay } from "../../format/calendarday";
 import { formatDueCompact } from "../../format/format.dates";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import { type LatePromise, latePromise } from "../../lib/latepromise";
@@ -57,7 +58,13 @@ export function nextBarLateness(
 ): LatePromise | undefined {
   const task = nextBarTask(view);
   return task?.due_at
-    ? latePromise(task.due_at, view.as_of, zone, "task", words)
+    ? latePromise(
+        taskDueOnDay(task.due_at, task.due_has_time, task.due_intent, zone),
+        view.as_of,
+        zone,
+        "task",
+        words,
+      )
     : undefined;
 }
 

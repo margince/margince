@@ -4,7 +4,11 @@
 // Package deadline answers whether a promised moment has passed.
 package deadline
 
-import "time"
+import (
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+)
 
 // Passed reports whether a due moment is in the past — whether the thing is
 // LATE.
@@ -66,4 +70,21 @@ func DaysPast(due *time.Time, now time.Time) (int, bool) {
 		return 0, false
 	}
 	return int(now.Sub(*due) / (24 * time.Hour)), true
+}
+
+// WallDayOffset is how many calendar days the chosen date of a task lies from
+// today in loc: negative once it is behind us, 0 on it. The date is read from
+// the wall clock text, not from the instant it resolves to. A reader in another
+// zone than the chooser's therefore counts the same day. It reports false when
+// the text does not start with a date.
+func WallDayOffset(wallClock string, now time.Time, loc *time.Location) (int, bool) {
+	if len(wallClock) < len(time.DateOnly) {
+		return 0, false
+	}
+	day, err := time.Parse(time.DateOnly, wallClock[:len(time.DateOnly)])
+	if err != nil {
+		return 0, false
+	}
+	noon := time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, loc)
+	return elapsed.Days(now, noon, loc), true
 }

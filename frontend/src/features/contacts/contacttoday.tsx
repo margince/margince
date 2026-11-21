@@ -9,6 +9,7 @@ import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { SourceLink } from "../../design-system/sourcelink";
+import { taskDueOnDay } from "../../format/calendarday";
 import { daysPast } from "../../format/lateness";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { latePromise } from "../../lib/latepromise";
@@ -101,7 +102,17 @@ export function ContactToday({
               subject: row.subject ?? t("task.untitled"),
               dueAt: row.due_at,
               overdue: row.due_at
-                ? daysPast(Date.parse(row.due_at), Date.parse(view.as_of)).late
+                ? daysPast(
+                    Date.parse(
+                      taskDueOnDay(
+                        row.due_at,
+                        row.due_has_time,
+                        row.due_intent,
+                        zone,
+                      ),
+                    ),
+                    Date.parse(view.as_of),
+                  ).late
                 : false,
             })),
             { t, plural, locale, zone },
@@ -281,7 +292,13 @@ function TaskBar({
   const zone = useViewerZone();
   const late =
     task.due_at &&
-    latePromise(task.due_at, view.as_of, zone, "task", { t, plural, locale });
+    latePromise(
+      taskDueOnDay(task.due_at, task.due_has_time, task.due_intent, zone),
+      view.as_of,
+      zone,
+      "task",
+      { t, plural, locale },
+    );
   return (
     <RecordNextBar
       title={displayedSubject(task) ?? t("task.untitled")}

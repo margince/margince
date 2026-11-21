@@ -360,10 +360,15 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		item.DueHasTime = new(task.DueHasTime)
 		item.DueIntent = task.DueIntent
 		past := taskLateAt(task.DueAt, asOf, task.MayBeDone)
+		name := dueGroup(due, asOf, until, loc)
+		if days, ok := pickedDay(task.DueAt, task.DueHasTime, task.DueIntent, asOf, loc); ok {
+			name = pickedDayGroup(days)
+			past = name == dueGroupOverdue && task.MayBeDone == nil
+		}
 		item.Overdue = &past
 		// Which run of the page it heads, so a client groups without having to
 		// decide the day's end for itself.
-		group := crmcontracts.AttentionItemDueGroup(dueGroup(due, asOf, until, loc))
+		group := crmcontracts.AttentionItemDueGroup(name)
 		item.DueGroup = &group
 	} else if task.later {
 		item.DueGroup = new(crmcontracts.AttentionItemDueGroupNone)

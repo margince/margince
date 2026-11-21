@@ -7,6 +7,7 @@ import {
   OverviewList,
   OverviewRow,
 } from "../../design-system/overviewcard";
+import { taskDueOnDay } from "../../format/calendarday";
 import { formatMoney } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -197,7 +198,14 @@ export function DealOverviewPane({
             subject: row.subject ?? t("task.untitled"),
             dueAt: row.due_at,
             overdue: row.due_at
-              ? Date.parse(row.due_at) < Date.parse(inputs.asOf)
+              ? Date.parse(
+                  taskDueOnDay(
+                    row.due_at,
+                    row.due_has_time,
+                    row.due_intent,
+                    zone,
+                  ),
+                ) < Date.parse(inputs.asOf)
               : false,
           })),
           { t, plural, locale, zone },

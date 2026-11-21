@@ -15,6 +15,7 @@ import {
   activityHasHappened,
   activityIsAhead,
 } from "../../../format/activitywhen";
+import { taskDueOnDay } from "../../../format/calendarday";
 import {
   calendarDaysBetween,
   formatDayMonth,
@@ -346,7 +347,17 @@ export function timelineEvents(
               zone,
               row.due_intent,
             ),
-            kind: Date.parse(row.due_at) < now ? "late" : "ahead",
+            kind:
+              Date.parse(
+                taskDueOnDay(
+                  row.due_at,
+                  row.due_has_time,
+                  row.due_intent,
+                  zone,
+                ),
+              ) < now
+                ? "late"
+                : "ahead",
           },
         ]
       : [],

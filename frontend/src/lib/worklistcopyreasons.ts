@@ -3,7 +3,11 @@ import {
   formatActivityWhen,
   type OccurredPrecision,
 } from "../format/activitywhen";
-import { middayInstant, sameCalendarDay } from "../format/calendarday";
+import {
+  middayInstant,
+  sameCalendarDay,
+  taskDueOnDay,
+} from "../format/calendarday";
 import {
   formatAgreedClock,
   formatDate,
@@ -334,9 +338,10 @@ function taskWhen(
           : when,
     });
   }
-  return sameCalendarDay(new Date(dueAt), now, record)
+  const day = taskDueOnDay(dueAt, false, item.due_intent, record);
+  return sameCalendarDay(new Date(day), now, record)
     ? null
-    : t(key, { when: formatDate(dueAt, locale, record) });
+    : t(key, { when: formatDate(day, locale, record) });
 }
 
 // Which sentence the moment goes in, or null for a row whose `due_at` is not a
