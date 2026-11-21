@@ -73,27 +73,40 @@ reducer, and the reducer is the conversation, so the rail cannot disagree with i
 the server (`/onboarding/state`, `onboarding_wizard_state` in the identity module). So loading the page again, or an
 OAuth round trip, builds the same scene again.
 
-The rail of the user who set up the workspace reads **Read · Confirm · Basis · Voice · Connect**. Basis
-is what the setup settles right after the company is confirmed, and before any step about the user. It is
-the installation's base for reports: the base currency, and the `timezone` for reports. An admin can
-change it later in Settings. A currency a deal has already frozen shows as locked there, as it does here.
+When their seat may create a voice profile, the rail of the user who set up the workspace reads **Read ·
+Confirm · Basis · Voice · Connect**. Basis is what the setup settles right after the company is
+confirmed, and before any step about the user. It is the installation's base for reports: the base
+currency, and the `timezone` for reports. An admin can change it later in Settings. A currency a deal has
+already frozen shows as locked there, as it does here.
 
 Connect is the last stop. Leaving it writes that onboarding is complete, and shows the hand off. Leaving
 the team act does the same for a creator who will not work in Margince.
 
 A member invited later walks the personal stops. Their company and its basis are already settled: the
 server refuses every new seat with 409 `company_not_described` until the company is saved. Their rail
-reads Voice · Connect, and the plan that brings them back puts them in the voice act. The app's onboarding gate sends
-here every human whose wizard state is missing or not finished. It does not send a read seat (it cannot
-write the checkpoint the journey ends on). A member invited later sets up their voice and connects their
-mailbox, as the creator did.
+reads Voice · Connect when their seat may create a voice profile, and a first visit then starts in the
+voice act. A member who comes back resumes where their wizard state says, so a saved Connect checkpoint
+or a recorded voice skip reopens Connect.
+
+A seat whose role may not create a voice profile has no Voice stop, creator and member alike. A member
+starts at Connect. A creator goes on from the invite question to Connect, and resumes there.
+
+For a described installation, the app's onboarding gate sends a human here while their wizard state is
+missing or not finished. It asks only where the `onboarding` rollout stage is on, and only for a seat
+that may create a voice profile or an activity. So a read seat is never sent here, since it cannot write
+the checkpoint the journey ends on. A failed read of the wizard state holds nobody: the shell renders,
+and the next load asks again.
+
+A member invited later whose seat may create a voice profile is offered the creator's voice setup and
+mailbox connection. They may skip either. Any other member starts at Connect.
 
 When a user finishes, the browser keeps that fact for them until sign-out. On the next load the app
 then shows without waiting for the wizard state. The read still runs, and a state that is not
 finished still sends the user here.
 
 The server refuses a member checkpoint at any step only the creator takes (`read`, `confirm`, `basis`,
-`invite`, `team`). It answers with the text `members begin at Voice`, which is now also the route.
+`invite`, `team`). It answers with the text `members begin at Voice`. That is also the route for a seat
+that may create a voice profile.
 
 The `step` enum on the wire (`read, confirm, basis, invite, team, voice, results, connect, complete`) is
 the vocabulary of the checkpoint. The rail is a view over it that knows about side steps. So a question
