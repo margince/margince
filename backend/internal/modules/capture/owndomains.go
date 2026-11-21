@@ -151,7 +151,9 @@ type SelfSet struct {
 	// reached their mailbox. They answer Covers and never CoversAddressExactly —
 	// see that method for why the two questions cannot share one set.
 	identityOnly map[string]struct{}
-	domains      InternalDomains
+	// shared are the addresses another seat's mailbox receives mail at too.
+	shared  map[string]struct{}
+	domains InternalDomains
 }
 
 // NewSelfSet folds and de-duplicates a seat's declared addresses and domains.
@@ -241,6 +243,26 @@ func (s SelfSet) Covers(address string) bool {
 		return true
 	}
 	return s.domains.Covers(folded)
+}
+
+// withShared marks which of the seat's addresses other seats receive at too.
+// The loader derives them from the seats' own rows, and names no other seat.
+func (s SelfSet) withShared(shared []string) SelfSet {
+	s.shared = make(map[string]struct{}, len(shared))
+	for _, address := range shared {
+		if folded := foldAddress(address); folded != "" {
+			s.shared[folded] = struct{}{}
+		}
+	}
+	return s
+}
+
+// SharedWithAnotherSeat reports an address several seats' mailboxes receive
+// at. Mail that reached it reached this seat, but mail from it names no one
+// seat as its author.
+func (s SelfSet) SharedWithAnotherSeat(address string) bool {
+	_, shared := s.shared[foldAddress(address)]
+	return shared
 }
 
 // Empty reports whether the seat declared nothing, which lets a caller skip

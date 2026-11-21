@@ -8,6 +8,11 @@
         "model": "claude-sonnet-5-5",
         "key_env": ""
       },
+      "sdk": {
+        "wire": "claude-sdk",
+        "model": "claude-sonnet-5-5",
+        "key_env": ""
+      },
       "api": {
         "wire": "messages",
         "model": "claude-sonnet-5-5",

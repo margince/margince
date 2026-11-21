@@ -30,7 +30,11 @@ import { OnboardingConversationScreen } from "./index";
 // one, and the shell then renders a refusal none of these stories is named for.
 
 const session = () =>
-  jsonResponse(meFixture({ allow: { automation: ["update"] } }));
+  jsonResponse(
+    meFixture({
+      allow: { automation: ["update"], voice_profile: ["read", "create"] },
+    }),
+  );
 
 /** The wizard row as the server stores it, at a named step. */
 function wizardAt(step: string, path: "creator" | "member" = "creator") {

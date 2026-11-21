@@ -243,10 +243,20 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 	duration := time.Duration(profile.DurationMinutes) * time.Minute
 	slots, truncated, err := h.store.PageAvailability(r.Context(), page.HostUserID, team, params.From, params.To, duration)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		writeGuestAvailabilityErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"slots": slots, "truncated": truncated})
+}
+
+// writeGuestAvailabilityErr answers a guest's availability read. A host with no
+// calendar reads as a paused page, so the guest learns nothing of the host's setup.
+func writeGuestAvailabilityErr(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, errNoCalendarToRead) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	writeStoreErr(w, r, err)
 }
 
 // bookingRequestIsWritable refuses a request before anything is written.

@@ -18,7 +18,7 @@ import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { useHiddenCoreFeatures } from "../lib/corefeatures";
 import { entryDepth } from "../lib/historydepth";
-import { type Route, routeHash, useHash } from "../lib/router";
+import { parseHash, type Route, routeHash, useHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { useGoToShortcuts } from "../lib/shortcuts";
 import { usePhoneViewport } from "../lib/viewport";
@@ -240,10 +240,9 @@ export function WorkspaceRail({
   // with the rest. One nav element keeps one navigation
   // landmark and no second item list to keep in sync.
   const phone = usePhoneViewport();
-  // A dial written in place keeps the entry, so the menu stays; Back, Forward
-  // and a pushed query land on another. useHash re-renders on each of them.
-  useHash();
-  const [open, setOpen] = useMenuOpen(routeHash(route), phone);
+  // The bar's entry, not the page on screen, so a move closes it at the press.
+  // A dial written in place keeps the entry, and the menu with it.
+  const [open, setOpen] = useMenuOpen(routeHash(parseHash(useHash())), phone);
   const menuOpen = open && phone;
   const more = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);

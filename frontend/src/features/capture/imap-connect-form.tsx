@@ -42,9 +42,9 @@ import "./imap-connect-form.css";
 // `/connectors/imap/connect` onboarding's ImapConnectPanel
 // (onboarding-connect-panels.imap.tsx) posts to.
 //
-// Two surfaces render the form: Settings, in a dialog, and the first-run
-// platform step, inline. ImapMailboxForm is the one form; ImapConnectForm is
-// the dialog around it.
+// Three surfaces render the form: Settings, in a dialog, and inline the
+// first-run platform step and the onboarding connect step. ImapMailboxForm is
+// the one form; ImapConnectForm is the dialog around it.
 
 type ImapConnectRequest = components["schemas"]["ImapCredentials"];
 

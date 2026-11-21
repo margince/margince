@@ -7,13 +7,13 @@ writes: true
 prompt: |
   Sofia Meier leaves at the end of the month. What should we do about her access?
 
-must_call:
-  - read_workspace|list_colleagues|whoami
-
 may_call:
   - change_access
   - read_details
   - search_records
+  - read_workspace
+  - list_colleagues
+  - whoami
 
 must_not_call_with:
   - change_access~deactivate_member

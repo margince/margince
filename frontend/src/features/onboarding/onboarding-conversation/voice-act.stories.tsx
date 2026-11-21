@@ -141,15 +141,6 @@ export const Built: Story = {
   ),
 };
 
-/**
- * Skipped. A company that will not hand over its writing still has to reach the
- * end of onboarding, so this is an ordinary outcome rather than a failure — and
- * the act says what the product will do without it.
- */
-export const Skipped: Story = {
-  render: act(state("vo.skipped"), summary(0)),
-};
-
 /** At 390px the meter, the paste area and the build verb stack. */
 export const Phone: Story = {
   tags: ["uat-phone"],

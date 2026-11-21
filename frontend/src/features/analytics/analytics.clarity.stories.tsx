@@ -90,6 +90,19 @@ const readings: components["schemas"]["ForecastReadings"] = {
       chance_in_use: 60,
       signals: [],
     },
+    {
+      deal_id: "33333333-3333-4333-8333-333333333333",
+      deal_name: "Pilot without a price",
+      exclusion_reason: "unpriced",
+      weighted_minor: 0,
+      in_open: true,
+      in_won: false,
+      in_evidence: true,
+      probability_source: "stage",
+      applied_probability: 40,
+      chance_in_use: 40,
+      signals: [],
+    },
   ],
 };
 const check: components["schemas"]["InputCheck"] = {

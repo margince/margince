@@ -286,6 +286,11 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 			"questions": []any{map[string]any{"key": "why", "label": "Why did we win?", "type": "text", "required": true}},
 		}}
 	},
+	// An omitted jurisdiction defaults to the country, and this binary compiles
+	// no pack for it.
+	"create_legal_entity": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"jurisdiction": namedValues["jurisdiction"]}}
+	},
 	"update_legal_review_settings": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"enabled": true}}
 	},

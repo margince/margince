@@ -27,7 +27,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -111,7 +110,7 @@ func WorkingHoursOf(ctx context.Context, tx pgx.Tx, user ids.UserID) (WorkingHou
 	// week and a customer opening a public booking link, neither of whom holds
 	// installation_settings.read — and the zone is disclosed by every time
 	// either of them is shown anyway (see the entry's own note).
-	installation, err := settings.ApplyTx(ctx, tx, Timezone)
+	installation, err := TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return WorkingHours{}, false, err
 	}

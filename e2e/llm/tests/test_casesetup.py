@@ -73,3 +73,27 @@ class QueueProblemsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RecordingAdmin:
+    """Answers every call with a new id, and keeps each one."""
+
+    def __init__(self):
+        self.calls = []
+
+    def call(self, method, path, body=None, content_type=None):
+        self.calls.append((method, path, body))
+        if path == "/filters/preview":
+            return {"match_count": len(casesetup.FAIR_GUESTS)}
+        return {"id": f"id-{len(self.calls)}"}
+
+
+class ContactChannelTest(unittest.TestCase):
+    # The API refuses a contact with no email, phone or LinkedIn URL.
+    def test_every_fair_guest_is_created_with_a_way_to_reach_them(self):
+        admin = RecordingAdmin()
+        casesetup.fair_guests_tagged(admin)
+        created = [body for method, path, body in admin.calls if (method, path) == ("POST", "/contacts")]
+        self.assertEqual(len(created), len(casesetup.FAIR_GUESTS))
+        for body in created:
+            self.assertTrue(body.get("emails"), f"{body['full_name']} is created with no email")

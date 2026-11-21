@@ -9,6 +9,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -64,6 +65,8 @@ const offer = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
+const REFUSAL = "the server does not take this value";
+
 type Held = {
   patch: Record<string, unknown>;
   answer: (status?: number) => void;
@@ -94,7 +97,7 @@ function stubServer(initial: Record<string, unknown>) {
         state.inflight -= 1;
         if (status !== 200) {
           return jsonResponse(
-            { title: "Unprocessable", status, detail: "refused" },
+            { title: "Unprocessable", status, detail: REFUSAL },
             status,
           );
         }
@@ -269,7 +272,7 @@ describe.each(KINDS)(
       expect(state.mostInflight).toBe(1);
     });
 
-    it("keeps a refused newer text and says it was not saved", async () => {
+    it("keeps a refused newer text and shows the server's reason in its row", async () => {
       const { held, state, user, cell } = await setUp(kind);
       await typeInto(user, cell, kind.first, kind.clear);
       await user.tab();
@@ -280,8 +283,11 @@ describe.each(KINDS)(
       await waitFor(() => expect(held).toHaveLength(2));
       await answer(held[1], 422);
 
-      expect(await screen.findByText("Change was not saved")).toBeTruthy();
+      const row = screen.getByTestId("line-row-li-1");
+      expect(await within(row).findByText(REFUSAL)).toBeTruthy();
+      expect(screen.queryByText("Change was not saved")).toBeNull();
       expect(cell.value).toBe(kind.left ?? kind.shown);
+      expect(screen.getByTestId(kind.testId)).toBe(cell);
       expect(state.line).toMatchObject(kind.patches[0]);
     });
   },
@@ -297,5 +303,49 @@ describe("an offer line cell", () => {
     await waitFor(() => expect(cell.value).toBe("Consulting!"));
     expect(held).toHaveLength(1);
     expect(screen.queryByText("Change was not saved")).toBeNull();
+  });
+});
+
+describe("the billing cell", () => {
+  it("keeps a refused term, shows the server's reason in its row, and sends it again on the next blur", async () => {
+    const { held, state } = stubServer({
+      ...baseLine,
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: 4,
+    });
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+    const term = screen.getByRole("spinbutton", { name: "Periods, line 1" });
+    const refusedTerm = {
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: 0,
+    };
+
+    await typeInto(user, term as HTMLInputElement, "0", true);
+    await user.tab();
+    await waitFor(() => expect(held).toHaveLength(1));
+    expect(held[0].patch).toEqual(refusedTerm);
+    await answer(held[0], 422);
+
+    const row = screen.getByTestId("line-row-li-1");
+    expect(await within(row).findByText(REFUSAL)).toBeTruthy();
+    expect(screen.queryByText("Change was not saved")).toBeNull();
+    expect(screen.getByRole("spinbutton", { name: "Periods, line 1" })).toBe(
+      term,
+    );
+    expect(term).toHaveProperty("value", "0");
+    expect(term.getAttribute("aria-invalid")).toBe("true");
+
+    await user.click(term);
+    await user.tab();
+    await waitFor(() => expect(held).toHaveLength(2));
+    expect(held[1].patch).toEqual(refusedTerm);
+    await answer(held[1]);
+    await waitFor(() => expect(within(row).queryByText(REFUSAL)).toBeNull());
+    expect(term.getAttribute("aria-invalid")).toBeNull();
+    expect(state.line).toMatchObject({ interval_count: 0 });
   });
 });

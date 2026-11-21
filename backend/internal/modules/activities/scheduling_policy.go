@@ -105,6 +105,10 @@ func (s *Store) withLocalBusy(ctx context.Context, host ids.UserID, p crmcontrac
 	return busy, err
 }
 
+// errNoCalendarToRead marks a host who has no calendar connected. The host and
+// their agent are asked to connect one; a guest's door answers as a paused page.
+var errNoCalendarToRead = errors.New("the host has no calendar connected")
+
 // ReliableAvailability combines provider occupancy with pending local reservations.
 func (s *Store) ReliableAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration) ([]slot, bool, error) {
 	if err := mayReadLiveCalendar(ctx, host); err != nil {
@@ -145,7 +149,7 @@ func (s *Store) calendarReadable(ctx context.Context, host ids.UserID, profile c
 	}
 	switch {
 	case blocker == crmcontracts.SchedulingProfileBlockerNoCalendar:
-		return errCalendarNotConnected()
+		return fmt.Errorf("%w: %w", errNoCalendarToRead, errCalendarNotConnected())
 	case blocker != crmcontracts.SchedulingProfileBlockerCalendarUnavailable:
 		return nil
 	case s.calendar == nil:

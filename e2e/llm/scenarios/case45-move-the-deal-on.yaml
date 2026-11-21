@@ -29,8 +29,6 @@ prompt: |
   terms now. Put the Netzmodernisierung deal in Negotiation and note that
   purchasing is at the table. What does that do to my quarter?
 
-must_call:
-  - progress_deal
 must_not_call_with:
   - move_deal_pipeline~.
   - change_offers~.
@@ -44,6 +42,7 @@ may_call:
   - resolve_entities
   - query_workspace
   - read_forecast
+  - progress_deal
 
 must_mention:
   - "Negotiation"

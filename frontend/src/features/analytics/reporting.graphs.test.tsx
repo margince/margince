@@ -672,3 +672,52 @@ it("says why an owner chart drawn from the reader's own figures has one bar", ()
   );
   expect(screen.getByText(reason)).toBeInTheDocument();
 });
+
+it("names the forecast's open pipeline by the quarter its deals close in", async () => {
+  installFetchStub(reportingStoryRoutes(forecastEvaluation));
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingForecastGraphs scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  expect(
+    (await screen.findAllByText("Open pipeline closing this quarter")).length,
+  ).toBeGreaterThan(0);
+  expect(screen.queryByText("Open pipeline")).not.toBeInTheDocument();
+});
+
+it("titles the drawer after the tile that opened it, and dates mix rows by close day", async () => {
+  const reference = {
+    metric: "bookings_mix",
+    context_id: "interval",
+    group_key: "kind:software",
+  } as const;
+  const won = reportingStoryEvaluation.metrics.find(
+    (metric) => metric.id === "bookings_won",
+  );
+  if (!won) throw new Error("the story evaluation reads sales won");
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    metrics: [
+      ...reportingStoryEvaluation.metrics,
+      { ...won, id: "bookings_mix", evidence: reference },
+    ],
+  } satisfies typeof reportingStoryEvaluation;
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingEvidenceDrawer
+        evaluation={evaluation}
+        reference={reference}
+        title="Product sales"
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Product sales" }),
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByRole("columnheader", { name: "Closed on" }),
+  ).toBeInTheDocument();
+});

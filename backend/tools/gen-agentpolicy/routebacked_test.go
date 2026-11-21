@@ -186,9 +186,10 @@ content:
       allOf:
         - $ref: '#/components/schemas/Base'
         - type: object
+          description: words about the schema, which the shape does not need
           required: [note]
           properties:
-            note: { type: string, description: words a caller does not need }
+            note: { type: string, description: what a caller may write here }
             label: { type: [string, 'null'] }
             when:
               oneOf:
@@ -204,12 +205,12 @@ content:
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"id":{"type":"string"}`, `"note":{"type":"string"}`, `"label":{"type":"string"}`, `"when":{"format":"date","type":"string"}`, `"required":["id","note"]`} {
+	for _, want := range []string{`"id":{"type":"string"}`, `"note":{"description":"what a caller may write here","type":"string"}`, `"label":{"type":"string"}`, `"when":{"format":"date","type":"string"}`, `"required":["id","note"]`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("body schema %s lacks %s", got, want)
 		}
 	}
-	for _, refused := range []string{"allOf", "oneOf", "description", "$ref"} {
+	for _, refused := range []string{"allOf", "oneOf", "about the schema", "$ref"} {
 		if strings.Contains(got, refused) {
 			t.Errorf("body schema %s still carries %s", got, refused)
 		}
@@ -269,14 +270,14 @@ func TestTheRoutersAreReadFromTheAgentsPackage(t *testing.T) {
 }
 
 func TestAFieldNamedLikeProseKeepsItsPlaceInABodySchema(t *testing.T) {
-	out, err := resolveRefs(map[string]any{
+	out, err := (&refWalk{open: map[string]bool{}}).resolve(map[string]any{
 		"type":        "object",
 		"description": "dropped",
 		"properties": map[string]any{
 			"description": map[string]any{"type": "string", "description": "dropped too"},
 			"example":     map[string]any{"type": "string"},
 		},
-	}, nil, 0, map[string]bool{})
+	}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -476,15 +477,15 @@ content:
 		}
 		return node.Content[0]
 	}
-	got, humanOnly, err := bodySchema(body("status"), map[string]any{})
+	got, marks, err := bodySchema(body("status"), map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(got, `"status"`) || strings.Contains(got, `"kind"`) || strings.Contains(got, "x-human-only") {
 		t.Errorf("body schema %s, want status alone and no marker", got)
 	}
-	if !slices.Equal(humanOnly, []string{"kind"}) {
-		t.Errorf("human-only members %v, want [kind] for the agent gate", humanOnly)
+	if !slices.Equal(marks.HumanOnly, []string{"kind"}) {
+		t.Errorf("human-only members %v, want [kind] for the agent gate", marks.HumanOnly)
 	}
 	if _, _, err := bodySchema(body("kind"), map[string]any{}); err == nil || !strings.Contains(err.Error(), "kind") {
 		t.Errorf("a body requiring a human-only member answered %v, want a refusal naming it", err)
@@ -500,9 +501,9 @@ content:
 `), &referenced); err != nil {
 		t.Fatal(err)
 	}
-	got, humanOnly, err = bodySchema(referenced.Content[0], map[string]any{"Kind": map[string]any{"type": "string"}})
-	if err != nil || strings.Contains(got, `"kind"`) || !slices.Equal(humanOnly, []string{"kind"}) {
-		t.Errorf("a marker beside $ref: schema %s, human-only %v (%v), want kind left out and named", got, humanOnly, err)
+	got, marks, err = bodySchema(referenced.Content[0], map[string]any{"Kind": map[string]any{"type": "string"}})
+	if err != nil || strings.Contains(got, `"kind"`) || !slices.Equal(marks.HumanOnly, []string{"kind"}) {
+		t.Errorf("a marker beside $ref: schema %s, human-only %v (%v), want kind left out and named", got, marks.HumanOnly, err)
 	}
 	var nested yaml.Node
 	if err := yaml.Unmarshal([]byte(`
@@ -517,5 +518,58 @@ content:
 	}
 	if _, _, err := bodySchema(nested.Content[0], map[string]any{}); err == nil {
 		t.Error("a nested human-only member was accepted, though the agent gate reads top-level members only")
+	}
+}
+
+func agentValuedBody(t *testing.T, member string) *yaml.Node {
+	t.Helper()
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+content:
+  application/json:
+    schema:
+      type: object
+      properties:
+        source: `+member+`
+`), &node); err != nil {
+		t.Fatal(err)
+	}
+	return node.Content[0]
+}
+
+// An agent is offered only the values it may send, and the gate is told them.
+func TestAnAgentIsOfferedOnlyTheValuesItMaySend(t *testing.T) {
+	got, marks, err := bodySchema(agentValuedBody(t,
+		`{ type: string, enum: [browser, chosen, agent], x-agent-values: [agent], description: Only an agent sends agent. }`), map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"properties":{"source":{"description":"Only an agent sends agent.","enum":["agent"],"type":"string"}},"type":"object"}`
+	if got != want {
+		t.Errorf("body schema %s, want %s", got, want)
+	}
+	if !slices.Equal(marks.AgentValues["source"], []string{"agent"}) {
+		t.Errorf("agent values %v, want source: [agent] for the agent gate", marks.AgentValues)
+	}
+	for _, member := range []string{
+		`{ type: string, enum: [browser, agent], x-agent-values: [chosen] }`,
+		`{ type: string, x-agent-values: [agent] }`,
+		`{ type: object, properties: { kind: { type: string, enum: [a, b], x-agent-values: [a] } } }`,
+	} {
+		if _, _, err := bodySchema(agentValuedBody(t, member), map[string]any{}); err == nil {
+			t.Errorf("%s was accepted; a value outside the enum, a member with no enum and a nested marker are refused", member)
+		}
+	}
+}
+
+// The words that state what a caller may send are on the field, in a body only.
+func TestABodyFieldKeepsItsDescription(t *testing.T) {
+	schemas := map[string]any{"Zone": map[string]any{"type": "string", "description": "An IANA zone name."}}
+	got, _, err := bodySchema(agentValuedBody(t, `{ $ref: '#/components/schemas/Zone' }`), schemas)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, `"description":"An IANA zone name."`) {
+		t.Errorf("body schema %s, want the referenced schema's description on the field", got)
 	}
 }

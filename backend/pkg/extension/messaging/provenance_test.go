@@ -129,3 +129,41 @@ func TestResolvingACitationFillsWhatItLeftToItsInstrument(t *testing.T) {
 		t.Errorf("resolved to %+v, want the instrument's provision and source", got)
 	}
 }
+
+func TestAnInstrumentRecordsItsRefreshOneWay(t *testing.T) {
+	fetched := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
+	digest := strings.Repeat("0f", 32)
+	source := Instrument{Name: "Act A", SourceURL: "https://example.org/a"}
+	with := func(change func(*Instrument)) Instrument {
+		in := source
+		change(&in)
+		return in
+	}
+	for name, in := range map[string]Instrument{
+		"no refresh yet":      source,
+		"a digest of its day": with(func(in *Instrument) { in.TextDigest, in.TextFetchedAt = digest, fetched }),
+		"a readable address":  with(func(in *Instrument) { in.TextURL = "https://example.org/a.pdf" }),
+		"a check by hand":     with(func(in *Instrument) { in.CheckedByHandAt = fetched }),
+		"a digest of a text address alone": {
+			Name: "Act A", TextURL: "https://example.org/a.pdf", TextDigest: digest, TextFetchedAt: fetched,
+		},
+	} {
+		if err := in.Validate(); err != nil {
+			t.Errorf("%s was refused: %v", name, err)
+		}
+	}
+	for name, in := range map[string]Instrument{
+		"a text address over http":         with(func(in *Instrument) { in.TextURL = "http://example.org/a.pdf" }),
+		"a digest that is no SHA-256":      with(func(in *Instrument) { in.TextDigest, in.TextFetchedAt = "abc", fetched }),
+		"a digest with no day":             with(func(in *Instrument) { in.TextDigest = digest }),
+		"a day with no digest":             with(func(in *Instrument) { in.TextFetchedAt = fetched }),
+		"a digest and a check by hand":     with(func(in *Instrument) { in.TextDigest, in.TextFetchedAt, in.CheckedByHandAt = digest, fetched, fetched }),
+		"a text address checked by hand":   with(func(in *Instrument) { in.TextURL, in.CheckedByHandAt = "https://example.org/a.pdf", fetched }),
+		"a check by hand of no source":     {Name: "Act A", CheckedByHandAt: fetched},
+		"a digest of no source or address": {Name: "Act A", TextDigest: digest, TextFetchedAt: fetched},
+	} {
+		if err := in.Validate(); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
+	}
+}

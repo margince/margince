@@ -10,14 +10,77 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "852458cc421f0ca4",
+    "tools": "267307c89737599d",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T14:57:32Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:57:32Z"
+  },
   "usage": {
-    "input_tokens": 8,
-    "output_tokens": 2258,
-    "cache_creation_input_tokens": 20583,
-    "cache_read_input_tokens": 302709,
+    "input_tokens": 10,
+    "output_tokens": 2022,
+    "cache_creation_input_tokens": 17948,
+    "cache_read_input_tokens": 383904,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1352
+    "cost_usd": 0.1304
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_record_fields",
+        "read_view",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_record_fields",
+        "read_view",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 2,
+      "max": 4
+    },
+    "turns": {
+      "median": 4,
+      "min": 3,
+      "max": 5
+    },
+    "refused": {
+      "median": 1,
+      "min": 0,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 200931,
+      "min": 162003,
+      "max": 239859
+    },
+    "output_tokens": {
+      "median": 1011,
+      "min": 907,
+      "max": 1115
+    },
+    "duration_ms": {
+      "median": 11193,
+      "min": 10488,
+      "max": 11898
+    }
   }
 }

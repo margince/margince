@@ -96,7 +96,7 @@ func (ie *ingestEnv) attempt(t *testing.T, documentID ids.UUID) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	body, err := ie.store.OpenDocument(ie.ctx, src.StorageKey)
+	body, err := ie.store.OpenDocument(ie.ctx, src)
 	if err != nil {
 		return 0, err
 	}
@@ -110,10 +110,10 @@ func (ie *ingestEnv) attempt(t *testing.T, documentID ids.UUID) (int, error) {
 		return 0, err
 	}
 	chunks := knowledge.ChunkText(string(raw))
-	if err := ie.store.WriteChunks(ie.ctx, documentID, src.CorpusID, chunks); err != nil {
+	if err := ie.store.WriteChunks(ie.ctx, documentID, src, chunks); err != nil {
 		return 0, err
 	}
-	return len(chunks), ie.store.FinishIngest(ie.ctx, documentID, len(chunks))
+	return len(chunks), ie.store.FinishIngest(ie.ctx, documentID, src, len(chunks))
 }
 
 // prose is a body long enough to cut into several passages, so a doubling is
@@ -182,7 +182,7 @@ func TestAnAttemptThatDiedMidFlightLeavesTheNextOneClean(t *testing.T) {
 		t.Fatalf("begin: %v", err)
 	}
 	half := knowledge.ChunkText(prose(3))
-	if err := ie.store.WriteChunks(ie.ctx, docID, src.CorpusID, half); err != nil {
+	if err := ie.store.WriteChunks(ie.ctx, docID, src, half); err != nil {
 		t.Fatalf("write chunks: %v", err)
 	}
 
@@ -286,7 +286,7 @@ func TestADocumentArchivedMidIngestLeavesNoLiveChunk(t *testing.T) {
 	if err := ie.store.ArchiveCorpus(ie.ctx, ie.corpus); err != nil {
 		t.Fatalf("archive: %v", err)
 	}
-	err = ie.store.WriteChunks(ie.ctx, docID, src.CorpusID, knowledge.ChunkText(prose(2)))
+	err = ie.store.WriteChunks(ie.ctx, docID, src, knowledge.ChunkText(prose(2)))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("writing chunks under an archived document = %v, want ErrNotFound", err)
 	}
@@ -506,12 +506,12 @@ func TestTwoAttemptsAtOneDocumentCannotBothWriteItsPassages(t *testing.T) {
 		t.Fatalf("second begin: %v", err)
 	}
 	chunks := knowledge.ChunkText(prose(3))
-	if err := ie.store.WriteChunks(ie.ctx, docID, first.CorpusID, chunks); err != nil {
+	if err := ie.store.WriteChunks(ie.ctx, docID, first, chunks); err != nil {
 		t.Fatalf("first write: %v", err)
 	}
 	// The second attempt is REFUSED rather than doubling the corpus. Which
 	// error it is does not matter — what matters is that it does not succeed.
-	if err := ie.store.WriteChunks(ie.ctx, docID, second.CorpusID, chunks); err == nil {
+	if err := ie.store.WriteChunks(ie.ctx, docID, second, chunks); err == nil {
 		t.Fatal("a second attempt wrote the same passages again")
 	}
 	if live := liveChunkCount(t, ie.env, ie.corpus); live != len(chunks) {
@@ -583,12 +583,12 @@ func TestTheCeilingHoldsAcrossTwoDocumentsInOneCorpus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("begin second: %v", err)
 	}
-	if err := ie.store.WriteChunks(ie.ctx, first, firstSrc.CorpusID, knowledge.ChunkText(prose(2))); err != nil {
+	if err := ie.store.WriteChunks(ie.ctx, first, firstSrc, knowledge.ChunkText(prose(2))); err != nil {
 		t.Fatalf("first write: %v", err)
 	}
 	// The second is refused: the corpus is full, whichever document is asking.
 	var full *knowledge.CorpusFullError
-	if err := ie.store.WriteChunks(ie.ctx, second, secondSrc.CorpusID, knowledge.ChunkText(prose(3))); !errors.As(err, &full) {
+	if err := ie.store.WriteChunks(ie.ctx, second, secondSrc, knowledge.ChunkText(prose(3))); !errors.As(err, &full) {
 		t.Fatalf("second write = %v, want CorpusFullError", err)
 	}
 	if live := liveChunkCount(t, ie.env, ie.corpus); live > knowledgePassageCeiling {

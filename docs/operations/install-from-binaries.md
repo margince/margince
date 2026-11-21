@@ -26,12 +26,16 @@ root, which is where the later commands expect to be.
 
 Stamp all three with one release identifier, or the
 [release guard](../explanation/self-hosting.md#every-role-runs-at-one-release)
-is off. Any stable per-build identifier will do, such as a commit sha, but it
-must not be empty or `dev`. Set `MY_BUILD_ID` to it first:
+is off, and with one commit, which `--version` prints. Set `MY_BUILD_ID` first, as one word of letters, digits, `.`, `_` and
+`-`, such as a build number. Run these lines as a script, so
+`scripts/release-version-stamped.sh` stops the build on an empty or `dev` value:
 
 ```sh
+set -euo pipefail
+MY_BUILD_ID="$(./scripts/release-version-stamped.sh "${MY_BUILD_ID:-}")"
+MY_REVISION="$(bash scripts/build-revision.sh)"
 mkdir -p bin
-stamp="-X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MY_BUILD_ID"
+stamp="-X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MY_BUILD_ID -X github.com/margince/margince/backend/internal/shared/buildinfo.Revision=$MY_REVISION"
 go build -C backend -ldflags "$stamp" -o ../bin/margince-migrate ./cmd/migrate
 go build -C backend -ldflags "$stamp" -o ../bin/margince-api     ./cmd/api
 go build -C backend -ldflags "$stamp" -o ../bin/margince-worker  ./cmd/worker

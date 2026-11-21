@@ -11,6 +11,7 @@ import {
   MapPin,
   Users,
 } from "lucide-react";
+import { fn } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Badge } from "./atoms";
 import { Avatar } from "./avatar";
@@ -276,6 +277,38 @@ export const BarsAgainstAWhole: Story = {
           tone: "warning",
         },
       ]}
+    />
+  ),
+};
+
+// Amounts of very different widths and a name that wraps: every track still
+// starts and ends at the same x, plain and as evidence actions.
+const unevenStages = [
+  { key: "discovery", label: "Discovery", value: 9, amount: "€900" },
+  {
+    key: "proposal",
+    label: "Proposal sent and awaiting the customer's legal review",
+    value: 5_800,
+    amount: "€580,000 · 12 priced deals",
+  },
+  {
+    key: "negotiation",
+    label: "Negotiation",
+    value: 4_400,
+    amount: "€440,000",
+  },
+];
+
+export const BarsWithUnevenAmounts: Story = {
+  render: () => <BarList label="Open pipeline by stage" rows={unevenStages} />,
+};
+
+export const BarsToSelect: Story = {
+  render: () => (
+    <BarList
+      label="Open pipeline by stage"
+      rows={unevenStages}
+      onSelect={fn()}
     />
   ),
 };

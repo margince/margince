@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // are the real ones; each case gets them as a fresh page load has them.
 let router: typeof import("./router");
 let leaveRecord: typeof import("./listreturn").leaveRecord;
+let leftRecord: typeof import("./listreturn").leftRecord;
 let unwatch: () => void;
 
 const DEAL = { screen: "deals", id: "d-1", id2: "activity" } as const;
@@ -15,7 +16,7 @@ const DEAL = { screen: "deals", id: "d-1", id2: "activity" } as const;
 beforeEach(async () => {
   vi.resetModules();
   router = await import("./router");
-  ({ leaveRecord } = await import("./listreturn"));
+  ({ leaveRecord, leftRecord } = await import("./listreturn"));
   globalThis.history.replaceState(null, "", "#/home");
   unwatch = router.watchAddress(() => undefined);
   await arrive("#/deals");
@@ -59,5 +60,20 @@ describe("leaveRecord pressed twice", () => {
     leaveRecord(DEAL);
 
     expect(globalThis.location.hash).toBe("#/deals");
+  });
+});
+
+describe("leftRecord", () => {
+  it("holds once leaving has landed on the list", () => {
+    leaveRecord(DEAL);
+
+    expect(leftRecord(DEAL, globalThis.location.hash)).toBe(true);
+  });
+
+  it("does not hold for a bar still on the record, another tab ahead", () => {
+    globalThis.history.back();
+    expect(globalThis.location.hash).toBe("#/deals/d-1");
+
+    expect(leftRecord(DEAL, globalThis.location.hash)).toBe(false);
   });
 });
