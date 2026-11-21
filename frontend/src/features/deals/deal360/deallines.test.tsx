@@ -280,6 +280,7 @@ describe("a deal priced from its lines", () => {
   });
 
   it("drops a rate card price once the lines take another currency", async () => {
+    const posted: unknown[] = [];
     installFetchStub({
       [`GET /deals/${DEAL}/products`]: () => jsonResponse({ data: [] }),
       [`GET /deals/${DEAL}/lines`]: () =>
@@ -298,6 +299,10 @@ describe("a deal priced from its lines", () => {
           next_cursor: null,
           has_more: false,
         }),
+      [`POST /deals/${DEAL}/lines`]: (body) => {
+        posted.push(body);
+        return jsonResponse(BANANAS);
+      },
     });
     renderWithQueryClient(
       <DealProductsCard
@@ -337,6 +342,9 @@ describe("a deal priced from its lines", () => {
     ).toBeTruthy();
     await user.type(price(), "2.40");
     expect(save).toHaveProperty("disabled", false);
+    await user.click(save);
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ currency: "USD", unit_price_minor: 240 });
   });
 
   it("sends the tax rate and discount typed on a custom item", async () => {
