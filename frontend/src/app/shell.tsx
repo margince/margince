@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { useEntityName } from "../components/entityref.queries";
 import { PageAsideProvider } from "../components/pageaside";
 import { PageHeadSlot } from "../components/pageheadaction";
 import { PageWait, usePageWait } from "../design-system/pagewait";
@@ -15,11 +14,17 @@ import {
   SETTINGS_SCREEN,
   useSettingsSection,
 } from "../features/settings/settingsnav";
-import { useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { useFirstScreenSettled } from "../lib/journeymarks";
 import { routeIdentity } from "../lib/routeidentity";
-import { parseHash, type Route, useLiveHash, useRoute } from "../lib/router";
+import {
+  parseHash,
+  type Route,
+  routeHash,
+  useLiveHash,
+  useRoute,
+} from "../lib/router";
 import { ShownAddressSink, type ShownScreen } from "../lib/screenaddress";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
@@ -32,18 +37,11 @@ import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
 import { InstallHint } from "./installhint";
 import { LicenseBanner } from "./licensebanner";
-import {
-  entryLabel,
-  type NavCounts,
-  type NavSection,
-  RAIL_LESS_SCREENS,
-  recordKindOf,
-} from "./nav";
+import { type NavCounts, type NavSection, RAIL_LESS_SCREENS } from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
-import { sectionHead, usePageName, useRouteSubject } from "./pagemeta";
 import { isRecordPage, readingColumn } from "./readingcolumn";
 import { usePublishedScrollerHeight } from "./scrollerheight";
-import { TopBar } from "./topbar";
+import { TopBar, usePageCalled, withoutRecord } from "./topbar";
 import "./shell.css";
 
 // The app shell: one sidebar against the left edge of the viewport, and the
@@ -237,16 +235,12 @@ export function Shell({
               <WorkspaceRail {...railProps} />
             )}
           </NavWalkProvider>
-          <main
-            className={mainClasses(gridded, griddedRecord)}
-            aria-busy={waiting || undefined}
-          >
+          <main className={mainClasses(gridded, griddedRecord)}>
             {leveled ? <SettingsTopBar {...bar} /> : <TopBar {...bar} />}
-            {live.screen === SETTINGS_SCREEN ? (
-              <SettingsPageArriving route={live} waiting={waiting} />
-            ) : (
-              <PageArriving route={live} waiting={waiting} />
-            )}
+            <PageWait
+              waiting={waiting}
+              label={<ArrivingLabel key={routeHash(live)} route={live} />}
+            />
             {/* Mounted from the start: it holds the outage watcher, and a
                 known offline state shows in the first paint. */}
             <ConnectivityBanner />
@@ -260,7 +254,14 @@ export function Shell({
             its own, which is what tabIndex -1 buys. A reader who takes the skip
             lands here, past the strip, and the next Tab continues into the page's
             own controls. */}
-            <div className="scroll" ref={scroller} tabIndex={-1}>
+            {/* Busy here, not on `main`: the wait's status beside it must still
+                be read out. */}
+            <div
+              className="scroll"
+              ref={scroller}
+              tabIndex={-1}
+              aria-busy={waiting || undefined}
+            >
               {leveled ? (
                 <SettingsPageTitle route={route} actionSlot={setHeadSlot} />
               ) : (
@@ -310,33 +311,30 @@ function isLeveled(route: Route): boolean {
   return route.screen === SETTINGS_SCREEN || onUnitPage;
 }
 
-// A settings page is named as its heading names it.
-function SettingsPageArriving(
-  props: Readonly<{ route: Route; waiting: boolean }>,
-) {
-  const section = useSettingsSection(props.route);
-  return <PageArriving {...props} section={section} />;
+// Mounted only while the wait shows, so a quick move reads no names.
+function ArrivingLabel({ route }: Readonly<{ route: Route }>) {
+  return route.screen === SETTINGS_SCREEN ? (
+    <SettingsArrivingLabel route={route} />
+  ) : (
+    <PageArrivingLabel route={route} />
+  );
 }
 
-// A record whose name has not been read is named by its list, never its id.
-function PageArriving({
+function SettingsArrivingLabel({ route }: Readonly<{ route: Route }>) {
+  const section = useSettingsSection(route);
+  return <PageArrivingLabel route={route} section={section} />;
+}
+
+// Named once, when the wait starts: a label that changed under it would be
+// read out twice. A record is named by its list, as on a phone.
+function PageArrivingLabel({
   route,
-  waiting,
   section,
-}: Readonly<{ route: Route; waiting: boolean; section?: NavSection }>) {
+}: Readonly<{ route: Route; section?: NavSection }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const kind = recordKindOf(route);
-  const record = kind && route.id;
-  const { name } = useEntityName(kind ?? "contact", record);
-  const subject = useRouteSubject(route);
-  const list = usePageName(route.screen);
-  const entry = sectionHead(section, route)?.entry;
-  const named = record ? (name ?? list) : subject;
-  const page = entry ? entryLabel(entry, locale, t) : named;
-  return (
-    <PageWait waiting={waiting} label={t("settings.pageLoading", { page })} />
-  );
+  const page = usePageCalled(withoutRecord(route), section);
+  const [label] = useState(() => t("shell.pageLoading", { page }));
+  return label;
 }
 
 // The record a record page shows, whichever tab and dials it has open.

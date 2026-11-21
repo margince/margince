@@ -13,14 +13,18 @@
   overflow: hidden;
   background: color-mix(in srgb, var(--textSecondary) 18%, transparent);
 }
-/* Neutral ink: the wait is the app's own, and indigo would name an agent. */
+/* Neutral ink: the wait is the app's own, and indigo would name an agent.
+   Still and whole unless `data-motion` (from pagewait.tsx) says it may run. */
 .pagewait-line::after {
   content: "";
   position: absolute;
   inset-block: 0;
   inset-inline-start: 0;
-  inline-size: 40%;
+  inline-size: 100%;
   background: var(--textSecondary);
+}
+.pagewait-line[data-motion="in"]::after {
+  inline-size: 40%;
   animation: pagewait-run 1.2s var(--ease-in-out) infinite;
 }
 @keyframes pagewait-run {
@@ -29,11 +33,5 @@
   }
   to {
     transform: translateX(250%);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pagewait-line::after {
-    animation: none;
-    inline-size: 100%;
   }
 }

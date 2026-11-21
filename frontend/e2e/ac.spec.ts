@@ -441,10 +441,17 @@ test("AC-shell-1l: a page still loading keeps the old page's name and says it is
     window.location.hash = "#/settings/privacy";
   });
   await expect.poll(() => held.length).toBeGreaterThan(0);
-  await expect(page.locator("main")).toHaveAttribute("aria-busy", "true");
-  await expect(page.locator(".pagewait")).toHaveText(
-    de["settings.pageLoading"].replace("{page}", de["settings.tab.privacy"]),
+  await expect(page.locator("main > .scroll")).toHaveAttribute(
+    "aria-busy",
+    "true",
   );
+  await expect(page.locator(".pagewait")).toHaveText(
+    de["shell.pageLoading"].replace("{page}", de["settings.tab.privacy"]),
+  );
+  const statusInBusy = await page
+    .locator(".pagewait")
+    .evaluate((region) => region.closest("[aria-busy]") !== null);
+  expect(statusInBusy).toBe(false);
   await expect(heading).toHaveCount(1);
   await expect(heading).toHaveText(de["nav.analytics"]);
   expect(await page.title()).toMatch(new RegExp(`^${de["nav.analytics"]} · `));
@@ -453,7 +460,7 @@ test("AC-shell-1l: a page still loading keeps the old page's name and says it is
   await page.unroute(settingsCode);
   for (const release of held) await release();
   await expect(heading).toHaveText(de["settings.tab.privacy"]);
-  await expect(page.locator("main")).not.toHaveAttribute("aria-busy");
+  await expect(page.locator("main > .scroll")).not.toHaveAttribute("aria-busy");
 });
 
 test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async ({

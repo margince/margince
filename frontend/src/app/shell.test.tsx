@@ -705,11 +705,17 @@ describe("Shell", () => {
     });
 
     await act(() => vi.advanceTimersByTimeAsync(200));
+    const label = document.querySelector(".pagewait")?.textContent;
+    cleanup();
+    vi.useRealTimers();
+
+    // The unit's page once it has landed: its trail ends in the same name.
+    render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
+    const leaf = document.querySelector(".topbar .crumbs-current")?.textContent;
     const unit = findExtension("notes");
     if (!unit) throw new Error("the composed registry lost its unit");
-    expect(document.querySelector(".pagewait")?.textContent).toBe(
-      en["settings.pageLoading"].replace("{page}", unitTitle(unit, "en")),
-    );
+    expect(leaf).toBe(unitTitle(unit, "en"));
+    expect(label).toBe(en["shell.pageLoading"].replace("{page}", leaf ?? ""));
   });
 
   it("mints the page-level heading on a route that names no record", () => {

@@ -50,4 +50,18 @@ describe("PageWait", () => {
     act(() => vi.advanceTimersByTime(PAGE_WAIT_DELAY_MS));
     expect(screen.getByRole("status")).toHaveTextContent("Loading Account…");
   });
+
+  it("runs the line, and holds it still under reduced motion", () => {
+    const { rerender } = render(<PageWait waiting label="Loading Account…" />);
+    expect(document.querySelector(".pagewait-line")).toHaveAttribute(
+      "data-motion",
+      "in",
+    );
+
+    rerender(<PageWait waiting label="Loading Account…" reducedMotion />);
+    expect(document.querySelector(".pagewait-line")).toHaveAttribute(
+      "data-motion",
+      "none",
+    );
+  });
 });

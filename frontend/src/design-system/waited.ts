@@ -28,6 +28,7 @@ export function useWaited(delayMs: number | undefined): boolean {
 /** Whether `waiting` has held for `delayMs` without a break. */
 export function useWaitedWhile(waiting: boolean, delayMs: number): boolean {
   const [waited, setWaited] = useState(false);
+  // Reset in render, not in an effect, so the next wait has no frame of a stale true.
   if (!waiting && waited) {
     setWaited(false);
   }

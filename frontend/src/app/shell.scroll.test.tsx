@@ -8,6 +8,7 @@ import {
   cleanup,
   fireEvent,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import { useState } from "react";
@@ -17,7 +18,12 @@ import { en } from "../i18n/en";
 import { samePage, useHash, useRoute } from "../lib/router";
 import { useReportShownAddress } from "../lib/screenaddress";
 import { forgetScrollMemory, keepPlaceOnNextMove } from "../lib/scrollmemory";
-import { ignoreSearch, render } from "../testing/shellharness";
+import {
+  ignoreSearch,
+  newClient,
+  render,
+  renderWith,
+} from "../testing/shellharness";
 import { Shell } from "./shell";
 
 // The routed screen's part of the contract: it names the address it shows.
@@ -123,6 +129,7 @@ async function moveTo(hash: string, state: unknown = null) {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
   forgetScrollMemory();
   window.history.replaceState(null, "", "#/");
 });
@@ -264,7 +271,12 @@ function trail(): string[] {
   });
   return within(nav)
     .getAllByRole("listitem")
-    .map((stop) => stop.textContent ?? "");
+    .map((stop) =>
+      (stop.textContent ?? "").replace(
+        stop.querySelector(".crumbs-sep")?.textContent ?? "",
+        "",
+      ),
+    );
 }
 
 function wait(): HTMLElement {
@@ -277,7 +289,18 @@ function activeRow(): Element | null {
   return document.querySelector("nav.rail a.navitem.active");
 }
 
-const LOADING_SCHEDULED = en["settings.pageLoading"].replace(
+const ANNA = "0a7e5c1d-6b2f-4c8e-9d3a-1f2e3d4c5b6a";
+
+// The requests that read a record's name, which only the landed trail makes.
+function nameReads(fetch: ReturnType<typeof vi.fn>): number {
+  return fetch.mock.calls.filter(([input]) =>
+    String(input instanceof Request ? input.url : input).includes(
+      "/references",
+    ),
+  ).length;
+}
+
+const LOADING_SCHEDULED = en["shell.pageLoading"].replace(
   "{page}",
   en["nav.scheduled"],
 );
@@ -314,18 +337,19 @@ describe("the chrome while the next page loads", () => {
     await moveTo("#/scheduled");
 
     act(() => vi.advanceTimersByTime(199));
-    expect(main()).not.toHaveAttribute("aria-busy");
+    expect(column()).not.toHaveAttribute("aria-busy");
     expect(document.querySelector(".pagewait-line")).toBeNull();
     expect(wait()).toHaveTextContent("");
 
     act(() => vi.advanceTimersByTime(1));
-    expect(main()).toHaveAttribute("aria-busy", "true");
+    expect(column()).toHaveAttribute("aria-busy", "true");
+    expect(wait().closest("[aria-busy]")).toBeNull();
     expect(document.querySelector(".pagewait-line")).not.toBeNull();
     expect(wait()).toHaveAttribute("role", "status");
     expect(wait()).toHaveTextContent(LOADING_SCHEDULED);
 
     fireEvent.click(screen.getByRole("button", { name: "Land" }));
-    expect(main()).not.toHaveAttribute("aria-busy");
+    expect(column()).not.toHaveAttribute("aria-busy");
     expect(document.querySelector(".pagewait-line")).toBeNull();
     expect(
       screen.getByRole("heading", { level: 1, name: en["nav.scheduled"] }),
@@ -333,29 +357,107 @@ describe("the chrome while the next page loads", () => {
   });
 
   it.each([
+    ["a screen", "#/scheduled", "last", en["nav.scheduled"]],
     [
-      "a settings page by its own name",
+      "a settings page",
       "#/settings/account",
+      "last",
       en["settings.tab.account"],
     ],
     [
-      "a record whose name is not read by its list",
-      "#/contacts/0a7e5c1d-6b2f-4c8e-9d3a-1f2e3d4c5b6a",
+      "a record, by its list",
+      `#/contacts/${ANNA}`,
+      "first",
       en["nav.contacts"],
     ],
-  ])("names %s", async (_case, destination, name) => {
+  ] as const)(
+    "names %s as its trail does once it lands",
+    async (_c, to, stop, name) => {
+      vi.useFakeTimers();
+      window.history.replaceState(null, "", "#/analytics");
+      render(
+        <Shell onOpenSearch={ignoreSearch}>
+          <Loading from="#/analytics" />
+        </Shell>,
+      );
+      await moveTo(to);
+      await act(() => vi.advanceTimersByTimeAsync(200));
+      const label = wait().textContent;
+
+      fireEvent.click(screen.getByRole("button", { name: "Land" }));
+      const stops = trail();
+      const named = stop === "first" ? stops[0] : stops[stops.length - 1];
+      expect(label).toBe(
+        en["shell.pageLoading"].replace("{page}", named ?? ""),
+      );
+      expect(named).toBe(name);
+    },
+  );
+
+  it("reads no record's name for the wait, even when the read would fail", async () => {
     vi.useFakeTimers();
+    const fetch = vi.fn(async () =>
+      Response.json({ code: "not_found" }, { status: 404 }),
+    );
+    vi.stubGlobal("fetch", fetch);
     window.history.replaceState(null, "", "#/analytics");
     render(
       <Shell onOpenSearch={ignoreSearch}>
         <Loading from="#/analytics" />
       </Shell>,
     );
-    await moveTo(destination);
+    await moveTo(`#/contacts/${ANNA}`);
+    await act(() => vi.advanceTimersByTimeAsync(1000));
 
-    await act(() => vi.advanceTimersByTimeAsync(200));
     expect(wait()).toHaveTextContent(
-      en["settings.pageLoading"].replace("{page}", name),
+      en["shell.pageLoading"].replace("{page}", en["nav.contacts"]),
+    );
+    expect(nameReads(fetch)).toBe(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Land" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(nameReads(fetch)).toBeGreaterThan(0);
+  });
+
+  it("keeps the name it started the wait with when a better one lands", async () => {
+    vi.useFakeTimers();
+    window.history.replaceState(null, "", "#/analytics");
+    const client = newClient();
+    renderWith(
+      client,
+      <Shell onOpenSearch={ignoreSearch}>
+        <Loading from="#/analytics" />
+      </Shell>,
+    );
+    await moveTo("#/lists/l-1");
+    await act(() => vi.advanceTimersByTimeAsync(200));
+    const started = wait().textContent;
+
+    act(() =>
+      client.setQueryData(["lists", "one", "l-1"], { name: "Key accounts" }),
+    );
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(wait().textContent).toBe(started);
+
+    fireEvent.click(screen.getByRole("button", { name: "Land" }));
+    expect(trail().at(-1)).toBe("Key accounts");
+  });
+
+  it("steps Back out of a move still loading, onto the record on screen", async () => {
+    window.history.replaceState(null, "", `#/contacts/${ANNA}`);
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <Loading from={`#/contacts/${ANNA}`} />
+      </Shell>,
+    );
+    await moveTo("#/projects/p-9");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: en["shell.back"] }));
+    });
+
+    await waitFor(() =>
+      expect(window.location.hash).toBe(`#/contacts/${ANNA}`),
     );
   });
 
@@ -372,7 +474,7 @@ describe("the chrome while the next page loads", () => {
     fireEvent.click(screen.getByRole("button", { name: "Land" }));
 
     act(() => vi.advanceTimersByTime(1000));
-    expect(main()).not.toHaveAttribute("aria-busy");
+    expect(column()).not.toHaveAttribute("aria-busy");
     expect(document.querySelector(".pagewait-line")).toBeNull();
   });
 
@@ -384,7 +486,7 @@ describe("the chrome while the next page loads", () => {
       screen.getByRole("heading", { level: 1, name: "Analytics" }),
     ).toBeInTheDocument();
     expect(activeRow()?.textContent).toBe("Analytics");
-    expect(main()).not.toHaveAttribute("aria-busy");
+    expect(column()).not.toHaveAttribute("aria-busy");
   });
 
   it("keeps the reading column of the page on screen", async () => {

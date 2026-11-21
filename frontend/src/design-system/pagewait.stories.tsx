@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Button } from "./atoms";
 import { PageWait, usePageWait } from "./pagewait";
 
@@ -39,15 +39,12 @@ export const Showing: Story = {
   args: { waiting: true, label: "Loading Account…" },
 };
 
-/**
- * With reduced motion on (the browser's rendering tools can turn it on), the
- * segment stands still across the whole line.
- */
+/** Under reduced motion the line stands still and whole. */
 export const ReducedMotion: Story = {
-  args: { waiting: true, label: "Loading Account…" },
+  args: { waiting: true, label: "Loading Account…", reducedMotion: true },
 };
 
-function DelayedWait({ label }: Readonly<{ label: string }>) {
+function DelayedWait({ label }: Readonly<{ label: ReactNode }>) {
   const [pending, setPending] = useState(false);
   const waiting = usePageWait(pending);
   return (

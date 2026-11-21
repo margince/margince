@@ -17,6 +17,7 @@ import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { stepBackOutOf } from "../lib/historydepth";
 import { useFirstScreenSettled } from "../lib/journeymarks";
 import {
   ariaKeyShortcuts,
@@ -30,7 +31,13 @@ import {
   rememberListAddress,
 } from "../lib/listreturn";
 import { useReadsTeamProgress } from "../lib/progressreader";
-import { type Route, routeHash, useHash } from "../lib/router";
+import {
+  navigateReplacing,
+  type Route,
+  routeHash,
+  samePage,
+  useHash,
+} from "../lib/router";
 import { usePhoneViewport } from "../lib/viewport";
 import { AccountMenu } from "./account";
 import { useFiltersCrumbs } from "./filterstrail";
@@ -72,6 +79,19 @@ const SetupReminder = lazy(
 // screen. The trail and the back control both lead to that list.
 function belowList(route: Route): boolean {
   return Boolean(recordKindOf(route) && route.id) || !!reservedPageTitle(route);
+}
+
+// While the next page loads, the bar has already left the record on screen.
+// Back then undoes that move, as the browser's Back would.
+function goBack(onScreen: Route, bar: string): void {
+  if (samePage(bar, routeHash(onScreen))) {
+    leaveRecord(onScreen);
+    return;
+  }
+  stepBackOutOf(
+    (hash) => samePage(hash, bar),
+    () => navigateReplacing(onScreen),
+  );
 }
 
 /**
@@ -179,6 +199,17 @@ export function TopBarSearch({
   );
 }
 
+/** What the page at `route` is called: the last stop of its trail. */
+export function usePageCalled(route: Route, section?: NavSection): string {
+  const crumbs = useCrumbs(route, section);
+  return crumbs[crumbs.length - 1]?.label ?? "";
+}
+
+/** The route a record stands under, for a place that reads no record's name. */
+export function withoutRecord(route: Route): Route {
+  return recordKindOf(route) ? { screen: route.screen } : route;
+}
+
 // The browser tab reads the trail from the page back to the product, as the
 // sign-in page does. Tabs and history entries then name different pages.
 function useTrailTitle(crumbs: readonly Crumb[]) {
@@ -205,8 +236,7 @@ function TopBarHome({
 }: Readonly<{ route: Route; section?: NavSection }>) {
   // A phone draws no trail, so its tab names a record's list rather than
   // asking for the record's name.
-  const named = recordKindOf(route) ? { screen: route.screen } : route;
-  useTrailTitle(useCrumbs(named, section));
+  useTrailTitle(useCrumbs(withoutRecord(route), section));
   const label = useHomeLinkLabel();
   const chipId = useId();
   const labelId = useId();
@@ -309,7 +339,7 @@ export function TopBar({
           <IconAction
             label={t("shell.back")}
             icon={<ArrowLeft />}
-            onClick={() => leaveRecord(route)}
+            onClick={() => goBack(route, hash)}
           />
         )}
         {phone ? (
