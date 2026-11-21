@@ -117,6 +117,29 @@ Schema that only a fork needs goes in `backend/migrations/custom/`. It has its o
 applies after core. Its files are named `YYYYMMDDHHMMSS` and its columns start with `x_`. It stays as it is
 when the fork merges from the main project.
 
+## Change a limited text column of activity
+
+`activity` carries two triggers that hold its text limits, `text_bound_insert` and `text_bound_update`.
+On this one table both name the limited columns. So Postgres refuses to drop one of those columns, or to
+change its type, while the triggers stand. The reasons are in
+[Why text has a shared limit](../explanation/text-length-limits.md).
+
+To drop such a column or change its type:
+
+1. In your migration, drop both triggers before you change the column:
+   `DROP TRIGGER text_bound_insert ON activity; DROP TRIGGER text_bound_update ON activity;`
+2. In its rollback, create both triggers again after the column is back. Copy the two
+   `CREATE TRIGGER` statements for `activity` from `backend/migrations/testdata/head_catalog.txt`.
+   Take them from the file as it was before your change.
+3. Remove or change the column's line in `backend/internal/platform/database/textbounds/columns.txt`.
+4. Record the schema, as in step 6 above.
+5. From `backend/`, write the migration that puts the triggers back for the columns that are left:
+   `go run ./tools/gen-textbounds -tables activity -version <unix second> -name <name>`.
+   Give it a version after your first migration, then record the schema again.
+
+A rename needs only steps 3 to 5, because Postgres follows the new name in the triggers by itself.
+The written migration then corrects the list of columns that the refusal reports.
+
 ## Migrations that lock a busy table
 
 Some migrations take a lock on a whole table, and every other user of that table waits on it. Such a

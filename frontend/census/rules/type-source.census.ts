@@ -64,7 +64,15 @@ const lineOf = (text: string, index: number) =>
  * its own selector, not the `@media` around it.
  */
 function selectorOf(text: string, index: number): string {
-  const open = text.lastIndexOf("{", index);
+  let open = index;
+  // Skips each block that closed before the declaration. A rule nested
+  // earlier in the same block is not the one the declaration stands in.
+  for (let depth = 0; open >= 0; open--) {
+    if (text[open] === "}") depth++;
+    if (text[open] !== "{") continue;
+    if (depth === 0) break;
+    depth--;
+  }
   if (open < 0) return "";
   const before = text.slice(0, open);
   const ended = Math.max(
@@ -97,6 +105,8 @@ function cssDeclarationHolds(
 ): boolean {
   if (value === INHERIT) return true;
   if (property === "font") return TYPE_TOKEN.test(value);
+  // A face's descriptor names the weight its file draws; it dresses nothing.
+  if (property === "font-weight" && selector === "@font-face") return true;
   if (property === "font-weight") return WEIGHT_TOKEN.test(value);
   // These three carry figure shapes and ligatures too; only capitals count.
   if (property === "font-variant-caps") return value === "normal";

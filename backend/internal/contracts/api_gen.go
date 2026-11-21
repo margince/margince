@@ -50062,7 +50062,8 @@ type DirectCommunicationSendRequest struct {
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
 
 	// ScheduledAt A future moment to send at instead of now. The decision is recorded now and spent when
-	// the message fires. Absent sends now.
+	// the message fires. It sends now only when `scheduled_at`, `scheduled_tz` and
+	// `scheduled_intent` are all absent.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
 
 	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.

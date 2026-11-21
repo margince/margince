@@ -9,10 +9,11 @@
 #   1. each refused shape is refused, and the finding names the planted file;
 #   2. the shapes the rule allows stay silent — code, pre, samp and .code-block
 #      in every spelling a stylesheet uses, the --fontFamilyMono token in tokens.css,
-#      a var() reference with a fallback, and `inherit`. A gate that fires on
-#      correct code teaches readers to stop reading it. (A grep reads comments
-#      as it reads code, so a comment naming the class is refused here too;
-#      census/rules/mono.census.ts is the arm that reads past one.)
+#      a var() reference with a fallback, `inherit`, and the family a @font-face
+#      declares. A gate that fires on correct code teaches readers to stop
+#      reading it. (A grep reads comments as it reads code, so a comment naming
+#      the class is refused here too; census/rules/mono.census.ts is the arm
+#      that reads past one.)
 #
 # Usage: bash frontend/scripts/check-font-lock.test.sh
 
@@ -53,6 +54,10 @@ REFUSED=(
   "screens/a.css|@media (width > 1px) { .foo { font-family: monospace; } }"
   "screens/a.css|pre { .label { font-family: var(--fontFamilyMono); } }"
   "screens/a.css|:root { --code-face: var(--fontFamilyMono); }"
+  # A face declared beside a rule does not open that rule to mono.
+  "screens/a.css|"$'@font-face { font-family: "Geist Mono"; }\n.foo { font-family: "Geist Mono"; }'
+  "screens/a.css|@font-face { font: 12px \"Geist Mono\"; }"
+  "screens/a.css|.foo { @font-face { font-family: \"Geist Mono\"; } font-family: monospace; }"
   "screens/a.css|.t-mono { color: inherit; }"
   "screens/a.tsx|export const A = () => <span className=\"t-mono\">1</span>;"
   "screens/a.tsx|export const A = () => <b style={{ fontFamily: \"var(--fontFamilyMono)\" }} />;"
@@ -105,6 +110,11 @@ pre { &:hover { font-family: var(--fontFamilyMono); } }
 .reset { font-family: inherit; }
 .figure { font-family: var(--fontFamilyHeading, var(--fontFamilyBody)); }
 .stack { font-family: var(--fontFamilyBody, Geist), sans-serif; }'
+plant "$CLEAN" design-system/fonts.css '@font-face {
+  font-family: "Geist Mono";
+  src: url("@fontsource/geist-mono/files/geist-mono-latin-400-normal.woff2") format("woff2");
+}
+@FONT-FACE { font-family: "Geist Mono"; }'
 plant "$CLEAN" screens/b.tsx 'export const B = () => <span className="t-num t-monochrome">1</span>;
 const sheet = "pre code { font-family: var(--fontFamilyMono); }";'
 

@@ -5,7 +5,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { jsonResponse, stubRoutes } from "./compose.testkit";
 import { DirectSendModal } from "./directsendmodal";
@@ -39,8 +39,17 @@ function open(onSent = vi.fn()) {
   return onSent;
 }
 
+// The moments below are judged against this clock, not the machine's.
+beforeEach(() => {
+  vi.useFakeTimers({
+    now: new Date("2030-01-15T10:00:00Z"),
+    toFake: ["Date", "setInterval", "clearInterval"],
+  });
+});
+
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 

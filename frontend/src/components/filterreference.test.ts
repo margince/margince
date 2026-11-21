@@ -238,6 +238,44 @@ describe("the two targets that are the roster", () => {
   });
 });
 
+describe("a target this module reads one page of", () => {
+  it.each([
+    [
+      "project",
+      (index: number) => ({ id: `pr-${index}`, name: `Rollout ${index}` }),
+    ],
+    [
+      "product",
+      (index: number) => ({ id: `pd-${index}`, name: `Licence ${index}` }),
+    ],
+  ] as const)(
+    "%s says the list stopped when more pages exist",
+    async (reference, row) => {
+      const { cursors, wrapper } = pagedHarness(row, 1);
+      const { result } = renderHook(() => useReferenceOptions(reference), {
+        wrapper,
+      });
+
+      await waitFor(() => expect(result.current.options).toHaveLength(1));
+      expect(cursors).toEqual([null]);
+      expect(result.current.partial).toBe(true);
+    },
+  );
+
+  it("calls a catalogue that fits one page whole", async () => {
+    const { wrapper } = pagedHarness(
+      (index) => ({ id: `pd-${index}`, name: `Licence ${index}` }),
+      0,
+    );
+    const { result } = renderHook(() => useReferenceOptions("product"), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.options).toHaveLength(1));
+    expect(result.current.partial).toBe(false);
+  });
+});
+
 describe("a configuration list the contract answers whole", () => {
   it("is never reported as part of one", async () => {
     const { wrapper } = harness({

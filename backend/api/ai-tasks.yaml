@@ -57,6 +57,10 @@
 #                     ProviderOptions, then the binding's thinking_level or
 #                     routing.reasoning_effort, then this. What each provider
 #                     is sent: docs/reference/ai-thinking.md.
+#   latency_scales_with_input  this interactive task takes longer the larger its
+#                     input, so certified latency over the corpus's fixed inputs
+#                     sets no time limit for it: it keeps CallCeiling on each try
+#                     and no bound on the walk. Only an interactive task may say it.
 #   no_payload        content from this task must NEVER reach ai_call_payload,
 #                     whatever the deployment's capture posture says. A parsed
 #                     field, not a phrase in `doc:` — a sentence in a comment
@@ -254,6 +258,7 @@ tasks:
     summary: "Writes the short summaries shown on account, contact and deal pages."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
+    latency_scales_with_input: true
     on_outage: degrades
     status: shipped
     subject_restriction: honour
@@ -330,6 +335,7 @@ tasks:
     summary: "Reads pasted meeting transcripts. Not in use yet."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
+    latency_scales_with_input: true
     status: planned
     subject_restriction: honour
     company_context: none
@@ -365,6 +371,7 @@ tasks:
     summary: "Shows a note, email or meeting in the reader's own language when they ask for it."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
+    latency_scales_with_input: true
     status: shipped
     subject_restriction: honour
     sites: [activity_text]
@@ -377,6 +384,7 @@ tasks:
     summary: "Answers questions from the documents your company filed, citing where each answer comes from."
     ladder: [premium]
     execution_mode: interactive
+    latency_scales_with_input: true
     on_outage: degrades
     status: shipped
     subject_restriction: none

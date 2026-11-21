@@ -210,7 +210,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "6c4169a2e205b23aaf1af0ad8701a1780a94ec05b8b9c9d9d4522ed355d579ea"
+const TaskContractHash = "de35de79b13bcff314c0e60bf88afb9c9ec94a4f7902985678f2185332258f72"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -644,6 +644,18 @@ var noPayloadTasks = map[Task]bool{
 
 // NoPayload reports the contract's payload prohibition for a task.
 func NoPayload(t Task) bool { return noPayloadTasks[t] }
+
+// inputScaledTasks take longer the larger their input, so certified latency
+// over fixed fixtures sets no time limit for them.
+var inputScaledTasks = map[Task]bool{
+	TaskCorpusAsk:       true,
+	TaskReaderRendering: true,
+	TaskSummarize:       true,
+	TaskTranscript:      true,
+}
+
+// LatencyScalesWithInput reports the contract's latency_scales_with_input for a task.
+func LatencyScalesWithInput(t Task) bool { return inputScaledTasks[t] }
 
 // taskSubjectRestriction is each task's declared restriction posture.
 var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
