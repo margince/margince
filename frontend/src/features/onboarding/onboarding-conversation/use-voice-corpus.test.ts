@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { en } from "../../../i18n/en";
 import {
   type ConversationEvent,
@@ -401,7 +401,14 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
     expect(cached()?.summary?.total_words).toBe(1800);
   });
 
+  // The clock stands still, so the probe's own read and the writes before it
+  // share one timestamp: only the order of the answers may decide.
   it("takes the meter from the probe read again when the read after a removal fails", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const reread = gate();
     stubApi({
       ingests: [{ stats: documentStats, summary: summaryOf(900) }],
       afterRemoveStatus: 500,
@@ -412,13 +419,10 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
       summary: null,
       sources: [],
     });
-    const probe = vi.fn(
-      async (): Promise<VoiceRestoreProbe> => ({
-        built: false,
-        summary: summaryOf(0),
-        sources: [],
-      }),
-    );
+    const probe = vi.fn(async (): Promise<VoiceRestoreProbe> => {
+      await reread.held;
+      return { built: false, summary: summaryOf(0), sources: [] };
+    });
     const dispatch = vi.fn<(event: ConversationEvent) => void>();
     const { result } = renderHook(
       () => {
@@ -442,7 +446,10 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
     if (added) {
       act(() => result.current.removeSample(added));
     }
+    await waitFor(() => expect(probe).toHaveBeenCalledTimes(1));
+    expect(result.current.meterStale).toBe(true);
 
+    reread.open();
     await waitFor(() => expect(result.current.summary?.total_words).toBe(0));
     expect(result.current.busy).toBe(false);
     expect(

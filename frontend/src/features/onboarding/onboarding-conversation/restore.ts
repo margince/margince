@@ -52,12 +52,19 @@ export function patchVoiceProbe(client: QueryClient, change: ProbeChange) {
 export async function refreshedProbeSummary(
   client: QueryClient,
 ): Promise<VoiceRestoreProbe["summary"]> {
-  const before = client.getQueryState(VOICE_PROBE_KEY)?.dataUpdatedAt ?? 0;
-  await client.invalidateQueries({ queryKey: VOICE_PROBE_KEY });
-  const after = client.getQueryState<VoiceRestoreProbe>(VOICE_PROBE_KEY);
-  return after !== undefined && after.dataUpdatedAt > before
-    ? (after.data?.summary ?? null)
-    : null;
+  const probe = client
+    .getQueryCache()
+    .find<VoiceRestoreProbe>({ queryKey: VOICE_PROBE_KEY });
+  if (probe === undefined || !probe.isActive()) {
+    await client.invalidateQueries({ queryKey: VOICE_PROBE_KEY });
+    return null;
+  }
+  // The read's own answer, never a timestamp: a write in the same millisecond
+  // would otherwise pass for a fresh read.
+  return probe.fetch(undefined, { cancelRefetch: true }).then(
+    (fresh) => fresh.summary,
+    () => null,
+  );
 }
 
 export type RestoreInputs = Readonly<{
