@@ -232,11 +232,14 @@ export function useTooltip<T extends HTMLElement = HTMLElement>(
  *
  * Always worth showing, and the anchor takes a tab stop. A figure is not a
  * control, so without one the exact amount is reachable by pointer only.
+ * With `tabStop` false only the pointer raises it, so the anchor carries the
+ * text as its description.
  */
 export function useDetailTooltip<T extends HTMLElement = HTMLElement>(
   text: string,
+  tabStop = true,
 ): Tooltip<T> {
-  return useTip<T>(text, always, true);
+  return useTip<T>(text, always, tabStop);
 }
 
 /**

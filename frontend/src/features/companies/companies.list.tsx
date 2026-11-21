@@ -237,10 +237,12 @@ export function CompaniesScreen({
             header: t("company.description"),
             cell: (company: Company) => company.description ?? "",
             sort: "description",
+            initiallyHidden: true,
           },
-          tagsColumn<Company>(t),
+          { ...tagsColumn<Company>(t), initiallyHidden: true },
           {
             key: "website",
+            initiallyHidden: true,
             header: t("company.website"),
             // Sorted by the host the cell prints; the scheme is a constant.
             sort: "website_url",
@@ -265,6 +267,7 @@ export function CompaniesScreen({
             // must tell "no contacts" from "not shown".
             key: "contacts",
             header: t("company.contactCount"),
+            initiallyHidden: true,
             numeric: true,
             cell: (company: Company) => company.contact_count ?? "",
             // A reader shown no count is ordered by none: such rows go last.
