@@ -154,9 +154,11 @@ def fair_guests_tagged(admin):
     """Thirty contacts carrying one tag no other case sees, so a list built on it
     holds more than one preview page."""
     tag = admin.call("POST", "/tags", {"name": FAIR_TAG})
-    for name in FAIR_GUESTS:
-        contact = admin.call("POST", "/contacts", {"full_name": name, "source": "manual"})
-        admin.call("POST", f"/tags/{tag['id']}/apply", {"entity_type": "contact", "entity_id": contact["id"]})
+    for number, name in enumerate(FAIR_GUESTS, start=1):
+        # A contact needs one way to reach it; the address is never what the case asks about.
+        contact = _create(admin, "/contacts", {"full_name": name, "emails": [
+            {"email": f"fair-guest-{number:02d}@guests.test", "is_primary": True}]}, name)
+        admin.call("POST", f"/tags/{tag['id']}/apply", {"entity_type": "contact", "entity_id": contact})
     preview = admin.call("POST", "/filters/preview", {
         "resource": "contact", "filter": {"field": "tag", "op": "eq", "value": tag["id"]}, "limit": 1,
     })
@@ -175,7 +177,7 @@ def stage_change_rule_on(admin):
     if rule is None:
         raise SetupFault(f"the workspace has no {STAGE_CHANGE_RULE} rule")
     # Running, it watches the stages of one pipeline, and it refuses to start without them.
-    pipelines = admin.call("GET", "/pipelines?limit=100").get("data", [])
+    pipelines = admin.call("GET", "/pipelines").get("data", [])
     pipeline = next((p for p in pipelines if p.get("is_default")), pipelines[0] if pipelines else None)
     if pipeline is None:
         raise SetupFault("the workspace has no pipeline for the stage-change rule to watch")

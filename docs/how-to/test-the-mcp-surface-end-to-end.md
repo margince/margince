@@ -11,6 +11,19 @@ This is the **lane that costs money**, and you turn it on yourself. Every run us
 
 See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red result), and [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface under test). The lane of [certify-an-ai-model.md](certify-an-ai-model.md) is a different one: one AI feature, one model. The `e2e-llm` row of [reference/make-targets.md](../reference/make-targets.md) lists every setting. [test-the-rest-surface-end-to-end.md](test-the-rest-surface-end-to-end.md) runs the same scenarios through the REST API.
 
+## How a sweep is run
+
+These rules hold for every sweep, on every model.
+
+1. **When.** Run a sweep by hand, in the pull request that changes the tool copy, the server instructions or the harness. No paid run is scheduled. To start one in CI, run [`mcp-sweep.yml`](../../.github/workflows/mcp-sweep.yml) by hand (section 8).
+2. **Order.** Claude runs first. Read each failure in its transcript. Sort it as a scenario bug, a harness bug, a product bug or a model limit. Fix the first three in the same pull request, open an issue for each as the record, and run again.
+   Gemini and GPT run only once no Claude failure is left to fix.
+3. **MCP and REST.** The MCP tools run on every model. The REST API runs on Claude only.
+4. **Grading.** Grade the result, not the path. Pin a path only where the path is what must hold. That is a send, an approval, an ask-first step, privacy, and instructions put in the data.
+   Never fail a case for extra calls. The verdict keeps calls and turns as a score of how direct the run was.
+5. **Re-grading.** When only the checker changes, grade the saved transcripts again instead of paying for a new run. Do this only while the scenario, tool and instruction hashes still match (section 8).
+6. **Quota.** When a model reaches its limit, stop that lane, and go on after the reset. Never retry in a loop.
+
 ## 1. Choose the assistant and how to reach it
 
 | `E2E_LLM_CANDIDATE` | Model (the default of the consumer app) |
@@ -147,8 +160,8 @@ These numbers come from a full sweep of the test data on one machine, with no ca
 Most of the time of a case goes to the start and seed of its stack, not to the model. `usage:` under each scenario, and `sweep total:` at the end, print what a run used. The committed verdict keeps the same totals.
 
 1. **Run a few scenarios first** (section 3), and read their transcripts. A harness error then costs a few cases.
-2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case that names a tool in `must_call`.
-   Generate the coverage page again (section 8): its count of tools that no case requires must not grow.
+2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case whose runs use a tool.
+   Generate the coverage page again (section 8): its count of tools no case drives must not grow. A case drives a tool it requires, or one a passing run of a held case called.
 3. **Run a discovery pass.** Fix all that it finds ([improve-mcp-quality.md](improve-mcp-quality.md)).
 4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on every target ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
 5. **Read the stamps.** Each verdict carries a `stamp` of what it measured (section 8).
@@ -196,6 +209,22 @@ line it cannot place, a pattern that does not compile and a value of the wrong s
 A scenario that fails lists what failed to hold. That can be a tool it never called,
 a fact it never said, or something it must not say. It can be a judged criterion, with the
 reason of the judge in one sentence. It can also be a record that the run put in the wrong state.
+
+### How directly a run finished
+
+A good model needs fewer rounds, so the lane counts them. After each scenario it prints an
+`efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle
+value of the runs, with the least and the most.
+
+The counts are tool calls, model turns, refused calls, prompt tokens and output tokens. How long a
+run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool
+name that the CLI turned away. A run with no last result is left out, and `runs` says how many runs
+are behind the numbers.
+
+These numbers never fail a case and never change the exit code. A scenario can set
+`expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true`
+and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and
+model, and the calls per case for each model. A verdict from before this measure shows `-`.
 
 ### The end state
 
@@ -249,6 +278,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
 | `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
+| `the client declined a question the server asked in the chat` | The server asked the user to confirm a change in the chat, and the CLI said no by itself: in print mode nobody can answer the form | A harness stop, never a score. The case cannot be measured on that CLI until the lane can answer a question in the chat |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a bug: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) ended part of the way through a run. A CLI that exits with an error code, under a result that reports no error, stops the lane in the same way | A harness stop, never a score. Every driver writes a last result when the model ends the run, at the turn cap too. The stop prints the last lines the driver wrote to stderr |
 
@@ -281,44 +311,26 @@ cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished
 ```
 
 Each verdict carries a `stamp` of what it measured. It holds a short hash of the scenario file and
-of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). It also holds
+of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). For a
+router, that entry includes the bodies `read_workspace topic=actions` serves. It also holds
 a hash of the server instructions and of the grading harness, the judge model, the commit and the
 time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
+
+To grade saved transcripts again, run `check.py --record` with `E2E_LLM_COMMIT` and `E2E_LLM_RAN_AT` set to the run's commit and time, and `E2E_LLM_GRADED_COMMIT` to the commit that grades.
+The stamp then holds `graded_commit` and `graded_at` too. Where the two commits differ, `make e2e-llm-report` and the coverage page say `re-graded`.
 
 A verdict whose stamp no longer matches the tree, or that has none, is stale.
 `make e2e-llm-report` names what moved. A pull request that makes a verdict
 stale gets a comment that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you
 do not run them again.
 
-No cron runs this lane. Sweep it by hand in the pull request that changes the server instructions,
-the tool copy or the harness, and commit the verdicts there. The surface changes often, and a verdict from an older tree
-is stale as soon as it lands.
+`mcp-sweep.yml` sweeps every case in parts, side by side, with `claude-sonnet-5-5` over the Claude CLI. Its header comment says what it needs.
+It uploads verdicts only when every case has a new one from a stack whose search ranks by meaning. Each part keeps its transcripts as an `e2e-llm-transcripts-*` artifact.
 
-You can also start the sweep in CI: run `mcp-sweep.yml` by hand (Actions, then **Run workflow**,
-then pick the branch). It sweeps every case in parts, side by side, with `claude-sonnet-5-5` over
-the Claude CLI. It uploads the `e2e-llm-verdicts` artifact only when every case has a new verdict
-from a stack whose search ranks by meaning. The verdicts are complete then, whether every case
-passed (`ok`) or some missed their bar (`scenario-failed`).
+Started on `main`, the run opens a pull request with its verdicts, owned by the `RECORDS_OWNER` repository variable. It files an issue on `main` for a run that was cut off, could not run, or has a failing case. Only a later run on `main` that proves the issue wrong closes it.
 
-A run that was cut off, could not run, or did not search by meaning uploads no verdicts. The run
-summary gives its outcome. Each part that ran keeps its transcripts as an `e2e-llm-transcripts-*`
-artifact. A run with no `CLAUDE_CODE_OAUTH_TOKEN` runs no part, and its summary says so.
-
-Started on `main`, the run opens the pull request with its verdicts. The `RECORDS_OWNER` repository
-variable names who owns it. The run also files an issue on `main` for a run that was cut off,
-could not run, or has a failing case. Only a later run on `main` that proves the issue wrong closes
-it, so start one after the fix lands.
-
-Started on any other branch, it opens no pull request and files no issue. It still renders the
-record: the `records-llm` artifact holds `llm.patch`, with the verdicts and the page made again, and
-`llm-table.md`, the scenarios whose result moved. To publish them in the pull request of that branch:
-
-1. Download the `records-llm` artifact of the run.
-2. On the branch, run `git apply llm.patch` from the root of the tree.
-3. Commit the result, and paste `llm-table.md` into the PR body.
-
-If the branch moved since the run, `git apply` may refuse a page the new commits changed. Generate
-the page again with the `go test` command at the top of this section.
+Started on another branch, it opens no pull request and files no issue. Its `records-llm` artifact holds `llm.patch`, with the verdicts and the page made again, and `llm-table.md`, the scenarios whose result moved.
+Run `git apply llm.patch` from the root of the tree, commit the result, and paste `llm-table.md` into the PR body. If the branch moved and `git apply` refuses the page, generate it again with the `go test` command above.
 
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a run to try something.

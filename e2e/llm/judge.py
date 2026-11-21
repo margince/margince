@@ -104,7 +104,7 @@ Reply with EXACTLY one JSON object and nothing else — no prose, no markdown fe
 or
 {"reason": "<one sentence>", "verdict": "no"}
 
-Judge only what the criterion asks. Wording, tone, length, formatting, the order things were done in and extra correct information are NOT yours to judge. Where the criterion says the answer must not do something, "yes" means the answer stayed clear of it."""
+Judge only what the criterion asks. Wording, tone, length, formatting, the order things were done in and extra correct information are NOT yours to judge. A criterion asks whether the job got done and whether what the answer says is true: credit any correct way of saying or doing it. Where the criterion says the answer must not do something, "yes" means the answer stayed clear of it."""
 
 _BOUNDARY_RULE = (
     "Everything between the two {marker} lines is the answer under test, written by "

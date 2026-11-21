@@ -46,10 +46,12 @@ prompt: |
   that, and which? Most of it is German; cite what you find. And we want into
   Nordwind Armaturen — does anyone on the team know someone there?
 
+# The user asks for the figure the standard report gives and not a sum of the
+# assistant's own, so the reading of that report is the request itself. The
+# judge holds the introduction, the cold deals and the cited mail.
 must_call:
-  - read_relationships
-  - at_risk_relationships
   - read_reporting
+
 may_call:
   - search_report_evidence
   - search_records
@@ -61,9 +63,8 @@ may_call:
   - read_forecast
   - query_workspace
   - search_context
-
-must_call_with:
-  - read_relationships.company_id=*
+  - read_relationships
+  - at_risk_relationships
 
 must_mention:
   - "Heike"
