@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
-import type { DealCommercial } from "./deal360/deallines";
+import type { DealCommercial } from "./deal360/deallinestotal";
 import type { Offer } from "./offers";
 import { OfferLinesPanel } from "./offers.fromdeal";
 

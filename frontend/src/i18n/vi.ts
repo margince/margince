@@ -4557,6 +4557,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.lines.description": "Mô tả",
   "deal.lines.quantity": "Số lượng",
   "deal.lines.price": "Giá bán",
+  "deal.lines.priceInOtherCurrency":
+    "Sản phẩm này có giá bằng {currency}. Hãy nhập giá của nó.",
   "deal.lines.remove": "Xóa {name}",
   "deal.lines.editTitle": "Sản phẩm và dịch vụ",
   "deal.lines.save": "Lưu sản phẩm",

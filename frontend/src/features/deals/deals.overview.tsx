@@ -19,7 +19,7 @@ import { DealBrief } from "./deal360/dealbrief";
 import { DealCommitmentsCard } from "./deal360/dealcommitments";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
-import { useDealLines } from "./deal360/deallines";
+import { useDealLines } from "./deal360/deallinestotal";
 import { DealLinksCard } from "./deal360/deallinkscard";
 import { DealMarginceChangesCard } from "./deal360/dealmarginchanges";
 import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";

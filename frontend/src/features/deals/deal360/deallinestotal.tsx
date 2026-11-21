@@ -1,11 +1,33 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../../../api/client";
+import type { components } from "../../../api/schema";
 import { formatMoneyOrAbsent } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { labelFor } from "../../../lib/labelfor";
-import type { DealCommercial } from "./deallines";
+import { unwrap } from "../../../lib/problem";
+
+export type DealCommercial = components["schemas"]["DealCommercial"];
+
+export const dealLinesKey = (dealId: string) => ["deal-lines", dealId] as const;
+
+/** The deal's lines and the value they add up to. */
+export function useDealLines(dealId: string) {
+  const t = useT();
+  return useQuery({
+    queryKey: dealLinesKey(dealId),
+    queryFn: async (): Promise<DealCommercial> =>
+      unwrap(
+        await api.GET("/deals/{id}/lines", {
+          params: { path: { id: dealId } },
+        }),
+        t,
+      ),
+  });
+}
 
 const MISSING_LABEL: Record<DealCommercial["missing"][number], MessageKey> = {
   lines: "deal.lines.missing.lines",

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../../api/client";
@@ -38,26 +38,9 @@ import {
 } from "../offerlinerates";
 import { OfferCurrencyField } from "../offers.currencyfield";
 import { useProductCandidateSearch } from "../products";
+import { type DealCommercial, dealLinesKey } from "./deallinestotal";
 
-export type DealCommercial = components["schemas"]["DealCommercial"];
 type DealLine = components["schemas"]["DealLine"];
-
-export const dealLinesKey = (dealId: string) => ["deal-lines", dealId] as const;
-
-/** The deal's lines and the value they add up to. */
-export function useDealLines(dealId: string) {
-  const t = useT();
-  return useQuery({
-    queryKey: dealLinesKey(dealId),
-    queryFn: async (): Promise<DealCommercial> =>
-      unwrap(
-        await api.GET("/deals/{id}/lines", {
-          params: { path: { id: dealId } },
-        }),
-        t,
-      ),
-  });
-}
 
 /** One row the editor holds. `id` is the saved line, absent on a new one. */
 type DraftLine = LineRates & {
@@ -71,6 +54,7 @@ type DraftLine = LineRates & {
   // The product's name and price as the picker named them, for a line not saved yet.
   catalogName?: string;
   catalogPriceMinor?: number;
+  catalogCurrency?: string;
 };
 
 // A rate card price is one in the lines' currency, so a new currency drops it.
@@ -107,8 +91,24 @@ function typedRate(text: string, locale: Locale): number | undefined {
 
 const NO_RATES: LineRates = { discount_pct: "", tax_rate: "" };
 
-function lineFault(row: DraftLine, locale: Locale, t: Translator) {
+// A line with no price takes its product's, which the server refuses in
+// another currency. So such a line asks for a price in the lines' currency.
+function priceFault(row: DraftLine, currency: string | null, t: Translator) {
+  return row.priceMinor === null &&
+    row.catalogCurrency !== undefined &&
+    row.catalogCurrency !== currency
+    ? t("deal.lines.priceInOtherCurrency", { currency: row.catalogCurrency })
+    : undefined;
+}
+
+function lineFault(
+  row: DraftLine,
+  currency: string | null,
+  locale: Locale,
+  t: Translator,
+) {
   return (
+    priceFault(row, currency, t) ??
     typedNumberFault(row.quantity, locale, t) ??
     discountFault(row.discount_pct, locale, t) ??
     taxRateFault(row.tax_rate, locale, t)
@@ -297,7 +297,10 @@ function DraftLineRow({
         )}
       </Field>
       {currency && (
-        <Field label={t("deal.lines.price")}>
+        <Field
+          label={t("deal.lines.price")}
+          error={priceFault(row, currency, t)}
+        >
           {(control) => (
             <MoneyInput
               {...control}
@@ -354,16 +357,8 @@ export function DealLinesEditor({
   const replaces = state.mode !== "lines" && typedAmount !== null;
   const [partial, setPartial] = useState<string | null>(null);
   const save = useMutation({
-    mutationFn: () => {
-      const start = {
-        ...state,
-        currency: state.currency ?? (currency || null),
-      };
-      return saveDraft(
-        saveSteps(dealId, start, draft, replaces, t, locale),
-        start,
-      );
-    },
+    mutationFn: (input: { steps: SaveStep[]; start: DealCommercial }) =>
+      saveDraft(input.steps, input.start),
     onSuccess: (outcome) => {
       client.setQueryData(dealLinesKey(dealId), outcome.state);
       void client.invalidateQueries({ queryKey: ["deal", dealId] });
@@ -403,6 +398,7 @@ export function DealLinesEditor({
         description: candidate.name,
         catalogName: candidate.name,
         catalogPriceMinor,
+        catalogCurrency: candidate.currency,
         quantity: "",
         priceMinor: catalogPriceMinor ?? null,
         billing: EMPTY_LINE_BILLING,
@@ -439,10 +435,14 @@ export function DealLinesEditor({
       pending={save.isPending}
       // A refused figure would travel as no figure, so the save waits.
       confirmDisabled={draft.some(
-        (row) => lineFault(row, locale, t) !== undefined,
+        (row) => lineFault(row, linesCurrency, locale, t) !== undefined,
       )}
       error={save.error ? problemMessageOf(save.error, t) : partial}
-      onConfirm={() => save.mutate()}
+      onConfirm={() => {
+        const start = { ...state, currency: linesCurrency };
+        const steps = saveSteps(dealId, start, draft, replaces, t, locale);
+        save.mutate({ steps, start });
+      }}
     >
       <p className="t-body">{t("deal.lines.intro")}</p>
       {replaces && (

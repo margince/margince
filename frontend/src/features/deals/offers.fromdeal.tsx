@@ -10,7 +10,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { useDealLines } from "./deal360/deallines";
+import { useDealLines } from "./deal360/deallinestotal";
 import type { Offer } from "./offers";
 import { isOpenDraft } from "./offers.actions";
 import { OfferLineEditor } from "./offers.lines";

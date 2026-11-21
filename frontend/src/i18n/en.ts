@@ -4630,6 +4630,8 @@ export const en = {
   "deal.lines.description": "Description",
   "deal.lines.quantity": "Quantity",
   "deal.lines.price": "Selling price",
+  "deal.lines.priceInOtherCurrency":
+    "This product is priced in {currency}. Enter its price.",
   "deal.lines.remove": "Remove {name}",
   "deal.lines.editTitle": "Products and services",
   "deal.lines.save": "Save products",

@@ -4685,6 +4685,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.lines.description": "Beschreibung",
   "deal.lines.quantity": "Menge",
   "deal.lines.price": "Verkaufspreis",
+  "deal.lines.priceInOtherCurrency":
+    "Dieses Produkt hat einen Preis in {currency}. Gib seinen Preis ein.",
   "deal.lines.remove": "{name} entfernen",
   "deal.lines.editTitle": "Produkte und Leistungen",
   "deal.lines.save": "Produkte speichern",

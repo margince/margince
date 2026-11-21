@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../../design-system/select-testing";
 import { renderWithQueryClient } from "../../../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../../../testing/story-utils";
-import type { DealCommercial } from "./deallines";
+import type { DealCommercial } from "./deallinestotal";
 import { DealProductsCard } from "./dealproducts";
 
 // A deal priced from its own lines. The card lists them with their net value
@@ -327,6 +327,16 @@ describe("a deal priced from its lines", () => {
 
     await pickOption(user, currency, "USD");
     expect(price()).toHaveProperty("value", "");
+    // Saved with no price, the line would take a euro rate card price.
+    const save = within(dialog).getByRole("button", { name: "Save products" });
+    expect(save).toHaveProperty("disabled", true);
+    expect(
+      within(dialog).getByText(
+        "This product is priced in EUR. Enter its price.",
+      ),
+    ).toBeTruthy();
+    await user.type(price(), "2.40");
+    expect(save).toHaveProperty("disabled", false);
   });
 
   it("sends the tax rate and discount typed on a custom item", async () => {

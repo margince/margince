@@ -31,12 +31,12 @@ import {
 } from "../../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingfigures";
 import { useProductCandidateSearch } from "../products";
+import { DealLinesEditor } from "./deallines";
 import {
   type DealCommercial,
-  DealLinesEditor,
+  DealLinesTotal,
   useDealLines,
-} from "./deallines";
-import { DealLinesTotal } from "./deallinestotal";
+} from "./deallinestotal";
 
 type DealProduct = components["schemas"]["DealProduct"];
 type DealProductList = components["schemas"]["DealProductListResponse"];
