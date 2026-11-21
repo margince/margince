@@ -20,8 +20,6 @@ import (
 // duplicateEmailWhy is a merge candidate the run discloses and does not resolve.
 var (
 	boundArchivedWhy        = migration.Why(migration.ReasonRecordArchived)
-	linkedInClaimedWhy      = importkeys.LinkedInHeldWhy
-	domainClaimedWhy        = importkeys.DomainHeldWhy
 	contactEmailClaimedWhy  = importkeys.ContactEmailHeldWhy
 	contactHoldsLeadWhy     = importkeys.ContactHoldsLeadWhy
 	addressErasedWhy        = migration.Why(migration.ReasonAddressErased)

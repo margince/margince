@@ -119,7 +119,7 @@ func (w *csvWriters) bind(ctx context.Context, row migration.Row, id ids.UUID) e
 }
 
 // claimLanded claims the keys a bound row's record holds. A key the row would
-// still have to move onto the record was refused and claims nothing, as the
+// still have to move onto the record was refused. It claims nothing, as the
 // first pass claims nothing for a skipped row.
 func (w *csvWriters) claimLanded(ctx context.Context, row migration.Row, id ids.UUID) error {
 	if w.object == migration.ObjectDeal || w.object == migration.ObjectActivity {

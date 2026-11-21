@@ -47,13 +47,6 @@ func (w *csvWriters) claimRow(row migration.Row, typed map[string]any) {
 	w.links.claims.Claim(w.object, w.keysOf(row, typed))
 }
 
-// movedKeyKinds are the columns whose change moves a key, in the order the
-// store's refusals are asked.
-var movedKeyKinds = []struct {
-	field string
-	kind  importkeys.Kind
-}{{fieldEmail, importkeys.Email}, {fieldLinkedIn, importkeys.LinkedIn}, {fieldDomain, importkeys.Domain}}
-
 // movedKeyFields are the columns whose change moves a key.
 var movedKeyFields = map[string]importkeys.Kind{fieldEmail: importkeys.Email, fieldLinkedIn: importkeys.LinkedIn, fieldDomain: importkeys.Domain}
 

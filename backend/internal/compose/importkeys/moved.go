@@ -5,8 +5,8 @@ package importkeys
 
 // The question an update asks when it moves a key onto a record: does another
 // record already hold it. An earlier row of the run holds it through the
-// ledger. A stored record holds it through the store's own lookups, which are
-// the ones its uniqueness checks use, and the record's own values do not count.
+// ledger. A stored record holds it through the store's own lookups, the ones
+// its uniqueness checks use. The record's own values do not count.
 
 import (
 	"context"

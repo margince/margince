@@ -67,7 +67,7 @@ func (l Ledger) Claim(object string, values map[Kind]string) {
 }
 
 // Held reports whether an earlier row of one of these record types holds the
-// value as a key of this kind, in any spelling the store reads as the same key.
+// value as a key of this kind. Any spelling the store reads as that key counts.
 func (l Ledger) Held(kind Kind, value string, holders ...string) bool {
 	if value == "" {
 		return false

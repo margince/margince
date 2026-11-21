@@ -161,8 +161,8 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 
 func TestAResumedCommitClaimsNothingForARefusedMovedKeyRow(t *testing.T) {
 	e := setupImportApp(t)
-	stored := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Stored One",
-		"domains": []AnyMap{{"domain": "one.stored.test", "is_primary": true}}})
+	domains := []AnyMap{{"domain": "one.stored.test", "is_primary": true}}
+	stored := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Stored One", "domains": domains})
 	createdID(t, e, "/v1/companies", AnyMap{
 		"source": "manual", "display_name": "Held Co", "linkedin_url": "https://www.linkedin.com/company/held-co",
 	})

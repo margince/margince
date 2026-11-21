@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -104,4 +105,14 @@ func CompanyLinkedInRival(ctx context.Context, tx pgx.Tx, self ids.CompanyID, ur
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM company WHERE archived_at IS NULL AND lower(linkedin_url)=lower(@url) AND id <> @self)`,
 		pgx.NamedArgs{"url": url, "self": self}).Scan(&claimed)
 	return claimed, err
+}
+
+// CompanyDomainHeld reports whether a live company other than self holds the
+// domain, by the probe every door shares. It names no company.
+func CompanyDomainHeld(ctx context.Context, tx pgx.Tx, self ids.CompanyID, domain string) (bool, error) {
+	err := claimedDomainOwner(ctx, tx, self, domain)
+	if _, held := errors.AsType[*DuplicateDomainError](err); held {
+		return true, nil
+	}
+	return false, err
 }

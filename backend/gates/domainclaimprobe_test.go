@@ -58,8 +58,8 @@ const claimProbeOwner = "internal/modules/contacts/company_domains.go"
 var readsDomainClaim = regexp.MustCompile(
 	`(?is)SELECT\s+[^;]*\bcompany_id\b[^;]*\bFROM\s+company_domain\b[^;]*\bdomain\s*=`)
 
-// readsDomainClaimAny is the same question asked without projecting an id: an
-// EXISTS over `domain = ANY(spellings)`, which is how a copy of the rule that
+// readsDomainClaimAny is the same question asked without projecting an id.
+// It is an EXISTS over `domain = ANY(spellings)`. A copy of the rule that
 // answers a boolean would hide from the projection half.
 var readsDomainClaimAny = regexp.MustCompile(`(?is)\bFROM\s+company_domain\b[^;]*\bdomain\s*=\s*ANY\b`)
 

@@ -155,16 +155,6 @@ func claimedDomainOwner(
 	return dup
 }
 
-// CompanyDomainHeld reports whether a live company other than self holds the
-// domain, by the probe every door shares. It names no company.
-func CompanyDomainHeld(ctx context.Context, tx pgx.Tx, self ids.CompanyID, domain string) (bool, error) {
-	err := claimedDomainOwner(ctx, tx, self, domain)
-	if _, held := errors.AsType[*DuplicateDomainError](err); held {
-		return true, nil
-	}
-	return false, err
-}
-
 // ensureCompanyDomainsUnclaimed answers the domain dedupe probe with the
 // contract's 409, disclosing the existing company id only when the caller
 // could read that row (a domain maps to at most one company per workspace,
