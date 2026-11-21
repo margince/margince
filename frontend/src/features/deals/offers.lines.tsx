@@ -115,6 +115,8 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   // header-level Offer PATCH, a line item's own `version` is not a
   // precondition the API accepts, and the generated client refuses one.
   const updateMutation = useMutation({
+    // One at a time, so a line's later edit is the one the server keeps.
+    scope: { id: `offer-lines:${offer.id}` },
     mutationFn: async (variables: {
       lineItemId: string;
       patch: UpdateOfferLineItemRequest;

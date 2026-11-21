@@ -334,6 +334,41 @@ describe("a line's billing", () => {
     });
   });
 
+  it("sends a line's second billing change only once the first is answered", async () => {
+    const sent: unknown[] = [];
+    const answers: ((response: Response) => void)[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ offer: ["read", "update"] }),
+      "GET /offers/o-1": () => jsonResponse(draft([line1])),
+      "PATCH /offers/o-1/line-items/li-1": (body) => {
+        sent.push(body);
+        return new Promise<Response>((resolve) => answers.push(resolve));
+      },
+    });
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+    const billing = () =>
+      screen.getByRole("combobox", { name: "Billing, line 1" });
+
+    await pickOption(user, billing(), "One-time");
+    await pickOption(user, billing(), "Recurring");
+    await waitFor(() => expect(sent).toHaveLength(1));
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Billing period, line 1" }),
+      "Yearly",
+    );
+    expect(sent).toHaveLength(1);
+
+    answers[0](jsonResponse(draft([{ ...line1, billing_model: "one_time" }])));
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]).toMatchObject({
+      billing_model: "recurring",
+      billing_interval_months: 12,
+    });
+  });
+
   it("saves a line made recurring only once it has a period", async () => {
     const calls = serve(draft([line1]), () => ({
       status: 200,
