@@ -89,6 +89,10 @@ type mcpInfo struct {
 	// Instructions are what server/discover tells every client's model before
 	// any tool's own text; the MCP end-to-end verdicts stamp them.
 	Instructions string `json:"instructions"`
+	// ActionCatalog is what read_workspace topic=actions answers for each
+	// router: every route action's body as a model reads it. The verdicts
+	// stamp it per router, since tools/list carries none of it.
+	ActionCatalog map[string]json.RawMessage `json:"action_catalog"`
 }
 
 // mcpInfoTotals is the arithmetic a reviewer would otherwise do by hand.
@@ -155,6 +159,7 @@ func TestPublishedMCPSurfaceMatchesWhatAClientIsServed(t *testing.T) {
 	doc := mcpInfoDocument(t, tools, resources)
 	doc.Documents = publishedDocumentBodies(t, resources, views)
 	doc.Instructions = servedInstructions(t, views)
+	doc.ActionCatalog = servedActionCatalog(t)
 	rendered, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		t.Fatalf("rendering the served surface: %v", err)
@@ -533,4 +538,30 @@ func truncateLine(line string) string {
 		return line
 	}
 	return line[:limit] + "…"
+}
+
+// servedActionCatalog reads every router's action catalog through the tool
+// that serves it, re-encoded so the file holds JSON's own key order.
+func servedActionCatalog(t *testing.T) map[string]json.RawMessage {
+	t.Helper()
+	registry := NewRegistry(nil, SendPath{})
+	routers := registry.ActionCatalogRouters()
+	if len(routers) == 0 {
+		t.Fatal("no router serves an action catalog")
+	}
+	catalog := make(map[string]json.RawMessage, len(routers))
+	for _, router := range routers {
+		answer, err := registry.ActionCatalog(router)
+		if err != nil {
+			t.Fatalf("the %s action catalog: %v", router, err)
+		}
+		var canonical any
+		if err := json.Unmarshal(answer, &canonical); err != nil {
+			t.Fatalf("the %s action catalog does not decode: %v", router, err)
+		}
+		if catalog[router], err = json.Marshal(canonical); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return catalog
 }

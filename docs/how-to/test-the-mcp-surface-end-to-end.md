@@ -282,7 +282,8 @@ cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished
 ```
 
 Each verdict carries a `stamp` of what it measured. It holds a short hash of the scenario file and
-of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). It also holds
+of the published entries of the tools its checks name (`docs/reference/mcp-info.json`), with the
+action catalog of each router among them: the bodies `read_workspace topic=actions` serves. It also holds
 a hash of the server instructions and of the grading harness, the judge model, the commit and the
 time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
 
