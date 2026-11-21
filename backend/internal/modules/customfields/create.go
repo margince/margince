@@ -87,45 +87,13 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 	return out, nil
 }
 
-// createInTx is Create's transaction body: lock → collision pre-check →
-// column allocation → ALTER → catalog INSERT + audit, all as the schema pool's
-// owner role. The column is allocated under the lock so two creates of one name
-// cannot pick the same one.
+// createInTx is Create's transaction body: add the column, then write the
+// catalog row and audit entry, all as the schema pool's owner role.
 func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, creator ids.UUID, slug string) (crmcontracts.CustomField, error) {
-	if err := serializeSchemaChange(ctx, tx, spec.Object); err != nil {
-		return crmcontracts.CustomField{}, err
-	}
-	if err := refuseTakenLabel(ctx, tx, spec.Object, ids.Nil, spec.Label); err != nil {
-		return crmcontracts.CustomField{}, err
-	}
-	column, err := allocateColumn(ctx, tx, spec.Object, slug)
+	column, err := addColumn(ctx, tx, spec, slug)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
-	if err := refuseTakenColumn(ctx, tx, spec.Object, column); err != nil {
-		return crmcontracts.CustomField{}, err
-	}
-	ddl, err := BuildDDL(spec.Object, column, spec)
-	if err != nil {
-		return crmcontracts.CustomField{}, err
-	}
-
-	// The one statement that needs the owner role. 42701 can still fire
-	// despite the pre-check when the column arrived outside the engine's
-	// serialization (a fork migration) — the same honest answer applies.
-	// 55P03 is the bounded lock wait firing: the table is busy, the caller
-	// retries.
-	if _, err := tx.Exec(ctx, ddl); err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == pgDuplicateColumn {
-			return crmcontracts.CustomField{}, &ColumnTakenError{Column: column}
-		}
-		if lockTimedOut(err) {
-			return crmcontracts.CustomField{}, ErrTableBusy
-		}
-		return crmcontracts.CustomField{}, fmt.Errorf("customfields: adding column: %w", err)
-	}
-
 	var currency *string
 	if spec.Type == TypeCurrency {
 		currency = spec.Currency
@@ -157,6 +125,14 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: inserting catalog row: %w", err)
 	}
 
+	if err := auditCreate(ctx, tx, out, column, spec.Source); err != nil {
+		return crmcontracts.CustomField{}, err
+	}
+	return out, nil
+}
+
+// auditCreate writes the create's audit entry.
+func auditCreate(ctx context.Context, tx pgx.Tx, out crmcontracts.CustomField, column, source string) error {
 	after := map[string]any{
 		fieldObject: string(out.Object), fieldSlug: out.Slug, fieldLabel: out.Label,
 		fieldType: string(out.Type), fieldColumn: column, fieldStatus: string(out.Status),
@@ -177,10 +153,51 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	// cross-object catalog change has no single family stream to ride
 	// (the attachments precedent in writeshape_test.go).
 	if _, err := storekit.AuditWithEvidence(ctx, tx, "create", rbacObject, ids.UUID(out.Id),
-		nil, after, map[string]any{fieldSource: spec.Source}); err != nil {
-		return crmcontracts.CustomField{}, fmt.Errorf("customfields: audit write: %w", err)
+		nil, after, map[string]any{fieldSource: source}); err != nil {
+		return fmt.Errorf("customfields: audit write: %w", err)
 	}
-	return out, nil
+	return nil
+}
+
+// addColumn is the schema half of a create: lock → collision pre-check → column
+// allocation → ALTER. The column is allocated under the lock so two creates of
+// one name cannot pick the same one. It answers the column it added.
+func addColumn(ctx context.Context, tx pgx.Tx, spec FieldSpec, slug string) (string, error) {
+	if err := serializeSchemaChange(ctx, tx, spec.Object); err != nil {
+		return "", err
+	}
+	if err := refuseTakenLabel(ctx, tx, spec.Object, ids.Nil, spec.Label); err != nil {
+		return "", err
+	}
+	column, err := allocateColumn(ctx, tx, spec.Object, slug)
+	if err != nil {
+		return "", err
+	}
+	if err := refuseTakenColumn(ctx, tx, spec.Object, column); err != nil {
+		return "", err
+	}
+	ddl, err := BuildDDL(spec.Object, column, spec)
+	if err != nil {
+		return "", err
+	}
+
+	// The one statement that needs the owner role. 42701 can still fire
+	// despite the pre-check when the column arrived outside the engine's
+	// serialization (a fork migration), and answers the same conflict.
+	// 55P03 is the bounded lock wait firing: the table is busy, the caller
+	// retries.
+	if _, err := tx.Exec(ctx, ddl); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgDuplicateColumn {
+			return "", &ColumnTakenError{Column: column}
+		}
+		if lockTimedOut(err) {
+			return "", ErrTableBusy
+		}
+		return "", fmt.Errorf("customfields: adding column: %w", err)
+	}
+
+	return column, nil
 }
 
 // catalogBinding is one column of the catalog INSERT and its value. The column
