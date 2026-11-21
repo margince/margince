@@ -264,3 +264,29 @@ func TestABookingTheReaderMayNotOpenIsNotCounted(t *testing.T) {
 		t.Errorf("Rep2 reads %v, want their own limited booking and not Rep3's private one", credited)
 	}
 }
+
+// A meeting is judged booked by the start it was created with. Moving one
+// logged after its start into the future makes no booking, and moving a
+// booking into the past unmakes none. A date is ahead until it is over.
+func TestARescheduleNeitherMakesNorUnmakesABooking(t *testing.T) {
+	w := setupWork(t)
+	rep1 := w.seat(w.e.Rep1)
+	reschedule := func(id ids.UUID, start time.Time) {
+		t.Helper()
+		moved := activities.UpdateActivityInput{OccurredAt: &start, OccurredPrecision: new(activities.PrecisionInstant)}
+		if _, err := w.e.Activities.UpdateActivity(rep1, ids.From[ids.ActivityKind](id), moved); err != nil {
+			t.Fatalf("rescheduling the meeting: %v", err)
+		}
+	}
+	logged := w.meeting(rep1, t, w.e.Rep2, ninth, func(in *activities.LogActivityInput) { in.OccurredAt = new(ninth.Add(-24 * time.Hour)) })
+	reschedule(logged, ninth.Add(14*24*time.Hour))
+	reschedule(w.meeting(rep1, t, w.e.Rep2, ninth, nil), june)
+	eighth := time.Date(2026, 7, 8, 0, 0, 0, 0, time.UTC)
+	sameDay := w.meeting(rep1, t, w.e.Rep2, eighth.Add(18*time.Hour), func(in *activities.LogActivityInput) {
+		in.OccurredAt, in.OccurredPrecision = new(eighth.Add(12*time.Hour)), activities.PrecisionDay
+	})
+	reschedule(sameDay, june)
+	if credited := w.read(rep1, t, MeetingsBookedForColleagues, july, aug); credited[w.e.Rep1] != 2 || len(credited) != 1 {
+		t.Errorf("credits %v, want the booking moved into June and the day booking made on its own date", credited)
+	}
+}

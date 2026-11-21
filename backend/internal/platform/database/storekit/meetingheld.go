@@ -43,13 +43,6 @@ func MeetingHeldAsOfSQL(alias, asOf string, unread func(transition string) strin
 		Join: `LEFT JOIN LATERAL(SELECT h.* FROM activity_meeting_history h WHERE h.activity_id=` + alias +
 			`.id AND h.effective_at<=` + asOf + ` AND NOT ` + unread("h") + ` ORDER BY h.effective_at DESC,h.id DESC LIMIT 1) held ON true`,
 		Legacy: "(held.id IS NULL OR held.customer_eligible_at_change IS NULL OR held.partial_pre_history)",
-		// A transition says whether its start was a time or a date, so a day
-		// meeting moved later stays on the day it was held. A row recorded
-		// before it said so reads as the meeting's precision only while it is
-		// the meeting's time; otherwise as an instant.
-		Start: "COALESCE(held.scheduled_start," + alias + ".occurred_at)",
-		Precision: "COALESCE(held.scheduled_precision,CASE WHEN held.scheduled_start IS NULL OR held.scheduled_start = " +
-			alias + ".occurred_at THEN " + alias + ".occurred_precision ELSE 'instant' END)",
 		// Only a noon UTC start can be a date's anchor. On a row with no
 		// recorded precision it may be either day.
 		UnknownDay: "(held.scheduled_precision IS NULL AND held.scheduled_start IS NOT NULL AND " +
@@ -57,8 +50,21 @@ func MeetingHeldAsOfSQL(alias, asOf string, unread func(transition string) strin
 		Recorded: "(held.id IS NOT NULL OR NOT EXISTS(SELECT 1 FROM activity_meeting_history future WHERE future.activity_id=" +
 			alias + ".id AND NOT " + unread("future") + "))",
 	}
+	held.Start, held.Precision = TransitionStartSQL("held", alias)
 	held.Began = "(CASE WHEN " + held.UnknownDay + " THEN LEAST(" +
 		occurredday.StartAtSQL(held.Start, "'instant'") + "," + occurredday.StartAtSQL(held.Start, "'day'") +
 		") ELSE " + occurredday.StartAtSQL(held.Start, held.Precision) + " END)"
 	return held
+}
+
+// TransitionStartSQL is the start and precision the status transition under
+// transition placed the meeting under alias at, so a day meeting moved later
+// stays on the day it was then. A transition recorded before it said its
+// precision reads as the meeting's precision only while it is the meeting's
+// time; otherwise as an instant. No transition reads as the meeting today.
+func TransitionStartSQL(transition, alias string) (start, precision string) {
+	start = "COALESCE(" + transition + ".scheduled_start," + alias + ".occurred_at)"
+	precision = "COALESCE(" + transition + ".scheduled_precision,CASE WHEN " + transition + ".scheduled_start IS NULL OR " +
+		transition + ".scheduled_start = " + alias + ".occurred_at THEN " + alias + ".occurred_precision ELSE 'instant' END)"
+	return start, precision
 }
