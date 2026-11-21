@@ -42,6 +42,8 @@ func StoreWaitingHorizonTx(ctx context.Context, tx pgx.Tx, days int, measuredAt 
 	if days <= 0 {
 		return fmt.Errorf("storekit: a waiting horizon of %d days is not a measurement", days)
 	}
+	// Cut to the microsecond a timestamptz holds. The reader casts this text,
+	// and a cast rounds, which could move the instant past the reader's bound.
 	return StoreInstallationStateTx(ctx, tx, StateActivityWaitingHorizon,
-		waitingHorizon{Days: days, MeasuredAt: measuredAt})
+		waitingHorizon{Days: days, MeasuredAt: measuredAt.Truncate(time.Microsecond)})
 }

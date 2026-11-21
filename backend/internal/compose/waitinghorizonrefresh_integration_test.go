@@ -27,7 +27,7 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 	// 30-day ceiling. The colleagues' mail is answered within a minute and
 	// outnumbers it: counted, the horizon falls to the fourteen-day floor.
 	e.WsExec(t, `
-		CREATE TEMP TABLE horizon_seed AS
+		CREATE TEMP TABLE horizon_seed ON COMMIT DROP AS
 		  SELECT gen_random_uuid() id, g, g <= 40 AS customer,
 		         now() - interval '200 days' + g * interval '1 hour' AS at_time,
 		         CASE WHEN g <= 40 THEN 'buyer'||g||'@customer.test' ELSE 'rep'||g||'@colleagues.test' END AS addr
