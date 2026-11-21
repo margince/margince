@@ -6,7 +6,8 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { forReader } from "../../format/collate";
-import { formatDayMonth, formatNumber, INTL_LOCALE } from "../../format/format";
+import { formatDayMonth, formatNumber } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 import { openContactTab } from "../worklist/worklist.return";
@@ -52,7 +53,7 @@ export function ContactConfirmCallout({
       pending.map((field) => t(`contact.enriched.field.${field.field}`)),
     ),
   ].sort((a, b) => forReader(a, b, locale));
-  const fields = new Intl.ListFormat(INTL_LOCALE[locale], {
+  const fields = listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(fieldNames);

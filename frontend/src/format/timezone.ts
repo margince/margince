@@ -44,7 +44,13 @@
 // parameter from the component that read it — never by importing the fallback
 // below, which is a different value that only happens to agree.
 
+import type { Locale } from "../i18n";
 import { isRealCalendarDay, shiftCalendarDay } from "./calendarday";
+import {
+  dateTimeFormat,
+  pinnedDateTimeFormat,
+  zonelessDateTimeFormat,
+} from "./formatters";
 
 // The zone a record's dates are read in when the installation's own answer is
 // missing. It is only the last resort. `useCompanyZone` in
@@ -84,7 +90,7 @@ export function assertIanaZone(zone: string): void {
   }
   // Intl rejects unknown names: constructing with the zone throws a RangeError
   // that propagates. format() forces the value to be consumed.
-  new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
+  pinnedDateTimeFormat("en-US", { timeZone: zone }).format();
   checkedZones.add(zone);
 }
 
@@ -121,14 +127,17 @@ export function isRenderableZone(zone: string): boolean {
  * what the rest of the product says.
  */
 export function zoneNameAndOffset(
-  locale: string,
+  locale: Locale,
   at: Date,
   zone?: string,
 ): string {
   // A zone the formatters refuse is shown as stored, not dropped.
   if (zone !== undefined && !isRenderableZone(zone)) return zone;
   const named = (style: "long" | "shortOffset") =>
-    new Intl.DateTimeFormat(locale, { timeZone: zone, timeZoneName: style })
+    (zone === undefined
+      ? zonelessDateTimeFormat(locale, { timeZoneName: style })
+      : dateTimeFormat(locale, { timeZone: zone, timeZoneName: style })
+    )
       .formatToParts(at)
       .find((piece) => piece.type === "timeZoneName")?.value ?? "";
   return [named("long"), named("shortOffset").replace("GMT", "UTC")]
@@ -147,7 +156,7 @@ export function browserZone(): string {
 // Read to the second: Intl never reports a fraction.
 function wallClockMs(utcMs: number, zone: string): number {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
+    pinnedDateTimeFormat("en-US", {
       timeZone: zone,
       hourCycle: "h23",
       year: "numeric",
@@ -209,7 +218,7 @@ function instantInZone(
 // offset is what is in question at the moments this is asked about.
 export function dayInZone(utcMs: number, zone: string): string {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
+    pinnedDateTimeFormat("en-US", {
       timeZone: zone,
       year: "numeric",
       month: "2-digit",

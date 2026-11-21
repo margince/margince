@@ -3,7 +3,7 @@
 
 import type { Locale } from "../i18n";
 import { isRealCalendarDay } from "./calendarday";
-import { INTL_LOCALE } from "./intllocale";
+import { zonelessDateTimeFormat } from "./formatters";
 import {
   type DateFormat,
   type DatePart,
@@ -34,7 +34,7 @@ export function datePattern(locale: Locale, format: DateFormat): DatePattern {
 }
 
 function localePattern(locale: Locale): DatePattern {
-  const parts = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  const parts = zonelessDateTimeFormat(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

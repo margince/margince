@@ -48,6 +48,7 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 - `agent_run_pkey`: `unique, btree (id)`
 - `agent_run_trigger_unique`: `unique, btree (trigger_ref)`
 - `idx_agent_run_awaiting`: `btree (approval_id) WHERE (status = 'awaiting_approval')`
+- `idx_agent_run_running`: `btree (id) WHERE (status = 'running')`
 
 **Triggers**
 

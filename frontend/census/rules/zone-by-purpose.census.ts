@@ -558,6 +558,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The zone IS the input under test: the whole case is that a record's date and the count beside it name the same day, which only shows up where the reader's calendar and UTC's disagree — so it needs one named zone east of UTC, one west, and UTC itself to count against. A zone read off the runner would decide whether the defect can appear at all, and the suite would pass over code that is wrong for half the world.",
   },
   {
+    file: "format/formatters.test.ts",
+    why: "Tests the formatter cache. It must pin named zones to prove the cache key holds the zone: one instant read in Auckland and in Los Angeles gives two days.",
+  },
+  {
     file: "format/format.test.ts",
     why: "formatDate's whole contract is that it attaches the zone it is given, which needs a named zone on both sides of the assertion.",
   },
