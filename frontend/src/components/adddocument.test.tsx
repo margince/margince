@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  QueryObserver,
+} from "@tanstack/react-query";
 import {
   cleanup,
   render,
@@ -740,6 +744,54 @@ describe("adding a document from the account", () => {
       ).toBe(true),
     );
     expect(screen.getByText("Add document")).toBeTruthy();
+    expect(screen.getByLabelText<HTMLInputElement>(/Title/).value).toBe(
+      "Second draft",
+    );
+  });
+
+  it("leaves a draft begun during the list refresh alone when the metadata failed", async () => {
+    const user = userEvent.setup();
+    stubApi(FULL_SEAT, { metadataThrows: true, stampedCompany: "o-1" });
+    renderHosted();
+    const lists = shared ?? client();
+    let reads = 0;
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    // An open file list, so the refresh after the upload is a refetch to wait on.
+    const shown = new QueryObserver(lists, {
+      queryKey: companyDocumentsKey("o-1"),
+      queryFn: async () => {
+        reads += 1;
+        if (reads > 1) {
+          await held;
+        }
+        return { data: [] };
+      },
+    });
+    const unsubscribe = shown.subscribe(() => undefined);
+    await waitFor(() => expect(reads).toBe(1));
+
+    // A category, so the metadata request is sent and its failure is a partial.
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: /Category/ }),
+      "SOW/Contract",
+    );
+    await user.upload(screen.getByLabelText(/File/), orderForm());
+    await pressUpload(user);
+    await waitFor(() => expect(reads).toBe(2));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "reopen" }));
+    await user.type(await screen.findByLabelText(/Title/), "Second draft");
+
+    release?.();
+    await waitFor(() =>
+      expect(shown.getCurrentResult().isFetching).toBe(false),
+    );
+    unsubscribe();
+    expect(screen.queryByText(/Uploaded, but not filed/)).toBeNull();
     expect(screen.getByLabelText<HTMLInputElement>(/Title/).value).toBe(
       "Second draft",
     );

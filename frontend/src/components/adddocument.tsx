@@ -290,15 +290,15 @@ export function AddDocumentDialog({
     },
     onMutate: pressedIn,
     onSuccess: async (result, _submitted, pressed) => {
-      const here = inSession(pressed);
       // Closed before the refetch, so a dialog reopened meanwhile keeps its draft.
-      if (result.filed && here) {
+      if (result.filed && inSession(pressed)) {
         closeAndClear();
       }
       for (const queryKey of fileListKeys(result.home)) {
         await queryClient.invalidateQueries({ queryKey });
       }
-      if (result.filed || !here) {
+      // Asked again: the reader may have closed and reopened during the refetch.
+      if (result.filed || !inSession(pressed)) {
         return;
       }
       // Kept open, with the draft cleared: the document is on the record, so
