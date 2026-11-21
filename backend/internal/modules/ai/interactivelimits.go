@@ -3,10 +3,9 @@
 
 package ai
 
-// A task a user waits on is held to limits its certified models measured: one
-// on each try, and one on the whole walk across rungs, retries and the
-// escalation. A background task, and an interactive task no served record
-// measures, keeps CallCeiling on each try and no bound on the walk.
+// A task a user waits on is held to limits its certified models measured. One
+// bounds each try. The other bounds the whole walk across rungs, retries and
+// the escalation. Any other task keeps CallCeiling on each try and no walk bound.
 
 import (
 	"context"
@@ -16,20 +15,19 @@ import (
 
 const (
 	// InteractiveAttemptFloor is the least a derived per-try limit may be. A
-	// model the lane measured at a few seconds still meets a cold connection or
-	// a busy host, and a limit near its p95 would cut those answers.
+	// fast model still meets a cold connection or a busy host. A limit near its
+	// p95 would cut those answers.
 	InteractiveAttemptFloor = 30 * time.Second
 
 	// interactiveWalkTries is how many full tries a walk may spend. Two covers
-	// the first try and one more, a step up the ladder or the schema retry, each
-	// at the full limit. Past that the user has waited three times the slowest
-	// certified p95, and a further try rarely answers before they leave.
+	// the first try and one more at the full limit: a step up or the schema
+	// retry. Past that the user has waited three times the slowest p95.
 	interactiveWalkTries = 2
 )
 
 // InteractiveAttemptTimeout is the per-try limit of an interactive task whose
-// slowest served model measured p95: half again that p95, rounded up to a whole
-// second, held between InteractiveAttemptFloor and CallCeiling.
+// slowest served model measured p95. It is half again that p95, rounded up to a
+// second. It stays between InteractiveAttemptFloor and CallCeiling.
 func InteractiveAttemptTimeout(p95 time.Duration) time.Duration {
 	limit := (p95*3/2 + time.Second - 1).Truncate(time.Second)
 	return min(max(limit, InteractiveAttemptFloor), CallCeiling)
@@ -45,10 +43,10 @@ func walkBound(attempt time.Duration) time.Duration {
 // ExecutionModeOf is whether a user waits on task, as ai-tasks.yaml declares.
 func ExecutionModeOf(task Task) ExecutionMode { return taskExecutionModes[task] }
 
-// LatencyScalesWithInput is whether task's time grows with the size of what it
-// is given, so a p95 over the lane's fixed inputs does not bound it. A
-// transcript takes as long as its recording: a limit from short fixtures would
-// cut every long meeting, so it keeps CallCeiling and no walk bound.
+// LatencyScalesWithInput is whether task's time grows with the size of its
+// input, so a p95 over the lane's fixed inputs does not bound it. A transcript
+// takes as long as its recording. A limit from short fixtures would cut every
+// long meeting, so it keeps CallCeiling and no walk bound.
 func LatencyScalesWithInput(task Task) bool { return task == TaskTranscript }
 
 // tryTimeout is how long lc's next try may take: its task's per-try limit, cut

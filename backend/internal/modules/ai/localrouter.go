@@ -58,9 +58,8 @@ func WithoutResultCache() LocalOption {
 }
 
 // WithoutInteractiveLimits sends every task at CallCeiling with no walk bound.
-// The cert lane measures how long a model takes, and the interactive limits
-// are derived from those measurements: a run cut at its limit would record
-// the limit, and a slower model could never raise it.
+// The interactive limits come from what the cert lane measures. A run cut at
+// its limit would record the limit, and a slower model could never raise it.
 func WithoutInteractiveLimits() LocalOption {
 	return func(o *localOpts) { o.unlimited = true }
 }

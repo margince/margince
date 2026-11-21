@@ -123,9 +123,9 @@ type EffectiveTask struct {
 	WalkTimeout time.Duration
 }
 
-// TaskDefaults is what task's calls are sent with when nothing overrides it:
-// the limits its certified models measured (attemptlimits_gen.go), or
-// CallCeiling on each try and no walk bound where none measured it.
+// TaskDefaults is what task's calls are sent with when nothing overrides it.
+// That is the limits its certified models measured (attemptlimits_gen.go). With
+// no such measure, it is CallCeiling on each try and no walk bound.
 func TaskDefaults(task Task) EffectiveTask {
 	out := EffectiveTask{DecisionTimeout: DecisionCallTimeout, AttemptTimeout: CallCeiling}
 	if limit, ok := certifiedAttemptTimeouts[task]; ok {
@@ -206,8 +206,9 @@ func (r *Router) taskSettings(task Task) EffectiveTask {
 
 // callSettings is what one logical call's task is sent with, read on first use
 // and kept, so a save mid-call cannot give two of its attempts different
-// deadlines or record one it was not sent under. The first read starts the
-// call's walk bound.
+// deadlines or record one it was not sent under.
+//
+// The first read starts the call's walk bound.
 func (r *Router) callSettings(lc *logicalCall, task Task) EffectiveTask {
 	if lc.settings == nil {
 		settings := r.taskSettings(task)

@@ -107,7 +107,7 @@ func (s *deadlineSpy) Complete(ctx context.Context, req model.Request) (model.Re
 }
 
 // The lane measures the latency the limits come from, so it runs a waited task
-// at the ceiling: a run cut at the limit would record the limit itself.
+// at the ceiling. A run cut at the limit would record the limit itself.
 func TestTheLaneMeasuresAWaitedTaskWithoutItsLimit(t *testing.T) {
 	candidate := &deadlineSpy{FakeClient: ai.NewFakeClient().Script("the widget is blue")}
 	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))

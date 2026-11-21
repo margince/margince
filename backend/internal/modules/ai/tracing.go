@@ -200,9 +200,6 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		// share and the walk still reaches the rung above it.
 		timeout, spent := r.tryTimeout(lc, task)
 		if spent != nil {
-			if lastErr != nil {
-				spent = fmt.Errorf("%w (the rung: %w)", spent, lastErr)
-			}
 			return model.Response{}, lastTier, false, spent
 		}
 		// The rail's lease covers one model call, and this is the next one.
