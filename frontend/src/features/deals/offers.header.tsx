@@ -179,7 +179,9 @@ export function EditOfferHeaderModal({
   );
 
   const mutation = useMutation({
-    mutationFn: async (input: HeaderEditValues) => {
+    mutationFn: async (
+      input: HeaderEditValues & Readonly<{ savedValidUntil: string }>,
+    ) => {
       return unwrap(
         await api.PATCH("/offers/{id}", {
           params: {
@@ -191,7 +193,7 @@ export function EditOfferHeaderModal({
             buyer_company_id: input.buyer_company_id,
             // Sent only when changed: a saved day that has since passed is
             // left alone, and a typed one is held to today or later.
-            ...(input.valid_until === (offer.valid_until ?? "")
+            ...(input.valid_until === input.savedValidUntil
               ? {}
               : { valid_until: input.valid_until || null }),
             template_id: input.template_id,
@@ -338,10 +340,14 @@ export function EditOfferHeaderModal({
               faults.show(new Map([["valid_until", validUntilFault]]));
               return;
             }
-            mutation.mutate(values, {
-              onError: (error) =>
-                faults.show(refusalSentences(error, t, labels).byField),
-            });
+            const savedValidUntil = offer.valid_until ?? "";
+            mutation.mutate(
+              { ...values, savedValidUntil },
+              {
+                onError: (error) =>
+                  faults.show(refusalSentences(error, t, labels).byField),
+              },
+            );
           }}
         >
           {t("record.save")}
