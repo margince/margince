@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
@@ -372,11 +373,14 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 		return reportOutcome{}, err
 	}
 
-	fetched, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, selects, columns)
+	covered := partialSumAliases(spec, aggregates)
+	fetchSelects, fetchColumns := dealcoverage.Attach(covered, pipelineBaseValueExpr, spec.dimensions[fieldCurrency], selects, columns)
+	fetched, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, fetchSelects, fetchColumns)
 	if err != nil {
 		return reportOutcome{}, err
 	}
 	rows, frame := fetched.rows, fetched.frame
+	dealcoverage.Fold(rows, covered)
 
 	return reportOutcome{
 		ExcludedByPermission: fetched.excluded,

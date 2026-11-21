@@ -50836,7 +50836,8 @@ components:
         rows:
           type: array
           items: {type: object, additionalProperties: true}
-          description: Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
+          description: >-
+            Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
         total_rows:
           type: integer
           description: >-

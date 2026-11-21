@@ -3071,7 +3071,7 @@ export const en = {
   "coverage.noRate_other": "{count} deals have no exchange rate{currencies}",
   "coverage.noValue_one": "{count} deal has no value",
   "coverage.noValue_other": "{count} deals have no value",
-  "coverage.partial": "partial",
+  "coverage.partial": "Partial",
   "coverage.partialTip": "Partial total: it leaves out these deals.",
   "board.totalsTip":
     "{total} open, {weighted} weighted by each deal’s probability.",
@@ -9190,8 +9190,6 @@ export const en = {
   "analytics.field.open_commitments": "Open tasks",
   "analytics.field.open_deal_value_minor": "Open deal value",
   "analytics.field.open_deal_unpriced": "Open deals not priced",
-  "analytics.field.no_rate_deal": "Deals with no exchange rate",
-  "analytics.field.no_value_deal": "Deals with no value",
   "analytics.field.overdue_commitments": "Overdue tasks",
   "analytics.field.close_month": "Close month",
   "analytics.field.owner_id": "Owner",

@@ -12,7 +12,7 @@ import {
 import { type Locale, usePlural, useT } from "../../i18n";
 import { RATE_SHEET, useCoverageWords } from "../../lib/coveragewords";
 import { WIN_PROBABILITY_DIAL } from "../../lib/dealranges";
-import { dealsFilteredBy } from "../../lib/dealsaddress";
+import { dealsFilteredBy, type scopeDealDials } from "../../lib/dealsaddress";
 import {
   addCoverage,
   coverageOf,
@@ -65,6 +65,29 @@ export function CoverageNote({
       {value}
     </>
   );
+}
+
+// The word that marks a figure adding only the deals that convert. It stands
+// beside the raw and the weighted figure alike, since both leave the deals out.
+export function PartialMark({
+  coverage,
+}: Readonly<{ coverage: MoneyCoverage | null | undefined }>) {
+  const t = useT();
+  return hasGap(coverage) ? (
+    <span className="t-caption analytics-partial">
+      {" "}
+      {t("coverage.partial")}
+    </span>
+  ) : null;
+}
+
+// The same mark for a figure a stat card holds as text.
+function withPartial(
+  figure: string,
+  coverage: MoneyCoverage | null | undefined,
+  t: ReturnType<typeof useT>,
+): string {
+  return hasGap(coverage) ? `${figure} ${t("coverage.partial")}` : figure;
 }
 
 // The footnote under a money figure that leaves deals out: how many, and why.
@@ -168,11 +191,10 @@ export function ForecastTile({
   // pairs: a caption is read as one sentence about the figure.
   const parts: ReactNode[] = [];
   if (weightedMinor != null) {
-    parts.push(
-      t("analytics.forecastWeighted", {
-        amount: formatAnalyticsMoney(weightedMinor, currency, locale),
-      }),
-    );
+    const weighted = t("analytics.forecastWeighted", {
+      amount: formatAnalyticsMoney(weightedMinor, currency, locale),
+    });
+    parts.push(withPartial(weighted, coverage, t));
   }
   if (dealCount != null) {
     parts.push(deals(dealCount));
@@ -186,7 +208,11 @@ export function ForecastTile({
       label={label}
       source={source}
       href={dealsUrl}
-      value={formatAnalyticsMoney(amountMinor, currency, locale)}
+      value={withPartial(
+        formatAnalyticsMoney(amountMinor, currency, locale),
+        coverage,
+        t,
+      )}
       detail={
         parts.length > 0 ? (
           <>
@@ -211,21 +237,27 @@ function bandSlots(rows: readonly ReportRow[]): string[] {
   return [...known, ...new Set(added)];
 }
 
-function bandDealsUrl(key: string): string | undefined {
+function bandDealsUrl(key: string, scope: DealDials): string | undefined {
   const band = bandOfKey(key);
-  return band
-    ? dealsFilteredBy(WIN_PROBABILITY_DIAL, bandDialValue(band))
+  return band && scope
+    ? dealsFilteredBy(WIN_PROBABILITY_DIAL, bandDialValue(band), scope)
     : undefined;
 }
+
+// The deals-list dials the report's scope names. Null where the list cannot
+// say it, because a link would then open more deals than the count held.
+type DealDials = ReturnType<typeof scopeDealDials>;
 
 export function ForecastStrip({
   rows,
   baseCurrency,
   locale,
+  dealDials,
 }: Readonly<{
   rows: ReportRow[];
   baseCurrency: string | null;
   locale: Locale;
+  dealDials: DealDials;
 }>) {
   const t = useT();
   return (
@@ -252,7 +284,7 @@ export function ForecastStrip({
           return (
             <ForecastTile
               key={key}
-              dealsUrl={bandDealsUrl(key)}
+              dealsUrl={bandDealsUrl(key, dealDials)}
               label={band ? t(band.label) : key}
               amountMinor={row ? rowMoney(row, "raw_minor") : null}
               weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
@@ -311,7 +343,9 @@ export function StageTable({
   stages,
   locale,
   baseCurrency,
+  dealDials,
 }: Readonly<{
+  dealDials: DealDials;
   rows: ReportRow[];
   stages: readonly Stage[];
   locale: Locale;
@@ -356,9 +390,14 @@ export function StageTable({
             render: (row: StageAgg) => (
               <CountLink
                 count={row.count}
-                href={dealsFilteredBy("stage_id", row.stageId, {
-                  status: "open",
-                })}
+                href={
+                  dealDials
+                    ? dealsFilteredBy("stage_id", row.stageId, {
+                        ...dealDials,
+                        status: "open",
+                      })
+                    : undefined
+                }
                 title={t("analytics.openStageDeals", { stage: row.stageName })}
               />
             ),
@@ -386,6 +425,7 @@ export function StageTable({
                       baseCurrency,
                       locale,
                     )}
+                    <PartialMark coverage={row.coverage} />
                     <CoverageFootnote coverage={row.coverage} />
                   </span>
                 </BarFigure>
@@ -396,12 +436,16 @@ export function StageTable({
             key: "weighted",
             header: t("analytics.weighted"),
             align: "end",
-            render: (row: StageAgg) =>
-              formatAnalyticsMoneyOrAbsent(
-                row.weightedMinor,
-                baseCurrency,
-                locale,
-              ),
+            render: (row: StageAgg) => (
+              <>
+                {formatAnalyticsMoneyOrAbsent(
+                  row.weightedMinor,
+                  baseCurrency,
+                  locale,
+                )}
+                <PartialMark coverage={row.coverage} />
+              </>
+            ),
           },
         ]}
         rows={aggregates}
@@ -434,13 +478,13 @@ function PipelineTotals({
   const t = useT();
   const count = aggregates.reduce((total, row) => total + row.count, 0);
   // Every stage's sum already leaves out the deals it cannot price, so the
-  // header adds the sums and the gaps of the same stages. A stage that did
-  // not state its gaps would leave a shortfall unsaid, so then the totals
-  // are absent.
+  // header adds the sums and the gaps of the same stages. A stage with deals
+  // that states no coverage (an older server) would leave a shortfall unsaid,
+  // so then the totals are withheld.
   const coverage = addCoverage(aggregates.map((row) => row.coverage));
-  const unstated =
-    coverage == null &&
-    aggregates.some((row) => row.count > 0 && row.rawMinor == null);
+  const unstated = aggregates.some(
+    (row) => row.count > 0 && row.coverage == null,
+  );
   const rawMinor = unstated
     ? null
     : sumKnown(aggregates.map((row) => row.rawMinor));
@@ -458,16 +502,20 @@ function PipelineTotals({
       <StatCard
         narrow="row"
         label={t("analytics.unweighted")}
-        value={formatAnalyticsMoneyOrAbsent(rawMinor, baseCurrency, locale)}
+        value={withPartial(
+          formatAnalyticsMoneyOrAbsent(rawMinor, baseCurrency, locale),
+          coverage,
+          t,
+        )}
         detail={footnote}
       />
       <StatCard
         narrow="row"
         label={t("analytics.weighted")}
-        value={formatAnalyticsMoneyOrAbsent(
-          weightedMinor,
-          baseCurrency,
-          locale,
+        value={withPartial(
+          formatAnalyticsMoneyOrAbsent(weightedMinor, baseCurrency, locale),
+          coverage,
+          t,
         )}
         detail={footnote}
       />

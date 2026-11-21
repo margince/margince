@@ -62,8 +62,6 @@ describe("reports never sum money across currencies", () => {
       { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
       { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
       { fn: "count", as: "deal_count" },
-      { fn: "count", field: "no_value_deal", as: "no_value_deals" },
-      { fn: "count", field: "no_rate_deal", as: "no_rate_deals" },
     ]);
   });
 
@@ -231,14 +229,19 @@ describe("reports never sum money across currencies", () => {
           raw_minor: 100,
           weighted_minor: 90,
           deal_count: 4,
-          no_value_deals: 1,
-          no_rate_deals: 2,
-          no_rate_currencies: "JPY,SEK",
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: true,
+            no_value_deals: 1,
+            no_rate_deals: 2,
+            missing_currencies: ["JPY", "SEK"],
+          },
         },
       ],
       STAGES,
     );
     expect(row.coverage).toEqual({
+      partial: true,
       noValue: 1,
       noRate: 2,
       rateCurrencies: ["JPY", "SEK"],
@@ -272,9 +275,13 @@ describe("reports never sum money across currencies", () => {
             raw_minor: 100,
             weighted_minor: 90,
             deal_count: 2,
-            no_value_deals: 0,
-            no_rate_deals: 1,
-            currency: "JPY",
+            coverage: {
+              aggregates: ["raw_minor"],
+              partial: true,
+              no_value_deals: 0,
+              no_rate_deals: 1,
+              missing_currencies: ["JPY"],
+            },
           },
         ],
       }),
@@ -316,8 +323,13 @@ describe("reports never sum money across currencies", () => {
             raw_minor: 100,
             weighted_minor: 90,
             deal_count: 2,
-            no_value_deals: 0,
-            no_rate_deals: 0,
+            coverage: {
+              aggregates: ["raw_minor"],
+              partial: false,
+              no_value_deals: 0,
+              no_rate_deals: 0,
+              missing_currencies: [],
+            },
           },
         ],
       }),
@@ -434,9 +446,13 @@ describe("reports never sum money across currencies", () => {
             raw_minor: 2_500_000,
             weighted_minor: 250_000,
             deal_count: 2,
-            no_value_deals: 0,
-            no_rate_deals: 1,
-            currency: "JPY",
+            coverage: {
+              aggregates: ["raw_minor"],
+              partial: true,
+              no_value_deals: 0,
+              no_rate_deals: 1,
+              missing_currencies: ["JPY"],
+            },
           },
         ],
       }),
@@ -447,7 +463,9 @@ describe("reports never sum money across currencies", () => {
       .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     expect(
-      await screen.findByText(formatAnalyticsMoney(2_500_000, "EUR", "en")),
+      await screen.findByText(
+        `${formatAnalyticsMoney(2_500_000, "EUR", "en")} Partial`,
+      ),
     ).toBeTruthy();
     // Fragments on the tile's second line, never "Label: value" pairs: a
     // caption is read as one sentence about the figure above it. Where the
@@ -455,10 +473,10 @@ describe("reports never sum money across currencies", () => {
     // states the gap. Without it the total reads as covering both deals when
     // it covers one.
     const [detail] = screen.getAllByText((text) =>
-      text.includes("weighted · "),
+      text.includes("weighted Partial · "),
     );
     expect(detail.textContent).toBe(
-      `${formatAnalyticsMoney(250_000, "EUR", "en")} weighted · 2 deals · 1 deal has no exchange rate (JPY)`,
+      `${formatAnalyticsMoney(250_000, "EUR", "en")} weighted Partial · 2 deals · 1 deal has no exchange rate (JPY)`,
     );
   });
 });

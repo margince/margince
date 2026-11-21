@@ -67,10 +67,8 @@ func pipelineCurrentSpec() reportSpec {
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountBaseMinor, As: "amount_base_minor_sum"},
 			{Fn: aggFnSum, Field: fieldWeightedBaseMinor, As: "weighted_base_minor_sum"},
-			// How many deals the money covers, and why the rest are left out.
+			// How many deals the money covers; the row's coverage says why the rest are not.
 			{Fn: aggFnCount, Field: fieldAmountBaseMinor, As: aliasPricedDeals},
-			{Fn: aggFnCount, Field: dealcoverage.MeasureNoValue, As: dealcoverage.AliasNoValue},
-			{Fn: aggFnCount, Field: dealcoverage.MeasureNoRate, As: dealcoverage.AliasNoRate},
 		},
 	}
 }
@@ -113,7 +111,6 @@ func baseMoneyMeasures(native map[string]string) map[string]string {
 		fieldAmountBaseMinor:   pipelineBaseValueExpr,
 		fieldWeightedBaseMinor: pipelineWeightedBaseExpr,
 	}
-	maps.Copy(measures, dealcoverage.Measures(pipelineBaseValueExpr))
 	maps.Copy(measures, native)
 	return measures
 }
@@ -122,7 +119,7 @@ func baseMoneyCoverage(fields ...string) map[string]string {
 	if len(fields) == 0 {
 		fields = []string{fieldAmountBaseMinor, fieldWeightedBaseMinor}
 	}
-	missing := "CASE WHEN " + dealcoverage.NoRateSQL(pipelineBaseValueExpr) + " THEN 1 ELSE 0 END"
+	missing := "CASE WHEN " + dealcoverage.NoRateSQL("t", pipelineBaseValueExpr) + " THEN 1 ELSE 0 END"
 	out := make(map[string]string, len(fields))
 	for _, field := range fields {
 		out[field] = missing

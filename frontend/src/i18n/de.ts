@@ -3168,7 +3168,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "coverage.noRate_other": "{count} Deals haben keinen Wechselkurs{currencies}",
   "coverage.noValue_one": "{count} Deal hat keinen Wert",
   "coverage.noValue_other": "{count} Deals haben keinen Wert",
-  "coverage.partial": "teilweise",
+  "coverage.partial": "Teilsumme",
   "coverage.partialTip": "Teilsumme: Diese Deals sind nicht enthalten.",
   "board.totalsTip":
     "{total} offen, {weighted} gewichtet mit der Abschlusschance jedes Deals.",
@@ -9230,8 +9230,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.open_commitments": "Offene Aufgaben",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
   "analytics.field.open_deal_unpriced": "Nicht bewertete offene Deals",
-  "analytics.field.no_rate_deal": "Deals ohne Wechselkurs",
-  "analytics.field.no_value_deal": "Deals ohne Wert",
   "analytics.field.overdue_commitments": "Überfällige Aufgaben",
   "analytics.field.close_month": "Abschlussmonat",
   "analytics.field.owner_id": "Verantwortlich",

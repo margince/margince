@@ -174,7 +174,7 @@ for the whole open pipeline. **Forecast by probability** sits beside the tables.
 stage, how many deals, and the value without and with weighting. Every figure
 is turned into one base currency, so a stage is one row with no currency
 column. A deal with no exchange rate or no value is left out of a total, and a
-note says how many deals and why. The total is then partial.
+note says how many deals and why. Such a figure carries a **Partial** mark.
 
 **Forecast by probability**: a tile per band (0%, 1 to 29%, 30 to 59%, 60 to
 89%, 90% or more). Each shows the raw total as the value

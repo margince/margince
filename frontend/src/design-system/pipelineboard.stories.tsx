@@ -211,7 +211,7 @@ const absentMoneyColumns: BoardMoneyColumn[] = [
     weightedMinor: 22_800,
     currency: "EUR",
     asOf: "2026-10-01",
-    coverage: { noValue: 0, noRate: 1, rateCurrencies: ["USD"] },
+    coverage: { partial: true, noValue: 0, noRate: 1, rateCurrencies: ["USD"] },
     count: 3,
     deals: [
       boardDeal("a4", "Globex EU", 28_000, 6),

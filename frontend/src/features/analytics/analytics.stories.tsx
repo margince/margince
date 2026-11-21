@@ -680,7 +680,12 @@ export const ForecastSlots: Story = {
           amountMinor={4100000}
           weightedMinor={1600000}
           dealCount={9}
-          coverage={{ noValue: 1, noRate: 2, rateCurrencies: ["JPY"] }}
+          coverage={{
+            partial: true,
+            noValue: 1,
+            noRate: 2,
+            rateCurrencies: ["JPY"],
+          }}
           currency="EUR"
           locale="en"
         />

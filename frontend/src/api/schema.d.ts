@@ -53244,7 +53244,7 @@ export interface components {
                 [key: string]: unknown;
             };
             columns: string[];
-            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). */
+            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -53257,6 +53257,19 @@ export interface components {
             generated_at?: string;
             /** @description Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell. */
             derivation_url?: string | null;
+        };
+        /** @description What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one. */
+        ReportRowCoverage: {
+            /** @description The aliases of the row's partial sums, which this coverage qualifies. */
+            aggregates: string[];
+            /** @description True when at least one deal is left out of those sums. */
+            partial: boolean;
+            /** @description Deals in the group with no amount. */
+            no_value_deals: number;
+            /** @description Deals in the group with an amount whose currency has no exchange rate as of the answer's date. */
+            no_rate_deals: number;
+            /** @description The currencies with no exchange rate, from the same statement as the sums. */
+            missing_currencies: string[];
         };
         /**
          * @description The "Explain This Number" resolution (features/03 §1.3): a plain-language definition of

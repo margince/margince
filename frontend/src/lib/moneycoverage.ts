@@ -1,26 +1,14 @@
-// Why a deal's money is missing from a converted total: no amount was
-// entered, or the amount's currency has no exchange rate. The server sums the
-// deals that convert and counts these two apart. This module reads those
-// counts for every screen that shows such a total.
+// What a converted sum leaves out. The report adds the deals that convert.
+// The same row, from the same statement, says how many deals it left out.
+// It says why too: no amount, or a currency with no rate. Every screen
+// showing such a sum reads that statement here.
 
-import type { components } from "../api/schema";
 import { stable } from "../format/collate";
-
-type ReportAggregate = NonNullable<
-  components["schemas"]["RunReportRequest"]["aggregates"]
->[number];
 
 type Row = Record<string, unknown>;
 
-export const COVERAGE_AGGREGATES: ReportAggregate[] = [
-  { fn: "count", field: "no_value_deal", as: "no_value_deals" },
-  { fn: "count", field: "no_rate_deal", as: "no_rate_deals" },
-];
-
-const RATE_CURRENCIES = "no_rate_currencies";
-const CURRENCY = "currency";
-
 export type MoneyCoverage = Readonly<{
+  partial: boolean;
   noValue: number;
   noRate: number;
   rateCurrencies: readonly string[];
@@ -32,25 +20,29 @@ function count(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-// Null when the row carries no counts: that is "not answered", never "nothing
-// is missing".
+// Null when the row states no coverage: that is "not answered", never "nothing
+// is missing". A client older than the server meets that on a row it did not
+// ask the server to qualify.
 export function coverageOf(row: Row): MoneyCoverage | null {
-  const noValue = count(row.no_value_deals);
-  const noRate = count(row.no_rate_deals);
+  const stated = row.coverage;
+  if (stated == null || typeof stated !== "object") return null;
+  const fields = stated as Row;
+  const noValue = count(fields.no_value_deals);
+  const noRate = count(fields.no_rate_deals);
   if (noValue == null || noRate == null) return null;
-  const listed = row[RATE_CURRENCIES];
+  const listed = fields.missing_currencies;
   return {
+    partial: noValue + noRate > 0,
     noValue,
     noRate,
-    rateCurrencies:
-      typeof listed === "string" && listed ? listed.split(",") : [],
+    rateCurrencies: Array.isArray(listed) ? listed.map(String) : [],
   };
 }
 
 export function hasGap(
   coverage: MoneyCoverage | null | undefined,
 ): coverage is MoneyCoverage {
-  return coverage != null && coverage.noValue + coverage.noRate > 0;
+  return coverage != null && coverage.partial;
 }
 
 // The coverage of several groups taken together. Null as soon as one group
@@ -60,48 +52,14 @@ export function addCoverage(
 ): MoneyCoverage | null {
   const known = parts.filter((part): part is MoneyCoverage => part != null);
   if (known.length !== parts.length) return null;
+  const noValue = known.reduce((sum, part) => sum + part.noValue, 0);
+  const noRate = known.reduce((sum, part) => sum + part.noRate, 0);
   return {
-    noValue: known.reduce((sum, part) => sum + part.noValue, 0),
-    noRate: known.reduce((sum, part) => sum + part.noRate, 0),
+    partial: noValue + noRate > 0,
+    noValue,
+    noRate,
     rateCurrencies: [
       ...new Set(known.flatMap((part) => part.rateCurrencies)),
     ].sort(stable),
   };
 }
-
-function groupKey(row: Row, groupBy: readonly string[]): string {
-  return JSON.stringify(groupBy.map((field) => String(row[field] ?? "")));
-}
-
-// Names the currencies behind each group's no-rate count. It asks again,
-// split by currency, only when some group has such a deal.
-// `ask` runs the same report and filters, grouped as it is told, with the
-// no-rate count as its one aggregate.
-export async function withRateCurrencies<R extends Row>(
-  rows: readonly R[],
-  groupBy: readonly string[],
-  ask: (groupBy: string[]) => Promise<readonly Row[]>,
-): Promise<R[]> {
-  if (!rows.some((row) => (count(row.no_rate_deals) ?? 0) > 0)) {
-    return [...rows];
-  }
-  const split = await ask([...groupBy, CURRENCY]);
-  const byGroup = new Map<string, string[]>();
-  for (const row of split) {
-    if ((count(row.no_rate_deals) ?? 0) === 0) continue;
-    const currency = String(row[CURRENCY] ?? "");
-    if (!currency) continue;
-    const key = groupKey(row, groupBy);
-    byGroup.set(key, [...(byGroup.get(key) ?? []), currency]);
-  }
-  return rows.map((row) => ({
-    ...row,
-    [RATE_CURRENCIES]: (byGroup.get(groupKey(row, groupBy)) ?? [])
-      .sort(stable)
-      .join(","),
-  }));
-}
-
-export const NO_RATE_ONLY: ReportAggregate[] = COVERAGE_AGGREGATES.filter(
-  (aggregate) => aggregate.as === "no_rate_deals",
-);

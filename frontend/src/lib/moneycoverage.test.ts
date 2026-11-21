@@ -1,35 +1,37 @@
 import { expect, it } from "vitest";
-import {
-  addCoverage,
-  coverageOf,
-  hasGap,
-  withRateCurrencies,
-} from "./moneycoverage";
+import { scopeDealDials } from "./dealsaddress";
+import { addCoverage, coverageOf, hasGap } from "./moneycoverage";
 
-it("reads the two counts apart and says nothing when the row has none", () => {
-  expect(coverageOf({ no_value_deals: 2, no_rate_deals: "1" })).toEqual({
+const stated = (
+  noValue: number,
+  noRate: number,
+  currencies: string[] = [],
+) => ({
+  coverage: {
+    aggregates: ["raw"],
+    partial: noValue + noRate > 0,
+    no_value_deals: noValue,
+    no_rate_deals: noRate,
+    missing_currencies: currencies,
+  },
+});
+
+it("reads the two counts apart and says nothing when the row states none", () => {
+  expect(coverageOf(stated(2, 1, ["JPY"]))).toEqual({
+    partial: true,
     noValue: 2,
     noRate: 1,
-    rateCurrencies: [],
+    rateCurrencies: ["JPY"],
   });
   expect(coverageOf({ deals: 3 })).toBeNull();
-  expect(hasGap(coverageOf({ no_value_deals: 0, no_rate_deals: 0 }))).toBe(
-    false,
-  );
+  expect(hasGap(coverageOf(stated(0, 0)))).toBe(false);
 });
 
 it("adds the gaps of several groups, and none when one group did not say", () => {
-  const jpy = coverageOf({
-    no_value_deals: 1,
-    no_rate_deals: 1,
-    no_rate_currencies: "JPY",
-  });
-  const sek = coverageOf({
-    no_value_deals: 0,
-    no_rate_deals: 2,
-    no_rate_currencies: "SEK,JPY",
-  });
+  const jpy = coverageOf(stated(1, 1, ["JPY"]));
+  const sek = coverageOf(stated(0, 2, ["JPY", "SEK"]));
   expect(addCoverage([jpy, sek])).toEqual({
+    partial: true,
     noValue: 1,
     noRate: 3,
     rateCurrencies: ["JPY", "SEK"],
@@ -37,30 +39,10 @@ it("adds the gaps of several groups, and none when one group did not say", () =>
   expect(addCoverage([jpy, null])).toBeNull();
 });
 
-it("names the currencies of each group's no-rate deals, asking only when there are some", async () => {
-  const rows = [
-    { stage_id: "a", no_rate_deals: 2, no_value_deals: 0 },
-    { stage_id: "b", no_rate_deals: 0, no_value_deals: 1 },
-  ];
-  const asked: string[][] = [];
-  const named = await withRateCurrencies(rows, ["stage_id"], async (by) => {
-    asked.push(by);
-    return [
-      { stage_id: "a", currency: "SEK", no_rate_deals: 1 },
-      { stage_id: "a", currency: "JPY", no_rate_deals: 1 },
-      { stage_id: "b", currency: "EUR", no_rate_deals: 0 },
-    ];
-  });
-  expect(asked).toEqual([["stage_id", "currency"]]);
-  expect(named.map((row) => coverageOf(row)?.rateCurrencies)).toEqual([
-    ["JPY", "SEK"],
-    [],
-  ]);
-
-  let calls = 0;
-  await withRateCurrencies([rows[1]], ["stage_id"], async () => {
-    calls += 1;
-    return [];
-  });
-  expect(calls).toBe(0);
+it("names the deals-list dials a scope counts, and none where the list cannot say it", () => {
+  const scope = (kind: string, id?: string) => ({ kind, id });
+  expect(scopeDealDials(scope("workspace"))).toEqual({});
+  expect(scopeDealDials(scope("owner", "u1"))).toEqual({ owner_id: "u1" });
+  expect(scopeDealDials(scope("team", "t1"))).toEqual({ owner_team_id: "t1" });
+  expect(scopeDealDials(scope("managed_teams"))).toBeNull();
 });

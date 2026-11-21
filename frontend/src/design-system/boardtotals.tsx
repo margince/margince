@@ -123,6 +123,9 @@ export function ColumnTotals({
             {compact(money.weightedMinor)}
           </span>{" "}
           {t("board.weightedLabel")}
+          {gap && money.weightedMinor != null && (
+            <span className="board-col-partial"> {t("coverage.partial")}</span>
+          )}
         </span>
       </div>
       {/* The bar repeats the two figures beside it, so it stays out of the

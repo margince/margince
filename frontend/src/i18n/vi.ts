@@ -3070,7 +3070,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "coverage.noRate_other": "{count} deal chưa có tỷ giá{currencies}",
   "coverage.noValue_one": "{count} deal chưa có giá trị",
   "coverage.noValue_other": "{count} deal chưa có giá trị",
-  "coverage.partial": "một phần",
+  "coverage.partial": "Một phần",
   "coverage.partialTip": "Tổng một phần: không gồm các deal này.",
   "board.totalsTip":
     "{total} đang mở, {weighted} có trọng số theo xác suất của từng deal.",
@@ -8982,8 +8982,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.open_commitments": "Việc cần làm đang mở",
   "analytics.field.open_deal_value_minor": "Giá trị deal đang mở",
   "analytics.field.open_deal_unpriced": "Deal đang mở chưa định giá",
-  "analytics.field.no_rate_deal": "Deal chưa có tỷ giá",
-  "analytics.field.no_value_deal": "Deal chưa có giá trị",
   "analytics.field.overdue_commitments": "Việc cần làm quá hạn",
   "analytics.field.close_month": "Tháng chốt",
   "analytics.field.owner_id": "Người chịu trách nhiệm",

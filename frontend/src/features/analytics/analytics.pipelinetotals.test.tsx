@@ -31,17 +31,26 @@ it("totals the whole pipeline above its stages and says which deals it leaves ou
           raw_minor: 100_000,
           weighted_minor: 20_000,
           deal_count: 2,
-          no_value_deals: 0,
-          no_rate_deals: 0,
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: false,
+            no_value_deals: 0,
+            no_rate_deals: 0,
+            missing_currencies: [],
+          },
         },
         {
           stage_id: "pl-s9",
           raw_minor: 50_000,
           weighted_minor: 10_000,
           deal_count: 3,
-          no_value_deals: 1,
-          no_rate_deals: 1,
-          currency: "JPY",
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: true,
+            no_value_deals: 1,
+            no_rate_deals: 1,
+            missing_currencies: ["JPY"],
+          },
         },
       ],
     }),
@@ -49,12 +58,17 @@ it("totals the whole pipeline above its stages and says which deals it leaves ou
   render(<AnalyticsScreen />);
   await openPipeline();
 
+  // Both header figures carry the Partial mark, and so does the stage whose
+  // sums leave deals out, in its raw and its weighted cell.
   expect(
-    await screen.findByText(formatAnalyticsMoney(150_000, "EUR", "en")),
+    await screen.findByText(
+      `${formatAnalyticsMoney(150_000, "EUR", "en")} Partial`,
+    ),
   ).toBeTruthy();
   expect(
-    screen.getByText(formatAnalyticsMoney(30_000, "EUR", "en")),
+    screen.getByText(`${formatAnalyticsMoney(30_000, "EUR", "en")} Partial`),
   ).toBeTruthy();
+  expect(screen.getAllByText("Partial")).toHaveLength(2);
   expect(screen.getByText("5")).toBeTruthy();
   // Under both money totals: the weighted one is short the same deals.
   expect(screen.getAllByText("1 deal has no exchange rate (JPY)")).toHaveLength(
@@ -63,7 +77,7 @@ it("totals the whole pipeline above its stages and says which deals it leaves ou
   expect(screen.getAllByText(/1 deal has no value/)).toHaveLength(3);
 });
 
-it("states no pipeline-wide gap when a stage left its counts out", async () => {
+it("withholds the pipeline totals when a stage with deals states no coverage", async () => {
   vi.stubGlobal(
     "fetch",
     reportsStub({
@@ -73,8 +87,13 @@ it("states no pipeline-wide gap when a stage left its counts out", async () => {
           raw_minor: 100_000,
           weighted_minor: 20_000,
           deal_count: 2,
-          no_value_deals: 0,
-          no_rate_deals: 1,
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: true,
+            no_value_deals: 0,
+            no_rate_deals: 1,
+            missing_currencies: [],
+          },
         },
         {
           stage_id: "pl-s9",
@@ -88,12 +107,12 @@ it("states no pipeline-wide gap when a stage left its counts out", async () => {
   render(<AnalyticsScreen />);
   await openPipeline();
 
+  await screen.findByText("Qualify");
   expect(
-    await screen.findByText(formatAnalyticsMoney(150_000, "EUR", "en")),
-  ).toBeTruthy();
-  expect(
-    screen.getAllByText((text) => text.includes("no exchange rate")),
-  ).toHaveLength(1);
+    screen.queryByText((text) =>
+      text.startsWith(formatAnalyticsMoney(150_000, "EUR", "en")),
+    ),
+  ).toBeNull();
 });
 
 it("draws no pipeline total when an unpriced stage's shortfall cannot be stated", async () => {
@@ -171,10 +190,20 @@ it("asks every pipeline card for the picked record scope, and leaves delivery co
       sent.body.group_by.includes("close_month"),
   );
   expect(byMonth?.body.scope).toEqual({ kind: "team", id: "t-north" });
+  // A stage's count opens the deals of the picked team, not every deal.
+  const hrefs = (await screen.findAllByRole("link")).map((link) =>
+    link.getAttribute("href"),
+  );
+  expect(
+    hrefs.some(
+      (href) =>
+        href?.includes("stage_id=") && href.includes("owner_team_id=t-north"),
+    ),
+  ).toBe(true);
   expect(byMonth?.body.aggregates).toContainEqual({
-    fn: "count",
-    field: "no_rate_deal",
-    as: "no_rate_deals",
+    fn: "sum",
+    field: "amount_base_minor",
+    as: "raw_minor",
   });
 
   await userEvent
@@ -276,9 +305,13 @@ it("says when a month's total leaves out deals, and why", async () => {
           raw_minor: 70_000,
           weighted_minor: 14_000,
           deal_count: 2,
-          no_value_deals: 0,
-          no_rate_deals: 1,
-          currency: "SEK",
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: true,
+            no_value_deals: 0,
+            no_rate_deals: 1,
+            missing_currencies: ["SEK"],
+          },
         },
       ],
     }),
@@ -292,4 +325,6 @@ it("says when a month's total leaves out deals, and why", async () => {
   expect(
     within(table).getByText("1 deal has no exchange rate (SEK)"),
   ).toBeTruthy();
+  // The raw and the weighted figure of the month both carry the mark.
+  expect(within(table).getAllByText("Partial")).toHaveLength(2);
 });

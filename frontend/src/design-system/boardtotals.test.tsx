@@ -78,13 +78,28 @@ describe("the stage totals at the head of a board column", () => {
     expect(largestStageTotal(columns)).toBe(200_000);
   });
 
+  it("marks both the total and the weighted figure as partial", () => {
+    board([
+      stage("a", 100_000, {
+        weightedMinor: 40_000,
+        coverage: { partial: true, noValue: 1, noRate: 0, rateCurrencies: [] },
+      }),
+    ]);
+    expect(screen.getAllByText("Partial")).toHaveLength(2);
+  });
+
   // The figures are rounded, so the exact amounts must be one focus away.
   it("spells out the exact amounts and the notes in the total's tip", () => {
     board([
       stage("a", 106_254_800, {
         weightedMinor: 10_625_480,
         probabilityPct: 10,
-        coverage: { noValue: 0, noRate: 6, rateCurrencies: ["JPY"] },
+        coverage: {
+          partial: true,
+          noValue: 0,
+          noRate: 6,
+          rateCurrencies: ["JPY"],
+        },
         asOf: "2026-11-03T08:00:00Z",
       }),
     ]);

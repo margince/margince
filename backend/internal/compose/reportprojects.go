@@ -7,6 +7,7 @@ package compose
 // the bodies of work in flight. They share a vocabulary of their own.
 
 import (
+	"cmp"
 	"fmt"
 	"maps"
 
@@ -249,6 +250,17 @@ func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, express
 		return moneytotal.PartialSumSQL(rendered)
 	}
 	return moneytotal.CompleteAggregateSQL(rendered, "sum("+coverage+")", aggregate.Fn == aggFnSum)
+}
+
+// partialSumAliases names the sums of this plan that add only the deals that
+// convert, which the row's coverage then qualifies.
+func partialSumAliases(spec reportSpec, aggregates []reportAggregate) (names []string) {
+	for _, agg := range aggregates {
+		if _, covered := spec.sumCoverage[agg.Field]; covered && spec.partialSums && agg.Fn == aggFnSum {
+			names = append(names, cmp.Or(agg.As, agg.Fn))
+		}
+	}
+	return names
 }
 
 // aggregateOver is one function over an expression. A percentile is rendered by

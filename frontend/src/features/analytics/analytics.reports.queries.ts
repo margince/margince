@@ -2,11 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import type { Section } from "../../lib/analytics.address";
-import {
-  COVERAGE_AGGREGATES,
-  NO_RATE_ONLY,
-  withRateCurrencies,
-} from "../../lib/moneycoverage";
 import { unwrap } from "../../lib/problem";
 import { FIELD_CURRENCY } from "./analytics.cells";
 import {
@@ -80,19 +75,16 @@ const REPORT_AGGREGATES: Record<CardKey, ReportAggregate[]> = {
     { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
     { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
-    ...COVERAGE_AGGREGATES,
   ],
   "pipeline-current": [
     { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
     { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
-    ...COVERAGE_AGGREGATES,
   ],
   forecast: [
     { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
     { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
-    ...COVERAGE_AGGREGATES,
   ],
   "open-deals-per-company": [
     { fn: "sum", field: "amount_minor", as: "raw_minor" },
@@ -113,26 +105,16 @@ export function useReportRun(
     enabled,
     queryKey: ["report", card, scope ? scopeKey(scope) : null],
     queryFn: async () => {
-      const run = async (groupBy: string[], aggregates: ReportAggregate[]) =>
-        unwrap(
-          await api.POST("/reports/{report}", {
-            params: { path: { report } },
-            body: {
-              scope: scope ? reportScope(scope) : undefined,
-              group_by: groupBy,
-              aggregates,
-            },
-          }),
-        );
-      const result = await run(REPORT_GROUP_BY[card], REPORT_AGGREGATES[card]);
-      return {
-        ...result,
-        rows: await withRateCurrencies(
-          result.rows,
-          REPORT_GROUP_BY[card],
-          async (groupBy) => (await run(groupBy, NO_RATE_ONLY)).rows,
-        ),
-      };
+      return unwrap(
+        await api.POST("/reports/{report}", {
+          params: { path: { report } },
+          body: {
+            scope: scope ? reportScope(scope) : undefined,
+            group_by: REPORT_GROUP_BY[card],
+            aggregates: REPORT_AGGREGATES[card],
+          },
+        }),
+      );
     },
   });
 }

@@ -51,7 +51,12 @@ export const WithNotes: Story = {
       rawMinor: 26_500_000,
       weightedMinor: 7_969_110,
       probabilityPct: 30,
-      coverage: { noValue: 0, noRate: 6, rateCurrencies: ["JPY"] },
+      coverage: {
+        partial: true,
+        noValue: 0,
+        noRate: 6,
+        rateCurrencies: ["JPY"],
+      },
       asOf: "2026-11-03T08:00:00Z",
     }),
     scaleMinor: 106_254_800,

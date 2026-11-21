@@ -17,7 +17,7 @@ import {
   rowMoney,
 } from "./analytics.cells";
 import { CellExplain, rowDerivationUrl } from "./analytics.explain";
-import { CoverageFootnote } from "./analytics.pipeline";
+import { CoverageFootnote, PartialMark } from "./analytics.pipeline";
 
 const closeMonth = (row: ReportRow) =>
   typeof row.close_month === "string" ? row.close_month : null;
@@ -104,6 +104,7 @@ export function CloseMonthTable({
                     baseCurrency,
                     locale,
                   )}
+                  <PartialMark coverage={coverageOf(row)} />
                   <CoverageFootnote coverage={coverageOf(row)} />
                 </span>
               </BarFigure>
@@ -114,12 +115,16 @@ export function CloseMonthTable({
           key: "weighted",
           header: t("analytics.weighted"),
           align: "end",
-          render: (row: ReportRow) =>
-            formatAnalyticsMoneyOrAbsent(
-              rowMoney(row, "weighted_minor"),
-              baseCurrency,
-              locale,
-            ),
+          render: (row: ReportRow) => (
+            <>
+              {formatAnalyticsMoneyOrAbsent(
+                rowMoney(row, "weighted_minor"),
+                baseCurrency,
+                locale,
+              )}
+              <PartialMark coverage={coverageOf(row)} />
+            </>
+          ),
         },
       ]}
       rows={ordered}

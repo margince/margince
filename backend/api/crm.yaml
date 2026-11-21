@@ -73175,7 +73175,9 @@ components:
         rows:
           type: array
           items: { type: object, additionalProperties: true }
-          description: Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
+          description: >-
+            Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
+            A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
         total_rows:
           type: integer
           description: >-
@@ -73189,6 +73191,31 @@ components:
         derivation_url:
           type: [string, 'null']
           description: Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell.
+
+    ReportRowCoverage:
+      type: object
+      required: [aggregates, partial, no_value_deals, no_rate_deals, missing_currencies]
+      description: >-
+        What a row's partial sums leave out. A sum over a converted amount adds
+        the deals that convert, so without this a short sum reads as a whole one.
+      properties:
+        aggregates:
+          type: array
+          items: { type: string }
+          description: The aliases of the row's partial sums, which this coverage qualifies.
+        partial:
+          type: boolean
+          description: True when at least one deal is left out of those sums.
+        no_value_deals:
+          type: integer
+          description: Deals in the group with no amount.
+        no_rate_deals:
+          type: integer
+          description: Deals in the group with an amount whose currency has no exchange rate as of the answer's date.
+        missing_currencies:
+          type: array
+          items: { type: string }
+          description: The currencies with no exchange rate, from the same statement as the sums.
 
     ReportDerivation:
       type: object

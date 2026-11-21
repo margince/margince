@@ -424,32 +424,35 @@ export const reportFixtures: Record<string, unknown> = {
   "pipeline-current": {
     report: "pipeline-current",
     plan: { group_by: ["stage_id"] },
-    columns: [
-      "stage_id",
-      "raw_minor",
-      "weighted_minor",
-      "deal_count",
-      "no_value_deals",
-      "no_rate_deals",
-    ],
+    columns: ["stage_id", "raw_minor", "weighted_minor", "deal_count"],
     rows: [
       {
         stage_id: "s1",
         raw_minor: 1_250_000,
         weighted_minor: 250_000,
         deal_count: 1,
-        no_value_deals: 0,
-        no_rate_deals: 0,
+        coverage: {
+          aggregates: ["raw_minor"],
+          partial: false,
+          no_value_deals: 0,
+          no_rate_deals: 0,
+          missing_currencies: [],
+        },
         derivation_url:
-          "/v1/reports/pipeline-current/derivation?by=stage_id&agg=sum:amount_base_minor:raw_minor&agg=sum:weighted_base_minor:weighted_minor&agg=count::deal_count&agg=count:no_value_deal:no_value_deals&agg=count:no_rate_deal:no_rate_deals&stage_id=s1",
+          "/v1/reports/pipeline-current/derivation?by=stage_id&agg=sum:amount_base_minor:raw_minor&agg=sum:weighted_base_minor:weighted_minor&agg=count::deal_count&stage_id=s1",
       },
       {
         stage_id: "s2",
         raw_minor: 4_800_000,
         weighted_minor: 1_920_000,
         deal_count: 2,
-        no_value_deals: 0,
-        no_rate_deals: 0,
+        coverage: {
+          aggregates: ["raw_minor"],
+          partial: false,
+          no_value_deals: 0,
+          no_rate_deals: 0,
+          missing_currencies: [],
+        },
       },
     ],
     total_rows: 2,

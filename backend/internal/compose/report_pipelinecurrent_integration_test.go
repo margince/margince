@@ -18,6 +18,7 @@ package compose
 // production expression proves only that it was copied correctly.
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -162,7 +163,6 @@ func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing
 	const withPriced = `{"group_by":["stage_id"],"aggregates":[` +
 		`{"fn":"count","as":"deals"},` +
 		`{"fn":"count","field":"amount_base_minor","as":"priced"},` +
-		`{"fn":"count","field":"no_rate_deal","as":"no_rate"},` +
 		`{"fn":"sum","field":"amount_base_minor","as":"base"}]}`
 	result := e.runReport(e.Admin(), t, "pipeline-current", withPriced)
 	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
@@ -176,8 +176,8 @@ func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing
 	if got := wireInt(t, row, "priced"); got != 1 {
 		t.Errorf("the money covers %v deals, want 1", got)
 	}
-	if got := wireInt(t, row, "no_rate"); got != 1 {
-		t.Errorf("%v deals with no rate, want 1", got)
+	if cov, _ := row["coverage"].(map[string]any); cov["partial"] != true || fmt.Sprint(cov["no_rate_deals"]) != "1" {
+		t.Errorf("coverage = %v, want a partial row with one deal with no rate", row["coverage"])
 	}
 }
 

@@ -428,7 +428,7 @@ describe("DealCard + PipelineBoard", () => {
       weightedMinor: 50_000,
       currency: "EUR",
       asOf: "2026-10-01",
-      coverage: { noValue: 2, noRate: 0, rateCurrencies: [] },
+      coverage: { partial: true, noValue: 2, noRate: 0, rateCurrencies: [] },
       deals: [deal],
       count: 29,
     };
