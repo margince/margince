@@ -16,6 +16,9 @@ Route = collections.namedtuple(
 
 _OPENROUTER = "https://openrouter.ai/api/v1"
 
+# The routes whose agent loop is a vendor's own program rather than the bridge.
+HOSTED = ("cli", "sdk")
+
 
 class RouteError(ValueError):
     """A candidate or route the table cannot serve; the message is for the operator."""
@@ -54,9 +57,9 @@ def resolve(candidate, via, model="", folder="", effort=""):
             f"model {chosen!r} at effort {effort or row['effort']!r} is not this candidate's "
             "default, so set E2E_LLM_FOLDER to the folder its verdicts belong in, without a '/'"
         )
-    # A CLI carries its own system prompt and tools, so its number is filed
-    # beside the comparison rather than in it.
-    filed = f"{base_folder}@{route['wire']}" if via == "cli" else base_folder
+    # A CLI, and the Agent SDK host that runs one, carries its own system prompt
+    # and tools, so its number is filed beside the comparison rather than in it.
+    filed = f"{base_folder}@{route['wire']}" if via in HOSTED else base_folder
     base_url = route.get("base_url", "")
     if via == "openrouter":
         base_url = os.environ.get("OPENAI_COMPATIBLE_BASE_URL") or _OPENROUTER

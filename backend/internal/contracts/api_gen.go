@@ -14467,6 +14467,7 @@ const (
 	HealthActionDestinationConnections   HealthActionDestination = "connections"
 	HealthActionDestinationDiagnostics   HealthActionDestination = "diagnostics"
 	HealthActionDestinationModels        HealthActionDestination = "models"
+	HealthActionDestinationRegional      HealthActionDestination = "regional"
 	HealthActionDestinationSearch        HealthActionDestination = "search"
 	HealthActionDestinationUpdates       HealthActionDestination = "updates"
 )
@@ -14481,6 +14482,8 @@ func (e HealthActionDestination) Valid() bool {
 	case HealthActionDestinationDiagnostics:
 		return true
 	case HealthActionDestinationModels:
+		return true
+	case HealthActionDestinationRegional:
 		return true
 	case HealthActionDestinationSearch:
 		return true
@@ -33185,7 +33188,7 @@ type AccountCoverage struct {
 	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 	Scope AnalyticsScope `json:"scope"`
 
-	// Thresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	// Thresholds What the coverage section counts as at risk. Absent fields take the defaults the answer prints.
 	Thresholds AccountCoverageThresholds `json:"thresholds"`
 
 	// Truncated True when a view had more candidates than the read judges, so its count covers the largest ones and not every one.
@@ -33252,18 +33255,18 @@ type AccountCoverageRow struct {
 	WonDeal   *AccountCoverageDeal `json:"won_deal,omitempty"`
 }
 
-// AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+// AccountCoverageThresholds What the coverage section counts as at risk. Absent fields take the defaults the answer prints.
 type AccountCoverageThresholds struct {
-	// MaxEngagedSeats A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. Account coverage and the deal page both judge by it. Default 1.
+	// MaxEngagedSeats A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. The coverage section and the deal page both judge by it. Default 1.
 	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" maximum:"10" minimum:"0"`
 
-	// SilentDays A won account with no exchange within this many days is silent. Default 30.
+	// SilentDays A won company with no exchange within this many days is silent. Default 30.
 	SilentDays *int `json:"silent_days,omitempty" maximum:"365" minimum:"1"`
 
-	// UntouchedDays An account with an open deal and no exchange within this many days is untouched. Default 21.
+	// UntouchedDays A company with an open deal and no exchange within this many days is untouched. Default 21.
 	UntouchedDays *int `json:"untouched_days,omitempty" maximum:"365" minimum:"1"`
 
-	// WonWithinDays How far back a won deal still makes an account a won account. Default 180.
+	// WonWithinDays How far back a won deal still makes a company a won one. Default 180.
 	WonWithinDays *int `json:"won_within_days,omitempty" maximum:"730" minimum:"1"`
 }
 
@@ -42267,7 +42270,7 @@ type CompanyAnswer struct {
 	// approval is not a citable record type here, and an answer that named one could
 	// not be checked the way every other sentence can.
 	// `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
-	// `whats_changed` — what has moved on this account recently.
+	// `whats_changed` — what has moved on this company recently.
 	Question CompanyQuestion `json:"question"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
@@ -43602,7 +43605,7 @@ type CompanyProfileInput struct {
 // approval is not a citable record type here, and an answer that named one could
 // not be checked the way every other sentence can.
 // `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
-// `whats_changed` — what has moved on this account recently.
+// `whats_changed` — what has moved on this company recently.
 type CompanyQuestion string
 
 // CompanyRollupPeriodLabels The year, quarter and month under way at the read, in the period reports' spelling, so a caller can name one without spelling a fiscal label itself.
@@ -43708,7 +43711,7 @@ type CompanyScan struct {
 
 // CompanyScanRequest What an ensure may ask beyond "make it current".
 type CompanyScanRequest struct {
-	// Force Read the account again even though the stored findings' fingerprint matches or
+	// Force Read the company again even though the stored findings' fingerprint matches or
 	// the rescan floor has not passed. A scan already in flight is still returned as
 	// it stands rather than started twice.
 	Force *bool `json:"force,omitempty"`
@@ -52891,12 +52894,14 @@ type HandoverCounts struct {
 
 // HealthAction defines model for HealthAction.
 type HealthAction struct {
-	Available   bool                    `json:"available"`
+	Available bool `json:"available"`
+
+	// Destination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
 	Destination HealthActionDestination `json:"destination"`
 	Reason      *string                 `json:"reason,omitempty"`
 }
 
-// HealthActionDestination defines model for HealthAction.Destination.
+// HealthActionDestination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
 type HealthActionDestination string
 
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
@@ -60862,7 +60867,8 @@ type PreviewAccountSendRequest struct {
 
 	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
 	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-	// An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+	// Only the human sender states them: an agent's preview carrying this field is refused with 403
+	// `permission_denied`, and an integration's with 422 `invalid`.
 	// Each address may appear once; a second entry is refused with 422 `invalid`.
 	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
@@ -60908,7 +60914,8 @@ type PreviewSendRequest struct {
 
 	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
 	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-	// An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+	// Only the human sender states them: an agent's preview carrying this field is refused with 403
+	// `permission_denied`, and an integration's with 422 `invalid`.
 	// Each address may appear once; a second entry is refused with 422 `invalid`.
 	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
@@ -64320,7 +64327,7 @@ type ReportingFramework struct {
 
 // ReportingFrameworkInput defines model for ReportingFrameworkInput.
 type ReportingFrameworkInput struct {
-	// AccountCoverage What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	// AccountCoverage What the coverage section counts as at risk. Absent fields take the defaults the answer prints.
 	AccountCoverage *AccountCoverageThresholds      `json:"account_coverage,omitempty"`
 	CaptureContexts []ReportingCaptureContext       `json:"capture_contexts"`
 	Qualification   []ReportingQualification        `json:"qualification"`
@@ -68354,7 +68361,7 @@ type SignalEvidence struct {
 	// extension files a signal. A request that carries it is refused.
 	Fields *map[string]interface{} `json:"fields,omitempty"`
 
-	// LifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+	// LifecycleScope Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
 	LifecycleScope *SignalEvidenceLifecycleScope `json:"lifecycle_scope,omitempty"`
 
 	// Provenance Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
@@ -68373,7 +68380,7 @@ type SignalEvidence struct {
 // SignalEvidenceCommercialRole The commercial role supported by the cited source, independent of recipient order.
 type SignalEvidenceCommercialRole string
 
-// SignalEvidenceLifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+// SignalEvidenceLifecycleScope Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
 type SignalEvidenceLifecycleScope string
 
 // SignalEvidenceSourceType defines model for SignalEvidence.SourceType.
@@ -77804,7 +77811,7 @@ type AskAboutCompanyJSONBody struct {
 	// approval is not a citable record type here, and an answer that named one could
 	// not be checked the way every other sentence can.
 	// `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
-	// `whats_changed` — what has moved on this account recently.
+	// `whats_changed` — what has moved on this company recently.
 	Question CompanyQuestion `json:"question"`
 }
 
@@ -78130,16 +78137,16 @@ type GetCompanyHierarchyRollupParamsScope string
 
 // DraftIntroRequestJSONBody defines parameters for DraftIntroRequest.
 type DraftIntroRequestJSONBody struct {
-	// ContactId The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the account instead.
+	// ContactId The contact to be introduced TO. Must be somebody the caller can see at this company; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the company instead.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
-	// DealId Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
+	// DealId Which open deal the introduction is for. Absent draws on the company as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
 	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 
 	// Function Only with no `contact_id`, and optional there: the function the somebody works in. Must be one of the colleague's `functions` on the reach answer, or it is `422`, because the draft would ask for an introduction the colleague's connections cannot give.
 	Function *LinkedInReachFunction `json:"function,omitempty"`
 
-	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this account, or it is `404`.
+	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the company's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this company, or it is `404`.
 	ViaUserId openapi_types.UUID `json:"via_user_id"`
 }
 
@@ -78413,19 +78420,19 @@ type DismissCompanySuggestionJSONBody struct {
 	// sha256 digest in lowercase hex.
 	//
 	// A value of the wrong SHAPE is a 422, so a client that mangled it can
-	// tell that from a hit. A well-formed value the account does not
+	// tell that from a hit. A well-formed value the company does not
 	// currently raise is a `204` that stores nothing; see this operation's
 	// description for why those two answers differ.
 	Fingerprint string `json:"fingerprint"`
 
 	// ProjectId The project the page was scoped to when the suggestion was rendered,
-	// absent on the whole-account page.
+	// absent on the whole-company page.
 	//
 	// A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
 	// page reasons over one project's activity — so the same advice raised
-	// on a scoped page and on the account page are two different
+	// on a scoped page and on the company page are two different
 	// fingerprints. This route re-derives the suggestions to check the
-	// fingerprint is one the account really raises for this caller, and it
+	// fingerprint is one the company really raises for this caller, and it
 	// can only reproduce a scoped one by narrowing the same way.
 	//
 	// Send the project the reader was looking at. Omit it and a dismissal
@@ -80317,12 +80324,6 @@ type ListContactCasesParams struct {
 
 // ListContactCasesParamsScope defines parameters for ListContactCases.
 type ListContactCasesParamsScope string
-
-// GetMorningDigestParams defines parameters for GetMorningDigest.
-type GetMorningDigestParams struct {
-	// Date A specific digest day; default: the latest generated.
-	Date *openapi_types.Date `form:"date,omitempty" json:"date,omitempty"`
-}
 
 // SendCompanyEmailParams defines parameters for SendCompanyEmail.
 type SendCompanyEmailParams struct {
@@ -100306,7 +100307,7 @@ type ServerInterface interface {
 	// What AI cost over a window, this month by default, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams)
-	// The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
+	// The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
 	// (GET /analytics/account-coverage)
 	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
 	// The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see. Written by the model and kept per reader until the figures or the recorded decisions move; without a model, or when the model's reply cannot be grounded, it answers no sentences and `generated_by` says so, and the page shows its own summary.
@@ -101667,7 +101668,7 @@ type ServerInterface interface {
 	UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request)
 	// The calling user's morning digest — what capture did overnight.
 	// (GET /digest)
-	GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams)
+	GetMorningDigest(w http.ResponseWriter, r *http.Request)
 	// The workspace's signature template.
 	// (GET /email-signature-template)
 	GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
@@ -103981,7 +103982,7 @@ func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
+// The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
 // (GET /analytics/account-coverage)
 func (_ Unimplemented) GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -106701,7 +106702,7 @@ func (_ Unimplemented) UpdateContactCaseSettings(w http.ResponseWriter, r *http.
 
 // The calling user's morning digest — what capture did overnight.
 // (GET /digest)
-func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams) {
+func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -136125,33 +136126,14 @@ func (siw *ServerInterfaceWrapper) UpdateContactCaseSettings(w http.ResponseWrit
 // GetMorningDigest operation middleware
 func (siw *ServerInterfaceWrapper) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetMorningDigestParams
-
-	// ------------- Optional query parameter "date" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "date", r.URL.Query(), &params.Date, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "date"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetMorningDigest(w, r, params)
+		siw.Handler.GetMorningDigest(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

@@ -145,7 +145,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
 		            OR ($1::uuid IS NULL AND `+storekit.StopOnAddressesSQL("live", "$9", "$10")+`)))
 		RETURNING id`,
-		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
+		zeroAsNull(ref.LeadID.UUID), normalizeAddress(ref.Address), commsauthz.ReasonObjection,
 		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID, string(commsauthz.RecordedBySubject),
 		lowered, hashes, stoppedAt).Scan(&stopID)
 	if errors.Is(err, pgx.ErrNoRows) {

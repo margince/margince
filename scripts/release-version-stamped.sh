@@ -37,4 +37,4 @@ case "$version" in
 	;;
 esac
 
-echo "$version"
+printf '%s\n' "$version"

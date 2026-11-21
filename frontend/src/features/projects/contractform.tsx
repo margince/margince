@@ -380,9 +380,18 @@ export function pricedIn(
 // server would make a legal agreement unrecordable.
 export function draftProblem(
   draft: ContractDraft,
-): "contracts.form.errNoName" | "contracts.form.errTermOrder" | null {
+):
+  | "contracts.form.errNoName"
+  | "contracts.form.errTermOrder"
+  | "contracts.form.errNegativeAmount"
+  | null {
   if (draft.title.trim() === "") {
     return "contracts.form.errNoName";
+  }
+  // The body sends an amount below zero as "no amount", which would clear the
+  // stored one; refusing here keeps it.
+  if (draft.valueMinor < 0 || draft.arrMinor < 0) {
+    return "contracts.form.errNegativeAmount";
   }
   if (
     draft.startsOn !== "" &&

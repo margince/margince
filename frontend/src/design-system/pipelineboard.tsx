@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { Fragment, useContext, useRef } from "react";
 import { formatNumber, formatPercent } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
@@ -17,6 +17,7 @@ import {
   scrollColumnIn,
   useOffScreenMatches,
 } from "./pipelinereveal";
+import { useTruncationTooltip } from "./tooltip";
 
 export type BoardRecord = {
   id: string;
@@ -354,7 +355,7 @@ function BoardLayout<Record extends BoardRecord>({
                 foldable column beside it. A control that does nothing is worse
                 than no control, and a lead board would otherwise have made its
                 three open stages focusable to no effect. */}
-              <div className="board-col-head" {...foldProps(column)}>
+              <ColumnHead label={column.label} fold={foldProps(column)}>
                 <span className="stage">{column.label}</span>
                 {/* Its own node, not one composed string. The name is data of
                   unbounded length and truncates; the count is three characters
@@ -376,7 +377,7 @@ function BoardLayout<Record extends BoardRecord>({
                   <OptionCount count={dealCount} />
                 </span>
                 {money && <span className="prob">{chance}</span>}
-              </div>
+              </ColumnHead>
               {/* The stage's money leads the sub. The count is in the head;
                   a screen reader gets it here with its unit, as "12 deals". */}
               <div className="board-col-sub">
@@ -404,6 +405,33 @@ function BoardLayout<Record extends BoardRecord>({
         })}
       </div>
     </>
+  );
+}
+
+// A stage name is data of any length, so once its head cuts it short the head
+// shows it whole on hover and on focus.
+function ColumnHead({
+  label,
+  fold,
+  children,
+}: Readonly<{
+  label: string;
+  fold: HTMLAttributes<HTMLDivElement>;
+  children: ReactNode;
+}>) {
+  const { ref, trigger, tip } = useTruncationTooltip<HTMLDivElement>(label);
+  return (
+    <div
+      ref={ref}
+      className="board-col-head"
+      {...trigger}
+      {...fold}
+      // A head that folds is a button named by this text already.
+      aria-describedby={fold.role ? undefined : trigger["aria-describedby"]}
+    >
+      {children}
+      {tip}
+    </div>
   );
 }
 

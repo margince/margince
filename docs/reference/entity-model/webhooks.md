@@ -46,6 +46,7 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 - `idx_webhook_delivery_body_kept`: `btree (id) WHERE ((payload_pruned_at IS NULL) AND (payload <> '') AND (status = ANY (ARRAY['delivered', 'dead_lettered', 'visibility_revoked'])))`
 - `idx_webhook_delivery_by_subscription`: `btree (subscription_id, created_at DESC)`
 - `idx_webhook_delivery_due`: `btree (next_retry_at) WHERE (status = 'retrying')`
+- `idx_webhook_delivery_pending`: `btree (created_at) WHERE (status = 'pending')`
 - `webhook_delivery_dedupe_key`: `unique, btree (subscription_id, event_id)`
 - `webhook_delivery_pkey`: `unique, btree (id)`
 

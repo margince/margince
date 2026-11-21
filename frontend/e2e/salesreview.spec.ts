@@ -212,3 +212,83 @@ test("the complete outlook stays readable on a phone with keyboard evidence acce
     ),
   ).toBe(true);
 });
+
+const WIDE = { width: 1440, height: 900 };
+
+test("a click in the middle of a plate reading opens its records at 1440×900", async ({
+  page,
+}) => {
+  await openSalesReview(page);
+  await page.route(/\/v1\/analytics\/evidence/, (route) =>
+    route.fulfill({
+      json: {
+        context: QUARTER.context,
+        metric: "bookings_won",
+        truncated: false,
+        rows: [
+          {
+            key: "d-1",
+            label: "Harbourline depot retrofit",
+            value: 42_000_000,
+            restricted: false,
+          },
+        ],
+      },
+    }),
+  );
+  await page.setViewportSize(WIDE);
+  const salesWon = page
+    .getByRole("region", { name: de["analytics.overview.readings"] })
+    .locator("section.stat-card")
+    .filter({ hasText: "Sales won" });
+  const box = await salesWon.boundingBox();
+  if (!box) throw new Error("the Sales won reading has no box");
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(
+    page.getByRole("dialog").getByText("Harbourline depot retrofit"),
+  ).toBeVisible();
+});
+
+test("every stage bar starts and ends at one x whatever its amount at 1440×900", async ({
+  page,
+}) => {
+  // One stage far smaller than the others, so its amount is the narrowest.
+  const uneven = {
+    ...QUARTER,
+    charts: QUARTER.charts.map((chart) =>
+      chart.kind === "stage_distribution"
+        ? {
+            ...chart,
+            points: chart.points.map((point, at) =>
+              at === 0 ? { ...point, value: 90_000 } : point,
+            ),
+          }
+        : chart,
+    ),
+  };
+  await openSalesReview(page, uneven);
+  await page.setViewportSize(WIDE);
+  const rows = page.locator(".barlist-row");
+  await expect(rows).toHaveCount(3);
+  const tracks = await rows.evaluateAll((elements) =>
+    elements.map((row) => {
+      const amount = row.querySelector(".barlist-amount");
+      const track = row.querySelector(".meterbar");
+      if (!amount || !track)
+        throw new Error(`bar row ${row.textContent} lacks its amount or track`);
+      const ink = document.createRange();
+      ink.selectNodeContents(amount);
+      const bar = track.getBoundingClientRect();
+      return {
+        amount: Math.round(ink.getBoundingClientRect().width),
+        x: Math.round(bar.x),
+        width: Math.round(bar.width),
+      };
+    }),
+  );
+  expect(new Set(tracks.map((track) => track.amount)).size).toBeGreaterThan(1);
+  for (const track of tracks.slice(1)) {
+    expect(track.x).toBe(tracks[0].x);
+    expect(track.width).toBe(tracks[0].width);
+  }
+});

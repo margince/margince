@@ -1,0 +1,6 @@
+SET LOCAL lock_timeout = '3s';
+
+ALTER TABLE communication_suppression DROP CONSTRAINT communication_suppression_address_is_canonical;
+ALTER TABLE capture_sender_override DROP CONSTRAINT capture_sender_override_address_is_canonical;
+ALTER TABLE capture_pending_counterparty DROP CONSTRAINT capture_pending_counterparty_email_is_canonical;
+ALTER TABLE app_user DROP CONSTRAINT app_user_email_is_canonical;

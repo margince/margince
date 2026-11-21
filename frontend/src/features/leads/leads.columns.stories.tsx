@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider, translate } from "../../i18n";
@@ -53,5 +53,39 @@ export const NameFallbacks: Story = {
     await expect(canvas.getByText("Vera Lindqvist")).toBeVisible();
     await expect(canvas.getByText("buyer@example.test")).toBeVisible();
     await expect(canvas.getByText("Unnamed lead")).toBeVisible();
+  },
+};
+
+// The score alone in its cell; its main reason is the tip on hover.
+export const ScoreWithItsReason: Story = {
+  render: () => {
+    const score = leadColumns(
+      (key) => translate("en", key),
+      "en",
+      UTC_ZONE,
+      [],
+    ).find((column) => column.key === "score");
+    return (
+      <LocaleProvider initial="en">
+        {leads
+          .slice(0, 2)
+          .map<Lead>((lead, index) =>
+            index === 0
+              ? { ...lead, score: 72, score_reason: "decision_maker_title" }
+              : { ...lead, score: 12 },
+          )
+          .map((lead) => (
+            <div key={lead.id}>{score?.cell(lead)}</div>
+          ))}
+      </LocaleProvider>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.hover(canvas.getByText("72"));
+    await expect(
+      await within(document.body).findByRole("tooltip"),
+    ).toHaveTextContent("Decision-maker title");
+    await expect(canvas.getByText("12")).toBeVisible();
   },
 };

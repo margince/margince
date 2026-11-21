@@ -162,3 +162,25 @@ class GraderCrashTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def declined_run(answer):
+    """A bulk change the server asked about in the chat, answered with answer."""
+    path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+    with transcript.Transcript(path) as out:
+        out.init("m", "claude:cli", "cli-default", "connected", ["bulk_update_records"])
+        out.assistant("", [("c0", "bulk_update_records", {"mode": "execute"})])
+        out.tool_results([("c0", answer, True)])
+        out.finish(False, "The reassignment did not run.", 2)
+    return path
+
+
+class DeclinedInChatTest(unittest.TestCase):
+    # Nobody answers a lane run's in-chat question, so the client's own no is the harness's.
+    def test_a_question_the_client_declined_stops_the_run_unscored(self):
+        path = declined_run("The user said no in the chat, so nothing was changed. Do not repeat the call.")
+        self.assertIn("declined a question", check.unrun(path))
+
+    def test_any_other_refusal_is_still_a_scored_run(self):
+        path = declined_run("Refused on authority: permission denied.")
+        self.assertEqual(check.unrun(path), "")

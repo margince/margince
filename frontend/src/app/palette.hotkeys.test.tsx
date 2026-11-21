@@ -9,6 +9,7 @@ import {
   fireEvent,
   render as rtlRender,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -112,6 +113,46 @@ function ShellWithDialog({
     </>
   );
 }
+
+// The shell's wiring while the reader's setup is unfinished.
+function ShellBeforeSetup({
+  available = false,
+}: Readonly<{ available?: boolean }>) {
+  const palette = useCommandPalette(useRoute(), available);
+  useShortcutDispatcher();
+  return (
+    <CommandPalette
+      open={palette.open === true}
+      mode={palette.mode}
+      onClose={palette.hide}
+      commands={commands}
+    />
+  );
+}
+
+describe("the palette before setup is finished", () => {
+  it("closes a palette already open when setup starts holding the reader", async () => {
+    const view = render(<ShellBeforeSetup available />);
+    const user = userEvent.setup();
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(await screen.findByRole("searchbox")).toBeTruthy();
+
+    view.rerender(<ShellBeforeSetup available={false} />);
+    await waitFor(() => expect(screen.queryByRole("searchbox")).toBeNull());
+    view.rerender(<ShellBeforeSetup available />);
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("opens on none of its keys", async () => {
+    render(<ShellBeforeSetup />);
+    const user = userEvent.setup();
+
+    await user.keyboard("{Meta>}k{/Meta}");
+    await user.keyboard("/");
+    await user.keyboard("c");
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+});
 
 // The palette is the app, and an open dialog makes the app unreachable.
 describe("the palette hotkey", () => {

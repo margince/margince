@@ -17,7 +17,6 @@ package integration
 // offer read disclosed strictly more than the id the deal read withholds.
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -378,7 +377,7 @@ func TestADownloadSaysNoMoreAboutTheBuyerThanTheReadDoes(t *testing.T) {
 	if served.Code != http.StatusOK {
 		t.Fatalf("downloading as the colleague who can open the buyer = %d %s, want 200", served.Code, served.Body.String())
 	}
-	if !bytes.Contains(served.Body.Bytes(), []byte("Meridian Labs")) {
+	if !strings.Contains(offerPDFText(t, served.Body.Bytes()), "Meridian Labs") {
 		t.Error("the stored document does not print the buyer, so the refusal above withheld nothing")
 	}
 }
@@ -412,7 +411,7 @@ func TestANewBuyerRetiresTheRenderingThatPrintsTheOldOne(t *testing.T) {
 	// after it prints the new buyer, and the desk downloads that one.
 	renderOfferAs(desk, t, h, offer)
 	served := downloadOfferPdfAs(desk, h, offer)
-	if served.Code != http.StatusOK || !bytes.Contains(served.Body.Bytes(), []byte("Ashgrove Holdings")) {
+	if served.Code != http.StatusOK || !strings.Contains(offerPDFText(t, served.Body.Bytes()), "Ashgrove Holdings") {
 		t.Fatalf("downloading the rendering made after the change = %d, want 200 printing the new buyer", served.Code)
 	}
 }

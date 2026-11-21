@@ -107,6 +107,19 @@ func ApplyProviderClaims(ctx context.Context, tx pgx.Tx, runID, contactID, provi
 // on the queue rows it files.
 const providerFillRecheckSource = "provider_fill_recheck"
 
+// touchWhenAddressFilled moves the contact's version when a purchase added an
+// address or number, which changes no column of the contact row.
+//
+//gate:parent-version-door
+func touchWhenAddressFilled(ctx context.Context, tx pgx.Tx, subject ids.UUID, applied []appliedField) error {
+	for _, f := range applied {
+		if f.table == tableContactEmail || f.table == tableContactPhone {
+			return touchChildSetParent(ctx, tx, contactEntity, subject)
+		}
+	}
+	return nil
+}
+
 // recheckIfAddressFilled runs the edit re-check when a purchase gave the
 // contact an address, which can make it the same human as another contact.
 func recheckIfAddressFilled(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName string, applied []appliedField) error {
@@ -141,7 +154,7 @@ func applyEach(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName st
 			applied = append(applied, landed.field)
 		}
 	}
-	return applied, nil
+	return applied, touchWhenAddressFilled(ctx, tx, subject, applied)
 }
 
 // recordApplied writes the rows a later revert reads.

@@ -145,6 +145,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendtaskorigins_test.go` | H3 | Every automatic task source has a sentence in the browser saying what made the task. |
 | `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
 | `frontendvendorservices_test.go` | H3 | Which calendar belongs beside which mailbox is answered on both sides of the wire, and the two answers must be the same pairs. |
+| `frontendvoicesourcecap_test.go` | H3 | The browser names the server's body cap as a constant it cannot ask for, so this gate fails when either side moves without the other. |
 | `frontendwebformsigning_test.go` | H3 | The setup dialog hands a website's developer the code that signs a server form's posts. |
 | `frontendwriteverbs_test.go` | H3 | The browser hides a moment verb a seat may not take by asking whether the verb writes an activity. |
 | `geocodestatuses_test.go` | H3 | A company's geocode status is spelled once in Go and once in the column's CHECK, and the two are the same set. |
@@ -294,12 +295,14 @@ The eight shapes, what each is for, and how each one silently passes:
 | `buildinputfetch_test.go` | H3 | A build input fetched over the network survives a transient failure. |
 | `cachedtestinputs_test.go` | H2 | A cached test file that runs a process declares what that process read through gatekit. |
 | `calendaroccurrenceexpansion_test.go` | H2 | Every calendar pull lists occurrences, never recurring series masters. |
+| `canonicaladdresscolumns_test.go` | H2 | A column that holds an address or a domain and takes part in a unique index is stored lowercased and trimmed. |
 | `capturecontainers_test.go` | H2 | Every mail connector tells the sink where the provider filed a message. |
 | `capturefactwriters_test.go` | H2 | Every writer of a fact capture remembers says so in its own transaction. |
 | `captureseatlessrows_test.go` | H2 | A shared mailbox is a capture\_connection with no user, and its import rows name the connection instead of a seat. |
 | `capturesinkseams_test.go` | H3 | Every optional seam the capture Sink offers is wired by the composition root. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's options. |
 | `checklegsplit_test.go` | H3 | CI splits the backend gate's fan-out over two jobs: deterministic-gates runs `make check-backend CHECK\_LEGS="…"` and backend-lint runs `make check-static`. |
+| `childsetaudit_test.go` | H2 | Every writer of a child set moves the parent record's version. |
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
 | `communityhealth_test.go` | H1 | The community-health files GitHub resolves from the repository root. |
@@ -526,6 +529,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |
 | `unvalidatedconstraints_test.go` | H2 | A constraint left NOT VALID is declared, with the reason it stays that way. |
+| `updatedatshape_test.go` | H2 | A row that was never changed carries the moment it was written in updated\_at. |
 | `usertimezonewriters_test.go` | H2 | A user's time zone has one writer after their row exists: writeTimezoneTx in identity/usertimezone.go. |
 | `uuidkeydefault_test.go` | H2 | Every uuid `id` column defaults to uuidv7(). |
 | `validatedreplypath_test.go` | H2 | A model reply this tree can refuse must be asked for through the validated lane, so the refusal reaches the model that can act on it. |

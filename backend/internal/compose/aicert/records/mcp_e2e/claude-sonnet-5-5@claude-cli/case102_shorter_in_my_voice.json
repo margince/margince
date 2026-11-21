@@ -10,14 +10,81 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "410b4006f0c290a9",
+    "tools": "0200c28776ed7f6a",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T14:45:47Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:45:47Z"
+  },
   "usage": {
-    "input_tokens": 16,
-    "output_tokens": 988,
-    "cache_creation_input_tokens": 5258,
-    "cache_read_input_tokens": 610698,
+    "input_tokens": 14,
+    "output_tokens": 852,
+    "cache_creation_input_tokens": 84335,
+    "cache_read_input_tokens": 467390,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.092
+    "cost_usd": 0.3926
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_my_settings",
+        "create_voice_profile",
+        "describe_router_actions",
+        "list_voice_profiles",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_my_settings",
+        "create_voice_profile",
+        "describe_router_actions",
+        "list_voice_profiles",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "turns": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 275869.5,
+      "min": 240610,
+      "max": 311129
+    },
+    "output_tokens": {
+      "median": 426,
+      "min": 411,
+      "max": 441
+    },
+    "duration_ms": {
+      "median": 8855,
+      "min": 7413,
+      "max": 10297
+    }
   }
 }

@@ -84,10 +84,12 @@ var catalogRecordStart = regexp.MustCompile(`^(?:public|ext)\.|^policy |^schema 
 // could satisfy another's: an index and a trigger both open with CREATE, and a
 // constraint's definition can carry the `def=` a column line ends with.
 var (
-	catalogIndex      = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) (CREATE (?:UNIQUE )?INDEX .*)$`)
-	catalogFunction   = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+\([^)]*\) secdef=`)
-	catalogRelation   = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) acl=\S* rls=\S+ force=\S+$`)
-	catalogView       = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+ opts=`)
+	catalogIndex    = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) (CREATE (?:UNIQUE )?INDEX .*)$`)
+	catalogFunction = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+\([^)]*\) secdef=`)
+	catalogRelation = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) acl=\S* rls=\S+ force=\S+$`)
+	catalogView     = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+ opts=`)
+	// catalogStorage is a table's storage options, which no page renders.
+	catalogStorage    = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+ storage=\S+ toast=\S+$`)
 	catalogTrigger    = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+)\.([a-zA-Z0-9_]+) (CREATE (?:CONSTRAINT )?TRIGGER .*)$`)
 	catalogConstraint = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+)\.([a-zA-Z0-9_]+) ((?:PRIMARY KEY|FOREIGN KEY|CHECK|UNIQUE|EXCLUDE|TRIGGER) .*)$`)
 	catalogColumn     = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+)\.([a-zA-Z0-9_]+) (.+?) gen=(\S+) def=(.*)$`)
@@ -130,7 +132,7 @@ func parseHeadCatalog(t *testing.T) *emSchema {
 	for _, record := range catalogRecords(t) {
 		switch {
 		case catalogIgnored.MatchString(record), catalogView.MatchString(record),
-			catalogFunction.MatchString(record):
+			catalogStorage.MatchString(record), catalogFunction.MatchString(record):
 		case catalogRelation.MatchString(record):
 			relations[catalogRelation.FindStringSubmatch(record)[1]] = true
 		case catalogIndex.MatchString(record):

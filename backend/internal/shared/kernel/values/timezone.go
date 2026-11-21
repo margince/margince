@@ -16,6 +16,10 @@ type Timezone struct{ name string }
 
 const zoneField = "timezone"
 
+// CodeTimezoneUnknown is the refusal of a well-formed name this server's zone
+// data does not hold. A browser with newer zone data can send one.
+const CodeTimezoneUnknown = "timezone_unknown"
+
 func ParseTimezone(name string) (Timezone, error) {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" || trimmed == "Local" {
@@ -26,7 +30,7 @@ func ParseTimezone(name string) (Timezone, error) {
 	}
 	if _, err := time.LoadLocation(trimmed); err != nil {
 		return Timezone{}, &ParseError{
-			Field: zoneField, Code: "timezone_unknown",
+			Field: zoneField, Code: CodeTimezoneUnknown,
 			Message: trimmed + " is not a known IANA zone",
 		}
 	}

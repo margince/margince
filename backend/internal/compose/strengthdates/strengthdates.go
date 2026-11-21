@@ -28,7 +28,7 @@ func DataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1795269930_contact_strength_dates", Version: 1,
 		Title:    systemtext.Literal("datatask.title.core.1795269930_contact_strength_dates"),
-		Requires: []string{"core/1795269930"},
+		Requires: []string{"core/1795299767"},
 		Steps:    []datatask.Step{foldStep()},
 	}
 }

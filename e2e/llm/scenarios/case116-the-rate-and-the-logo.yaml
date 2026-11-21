@@ -11,16 +11,15 @@ prompt: |
   And this is our new logo, a PNG, already in base64: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
   Please set it as our company logo, the wide one.
 
+# The rate is read back below. No tool reads the workspace's own logo, so the
+# upload is held on its call, with the bytes the user gave.
 must_call:
   - change_settings
 
 must_call_with:
-  - change_settings.action=set_fx_rate
   - change_settings.action=upload_company_logo
 
 must_call_matching:
-  - 'change_settings~"from_currency": "USD"'
-  - 'change_settings~"rate": "0\.920*"'
   - 'change_settings~iVBORw0KGgo'
 
 must_not_call_with:

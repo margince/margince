@@ -5062,7 +5062,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them. */
+        /** The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them. */
         get: operations["getAccountCoverage"];
         put?: never;
         post?: never;
@@ -15352,6 +15352,7 @@ export interface paths {
         };
         /**
          * The calling user's morning digest — what capture did overnight.
+         * @deprecated
          * @description Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
          *     review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
          *     the connector health strip. `404 no_digest_yet` before the first nightly run — the
@@ -25270,8 +25271,8 @@ export interface paths {
          *     effect the same way, and the row and the audit name the agent until the
          *     user chooses a zone themselves. Saving the zone already stored writes nothing.
          *
-         *     Not open to agents: an agent acting for a user must not change the
-         *     clock that user's times, bookings and mail are read on.
+         *     An agent sends `agent` alone, and only once its user asked for the zone:
+         *     it never passes as the user's own pick or as the browser.
          */
         put: operations["saveMyTimezone"];
         post?: never;
@@ -35711,7 +35712,7 @@ export interface components {
         /** @description What an ensure may ask beyond "make it current". */
         CompanyScanRequest: {
             /**
-             * @description Read the account again even though the stored findings' fingerprint matches or
+             * @description Read the company again even though the stored findings' fingerprint matches or
              *     the rescan floor has not passed. A scan already in flight is still returned as
              *     it stands rather than started twice.
              * @default false
@@ -36090,7 +36091,7 @@ export interface components {
          *     approval is not a citable record type here, and an answer that named one could
          *     not be checked the way every other sentence can.
          *     `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
-         *     `whats_changed` — what has moved on this account recently.
+         *     `whats_changed` — what has moved on this company recently.
          * @enum {string}
          */
         CompanyQuestion: "whats_open" | "meeting_prep" | "whats_changed";
@@ -45830,7 +45831,8 @@ export interface components {
             /**
              * @description The countries the sender states for this message's recipients, read as the send reads them:
              *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-             *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Only the human sender states them: an agent's preview carrying this field is refused with 403
+             *     `permission_denied`, and an integration's with 422 `invalid`.
              *     Each address may appear once; a second entry is refused with 422 `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
@@ -45872,7 +45874,8 @@ export interface components {
             /**
              * @description The countries the sender states for this message's recipients, read as the send reads them:
              *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-             *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Only the human sender states them: an agent's preview carrying this field is refused with 403
+             *     `permission_denied`, and an integration's with 422 `invalid`.
              *     Each address may appear once; a second entry is refused with 422 `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
@@ -47719,7 +47722,7 @@ export interface components {
             source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             source_id?: string | null;
             /**
-             * @description Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+             * @description Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
              * @enum {string}
              */
             lifecycle_scope?: "company" | "workstream" | "unknown";
@@ -50067,15 +50070,15 @@ export interface components {
             reason: string;
             account_coverage?: components["schemas"]["AccountCoverageThresholds"];
         };
-        /** @description What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints. */
+        /** @description What the coverage section counts as at risk. Absent fields take the defaults the answer prints. */
         AccountCoverageThresholds: {
-            /** @description A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. Account coverage and the deal page both judge by it. Default 1. */
+            /** @description A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. The coverage section and the deal page both judge by it. Default 1. */
             max_engaged_seats?: number;
-            /** @description An account with an open deal and no exchange within this many days is untouched. Default 21. */
+            /** @description A company with an open deal and no exchange within this many days is untouched. Default 21. */
             untouched_days?: number;
-            /** @description A won account with no exchange within this many days is silent. Default 30. */
+            /** @description A won company with no exchange within this many days is silent. Default 30. */
             silent_days?: number;
-            /** @description How far back a won deal still makes an account a won account. Default 180. */
+            /** @description How far back a won deal still makes a company a won one. Default 180. */
             won_within_days?: number;
         };
         ReportingFramework: {
@@ -52745,8 +52748,11 @@ export interface components {
             action: components["schemas"]["HealthAction"];
         };
         HealthAction: {
-            /** @enum {string} */
-            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration";
+            /**
+             * @description Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+             * @enum {string}
+             */
+            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration" | "regional";
             available: boolean;
             reason?: string;
         };
@@ -68903,19 +68909,19 @@ export interface operations {
                 "application/json": {
                     /**
                      * Format: uuid
-                     * @description The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the account instead.
+                     * @description The contact to be introduced TO. Must be somebody the caller can see at this company; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the company instead.
                      */
                     contact_id?: string | null;
                     /**
                      * Format: uuid
-                     * @description The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this account, or it is `404`.
+                     * @description The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the company's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this company, or it is `404`.
                      */
                     via_user_id: string;
                     /** @description Only with no `contact_id`, and optional there: the function the somebody works in. Must be one of the colleague's `functions` on the reach answer, or it is `422`, because the draft would ask for an introduction the colleague's connections cannot give. */
                     function?: components["schemas"]["LinkedInReachFunction"];
                     /**
                      * Format: uuid
-                     * @description Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
+                     * @description Which open deal the introduction is for. Absent draws on the company as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
                      */
                     deal_id?: string | null;
                 };
@@ -69458,7 +69464,7 @@ export interface operations {
                      *     sha256 digest in lowercase hex.
                      *
                      *     A value of the wrong SHAPE is a 422, so a client that mangled it can
-                     *     tell that from a hit. A well-formed value the account does not
+                     *     tell that from a hit. A well-formed value the company does not
                      *     currently raise is a `204` that stores nothing; see this operation's
                      *     description for why those two answers differ.
                      */
@@ -69466,13 +69472,13 @@ export interface operations {
                     /**
                      * Format: uuid
                      * @description The project the page was scoped to when the suggestion was rendered,
-                     *     absent on the whole-account page.
+                     *     absent on the whole-company page.
                      *
                      *     A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
                      *     page reasons over one project's activity — so the same advice raised
-                     *     on a scoped page and on the account page are two different
+                     *     on a scoped page and on the company page are two different
                      *     fingerprints. This route re-derives the suggestions to check the
-                     *     fingerprint is one the account really raises for this caller, and it
+                     *     fingerprint is one the company really raises for this caller, and it
                      *     can only reproduce a scoped one by narrowing the same way.
                      *
                      *     Send the project the reader was looking at. Omit it and a dismissal
@@ -89566,10 +89572,7 @@ export interface operations {
     };
     getMorningDigest: {
         parameters: {
-            query?: {
-                /** @description A specific digest day; default: the latest generated. */
-                date?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -754,5 +755,43 @@ func TestSyncKeepsItsWatermarkWhenDeletionFails(t *testing.T) {
 	cursor, err := New(fakeOAuth{access: "token"}, api).Sync(context.Background(), authBytes(t), []byte(`{"history_id":"12345"}`), &failingRemover{})
 	if err == nil || len(cursor) != 0 {
 		t.Fatalf("failed removal advanced cursor: %s err=%v", cursor, err)
+	}
+}
+
+// lostCursors records what a sync reports through connector.RecordLostCursor.
+type lostCursors struct{ readFrom []time.Time }
+
+func (l *lostCursors) CheckpointSync(context.Context, connector.Cursor) error { return nil }
+
+func (l *lostCursors) RecordLostCursor(_ context.Context, readFrom time.Time) error {
+	l.readFrom = append(l.readFrom, readFrom)
+	return nil
+}
+
+func TestAFullListAfterALostCursorReportsTheMailLeftOut(t *testing.T) {
+	api := &fakeAPI{email: owner, historyID: "55555", historyErr: ErrHistoryGone, raws: map[string][]byte{}}
+	for i := range backfillWindow {
+		id := "m" + strconv.Itoa(i) + "@mail.gmail.com"
+		api.recent = append(api.recent, id)
+		api.raws[id] = rawMsg(id, "alice@acme.com")
+	}
+	prior, _ := json.Marshal(cursorState{HistoryID: "1"})
+
+	reported := &lostCursors{}
+	ctx := connector.WithSyncCheckpointer(context.Background(), reported)
+	if _, err := New(fakeOAuth{access: "access-1"}, api).Sync(ctx, authBytes(t), prior, &recordingSink{}); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(reported.readFrom) != 1 {
+		t.Fatalf("the sync reported %d lost cursors, want 1", len(reported.readFrom))
+	}
+
+	_, err := New(fakeOAuth{access: "access-1"}, api).Sync(context.Background(), authBytes(t), prior, &recordingSink{})
+	if !errors.Is(err, connector.ErrNoLostCursorRecorder) {
+		t.Fatalf("a sync nobody records a lost cursor for → %v, want a refusal", err)
+	}
+	// A first sync has no cursor to lose, however much mail it lists.
+	if _, err := New(fakeOAuth{access: "access-1"}, api).Sync(context.Background(), authBytes(t), nil, &recordingSink{}); err != nil {
+		t.Fatalf("a first sync: %v", err)
 	}
 }

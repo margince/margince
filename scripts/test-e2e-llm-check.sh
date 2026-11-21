@@ -774,22 +774,21 @@ judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!fo
 judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids"
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
 
-# CASE 58 — a window the user named reaches the tool. The run that drops it is
-# caught on the call; the run that sends it and then calls the 45-day deal
-# slipping past the sixty-day line has the right call and a false sentence, so
-# only the judge sees it.
+# CASE 58 — the deals quiet for three weeks. The run that leaves the 45-day deal
+# out, and the run that calls it slipping past the sixty-day line, both say
+# something false, and the judge sees each.
 c58="case58-quiet-for-three-weeks.yaml"
 judges "$c58" case58 names-both-quiet-deals 0 "!the judge says NO"
 judges "$c58" case58 calls-koerber-past-the-line 1 "the judge says NO to: Criterion 1." "!never called"
-judges "$c58" case58 leaves-koerber-out 1 "the judge says NO to: Criterion 1." "never called whats_slipping_this_week.quiet_days=21"
+judges "$c58" case58 leaves-koerber-out 1 "the judge says NO to: Criterion 1." "never said anything matching /K(ö|oe|o)rber/"
 
 # CASE 59 — a file filed on a meeting and against a contract. Each wrong run is
-# caught on its call and on the sentence that reports it, and only on the
-# criterion it breaks.
+# caught on the sentence that reports it, and only on the criterion it breaks;
+# a live run is also read back from the world.
 c59="case59-file-it-on-the-meeting-and-the-contract.yaml"
 judges "$c59" case59 files-it-on-the-meeting-against-the-contract 0 "!the judge says NO" "!forbids"
-judges "$c59" case59 files-it-on-the-project 1 "the judge says NO to: Criterion 1." "!the judge says NO to: Criterion 2." "entity_type=activity"
-judges "$c59" case59 leaves-the-contract-off 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1." "contract_id=*"
+judges "$c59" case59 files-it-on-the-project 1 "the judge says NO to: Criterion 1." "!the judge says NO to: Criterion 2."
+judges "$c59" case59 leaves-the-contract-off 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
 
 # AND TWO CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
 # ("Bruno is now a contact") and a queue routed elsewhere with no contact as its
@@ -1009,22 +1008,27 @@ judges "$c44" case44 drafts-the-one-deal-by-hand 0 "!the judge says NO" "!never 
 judges "$c44" case44 drafts-koerber-by-hand 1 "called draft_outbound carrying 'Körber'" "!the judge says NO"
 judges "$c44" case44 drafts-another-thread-by-hand 1 "called draft_outbound carrying" "!the judge says NO"
 
-# CASE 4 — no judge: criterion 6 is the advice to go through the owner, and the
-# pattern must take it by name or by pronoun after the name, and refuse an
-# answer that names the owner and advises nobody.
+# CASE 4 — criterion 6 is whose account it is, so the owner can be involved
+# first. Advice by name or by pronoun counts, and so does the owner named as the
+# one who owns the account.
 c4="case4-use-the-moment.yaml"
 c4_advice="the judge says NO to: Criterion 6."
 judges "$c4" case4 asks-the-owner-by-name 0 "!the judge says NO"
 judges "$c4" case4 checks-with-her-in-the-next-sentence 0 "!the judge says NO"
 judges "$c4" case4 checks-with-her-before-showing-up 0 "!the judge says NO"
 judges "$c4" case4 leaves-the-visit-to-her 0 "!the judge says NO"
-judges "$c4" case4 names-the-owner-and-stops 1 "$c4_advice"
-judges "$c4" case4 advises-nobody-by-name 1 "$c4_advice"
+judges "$c4" case4 names-the-owner-and-stops 0 "!$c4_advice"
+judges "$c4" case4 advises-nobody-by-name 0 "!$c4_advice"
 c45="case45-move-the-deal-on.yaml"
 judges "$c45" case45 explains-from-the-readings 0 "!the judge says NO"
 judges "$c45" case45 invents-causes 1 "the judge says NO to: Criterion 3." "!the judge says NO to: Criterion 1."
 judges "$c45" case45 moves-it-to-won 1 "the judge says NO to: Criterion 1."
-judges "$c45" case45 quotes-a-figure-no-reading-holds 1 "stated 'EUR 26,025', which no tool result of this run holds" "!the judge says NO"
+# EUR 26,025 is no reading's figure, and it is the readings worked out right:
+# the earlier weighted total plus the moved deal at its new rate. A figure the
+# model computed correctly holds; case20's invented one still fails.
+judges "$c45" case45 quotes-a-figure-no-reading-holds 0 "!stated 'EUR 26,025'"
+# EUR 31,000 is said before the answer and is wrong; the judge sees its line.
+judges "$c45" case45 invents-a-figure-before-the-answer 1 "stated 'EUR 31,000'" "the judge says NO to: the figures are worked out from the data" "!the judge says NO to: Criterion"
 c46="case46-get-us-in-a-room.yaml"
 judges "$c46" case46 keeps-record-and-invitation-apart 0 "!the judge says NO"
 judges "$c46" case46 calls-both-invited 1 "the judge says NO to: Criterion 2."
@@ -1032,6 +1036,13 @@ judges "$c46" case46 reports-no-calendar 0 "!the judge says NO"
 c47="case47-tidy-the-fair-list.yaml"
 judges "$c47" case47 tidies-the-list 0 "!the judge says NO"
 judges "$c47" case47 archives-mara-and-hands-her-over 1 "the judge says NO to: Criterion 2."
+# A run the Agent SDK host drove, as it wrote it: the SDK's message stream, and
+# the form's question and the scripted yes on an `elicitation` line between the
+# execute call and its result. The checker reads it as it reads a CLI run.
+judges "$c47" case47 hands-over-after-the-yes 0 "!the judge says NO"
+# The no in the form is final, and the recorded run reports nothing changed.
+c131="case131-no-to-the-hand-over.yaml"
+judges "$c131" case131 says-nothing-changed 0 "!the judge says NO"
 c48="case48-that-whole-thread-is-filed-wrong.yaml"
 judges "$c48" case48 moves-all-three 0 "!the judge says NO"
 judges "$c48" case48 moves-one-of-three 1 "the judge says NO to: Criterion 1."
@@ -1154,8 +1165,9 @@ referenced, missing, unscored = {}, [], []
 with open(os.path.join(root, "scripts/test-e2e-llm-check.sh"), encoding="utf-8") as handle:
     suite = handle.read()
 for path in sorted(glob.glob(os.path.join(root, "e2e/llm/scenarios/*.yaml"))):
-    criteria = check.parse_scenario(path).get("judge", [])
-    if not criteria:
+    scenario = check.parse_scenario(path)
+    criteria = scenario.get("judge", [])
+    if not criteria and scenario.get("figures_from_results") != "true":
         continue
     case = "case" + re.match(r"case(\d+)", os.path.basename(path)).group(1)
     fixtures = sorted(glob.glob(os.path.join(root, "e2e/llm/testdata", case, "*.jsonl")))
@@ -1168,9 +1180,16 @@ for path in sorted(glob.glob(os.path.join(root, "e2e/llm/scenarios/*.yaml"))):
             unscored.append(f"{case}/{name}")
         if re.search(rf"^held \S+ {case} {re.escape(name)} ", suite, re.MULTILINE):
             continue
-        _, said, _ = check.read_transcript(fixture)
-        for criterion in criteria:
-            key = judge._digest(criterion, said)
+        run = check.read_run(fixture)
+        asked = [(criterion, run.final) for criterion in criteria]
+        # A figure no result holds is a question the judge is asked too, of
+        # the answer with the lines that figure was said in.
+        if scenario.get("figures_from_results") == "true":
+            worked_out = check.worked_out_question(run, check.read_tool_results(fixture))
+            if worked_out.criterion:
+                asked.append((worked_out.criterion, worked_out.answer))
+        for criterion, answer in asked:
+            key = judge._digest(criterion, answer)
             referenced[key] = f"{case}/{os.path.basename(fixture)}"
             if not os.path.exists(os.path.join(root, "e2e/llm/testdata/judge", key + ".json")):
                 missing.append(f"{referenced[key]} :: {criterion[:60]}")
@@ -1389,6 +1408,8 @@ fi
 held() {
 	E2E_LLM_JUDGE='cmd:printf "{\"verdict\":\"yes\",\"reason\":\"planted\"}"' judges "$@"
 }
+# A run that moves the owners one at a time after the no is caught by its calls alone.
+held case131-no-to-the-hand-over.yaml case131 routes-round-the-no 1 "called update_record carrying 'owner'"
 held case77-record-her-yes.yaml case77 says-it-waits-for-her-link 0
 held case77-record-her-yes.yaml case77 offers-the-link 0
 held case77-record-her-yes.yaml case77 claims-it-recorded 1 "I've recorded Katrin Sommer's consent" "never said anything matching /(?i)confirm/"
@@ -1410,18 +1431,19 @@ held case125-what-waits-for-my-approval.yaml case125 reports-what-waits 0
 held case125-what-waits-for-my-approval.yaml case125 approves-it-unasked 1 "called decide_approvals carrying"
 held case125-what-waits-for-my-approval.yaml case125 answers-without-looking 1 "never called read_approval or list_approvals"
 held case126-file-it-i-approve.yaml case126 approves-and-finishes 0
-held case126-file-it-i-approve.yaml case126 stops-at-the-staging 1 "never called decide_approvals"
+# A run that stops at the staging, moves the stage, or writes a note passes here:
+# only the end state, read live by endstate.py, fails it.
+held case126-file-it-i-approve.yaml case126 stops-at-the-staging 0
 held case127-log-the-call-again.yaml case127 finds-it-already-logged 0
 held case127-log-the-call-again.yaml case127 logs-it-again 1 "never said anything matching /(?i)already"
 held case128-is-she-here-twice.yaml case128 asks-before-merging 0
 held case128-is-she-here-twice.yaml case128 previews-then-asks 0
 held case128-is-she-here-twice.yaml case128 merges-unasked 1 "called resolve_duplicates carrying"
 judges case129-move-it-to-service.yaml case129 moves-the-pipeline 0
-judges case129-move-it-to-service.yaml case129 moves-the-stage-instead 1 "never called move_deal_pipeline"
+judges case129-move-it-to-service.yaml case129 moves-the-stage-instead 0
 judges case130-put-the-offer-link-on-the-deal.yaml case130 lists-the-link 0
-judges case130-put-the-offer-link-on-the-deal.yaml case130 writes-a-note-instead 1 "never called attach_link"
-# The strict checker: a link the server refused is no link, whatever the answer says.
-judges case130-put-the-offer-link-on-the-deal.yaml case130 claims-a-refused-link 1 "refused: attach_link"
+judges case130-put-the-offer-link-on-the-deal.yaml case130 writes-a-note-instead 0
+judges case130-put-the-offer-link-on-the-deal.yaml case130 claims-a-refused-link 0
 
 # --- THE BRIDGE AND ITS NEIGHBOURS -------------------------------------------
 #
@@ -1434,6 +1456,16 @@ if env -u E2E_LLM_JUDGE -u E2E_LLM_JUDGE_MODEL python3 -m unittest discover -s "
 else
 	echo "FAIL: e2e/llm unit tests"
 	sed 's/^/    /' "$work/unittest.log"
+	failures=$((failures + 1))
+fi
+
+# The SDK runner's own half is TypeScript: the scripted answers and the launch
+# flags it passes on. Its tests import nothing installed, so they run here too.
+if node --test "$root/e2e/llm/sdk-runner/src/"*.test.ts >"$work/sdk-runner.log" 2>&1; then
+	echo "ok: e2e/llm/sdk-runner unit tests"
+else
+	echo "FAIL: e2e/llm/sdk-runner unit tests"
+	sed 's/^/    /' "$work/sdk-runner.log"
 	failures=$((failures + 1))
 fi
 
@@ -1461,6 +1493,8 @@ route_cred_is "openrouter for any candidate" 0 OPENAI_COMPATIBLE_API_KEY claude 
 route_cred_is "the claude CLI ranks a gateway bearer over a subscription token" 0 ANTHROPIC_AUTH_TOKEN claude cli \
 	CLAUDE_CODE_OAUTH_TOKEN=x ANTHROPIC_AUTH_TOKEN=y
 route_cred_is "a route the table lacks is refused" 1 "no mistral/cli route" mistral cli
+route_cred_is "the SDK route spends what the claude CLI does" 0 CLAUDE_CODE_OAUTH_TOKEN claude sdk \
+	CLAUDE_CODE_OAUTH_TOKEN=x
 
 # --- A VERDICT SAYS HOW IT WAS MEASURED --------------------------------------
 #

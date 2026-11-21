@@ -141,8 +141,9 @@ func TestTheFilterAndTheBadgeReadOneStoredHorizon(t *testing.T) {
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send the signed order", "commitment", OwedVerdictAsksUs)
 	at := requestInstant.AddDate(0, 0, 10)
-	e.exec(t, `INSERT INTO activity_waiting_horizon (singleton, horizon_days, measured_at) VALUES (true, 5, $1)
-		ON CONFLICT (singleton) DO UPDATE SET horizon_days = 5, measured_at = $1`, at.Add(-time.Hour))
+	e.exec(t, `INSERT INTO installation_state (key, value)
+		VALUES ('activity_waiting_horizon', jsonb_build_object('horizon_days', 5, 'measured_at', $1::timestamptz))
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, at.Add(-time.Hour))
 
 	if got := moveAt(t, e, id, at); got != crmcontracts.EmailSummaryMoveNone {
 		t.Fatalf("10 days after the request, under a 5-day horizon, the badge reads %q, want none", got)

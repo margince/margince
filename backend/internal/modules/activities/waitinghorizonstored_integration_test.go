@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -79,16 +80,14 @@ func TestAStoredHorizonOlderThanADayAnswersTheCompiledHorizon(t *testing.T) {
 	ctx, tx, store := storedHorizonTx(t)
 	now := time.Now()
 	store = store.WithClock(func() time.Time { return now })
-	if _, err := tx.Exec(ctx, `INSERT INTO activity_waiting_horizon (horizon_days, measured_at) VALUES (21, $1)`,
-		now.Add(-waitingHorizonStaleAfter+time.Minute)); err != nil {
+	if err := storekit.StoreWaitingHorizonTx(ctx, tx, 21, now.Add(-waitingHorizonStaleAfter+time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	if got := readHorizon(ctx, t, tx, store); got != 21 {
 		t.Fatalf("a horizon stored just inside the day answered %d, want 21", got)
 	}
 
-	if _, err := tx.Exec(ctx, `UPDATE activity_waiting_horizon SET measured_at = $1`,
-		now.Add(-waitingHorizonStaleAfter)); err != nil {
+	if err := storekit.StoreWaitingHorizonTx(ctx, tx, 21, now.Add(-waitingHorizonStaleAfter)); err != nil {
 		t.Fatal(err)
 	}
 	if got := readHorizon(ctx, t, tx, store); got != waitingHorizonDays {
@@ -100,8 +99,7 @@ func TestAFailedMeasurementKeepsThePreviousStoredHorizon(t *testing.T) {
 	ctx, tx, store := storedHorizonTx(t)
 	now := time.Now()
 	store = store.WithClock(func() time.Time { return now })
-	if _, err := tx.Exec(ctx, `INSERT INTO activity_waiting_horizon (horizon_days, measured_at) VALUES (21, $1)`,
-		now.Add(-time.Hour)); err != nil {
+	if err := storekit.StoreWaitingHorizonTx(ctx, tx, 21, now.Add(-time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	// The seeded year takes well over 20 ms to measure, so this stops the

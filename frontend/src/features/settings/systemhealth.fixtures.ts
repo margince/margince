@@ -120,6 +120,21 @@ export const overdueFinding: components["schemas"]["HealthFinding"] = {
   observed_at: HEALTH_AT,
   action: { destination: "diagnostics", available: true },
 };
+/** What the server raises when the stored installation zone will not load. */
+export const zoneFinding: components["schemas"]["HealthFinding"] = {
+  id: "jobs:zone_unresolved",
+  source: "jobs",
+  code: "zone_unresolved",
+  condition: "waiting_human",
+  requires_action: true,
+  urgency: 1,
+  scope: "installation",
+  impact: "measured",
+  responsible: "administrator",
+  recovery: "zone",
+  observed_at: HEALTH_AT,
+  action: { destination: "regional", available: true },
+};
 export const attentionReport: Report = {
   ...healthReport,
   assessment: "attention",

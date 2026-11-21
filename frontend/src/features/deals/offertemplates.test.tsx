@@ -155,6 +155,17 @@ describe("OfferTemplatesAdmin", () => {
     expect(await offered(/^Default for this language/)).toEqual(["No", "Yes"]);
   });
 
+  // The letterhead goes in Header text, and an address runs over several lines.
+  it("takes the header and footer texts in fields that hold more than one line", async () => {
+    vi.stubGlobal("fetch", templatesStub({ allow: TEMPLATE_MANAGER }));
+    render(<OfferTemplatesAdmin />);
+    await userEvent.click(await screen.findByTestId("new-record"));
+    const form = within(await screen.findByRole("dialog"));
+    for (const name of [/^Header text/, /^Footer text/]) {
+      expect(form.getByRole("textbox", { name }).tagName).toBe("TEXTAREA");
+    }
+  });
+
   it("surfaces a 409 offer_template_default_conflict detail verbatim on create", async () => {
     vi.stubGlobal(
       "fetch",

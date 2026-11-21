@@ -17,7 +17,6 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../../lib/storage";
-import { ReturnWarn } from "./onboarding-connect-panels.imap";
 
 // The onboarding connect panels: what a consent round trip came back with, and
 // the IMAP form, which lives in its own file. Neither claims a connection the
@@ -25,6 +24,34 @@ import { ReturnWarn } from "./onboarding-connect-panels.imap";
 // from the roster.
 
 export { ImapConnectPanel } from "./onboarding-connect-panels.imap";
+
+/** A leg that did not land: amber for the reader's own refusal, red for any
+ *  other break. Done puts it away, back onto the step's ask. */
+function ReturnWarn({
+  title,
+  body,
+  tone,
+  onDone,
+}: Readonly<{
+  title: string;
+  body: string;
+  tone: "warning" | "danger";
+  onDone: () => void;
+}>) {
+  const t = useT();
+  return (
+    <Callout
+      tone={tone}
+      kind="outcome"
+      title={title}
+      actions={
+        <Button onClick={onDone}>{t("ob.conv.connect.dialogDone")}</Button>
+      }
+    >
+      <p>{body}</p>
+    </Callout>
+  );
+}
 
 // The OAuth outcomes that no retry can clear. The provider refused the grant,
 // or its API was never enabled for this deployment. It refused this
@@ -99,6 +126,7 @@ export function OAuthReturnPanel({
         title={t("ob.conv.connect.calendarFailedTitle")}
         body={t(calendarFailureBody(outcome, missing))}
         tone={outcome === "denied" ? "warning" : "danger"}
+        onDone={onDone}
       />
     );
   }
@@ -113,6 +141,7 @@ export function OAuthReturnPanel({
         title={t(failure.title)}
         body={t(failure.body)}
         tone={outcome === "denied" ? "warning" : "danger"}
+        onDone={onDone}
       />
     );
   }
