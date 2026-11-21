@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
@@ -25,6 +26,14 @@ type MemberAddresses struct{ known SelfSet }
 // the rule SeatProvedAddressTx trusts). Archived and retired seats no longer count. Invited and imported
 // inactive seats still count, because their addresses can identify colleagues.
 func MemberAddressesTx(ctx context.Context, tx pgx.Tx) (MemberAddresses, error) {
+	return storekit.RememberCaptureFact(ctx, tx, memberAddressesMemo, func() (MemberAddresses, error) { return readMemberAddressesTx(ctx, tx) })
+}
+
+// memberAddressesMemo keys the set in a transaction's memo. It reads the own
+// domains too, so every writer of those forgets it with the other facts.
+const memberAddressesMemo = storekit.CaptureFactsMemo + "member_addresses"
+
+func readMemberAddressesTx(ctx context.Context, tx pgx.Tx) (MemberAddresses, error) {
 	rows, err := tx.Query(ctx, `SELECT u.id, u.email FROM app_user u WHERE `+workforce.CaptureSeatSQL("u"))
 	if err != nil {
 		return MemberAddresses{}, fmt.Errorf("capture: reading the members' logins: %w", err)

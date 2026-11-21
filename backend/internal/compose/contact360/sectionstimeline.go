@@ -135,8 +135,7 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
-	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts,
-		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`, byUrgencyHumanFirst)
+	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts, openTaskFilter, byUrgencyHumanFirst)
 	if err != nil {
 		return err
 	}
@@ -146,6 +145,10 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids
 	}{Data: rows, Page: crmcontracts.PageInfo{HasMore: hasMore}}
 	return nil
 }
+
+// openTaskFilter is the open work nextStepsSection lists and a claim's
+// task_open asks about.
+const openTaskFilter = `AND a.kind = 'task' AND coalesce(a.is_done, false) = false`
 
 // How a section's rows are ordered, and why the two differ.
 //
@@ -226,32 +229,10 @@ func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool
 // a row off /activities answers, because it is read by the same list and
 // folded by the same scan.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
-	forDraft := opts.WrittenByHumanOnly && order == byRecency
+	forDraft := draftRead(opts, order)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	contactPos := arg(contactID)
-	if opts.PartyOnly && order == byRecency {
-		extra += " AND " + activities.ContactIsPartySQL(bind(contactPos))
-	}
-	if order != byRecency {
-		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
-		if err != nil {
-			return nil, false, err
-		}
-		extra += " AND " + activities.CurrentTaskClause("a", s.now(), identities, arg)
-	}
-	// DISCOVER-gated, like the activities list: a limited conversation on
-	// this contact is still a row on the timeline — date, direction, kind —
-	// with its content withheld (content_state), not a gap the reader
-	// cannot tell from silence.
-	gate := activityDiscoverScope
-	if forDraft {
-		// A draft reads content, so a row withheld from this reader must leave
-		// before the cap rather than occupy a slot the draft then discards.
-		gate = activityScope
-		extra += " AND " + relstrength.HappenedByNowSQL("a", bind(arg(s.now().UTC())))
-	}
-	scope, err := gate(ctx, arg)
+	candidates, err := s.activityCandidates(ctx, tx, contactID, opts, extra, order, arg)
 	if err != nil {
 		return nil, false, err
 	}
@@ -263,8 +244,6 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 			return nil, false, err
 		}
 	}
-	candidates := fmt.Sprintf(`a.archived_at IS NULL AND %s AND (%s)%s %s`,
-		fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra)
 	// The recent timeline shows one row per email, as the company timeline does.
 	from, trailing, collapse, gatedOnce := "activity a", "", order == byRecency, ""
 	if collapse {
@@ -295,6 +274,47 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 		return nil, false, err
 	}
 	return out, hasMore, nil
+}
+
+// draftRead reports whether a section feeds a draft, which reads content.
+func draftRead(opts AssembleOptions, order sectionOrder) bool {
+	return opts.WrittenByHumanOnly && order == byRecency
+}
+
+// activityCandidates is the predicate a section's rows are read under, before
+// its cap: the contact's reach, the gate, the project scope and extra. The
+// next-steps section and a claim's task_open both read it. So one page judges
+// a task open and visible in one way.
+func (s *Service) activityCandidates(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder, arg func(any) int,
+) (string, error) {
+	contactPos := arg(contactID)
+	if opts.PartyOnly && order == byRecency {
+		extra += " AND " + activities.ContactIsPartySQL(bind(contactPos))
+	}
+	if order != byRecency {
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return "", err
+		}
+		extra += " AND " + activities.CurrentTaskClause("a", s.now(), identities, arg)
+	}
+	// DISCOVER-gated, like the activities list. A limited conversation on this
+	// contact is still a row (date, direction, kind) with its content withheld,
+	// so the reader can tell it from silence.
+	gate := activityDiscoverScope
+	if draftRead(opts, order) {
+		// A draft reads content, so a row withheld from this reader must leave
+		// before the cap rather than occupy a slot the draft then discards.
+		gate = activityScope
+		extra += " AND " + relstrength.HappenedByNowSQL("a", bind(arg(s.now().UTC())))
+	}
+	scope, err := gate(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf(`a.archived_at IS NULL AND %s AND (%s)%s %s`,
+		fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra), nil
 }
 
 // networkSection answers "who here knows them", warmest first — the

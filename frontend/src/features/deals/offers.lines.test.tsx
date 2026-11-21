@@ -290,7 +290,7 @@ describe("a refused line edit", () => {
     },
   };
 
-  it("puts the saved value back and keeps the reason in that row until the line saves", async () => {
+  it("keeps the refused text and the reason in that row until the line saves", async () => {
     let refuseLine1 = true;
     const saved = { ...line1, quantity: 2, version: 2 };
     const renamed = { ...line2, description: "Workshop day", version: 2 };
@@ -312,7 +312,8 @@ describe("a refused line edit", () => {
     await user.type(quantity(), "0");
     await user.tab();
     expect(await within(row1()).findByText(reason)).toBeTruthy();
-    expect(quantity()).toHaveProperty("value", "1");
+    expect(quantity()).toHaveProperty("value", "0");
+    expect(quantity().getAttribute("aria-invalid")).toBe("true");
 
     const description = screen.getByTestId("line-description-li-2");
     await user.type(description, " day");
@@ -325,6 +326,8 @@ describe("a refused line edit", () => {
     );
     expect(screen.getAllByText(reason)).toHaveLength(1);
     expect(within(row1()).getByText(reason)).toBeTruthy();
+
+    expect(quantity()).toHaveProperty("value", "0");
 
     refuseLine1 = false;
     await user.clear(quantity());

@@ -47,17 +47,21 @@ export function useCompanyEdit(company: Company, canEdit: boolean): RailEdit {
   const { locale } = useLocale();
   const industries = useIndustryOptions(company.industry);
   const parent = useEntityName("company", company.parent_company_id);
-  const fields = companyEditFields([], false, t, locale).flatMap(
-    (field): CreateField[] => {
-      if (field.key === "owner_id") return [];
-      if (field.key === "industry") return [{ ...field, options: industries }];
-      // The wire may omit the stage, and a required blank would hold every
-      // other About field hostage to it.
-      if (field.key === "lifecycle")
-        return [{ ...field, required: Boolean(company.lifecycle) }];
-      return [field];
-    },
-  );
+  const fields = companyEditFields(
+    [],
+    false,
+    t,
+    locale,
+    company.address?.country,
+  ).flatMap((field): CreateField[] => {
+    if (field.key === "owner_id") return [];
+    if (field.key === "industry") return [{ ...field, options: industries }];
+    // The wire may omit the stage, and a required blank would hold every
+    // other About field hostage to it.
+    if (field.key === "lifecycle")
+      return [{ ...field, required: Boolean(company.lifecycle) }];
+    return [field];
+  });
   return {
     kind: "company",
     canEdit,

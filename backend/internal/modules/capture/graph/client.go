@@ -229,6 +229,8 @@ type OAuthConfig struct {
 	// the NAME, or its own failures would read as the mail connector's in the
 	// logs and in the connection roster.
 	Provider string
+	// Tokens keeps access tokens for their lifetime; nil redeems on every call.
+	Tokens *oauthflow.TokenCache
 }
 
 // NewOAuth builds the OAuth client, applying Microsoft's default endpoints
@@ -270,6 +272,7 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		ScopeInTokenForms: true,
 		AuthRejected:      ErrAuthRejected,
 		Unreachable:       ErrUnreachable,
+		Tokens:            cfg.Tokens,
 	})
 }
 

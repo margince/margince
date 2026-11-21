@@ -94,7 +94,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["linkedin_url_not_linkedin", "create.linkedinNotLinkedin"],
   ["linkedin_url_not_profile", "create.linkedinNotProfile"],
   ["invalid_date_range", "create.dateRangeReversed"],
-  ["invalid_country_code", "create.countryCodeInvalid"],
+  ["invalid_country_code", "legalEntities.invalidCountry"],
   // A Deal Room refusal: the detail is an English API sentence.
   ["deal_room_document_already_present", "room.docs.alreadyPresent"],
   // The detail says to regenerate, which a draft cannot; one sentence serves both.

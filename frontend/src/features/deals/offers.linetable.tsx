@@ -28,18 +28,12 @@ type LineField = keyof UpdateOfferLineItemRequest;
 
 export type LineRefusals = ReturnType<typeof useLineRefusals>;
 
-// What a cell was drawn from. Billing takes a saved change in place instead,
-// so a term still being typed survives an earlier pick's answer.
-function savedOf(line: OfferLineItem, field: LineField): string {
-  return field === "billing_model" ? "" : String(line[field]);
-}
-
 /**
  * The server's last refusal per line, shown in that line's row until the line
- * next saves. A cell keeps what was typed in its own buffer. Each refused
- * cell takes a new key, to mount again on the value the server still holds.
- * The counts only grow, so a refusal elsewhere never remounts a cell in use.
- * A cell also mounts again when its own saved value changes, and only then.
+ * next saves. A text cell keeps the refused text in its draft. The billing
+ * cell has no draft to fall back on, so a refused billing field takes a new
+ * key and mounts again on the value the server still holds. The counts only
+ * grow, so a refusal elsewhere never remounts a cell in use.
  */
 export function useLineRefusals() {
   const [errors, setErrors] = useState<ReadonlyMap<string, string>>(new Map());
@@ -68,7 +62,7 @@ export function useLineRefusals() {
     },
     errorOf: (lineItemId: string) => errors.get(lineItemId),
     cellKey: (line: OfferLineItem, field: LineField) =>
-      `${field}:${resets.get(`${line.id}:${field}`) ?? 0}:${savedOf(line, field)}`,
+      `${field}:${resets.get(`${line.id}:${field}`) ?? 0}`,
   };
 }
 
@@ -90,11 +84,11 @@ export function EditableLineTable({
 }: Readonly<{
   offer: Offer;
   refusals: LineRefusals;
-  // Settles with the saved offer, or undefined once the save is refused.
+  // Settles with the saved offer, and rejects once the save is refused.
   onSave: (
     lineItemId: string,
     patch: UpdateOfferLineItemRequest,
-  ) => Promise<Offer | undefined>;
+  ) => Promise<Offer>;
   onRemove: (lineItemId: string) => void;
   removing: boolean;
 }>) {
@@ -111,7 +105,6 @@ export function EditableLineTable({
     check?: (text: string) => string | undefined,
   ) => (
     <NumericCell
-      key={refusals.cellKey(line, field)}
       value={line[field]}
       width={shape.width}
       testId={`${shape.testId}-${line.id}`}
@@ -120,7 +113,7 @@ export function EditableLineTable({
       onSave={(num) => {
         const patch: UpdateOfferLineItemRequest = {};
         patch[field] = num;
-        void onSave(line.id, patch);
+        return onSave(line.id, patch);
       }}
     />
   );
@@ -144,7 +137,6 @@ export function EditableLineTable({
       header: t("offer.description"),
       render: (line: OfferLineItem) => (
         <DescriptionCell
-          key={refusals.cellKey(line, "description")}
           line={line}
           label={cellLabel(t("offer.description"), line)}
           onSave={save(line)}
@@ -156,7 +148,6 @@ export function EditableLineTable({
       header: t("offer.unit"),
       render: (line: OfferLineItem) => (
         <UnitCell
-          key={refusals.cellKey(line, "unit")}
           line={line}
           label={(column) => cellLabel(column, line)}
           onSave={save(line)}
@@ -182,7 +173,6 @@ export function EditableLineTable({
           <UnpricedCaption label={t("offer.unpriced")} />
         ) : (
           <UnitPriceCell
-            key={refusals.cellKey(line, "unit_price_minor")}
             line={line}
             currency={offer.currency}
             label={cellLabel(t("offer.unitPrice"), line)}
@@ -245,7 +235,11 @@ export function EditableLineTable({
           key={refusals.cellKey(line, "billing_model")}
           line={line}
           label={(column) => cellLabel(column, line)}
-          onSave={save(line)}
+          onSave={(patch) =>
+            // BillingCell reads undefined as no answer; the row shows the
+            // refusal and the key above mounts the cell again.
+            onSave(line.id, patch).catch(() => undefined)
+          }
         />
       ),
     },

@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -88,7 +90,7 @@ func (e *Env) SeedPromiseTask(t *testing.T, p PromiseThread, linked ...ids.Conta
 	if err != nil {
 		t.Fatalf("filing the promise task: %v", err)
 	}
-	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, ids.UUID(task.Id), ids.UUID(p.Claim.Id))
+	e.LinkClaimTask(e.Admin(), t, ids.UUID(p.Claim.Id), ids.UUID(task.Id))
 	return ids.UUID(task.Id)
 }
 
@@ -112,5 +114,16 @@ func (e *Env) ClaimPromiseFor(t *testing.T, p PromiseThread, task ids.UUID, cont
 		ContactID: contact, Kind: "commitment_ours", Body: "Send the listing details", ActivityID: ids.UUID(p.Claim.SourceActivityId),
 		Quote: "I'll prepare the listing details and get those over to you shortly.", Source: provenance.RecordSourceManual,
 	})
-	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, task, ids.UUID(claim.Id))
+	e.LinkClaimTask(e.Admin(), t, ids.UUID(claim.Id), task)
+}
+
+// LinkClaimTask files a claim under its task, as the seat as, through the
+// writer signal extraction uses. The link then carries its audit row and event.
+func (e *Env) LinkClaimTask(as context.Context, t *testing.T, claim, task ids.UUID) {
+	t.Helper()
+	if err := e.DB().Tx(as, func(tx pgx.Tx) error {
+		return e.Contacts.SetClaimTaskTx(as, tx, claim, task)
+	}); err != nil {
+		t.Fatalf("linking claim %s to task %s: %v", claim, task, err)
+	}
 }
