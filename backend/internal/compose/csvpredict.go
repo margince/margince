@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/margince/margince/backend/internal/compose/importkeys"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -37,6 +38,9 @@ const (
 	// from the three outcomes above because a dry run that folds it into
 	// `created` promises work that cannot happen.
 	predictUnwritable
+	// predictHeldKey is an update the store refuses over a key another record
+	// holds. The row is skipped, and its record still answers to the row's ref.
+	predictHeldKey
 	// predictCollides is a row naming a company the CRM ALREADY holds, found
 	// by the same PO-F-2 ladder the create path runs. The commit still lands
 	// it — and files a review pair — so this is a disclosure, not a refusal:
@@ -208,8 +212,30 @@ func (w *csvWriters) reconcilePrediction(
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
+	if why, err := w.movedKeyRefusal(ctx, id, row, changed, typed, current); err != nil || why.Code != "" {
+		return predictHeldKey, why, err
+	}
 	w.predictedChange, err = w.changeOf(ctx, id, changed, current)
 	return predictUpdate, kept, err
+}
+
+// movedKeyRefusal is the skip the commit answers for a row that moves a key
+// another record holds. It rehearses the commit's own update, and only for a
+// row that moves a key.
+func (w *csvWriters) movedKeyRefusal(
+	ctx context.Context, id ids.UUID, row migration.Row, changed map[string]string, typed map[string]any, current []byte,
+) (migration.Reason, error) {
+	moved := func(field string) bool { _, ok := changed[field]; return ok }
+	if !moved(fieldEmail) && !moved(fieldDomain) && !moved(fieldLinkedIn) {
+		return migration.Reason{}, nil
+	}
+	err := importkeys.Rehearse(ctx, w.pool, func(ctx context.Context) error {
+		return w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID))
+	})
+	if why, refused := importkeys.UpdateRefusal(err); refused {
+		return why, nil
+	}
+	return migration.Reason{}, err
 }
 
 // collidesWithExisting asks whether the CRM already holds the company this row

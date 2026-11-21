@@ -52,11 +52,12 @@ change.
 | Mid-market | off | 4 | 8 GB | 50 GB |
 | Mid-market | on | 8 | 32 GB | 200 GB |
 
-- **Set `shared_buffers` by hand.** The Postgres defaults expect a machine
-  that runs only Postgres. Here, Postgres shares the memory with the other
-  processes. If the value stays at the size for a host with only Postgres, the
-  node runs out of memory and moves memory pages to disk. You see slow page
-  loads, not an error message.
+- **Size the Postgres memory to the host.** Here, Postgres shares the memory
+  with the other processes. The compose file sets `shared_buffers` for the 4 GB
+  host, and a larger host raises it in `.env`. For the rule, see
+  [Postgres memory on one host](../explanation/self-hosting.md#postgres-memory-on-one-host).
+  A value sized for a host with only Postgres makes the node run out of memory
+  and move memory pages to disk. You see slow page loads, not an error message.
 - **A restart stops the service for a time.** The API applies the migrations
   at start. So this shape has no upgrade one node at a time. All services
   fail together.

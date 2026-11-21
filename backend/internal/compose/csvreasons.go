@@ -10,22 +10,19 @@ package compose
 import (
 	"errors"
 
+	"github.com/margince/margince/backend/internal/compose/importkeys"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// The three "held" reasons name the row's own value and nothing about the
-// incumbent. They never say who holds it, nor whether the caller could see them.
-// duplicateEmailWhy is a merge candidate the run discloses and does not resolve.
 var (
 	boundArchivedWhy        = migration.Why(migration.ReasonRecordArchived)
-	linkedInClaimedWhy      = migration.Why(migration.ReasonLinkedinHeld)
-	domainClaimedWhy        = migration.Why(migration.ReasonDomainHeld)
-	contactEmailClaimedWhy  = migration.Why(migration.ReasonContactEmailHeld)
-	contactHoldsLeadWhy     = migration.Why(migration.ReasonContactHoldsLead)
-	addressErasedWhy        = migration.Why(migration.ReasonAddressErased)
-	duplicateEmailWhy       = migration.Why(migration.ReasonDuplicateEmail)
-	naturalKeyTakenWhy      = migration.Why(migration.ReasonNaturalKeyTaken)
+	linkedInClaimedWhy      = importkeys.LinkedInHeldWhy
+	domainClaimedWhy        = importkeys.DomainHeldWhy
+	contactEmailClaimedWhy  = importkeys.ContactEmailHeldWhy
+	contactHoldsLeadWhy     = importkeys.ContactHoldsLeadWhy
+	addressErasedWhy        = importkeys.AddressErasedWhy
+	naturalKeyTakenWhy      = importkeys.NaturalKeyTakenWhy
 	ownerRefusedWhy         = migration.Why(migration.ReasonOwnerRefused)
 	unknownOwnerWhy         = migration.WhyCount(migration.ReasonOwnerUnknown, "rows", 1)
 	newTagWhy               = migration.Why(migration.ReasonTagNew)
