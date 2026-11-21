@@ -42,6 +42,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// init binds the event types the deal check reads to the outbox writer, from
+// the list the retention read keeps.
+func init() {
+	storekit.UseAssuranceInputTypes(assurance.MarkingEventTypes())
+}
+
 // NewRetentionServiceFor assembles the retention service for one database
 // binding, with every seam its actions depend on.
 //
