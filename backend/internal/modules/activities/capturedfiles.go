@@ -332,3 +332,39 @@ func refuseUnderivedCategory(from CapturedFileSource) error {
 func providerMessageKey(from CapturedFileSource) string {
 	return from.System + ":" + from.MessageID
 }
+
+// DiscardCapturedFiles deletes the objects StageCapturedFiles put for a message
+// that then recorded none of them, and clears their intents. A file another row
+// already held was never put, so it is left alone. An object whose delete fails
+// keeps its intent, and the stored-object sweep reaps it.
+func (s *Store) DiscardCapturedFiles(ctx context.Context, staged []StagedFile) error {
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return err
+	}
+	if s.blob == nil {
+		return nil
+	}
+	var deleted []string
+	for _, file := range staged {
+		if file.reused {
+			continue
+		}
+		if err := s.blob.Delete(ctx, file.key); err != nil {
+			return fmt.Errorf("delete a captured file nothing recorded: %w", err)
+		}
+		deleted = append(deleted, file.key)
+	}
+	if len(deleted) == 0 {
+		return nil
+	}
+	// The workspace the keys were staged under, from the context, as the ledger
+	// recorded them: the capture path reaches this from an installation-wide handle.
+	return s.db.ForWorkspace(workspaceID(ctx)).Tx(ctx, func(tx pgx.Tx) error {
+		for _, key := range deleted {
+			if err := storedobjects.Clear(ctx, tx, key); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}

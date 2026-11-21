@@ -195,7 +195,12 @@ func (s *Store) RestoreCompanyTx(
 	if err := ensureRestorable(ctx, tx, auth.CompanyArchive, companyEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	return storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, with)
+	report, err := storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, with)
+	if err != nil {
+		return report, err
+	}
+	// The restore puts the company's domains back, the own company's among them.
+	return report, storekit.OwnCompanyDomainsChanged(ctx, tx, id.UUID)
 }
 
 // ensureRestorable asks what the archive asks of the row: write authority and

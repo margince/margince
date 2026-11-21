@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -166,15 +167,29 @@ func SeatAddressesFor(ctx context.Context, tx pgx.Tx, addresses ...string) (Seat
 
 // LockSeatAddressChecks takes the shared lock a check of these addresses holds.
 // A writer of a row that an alias claim also writes takes it before that row.
+//
+// A claim that committed while the check waited changed the members'
+// addresses, so the capture facts this transaction read before are forgotten.
 func LockSeatAddressChecks(ctx context.Context, tx pgx.Tx, addresses ...string) error {
-	return lockSeatAddresses(ctx, tx, `pg_advisory_xact_lock_shared`, addresses)
+	if err := lockSeatAddresses(ctx, tx, `pg_advisory_xact_lock_shared`, addresses); err != nil {
+		return err
+	}
+	database.Forget(tx, CaptureFactsMemo)
+	return nil
 }
 
 // LockSeatAddressClaims is taken by every writer that adds, moves or withdraws
 // a seat's claim, over every address the change touches: the old and the new.
 // It waits for every check of them in flight. Take it before any row lock, and
 // wait on no contact row under it.
+//
+// A claim changes the members' addresses, a capture fact. So it takes the facts
+// lock first, in the order a capture takes both, and a capture waiting on this
+// claim's address lock cannot hold the facts lock the claim then needs.
 func LockSeatAddressClaims(ctx context.Context, tx pgx.Tx, addresses ...string) error {
+	if err := CaptureFactsChanged(ctx, tx); err != nil {
+		return err
+	}
 	return lockSeatAddresses(ctx, tx, `pg_advisory_xact_lock`, addresses)
 }
 

@@ -2485,6 +2485,7 @@ public.capture_exclusion.text_bound_update CREATE TRIGGER text_bound_update AFTE
 public.capture_exclusion.user_id uuid gen=- def=-
 public.capture_exclusion.value text NOT NULL gen=- def=-
 public.capture_exclusion_pkey CREATE UNIQUE INDEX capture_exclusion_pkey ON public.capture_exclusion USING btree (id)
+public.capture_facts_version_seq acl=margince_owner=rwU/margince_owner,margince_app=rU/margince_owner rls=false force=false
 public.capture_freemail_domain acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_freemail_domain.capture_freemail_domain_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE SET NULL (created_by)
 public.capture_freemail_domain.capture_freemail_domain_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
