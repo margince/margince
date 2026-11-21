@@ -311,7 +311,7 @@ func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids
 			WITH owed AS (
 				SELECT pe.contact_id
 				  FROM activity_participant ap
-				  JOIN contact_email pe ON lower(pe.email) = ap.address AND pe.archived_at IS NULL
+				  JOIN contact_email pe ON pe.email = ap.address AND pe.archived_at IS NULL
 				 WHERE ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL AND NOT ap.past_party_cap
 				   AND `+relstrength.AddressProvesSQL("pe.contact_id", "ap.address")+`
 				   AND NOT EXISTS (

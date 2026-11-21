@@ -71,7 +71,7 @@ func (s *Store) PendingMarketingToContact(ctx context.Context, contact ids.Conta
 			                coalesce(ss.payload->'recipients', '[]'::jsonb)
 			                || coalesce(ss.payload->'cc', '[]'::jsonb)
 			                || coalesce(ss.payload->'bcc', '[]'::jsonb)) AS addressed(address)
-			         JOIN contact_email ce ON lower(ce.email) = lower(trim(addressed.address))
+			         JOIN contact_email ce ON ce.email = lower(trim(addressed.address))
 			                              AND ce.archived_at IS NULL
 			        WHERE ce.contact_id = $2)
 			 ORDER BY ss.id`, string(commsauthz.CategoryMarketing), contact.UUID)

@@ -57,7 +57,7 @@ func TestReviewedImportRefusesChangedSourceBeforeLanding(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			writers := &bundleWriters{parts: map[string]*csvWriters{migration.ObjectCompany: {}}}
+			writers := &bundleWriters{parts: map[string]*csvWriters{migration.ObjectCompany: {links: &linkResolver{}}}}
 			if err := writers.bindReviewPlan(&migration.Report{ReviewPlan: &plan}); err != nil {
 				t.Fatal(err)
 			}

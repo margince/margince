@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -257,7 +258,7 @@ var meetingQuery = `
 	                WHERE ap.activity_id = a.id AND ap.contact_id IS NOT NULL) parts
 	         JOIN contact p ON p.id = parts.contact_id AND p.archived_at IS NULL
 	         LEFT JOIN relationship r ON r.contact_id = p.id AND r.deal_id = d.id
-	              AND r.kind = 'deal_stakeholder' AND r.archived_at IS NULL
+	              AND ` + dealseat.CurrentSQL("r") + `
 	              AND %[5]s
 	         WHERE %[2]s
 	       ), '[]'::json)

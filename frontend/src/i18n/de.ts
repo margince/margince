@@ -6498,23 +6498,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.colName": "Name",
   "legalEntities.colLegalName": "Firmierung",
   "legalEntities.colCountry": "Land",
-  "legalEntities.countryMissing":
-    "Nicht gesetzt: Das Land der Installation gilt",
+  "legalEntities.colJurisdiction": "Rechtsraum",
+  "legalEntities.jurisdictionMissing":
+    "Nicht gesetzt: Der Rechtsraum der Installation gilt",
   "legalEntities.defaultBadge": "Standard",
   "legalEntities.defaultUnnamed": "Dein Unternehmen",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
-  "legalEntities.defaultCountry":
-    "Land: {country}. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
-  "legalEntities.defaultCountryNone":
-    "Kein Land gesetzt. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
-  "legalEntities.defaultCountryLink": "Unter Rechtsraum ändern",
+  "legalEntities.countryHint": "Das Land der eingetragenen Adresse.",
+  "legalEntities.jurisdiction": "Rechtsraum",
+  "legalEntities.jurisdictionHint":
+    "Sein Recht gilt für die Mails, die das Team dieses Unternehmens sendet, und für die Datensätze, die es verantwortet.",
+  "legalEntities.defaultJurisdiction":
+    "Rechtsraum: {jurisdiction}. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultJurisdictionNone":
+    "Kein Rechtsraum gesetzt. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
+  "legalEntities.defaultJurisdictionLink": "Unter Rechtsraum ändern",
   "jurisdiction.entities.title": "Unternehmen",
-  "jurisdiction.entities.lead":
-    "Das Land jedes Unternehmens bestimmt das Recht für die Mails seines Teams und die Datensätze, die sie verantworten.",
-  "jurisdiction.entities.default": "{country}, die Auswahl oben",
-  "jurisdiction.entities.none": "Kein Land gesetzt",
+  "jurisdiction.entities.default": "{jurisdiction}, die Auswahl oben",
+  "jurisdiction.entities.none": "Kein Rechtsraum gesetzt",
   "jurisdiction.entities.edit": "Unternehmen ändern",
   "legalEntities.edit": "Bearbeiten",
   "legalEntities.archive": "Archivieren",
@@ -19900,6 +19903,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.deals.noClose": "Kein Datum",
   "contact.deals.untitled": "Deal ohne Titel",
   "contact.deals.noStage": "Noch keine Phase",
+  "contact.deals.seatEnded": "Nicht mehr an diesem Vorgang beteiligt",
   "contact.meetings.upcoming": "Anstehend",
   "contact.meetings.past": "Vergangen",
   "contact.meetings.noneBooked": "Keine anstehenden Termine.",

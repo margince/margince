@@ -168,8 +168,8 @@ func overrideTestCompany(t *testing.T, e *channelConsentEnv, user ids.UUID, name
 		return "", nil
 	})
 	if _, err := e.owner.Exec(context.Background(), `INSERT INTO legal_entity
-		(id, display_name, legal_name, country, imprint, captured_by)
-		VALUES ($1, $2, $2, 'de', 'Company details', 'human:x')`, id, name); err != nil {
+		(id, display_name, legal_name, country, jurisdiction, imprint, captured_by)
+		VALUES ($1, $2, $2, 'de', 'de', 'Company details', 'human:x')`, id, name); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `INSERT INTO legal_entity_member

@@ -46,8 +46,8 @@ func (e *resolveEnv) secondEntity(t *testing.T) ids.UUID {
 	t.Helper()
 	entity := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', 'at', 'human:x')`, entity); err != nil {
+		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'at', 'at', 'human:x')`, entity); err != nil {
 		t.Fatalf("describing the second entity: %v", err)
 	}
 	return entity
