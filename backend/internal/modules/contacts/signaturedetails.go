@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -108,7 +109,13 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	}
 	landed := 0
 	for _, f := range fields {
-		address, free, err := freeSignatureEmail(ctx, tx, f.Value)
+		// An address that does not parse is declined, as an unparseable number is.
+		parsed, err := values.ParseEmail(strings.TrimSpace(f.Value))
+		if err != nil {
+			continue
+		}
+		address := parsed.String()
+		free, err := freeSignatureEmail(ctx, tx, address)
 		if err != nil {
 			return 0, err
 		}
@@ -135,26 +142,24 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		[]storekit.FieldStamp{{Field: fieldEmail}})
 }
 
-// freeSignatureEmail parses one stated address and answers whether no record,
-// seat or erasure holds it, and no sending system owns it.
-func freeSignatureEmail(ctx context.Context, tx pgx.Tx, stated string) (string, bool, error) {
-	parsed, err := values.ParseEmail(strings.TrimSpace(stated))
-	if err != nil || refuseMachineAddress(parsed.String()) != nil {
-		return "", false, nil
+// freeSignatureEmail answers whether no record, seat or erasure holds one
+// parsed address, and no sending system owns it.
+func freeSignatureEmail(ctx context.Context, tx pgx.Tx, address string) (bool, error) {
+	if mailidentity.HasMachineLocalpart(address) {
+		return false, nil
 	}
-	address := parsed.String()
 	if erased, err := storekit.EmailSuppressed(ctx, tx, address); err != nil || erased {
-		return "", false, err
+		return false, err
 	}
 	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
 	if err != nil || seats.Covers(address, ids.Nil) {
-		return "", false, err
+		return false, err
 	}
 	holders, err := storekit.IdentityHoldersOf(ctx, tx, storekit.IdentityKeys{Emails: []string{address}})
 	if err != nil {
-		return "", false, err
+		return false, err
 	}
-	return address, len(holders.Contacts) == 0 && len(holders.Leads) == 0, nil
+	return len(holders.Contacts) == 0 && len(holders.Leads) == 0, nil
 }
 
 // addSignatureEmail stores one address through the contact_email writer. It

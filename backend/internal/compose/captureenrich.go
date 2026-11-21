@@ -53,7 +53,7 @@ var enrichFieldNames = nameSet(signatureFieldNames)
 // offers it. The name is not a field: the reading reports its parts under
 // "name", and contacts.MapSignatureName decides which becomes first_name and
 // last_name.
-var signatureFieldNames = []string{fieldTitle, fieldPhone, "linkedin", companyNameField, "address", "website", "email"}
+var signatureFieldNames = []string{fieldTitle, fieldPhone, "linkedin", companyNameField, "address", "website", fieldEmail}
 
 func nameSet(names []string) map[string]bool {
 	set := make(map[string]bool, len(names))
@@ -66,7 +66,7 @@ func nameSet(names []string) map[string]bool {
 // signatureRepeatedFields hold a list. A signature listing a German, a
 // Vietnamese and a Singapore number states three numbers, all current. A gate
 // that kept the first would record one and lose two. Addresses likewise.
-var signatureRepeatedFields = map[string]bool{"phone": true, "email": true}
+var signatureRepeatedFields = map[string]bool{fieldPhone: true, fieldEmail: true}
 
 const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone,
 linkedin, company_name, address, website, email. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet

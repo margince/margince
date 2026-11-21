@@ -45,11 +45,14 @@ func (s *Sink) backupOwnerActingTx(ctx context.Context, tx pgx.Tx, box ids.UUID)
 		return ctx, err
 	}
 	err = refuseBackupOutsideTeamTx(ctx, tx, team, backup)
-	if _, outside := errors.AsType[*BackupOwnerError](err); outside || CaptureRefusal(rbac.Permissions, seat) != nil {
+	if _, outside := errors.AsType[*BackupOwnerError](err); outside {
 		return ctx, nil
 	}
 	if err != nil {
 		return ctx, err
+	}
+	if mayCapture := CaptureRefusal(rbac.Permissions, seat) == nil; !mayCapture {
+		return ctx, nil
 	}
 	run, _ := principal.Actor(ctx)
 	return context.WithValue(ctx, backupActingKey{}, principal.Principal{
