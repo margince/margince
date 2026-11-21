@@ -108,8 +108,9 @@ jobs:
       matrix: ${{ fromJSON(needs.llm-plan.outputs.shards) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    # The sweep step's limit, read by the step and by the outcome that tells a
-    # cut-off from a sweep that stopped early.
+    # The sweep step's limit, for the outcome that tells a cut-off from a sweep
+    # that stopped early. It equals that step's timeout-minutes, which stays a
+    # literal because workflowtimeouts_test.go reads it as a number.
     env:
       LANE_LIMIT_MINUTES: 100
     permissions:
@@ -159,7 +160,7 @@ jobs:
       # summary named the token as what funds it.
       - name: Sweep this shard (scripts/e2e-llm-sweep.sh)
         id: lane
-        timeout-minutes: ${{ fromJSON(env.LANE_LIMIT_MINUTES) }}
+        timeout-minutes: 100
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           MARGINCE_E2E_LLM: "1"
