@@ -11,6 +11,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -95,9 +96,7 @@ func storedStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, n
 		return byContact, nil
 	}
 	live, err := liveStrengths(ctx, tx, unfolded, foldScope{admit: now})
-	for contactID, rs := range live {
-		byContact[contactID] = rs
-	}
+	maps.Copy(byContact, live)
 	return byContact, err
 }
 

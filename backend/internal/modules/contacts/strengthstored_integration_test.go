@@ -238,15 +238,13 @@ func TestAReadAheadOfTheDatabaseFoldsTheHistory(t *testing.T) {
 		}
 		return got[0].Strength
 	}
-	if got := read(now.Add(2 * time.Minute)); !sameMoment(got.LastInbound, ptr(now.AddDate(0, 0, -4))) {
+	if got := read(now.Add(2 * time.Minute)); !sameMoment(got.LastInbound, new(now.AddDate(0, 0, -4))) {
 		t.Errorf("a read ahead of the database took the stored inbound %v, want the history's", got.LastInbound)
 	}
 	if got := read(now.Add(-time.Second)); !sameMoment(got.LastInbound, &planted) {
 		t.Errorf("a read behind the database gave %v, want the stored %v: the stored dates were not read", got.LastInbound, planted)
 	}
 }
-
-func ptr(at time.Time) *time.Time { return &at }
 
 // present is the wall clock: the stored dates answer only for the database's
 // own now(), which a moved fixture clock cannot reach.
