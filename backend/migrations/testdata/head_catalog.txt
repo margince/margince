@@ -3176,10 +3176,16 @@ public.communication_instruction_by_director CREATE INDEX communication_instruct
 public.communication_instruction_pkey CREATE UNIQUE INDEX communication_instruction_pkey ON public.communication_instruction USING btree (id)
 public.communication_instruction_refuse_rewrite() secdef=false cfg=- acl=- 
 BEGIN
+  -- A row goes only with the review it decided, through the CASCADE. A direct
+  -- delete is refused. The CASCADE has already removed the review by the time
+  -- this fires, so the review is gone when the delete is its own.
   IF TG_OP = 'DELETE' THEN
-    RAISE EXCEPTION 'a communication instruction is the record of a decision and is never deleted'
-      USING ERRCODE = 'check_violation',
-            CONSTRAINT = 'communication_instruction_immutable';
+    IF EXISTS (SELECT 1 FROM communication_review r WHERE r.id = OLD.review_id) THEN
+      RAISE EXCEPTION 'a communication instruction is the record of a decision and is removed only with the review it decided'
+        USING ERRCODE = 'check_violation',
+              CONSTRAINT = 'communication_instruction_immutable';
+    END IF;
+    RETURN OLD;
   END IF;
   IF NEW.acknowledged_wording IS DISTINCT FROM OLD.acknowledged_wording THEN
     RAISE EXCEPTION 'a communication instruction records the message that was acknowledged and cannot be re-pointed at another'
