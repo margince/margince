@@ -2816,6 +2816,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "shell.railAria": "Điều hướng chính",
   "shell.skipToContent": "Chuyển đến nội dung",
+  "shell.pageLoading": "Đang tải {page}…",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
@@ -10955,7 +10956,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.capture_backfill_reconcile": "Khôi phục lượt nhập thư cũ",
   "jobs.kind.capture_confidentiality_verdict": "Kiểm tra tính bảo mật của thư",
   "jobs.kind.capture_counterparty_verdict": "Kiểm tra bên gửi thư",
-  "jobs.kind.capture_digest": "Bản tổng hợp thư buổi sáng",
   "jobs.kind.capture_enrich": "Lấy thông tin liên hệ từ chữ ký thư",
   "jobs.kind.captured_deal_refile": "Gắn hoạt động đã thu thập vào cơ hội",
   "jobs.kind.captured_deal_refile_sweep":
@@ -14729,7 +14729,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.scopeAriaMixed":
     "Các cài đặt trên trang này ảnh hưởng đến những đối tượng khác nhau; mỗi cài đặt ghi rõ đối tượng.",
   "settings.readOnlyPageTitle": "Cài đặt chỉ đọc",
-  "settings.pageLoading": "Đang tải {page}…",
   "settings.readOnlyPage":
     "Vai trò hiện tại không có quyền thay đổi các cài đặt này.",
   "settings.seatRefused":

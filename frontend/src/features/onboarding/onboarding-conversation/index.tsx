@@ -1,7 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import type { Dispatch } from "react";
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { Button } from "../../../design-system/atoms";
@@ -17,7 +17,7 @@ import { useMe } from "../../../lib/session";
 import { useAddressWriters } from "../../../lib/urlstate";
 import { EMPTY_DRAFT, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
-import { loadWizardState } from "../onboarding-progress";
+import { onboardingProgressOptions } from "../onboarding-progress";
 import { BasisAct } from "./basis-act";
 import { CompanyAct } from "./company-act";
 import { ConnectAct } from "./connect-act";
@@ -39,7 +39,7 @@ import { useStepAddress } from "./use-step-address";
 import type { WizardPersistInput } from "./use-wizard-state";
 import { useWizardStatePersist } from "./use-wizard-state";
 import { VoiceAct } from "./voice-act";
-import { WorkbenchEntranceScope } from "./workbench";
+import { RestoredReadScope, WorkbenchEntranceScope } from "./workbench";
 
 // The conversational onboarding shell — THE onboarding experience: one pure
 // machine owns where the conversation is, and each act renders inside the
@@ -203,16 +203,21 @@ function useRestore(
   const mayTrainVoice = useCanWrite("voice_profile", "create");
   // Both grants above read false until /me answers, so the restore waits on it.
   const meAnswered = useMe().data !== undefined;
-  // The restore's own snapshot, not the live entry the shell gates on: a
-  // checkpoint landing mid-journey must not re-run the restore's reads.
-  const wizard = useQuery({
-    queryKey: ["onboarding-conv-state"],
-    queryFn: loadWizardState,
+  const progress = useQuery({
+    ...onboardingProgressOptions,
+    staleTime: Number.POSITIVE_INFINITY,
   });
+  // Held from the first answer, so a checkpoint landing mid-journey does not
+  // re-run the restore's reads.
+  const [atMount, setAtMount] = useState<{ row: OnboardingState | null }>();
+  if (atMount === undefined && progress.isSuccess) {
+    setAtMount({ row: progress.data });
+  }
+  const wizard = atMount?.row ?? null;
   const voiceNeeded =
-    wizard.isSuccess &&
+    atMount !== undefined &&
     described !== undefined &&
-    voiceProbeNeeded(wizard.data ?? null, described, mayDescribe);
+    voiceProbeNeeded(wizard, described, mayDescribe);
   const voice = useQuery({
     queryKey: VOICE_PROBE_KEY,
     queryFn: probeVoice,
@@ -223,9 +228,9 @@ function useRestore(
   // of stranding the user's work behind a fresh intro.
   const persistedReadId =
     mayDescribe &&
-    wizard.data != null &&
-    (wizard.data.step === "read" || wizard.data.step === "confirm")
-      ? (wizard.data.site_read_id ?? null)
+    wizard !== null &&
+    (wizard.step === "read" || wizard.step === "confirm")
+      ? (wizard.site_read_id ?? null)
       : null;
   const persistedRead = useQuery({
     queryKey: ["onboarding-conv-read", persistedReadId],
@@ -251,7 +256,7 @@ function useRestore(
   const settled =
     meAnswered &&
     described !== undefined &&
-    wizard.isSuccess &&
+    atMount !== undefined &&
     (!voiceNeeded || voice.isSuccess) &&
     (persistedReadId === null || persistedRead.isSuccess);
   useEffect(() => {
@@ -260,7 +265,7 @@ function useRestore(
     }
     restored.current = true;
     const plan = restorePlan({
-      state: wizard.data ?? null,
+      state: wizard,
       profile: existing.data ?? null,
       described: described === true,
       mayDescribe,
@@ -298,7 +303,7 @@ function useRestore(
   }, [
     state.act,
     settled,
-    wizard.data,
+    wizard,
     existing.data,
     described,
     mayDescribe,
@@ -315,7 +320,8 @@ function useRestore(
     existing,
     voice,
     persistedRead,
-    lookups: [existing, wizard, voice, persistedRead],
+    restoredReadId: wizard?.site_read_id ?? null,
+    lookups: [existing, progress, voice, persistedRead],
   };
 }
 
@@ -326,11 +332,8 @@ export function OnboardingConversationScreen() {
     initialConversationState,
   );
   const { persist } = useWizardStatePersist();
-  const { existing, voice, persistedRead, lookups } = useRestore(
-    state,
-    dispatch,
-    route.id === "connect",
-  );
+  const { existing, voice, persistedRead, restoredReadId, lookups } =
+    useRestore(state, dispatch, route.id === "connect");
   useStepAddress(state, dispatch, route.id);
 
   // Act-transition checkpoints: the server remembers where the journey is,
@@ -365,17 +368,19 @@ export function OnboardingConversationScreen() {
       {/* Above the act switch on purpose: this is the one level that survives an
           act change, so it is the only place that can know whether the workbench
           frame has already introduced itself. */}
-      <WorkbenchEntranceScope>
-        <CurrentAct
-          state={state}
-          dispatch={dispatch}
-          route={route}
-          persist={persist}
-          existing={existing}
-          voice={voice}
-          persistedRead={persistedRead}
-        />
-      </WorkbenchEntranceScope>
+      <RestoredReadScope value={restoredReadId}>
+        <WorkbenchEntranceScope>
+          <CurrentAct
+            state={state}
+            dispatch={dispatch}
+            route={route}
+            persist={persist}
+            existing={existing}
+            voice={voice}
+            persistedRead={persistedRead}
+          />
+        </WorkbenchEntranceScope>
+      </RestoredReadScope>
     </div>
   );
 }

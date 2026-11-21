@@ -3,10 +3,7 @@ import { useCallback, useRef } from "react";
 import type { components } from "../../../api/schema";
 import type { CompanyForm } from "../onboarding";
 import { wizardStateBody, writeWizardState } from "../onboarding";
-import {
-  loadWizardState,
-  onboardingProgressOptions,
-} from "../onboarding-progress";
+import { onboardingProgressOptions } from "../onboarding-progress";
 import { isCompanyField } from "./company-proposal";
 
 // Minimal wizard-state persistence for the conversational shell: the server
@@ -56,7 +53,11 @@ const FRESH_STATE: SavedState = {
   finished: null,
 };
 
-function fromServerState(data: OnboardingState): SavedState {
+function fromServerState(data: OnboardingState | null): SavedState {
+  // Nothing persisted yet: the first write starts at version 0.
+  if (data === null) {
+    return FRESH_STATE;
+  }
   return {
     version: typeof data.version === "number" ? data.version : 0,
     sourceMode: data.source_mode ?? null,
@@ -70,12 +71,6 @@ function fromServerState(data: OnboardingState): SavedState {
     draft: data.company_draft ?? null,
     finished: data.step === "complete" ? data : null,
   };
-}
-
-async function loadSavedState(): Promise<SavedState> {
-  const data = await loadWizardState();
-  // Nothing persisted yet: the first write starts at version 0.
-  return data ? fromServerState(data) : FRESH_STATE;
 }
 
 // A blank conversational field never clobbers a value an earlier session
@@ -135,18 +130,30 @@ export function useWizardStatePersist() {
     (input: WizardPersistInput): Promise<boolean> => {
       queue.current = queue.current.then(async () => {
         try {
-          saved.current ??= await loadSavedState();
-          // Another tab may have finished the journey, which the server then
-          // refuses to write over: the stored row is the answer instead.
-          const written =
-            saved.current.finished ??
-            (await writeMerged(saved.current, input).catch(async (err) => {
-              const fresh = await loadSavedState();
-              if (fresh.finished === null) {
-                throw err;
-              }
-              return fresh.finished;
-            }));
+          saved.current ??= fromServerState(
+            await client.fetchQuery({
+              ...onboardingProgressOptions,
+              staleTime: Number.POSITIVE_INFINITY,
+            }),
+          );
+          let written: OnboardingState;
+          try {
+            written =
+              saved.current.finished ??
+              (await writeMerged(saved.current, input));
+          } catch {
+            // A refused write reads the row again: another tab may have
+            // finished the journey, and the next write needs its version.
+            const fresh = await client.fetchQuery({
+              ...onboardingProgressOptions,
+              staleTime: 0,
+            });
+            saved.current = fromServerState(fresh);
+            if (fresh?.step !== "complete") {
+              return false;
+            }
+            written = fresh;
+          }
           saved.current = fromServerState(written);
           // The app shell gates on this same entry: a completion it never
           // learned of would send the finished journey straight back here.
@@ -157,9 +164,13 @@ export function useWizardStatePersist() {
         } catch {
           // Best-effort by design: the act must never stall on state
           // persistence. The caller learns via the false result (the proposal
-          // join is gated on it and falls back to the site-read snapshot);
-          // resetting forces a fresh version sync on the next attempt.
+          // join is gated on it and falls back to the site-read snapshot).
+          // Invalidating forces a fresh version sync on the next attempt.
           saved.current = null;
+          void client.invalidateQueries({
+            queryKey: onboardingProgressOptions.queryKey,
+            refetchType: "none",
+          });
           return false;
         }
       });

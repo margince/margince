@@ -248,9 +248,10 @@ function useShownAddress(asked: string): string | null {
 
 function DrawnFor({
   address,
+  pending,
   children,
-}: Readonly<{ address: string; children: ReactNode }>) {
-  useReportShownAddress(address);
+}: Readonly<{ address: string; pending: boolean; children: ReactNode }>) {
+  useReportShownAddress(address, pending);
   return (
     <ScreenAddress.Provider value={address}>{children}</ScreenAddress.Provider>
   );
@@ -263,9 +264,9 @@ export function ScreenView({
 }: Readonly<{ screen: Screen; id?: string; id2?: string }>) {
   const disabled = useDisabledCoreFeatures();
   const hidden = useHiddenCoreFeatures();
-  const shown = useShownAddress(
-    askedAddress({ screen, id, id2 }, useLiveHash()),
-  );
+  const asked = askedAddress({ screen, id, id2 }, useLiveHash());
+  const shown = useShownAddress(asked);
+  const loading = shown !== null && !samePage(shown, asked);
   return (
     <Suspense fallback={<ScreenPending />}>
       {/* The draft guard holds content while browser history can still move. */}
@@ -273,8 +274,8 @@ export function ScreenView({
         <ScreenPending />
       ) : (
         <UnsavedGuard address={shown} samePlace={samePage} onKeep={returnTo}>
-          {(held) => (
-            <DrawnFor address={held}>
+          {(held, asking) => (
+            <DrawnFor address={held} pending={loading && !asking}>
               <Fragment key={identityOfAddress(held)}>
                 {screenEnabled(parseHash(held).screen, hidden) ? (
                   screenWithLocale(held)

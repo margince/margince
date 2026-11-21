@@ -2794,6 +2794,7 @@ export const en = {
 
   "shell.railAria": "Primary navigation",
   "shell.skipToContent": "Skip to content",
+  "shell.pageLoading": "Loading {page}…",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
@@ -11228,7 +11229,6 @@ export const en = {
   "jobs.kind.capture_backfill_reconcile": "Mail history import recovery",
   "jobs.kind.capture_confidentiality_verdict": "Mail confidentiality check",
   "jobs.kind.capture_counterparty_verdict": "Mail sender check",
-  "jobs.kind.capture_digest": "Morning mail digest",
   "jobs.kind.capture_enrich": "Contact details from signatures",
   "jobs.kind.captured_deal_refile": "File recent captured activity on deals",
   "jobs.kind.captured_deal_refile_sweep": "Recover captured activity filing",
@@ -15062,7 +15062,6 @@ export const en = {
   "settings.scopeAriaMixed":
     "Settings on this page affect different people; each one states which.",
   "settings.readOnlyPageTitle": "Read-only settings",
-  "settings.pageLoading": "Loading {page}…",
   "settings.readOnlyPage": "Your role cannot change these settings.",
   "settings.seatRefused":
     "Your seat is read-only. Ask an admin for a full seat.",
