@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "5bfa230f5d4f0df552ae0f05855f6c93e97711edc5b7a402eefee5d90c68518c"
+const JobContractHash = "9e4dc65d6139cdbac489ba9c14ed09e249b6f31547e09cbbc4f772292cfa6f36"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
