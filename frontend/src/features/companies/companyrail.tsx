@@ -12,6 +12,7 @@ import {
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { type RailEdit, RailField } from "../../components/railfield";
 import { useSectionEdit } from "../../components/sectionedit";
 import { Badge } from "../../design-system/atoms";
@@ -31,7 +32,6 @@ import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useRecordCarriesTags } from "../../lib/tags.queries";
-import { EditAccessRequest } from "../records/editaccessrequest";
 import { CompanyContactCard } from "./companycontactcard";
 import {
   companyWebsite,

@@ -1,5 +1,5 @@
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { ownerRequestHooks } from "./ownerrequestapi";
 
 export type EditAccessRequest = components["schemas"]["EditAccessRequest"];

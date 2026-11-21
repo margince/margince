@@ -3,20 +3,27 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import { useMe } from "../../lib/session";
-import type { EditAccessRecordType } from "./editaccessapi";
-import { EditAccessRequest } from "./editaccessrequest";
+import { HandoverRequest } from "./handoverrequest";
 
 type Seat = "full" | "read";
 
-const colleaguesLead = {
-  id: "le-1",
+const colleaguesCompany = {
+  id: "co-1",
   owner_id: "u-owner",
   writable: false,
   archived_at: null,
+};
+
+const openRequest = {
+  approval_id: "a-1",
+  record_type: "company",
+  record_id: "co-1",
+  owner_id: "u-owner",
+  status: "pending",
+  expires_at: "2026-11-07T09:00:00Z",
 };
 
 function json(body: unknown, status = 200) {
@@ -27,19 +34,10 @@ function json(body: unknown, status = 200) {
 }
 
 // The server as this control meets it: the viewer, the owner's name, and the
-// viewer's own request on one record. The request exists once POST is sent.
-function serve(kind: EditAccessRecordType, seat: Seat = "full", asked = false) {
+// viewer's own request. The request exists once POST has been sent.
+function serve(seat: Seat = "full", asked = false) {
   const sent: string[] = [];
   let requested = asked;
-  const path = `/records/${kind}/le-1/edit-access-request`;
-  const open = {
-    approval_id: "a-1",
-    record_type: kind,
-    record_id: "le-1",
-    owner_id: "u-owner",
-    status: "pending",
-    expires_at: "2026-11-07T09:00:00Z",
-  };
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -56,16 +54,17 @@ function serve(kind: EditAccessRecordType, seat: Seat = "full", asked = false) {
           user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
           authorization: {
             seat_type: seat,
-            objects: { [kind]: { read: true, update: true } },
+            objects: { company: { read: true, update: true } },
           },
         });
       }
       if (key === "GET /users/names") {
         return json({ data: [{ id: "u-owner", display_name: "Mira Voss" }] });
       }
+      const path = "/records/company/co-1/ownership-request";
       if (key === `POST ${path}`) {
         requested = true;
-        return json(open, 201);
+        return json(openRequest, 201);
       }
       if (key === `DELETE ${path}`) {
         requested = false;
@@ -73,7 +72,7 @@ function serve(kind: EditAccessRecordType, seat: Seat = "full", asked = false) {
       }
       if (key === `GET ${path}`) {
         return requested
-          ? json(open)
+          ? json(openRequest)
           : json({ status: 404, title: "Not found" }, 404);
       }
       return json({});
@@ -88,17 +87,14 @@ function SeatRead() {
   return useMe().data ? <span>seat read</span> : null;
 }
 
-function draw(
-  kind: EditAccessRecordType,
-  record: Parameters<typeof EditAccessRequest>[0]["record"],
-) {
+function draw(record: Parameters<typeof HandoverRequest>[0]["record"]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <EditAccessRequest kind={kind} record={record} />
+        <HandoverRequest kind="company" record={record} />
         <SeatRead />
         <ToastRegion />
       </ToastProvider>
@@ -106,7 +102,7 @@ function draw(
   );
 }
 
-const askLabel = en["editAccess.ask"].replace("{owner}", "Mira Voss");
+const askLabel = en["handover.ask"].replace("{owner}", "Mira Voss");
 
 beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 afterEach(() => {
@@ -115,61 +111,56 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("EditAccessRequest", () => {
-  it.each(["lead", "deal", "project"] as const)(
-    "asks the owner of a %s, then takes the request back",
-    async (kind) => {
-      const sent = serve(kind);
-      const user = userEvent.setup();
-      draw(kind, colleaguesLead);
+describe("HandoverRequest", () => {
+  it("asks the owner, then says the request is open and takes it back", async () => {
+    const sent = serve();
+    const user = userEvent.setup();
+    draw(colleaguesCompany);
 
-      await user.click(await screen.findByRole("button", { name: askLabel }));
-      expect(sent).toContain(`POST /records/${kind}/le-1/edit-access-request`);
-      const withdraw = await screen.findByRole("button", {
-        name: en["editAccess.withdraw"],
-      });
-      expect(
-        screen.getByText(/You asked Mira Voss for edit access/),
-      ).toBeTruthy();
+    await user.click(await screen.findByRole("button", { name: askLabel }));
+    expect(sent).toContain("POST /records/company/co-1/ownership-request");
+    const withdraw = await screen.findByRole("button", {
+      name: en["handover.withdraw"],
+    });
+    expect(screen.getByText(/You asked Mira Voss/)).toBeTruthy();
 
-      await user.click(withdraw);
-      expect(sent).toContain(
-        `DELETE /records/${kind}/le-1/edit-access-request`,
-      );
-      expect(
-        await screen.findByRole("button", { name: askLabel }),
-      ).toBeTruthy();
-    },
-  );
+    await user.click(withdraw);
+    expect(sent).toContain("DELETE /records/company/co-1/ownership-request");
+    expect(await screen.findByRole("button", { name: askLabel })).toBeTruthy();
+  });
 
   it("shows the open request a reader made earlier", async () => {
-    serve("lead", "full", true);
-    draw("lead", colleaguesLead);
+    serve("full", true);
+    draw(colleaguesCompany);
     expect(
-      await screen.findByRole("button", { name: en["editAccess.withdraw"] }),
+      await screen.findByRole("button", { name: en["handover.withdraw"] }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: askLabel })).toBeNull();
   });
 
   it.each([
     [
-      "a lead the reader can already change",
-      { ...colleaguesLead, writable: true },
+      "a record the reader can change",
+      { ...colleaguesCompany, writable: true },
       "full",
     ],
-    ["the reader's own lead", { ...colleaguesLead, owner_id: "u1" }, "full"],
-    ["a lead nobody owns", { ...colleaguesLead, owner_id: null }, "full"],
     [
-      "a closed lead",
-      { ...colleaguesLead, archived_at: "2026-10-01T00:00:00Z" },
+      "the reader's own record",
+      { ...colleaguesCompany, owner_id: "u1" },
       "full",
     ],
-    ["a read seat", colleaguesLead, "read"],
+    ["a record nobody owns", { ...colleaguesCompany, owner_id: null }, "full"],
+    [
+      "an archived record",
+      { ...colleaguesCompany, archived_at: "2026-10-01T00:00:00Z" },
+      "full",
+    ],
+    ["a read seat", colleaguesCompany, "read"],
   ] as const)("offers nothing on %s", async (_, record, seat) => {
-    const sent = serve("lead", seat);
-    draw("lead", record);
+    const sent = serve(seat);
+    draw(record);
     await screen.findByText("seat read");
-    expect(sent).not.toContain("GET /records/lead/le-1/edit-access-request");
+    expect(sent).not.toContain("GET /records/company/co-1/ownership-request");
     expect(screen.queryByRole("button")).toBeNull();
   });
 });

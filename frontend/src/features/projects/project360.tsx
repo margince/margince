@@ -10,6 +10,7 @@ import {
   writableTarget,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { useRailRename } from "../../components/railfield";
 import { RecordTeam } from "../../components/recordteam";
 import { useFieldsDialog } from "../../components/sectionedit";
@@ -31,7 +32,6 @@ import { catalogOfRecord } from "../../lib/customfields.logic";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";
-import { EditAccessRequest } from "../records/editaccessrequest";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { useProjectScreenReads } from "./project360.reads";

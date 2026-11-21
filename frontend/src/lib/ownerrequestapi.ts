@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { throwProblem, unwrap } from "./problem";
 
 // A colleague's own request to the owner of a record, read, sent and taken
 // back. The handover and the edit access request differ only in their route.

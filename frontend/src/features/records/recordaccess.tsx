@@ -18,6 +18,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
@@ -34,9 +35,8 @@ import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
-import { EditAccessRequest } from "./editaccessrequest";
 import { HandoverOffer } from "./handoveroffer";
-import { HandoverRequest } from "./ownerask";
+import { HandoverRequest } from "./handoverrequest";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled

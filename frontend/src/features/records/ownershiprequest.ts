@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ownerRequestHooks } from "../../lib/ownerrequestapi";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { ownerRequestHooks } from "./ownerrequestapi";
 
 export type OwnershipRequest = components["schemas"]["OwnershipRequest"];
 

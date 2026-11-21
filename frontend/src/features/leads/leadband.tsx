@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { WriteRefused } from "../../design-system/querystates";
@@ -12,7 +13,6 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { EditAccessRequest } from "../records/editaccessrequest";
 import type { LeadWriter } from "./leads";
 
 type Lead = components["schemas"]["Lead"];

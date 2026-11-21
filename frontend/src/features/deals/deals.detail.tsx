@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -35,7 +36,6 @@ import { useMe, useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { EditAccessRequest } from "../records/editaccessrequest";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import {
   type ClosedDeal,

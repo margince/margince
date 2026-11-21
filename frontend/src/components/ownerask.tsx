@@ -1,31 +1,26 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Asking a colleague about the record they own: to hand it over, or for edit
-// access to it.
+// Asking a colleague about the record they own. The handover and the edit
+// access request each draw this control with their own route and words.
 //
 // It sits under the refusal that names who owns the record, as the next step
 // after it. The owner answers on their Worklist. This control only asks and
 // takes the ask back.
 
 import type { UseMutationResult } from "@tanstack/react-query";
-import { Button } from "../../design-system/button";
-import { ErrorLine } from "../../design-system/errorline";
-import { useToast } from "../../design-system/toast";
-import { formatDate } from "../../format/format.dates";
-import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { useCan, useCanMutate } from "../../lib/capability";
-import type { EntityKind } from "../../lib/entity";
-import { useMemberName } from "../../lib/membernames";
-import { problemMessageOf } from "../../lib/problem";
-import { useViewerId } from "../../lib/session";
-import { useViewerZone } from "../../lib/viewerzone";
-import {
-  type TransferableRecordType,
-  useOwnershipRequest,
-  useOwnershipRequestActions,
-} from "./ownershiprequest";
+import { Button } from "../design-system/button";
+import { ErrorLine } from "../design-system/errorline";
+import { useToast } from "../design-system/toast";
+import { formatDate } from "../format/format.dates";
+import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { useCan, useCanMutate } from "../lib/capability";
+import type { EntityKind } from "../lib/entity";
+import { useMemberName } from "../lib/membernames";
+import { problemMessageOf } from "../lib/problem";
+import { useViewerId } from "../lib/session";
+import { useViewerZone } from "../lib/viewerzone";
 
 export type AskedRecord = Readonly<{
   id?: string;
@@ -52,31 +47,6 @@ export function useOwnerToAsk(kind: EntityKind, record: AskedRecord) {
   return asks ? ownerId : undefined;
 }
 
-/**
- * The ask to be handed a contact or company. Beside the edit access ask it is
- * the second choice, so it draws as a link.
- */
-export function HandoverRequest({
-  kind,
-  record,
-}: Readonly<{ kind: TransferableRecordType; record: AskedRecord }>) {
-  const ownerId = useOwnerToAsk(kind, record);
-  const id = record.id ?? "";
-  const open = useOwnershipRequest(kind, id, ownerId !== undefined);
-  const actions = useOwnershipRequestActions();
-  return (
-    <OwnerAsk
-      kind={kind}
-      id={id}
-      ownerId={ownerId}
-      open={open}
-      actions={actions}
-      words={HANDOVER_WORDS}
-      variant="link"
-    />
-  );
-}
-
 export type AskWords = Readonly<{
   ask: MessageKey;
   requested: MessageKey;
@@ -84,14 +54,6 @@ export type AskWords = Readonly<{
   withdraw: MessageKey;
   withdrawn: MessageKey;
 }>;
-
-const HANDOVER_WORDS: AskWords = {
-  ask: "handover.ask",
-  requested: "handover.requested",
-  sent: "handover.sent",
-  withdraw: "handover.withdraw",
-  withdrawn: "handover.withdrawn",
-};
 
 type Target<K> = Readonly<{ recordType: K; id: string }>;
 

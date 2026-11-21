@@ -9,7 +9,7 @@ import {
   type EditAccessRecordType,
   useEditAccessRequest,
   useEditAccessRequestActions,
-} from "./editaccessapi";
+} from "../lib/editaccessapi";
 import {
   type AskedRecord,
   type AskWords,

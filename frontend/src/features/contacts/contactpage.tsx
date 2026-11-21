@@ -5,6 +5,7 @@ import {
   type ActivityGate,
   useActivityGate,
 } from "../../components/activitygate";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { MergedIntoSentence } from "../../components/historymergedref";
 import {
   LatestInboundLine,
@@ -32,7 +33,6 @@ import { BriefQueue } from "../brief/brief.queue";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { useWaitingDraftBand } from "../mail/composewaitingdraft";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { EditAccessRequest } from "../records/editaccessrequest";
 import { useContact360 } from "./contact360";
 import { ContactActions } from "./contactactions";
 import { ArchivedContactPage } from "./contactarchived";
