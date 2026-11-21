@@ -11,12 +11,12 @@ package compose
 // workspace reads, because a deal is customer identity — carries references
 // its reader's own company and project reads would refuse.
 //
-// Field masks do not answer this. maskedRowSelects applies the caller's ROLE
-// masks, which ask what this role may see of any row — never what THIS reader
-// may see of the row this one names. Without the second question an export
-// hands back the id of a company whose own row the same bundle withholds, and
-// an id is an existence oracle: it says the record is there and that someone
-// in this workspace has it.
+// Field masks do not answer this. MaskedRowSelects (recordexport) applies the
+// caller's role masks. Those ask what this role may see of any row, not what
+// this reader may see of the row a reference names. Without that question an
+// export hands back the id of a company whose own row the same bundle
+// withholds. An id is an existence oracle: it says the record is there and
+// that someone in this workspace has it.
 //
 // DERIVED, not listed. The pairs come from the schema's own foreign keys to
 // row-scoped tables, so a column added next year is covered the day it is

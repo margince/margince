@@ -17,13 +17,13 @@ const (
 
 // DerivedColumns lists, per table, the columns that follow its stored ones.
 var DerivedColumns = map[string][]string{
-	"contact": {exportPrimaryEmail, exportPrimaryPhone},
+	objectContact: {exportPrimaryEmail, exportPrimaryPhone},
 }
 
 // DerivedColumnExpr is the expression for a derived column on a row aliased t.
 // It picks the address the record page prints, and never a retired one.
 func DerivedColumnExpr(table, column string) (string, bool) {
-	if table != "contact" {
+	if table != objectContact {
 		return "", false
 	}
 	switch column {

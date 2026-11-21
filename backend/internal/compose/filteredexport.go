@@ -44,13 +44,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -201,8 +199,8 @@ func renderSlice(ctx context.Context, tx pgx.Tx, table string, matched []ids.UUI
 	return body, contentType, len(rows), err
 }
 
-// readableExport is the file the import takes back for an object: the import's
-// own fields for it, then its employer name where the import links one, and the id.
+// readableExport is the file the import takes back for an object. It holds the
+// import's own fields, the employer name where the import links one, and the id.
 func readableExport(table string) (recordexport.Spec, bool) {
 	if !selectsByID(table) {
 		return recordexport.Spec{}, false
@@ -240,7 +238,7 @@ func readRowsByID(ctx context.Context, tx pgx.Tx, table string, columns []string
 	if len(idList) == 0 {
 		return nil, nil
 	}
-	selects, args, err := maskedRowSelects(ctx, tx, table, columns, idList)
+	selects, args, err := recordexport.MaskedRowSelects(ctx, tx, table, columns, idList)
 	if err != nil {
 		return nil, err
 	}
@@ -271,92 +269,6 @@ func readRowsByID(ctx context.Context, tx pgx.Tx, table string, columns []string
 		return nil, err
 	}
 	return out, nil
-}
-
-// maskedRowSelects renders the per-column SELECT list with the caller's
-// field masks applied in the statement itself: an always-masked column goes
-// out NULL on every row, a write-authority-conditioned one only on the rows
-// the caller could not change — the identical decision the deal list makes
-// per row, spelled here once for the export and the filter preview, which
-// otherwise print every column of every visible row.
-func maskedRowSelects(ctx context.Context, tx pgx.Tx, table string, columns []string, idList []ids.UUID) ([]string, []any, error) {
-	args := []any{idList}
-	p, err := storekit.Actor(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	alwaysMasked := map[string]bool{}
-	for _, f := range auth.MaskedFields(p, table, true) {
-		alwaysMasked[f] = true
-	}
-	conditioned := map[string]bool{}
-	for _, f := range auth.MaskedFields(p, table, false) {
-		if !alwaysMasked[f] {
-			conditioned[f] = true
-		}
-	}
-	withholdDerivedColumns(table, columns, alwaysMasked, conditioned)
-	// Only a conditioned mask naming a REAL column earns the writable-set
-	// bind: a stale mask row naming no column would otherwise register a
-	// parameter no CASE references, which Postgres refuses outright.
-	rendered := false
-	for _, col := range columns {
-		if conditioned[col] {
-			rendered = true
-			break
-		}
-	}
-	writablePos := 0
-	if rendered {
-		writable, err := auth.WritableSubset(ctx, tx, table, idList)
-		if err != nil {
-			return nil, nil, err
-		}
-		writableIDs := make([]ids.UUID, 0, len(writable))
-		for id, ok := range writable {
-			if ok {
-				writableIDs = append(writableIDs, id)
-			}
-		}
-		args = append(args, writableIDs)
-		writablePos = len(args)
-	}
-	selects := make([]string, len(columns))
-	for i, col := range columns {
-		source := "t." + col
-		if derived, ok := recordexport.DerivedColumnExpr(table, col); ok {
-			source = derived
-		}
-		switch {
-		case alwaysMasked[col]:
-			selects[i] = fmt.Sprintf("NULL AS %s", col)
-		case conditioned[col]:
-			selects[i] = fmt.Sprintf("CASE WHEN t.id = ANY($%d) THEN %s END AS %s", writablePos, source, col)
-		default:
-			selects[i] = source + " AS " + col
-		}
-	}
-	return selects, args, nil
-}
-
-// withholdDerivedColumns extends both mask sets to the stored columns computed
-// from a withheld field. A deal's base amount and rate print the masked money
-// and currency back out. The stricter mask on any input decides the column.
-func withholdDerivedColumns(table string, columns []string, alwaysMasked, conditioned map[string]bool) {
-	for _, col := range columns {
-		inputs, derived := fieldmask.DerivedInputs(table, col)
-		if !derived {
-			continue
-		}
-		for _, input := range inputs {
-			switch {
-			case alwaysMasked[input]:
-				alwaysMasked[col] = true
-			case conditioned[input]:
-				conditioned[col] = true
-			}
-		}
-	}
 }
 
 // renderExport renders one member as the requested open format, reusing the

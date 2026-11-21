@@ -46,6 +46,11 @@ const (
 // ByteOrderMark is what Excel needs at the start of a file to read it as UTF-8.
 var ByteOrderMark = []byte{0xEF, 0xBB, 0xBF}
 
+const (
+	objectContact = "contact"
+	authorField   = "author"
+)
+
 // tagSeparator joins tag names in one cell, as the importer splits them.
 const tagSeparator = "; "
 
@@ -60,7 +65,7 @@ type Spec struct {
 }
 
 // Renders reports whether the export can write a cell for the target of an
-// object, so a column the importer gains cannot reach a file as an empty one.
+// object. A column the importer gains then cannot reach a file as an empty one.
 func Renders(object, target string) bool {
 	return !slices.Contains(unrenderable[object], target)
 }
@@ -68,10 +73,10 @@ func Renders(object, target string) bool {
 // unrenderable are import fields no stored record carries: the importer writes
 // the author on create only, and a deal's stakeholder contact is an edge.
 var unrenderable = map[string][]string{
-	"contact": {"author"},
-	"company": {"author"},
-	"lead":    {"author"},
-	"deal":    {"contact_ref"},
+	objectContact: {authorField},
+	"company":     {authorField},
+	"lead":        {authorField},
+	"deal":        {"contact_ref"},
 }
 
 // ExportedTargets is the import fields of an object that a file carries.
@@ -86,7 +91,7 @@ func ExportedTargets(object string, importFields []string) []string {
 }
 
 // Rows reads the records the caller may read, in the order given, and returns one
-// row of cells per record. A record the read refuses is left out: the ids come
+// row of cells per record. A record the read refuses is left out. The ids come
 // from the caller's own scoped selection, so a refusal is a record that went away.
 func Rows(ctx context.Context, tx pgx.Tx, spec Spec, idList []ids.UUID) ([][]string, error) {
 	records := make([]map[string]json.RawMessage, 0, len(idList))
@@ -130,13 +135,13 @@ func CSV(header []string, rows [][]string) ([]byte, error) {
 	return buf.Bytes(), out.Error()
 }
 
-// read is the record as the detail page reads it: the same row scope and the same
-// masks, so the file holds nothing the reader could not open.
+// read is the record as the detail page reads it, with the same row scope and
+// masks. The file then holds nothing the reader could not open.
 func read(ctx context.Context, tx pgx.Tx, object string, id ids.UUID) (map[string]json.RawMessage, error) {
 	var record any
 	var err error
 	switch object {
-	case "contact":
+	case objectContact:
 		record, err = contacts.NewStore(nil).GetContactTx(ctx, tx, ids.From[ids.ContactKind](id), storekit.LiveOnly, contacts.CustomColumns{})
 	case "company":
 		record, err = contacts.NewStore(nil).GetCompanyTx(ctx, tx, ids.From[ids.CompanyKind](id), storekit.LiveOnly, contacts.CustomColumns{})
@@ -178,7 +183,7 @@ func cell(spec Spec, names lookups, record map[string]json.RawMessage, target st
 	case Amount:
 		return amountCell(record)
 	case EmployerName:
-		if spec.Object == "contact" {
+		if spec.Object == objectContact {
 			return employerName(record["employer"])
 		}
 	case LeadStatus:

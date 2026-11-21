@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,6 +35,12 @@ func nameLookups(ctx context.Context, tx pgx.Tx, records []map[string]json.RawMe
 		{&out.pipelines, "pipeline_id", "SELECT id, name FROM pipeline WHERE id = ANY($1)"},
 		{&out.stages, "stage_id", "SELECT id, name FROM stage WHERE id = ANY($1)"},
 	} {
+		// A reader without the company grant gets no company name. The record
+		// reads already withheld the reference for them.
+		if read.field == "company_id" && !auth.ReadGranted(ctx, "company") {
+			*read.into = map[ids.UUID]string{}
+			continue
+		}
 		if *read.into, err = wordsFor(ctx, tx, read.query, namedBy(records, read.field)); err != nil {
 			return lookups{}, err
 		}

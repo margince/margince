@@ -135,8 +135,8 @@ func TestCSVSourceSkipsARowWithNoSourceKey(t *testing.T) {
 	}
 }
 
-// An exported row that has no value in its key column still names its record
-// by the id column, so it is identified rather than skipped.
+// An exported row with no value in its key column still names its record by
+// the id column. It is identified, not skipped.
 func TestCSVSourceIdentifiesAKeylessRowByItsIDColumn(t *testing.T) {
 	const id = "0192f3a0-0000-7000-8000-000000000001"
 	mapping := map[string]string{"Email": "email", "Id": "id"}

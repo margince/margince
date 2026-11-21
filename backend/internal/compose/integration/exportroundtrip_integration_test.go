@@ -6,9 +6,9 @@
 package integration
 
 // Export CSV writes the file Data import reads back. For each record type the
-// export names, the test seeds records through the importer, exports them, and
-// uploads the file as that type: every row must come back "same", with every
-// column of the file mapped without the reader's help.
+// export names, the test seeds records through the importer and exports them.
+// It then uploads the file as that type. Every row must come back "same", and
+// every column must map without the reader's help.
 
 import (
 	"bytes"
@@ -40,6 +40,7 @@ func exportAll(t *testing.T, e *apptest.AppEnv, object string) (body []byte, dis
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	//nolint:bodyclose // apptest.CloseBody closes it in the deferred call below.
 	resp, err := e.Client.Do(req)
 	if err != nil {
 		t.Fatalf("export request: %v", err)
@@ -91,10 +92,9 @@ func wantEverythingSame(t *testing.T, object string, report importReportDTO, hea
 	if header[len(header)-1] != "id" {
 		t.Errorf("the id is not the last column: %v", header)
 	}
-	// The other direction: no field the import takes goes missing from the file,
-	// but the ones no stored record holds (the importer writes an author on create
-	// only, a deal's stakeholder is an edge, a contact's employer is named by its
-	// name) and the workspace's own custom fields.
+	// The other direction: no field the import takes goes missing from the file.
+	// The exceptions are the author, which the import writes on create only, a
+	// deal's stakeholder edge, a contact's employer ref and the custom fields.
 	notStored := map[string]bool{"author": true, "ref": true, "contact_ref": true}
 	for _, target := range profile.Targets {
 		if notStored[target] || strings.HasPrefix(target, "cf_") || (object == "contact" && target == "company_ref") {
@@ -227,6 +227,7 @@ func TestAnExportOfASavedViewIsNamedAfterTheViewAndTheDay(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	//nolint:bodyclose // apptest.CloseBody closes it in the deferred call below.
 	resp, err := e.Client.Do(req)
 	if err != nil {
 		t.Fatalf("export request: %v", err)
@@ -242,7 +243,7 @@ func TestAnExportOfASavedViewIsNamedAfterTheViewAndTheDay(t *testing.T) {
 }
 
 // A row that names a contact, lead or deal by the id the export wrote updates
-// that record, and an id nobody can see is refused rather than created.
+// that record. An id nobody can see is refused, not created.
 func TestARowNamingAnIDUpdatesThatContactLeadOrDeal(t *testing.T) {
 	e := setupImportApp(t)
 	pipeline, open, _ := seededStageNames(t, e)

@@ -195,8 +195,8 @@ func hasCustomFields(object string) bool { return object != migration.ObjectActi
 
 // selectsByID reports whether an object's rows may name the record they are.
 //
-// Every object an export writes the id of: a corrected export names its records
-// by id, and an id names one record where a natural key can be empty or shared.
+// A corrected export names its records by id. An id names one record where a
+// natural key can be empty or shared.
 func selectsByID(object string) bool {
 	switch object {
 	case migration.ObjectCompany, migration.ObjectContact, migration.ObjectLead, migration.ObjectDeal:
