@@ -360,4 +360,44 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
     await waitFor(() => expect(cached()?.sources).toHaveLength(1));
     expect(cached()?.summary?.total_words).toBe(900);
   });
+
+  it("keeps the newer summary when two ingests settle out of order after the step closed", async () => {
+    const older = gate();
+    const newer = gate();
+    stubApi({
+      ingests: [
+        { stats: documentStats, summary: summaryOf(900), release: older.held },
+        { stats: documentStats, summary: summaryOf(1800), release: newer.held },
+      ],
+    });
+    const client = new QueryClient();
+    client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, {
+      built: false,
+      summary: null,
+      sources: [],
+    });
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result, unmount } = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      {
+        wrapper: ({ children }) =>
+          createElement(QueryClientProvider, { client }, children),
+      },
+    );
+    const cached = () =>
+      client.getQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY);
+    act(() => {
+      result.current.addPaste("The first paragraph I wrote.", "Pasted text");
+    });
+    act(() => {
+      result.current.addPaste("A second paragraph of mine.", "Pasted text");
+    });
+
+    unmount();
+    newer.open();
+    await waitFor(() => expect(cached()?.sources).toHaveLength(1));
+    older.open();
+    await waitFor(() => expect(cached()?.sources).toHaveLength(2));
+    expect(cached()?.summary?.total_words).toBe(1800);
+  });
 });

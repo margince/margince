@@ -181,6 +181,9 @@ export function useVoiceCorpus({
           source,
         ],
       }));
+      if (newest) {
+        appliedSummarySeq.current = seq;
+      }
       if (!mounted.current) {
         return;
       }
@@ -205,7 +208,6 @@ export function useVoiceCorpus({
       if (!newest) {
         return;
       }
-      appliedSummarySeq.current = seq;
       queue.push(diffCorpus(summaryRef.current, next, locale));
       summaryRef.current = next;
       setSummary(next);
