@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -96,7 +97,7 @@ func TestErasureFlagsAnInactiveMembersSignatureWithoutOpeningTheControllersOwn(t
 	}
 }
 
-func TestMarkerCorrectionDefersAWriteConflictWithoutAbortingItsTransaction(t *testing.T) {
+func TestMarkerCorrectionReportsAWriteConflictWithoutAbortingItsTransaction(t *testing.T) {
 	e := integration.Setup(t)
 	record := legacyWeeklyCopies(t, e, "")
 	contact, company := e.SeedContact(t, "Ordinary contact", nil), e.SeedCompany(t, "Ordinary company", nil)
@@ -107,11 +108,11 @@ func TestMarkerCorrectionDefersAWriteConflictWithoutAbortingItsTransaction(t *te
 		}
 		return database.WithWorkspaceTx(ctx, e.Pool, func(cleanup pgx.Tx) error {
 			page, err := privacy.RedactMarkedWeeklyAuditPageTx(ctx, cleanup, ids.UUID{}, ids.NewV7(), 200, nil)
-			if err != nil {
-				return err
+			if !storekit.IsLockTimeout(err) {
+				t.Fatalf("a busy table lock must return a lock timeout, got %v", err)
 			}
-			if page.Changed != 0 {
-				t.Fatalf("changed %d records while CRM write holds a lock", page.Changed)
+			if page.Changed != 0 || len(page.Scanned) != 0 {
+				t.Fatalf("busy table lock moved the cursor over %d records and changed %d", len(page.Scanned), page.Changed)
 			}
 			if _, err := business.Exec(ctx, `UPDATE company SET legal_hold=false WHERE id=$1`, company); err != nil {
 				return err
@@ -134,7 +135,7 @@ func TestMarkerCorrectionDefersAWriteConflictWithoutAbortingItsTransaction(t *te
 	}
 }
 
-func TestMarkerCorrectionDefersAReadLockOnARightsRequest(t *testing.T) {
+func TestMarkerCorrectionReportsAReadLockOnARightsRequest(t *testing.T) {
 	e := integration.Setup(t)
 	request := legacyRequestAuditCopies(t, e)
 	company := e.SeedCompany(t, "Ordinary company", nil)
@@ -149,11 +150,11 @@ func TestMarkerCorrectionDefersAReadLockOnARightsRequest(t *testing.T) {
 				return err
 			}
 			page, err := privacy.RedactRetiredRequestAuditPageTx(ctx, cleanup, ids.UUID{}, ids.NewV7(), privacy.MarkerAuditPageSize, nil)
-			if err != nil {
-				return err
+			if !storekit.IsLockTimeout(err) {
+				t.Fatalf("a busy record lock must return a lock timeout, got %v", err)
 			}
-			if page.Changed != 0 {
-				t.Fatal("changed a request another transaction is using")
+			if page.Changed != 0 || len(page.Scanned) != 0 {
+				t.Fatalf("busy record lock moved the cursor over %d records and changed %d", len(page.Scanned), page.Changed)
 			}
 			return nil
 		}); err != nil {

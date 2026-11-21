@@ -83,8 +83,11 @@ func redactMarkedAuditPage(ctx context.Context, tx pgx.Tx, source markedAuditSou
 		return page, nil
 	}
 	held, err := markerAuditUnderHold(ctx, tx)
-	if err != nil || held {
-		return page, err
+	if err != nil {
+		return HistoricalAuditPage{}, err
+	}
+	if held {
+		return page, nil
 	}
 	for _, id := range idsToCheck {
 		cleared, err := lockMarkedAuditRecord(ctx, tx, source, id)
