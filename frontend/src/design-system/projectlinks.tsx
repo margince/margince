@@ -220,24 +220,23 @@ export function ProjectLinks({
     );
   const dialogs = (
     <>
-      {picking && (
-        <AttachDialog
-          adapter={adapter}
-          role={role}
-          onRole={setRole}
-          moving={moving}
-          busy={busy}
-          refusal={refusal}
-          words={said}
-          onClose={() => setPicking(false)}
-          onAttach={(id) =>
-            run(
-              () => adapter.attach(id, role),
-              () => setPicking(false),
-            )
-          }
-        />
-      )}
+      <AttachDialog
+        open={picking}
+        adapter={adapter}
+        role={role}
+        onRole={setRole}
+        moving={moving}
+        busy={busy}
+        refusal={refusal}
+        words={said}
+        onClose={() => setPicking(false)}
+        onPick={(id) =>
+          run(
+            () => adapter.attach(id, role),
+            () => setPicking(false),
+          )
+        }
+      />
       <DetachDialog
         project={detaching}
         detach={adapter.detach}
@@ -329,10 +328,11 @@ function LinkedRows({
 // refusal, and folding all three back in is what took the section past what one
 // function should ask a reader to hold at once.
 //
-// A pick only selects, as Add stakeholder's does: the reader may still change
-// the role, and the confirm is what writes. Mounted per opening, so a second
-// opening starts with nothing picked.
+// It confirms nothing of its own — picking IS the act — so its confirm button
+// is permanently disabled, present only because ConfirmModal's pending and
+// error slots are what make a refused write legible.
 function AttachDialog({
+  open,
   adapter,
   role,
   onRole,
@@ -341,8 +341,9 @@ function AttachDialog({
   refusal,
   words,
   onClose,
-  onAttach,
+  onPick,
 }: Readonly<{
+  open: boolean;
   adapter: ProjectLinksAdapter;
   role: string;
   onRole: (role: string) => void;
@@ -351,10 +352,12 @@ function AttachDialog({
   refusal: string | null;
   words: LinkWords;
   onClose: () => void;
-  onAttach: (projectID: string) => void;
+  onPick: (projectID: string) => void;
 }>) {
   const t = useT();
-  const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
+  if (!open) {
+    return null;
+  }
   return (
     <ConfirmModal
       intent="form"
@@ -362,22 +365,11 @@ function AttachDialog({
       onClose={onClose}
       title={moving ? words.move : words.attach}
       confirmLabel={words.attach}
-      confirmDisabled={picked === null}
-      onConfirm={() => {
-        if (picked) {
-          onAttach(picked.id);
-        }
-      }}
+      confirmDisabled
+      onConfirm={() => undefined}
       pending={busy}
       error={refusal}
     >
-      <RecordPicker
-        label={words.search}
-        searchTargets={adapter.search}
-        disabled={busy}
-        selected={picked}
-        onPick={setPicked}
-      />
       {adapter.roles.length > 1 && (
         <Field label={t("projectLinks.roleLabel")}>
           {(control) => (
@@ -395,6 +387,12 @@ function AttachDialog({
           )}
         </Field>
       )}
+      <RecordPicker
+        label={words.search}
+        searchTargets={adapter.search}
+        disabled={busy}
+        onPick={(candidate) => onPick(candidate.id)}
+      />
     </ConfirmModal>
   );
 }

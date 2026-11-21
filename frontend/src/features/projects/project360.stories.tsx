@@ -221,32 +221,3 @@ export const EditProject: Story = {
     ).toHaveValue("CRM rollout");
   },
 };
-
-// The server refuses an archived project's 360, so the page draws from the row:
-// the archived sentence, and the history the shell hands in (none here).
-function refusedPage(row: unknown) {
-  return () => {
-    installFetchStub({
-      "GET /me": meRoute({ project: ["read", "update"] }),
-      "GET /projects/pr-1/360": () =>
-        jsonResponse({ title: "Not found", status: 404 }, 404),
-      "GET /projects/pr-1": () =>
-        row
-          ? jsonResponse(row)
-          : jsonResponse({ title: "Not found", status: 404 }, 404),
-    });
-    return (
-      <StoryProviders>
-        <ProjectScreen id="pr-1" />
-      </StoryProviders>
-    );
-  };
-}
-
-/** An archived project, opened from Show archived on the list. */
-export const Archived: Story = {
-  render: refusedPage(project({ archived_at: "2026-11-01T09:00:00Z" })),
-};
-
-/** An address that names no project the reader can see. */
-export const NotFound: Story = { render: refusedPage(null) };

@@ -7,7 +7,6 @@ import {
 } from "react";
 import {
   AnalyticsScreen,
-  ArchivedRecordHistory,
   BookingScreen,
   BriefScreen,
   BuyerRoomScreen,
@@ -112,7 +111,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
       !id || opensReservedPage({ screen: "projects", id }) ? (
         <ProjectsScreen startCreating={id !== undefined} />
       ) : (
-        <ProjectScreen id={id} archivedHistory={ArchivedRecordHistory} />
+        <ProjectScreen id={id} />
       ),
     // One segment, and it names whose day it is. A team board row needs that
     // door. The other three dials stay state: one of four in the address would

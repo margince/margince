@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { FIRST_PAGE } from "../api/client";
-import type { components } from "../api/schema";
-import type { RecordPickerCandidate } from "../design-system/recordpicker";
-import { holdsEveryWord } from "../format/collate";
+import { FIRST_PAGE } from "../../api/client";
+import type { components } from "../../api/schema";
+import type { RecordPickerCandidate } from "../../design-system/recordpicker";
+import { holdsEveryWord } from "../../format/collate";
 
 type DealPage = components["schemas"]["DealListResponse"];
 

@@ -7,7 +7,6 @@ import {
 import { useCallback, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { AddDocumentDialog } from "../../components/adddocument";
 import {
   AttachmentGrid,
   AttachmentTile,
@@ -31,6 +30,7 @@ import {
 import { attachmentTitle } from "../../lib/attachmentlink";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived
 // with the messages linked to it. The second half is why this exists — an

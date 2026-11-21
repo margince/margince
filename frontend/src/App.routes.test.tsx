@@ -57,11 +57,7 @@ describe("the address dispatch", () => {
     ["#/deals/d1/room", screens.DealsRoute, { id: "d1", id2: "room" }],
     ["#/projects", screens.ProjectsScreen, { startCreating: false }],
     ["#/projects/new", screens.ProjectsScreen, { startCreating: true }],
-    [
-      "#/projects/p1",
-      screens.ProjectScreen,
-      { id: "p1", archivedHistory: screens.ArchivedRecordHistory },
-    ],
+    ["#/projects/p1", screens.ProjectScreen, { id: "p1" }],
     ["#/worklist/me", screens.WorklistRedirect, { opensOn: "me" }],
     ["#/analytics", screens.AnalyticsScreen, {}],
     ["#/filters/f1/v1", screens.FiltersScreen, { id: "f1", view: "v1" }],

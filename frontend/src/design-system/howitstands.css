@@ -179,10 +179,3 @@
 .standing-sheet-figures {
   margin-inline: calc(-1 * var(--standing-inset));
 }
-/* A grid line passes behind the axis label before it rather than through it:
-   a label that names its year runs past the next line on a narrow axis. */
-.standing-sheet-pane .standing-timeline-tick-label {
-  z-index: 1;
-  padding-inline-end: var(--space-1);
-  background: var(--ground);
-}

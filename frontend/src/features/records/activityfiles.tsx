@@ -26,7 +26,7 @@ import "./activityfiles.css";
 // Fetched on the first press: Home reaches this list, and its cold load
 // should not wait for a dialog few readers open.
 const AddDocumentDialog = lazy(async () => ({
-  default: (await import("../../components/adddocument")).AddDocumentDialog,
+  default: (await import("../voice-knowledge/adddocument")).AddDocumentDialog,
 }));
 
 // The files filed on one activity: what a rep handed over in a meeting or

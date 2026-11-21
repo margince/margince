@@ -163,7 +163,7 @@ describe("the query client defaults", () => {
   // asked, because a change can get one wrong and the other right.
   //
   // The predicates, not the defaults they are installed as. What they are
-  // wired to is proved end to end in testing/liverecord.test.tsx,
+  // wired to is proved end to end in features/records/liverecord.test.tsx,
   // which drives each record page's own read through this client.
   it("repeats a record read, and nothing else", () => {
     expect(liveInterval({ queryKey: ["contact360", "p-1"] })).toBe(60_000);

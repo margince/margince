@@ -75,10 +75,11 @@ type Service struct {
 	// composed the reader behaves exactly as one whose policy is off, so the
 	// password path stays open. See ssoenforcement.go.
 	requireSSO func(ctx context.Context) (bool, error)
-	// admissionSettings reads the settings Authenticate applies, require-MFA
-	// among them, in the caller's transaction. Nil when unwired: no MFA
-	// enforcement. See mfachallenge.go.
-	admissionSettings func(ctx context.Context, tx pgx.Tx) (AdmissionSettings, error)
+	// requireMFA answers whether this installation makes a second factor
+	// mandatory, read in the caller's transaction. Nil when unwired: no
+	// enforcement, and Authenticate then reads nothing extra per request. See
+	// mfachallenge.go.
+	requireMFA func(ctx context.Context, tx pgx.Tx) (bool, error)
 	// challengeEpochKey keys a member's credential epoch with the challenge
 	// signing key. Unset, no challenge can be completed.
 	challengeEpochKey func(material string) string
@@ -371,19 +372,17 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		if loadErr != nil {
 			return loadErr
 		}
-		applied, err := s.admission(ctx, tx)
-		if err != nil {
+		if id.IndividualPerformance, err = IndividualPerformanceTx(ctx, tx); err != nil {
 			return err
 		}
-		id.IndividualPerformance = applied.IndividualPerformance
 		// Provider sessions rely on the provider’s MFA policy, even when the
 		// same member also has a password session requiring enrolment.
-		if !providerAuthenticated && applied.RequireMFA {
-			confirmed, err := hasConfirmedMFA(ctx, tx, userID)
+		if !providerAuthenticated {
+			mustEnrol, err := s.mustEnrolMFA(ctx, tx, userID)
 			if err != nil {
 				return err
 			}
-			id.MustEnrolMFA = !confirmed
+			id.MustEnrolMFA = mustEnrol
 		}
 		// Written last, to keep concurrent requests off the session row lock while
 		// the reads run. The UPDATE repeats the age test, so a burst that read

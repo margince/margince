@@ -28,6 +28,7 @@ src/components/meetingrows.tsx 1
 src/features/contacts/contactmemory.rows.ts 1
 src/features/contacts/contactstanding.ts 1
 src/features/import/vcard-import.tsx 1
+src/features/lists/filtersentence.ts 1
 src/features/lists/listhistory.tsx 1
 src/features/onboarding/connect-posture.tsx 1
 src/features/onboarding/onboarding.tsx 1

@@ -144,8 +144,7 @@ type Project360Contract struct {
 	EndsOn         *time.Time `json:"ends_on,omitempty"`
 }
 
-// Project360Documents is the project's own uploads and the files of the
-// activities filed under it.
+// Project360Documents is the files attached to the project itself.
 type Project360Documents struct {
 	Items     []Project360Document `json:"items"`
 	Truncated bool                 `json:"truncated"`

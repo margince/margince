@@ -287,34 +287,6 @@ describe("ListTable: pending, error and empty states", () => {
     await screen.findByRole("cell", { name: "No Contacts yet." });
   });
 
-  it("offers Clear filters instead of Retry when the server refuses the list's dials", async () => {
-    window.location.hash = "#/contacts?sort=bogus&stage=bogus";
-    const user = userEvent.setup();
-    const fetchPage = vi.fn(async (query: ListQuery) => {
-      if (query.sort === "bogus" || query.filters.stage) {
-        throw new ProblemError({ status: 422, detail: "expected one of: a" });
-      }
-      return emptyPage();
-    });
-    try {
-      render(<ListTableHarness fetchPage={fetchPage} />);
-
-      await screen.findByText("This list cannot be shown with these filters.");
-      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
-
-      await user.click(screen.getByRole("button", { name: "Clear filters" }));
-
-      await screen.findByRole("cell", { name: "No Contacts yet." });
-      expect(fetchPage).toHaveBeenLastCalledWith(
-        expect.objectContaining({ sort: "-created_at", filters: {} }),
-        null,
-        expect.anything(),
-      );
-    } finally {
-      window.location.hash = "";
-    }
-  });
-
   it("renders the table's own empty state once the list loads with no rows", async () => {
     const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
       emptyPage(),

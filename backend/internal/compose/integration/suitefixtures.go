@@ -155,6 +155,20 @@ func RegisterGoBDFloorPack() {
 	jurisdiction.Register(GoBDFloorPack{})
 }
 
+// entityLawPack is a pack with no retention classes. A further legal entity
+// may only name a compiled-in pack, and a suite binary composes no extension.
+type entityLawPack struct{ code jurisdiction.Code }
+
+func (p entityLawPack) Code() jurisdiction.Code { return p.code }
+
+func (entityLawPack) Retention() jurisdiction.Retention { return nil }
+
+// RegisterEntityLawPack compiles in a floorless pack under code, so a suite
+// can describe a further legal entity there. Call it once per binary, from init.
+func RegisterEntityLawPack(code jurisdiction.Code) {
+	jurisdiction.Register(entityLawPack{code: code})
+}
+
 // SeedRetentionPolicies authors one policy per branch the sweep must take.
 // A suite asserting an outcome then need not state the policy behind it.
 // The transcript-erase and contact-anonymize rows are not shipped defaults.

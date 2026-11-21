@@ -37,6 +37,7 @@ const VIENNA = entity("le-vienna", {
   display_name: "Acme Wien",
   legal_name: "Acme Wien GmbH",
   country: "at",
+  jurisdiction: "at",
   member_count: 3,
   address: { line1: "Kärntner Ring 12", postal_code: "1010", city: "Wien" },
   vat_id: "ATU12345678",
@@ -49,6 +50,14 @@ const VIENNA = entity("le-vienna", {
   imprint: "Acme Wien GmbH, Kärntner Ring 12, 1010 Wien",
 });
 
+// The installation follows the de pack; at and de are compiled in.
+const JURISDICTION = {
+  selected: "de",
+  available: [{ code: "at" }, { code: "de" }],
+  deadlines: [],
+  documents: [],
+};
+
 const ADMIN = { legal_entity: ["read", "create", "update", "delete"] } as const;
 const READER = { legal_entity: ["read"] } as const;
 
@@ -57,6 +66,7 @@ function story(allow: Parameters<typeof meRoute>[0], rows: object[]) {
     installFetchStub({
       "GET /me": meRoute(allow),
       "GET /legal-entities": () => jsonResponse({ data: rows }),
+      "GET /installation/jurisdiction": () => jsonResponse(JURISDICTION),
     });
     return (
       <StoryProviders>

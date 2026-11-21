@@ -245,13 +245,12 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
           },
         ]
       : []),
-    // Prose, not a line: the full width, with the writer's line breaks.
+    // The design's About draws no description; it stays one click away.
     {
       key: "description",
       term: t("project.description"),
       value: project.description || unset,
-      block: Boolean(project.description),
-      empty: !project.description,
+      empty: true,
     },
     ...customFieldRows(cf, project, display, unset, fieldLabel),
   ];

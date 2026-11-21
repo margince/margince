@@ -2,7 +2,6 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
-import { AddDocumentDialog } from "../../components/adddocument";
 import {
   AttachmentGrid,
   AttachmentTile,
@@ -20,6 +19,7 @@ import {
 import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
+import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { ContactChatCapture } from "./contactchatcapture";
 import "./contact360.css";
 import { contactFilesKey } from "../../lib/attachmentkeys";

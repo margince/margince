@@ -1,7 +1,12 @@
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { stable } from "../format/collate";
 import { en } from "../i18n/en";
-import { fieldsARecordUpdateWrites } from "../testing/updatebodies";
+import {
+  membersOf,
+  recordTypesInHistory,
+  schemaSource,
+} from "./contractschema.testkit";
 import {
   historyFieldLabel,
   historyFieldLabelKey,
@@ -23,6 +28,46 @@ import {
 //
 // It reads the generated types rather than the six Go stores for the same
 // reason the client does: the contract is the seam between the two trees.
+
+// Body fields that tell the update what else to do and are never a column it
+// writes, so no history row can name them.
+// Filing uses a relink audit; a follow-up creates a separately audited task.
+const INSTRUCTIONS = new Set([
+  "convert_lead_ids",
+  "deal_filing",
+  "follow_up_task",
+]);
+
+function updateBodyName(recordType: string): string {
+  return `Update${recordType[0].toUpperCase()}${recordType.slice(1)}Request`;
+}
+
+function fieldsARecordUpdateWrites(): Map<string, string[]> {
+  const source = schemaSource();
+  const byType = new Map<string, string[]>();
+  for (const recordType of recordTypesInHistory(source)) {
+    const body = updateBodyName(recordType);
+    let fields: string[] = [];
+    const walk = (node: ts.Node) => {
+      if (
+        ts.isPropertySignature(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === body &&
+        node.type
+      ) {
+        fields = membersOf(node.type)
+          .map((member) => member.name)
+          .filter(ts.isIdentifier)
+          .map((name) => name.text)
+          .filter((name) => !INSTRUCTIONS.has(name));
+      }
+      ts.forEachChild(node, walk);
+    };
+    walk(source);
+    byType.set(recordType, fields);
+  }
+  return byType;
+}
 
 describe("history field labels", () => {
   // Under-recognition is the one way this gate could break in silence: a

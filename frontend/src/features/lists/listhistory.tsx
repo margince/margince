@@ -29,7 +29,6 @@ import { navigate } from "../../lib/router";
 import { decode } from "../../lib/segmentpredicate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { filterSentence, useSentenceWords } from "./filtersentence";
-import { referencedIdsOf } from "./filtersentence.names";
 
 const KIND_LABEL: Record<ListHistoryEntry["kind"], MessageKey> = {
   member_added: "lists.history.added",
@@ -252,6 +251,7 @@ function FilterChange({
   list,
 }: Readonly<{ row: ListHistoryEntry; list: List }>) {
   const t = useT();
+  const words = useSentenceWords();
   const vocabulary = useFilterVocabulary(list.entity_type, true);
   const fields = vocabulary.data?.fields;
   // Decoding mints a fresh id for every node, so it runs once per definition.
@@ -260,12 +260,6 @@ function FilterChange({
     [row.previous_definition],
   );
   const after = useMemo(() => decode(row.definition), [row.definition]);
-  const words = useSentenceWords(
-    referencedIdsOf(
-      [before, after].filter((tree) => tree !== null),
-      fields,
-    ),
-  );
   const said = (tree: typeof before) =>
     (tree && filterSentence(tree, fields, words)) ||
     t("lists.history.noFilter");

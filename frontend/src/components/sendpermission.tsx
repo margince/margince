@@ -37,7 +37,7 @@ import { LawfulBasisCallout } from "./lawfulbasiswarning";
 // nobody may lift invites a support ticket and teaches reps that the product
 // argues with them.
 //
-// Name what is missing. "This follow-up has no open deal" and "she
+// Name what is missing. "Choose the deal for this follow-up" and "she
 // asked us to stop" are different sentences and must never blur into "no
 // consent". A refusal that does not say whose it is reads as arbitrary.
 

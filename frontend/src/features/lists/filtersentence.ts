@@ -25,7 +25,6 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { fieldLabel, type VocabularyField } from "../../lib/filterdata";
-import { valueFor } from "../../lib/labelfor";
 import {
   type FilterOp,
   isGroup,
@@ -36,13 +35,6 @@ import {
   type RadiusOperand,
 } from "../../lib/segmentpredicate";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  NO_REFERENCES,
-  type ReferencedIds,
-  recordNamesText,
-  tagNamesText,
-  useRecordNames,
-} from "./filtersentence.names";
 import { useTagCatalog } from "./tagadmin.queries";
 
 /**
@@ -111,13 +103,9 @@ export type SentenceWords = Readonly<{
   retiredTags?: ReadonlySet<string>;
   /** Tag names by id, so a tag clause names its tags instead of counting them. */
   tagNames?: ReadonlyMap<string, string>;
-  /** Company, colleague and team names by id, for the clauses that point at them. */
-  recordNames?: ReadonlyMap<string, string>;
 }>;
 
-export function useSentenceWords(
-  refs: ReferencedIds = NO_REFERENCES,
-): SentenceWords {
+export function useSentenceWords(): SentenceWords {
   const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
@@ -133,16 +121,7 @@ export function useSentenceWords(
   const tagNames = new Map(
     (catalog.data?.data ?? []).map((tag) => [tag.id, tag.name]),
   );
-  const recordNames = useRecordNames(refs);
-  return {
-    t,
-    plural,
-    locale,
-    zone: readerZone,
-    retiredTags,
-    tagNames,
-    recordNames,
-  };
+  return { t, plural, locale, zone: readerZone, retiredTags, tagNames };
 }
 
 /** One clause as a filter states it: a stored leaf, or a verdict's clause. */
@@ -197,7 +176,7 @@ export function clauseWords(
   const text = operandText(operand, known, words);
   const said = {
     field,
-    op: t(clauseOperatorKey(clause, known, words)),
+    op: t(clauseOperatorKey(clause, known)),
     operand: text === "" ? t("filters.sentence.pendingValue") : text,
   };
   return retiredTagCount(operand, known, words) > 0
@@ -231,12 +210,8 @@ function retiredTagCount(
 function clauseOperatorKey(
   { op, operand }: Clause,
   field: VocabularyField | undefined,
-  words: SentenceWords,
 ): MessageKey {
-  const named =
-    field !== undefined &&
-    recordNamesText(operand, field, words.recordNames) !== undefined;
-  if (op === "in" && field?.references && !named) {
+  if (op === "in" && field?.references) {
     return "filters.sentence.inCounted";
   }
   if (op === "in" && Array.isArray(operand) && operand.length === 1) {
@@ -365,13 +340,7 @@ function typedOperandText(
   if (!field.references || operand === "") {
     return undefined;
   }
-  const named =
-    tagNamesText(
-      operand,
-      field,
-      words.tagNames,
-      retiredTagCount(operand, field, words) > 0,
-    ) ?? recordNamesText(operand, field, words.recordNames);
+  const named = tagNamesText(operand, field, words);
   if (named !== undefined) {
     return named;
   }
@@ -381,17 +350,41 @@ function typedOperandText(
   if (retired === ids) {
     return plural("filters.sentence.ref.retiredTag", ids, count);
   }
-  const noun = valueFor(REFERENCE_NOUN, field.references, undefined);
-  if (noun === undefined) {
-    return undefined;
-  }
-  const counted = plural(noun, ids, count);
+  const counted = plural(REFERENCE_NOUN[field.references], ids, count);
   return retired === 0
     ? counted
     : t("filters.sentence.someRetired", {
         tags: counted,
         retired: formatNumber(retired, locale),
       });
+}
+
+/**
+ * The names of a tag clause's tags, or undefined when any tag has no name.
+ * The catalog may be withheld from this seat, or lack the tag. The caller then
+ * counts the tags instead. That never names one tag and miscounts another.
+ */
+function tagNamesText(
+  operand: unknown,
+  field: VocabularyField,
+  words: SentenceWords,
+): string | undefined {
+  const { tagNames } = words;
+  // A retired tag keeps its own wording, which says no record carries one.
+  if (
+    field.references !== "tag" ||
+    tagNames === undefined ||
+    retiredTagCount(operand, field, words) > 0
+  ) {
+    return undefined;
+  }
+  const tagIds: unknown[] = Array.isArray(operand) ? operand : [operand];
+  const names = tagIds.map((id) =>
+    typeof id === "string" ? tagNames.get(id) : undefined,
+  );
+  return names.every((name) => name !== undefined)
+    ? names.map((name) => `"${name}"`).join(", ")
+    : undefined;
 }
 
 /**

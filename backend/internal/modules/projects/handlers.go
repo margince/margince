@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ListProjects serves the cursor-paginated project list.
@@ -271,16 +270,12 @@ func (h Handlers) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, p
 
 // projectName is the rule both write paths carry: a name of spaces is not a
 // name. It satisfies "required" on the wire and then reads as blank on every
-// screen that shows it. The column is a bare NOT NULL, so nothing below this
-// catches it. Stored trimmed, so what was accepted is what is shown. The
-// length is the column's label limit, refused here so it is not a write fault.
+// screen that shows it, and the column is a bare NOT NULL, so nothing below
+// this catches it. Stored trimmed, so what was accepted is what is shown.
 func projectName(raw string) (string, error) {
 	name := strings.TrimSpace(raw)
 	if name == "" {
 		return "", &RequiredFieldError{Field: projectNameField}
-	}
-	if err := httperr.RequireWithin(projectNameField, name, values.TextLabelCharacters); err != nil {
-		return "", err
 	}
 	return name, nil
 }
