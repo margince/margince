@@ -1,0 +1,331 @@
+name: mcp-sweep
+
+# The MCP use cases (e2e/llm/scenarios), driven by a REAL assistant.
+#
+# BY HAND ONLY: a maintainer starts it, and no cron does. The Go suite pins the
+# payloads, the refusals and the legibility fields; only a model trying can say
+# whether an assistant can drive this surface and say something TRUE. Each run
+# costs real tokens, and its verdicts go stale as soon as the tool copy or the
+# harness changes, so the sweep belongs to the pull request that changes them.
+# It has its own file so that starting it runs nothing else and queues behind
+# nothing else.
+#
+# It runs the way a maintainer runs it locally: scripts/e2e-llm-sweep.sh in
+# lanes, on a stack whose search ranks by meaning (E2E_LLM_STACK_PRESET and its
+# key). The folder is dealt into shards, each with its own time limit, and the
+# verdicts are published only when every scenario has a fresh one. Without the
+# search key the run is an alarm: its verdicts go outside the records tree, so
+# a degraded run never replaces one made by meaning.
+#
+# The secrets: CLAUDE_CODE_OAUTH_TOKEN (a subscription token from `claude
+# setup-token`; it bills the account that minted it, and anybody with write
+# access can spend it by starting this workflow) drives the CLI and the judge.
+# OPENAI_COMPATIBLE_API_KEY funds the embedding model of the preset. An absent
+# token SKIPS the lane, so an unfunded run does not turn main red.
+#
+# Started on the default branch, it proposes its verdicts as a pull request and
+# files or closes the issues about main. Started on any other branch, it does
+# neither: the run summary states the outcome and the verdicts stay an artifact.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One sweep at a time: two would share one subscription and its rate limit.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+# A module the proxy cannot serve is not a broken build; see
+# backend/gates/buildinputfetch_test.go, which holds this line.
+env:
+  GOPROXY: https://proxy.golang.org|direct
+
+jobs:
+  llm-plan:
+    name: use cases, driven by a model (plan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      funded: ${{ steps.funded.outputs.funded }}
+      search: ${{ steps.funded.outputs.search }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # A step, not a job condition: a job-level `if` cannot read `secrets`.
+      - name: Is the model lane funded, and can its search rank by meaning?
+        id: funded
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          SEARCH_KEY: ${{ secrets.OPENAI_COMPATIBLE_API_KEY }}
+        run: |
+          if [ -z "${TOKEN:-}" ]; then
+            echo "funded=no" >> "$GITHUB_OUTPUT"
+            {
+              echo "### The model-driven use cases did not run"
+              echo
+              echo "\`CLAUDE_CODE_OAUTH_TOKEN\` is not set for this repository. This is a SKIP, not a"
+              echo "failure: the lane costs real tokens and nobody has funded it yet."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "funded=yes" >> "$GITHUB_OUTPUT"
+          if [ -n "${SEARCH_KEY:-}" ]; then
+            echo "search=semantic" >> "$GITHUB_OUTPUT"
+          else
+            echo "search=lexical" >> "$GITHUB_OUTPUT"
+            {
+              echo "### The use cases run as an alarm only"
+              echo
+              echo "\`OPENAI_COMPATIBLE_API_KEY\` is not set, so search ranks by word overlap. The run"
+              echo "files its verdicts outside the records tree and proposes none of them."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      # Eight shards of about nine cases each. A case takes about five minutes
+      # by hand and a shard's stack about fifteen to boot, seed and reindex,
+      # so a shard fits its 100-minute step with room for a slow model.
+      - name: Deal the scenario folder into shards
+        id: plan
+        if: steps.funded.outputs.funded == 'yes'
+        run: echo "shards=$(python3 e2e/llm/shards.py plan 8)" >> "$GITHUB_OUTPUT"
+
+  llm-use-cases:
+    name: use cases, driven by a model (shard ${{ matrix.shard }})
+    needs: llm-plan
+    if: needs.llm-plan.outputs.funded == 'yes'
+    strategy:
+      fail-fast: false
+      # One subscription drives every shard and the judge; four at once stays
+      # under its rate limit, and the sweep waits out a limit it still meets.
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.llm-plan.outputs.shards) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The lane reaches the app through Vite's port, whose /v1 and /mcp proxy is
+      # what the assistant talks to, so the frontend is installed and running.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      - name: Install the frontend
+        # --ignore-scripts (githubactions:S6505): no lifecycle scripts run at
+        # install; esbuild ships prebuilt platform binaries as optional deps.
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install the Claude CLI
+        uses: ./.github/actions/install-claude-cli
+        with:
+          version: 2.1.236
+      - name: Start the dev infra stack (compose + app role)
+        run: make db-up
+      # The stack reads its environment from .env.local, not from the step, so
+      # the preset's key is written there for the run by meaning.
+      - name: Give the stack its embedding key
+        if: needs.llm-plan.outputs.search == 'semantic'
+        env:
+          SEARCH_KEY: ${{ secrets.OPENAI_COMPATIBLE_API_KEY }}
+        run: printf 'OPENAI_COMPATIBLE_API_KEY=%s\n' "$SEARCH_KEY" >> .env.local
+      # The step's own limit is shorter than the job's, so a cut-off ends this
+      # step as a failure and the steps after it still say what happened.
+      #
+      # Exactly ONE credential reaches the CLI: it ranks ANTHROPIC_API_KEY above
+      # the token, so a stale key beside it would fail every run while the
+      # summary named the token as what funds it.
+      - name: Sweep this shard (scripts/e2e-llm-sweep.sh)
+        id: lane
+        timeout-minutes: 100
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          MARGINCE_E2E_LLM: "1"
+          E2E_LLM_CANDIDATE: claude
+          E2E_LLM_VIA: cli
+          E2E_SWEEP_WORKTREES: ${{ github.workspace }}
+          SEARCH: ${{ needs.llm-plan.outputs.search }}
+          CASES: ${{ matrix.cases }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -o pipefail
+          # A fresh folder per shard holds exactly what this run wrote; the
+          # records job files it in the records tree once every shard is in.
+          E2E_SWEEP_SINCE="$(date +%s)"
+          export E2E_SWEEP_SINCE E2E_LLM_VERDICTS="$RUNNER_TEMP/verdicts"
+          if [ "$SEARCH" = semantic ]; then
+            export E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml
+          else
+            export E2E_LLM_ALLOW_LEXICAL=1
+          fi
+          # shellcheck disable=SC2086 # CASES is a list of case numbers
+          scripts/e2e-llm-sweep.sh "ci$SHARD" $CASES 2>&1 | tee "$RUNNER_TEMP/sweep.log"
+      # What this shard did, read from the sweep's own lines: LANE DONE only once
+      # every case has a verdict, and a FAIL line for a case below its bar. No
+      # LANE DONE is a lane that was stopped or cut off, and it publishes nothing.
+      - name: File this shard's outcome and fresh verdicts
+        if: always()
+        env:
+          SHARD: ${{ matrix.shard }}
+          STEP: ${{ steps.lane.outcome }}
+        run: |
+          out="$RUNNER_TEMP/shard"
+          mkdir -p "$out/verdicts"
+          log="$RUNNER_TEMP/sweep.log"
+          if grep -q '^LANE DONE' "$log" 2>/dev/null; then
+            if grep -qE '^ci[0-9]+ +case[0-9]+_[a-z0-9_]+: FAIL' "$log"; then outcome=scenario-failed; else outcome=ok; fi
+            cp "$RUNNER_TEMP"/verdicts/*.json "$out/verdicts/"
+          elif [ "$STEP" = failure ] && ! grep -q '^LANE STOPPED' "$log" 2>/dev/null; then
+            outcome=cut-off
+          else
+            outcome=lane-failed
+          fi
+          echo "$outcome" > "$out/outcome-$SHARD"
+          echo "shard $SHARD: $outcome, $(find "$out/verdicts" -name '*.json' | wc -l) fresh verdicts"
+      - name: Keep the shard's outcome and verdicts
+        if: always()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: e2e-llm-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/shard/
+          retention-days: 30
+          if-no-files-found: error
+      # The transcripts are the finding: a verdict says a case failed, only the
+      # transcript says what the assistant did. Kept 30 days.
+      - name: Keep the run transcripts
+        if: always()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: e2e-llm-transcripts-${{ matrix.shard }}
+          path: |
+            e2e/llm/records/
+            .tmp/sweep/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # Publishes the verdicts only when every scenario has a fresh one from a run
+  # by meaning. A shard that was cut off or stopped makes the whole run "could
+  # not finish": nothing is proposed, and on main the reporter files an issue.
+  llm-collect:
+    name: use cases, driven by a model (collect)
+    needs: [llm-plan, llm-use-cases]
+    if: always() && needs.llm-plan.outputs.funded == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      outcome: ${{ steps.collect.outputs.outcome }}
+      publish: ${{ steps.collect.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: e2e-llm-shard-*
+          path: ${{ runner.temp }}/shards
+          merge-multiple: true
+      - name: Count what came back
+        id: collect
+        env:
+          SHARDS: ${{ needs.llm-plan.outputs.shards }}
+          SEARCH: ${{ needs.llm-plan.outputs.search }}
+        run: |
+          got="$RUNNER_TEMP/shards"
+          mkdir -p "$got/verdicts"
+          planned="$(echo "$SHARDS" | jq '.include | length')"
+          outcomes="$(cat "$got"/outcome-* 2>/dev/null | sort | uniq -c | xargs || true)"
+          echo "planned $planned shards; outcomes: ${outcomes:-none}"
+          reported="$(find "$got" -maxdepth 1 -name 'outcome-*' | wc -l)"
+          if [ "$reported" -lt "$planned" ] || grep -qx cut-off "$got"/outcome-* 2>/dev/null; then
+            outcome=cut-off
+          elif grep -qx lane-failed "$got"/outcome-*; then
+            outcome=lane-failed
+          elif ! python3 e2e/llm/shards.py collect "$got/verdicts"; then
+            outcome=lane-failed
+          elif grep -qx scenario-failed "$got"/outcome-*; then
+            outcome=scenario-failed
+          else
+            outcome=ok
+          fi
+          echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+          publish=no
+          if [ "$SEARCH" = semantic ] && { [ "$outcome" = ok ] || [ "$outcome" = scenario-failed ]; }; then
+            publish=yes
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "### Use cases driven by a model: $outcome, search $SEARCH, published: $publish" >> "$GITHUB_STEP_SUMMARY"
+          [ "$outcome" = ok ]
+      - name: Hand the complete verdicts to the records unit
+        if: always() && steps.collect.outputs.publish == 'yes'
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: e2e-llm-verdicts
+          path: ${{ runner.temp }}/shards/verdicts/
+          retention-days: 30
+          if-no-files-found: error
+
+  records:
+    name: the MCP use-case verdicts
+    needs: llm-collect
+    if: >-
+      !cancelled()
+      && needs['llm-collect'].outputs.publish == 'yes'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_records.yml
+    with:
+      part: llm
+      how: >-
+        Every scenario under `e2e/llm/scenarios/` driven by `claude-sonnet-5-5` over the Claude CLI
+        with `scripts/e2e-llm-sweep.sh`, search by meaning; outcome `${{ needs['llm-collect'].outputs.outcome }}`.
+    secrets:
+      RECORDS_APP_CLIENT_ID: ${{ secrets.RECORDS_APP_CLIENT_ID }}
+      RECORDS_APP_PRIVATE_KEY: ${{ secrets.RECORDS_APP_PRIVATE_KEY }}
+
+  # The one job holding `issues: write`, and it runs no build code. It runs
+  # whatever the lanes said, because the reporter also closes a finding a run
+  # proved fixed. Only on the default branch: a run on another branch measured
+  # that branch, not main.
+  report:
+    name: report
+    needs: [llm-plan, llm-use-cases, llm-collect, records]
+    if: >-
+      !cancelled()
+      && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: File or update an issue per failing check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          LLM_RESULT: ${{ needs['llm-collect'].result }}
+          LLM_OUTCOME: ${{ needs['llm-collect'].outputs.outcome }}
+          RECORDS_RESULT: ${{ needs.records.result }}
+          RECORDS_PR_RESULT: ${{ needs.records.outputs.proposed }}
+        run: ./scripts/scheduled-report.sh

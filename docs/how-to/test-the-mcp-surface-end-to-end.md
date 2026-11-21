@@ -294,15 +294,26 @@ No cron runs this lane. Sweep it by hand in the pull request that changes the to
 harness, and commit the verdicts there. The surface changes often, and a verdict from an older tree
 is stale as soon as it lands.
 
-You can also start the sweep in CI: run `scheduled.yml` by hand with the `llm` input. It sweeps
-every case in parts, side by side. Started on `main`, it opens a pull request with its verdicts. It
-does so only when every case has a new one from a stack whose search ranks by meaning. The
-`RECORDS_OWNER` repository variable names who owns that pull request.
+You can also start the sweep in CI: run `mcp-sweep.yml` by hand (Actions, then **Run workflow**,
+then pick the branch). It sweeps every case in parts, side by side, with `claude-sonnet-5-5` over
+the Claude CLI. It uploads the `e2e-llm-verdicts` artifact only when every case has a new verdict
+from a stack whose search ranks by meaning. The verdicts are complete then, whether every case
+passed (`ok`) or some missed their bar (`scenario-failed`).
 
-Started on any other branch, it opens none. The run still uploads the `e2e-llm-verdicts` artifact
-under the same rule: every case has a new verdict, by meaning. Download it and commit those
-verdicts to the pull request of that branch. A run that was cut off, that failed, or whose search did
-not rank by meaning uploads no artifact.
+A run that was cut off, could not run, or did not search by meaning uploads no verdicts. The run
+summary gives its outcome, and the transcripts are kept as `e2e-llm-transcripts-<shard>`.
+
+Started on `main`, the run opens the pull request with its verdicts. The `RECORDS_OWNER` repository
+variable names who owns it. The run also files an issue on `main` for a run that was cut off,
+could not run, or has a failing case. Only a later run on `main` that proves the issue wrong closes
+it, so start one after the fix lands.
+
+Started on any other branch, it opens no pull request and files no issue. To publish its verdicts
+in the pull request of that branch:
+
+1. Download the `e2e-llm-verdicts` artifact of the run.
+2. Put its JSON files in `backend/internal/compose/aicert/records/mcp_e2e/claude-sonnet-5-5@claude-cli/`.
+3. Generate the page again with the `go test` command at the top of this section, and commit both.
 
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a run to try something.

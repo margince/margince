@@ -278,15 +278,13 @@ expect_actions "a red all-stories render files its issue" \
 expect_actions "a green all-stories render closes it" \
 	"close 40" "$(printf '40\t%s\n' "$STORIES_TITLE")" STORIES_RESULT=success
 
-RECORDS_TITLE="the weekly records pull request could not be opened"
-expect_actions "records/a failed render files its issue" \
-	"create $RECORDS_TITLE" "" RECORDS_RESULT=failure RECORDS_PR_RESULT=skipped
-expect_actions "records/a failed proposal files its issue" \
-	"create $RECORDS_TITLE" "" RECORDS_RESULT=success RECORDS_PR_RESULT=failure
+RECORDS_TITLE="the records pull request could not be opened"
+expect_actions "records/a failed render or proposal files its issue" \
+	"create $RECORDS_TITLE" "" RECORDS_RESULT=failure RECORDS_PR_RESULT=
 expect_actions "records/an opened pull request closes it" \
 	"close 41" "$(printf '41\t%s\n' "$RECORDS_TITLE")" RECORDS_RESULT=success RECORDS_PR_RESULT=success
-expect_actions "records/nothing recorded neither files nor closes" \
-	"" "$(printf '41\t%s\n' "$RECORDS_TITLE")" RECORDS_RESULT=success RECORDS_PR_RESULT=skipped
+expect_actions "records/nothing proposed neither files nor closes" \
+	"" "$(printf '41\t%s\n' "$RECORDS_TITLE")" RECORDS_RESULT=success RECORDS_PR_RESULT=
 
 # --- retraction where ONE job result feeds TWO titles ---------------------------
 #
@@ -837,25 +835,29 @@ done
 # runs, goes red, and is reported by nobody — which is indistinguishable from a
 # lane that passed.
 sched="$root/.github/workflows/scheduled.yml"
-sched_report="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$sched")"
-if [[ -z "$sched_report" ]]; then
-	echo "FAIL: no 'report' job found in scheduled.yml — the wiring checks below would pass by scanning nothing"
-	failures=$((failures + 1))
-fi
-sched_needs="$(grep -oE '^    needs: \[[^]]*\]' <<<"$sched_report" | sed -E 's/^    needs: \[//; s/\]$//')"
-
-# The job keys are the two-space-indented ones after `jobs:`; a step or a `with:`
-# sits deeper and a top-level key sits shallower. Derived from the workflow
-# rather than listed, so a job added tomorrow is covered without editing this.
-for job in $(awk '/^jobs:/{j=1;next} j&&/^  [A-Za-z_][A-Za-z0-9_-]*:/{gsub(/[: ]/,"");print}' "$sched"); do
-	[[ "$job" == "report" ]] && continue
-	case ",${sched_needs// /}," in
-	*",$job,"*) ;;
-	*)
-		echo "FAIL: scheduled.yml job '$job' is not in its report job's 'needs:' — it can go red with nobody reporting it"
+# mcp-sweep.yml is the same lane's by-hand half, so it answers the same question.
+for wf in "$sched" "$root/.github/workflows/mcp-sweep.yml"; do
+	wf_name="$(basename "$wf")"
+	wf_report="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$wf")"
+	if [[ -z "$wf_report" ]]; then
+		echo "FAIL: no 'report' job found in $wf_name — the wiring checks below would pass by scanning nothing"
 		failures=$((failures + 1))
-		;;
-	esac
+	fi
+	wf_needs="$(grep -oE '^    needs: \[[^]]*\]' <<<"$wf_report" | sed -E 's/^    needs: \[//; s/\]$//')"
+
+	# The job keys are the two-space-indented ones after `jobs:`; a step or a `with:`
+	# sits deeper and a top-level key sits shallower. Derived from the workflow
+	# rather than listed, so a job added tomorrow is covered without editing this.
+	for job in $(awk '/^jobs:/{j=1;next} j&&/^  [A-Za-z_][A-Za-z0-9_-]*:/{gsub(/[: ]/,"");print}' "$wf"); do
+		[[ "$job" == "report" ]] && continue
+		case ",${wf_needs// /}," in
+		*",$job,"*) ;;
+		*)
+			echo "FAIL: $wf_name job '$job' is not in its report job's 'needs:' — it can go red with nobody reporting it"
+			failures=$((failures + 1))
+			;;
+		esac
+	done
 done
 
 # The other end: every result and outcome the reporter READS is handed in by one
@@ -1059,7 +1061,7 @@ fi
 # the silent direction — green run, skipped job, issue left open over a fixed
 # tree, and no assertion anywhere fails. That is how the defect this change
 # fixes went unnoticed for as long as it did.
-for wf in "$health" "$root/.github/workflows/scheduled.yml"; do
+for wf in "$health" "$root/.github/workflows/scheduled.yml" "$root/.github/workflows/mcp-sweep.yml"; do
 	wf_name="$(basename "$wf")"
 	wf_job="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$wf")"
 	if [[ -z "$wf_job" ]]; then

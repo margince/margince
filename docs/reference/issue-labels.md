@@ -99,11 +99,11 @@ planned. It does not say what a release needs.
 
 ## Records
 
-This label also goes on a **pull request**. The scheduled workflow opens one pull request for each
-record it measured, and puts this label on it.
+This label also goes on a **pull request**. `scheduled.yml` and `mcp-sweep.yml` open one pull
+request for each record they measured, and put this label on it.
 
-- `records: weekly`: a measurement the scheduled workflow puts up for review. That is the weekly
-  speed records, or the MCP use-case verdicts of a run started by hand. It goes to the maintainer that the `RECORDS_OWNER` repository variable names.
+- `records: weekly`: a measurement put up for review. That is the weekly speed records, or the MCP
+  use-case verdicts of a run started by hand. It goes to the maintainer that the `RECORDS_OWNER` repository variable names.
   That maintainer compares the record with the one it replaces, then merges or closes the pull request.
 
 ## Provenance

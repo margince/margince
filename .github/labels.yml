@@ -128,8 +128,8 @@
   description: "The next release cannot be tagged until this closes"
 
 # ---------------------------------------------------------------------------
-# Records — a measurement the weekly scheduled run proposes. It goes on the
-# pull request the run opens, so one maintainer owns each week's proposal.
+# Records — a measurement scheduled.yml or mcp-sweep.yml proposes. It goes on
+# the pull request the run opens, so one maintainer owns each proposal.
 # ---------------------------------------------------------------------------
 - name: "records: weekly"
   color: "0E8A16"

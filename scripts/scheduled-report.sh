@@ -838,24 +838,26 @@ elif [[ "${LLM_RESULT:-}" = "success" ]]; then
   resolve "a use case is failing when driven by a real model"
 fi
 
-# The weekly records pull request. Rendering and proposing are two jobs, and
-# either failing means a measurement was taken and nobody was asked to publish it.
-if [[ "${RECORDS_RESULT:-}" = "failure" ]] || [[ "${RECORDS_PR_RESULT:-}" = "failure" ]]; then
-  report "the weekly records pull request could not be opened" "priority: normal,area: ci-tests,bug" \
-"The weekly measurements recorded, but no pull request proposes the records: $RUN_URL
+# The records pull request. Both callers of _records.yml hand in its result and
+# whether it proposed: one records unit, so one finding whichever part found it.
+# A failed render or proposal fails the call, and means a measurement was taken
+# and nobody was asked to publish it.
+if [[ "${RECORDS_RESULT:-}" = "failure" ]]; then
+  report "the records pull request could not be opened" "priority: normal,area: ci-tests,bug" \
+"A run recorded a measurement, but no pull request proposes it: $RUN_URL
 
-The \`records\` job renders the pages the records feed (\`make perfdoc\` and the
-MCP tool coverage generator) and hands over a patch; \`records-pr\` commits it on
-a \`bench/scheduled-*\` branch and opens the pull request. The job log names the
-step that failed.
+The \`render\` job of \`_records.yml\` renders the pages the record feeds
+(\`make perfdoc\` or the MCP tool coverage generator) and hands over a patch;
+\`propose\` commits it on a \`records/weekly-<part>\` branch and opens the pull
+request. The job log names the step that failed.
 
 If the branch was pushed and only \`gh pr create\` failed, the repository may not
 let GitHub Actions open pull requests (Settings, Actions, General). Open the pull
 request from the branch by hand. The patch is kept on the run as
-\`scheduled-records\` for 30 days."\
+\`records-<part>\` for 30 days."\
     || unreported=1
 elif [[ "${RECORDS_PR_RESULT:-}" = "success" ]]; then
-  resolve "the weekly records pull request could not be opened"
+  resolve "the records pull request could not be opened"
 fi
 
 # --- merge-attest.yml -----------------------------------------------------------

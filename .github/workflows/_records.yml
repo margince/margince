@@ -1,0 +1,237 @@
+# Proposes one recorded part as a pull request, as a callable unit.
+#
+# Called by scheduled.yml for the speed records and by mcp-sweep.yml for the
+# MCP use-case verdicts. Both open the same kind of pull request, so the one
+# job that holds the records App token lives here once. The caller decides
+# whether a part was measured; this lays the record over a clean tree, renders
+# the pages it feeds and, from the default branch only, proposes the result.
+#
+# It never pushes to main: a human publishes a record by reviewing and merging
+# the pull request.
+name: _records
+
+on:
+  workflow_call:
+    inputs:
+      part:
+        description: "speed (the perf and mobile records) or llm (the MCP use-case verdicts)"
+        type: string
+        required: true
+      how:
+        description: "How the record was measured, for the pull request body"
+        type: string
+        required: true
+    secrets:
+      RECORDS_APP_CLIENT_ID:
+        required: false
+      RECORDS_APP_PRIVATE_KEY:
+        required: false
+    outputs:
+      proposed:
+        description: "success once the pull request is open; empty when nothing was proposed"
+        value: ${{ jobs.propose.outputs.proposed }}
+
+permissions:
+  contents: read
+
+# A module the proxy cannot serve is not a broken build; see
+# backend/gates/buildinputfetch_test.go, which holds this line.
+env:
+  GOPROXY: https://proxy.golang.org|direct
+
+jobs:
+  # It runs the tree's generators, so it holds no write token; propose pushes
+  # the patch it hands over.
+  render:
+    name: render the ${{ inputs.part }} record
+    outputs:
+      recorded: ${{ steps.render.outputs.recorded }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      # By pattern, not by name: a job that never uploaded is a part that did
+      # not record, and a download by name would fail the parts that did.
+      - if: inputs.part == 'speed'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: bench-*-record
+          path: ${{ runner.temp }}/perfbench
+          merge-multiple: true
+      - if: inputs.part == 'llm'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: e2e-llm-verdicts
+          path: ${{ runner.temp }}/verdicts
+          merge-multiple: true
+      # The perf and mobile records are one part: `make perfdoc` renders both
+      # into the same pages. A part counts as recorded only when its files differ.
+      - name: Render the pages the record feeds
+        id: render
+        env:
+          OUT: ${{ runner.temp }}/records
+          PART: ${{ inputs.part }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT"
+          case "$PART" in
+            speed)
+              perfbench=docs/reference/perfbench
+              for file in bench-perf.json bench-mobile.json; do
+                [ -f "$RUNNER_TEMP/perfbench/$file" ] && cp "$RUNNER_TEMP/perfbench/$file" "$perfbench/$file"
+              done
+              if [ -z "$(git status --porcelain -- "$perfbench")" ]; then
+                echo "recorded: nothing"; exit 0
+              fi
+              make perfdoc
+              git add -A -- docs/reference
+              ;;
+            llm)
+              if ! compgen -G "$RUNNER_TEMP/verdicts/*.json" >/dev/null; then
+                echo "recorded: nothing"; exit 0
+              fi
+              folder="$(python3 -c 'import sys; sys.path.insert(0, "e2e/llm"); import candidates; print(candidates.resolve("claude", "cli").folder)')"
+              verdicts="backend/internal/compose/aicert/records/mcp_e2e/$folder"
+              mkdir -p "$OUT/llm-before" "$verdicts"
+              cp "$verdicts"/*.json "$OUT/llm-before/" 2>/dev/null || true
+              cp "$RUNNER_TEMP"/verdicts/*.json "$verdicts/"
+              (cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished \
+                -update-mcp-tool-coverage -count=1)
+              git add -A -- docs/reference "$verdicts"
+              # It opens only the repository or the temp folder, so the runner's temp is named as that.
+              TMPDIR="$RUNNER_TEMP" python3 e2e/llm/verdictdiff.py "$OUT/llm-before" "$verdicts" > "$OUT/llm-table.md"
+              ;;
+            *)
+              echo "::error::unknown records part '$PART'"; exit 1
+              ;;
+          esac
+          git diff --cached --binary > "$OUT/$PART.patch"
+          git diff --cached --stat
+          git reset -q --hard
+          echo "recorded: $PART"
+          echo "recorded=yes" >> "$GITHUB_OUTPUT"
+      - name: Keep the patch
+        if: steps.render.outputs.recorded == 'yes'
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: records-${{ inputs.part }}
+          path: ${{ runner.temp }}/records/
+          retention-days: 30
+
+  # A token minted from the repository's records App opens the pull request,
+  # so CI starts on it; the default workflow token stays read-only. Only from
+  # the default branch: a run on another branch renders, and proposes nothing.
+  #
+  # Each part has ONE fixed branch, so a new record updates the open pull
+  # request rather than adding a second. Each gets the `records: weekly` label
+  # and the owner the RECORDS_OWNER repository variable names, who looks after
+  # the records and hands the variable on when away.
+  propose:
+    name: propose the ${{ inputs.part }} record
+    needs: render
+    if: >-
+      needs.render.outputs.recorded == 'yes'
+      && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    outputs:
+      proposed: ${{ steps.open.outputs.proposed }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # The App is installed on this repository only, with contents and pull
+      # requests write. RECORDS_APP_CLIENT_ID and RECORDS_APP_PRIVATE_KEY hold it.
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.RECORDS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RECORDS_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      # The credential persists here and nowhere else: the push below is the
+      # only write either caller makes to the repository.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: records-${{ inputs.part }}
+          path: ${{ runner.temp }}/records
+      - name: Commit the part and open its pull request
+        id: open
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RECORDS: ${{ runner.temp }}/records
+          PART: ${{ inputs.part }}
+          HOW: ${{ inputs.how }}
+          OWNER: ${{ vars.RECORDS_OWNER }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          day="$(date -u +%F)"
+          bot_id="$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${bot_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+          case "$PART" in
+            speed) title="speed records" ;;
+            llm) title="MCP use-case verdicts" ;;
+          esac
+          body="$RUNNER_TEMP/body.md"
+          {
+            echo "## What"
+            echo
+            echo "The $title measured on \`$GITHUB_SHA\`, with the pages the record feeds rendered"
+            echo "again by their own generators. Run: $RUN_URL"
+            echo
+            echo "$HOW"
+            if [ "$PART" = llm ]; then echo; cat "$RECORDS/llm-table.md"; fi
+            echo
+            echo "## Why"
+            echo
+            echo "A record reaches \`main\` only when a maintainer merges it. Compare it with the record it"
+            echo "replaces, and close this pull request to keep the old one."
+            if [ -z "$OWNER" ]; then
+              echo
+              echo "No owner is set: name one in the \`RECORDS_OWNER\` repository variable."
+            fi
+            echo
+            echo "## How verified"
+            echo
+            echo "The records App opened this pull request, so CI runs on it. Merge only when it is green."
+            echo
+            echo "Closes: none"
+          } > "$body"
+          branch="records/weekly-$PART"
+          git switch -q --force-create "$branch" "origin/$BASE"
+          git apply --index "$RECORDS/$PART.patch"
+          git commit -q -m "chore(records): $title of $day"
+          # --force: the branch is this part's one standing proposal.
+          git push --force origin "$branch"
+          existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --title "chore(records): $title of $day" --body-file "$body"
+          else
+            existing="$(gh pr create --base "$BASE" --head "$branch" \
+              --title "chore(records): $title of $day" --body-file "$body")"
+          fi
+          # Best effort: a label the repository has not synced, or an owner
+          # who cannot be assigned, must not lose the proposal itself.
+          gh pr edit "$existing" --add-label "records: weekly" || echo "::warning::could not label $existing"
+          if [ -n "$OWNER" ]; then
+            gh pr edit "$existing" --add-assignee "$OWNER" || echo "::warning::could not assign $existing to $OWNER"
+          fi
+          echo "proposed=success" >> "$GITHUB_OUTPUT"
