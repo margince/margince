@@ -719,14 +719,15 @@ describe("the voice act's surface/rail split", () => {
       },
     });
     render(<VoiceThenConnect initial={collectingState()} />);
+    const user = userEvent.setup();
 
-    await uploadFile("one.md", "Enough material.");
-    await userEvent.click(
+    await uploadFile("one.md", "Enough material.", user);
+    await user.click(
       await screen.findByRole("button", { name: /Build my voice profile/ }),
     );
     await screen.findByText(/Direct, concrete/);
-    await userEvent.click(screen.getByRole("button", { name: "That is me" }));
-    await userEvent.click(
+    await user.click(screen.getByRole("button", { name: "That is me" }));
+    await user.click(
       await screen.findByRole("button", { name: "Back to voice" }),
     );
 

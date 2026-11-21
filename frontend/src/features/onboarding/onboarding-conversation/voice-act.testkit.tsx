@@ -398,14 +398,15 @@ export function render(ui: ReactNode) {
   );
 }
 
-export async function uploadFile(name: string, content: string) {
+export async function uploadFile(
+  name: string,
+  content: string,
+  user: Pick<typeof userEvent, "upload"> = userEvent,
+) {
   const input = document.querySelector<HTMLInputElement>('input[type="file"]');
   expect(input).not.toBeNull();
   if (input) {
-    await userEvent.upload(
-      input,
-      new File([content], name, { type: "text/plain" }),
-    );
+    await user.upload(input, new File([content], name, { type: "text/plain" }));
   }
 }
 
