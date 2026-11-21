@@ -127,6 +127,13 @@ describe("the project name field", () => {
     }
   });
 
+  it("counts the name as the server stores it, without its edge spaces", () => {
+    const padded = ` ${"a".repeat(TEXT_LIMITS.label)}\u0085`;
+    for (const mode of ["create", "edit"] as const) {
+      expect(nameField(mode)?.validate?.(padded)).toBeUndefined();
+    }
+  });
+
   it("refuses a name past the label limit in characters", () => {
     const over = `${"a".repeat(TEXT_LIMITS.label)}🚀`;
     for (const mode of ["create", "edit"] as const) {

@@ -9,6 +9,7 @@ import {
   projectOwnerField,
 } from "../../components/projectownerfield";
 import { PHASE_LABEL } from "../../format/projectphase";
+import { trimServerSpace } from "../../format/servertrim";
 import type { MessageKey } from "../../i18n/en";
 import { faultSentenceFor } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
@@ -46,10 +47,10 @@ export function projectFields(
       key: "name",
       label: "project.name",
       required: true,
-      // No native `maxLength`: it counts UTF-16 units, and the server counts
-      // characters. The refusal holds Save and says the limit.
+      // No native `maxLength`: it counts UTF-16 units. The server trims, then
+      // counts characters, and so does this refusal, which holds Save.
       validate: (value) =>
-        [...value].length > TEXT_LIMITS.label
+        [...trimServerSpace(value)].length > TEXT_LIMITS.label
           ? faultSentenceFor(
               {
                 field: "name",
