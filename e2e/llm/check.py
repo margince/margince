@@ -244,9 +244,8 @@ def lint(path):
 # `<text the question holds> => accept|decline|cancel [field=value ...]`. Only a
 # host that can answer reads it (E2E_LLM_VIA=sdk); a value is JSON when it
 # parses as JSON, and a bare word otherwise.
-_ELICITATION = re.compile(
-    r"^(?P<match>\S.*?)\s*=>\s*(?P<action>accept|decline|cancel)(?P<fields>(?:\s+[A-Za-z_][A-Za-z0-9_]*=\S+)*)\s*$"
-)
+_ELICITATION_ACTIONS = ("accept", "decline", "cancel")
+_ELICITATION_FIELD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=\S+")
 
 
 def _form_value(text):
@@ -265,11 +264,13 @@ def elicitation_replies(entries):
     """The scripted answers as the SDK runner reads them, in the scenario's order."""
     replies = []
     for entry in entries:
-        found = _ELICITATION.match(str(entry))
-        if not found:
+        match, _, answer = str(entry).partition("=>")
+        action, *fields = answer.split() or [""]
+        if not match.strip() or action not in _ELICITATION_ACTIONS or not all(
+            _ELICITATION_FIELD.fullmatch(field) for field in fields
+        ):
             raise ValueError(f"elicitation entry {entry!r} is not `<text> => accept|decline|cancel [field=value ...]`")
-        reply = {"match": found.group("match"), "action": found.group("action")}
-        fields = found.group("fields").split()
+        reply = {"match": match.strip(), "action": action}
         if fields and reply["action"] != "accept":
             raise ValueError(f"elicitation entry {entry!r} gives fields to a {reply['action']}, which sends none")
         if reply["action"] == "accept":

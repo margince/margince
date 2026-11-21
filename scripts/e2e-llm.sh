@@ -146,7 +146,7 @@ fi
 if [[ "$WIRE" = claude-sdk ]]; then
   command -v node >/dev/null || { echo "node is not on PATH; the SDK route runs e2e/llm/sdk-runner" >&2; exit 1; }
   if [[ ! -d "$ROOT/e2e/llm/sdk-runner/node_modules/@anthropic-ai/claude-agent-sdk" ]]; then
-    (cd "$ROOT/e2e/llm/sdk-runner" && npm install --no-package-lock --no-audit --no-fund >/dev/null &&
+    (cd "$ROOT/e2e/llm/sdk-runner" && npm install --no-package-lock --ignore-scripts --no-audit --no-fund >/dev/null &&
       npm audit signatures >/dev/null) ||
       { echo "the SDK runner did not install, or a registry signature did not verify" >&2; exit 1; }
   fi
