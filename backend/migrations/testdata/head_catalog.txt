@@ -9214,10 +9214,13 @@ END;
 public.refresh_strength_dates_of_addresses(emails text[], holders uuid[]) secdef=false cfg=- acl=- 
 BEGIN
   PERFORM refresh_contact_strength_dates(ARRAY(
-    SELECT h.id FROM unnest(holders) h(id) WHERE h.id IS NOT NULL
-    UNION SELECT ce.contact_id FROM contact_email ce WHERE ce.email = ANY (emails)
-    UNION SELECT ap.contact_id FROM activity_participant ap
-           WHERE lower(ap.address) = ANY (emails) AND ap.address IS NOT NULL AND ap.contact_id IS NOT NULL));
+    SELECT named.id FROM (
+      SELECT h.id FROM unnest(holders) h(id)
+      UNION SELECT ce.contact_id FROM contact_email ce WHERE ce.email = ANY (emails)
+      UNION SELECT ap.contact_id FROM activity_participant ap
+             WHERE lower(ap.address) = ANY (emails) AND ap.address IS NOT NULL AND ap.contact_id IS NOT NULL) named
+     WHERE named.id IS NOT NULL
+       AND EXISTS (SELECT 1 FROM activity_link l WHERE l.contact_id = named.id)));
 END;
 
 public.refuse_oversized_text() secdef=false cfg=search_path=pg_catalog acl=- 
@@ -10895,22 +10898,26 @@ BEGIN
   IF cids IS NULL OR cardinality(cids) = 0 THEN RETURN; END IF;
   PERFORM 1 FROM contact WHERE id IN (SELECT unnest(cids)) ORDER BY id FOR UPDATE;
   PERFORM set_config('margince.last_activity_move', 'on', true);
-  WITH touched AS (
-    SELECT t.cid, t.aid, t.was FROM unnest(cids, aids, was) t(cid, aid, was) WHERE t.cid IS NOT NULL
+  WITH grouped AS (
+    SELECT t.cid, array_agg(t.aid) AS aids, array_agg(t.was) AS was, bool_or(t.was IS NULL) AS unknown
+      FROM unnest(cids, aids, was) t(cid, aid, was)
+     WHERE t.cid IS NOT NULL
+     GROUP BY t.cid
   ), judged AS (
     SELECT p.id, f.*,
-           EXISTS (SELECT 1 FROM touched t WHERE t.cid = p.id AND (t.was IS NULL
-                   OR (p.strength_last_interaction_at = t.was AND coalesce(f.interaction_at < t.was, true))
-                   OR (p.strength_last_engaged_at = t.was AND coalesce(f.engaged_at < t.was, true))
-                   OR (p.strength_last_inbound_at = t.was AND coalesce(f.inbound_at < t.was, true))
-                   OR (p.strength_last_outbound_at = t.was AND coalesce(f.outbound_at < t.was, true))))
+           g.unknown
+           OR (p.strength_last_interaction_at = ANY (g.was) AND coalesce(f.interaction_at < p.strength_last_interaction_at, true))
+           OR (p.strength_last_engaged_at = ANY (g.was) AND coalesce(f.engaged_at < p.strength_last_engaged_at, true))
+           OR (p.strength_last_inbound_at = ANY (g.was) AND coalesce(f.inbound_at < p.strength_last_inbound_at, true))
+           OR (p.strength_last_outbound_at = ANY (g.was) AND coalesce(f.outbound_at < p.strength_last_outbound_at, true))
            OR (f.inbound_at = p.strength_last_inbound_at
                AND (f.inbound_precision = 'day') IS DISTINCT FROM p.strength_last_inbound_day)
            OR (f.outbound_at = p.strength_last_outbound_at
                AND (f.outbound_precision = 'day') IS DISTINCT FROM p.strength_last_outbound_day) AS refold
-      FROM contact p
-     CROSS JOIN LATERAL contact_strength_dates_among(p.id, ARRAY(SELECT t.aid FROM touched t WHERE t.cid = p.id)) f
-     WHERE p.id IN (SELECT t.cid FROM touched t) AND p.strength_folded AND p.archived_at IS NULL
+      FROM grouped g
+      JOIN contact p ON p.id = g.cid
+     CROSS JOIN LATERAL contact_strength_dates_among(p.id, g.aids) f
+     WHERE p.strength_folded AND p.archived_at IS NULL
   ), moved AS (
     SELECT j.id,
            CASE WHEN j.refold THEN h.interaction_at ELSE greatest(p.strength_last_interaction_at, j.interaction_at) END AS interaction_at,
