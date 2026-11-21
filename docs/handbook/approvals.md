@@ -112,7 +112,7 @@ Also called: commitment, promise task, promised by, who owns this promise, take 
 
 ### How do I ask a colleague for edit access to their record?
 To change a contact, company, lead, deal or project a colleague owns, press **Ask … for edit access**, which names the owner. On a contact or company it is in the access chip under the name. On a lead, deal or project it is under the line that says the record is not yours to change.
-The request waits on the owner's **Worklist** for 7 days, and only the owner can answer it.
+The request waits on the owner's **Worklist** for 7 days. Only the owner can answer it, and their agent can decline it but not accept it.
 
 If the owner approves, the record is shared with you for writing, and the owner stays its owner. A notice tells you when the owner approves or declines and when the request runs out. After a decline you can ask again, and **Withdraw request** in the same place takes it back.
 
