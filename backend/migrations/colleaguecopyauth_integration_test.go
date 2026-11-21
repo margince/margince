@@ -49,7 +49,7 @@ func TestACopyWithoutAnAuthenticatedFromTurnsBack(t *testing.T) {
 	ctx := context.Background()
 	var colleague string
 	if err := conn.QueryRow(ctx, `
-		INSERT INTO app_user (email, display_name, status) VALUES ('Sam@auth.test', 'Sam', 'invited') RETURNING id`).Scan(&colleague); err != nil {
+		INSERT INTO app_user (email, display_name, status) VALUES ('sam@auth.test', 'Sam', 'invited') RETURNING id`).Scan(&colleague); err != nil {
 		t.Fatal(err)
 	}
 	const gmail = "connector:gmail:seat"
