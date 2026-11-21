@@ -44,21 +44,20 @@ common Go builder base. Every image builds with the **repo root** as context. Th
 the `extensions/*` packs via `gen-composition`, and `docker buildx bake` builds all three through
 `docker-bake.hcl`.
 
-Stamp all three with one release identifier and one commit, or the [release guard](../explanation/self-hosting.md#every-role-runs-at-one-release)
-is off and the web app shows "Development build". The web app compiles both in at build time, so it cannot learn them later.
-Run these lines as a script: `scripts/release-version-stamped.sh` stops it on an empty or `dev` identifier.
+Stamp every role with one release identifier and one commit. Every role builds both in, so neither can be set when the image runs. A missing or `dev` identifier turns the [release guard](../explanation/self-hosting.md#every-role-runs-at-one-release) off, and About Margince shows "Development build". A missing commit leaves About Margince without one, and the api cannot report a web build from another commit.
+
+Set `MY_BUILD_ID` first, as one word of letters, digits, `.`, `_` and `-`, such as a build number. Run these lines as a script from the repository root, so `scripts/release-version-stamped.sh` stops the build on an empty or `dev` value. Build only what is committed, because a changed tree is labelled with a commit it does not match.
 
 ```bash
 set -euo pipefail
-MY_BUILD_ID="$(./scripts/release-version-stamped.sh "$MY_BUILD_ID")"
-docker build --target api    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" --build-arg MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" -t margince-api:local .
-docker build --target worker --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" --build-arg MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" -t margince-worker:local .
-docker build --target web    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" --build-arg MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" -t margince-web:local .
+MY_BUILD_ID="$(./scripts/release-version-stamped.sh "${MY_BUILD_ID:-}")"
+MY_REVISION="$(bash scripts/build-revision.sh)"
+docker build --target api    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" --build-arg MARGINCE_BUILD_REVISION="$MY_REVISION" -t margince-api:local .
+docker build --target worker --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" --build-arg MARGINCE_BUILD_REVISION="$MY_REVISION" -t margince-worker:local .
+docker build --target web    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" --build-arg MARGINCE_BUILD_REVISION="$MY_REVISION" -t margince-web:local .
 ```
 
-Any stable per-build identifier, such as a build number, will do, and need not be a published release version. Every role in one deployment must get the same identifier and commit. An empty or `dev` identifier is read as "make no comparison".
-
-`docker-bake.hcl` does this for the release workflow, declaring both arguments once on the shared `role` target. Set the environment variables `VERSION` and `MARGINCE_BUILD_REVISION`, and `docker buildx bake` stamps every role with them. The release workflow refuses to publish a set stamped `dev` or nothing at all.
+`scripts/build-revision.sh` reads `.git`, or `REVISION` in a source download. Give every role the same identifier, because a role at another release refuses to start.
 
 ## Bootstrap the database once
 
