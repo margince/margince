@@ -123,10 +123,16 @@ function renderOffer() {
   );
 }
 
-const answer = (held: Held, status?: number) =>
-  act(async () => {
+// Answers one PATCH and lets the response reach the cache and the cell, which
+// takes several promise turns after the request settles.
+async function answer(held: Held, status?: number) {
+  await act(async () => {
     held.answer(status);
   });
+  for (let turn = 0; turn < 10; turn += 1) {
+    await act(async () => {});
+  }
+}
 
 type Kind = {
   testId: string;
@@ -240,7 +246,7 @@ describe.each(KINDS)(
       expect(held[1].patch).toEqual(kind.patches[1]);
       await answer(held[1]);
       await waitFor(() => expect(state.line).toMatchObject(kind.patches[1]));
-      expect(cell.value).toBe(kind.left ?? kind.shown);
+      await waitFor(() => expect(cell.value).toBe(kind.left ?? kind.shown));
       expect(state.mostInflight).toBe(1);
     });
 

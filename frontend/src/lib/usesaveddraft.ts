@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 /**
  * The draft of an input that saves when the reader leaves it.
@@ -24,7 +30,13 @@ export function useSavedDraft<Draft, Saved>({
   // with the request; nothing is returned when nothing was sent.
   submit: (draft: Draft) => Promise<unknown> | undefined;
 }>) {
-  const [draft, setDraft] = useState(() => toDraft(saved));
+  const [draft, setDraftState] = useState(() => toDraft(saved));
+  // Kept as the draft changes, so a blur right after a keystroke sends it.
+  const draftRef = useRef(draft);
+  const setDraft = useCallback((next: Draft) => {
+    draftRef.current = next;
+    setDraftState(next);
+  }, []);
   const [unsaved, setUnsaved] = useState(false);
   const [settled, setSettled] = useState(0);
   const edited = useRef(false);
@@ -32,11 +44,15 @@ export function useSavedDraft<Draft, Saved>({
   const failed = useRef(false);
   const pending = useRef(0);
   const sent = useRef<Draft | undefined>(undefined);
-  const seen = useRef(saved);
+  const lastSaved = useRef(saved);
+  const moved = useRef(false);
   const current = useRef(saved);
-  current.current = saved;
-  const latest = useRef({ draft, toDraft, submit });
-  latest.current = { draft, toDraft, submit };
+  const latest = useRef({ toDraft, submit });
+  // Layout effects run before the passive effect below reads these refs.
+  useLayoutEffect(() => {
+    current.current = saved;
+    latest.current = { toDraft, submit };
+  });
 
   const send = useCallback((value: Draft) => {
     const request = latest.current.submit(value);
@@ -44,6 +60,7 @@ export function useSavedDraft<Draft, Saved>({
       return;
     }
     sent.current = value;
+    moved.current = false;
     pending.current += 1;
     request.then(
       () => {
@@ -61,46 +78,48 @@ export function useSavedDraft<Draft, Saved>({
   }, []);
 
   useEffect(() => {
-    // `settled` re-runs this once a save answers, with the saved value that
-    // answer wrote.
+    // `settled` re-runs this once a save answers. The answer can reach here
+    // before the saved value it wrote reaches the props, so the draft is only
+    // replaced after the saved value itself has moved.
     void settled;
-    if (pending.current > 0 || failed.current) {
+    if (!Object.is(lastSaved.current, saved)) {
+      lastSaved.current = saved;
+      moved.current = true;
+    }
+    if (pending.current > 0 || failed.current || !moved.current) {
       return;
     }
     const now = latest.current;
-    if (!edited.current) {
-      if (!Object.is(seen.current, saved)) {
-        seen.current = saved;
-        setDraft(now.toDraft(saved));
-      }
-      return;
-    }
-    if (Object.is(now.draft, sent.current)) {
+    if (!edited.current || Object.is(draftRef.current, sent.current)) {
+      moved.current = false;
       edited.current = false;
       sent.current = undefined;
-      seen.current = saved;
       setDraft(now.toDraft(saved));
       return;
     }
     // The reader left the box with newer text while an earlier save was
     // pending, and that save has now moved the saved value under it.
     if (left.current) {
-      send(now.draft);
+      moved.current = false;
+      send(draftRef.current);
     }
-  }, [saved, settled, send]);
+  }, [saved, settled, send, setDraft]);
 
-  const edit = useCallback((next: Draft) => {
-    edited.current = true;
-    left.current = false;
-    failed.current = false;
-    setUnsaved(false);
-    setDraft(next);
-  }, []);
+  const edit = useCallback(
+    (next: Draft) => {
+      edited.current = true;
+      left.current = false;
+      failed.current = false;
+      setUnsaved(false);
+      setDraft(next);
+    },
+    [setDraft],
+  );
 
   const leave = useCallback(
     (value?: Draft) => {
       left.current = true;
-      send(value === undefined ? latest.current.draft : value);
+      send(value === undefined ? draftRef.current : value);
     },
     [send],
   );
@@ -111,7 +130,7 @@ export function useSavedDraft<Draft, Saved>({
     failed.current = false;
     setUnsaved(false);
     setDraft(latest.current.toDraft(current.current));
-  }, []);
+  }, [setDraft]);
 
   return { draft, edit, leave, restore, unsaved };
 }

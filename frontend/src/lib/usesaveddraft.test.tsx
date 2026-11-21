@@ -54,6 +54,17 @@ describe("useSavedDraft", () => {
     expect(result.current.unsaved).toBe(false);
   });
 
+  it("keeps the draft when an answer arrives before the saved value it wrote", async () => {
+    const { result, rerender, requests } = setUp();
+    act(() => result.current.edit("ab"));
+    act(() => result.current.leave());
+    await act(async () => requests[0].resolve());
+    expect(result.current.draft).toBe("ab");
+    act(() => result.current.edit("abc"));
+    rerender({ saved: "ab" });
+    expect(result.current.draft).toBe("abc");
+  });
+
   it("sends text edited back to the old value once the earlier answer moves the saved value", async () => {
     const { result, rerender, requests } = setUp();
     act(() => result.current.edit("ab"));
