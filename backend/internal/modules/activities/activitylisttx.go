@@ -30,23 +30,13 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		in.outsideParty = outsidePartyClause(ctx, tx)
 	}
 	limit := storekit.ClampLimit(in.Limit)
-	query, err := timelinePageSQL(ctx, in, limit)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	sorted := query.sorted
-	rows, err := tx.Query(ctx, query.sql, waitingListArgs(ctx, in, query.args)...)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	// Collected rather than streamed: AttachLinks runs a second query on
-	// this same transaction, which needs the cursor already closed.
-	paged, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (pagedRow, error) {
+	scan := func(query timelinePage, sorted *storekit.ListSort, row pgx.CollectableRow) (pagedRow, error) {
 		var copies SeatCopies
 		activity, key, err := scanActivityPage(ctx, row, sorted, query.copyDest(&copies)...)
 		copies.stamp(&activity)
 		return pagedRow{activity, key, copies}, err
-	})
+	}
+	sorted, paged, err := readTimelinePage(ctx, tx, in, limit, scan)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -183,4 +173,48 @@ func pageListedRows(in ListActivitiesInput, sorted *storekit.ListSort, paged []p
 		// Request priority has no resumable cursor; its count still includes later rows.
 	}
 	return activities, page, nil
+}
+
+// readTimelinePage runs the page statement, widening a collapsed page's fold
+// bound while it came up short of the page and its lookahead row.
+func readTimelinePage(
+	ctx context.Context, tx pgx.Tx, in ListActivitiesInput, limit int,
+	scan func(timelinePage, *storekit.ListSort, pgx.CollectableRow) (pagedRow, error),
+) (*storekit.ListSort, []pagedRow, error) {
+	bounds := []int{0}
+	switch {
+	case in.foldBounds != nil:
+		bounds = in.foldBounds
+	case in.CollapseSeatCopies:
+		bounds = FoldBounds(limit + 1)
+	}
+	var (
+		sorted *storekit.ListSort
+		paged  []pagedRow
+	)
+	for _, foldRows := range bounds {
+		query, err := timelinePageAt(ctx, in, limit, foldRows)
+		if err != nil {
+			return nil, nil, err
+		}
+		sorted = query.sorted
+		rows, err := tx.Query(ctx, query.sql, waitingListArgs(ctx, in, query.args)...)
+		if err != nil {
+			return nil, nil, err
+		}
+		// Collected rather than streamed: AttachLinks runs a second query on
+		// this same transaction, which needs the cursor already closed.
+		paged, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (pagedRow, error) { return scan(query, sorted, row) })
+		if err != nil {
+			return nil, nil, err
+		}
+		copies := make([]SeatCopies, len(paged))
+		for i := range paged {
+			copies[i] = paged[i].copies
+		}
+		if !FoldIncomplete(len(copies), limit+1, FoldedInFull(copies)) {
+			break
+		}
+	}
+	return sorted, paged, nil
 }

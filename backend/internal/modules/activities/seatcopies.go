@@ -32,27 +32,51 @@ import (
 const SeatCopyReadable = "copies.copy_readable"
 
 // SeatCopyColumns are the trailing columns ScanSeatCopyRow reads after the projection.
-const SeatCopyColumns = ", copies.copy_count, copies.copy_ids"
+const SeatCopyColumns = ", copies.copy_count, copies.copy_ids, copies." + connector.CopyFoldFullColumn
 
 // SeatCopyFrom renders a `FROM` clause that keeps one `activity a` row per
-// message.
-//
-// candidates is the reader's `WHERE` over `activity a`, and contentArm its
-// audience test there. The window runs over every candidate before the caller's
-// `ORDER BY` and `LIMIT`, so a page never holds two copies. A keyset clause goes
-// in the caller's outer `WHERE`, applied to the row shown.
-func SeatCopyFrom(ctx context.Context, candidates, contentArm string, arg func(any) int) string {
-	return connector.MailCopyGroupFrom(ctx, "activity", "a", candidates, contentArm, arg)
+// message, over the candidates the bound keeps. A keyset clause goes in the
+// caller's outer `WHERE`, applied to the row shown.
+func SeatCopyFrom(ctx context.Context, candidates, contentArm string, bound connector.FoldBound, arg func(any) int) string {
+	return connector.MailCopyGroupBoundedFrom(ctx, "activity", "a", candidates, contentArm, bound, arg)
 }
+
+// foldRowsPerPageRow is how many candidates a bounded fold reads for each row
+// of the page. Copies of a mail rarely number eight, so one attempt fills a page.
+const foldRowsPerPageRow = 8
+
+// FoldBounds are the bounds a collapsed read tries in turn for a page of want
+// rows: a multiple of the page, then every candidate. Zero means unbounded.
+func FoldBounds(want int) []int { return []int{want * foldRowsPerPageRow, 0} }
+
+// FoldIncomplete reports whether a page of got rows, read under a bound, may be
+// short because the bound left candidates out. Then the read goes on to its
+// next bound. full is FoldedInFull of the rows. An empty page says nothing of
+// the candidates a bound cut: they may all share the oldest second it read.
+func FoldIncomplete(got, want int, full bool) bool {
+	switch {
+	case got >= want:
+		return false
+	case got == 0:
+		return true
+	default:
+		return !full
+	}
+}
+
+// FoldedInFull reports whether the fold behind these rows saw every candidate.
+func FoldedInFull(copies []SeatCopies) bool { return len(copies) > 0 && copies[0].foldFull }
 
 // SeatCopies is what ScanSeatCopyRow read for one shown row: how many readable
 // rows it stands for, and their ids.
 type SeatCopies struct {
 	count int64
 	ids   []ids.UUID
+	// foldFull says the fold saw every candidate the read could reach.
+	foldFull bool
 }
 
-func (c *SeatCopies) dest() []any { return []any{&c.count, &c.ids} }
+func (c *SeatCopies) dest() []any { return []any{&c.count, &c.ids, &c.foldFull} }
 
 // stamp sets copies and the other copies' ids on the record only when it
 // stands for more than itself, so every copy stays reachable.

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // timelinePage is the one statement ListActivitiesTx runs, with what its scan needs.
@@ -26,9 +27,15 @@ func (p timelinePage) copyDest(copies *SeatCopies) []any {
 	return copies.dest()
 }
 
-// timelinePageSQL renders the page read. A collapsed page filters candidates
-// inside SeatCopyFrom and pages after it, so the keyset applies to the row shown.
+// timelinePageSQL renders the first attempt at the page read: the bounded fold.
 func timelinePageSQL(ctx context.Context, in ListActivitiesInput, limit int) (timelinePage, error) {
+	return timelinePageAt(ctx, in, limit, FoldBounds(limit + 1)[0])
+}
+
+// timelinePageAt renders the page read with the fold bounded to foldRows
+// candidates, or unbounded at zero. A collapsed page filters candidates inside
+// SeatCopyFrom and pages after it, so the keyset applies to the row shown.
+func timelinePageAt(ctx context.Context, in ListActivitiesInput, limit, foldRows int) (timelinePage, error) {
 	filtered := in
 	if in.CollapseSeatCopies {
 		filtered.Cursor = nil
@@ -55,12 +62,16 @@ func timelinePageSQL(ctx context.Context, in ListActivitiesInput, limit int) (ti
 			candidates = sprintf("((%s) OR a.id = $%d)", candidates, pos)
 			without = sprintf("NOT ($%d = ANY(copies.copy_ids))", pos)
 		}
-		from = SeatCopyFrom(ctx, candidates, content, arg)
-		content, trailing, where = SeatCopyReadable, SeatCopyColumns, []string{without}
 		keyset, err := timelineKeyset(in, sorted, arg)
 		if err != nil {
 			return timelinePage{}, err
 		}
+		bound, err := recencyFoldBound(in, sorted, order, foldRows, arg)
+		if err != nil {
+			return timelinePage{}, err
+		}
+		from = SeatCopyFrom(ctx, candidates, content, bound, arg)
+		content, trailing, where = SeatCopyReadable, SeatCopyColumns, []string{without}
 		if keyset != "" {
 			where = append(where, keyset)
 		}
@@ -81,4 +92,26 @@ func timelinePageSQL(ctx context.Context, in ListActivitiesInput, limit int) (ti
 			order + sprintf(" LIMIT %d", limit+1),
 		args: args, sorted: sorted, collapsed: in.CollapseSeatCopies,
 	}, nil
+}
+
+// recencyFoldBound is the bound a newest-first page may fold under. Any other
+// order, or a cursor with no timestamp, folds every candidate.
+func recencyFoldBound(in ListActivitiesInput, sorted *storekit.ListSort, order string, foldRows int, arg func(any) int) (connector.FoldBound, error) {
+	if foldRows == 0 || order != sorted.OrderBy() || !sorted.Orders("occurred_at", true) {
+		return connector.FoldBound{}, nil
+	}
+	bound := connector.FoldBound{Rows: foldRows}
+	if in.Cursor == nil || *in.Cursor == "" {
+		return bound, nil
+	}
+	cursor, err := storekit.DecodeCursor("activities", *in.Cursor)
+	if err != nil {
+		return connector.FoldBound{}, err
+	}
+	if cursor.SortKey == nil {
+		return connector.FoldBound{}, nil
+	}
+	// The keyset applies to the row shown, whose copies can happen up to a second after it.
+	bound.Ceiling = sprintf("(date_trunc('second', $%d::timestamptz) + interval '1 second')", arg(*cursor.SortKey))
+	return bound, nil
 }

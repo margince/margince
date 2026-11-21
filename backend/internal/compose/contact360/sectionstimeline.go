@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // contactReachesActivity is the reachability predicate every contact-360 section
@@ -229,26 +230,43 @@ func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool
 // a row off /activities answers, because it is read by the same list and
 // folded by the same scan.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
+	bounds := []int{0}
+	if order == byRecency {
+		bounds = activities.FoldBounds(sectionCap + 1)
+	}
+	for _, foldRows := range bounds {
+		out, hasMore, incomplete, err := s.readActivitiesAt(ctx, tx, contactID, opts, extra, order, foldRows)
+		if err != nil || !incomplete {
+			return out, hasMore, err
+		}
+	}
+	return nil, false, errors.New("a collapsed section read never ran unbounded")
+}
+
+// readActivitiesAt is readActivities with the recent fold bounded to foldRows
+// candidates, or unbounded at zero. Its third result says the bound left the
+// page short.
+func (s *Service) readActivitiesAt(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder, foldRows int) ([]crmcontracts.Activity, bool, bool, error) {
 	forDraft := draftRead(opts, order)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	candidates, err := s.activityCandidates(ctx, tx, contactID, opts, extra, order, arg)
 	if err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
 	// A draft's rows passed the content gate, which holds the audience arm, so
 	// each is readable. Projecting the arm again would plan a second copy.
 	contentArm := "TRUE"
 	if !forDraft {
 		if contentArm, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
-			return nil, false, err
+			return nil, false, false, err
 		}
 	}
 	// The recent timeline shows one row per email, as the company timeline does.
 	from, trailing, collapse, gatedOnce := "activity a", "", order == byRecency, ""
 	if collapse {
 		gatedOnce, candidates = foldedCandidates(candidates)
-		from = activities.SeatCopyFrom(ctx, candidates, contentArm, arg)
+		from = activities.SeatCopyFrom(ctx, candidates, contentArm, connector.FoldBound{Rows: foldRows}, arg)
 		contentArm, trailing, candidates = activities.SeatCopyReadable, activities.SeatCopyColumns, "TRUE"
 	}
 	if !collapse {
@@ -260,20 +278,20 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	// list here to fall behind that one.
 	columns, err := activities.ActivityProjection(ctx, contentArm, arg)
 	if err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
 	query := gatedOnce + fmt.Sprintf(`SELECT %s%s FROM %s WHERE %s ORDER BY %s LIMIT %d`,
 		columns, trailing, from, candidates, order, sectionCap+1)
-	out, hasMore, err := readSection(ctx, tx, sectionQuery{query, args, collapse}, opts.activityColumns, s.now())
-	if err != nil {
-		return nil, false, err
+	out, hasMore, incomplete, err := readSection(ctx, tx, sectionQuery{query, args, collapse, foldRows > 0}, opts.activityColumns, s.now())
+	if err != nil || incomplete {
+		return nil, false, incomplete, err
 	}
 	// A row reaches this page through a Cc or an attendance too, so each row
 	// says which part this contact had in it.
 	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
-	return out, hasMore, nil
+	return out, hasMore, false, nil
 }
 
 // draftRead reports whether a section feeds a draft, which reads content.
