@@ -8,7 +8,7 @@ An offer starts in the deal's currency, and while it is a draft you can change i
 
 ### How do I price a deal from its products?
 To price a deal from its products in Margince, open the deal and click **Price from products** on the **Products** card of its **Overview** tab.
-1. Pick a product under **Add a product**, or type a **Custom item** and click **Add item**. Each product in the list shows its SKU and rate card price. A picked product starts at that price.
+1. Pick a product under **Add a product**, or type a **Custom item** and click **Add item**. Each product in the list shows its SKU and rate card price. A picked product starts at that price when the price is in the deal's currency.
 2. Fill **Quantity** and **Selling price** on each line, and say whether it is paid once or repeats. Set **Tax %** and **Discount %** where the line needs them. A product line with no tax rate takes the product's own. A custom item with no tax rate carries no tax.
 3. Click **Save products**.
 

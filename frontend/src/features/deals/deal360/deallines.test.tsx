@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../../design-system/select-testing";
 import { renderWithQueryClient } from "../../../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../../../testing/story-utils";
 import type { DealCommercial } from "./deallines";
@@ -230,7 +231,7 @@ describe("a deal priced from its lines", () => {
     });
   });
 
-  it("starts a picked product at its rate card price, and sends no price the seller left alone", async () => {
+  it("starts a picked product at its rate card price, and sends the price the seller saw", async () => {
     const posted: unknown[] = [];
     show(ESTIMATE, posted);
     installFetchStub({
@@ -274,7 +275,58 @@ describe("a deal priced from its lines", () => {
       within(dialog).getByRole("button", { name: "Save products" }),
     );
     await waitFor(() => expect(posted).toHaveLength(1));
-    expect(posted[0]).not.toHaveProperty("unit_price_minor");
+    // Sent as shown, so a rate card change before the save is not taken.
+    expect(posted[0]).toMatchObject({ unit_price_minor: 200 });
+  });
+
+  it("drops a rate card price once the lines take another currency", async () => {
+    installFetchStub({
+      [`GET /deals/${DEAL}/products`]: () => jsonResponse({ data: [] }),
+      [`GET /deals/${DEAL}/lines`]: () =>
+        jsonResponse({ ...ESTIMATE, currency: null }),
+      "GET /products": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "p-banana",
+              name: "Bananas",
+              unit: "piece",
+              unit_price_minor: 200,
+              currency: "EUR",
+            },
+          ],
+          next_cursor: null,
+          has_more: false,
+        }),
+    });
+    renderWithQueryClient(
+      <DealProductsCard
+        canWrite
+        dealId={DEAL}
+        currency=""
+        typedAmount={null}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Price from products" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const currency = within(dialog).getByRole("combobox", { name: "Currency" });
+    await pickOption(user, currency, "EUR");
+    await user.type(
+      within(dialog).getByRole("searchbox", { name: "Add a product" }),
+      "Ban",
+    );
+    await user.click(
+      await within(dialog).findByRole("button", { name: /Bananas/ }),
+    );
+    const price = () =>
+      within(dialog).getByRole("textbox", { name: "Selling price" });
+    expect(price()).toHaveProperty("value", "2.00");
+
+    await pickOption(user, currency, "USD");
+    expect(price()).toHaveProperty("value", "");
   });
 
   it("sends the tax rate and discount typed on a custom item", async () => {

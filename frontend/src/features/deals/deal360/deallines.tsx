@@ -73,16 +73,22 @@ type DraftLine = LineRates & {
   catalogPriceMinor?: number;
 };
 
+// A rate card price is one in the lines' currency, so a new currency drops it.
+function withoutCatalogPrices(rows: DraftLine[]): DraftLine[] {
+  return rows.map((row) =>
+    row.priceMinor === row.catalogPriceMinor
+      ? { ...row, priceMinor: null, catalogPriceMinor: undefined }
+      : row,
+  );
+}
+
 function draftOf(line: DealLine, locale: Locale): DraftLine {
   return {
     key: line.id,
     id: line.id,
     productId: line.product_id ?? undefined,
     description: line.description,
-    quantity:
-      line.quantity == null
-        ? ""
-        : writtenDecimal(String(line.quantity), locale),
+    quantity: typedText(line.quantity, locale),
     priceMinor: line.unit_price_minor ?? null,
     billing: lineBillingOf(line),
     discount_pct: typedText(line.discount_pct, locale),
@@ -90,8 +96,8 @@ function draftOf(line: DealLine, locale: Locale): DraftLine {
   };
 }
 
-function typedText(rate: number | null | undefined, locale: Locale): string {
-  return rate == null ? "" : writtenDecimal(String(rate), locale);
+function typedText(value: number | null | undefined, locale: Locale): string {
+  return value == null ? "" : writtenDecimal(String(value), locale);
 }
 
 // Empty means the stored default, so an emptied rate is no change to send.
@@ -174,11 +180,9 @@ function newLineBody(
     product_id: row.productId,
     description: !row.productId || renamed ? row.description.trim() : undefined,
     quantity: quantityOf(row.quantity, locale),
+    // The price the seller saw is sent; none takes the product's own.
     unit_price_minor:
-      row.productId &&
-      (row.priceMinor === null || row.priceMinor === row.catalogPriceMinor)
-        ? undefined
-        : row.priceMinor,
+      row.priceMinor === null && row.productId ? undefined : row.priceMinor,
     discount_pct: typedRate(row.discount_pct, locale),
     tax_rate: typedRate(row.tax_rate, locale),
     ...lineBillingBody(row.billing),
@@ -237,11 +241,8 @@ function saveSteps(
   return steps;
 }
 
-/**
- * Saves the draft one change at a time. Each change commits on its own and
- * answers the next revision. A failure stops the save, which then reports how
- * far it got and the server's state at that point.
- */
+/** Saves one change at a time, each answering the next revision. A failure
+ * stops the save, which reports how far it got and the server's state then. */
 async function saveDraft(steps: readonly SaveStep[], start: DealCommercial) {
   let state = start;
   for (const [index, step] of steps.entries()) {
@@ -327,11 +328,8 @@ function DraftLineRow({
   );
 }
 
-/**
- * The editor of a deal's products and services. Saving prices the deal from
- * its lines; a typed value the deal held is replaced, and the dialog says so
- * before the save.
- */
+/** The editor of a deal's products and services. Saving prices the deal from
+ * its lines and replaces a typed value, which the dialog names before the save. */
 export function DealLinesEditor({
   dealId,
   state,
@@ -459,7 +457,10 @@ export function DealLinesEditor({
         <OfferCurrencyField
           value={currency}
           lineItems={[]}
-          onChange={setCurrency}
+          onChange={(next) => {
+            setCurrency(next);
+            setDraft(withoutCatalogPrices);
+          }}
         />
       )}
       {draft.length > 0 && (
