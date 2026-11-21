@@ -7722,7 +7722,7 @@ export const en = {
   "create.city": "City",
   "create.region": "State or region",
   "create.postalCode": "Postal code",
-  "create.country": "Country code (ISO 3166)",
+  "create.country": "Country",
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
@@ -7743,8 +7743,6 @@ export const en = {
     "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
   "create.dateRangeReversed":
     "The end date is before the start date. Choose a later end date.",
-  "create.countryCodeInvalid":
-    "Enter the country as its two-letter code, such as DE or US.",
   "create.referenceNotFound":
     "This record no longer exists, or you cannot see it.",
   "create.currency": "Currency",
@@ -14345,6 +14343,8 @@ export const en = {
     "Your answer is recorded. Staff here will handle your request and give you the reason if they need more time. This link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
+  "confirm.deadLinkBody":
+    "It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
   "confirm.questionChanged":
     "The question on this page changed after you opened it. Reload the page and answer again.",
   "prefs.lockedWhy": "Needed for something you requested, so it stays on.",
@@ -19819,7 +19819,6 @@ export const en = {
   "contact.standing.dims": "How the relationship stands",
   "contact.standing.dim.promises": "Your commitments",
   "contact.standing.dim.promisesNone": "None open",
-  "contact.standing.dim.promisesUncounted": "Too many tasks to count",
   "standing.overdue_one": "{count} overdue",
   "standing.overdue_other": "{count} overdue",
   "standing.ofOpen_one": "of {count} open",
@@ -23234,6 +23233,12 @@ export const en = {
   "legalReview.docState.final": "Final",
   "legalReview.advanceRefused":
     "This stage needs legal’s approval first. Request a legal review, then move the deal.",
+  "legalReview.advanceRefused.pending":
+    "This stage needs legal’s approval first. The review is still waiting for an answer from legal.",
+  "legalReview.advanceRefused.changesNeeded":
+    "This stage needs legal’s approval first. Legal asked for changes: make them, then request the review again.",
+  "legalReview.advanceRefused.termsChanged":
+    "The amount or offer changed since legal approved it. Request the review again, then move the deal.",
   "legalReview.packHistory": "Stage history",
   "legalReview.enteredStage": "{stage}, entered {date}",
   "legalReview.settingsTitle": "Legal review",

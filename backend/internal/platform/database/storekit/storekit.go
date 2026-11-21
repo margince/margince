@@ -272,13 +272,13 @@ func insertEvents(ctx context.Context, tx pgx.Tx, staged []stagedEvent) error {
 	if len(staged) == 0 {
 		return nil
 	}
-	args := make([]any, 0, 2*len(staged))
+	args := make([]any, 0, 3*len(staged))
 	rows := make([]string, 0, len(staged))
 	for _, event := range staged {
-		args = append(args, event.stream, event.body)
-		rows = append(rows, "($"+strconv.Itoa(len(args)-1)+", $"+strconv.Itoa(len(args))+")")
+		args = append(args, event.stream, event.body, assuranceInputsRead(event.env.Type))
+		rows = append(rows, "($"+strconv.Itoa(len(args)-2)+", $"+strconv.Itoa(len(args)-1)+", $"+strconv.Itoa(len(args))+")")
 	}
-	_, err := tx.Exec(ctx, `INSERT INTO `+TableOutbox+` (stream, envelope) VALUES `+strings.Join(rows, ", "), args...)
+	_, err := tx.Exec(ctx, `INSERT INTO `+TableOutbox+` (stream, envelope, assurance_inputs_read) VALUES `+strings.Join(rows, ", "), args...)
 	return err
 }
 

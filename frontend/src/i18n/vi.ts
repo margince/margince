@@ -7525,7 +7525,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.city": "Thành phố",
   "create.region": "Tỉnh hoặc vùng",
   "create.postalCode": "Mã bưu chính",
-  "create.country": "Mã quốc gia (ISO 3166)",
+  "create.country": "Quốc gia",
   "create.companyName": "Công ty",
   "create.companyPicked": "Thêm liên hệ vào công ty có sẵn này.",
   "create.companyNew":
@@ -7547,8 +7547,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hãy nhập đường liên kết tới hồ sơ cá nhân, ví dụ linkedin.com/in/ten.",
   "create.dateRangeReversed":
     "Ngày kết thúc đứng trước ngày bắt đầu. Hãy chọn ngày kết thúc muộn hơn.",
-  "create.countryCodeInvalid":
-    "Hãy nhập quốc gia bằng mã hai chữ cái, ví dụ DE hoặc US.",
   "create.referenceNotFound":
     "Bản ghi này không còn tồn tại hoặc bạn không thể xem.",
   "create.currency": "Loại tiền",
@@ -14013,6 +14011,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã ghi nhận câu trả lời. Nhân viên phụ trách sẽ xử lý yêu cầu của quý khách: chỉnh sửa thông tin trong 10 ngày và xóa thông tin trong 20 ngày. Nếu cần thêm thời gian, quý khách sẽ được báo lý do. Liên kết này đã hết lượt dùng.",
   "confirm.invalidLink":
     "Liên kết này không còn hiệu lực. Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
+  "confirm.deadLinkBody":
+    "Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
   "confirm.questionChanged":
     "Câu hỏi trên trang này đã thay đổi sau khi quý khách mở trang. Vui lòng tải lại trang và trả lời lại.",
   "prefs.lockedWhy": "Cần thiết cho việc quý khách đã yêu cầu, nên vẫn bật.",
@@ -19506,7 +19506,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Mối quan hệ đang thế nào",
   "contact.standing.dim.promises": "Cam kết của bạn",
   "contact.standing.dim.promisesNone": "Không có cam kết mở",
-  "contact.standing.dim.promisesUncounted": "Quá nhiều việc để đếm",
   "standing.overdue_one": "{count} quá hạn",
   "standing.overdue_other": "{count} quá hạn",
   "standing.ofOpen_one": "trong {count} đang mở",
@@ -22943,6 +22942,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalReview.docState.final": "Bản cuối",
   "legalReview.advanceRefused":
     "Giai đoạn này cần pháp lý phê duyệt trước. Hãy yêu cầu rà soát pháp lý, rồi chuyển deal.",
+  "legalReview.advanceRefused.pending":
+    "Giai đoạn này cần pháp lý phê duyệt trước. Yêu cầu rà soát vẫn đang chờ pháp lý trả lời.",
+  "legalReview.advanceRefused.changesNeeded":
+    "Giai đoạn này cần pháp lý phê duyệt trước. Pháp lý đã yêu cầu thay đổi: hãy thực hiện, rồi yêu cầu rà soát lại.",
+  "legalReview.advanceRefused.termsChanged":
+    "Số tiền hoặc báo giá đã thay đổi kể từ khi pháp lý phê duyệt. Hãy yêu cầu rà soát lại, rồi chuyển deal.",
   "legalReview.packHistory": "Lịch sử giai đoạn",
   "legalReview.enteredStage": "{stage}, vào lúc {date}",
   "legalReview.settingsTitle": "Rà soát pháp lý",

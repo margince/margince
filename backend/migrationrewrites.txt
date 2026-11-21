@@ -189,3 +189,8 @@
 1795229160_a_legal_entity_states_its_jurisdiction_apart_from_its_address.up.sql | *, legal_entity | replaces the two text-bound triggers, which act on later writes only; legal_entity holds one row per further legal entity an administrator described by hand, a handful per installation, each given one column copied from its own country
 1795229160_a_legal_entity_states_its_jurisdiction_apart_from_its_address.down.sql | * | drops the column and the check this migration added and restores the two text-bound triggers; no existing row is changed
 1795229161_the_legal_entity_jurisdiction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795248696_capture_knows_when_a_fact_it_judges_mail_by_moved.up.sql | * | the procedural body grants USAGE on the new sequence to the app role when that role exists; the migration changes no existing row
+1795259683_a_participant_write_clears_only_the_stamps_it_can_move.up.sql | * | the procedural bodies are trigger functions that clear the stamps on the threads one statement's participants or sender addresses reach; the migration only replaces triggers and functions and changes no existing row
+1795259683_a_participant_write_clears_only_the_stamps_it_can_move.down.sql | * | restores the row-level participant and contact_email triggers and their functions; no existing row is changed
+1795263247_an_empty_renewal_starter_is_switched_off.up.sql | *, automation, audit_log | the starter template seeds one renewal_reminder row per installation, plus the few a user created; only those with no record type or date field change, each with one audit row
+1795263247_an_empty_renewal_starter_is_switched_off.down.sql | * | the down migration is a single SELECT 1 that changes nothing

@@ -42,7 +42,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/platform/database/storekit/outboxtest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -143,17 +143,7 @@ func decodedOutboxEntityType(t *testing.T, tx *fakeTx) string {
 	if !strings.Contains(tx.execSQL, "INSERT INTO event_outbox") {
 		t.Errorf("%q should contain %q", tx.execSQL, "INSERT INTO event_outbox")
 	}
-	if len(tx.execArgs) != 2 {
-		t.Errorf("len = %d, want %d", len(tx.execArgs), 2)
-	}
-	body, ok := tx.execArgs[1].([]byte)
-	if !ok {
-		t.Errorf("second Exec arg = %T, want []byte (the marshaled envelope)", tx.execArgs[1])
-	}
-	var env events.Envelope
-	if json.Unmarshal(body, &env) != nil {
-		t.Fatalf("unexpected error: %v", json.Unmarshal(body, &env))
-	}
+	env := outboxtest.Envelope(t, tx.execArgs)
 	return env.Entity.Type
 }
 
