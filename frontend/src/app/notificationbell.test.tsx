@@ -165,6 +165,17 @@ describe("NotificationBell", () => {
     expect(within(bell).getByText("2")).not.toBeNull();
   });
 
+  it("stops a three-digit count at 99+ and keeps the whole figure in its name", async () => {
+    const waiting = Array.from({ length: 134 }, (_, index) =>
+      notice(`n${index}`, "A lead is past its deadline"),
+    );
+    vi.stubGlobal("fetch", backendFor(waiting).fetchMock);
+    render(<NotificationBell />);
+
+    const bell = await screen.findByRole("button", { name: /134 waiting/i });
+    expect(within(bell).getByText("99+")).not.toBeNull();
+  });
+
   // A ZERO IS NOT A COUNT WORTH DRAWING. A badge reading "0" is a mark the eye
   // stops on to learn there is nothing, which is the one thing an unmarked bell
   // already says.

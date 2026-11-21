@@ -90,7 +90,7 @@ func endingRequests(t *testing.T, e *revocationEnv, ender *requestEnder) context
 func postInvite(ctx context.Context, h Handlers, email string) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	body := `{"email":"` + email + `","display_name":"New Member","role":"rep"}`
-	h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx))
+	h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx), crmcontracts.InviteUserParams{})
 	return rec
 }
 
@@ -189,7 +189,7 @@ func TestAResendThatCommittedAnswersTheMember(t *testing.T) {
 	ctx := endingRequests(t, e, &requestEnder{marker: "INSERT INTO auth_token", atCommit: true})
 
 	rec := httptest.NewRecorder()
-	h.ResendUserInvite(rec, httptest.NewRequest(http.MethodPost, "/", nil).WithContext(ctx), id)
+	h.ResendUserInvite(rec, httptest.NewRequest(http.MethodPost, "/", nil).WithContext(ctx), id, crmcontracts.ResendUserInviteParams{})
 	<-sent
 	if rec.Code != http.StatusOK {
 		t.Fatalf("a resend whose link was committed answered %d: %s", rec.Code, rec.Body)

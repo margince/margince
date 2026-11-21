@@ -16,7 +16,7 @@ does with a call, see [agent-surface.md](agent-surface.md). For how the gate adm
  backend/api/ai-tasks.yaml            the `ai.routing` setting         ai.Router
    task  → ladder of tiers              tier → provider + model          • meter (workspace budget)
    + execution_mode                     profile (egress posture)         • inject company context
-   + on_budget_exhausted                BYOK key ← key vault             • trace (ai_call rows)
+                                        BYOK key ← key vault             • trace (ai_call rows)
         │                                     │                          • strip secrets
         │ make gen (drift-gated)              │                          • walk the ladder
         ▼                                     ▼                                 │
@@ -25,13 +25,13 @@ does with a call, see [agent-surface.md](agent-surface.md). For how the gate adm
                                                                           provider adapter
    task cold_start                                                        (anthropic | openai |
      ladder [cheap_cloud, premium]   ──walk on error/schema-fail──►       gemini | gemini_vertex |
-     on_budget_exhausted: degrade                                          ollama | vllm |
+                                                                           ollama | vllm |
                                                                            openai_compatible | fake)
 ```
 
 **Four rules hold this together:**
 
-1. **Contract first.** *What* a task is (its ladder, its budget rule) sits in `ai-tasks.yaml` and
+1. **Contract first.** *What* a task is (its ladder, its `execution_mode`) sits in `ai-tasks.yaml` and
    compiles into the binary. Changing that policy is a rebuild, held by the drift gate like `crm.yaml`.
    *Which* model serves a tier is runtime config. Policy and deployment stay apart.
 2. **One gate.** Every AI call (real, fake, or embedding) goes through the `ai.Router`. There is no
@@ -54,35 +54,38 @@ has more than one). A `planned` task has no site, no scenario and no certificati
 the unit that all later counts use. A number per task would let one certified prompt stand for another
 that was never measured.
 
-Each task declares a **ladder** (an ordered list of **tiers**, each a class of model), an **`execution_mode`**,
-and a **budget rule**:
+Each task declares a **ladder** (an ordered list of **tiers**, each a class of model) and an
+**`execution_mode`**:
 
 ```yaml
 # backend/api/ai-tasks.yaml
 tiers: [local_small, cheap_cloud, premium, frontier, local_large]
 
 tasks:
-  cold_start:    {ladder: [cheap_cloud, premium], execution_mode: interactive, on_budget_exhausted: degrade}
-  site_extract:  {ladder: [premium],              execution_mode: background,  on_budget_exhausted: queue}
-  capture_classify: {ladder: [local_small, cheap_cloud], execution_mode: background, on_budget_exhausted: queue}
+  cold_start:    {ladder: [cheap_cloud, premium], execution_mode: interactive}
+  site_extract:  {ladder: [premium],              execution_mode: background}
+  capture_classify: {ladder: [local_small, cheap_cloud], execution_mode: background}
 ```
 
-- **A tier** is a *class of model*, not a model. `local_small` and `local_large` run on the same box,
-  so no data leaves. `cheap_cloud` is fast and cheap and hosted. `premium` is strong hosted reasoning.
+- **A tier** is a *class of model*, not a model. `local_small` and `local_large` are the tiers the
+  `sovereign` profile keeps on the operator's own servers, where it moves every other rung. Under any
+  other profile a tier is whatever model the routing binds. Most presets in `config/presets/` bind
+  `local_small` to a hosted cloud model. Only the presets for an own server keep it local.
+- `cheap_cloud` is fast and cheap and hosted. `premium` is strong hosted reasoning.
   `frontier` is the strongest a deployment will pay for; `signal_extract` uses it.
 - A task's ladder is its **order to fall back**. The Router starts at the first tier, and walks to the
   next on a provider error or a failed schema check. So a short failure moves down a step, and does not
   drop the call.
 - **`execution_mode`** names who is waiting: `interactive` (a human, in the middle of work) or
-  `background` (a worker job). It pairs with the budget rule: an `interactive` task always declares
-  `degrade`, and a `background` task `queue`. The contract's own header states this rule.
-- **`on_budget_exhausted`** is what happens when the workspace's monthly model budget is spent.
-  `degrade` answers on a cheaper rung (at 100% an `interactive` task is pinned to `local_small`, not
-  blocked). `queue` waits and does not spend past the budget.
-- A queued wait is a **typed refusal**. The Router returns `BudgetDeferralError` (which wraps
+  `background` (a worker job). It also decides what the workspace's monthly model budget does as it
+  runs out (`budgetLadder` in `routeplan.go`). From 80% every task's ladder moves one tier down,
+  background or not: `site_extract`, whose ladder is `premium` alone, runs on `cheap_cloud`. From 100%
+  an `interactive` task is pinned to `local_small`, not blocked, and a `background` task waits.
+- A background wait is a **typed refusal**. The Router returns `BudgetDeferralError` (which wraps
   `ErrBudgetDeferred`) with `NextAttemptAt`, the next budget window. It does so **before any provider
-  attempt or `ai_call` row exists**, so a deferral costs nothing and traces nothing. A task with only
-  `premium`, like `site_extract`, has no cheaper rung, so it queues.
+  attempt or `ai_call` row exists**, so the refused attempt costs nothing and traces nothing. Each attempt
+  reads the band again. So an attempt that already ran in the same call keeps its tokens and its
+  `ai_call` row when a later one is deferred.
 
 Every field of `ai-tasks.yaml`, top level and per task:
 [ai-runtime-fields.md](../reference/ai-runtime-fields.md#every-field-in-ai-tasksyaml).
@@ -195,9 +198,15 @@ limits serves every part that asks "how are we doing". Those parts are the routi
 status screen, and the cost preview.
 
 - `normal`: under 80%.
-- `degraded`: 80% up to 100%; a task with `on_budget_exhausted: degrade` falls to a cheaper rung.
+- `degraded`: 80% up to 100%; every task's ladder moves one tier down.
 - `queued`: 100% or over, or the budget itself is zero or less. A wrong setting fails closed, never
   open.
+
+**The budget is a soft limit.** The Router reads the month's spend before a call (`applyBudget` in
+`router.go`) and records the call's spend after it returns, with nothing reserved in between. Calls that
+start together all read the same spend, so each can pass a limit that together they cross. How far the spend
+goes past the limit grows with the number of calls in flight and their size. From 100% a task a user waits on
+still runs on `local_small`. Where that tier is a hosted model, that spend goes on with no limit at all.
 
 Before saving a change, an admin can **preview** a new `BudgetConfig` or routing edit against live spend.
 The preview and the save share `Revision()`, a hash of the config in its standard form. A save is refused
@@ -252,7 +261,7 @@ raising the allowance resumes work that may run right away, not after a wait of 
  for each deferred carrier (site read / company scan / voice build):
    1. re-derive the requester from the carrier row itself — a human
       requester for any carrier; a site read alone may instead carry
-      the capture pipeline's own "system:capture_auto_enrich" identity
+      a system lane's identity (capture auto-enrich or domain triage)
    2. re-check a HUMAN requester's authority NOW (a revoked or
       deactivated one stays parked; restoring their access is what
       makes it eligible on a later pass) — the auto-enrich case has no
@@ -273,14 +282,12 @@ does not start the job again, when the job's `attempt` has already reached `max_
 job spends one ordinary River attempt like any other retry. Waiting gives no extra attempts. The one
 exception is a voice build whose first job is gone, so a new one starts.
 
-**Known gap:** the sweep finds the requester of a site read by *identity*, not by a general rule. It
-knows a human requester, or one named system actor (`system:capture_auto_enrich`). Company scans and
-voice builds know a human requester only. A site read started under a *different* system identity (a
-domain triage read is the one that exists) has no requester the sweep can find. It fails with an error
-(`"requester cannot be resolved"`), where it should stay parked.
-
-Take a new path that a system starts, wired into any carrier that can resume. If the sweep does not
-learn its identity, this gap comes back on every tick. It lasts for as long as one such carrier waits.
+The sweep resumes a site read whose requester is a human or a system lane. `isSystemRead`
+(`compose/deepreadtriage.go`) names the system lanes: the capture lane's own reads and domain triage. That one predicate
+also sets the smaller page limit of a system read, so a new system lane declares itself once and resumes
+too.
+Company scans and voice builds know a human requester only. Any other requester fails with
+`"requester cannot be resolved"`.
 
 RBAC: reading and changing the allowance is its own object, `ai_budget`. `admin` and `ops` can change
 it, `management` can read it, and nobody else sees it. It is separate from `ai_diagnostics` (counts of
@@ -309,7 +316,9 @@ ladder and prompt unless every check passes, in this order:
 No certification row is needed, only the answer checks above.
 
 [Certifying a site](../how-to/certify-a-decision-site.md) is advice: a measured record that an operator
-trusts it by, never something `Router.Decide` reads. A fallback leaves its reason on the ladder's first
+trusts it by, never something `Router.Decide` reads. A row needs at least 15 kept answers
+(`DecisionMinKept`). Where the bound lane's model has no row for a site, the API and worker log a
+warning at start and at each routing save. It names the model and the sites. A fallback leaves its reason on the ladder's first
 attempt: `decision_state_too_large`, `decision_error`, `decision_off_enum` or
 `decision_below_floor`.
 
@@ -331,8 +340,8 @@ host on your own machine. `sovereign` refuses `jev`, and holds `jev_compatible` 
 
 Every call ends at the Router (`internal/modules/ai`). In one pass it:
 
-- **meters** the workspace's monthly model budget (above), and applies `execution_mode` +
-  `on_budget_exhausted` when it is spent;
+- **meters** the workspace's monthly model budget (above), and applies `execution_mode` when it is
+  spent;
 - **puts company context in** where the task's policy asks for it (below);
 - **strips secrets** from the prompt before the request leaves the process, and again from all it
   records;

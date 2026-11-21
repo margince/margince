@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
+import { GoneNotice } from "../../components/gonenotice";
 import { Button } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
@@ -18,11 +19,15 @@ export function ReportGate({
     <QueryGate
       query={query}
       pendingLabel={t("reporting.reports")}
-      goneKey="reporting.reportGone"
-      goneAction={
-        <Button onClick={() => openAnalyticsSection("reports")}>
-          {t("common.goneBackToAnalytics")}
-        </Button>
+      gone={
+        <GoneNotice
+          messageKey="reporting.reportGone"
+          action={
+            <Button onClick={() => openAnalyticsSection("reports")}>
+              {t("common.goneBackToAnalytics")}
+            </Button>
+          }
+        />
       }
     >
       {children}

@@ -25,7 +25,6 @@ type localOpts struct {
 	captureWhole    bool
 	harness         harnessClient
 	fakeDecider     decision.Client
-	everyCertified  bool
 	restrictions    model.SubjectRestrictions
 }
 
@@ -98,15 +97,6 @@ func WithPayloadCapture() LocalOption {
 // binds a lane: the lane's provider and model still name every trace row.
 func WithFakeDecider(client decision.Client) LocalOption {
 	return func(o *localOpts) { o.fakeDecider = client }
-}
-
-// WithEveryDecisionCertified treats every (task, site, provider, model) as
-// certified. It exists for the certification lane alone, which must run the
-// lane to produce the record the generated table is built from — a runtime
-// that served only certified rows could never measure the first one. The
-// production constructor has no such knob.
-func WithEveryDecisionCertified() LocalOption {
-	return func(o *localOpts) { o.everyCertified = true }
 }
 
 // localDecisionLane is the lane a DB-less router serves: the config's own, or
@@ -193,9 +183,6 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	router := assembleRouter(clients, embedder, cfg.Profile, &memoryMeter{}, StaticBudget(o.monthlyBudget), o.callStore, meta, o.capturePayloads, nil)
 	router.cacheOff = o.cacheOff
 	router.captureWhole = o.captureWhole
-	if o.everyCertified {
-		router.decisionCertified = func(DecisionCertKey) bool { return true }
-	}
 	decisions, err := localDecisionLane(cfg, o.fakeDecider)
 	if err != nil {
 		return nil, err

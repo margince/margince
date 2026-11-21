@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
@@ -51,6 +52,9 @@ export function ApprovalPreferencesCard() {
                 description={
                   <Button
                     variant="link"
+                    aria-label={t("approvalPreferences.reviewKind", {
+                      kind: approvalKindLabel(row.kind, t),
+                    })}
                     onClick={() => setReviewKind(row.kind)}
                   >
                     {t("approvalPreferences.review")}
@@ -95,6 +99,13 @@ function PreferenceReview({
   close,
 }: Readonly<{ kind: string; close: () => void }>) {
   const t = useT();
+  const title = useRef<HTMLHeadingElement>(null);
+  // The review mounts below the whole list, often off screen.
+  // Bring it into view and give its title the focus.
+  useEffect(() => {
+    title.current?.scrollIntoView?.({ block: "start" });
+    title.current?.focus({ preventScroll: true });
+  }, []);
   const [cursor, setCursor] = useState<string>();
   const query = useQuery({
     queryKey: ["approvals", "include-muted", kind, cursor],
@@ -114,6 +125,11 @@ function PreferenceReview({
   });
   return (
     <PanelBody>
+      <Heading size="small" ref={title} tabIndex={-1}>
+        {t("approvalPreferences.reviewTitle", {
+          kind: approvalKindLabel(kind, t),
+        })}
+      </Heading>
       <PanelIntro>{t("approvalPreferences.reviewExplain")}</PanelIntro>
       <Button onClick={close}>{t("approvalPreferences.close")}</Button>
       <QueryGate

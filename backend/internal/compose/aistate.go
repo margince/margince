@@ -15,7 +15,7 @@ import (
 // AI-unconfigured deployment is a legitimate, ready deployment; the
 // state is a visibility line, not a gate.
 const (
-	AIStateConfigured   = "configured"   // a declared ai-routing.yaml is bound
+	AIStateConfigured   = "configured"   // a stored routing setting is bound
 	AIStateFake         = "fake"         // --ai-fake, dev/test only
 	AIStateUnconfigured = "unconfigured" // neither wired
 )

@@ -238,7 +238,7 @@ func TestChangedSinceBriefUsesTheRunsAsOfNotItsGeneratedAt(t *testing.T) {
 	// The reply landed after the night READ the records and before it finished
 	// writing them. Judged by generated_at it would read as old.
 	row := atRiskRow(ids.NewV7())
-	row.occurredAt = time.Date(2026, 9, 4, 6, 20, 0, 0, time.UTC)
+	row.item.OccurredAt = new(time.Date(2026, 9, 4, 6, 20, 0, 0, time.UTC))
 
 	marked := markChangedSinceBrief([]ranked{row}, readAt)
 
@@ -254,7 +254,7 @@ func TestChangedSinceBriefUsesTheRunsAsOfNotItsGeneratedAt(t *testing.T) {
 func TestSomethingTheNightSawIsNotChanged(t *testing.T) {
 	readAt := time.Date(2026, 9, 4, 6, 0, 0, 0, time.UTC)
 	row := atRiskRow(ids.NewV7())
-	row.occurredAt = time.Date(2026, 9, 3, 17, 0, 0, 0, time.UTC)
+	row.item.OccurredAt = new(time.Date(2026, 9, 3, 17, 0, 0, 0, time.UTC))
 
 	marked := markChangedSinceBrief([]ranked{row}, readAt)
 
@@ -267,7 +267,7 @@ func TestSomethingTheNightSawIsNotChanged(t *testing.T) {
 // was no night, the other says the night saw this.
 func TestWithNoRunNoRowClaimsTheNightSawIt(t *testing.T) {
 	row := atRiskRow(ids.NewV7())
-	row.occurredAt = time.Date(2026, 9, 4, 6, 20, 0, 0, time.UTC)
+	row.item.OccurredAt = new(time.Date(2026, 9, 4, 6, 20, 0, 0, time.UTC))
 
 	marked := markChangedSinceBrief([]ranked{row}, time.Time{})
 

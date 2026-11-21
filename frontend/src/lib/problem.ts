@@ -356,11 +356,11 @@ export function refusalShown(
   return Array.isArray(statuses) && statuses.includes(problemStatus(error));
 }
 
-// The server answered that the record or link the reader opened is not there.
-// A retry asks the same question again, so a screen shows no Retry for it.
+// A read of a record or link that no retry can answer. The reader may see none
+// (404, a row-scope miss too), it expired (410), or the id or token is invalid (422).
 export function isGone(err: unknown): boolean {
   const status = problemStatus(err);
-  return status === 404 || status === 410;
+  return status === 404 || status === 410 || status === 422;
 }
 
 // The HTTP status out of a thrown RFC-7807 body, or 0 when the failure carried

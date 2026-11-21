@@ -24,5 +24,8 @@ may_call:
   - read_view
   - whoami
 
+must_end_with:
+  - me "admin@demo.test" voice=*sentence*
+
 runs: 3
 pass_at: 2

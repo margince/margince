@@ -43,6 +43,26 @@ export const reportingMetricNames: Record<
   meetings_booked_for_colleagues: "Meetings booked for colleagues",
 };
 
+type AnalyticsContext = components["schemas"]["AnalyticsContext"];
+
+/** The analytics frame a reader opens on, with no manager forecast. */
+export function analyticsContextFixture(
+  defaultScope: AnalyticsContext["default_scope"],
+  allowed: AnalyticsContext["allowed_scopes"],
+): AnalyticsContext {
+  return {
+    default_scope: defaultScope,
+    allowed_scopes: allowed,
+    capabilities: {
+      view_manager_forecast: false,
+      submit_manager_forecast: false,
+    },
+    as_of: "2026-03-15T09:00:00Z",
+    timezone: REPORTING_FIXTURE_ZONE,
+    base_currency: "EUR",
+  };
+}
+
 export const reportingStoryScope = {
   kind: "team",
   id: "11111111-1111-4111-8111-111111111111",

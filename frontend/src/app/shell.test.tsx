@@ -63,6 +63,9 @@ vi.mock("@composition/extensions", () => ({
 // shell MOUNTS them in the places it promises, and feeds them the counts it
 // already has.
 
+// A contact id in the form the server reads.
+const ANNA_ID = "0a7e5c1d-6b2f-4c8e-9d3a-1f2e3d4c5b6a";
+
 afterEach(() => {
   cleanup();
   window.location.hash = "";
@@ -494,9 +497,9 @@ describe("Shell", () => {
   // is not the page. So the row yields to `aria-current="true"` there (current in
   // this set) and the trail's last stop keeps `page`.
   it("claims the page exactly once on a record, with the sidebar's row yielding", () => {
-    window.location.hash = "#/contacts/p-anna";
+    window.location.hash = `#/contacts/${ANNA_ID}`;
     const client = newClient();
-    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", ANNA_ID], "Anna Weber");
     const { container } = renderWith(
       client,
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,

@@ -428,6 +428,7 @@ func (c countingClient) Complete(ctx context.Context, req model.Request) (model.
 // below was overwritten by whatever the rung above failed with.
 func TestAQuotaRefusalStopsTheLadderInsteadOfEscalating(t *testing.T) {
 	premiumCalls := 0
+	store := &fakeCallStore{}
 	r := assembleRouter(
 		map[Tier]model.Client{
 			TierCheapCloud: stubClient{err: fmt.Errorf("ai: openai: %w", ErrProviderQuota)},
@@ -436,7 +437,7 @@ func TestAQuotaRefusalStopsTheLadderInsteadOfEscalating(t *testing.T) {
 				calls:      &premiumCalls,
 			},
 		},
-		nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, &fakeCallStore{},
+		nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, store,
 		map[Tier]routeMeta{
 			TierCheapCloud: {provider: "openai", model: "gpt-cheap"},
 			TierPremium:    {provider: "anthropic", model: "claude-premium"},
@@ -452,6 +453,10 @@ func TestAQuotaRefusalStopsTheLadderInsteadOfEscalating(t *testing.T) {
 	}
 	if !errors.Is(err, ErrProviderQuota) {
 		t.Fatalf("the caller is told the account refused, not what a later rung did: %v", err)
+	}
+	// One provider call is one trace row: the refusing rung is the call's terminal.
+	if len(store.recorded) != 1 || store.recorded[0].Tier != TierCheapCloud {
+		t.Errorf("the refused call wrote %d trace rows %+v, want the refusing rung's one", len(store.recorded), shapes(store.recorded))
 	}
 }
 

@@ -50,16 +50,6 @@ const NAME_READERS: Record<
   deal: referenceReader("deal"),
 };
 
-export function fetchEntityName(
-  kind: EntityKind,
-  id: string,
-  signal?: AbortSignal,
-): Promise<string | null> {
-  return fetchEntityReference(kind, id, signal).then(
-    (reference) => reference?.name ?? null,
-  );
-}
-
 export async function fetchEntityReference(
   kind: EntityKind,
   id: string,
@@ -71,7 +61,8 @@ export async function fetchEntityReference(
   return reference;
 }
 
-// Non-company readers share a cached display name; companies share rich references.
+// Every reader caches the reference, so a settled answer keeps a record it
+// left out (null) apart from a record that carries no name.
 export function entityNameQuery(
   kind: Exclude<EntityKind, "company">,
   id: string,
@@ -79,7 +70,7 @@ export function entityNameQuery(
   return {
     queryKey: [kind, ENTITY_NAME_KEY, id],
     // Other observers share this batch; retain its answer after unmount.
-    queryFn: () => fetchEntityName(kind, id),
+    queryFn: () => fetchEntityReference(kind, id),
     // References change rarely relative to the pages that render them; a short
     // cache keeps a 360 from re-fetching the same name on every hover/refetch.
     staleTime: 60_000,
@@ -98,16 +89,33 @@ export function companyReferenceQuery(id: string) {
   } as const;
 }
 
+/** What one answer says about an id: its name, and whether it held the record. */
+export type NameAnswer = Readonly<{ name: string | null; found: boolean }>;
+
+// A cached string is a name written straight into the cache.
+function answerOf(value: EntityReference | string | null): NameAnswer {
+  if (value === null) {
+    return { name: null, found: false };
+  }
+  return { name: typeof value === "string" ? value : value.name, found: true };
+}
+
+function nameReadQuery(
+  kind: EntityKind,
+  id: string,
+): UseQueryOptions<EntityReference | string | null, Error> {
+  return kind === "company"
+    ? companyReferenceQuery(id)
+    : entityNameQuery(kind, id);
+}
+
 export function entityNameObserverQuery(
   kind: EntityKind,
   id: string,
 ): UseQueryOptions<EntityReference | string | null, Error, string | null> {
-  const options =
-    kind === "company" ? companyReferenceQuery(id) : entityNameQuery(kind, id);
   return {
-    ...options,
-    select: (value: EntityReference | string | null) =>
-      typeof value === "string" ? value : (value?.name ?? null),
+    ...nameReadQuery(kind, id),
+    select: (value) => answerOf(value).name,
   };
 }
 
@@ -147,20 +155,27 @@ export function usableName(name: string | null | undefined): string | null {
 export function useEntityName(
   kind: EntityKind,
   id: string | null | undefined,
-): { name: string | null; reading: NameReading; fetching: boolean } {
-  const query = useQuery({
-    ...entityNameObserverQuery(kind, id ?? ""),
+): {
+  name: string | null;
+  reading: NameReading;
+  absent: boolean;
+  fetching: boolean;
+} {
+  const query = useQuery<EntityReference | string | null, Error, NameAnswer>({
+    ...nameReadQuery(kind, id ?? ""),
+    select: answerOf,
     enabled: Boolean(id),
   });
   // The reading travels with the name, because a caller handed only `null`
   // cannot tell a name that is still coming from one that will never come, and
   // every caller that has had to guess has guessed the id.
   //
-  // `fetching` is true while a read is under way or paused, cached answer or
-  // not. A cached "no name" can be replaced by the read still coming.
+  // `absent`: a settled answer left the record out. `fetching` is true while a
+  // read is under way or paused, since a cached "no name" can still change.
   return {
-    name: usableName(query.data),
+    name: usableName(query.data?.name),
     reading: readingOf(query),
+    absent: query.data?.found === false,
     fetching: query.fetchStatus !== "idle",
   };
 }

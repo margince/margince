@@ -1,16 +1,16 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { DEAL_ATTRIBUTION_LABEL, withUnset } from "../format/dealvocab";
 import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
 import { useHealthScope } from "../lib/healthscope";
 import { unwrap } from "../lib/problem";
 import type { CreateField } from "./create";
 
-const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
-  { value: "", label: "deal.attributionUnset" },
-  { value: "sourced", label: "deal.attributionSourced" },
-  { value: "influenced", label: "deal.attributionInfluenced" },
-];
+const ATTRIBUTION_OPTIONS = withUnset(
+  DEAL_ATTRIBUTION_LABEL,
+  "deal.attributionUnset",
+);
 
 function usePartners() {
   const readsCompanies = useCan("company", "read");

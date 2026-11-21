@@ -4,7 +4,6 @@ import type { MessageKey } from "../i18n/en";
 import { type FieldLabels, isGone, problemMessageOf } from "../lib/problem";
 import { Button, EmptyState, PendingBody } from "./atoms";
 import { Callout } from "./callout";
-import { ErrorLine } from "./errorline";
 import "./querystates.css";
 
 // The minimal read surface QueryGate/QueryStates need. A real react-query
@@ -29,8 +28,7 @@ export function QueryStates({
   query,
   pendingLabel,
   pendingLines,
-  goneKey,
-  goneAction,
+  gone,
   children,
 }: Readonly<{
   query: Readonly<{
@@ -46,10 +44,9 @@ export function QueryStates({
   // the page down as it arrives.
   pendingLabel: string;
   pendingLines?: number;
-  // A screen whose 404 can only mean the link or record is gone names it here.
-  // Without it a 404 stays a failed load, since it may be a row-scope refusal.
-  goneKey?: MessageKey;
-  goneAction?: ReactNode;
+  // What a screen draws when its read finds no record or link (see `isGone`).
+  // Without it such a failure keeps Retry, as its 404 may be a scope refusal.
+  gone?: ReactNode;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -61,13 +58,8 @@ export function QueryStates({
       />
     );
   }
-  if (goneKey && query.isError && isGone(query.error)) {
-    return (
-      <EmptyState>
-        <ErrorLine>{t(goneKey)}</ErrorLine>
-        {goneAction}
-      </EmptyState>
-    );
+  if (query.isError && gone && isGone(query.error)) {
+    return <>{gone}</>;
   }
   if (query.isError) {
     return (
@@ -170,8 +162,7 @@ export function QueryGate<Data>({
   empty,
   pendingLabel,
   pendingLines,
-  goneKey,
-  goneAction,
+  gone,
   children,
 }: Readonly<{
   query: QueryLike<Data>;
@@ -180,8 +171,7 @@ export function QueryGate<Data>({
   // pending state, so there is one place a screen names its wait.
   pendingLabel: string;
   pendingLines?: number;
-  goneKey?: MessageKey;
-  goneAction?: ReactNode;
+  gone?: ReactNode;
   children: (data: Data) => ReactNode;
 }>) {
   const t = useT();
@@ -203,8 +193,7 @@ export function QueryGate<Data>({
       query={query}
       pendingLabel={pendingLabel}
       pendingLines={pendingLines}
-      goneKey={goneKey}
-      goneAction={goneAction}
+      gone={gone}
     >
       {success}
     </QueryStates>

@@ -7,6 +7,7 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { RecordGone } from "../../components/recordgone";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
@@ -168,7 +169,11 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   return (
     <div className="wrap">
       <DomainContactsArrival key={id} companyId={id} />
-      <QueryGate query={companyQuery} pendingLabel={t("nav.companies")}>
+      <QueryGate
+        query={companyQuery}
+        pendingLabel={t("nav.companies")}
+        gone={<RecordGone kind="company" />}
+      >
         {(company) => (
           <CompanyRecord
             company={company}
