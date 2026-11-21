@@ -92,7 +92,7 @@ export function characterCountsIn(source: ts.SourceFile): number[] {
   return lines;
 }
 
-// Tests are left out: a case that proves the unit counts UTF-16 on purpose.
+// Tests are left out: a test may count UTF-16 to prove the unit.
 const judged = (file: CensusFile) =>
   (file.area === "src" || file.area === "extensions") &&
   file.source !== undefined &&

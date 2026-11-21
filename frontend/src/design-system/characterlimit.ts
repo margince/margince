@@ -24,8 +24,8 @@ function graphemeStart(value: string, index: number): number {
 type Cut = Readonly<{ value: string; caret: number | null }>;
 
 // The value with what the last edit put past `limit` taken out, or undefined
-// when nothing goes. The edit ends at the caret, so the cut keeps its start,
-// as the native attribute keeps the start of a paste that does not fit.
+// when nothing goes. The edit ends at the caret, so the cut keeps its start.
+// The native attribute also keeps the start of a paste that does not fit.
 function cutOf(control: TextControl, limit: number): Cut | undefined {
   const value = control.value;
   const previous = before.get(control);

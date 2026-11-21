@@ -401,8 +401,8 @@ it("says the asks could not be read and reads them again on retry", async () => 
   expect(screen.queryByText(en["contact.intro.asksFailed"])).toBeNull();
 });
 
-// The first read fails and every later one hangs, so the screen is the one a
-// reader sees for as long as a slow retry runs.
+// The first read fails and every later one hangs. The screen is then the one
+// a reader sees while a slow retry runs.
 function stubFailThenHang() {
   let reads = 0;
   vi.stubGlobal(
