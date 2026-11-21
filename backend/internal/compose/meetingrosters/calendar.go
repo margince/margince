@@ -31,10 +31,15 @@ const (
 const runEvidence = "data_task_run"
 
 // storedCalendar is the address of the calendar a stored event was read from,
-// or "" when the event proves none.
+// or "" when the event proves none. An event no parser reads proves none. Only
+// a failed read of the connected calendars is an error.
 func storedCalendar(ctx context.Context, tx pgx.Tx, provider string, raw []byte) (string, error) {
 	if provider == GoogleCalendar {
-		return gcal.SelfAddress(raw)
+		calendar, err := gcal.SelfAddress(raw)
+		if err != nil {
+			return "", nil //nolint:nilerr // an unreadable original names no calendar
+		}
+		return calendar, nil
 	}
 	connected, err := database.Remember(tx, "meetingrosters.calendars:"+provider, func() ([]string, error) {
 		rows, err := tx.Query(ctx, `SELECT account_label FROM capture_connection
@@ -47,7 +52,11 @@ func storedCalendar(ctx context.Context, tx pgx.Tx, provider string, raw []byte)
 	if err != nil {
 		return "", err
 	}
-	return graphcal.OwnCalendar(raw, connected)
+	calendar, err := graphcal.OwnCalendar(raw, connected)
+	if err != nil {
+		return "", nil //nolint:nilerr // an unreadable original names no calendar
+	}
+	return calendar, nil
 }
 
 // recordOf reads a stored event the way live capture does for its provider.

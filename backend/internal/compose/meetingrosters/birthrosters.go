@@ -66,7 +66,7 @@ func nameBirthRoster(ctx context.Context, tx pgx.Tx, row calendarMeeting) (bool,
 	}
 	calendar, err := storedCalendar(ctx, tx, row.Provider, raw)
 	if err != nil || calendar == "" {
-		return false, nil //nolint:nilerr // an unreadable original, or one naming no calendar, proves no seat
+		return false, err
 	}
 	meeting := ids.From[ids.ActivityKind](row.ID)
 	seat, stamps, err := StampingSeat(ctx, tx, meeting, row.Provider, calendar)

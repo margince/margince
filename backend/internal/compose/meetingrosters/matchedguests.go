@@ -73,7 +73,7 @@ func AddGuestsFromOriginal(
 	}
 	calendar, err := storedCalendar(ctx, tx, provider, raw)
 	if err != nil || calendar == "" {
-		return false, nil //nolint:nilerr // an unreadable original, or one naming no calendar, proves no seat
+		return false, err
 	}
 	rec, err := recordOf(provider, raw, calendar)
 	if err != nil || !rec.CrossDoorIdentity.Stated() {
