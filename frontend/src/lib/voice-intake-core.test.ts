@@ -315,6 +315,22 @@ describe("the request bodies the server actually receives", () => {
   });
 });
 
+describe("a paste whose opening words end like a file name", () => {
+  // A paste is routed by what the server read, never by the words its label
+  // happens to end on.
+  it("takes prose as prose even when its label ends in .json", async () => {
+    const bodies = stubApi(preview());
+    const text = "Please review this export as report.json";
+    const outcome = await intakePaste(
+      sourceRef("paste", "Pasted text", text),
+      pasteLabel("Pasted text", text),
+      text,
+    );
+    expect(outcome.kind).toBe("ingested");
+    expect(bodies).toHaveLength(1);
+  });
+});
+
 describe("the outcomes an intake can end as", () => {
   it("reports an empty file as skipped, without asking the server", async () => {
     const bodies = stubApi(preview());

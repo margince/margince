@@ -162,7 +162,7 @@ export function sourceRef(
 //
 // The share is computed from the server's own counts, never from the text.
 export function routePreview(
-  name: string,
+  name: string | null,
   preview: CorpusPreview,
 ): "ask-speaker" | "refuse" | "document" {
   if (preview.ingestible_as_transcript) {
@@ -172,7 +172,7 @@ export function routePreview(
   // an older or partial response falls back to refusing a transcript-shaped
   // file rather than ingesting it.
   const speakers = preview.speakers ?? [];
-  if (TRANSCRIPT_EXT.test(name)) {
+  if (name !== null && TRANSCRIPT_EXT.test(name)) {
     return "refuse";
   }
   if (speakers.length > 0) {
@@ -356,6 +356,7 @@ async function ingest(
 async function intakePreviewed(
   ref: string,
   label: string,
+  fileName: string | null,
   text: string,
   proseBody: (ref: string, label: string, content: string) => IngestRequest,
   onIssue?: () => void,
@@ -385,7 +386,7 @@ async function intakePreviewed(
       problem: error,
     };
   }
-  const route = routePreview(label, data);
+  const route = routePreview(fileName, data);
   if (route === "ask-speaker") {
     return { kind: "speaker-needed", ref, label, content: text, preview: data };
   }
@@ -409,7 +410,7 @@ export function intakeUpload(
   text: string,
   onIssue?: () => void,
 ): Promise<IntakeOutcome> {
-  return intakePreviewed(ref, name, text, documentBody, onIssue);
+  return intakePreviewed(ref, name, name, text, documentBody, onIssue);
 }
 
 /**
@@ -449,7 +450,8 @@ export function intakePaste(
   content: string,
   onIssue?: () => void,
 ): Promise<IntakeOutcome> {
-  return intakePreviewed(ref, label, content, pasteBody, onIssue);
+  // A paste has no file name: its label is the reader's own words.
+  return intakePreviewed(ref, label, null, content, pasteBody, onIssue);
 }
 
 /** The owner named themselves in a conversational source: ingest with the
