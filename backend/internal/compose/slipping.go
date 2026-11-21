@@ -220,20 +220,7 @@ func installationZone(ctx context.Context, pool *pgxpool.Pool) (*time.Location, 
 	}); err != nil {
 		return nil, fmt.Errorf("read the installation's timezone: %w", err)
 	}
-	return zoneNamed(name), nil
-}
-
-// zoneNamed resolves a stored zone name, answering UTC for one Go cannot load.
-//
-// The same fallback the deals module's own date arithmetic makes for a nil
-// zone, so a setting nobody can load cannot make the two surfaces disagree in a
-// NEW way — they are then both wrong about the day in the same direction, which
-// is a different and much smaller problem.
-func zoneNamed(name string) *time.Location {
-	if zone, err := time.LoadLocation(name); err == nil {
-		return zone
-	}
-	return time.UTC
+	return storekit.LoadZone(name)
 }
 
 // slippingCandidate carries a deal row across the seam with its risk

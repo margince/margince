@@ -20,6 +20,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/zonefault"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -230,16 +232,20 @@ func runPerWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(context.C
 	if err != nil {
 		return err
 	}
-	return runEach(ctx, workspaces, run)
+	return runEach(ctx, pool, workspaces, run)
 }
 
 // runEach is the walk both enumerations share: every workspace attempted, the
 // failures joined. One spelling, so the live and the archived-inclusive passes
 // cannot come to differ about what a tenant's failure does to the rest.
-func runEach(ctx context.Context, workspaces []ids.UUID, run func(context.Context, ids.UUID) error) error {
+//
+// A pass that could not load the installation zone counted its days in UTC.
+// The walk records that once per pass, whatever the pass itself answered.
+func runEach(ctx context.Context, pool *pgxpool.Pool, workspaces []ids.UUID, run func(context.Context, ids.UUID) error) error {
 	var failures []error
 	for _, ws := range workspaces {
-		if err := run(ctx, ws); err != nil {
+		watched, zones := storekit.WatchZones(ctx)
+		if err := errors.Join(run(watched, ws), zonefault.Record(ctx, pool, ws, zones)); err != nil {
 			failures = append(failures, fmt.Errorf("workspace %s: %w", ws, err))
 		}
 	}
@@ -259,7 +265,7 @@ func runPerEveryWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(cont
 	if err != nil {
 		return err
 	}
-	return runEach(ctx, workspaces, run)
+	return runEach(ctx, pool, workspaces, run)
 }
 
 // clientInsertMany binds the fan-out to the River client already in context —

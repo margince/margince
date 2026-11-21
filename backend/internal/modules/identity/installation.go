@@ -210,6 +210,13 @@ const (
 // a successful create, not a second result of the call.
 func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
 	in = in.underBootValues(c)
+	if origin == originClaimed {
+		var err error
+		in.Timezone, err = claimedZone(in.Timezone, func(zone string) (bool, error) { return databaseKnowsZoneTx(ctx, tx, zone) })
+		if err != nil {
+			return ids.WorkspaceID{}, err
+		}
+	}
 	boot := BootstrapInput{
 		WorkspaceName: in.CompanyName,
 		AdminEmail:    in.AdminEmail,

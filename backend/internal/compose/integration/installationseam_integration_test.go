@@ -13,12 +13,13 @@ package integration
 // answers with the seeded value and fails.
 
 import (
-	"strings"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -111,41 +112,38 @@ func TestAnOfferSnapshotNamesTheInstallationFromTheSetting(t *testing.T) {
 
 // "Today" is computed in the zone the SETTING names.
 //
-// The assertion turns on the zone STRING rather than on a date, deliberately.
-// Any two real zones agree about the date for part of every day, so a
-// date-based fixture would pass or fail by the hour the suite happened to run
-// — the flakiness P3 rules out. So the setting names a zone Postgres cannot
-// resolve, written by raw SQL because that is how it gets past the validator
-// guarding the real write path. Only a reader that actually consults the
-// setting fails, and the failure names the zone it tried.
+// The assertion turns on the zone name, never on a date. Two real zones agree
+// about the date for part of every day, so a date would pass by the hour.
+//
+// So the setting names a rule Go cannot load, stored past the write path that
+// refuses it. A reader that consults the setting reports that name to the watch.
 func TestTodayIsComputedInTheZoneTheSettingNames(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	ctx := e.Admin()
-	e.WsExec(t, `UPDATE setting SET value = '"Margince/Nowhere"'::jsonb WHERE key = 'installation.timezone'`)
+	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, zoneGoCannotLoad)
+	ctx, zones := storekit.WatchZones(e.Admin())
 
 	closeOn := time.Now().UTC().AddDate(0, 0, 30)
 	if _, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{
 		Name: "Zoned", PipelineID: pipeline, StageID: open, Source: "manual",
 		ExpectedClose: &closeOn,
-	}); err == nil {
-		t.Fatal("the close-date check resolved a today with an unresolvable zone stored; " +
-			"it is still reading workspace.timezone")
-	} else if !strings.Contains(err.Error(), "Margince/Nowhere") {
-		t.Errorf("the failure should name the zone it tried, got %v", err)
+	}); err != nil {
+		t.Fatalf("a deal could not be created while the stored zone will not load: %v", err)
+	}
+	if !slices.Contains(zones.Unloaded(), zoneGoCannotLoad) {
+		t.Error("the close-date check never read the stored zone; it is not reading the installation timezone")
 	}
 }
 
+// zoneGoCannotLoad is a POSIX rule Postgres reads and Go's zone data lacks.
+const zoneGoCannotLoad = "XYZ-3"
+
 // A CONTRACT's under-contract "today" is computed in the same zone, by the same
-// technique. Under the old spelling it truncated the store clock in UTC and
-// never consulted the setting, so this create would succeed whatever the zone —
-// the unresolvable zone is what proves the reader now reads it, and the
-// installation_settings gate is not in the way (the admin here does hold it, but
-// the seam reads ungated so a contract writer holding only `contract` also can).
+// technique. The seam reads ungated, so a writer holding only `contract` can too.
 func TestAContractsTodayIsComputedInTheZoneTheSettingNames(t *testing.T) {
 	e := Setup(t)
-	admin := e.Admin()
-	e.WsExec(t, `UPDATE setting SET value = '"Margince/Nowhere"'::jsonb WHERE key = 'installation.timezone'`)
+	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, zoneGoCannotLoad)
+	admin, zones := storekit.WatchZones(e.Admin())
 
 	company := ids.NewV7()
 	e.WsExec(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
@@ -159,10 +157,10 @@ func TestAContractsTodayIsComputedInTheZoneTheSettingNames(t *testing.T) {
 		ValueBasis: "total",
 		Source:     "manual",
 	})
-	if err == nil {
-		t.Fatal("the under-contract today resolved with an unresolvable zone stored; " +
-			"the contract store is not reading the installation timezone")
-	} else if !strings.Contains(err.Error(), "Margince/Nowhere") {
-		t.Errorf("the failure should name the zone it tried, got %v", err)
+	if err != nil {
+		t.Fatalf("a contract could not be created while the stored zone will not load: %v", err)
+	}
+	if !slices.Contains(zones.Unloaded(), zoneGoCannotLoad) {
+		t.Error("the under-contract today never read the stored zone; the contract store is not reading the installation timezone")
 	}
 }

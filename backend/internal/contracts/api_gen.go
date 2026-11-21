@@ -14386,6 +14386,7 @@ const (
 	HealthActionDestinationConnections   HealthActionDestination = "connections"
 	HealthActionDestinationDiagnostics   HealthActionDestination = "diagnostics"
 	HealthActionDestinationModels        HealthActionDestination = "models"
+	HealthActionDestinationRegional      HealthActionDestination = "regional"
 	HealthActionDestinationSearch        HealthActionDestination = "search"
 	HealthActionDestinationUpdates       HealthActionDestination = "updates"
 )
@@ -14400,6 +14401,8 @@ func (e HealthActionDestination) Valid() bool {
 	case HealthActionDestinationDiagnostics:
 		return true
 	case HealthActionDestinationModels:
+		return true
+	case HealthActionDestinationRegional:
 		return true
 	case HealthActionDestinationSearch:
 		return true
@@ -52663,12 +52666,14 @@ type HandoverCounts struct {
 
 // HealthAction defines model for HealthAction.
 type HealthAction struct {
-	Available   bool                    `json:"available"`
+	Available bool `json:"available"`
+
+	// Destination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
 	Destination HealthActionDestination `json:"destination"`
 	Reason      *string                 `json:"reason,omitempty"`
 }
 
-// HealthActionDestination defines model for HealthAction.Destination.
+// HealthActionDestination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
 type HealthActionDestination string
 
 // HealthDimension One named part of the relationship's health, with the reason for its rating.

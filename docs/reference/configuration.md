@@ -617,6 +617,24 @@ asks both engines for every 15 minutes of the next 14 months, in zones
 whose rules have moved. It fails naming the first moment they place
 differently.
 
+A stored zone name can also stop loading in Go, as after a move to a binary with older zone
+data. `storekit.EffectiveZone` then answers UTC to every Go reader of the installation zone, and a
+reader binds that same name into the SQL it writes. Nothing stops. An operator sees it in two
+places:
+
+- Each background pass that fell back writes one `system_log` row with the action
+  `installation_zone.unresolved`. Its detail names the stored zone and the zone applied.
+- System health shows the finding `zone_unresolved`, whose button opens the reporting timezone.
+  The finding goes when the stored name loads again.
+
+SQL that reads the stored name by itself keeps that name while Postgres can read it. So a report
+and a background pass can place a moment near the end of a day on different days. That lasts
+until an admin chooses a zone again. Postgres refuses a name it cannot read, and the write that asked fails.
+
+The setup screen sends the zone name its browser reports. When Go or Postgres does not know that
+name, the claim stores UTC for the installation and its first admin. The admin then chooses the
+zone in Settings. The name `Local` is still refused.
+
 What a browser holds is its own third copy. It decides what a reader is shown,
 and it reaches what is stored in two ways. Setting up an account and the zone setting
 store the zone name the browser reports. A scheduled send stores the moment the
