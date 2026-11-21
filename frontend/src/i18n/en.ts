@@ -15007,6 +15007,7 @@ export const en = {
   "cf.audit.footer":
     "Every addition, edit and archive is recorded permanently in the audit log.",
   "cf.retired": "Retired",
+  "cf.retiredLabel": "{label} (retired)",
   "cf.retire.title": "Archive “{label}”?",
   "cf.retire.body":
     "It is hidden from new records and filters. The values already stored are kept. Archiving cannot be undone.",

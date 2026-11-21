@@ -14677,6 +14677,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.audit.footer":
     "Mọi lần thêm, sửa và chuyển vào kho lưu trữ đều được ghi vĩnh viễn vào nhật ký hoạt động.",
   "cf.retired": "Đã ngừng dùng",
+  "cf.retiredLabel": "{label} (đã ngừng dùng)",
   "cf.retire.title": "Chuyển “{label}” vào kho lưu trữ?",
   "cf.retire.body":
     "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ. Không thể hoàn tác việc lưu trữ.",
