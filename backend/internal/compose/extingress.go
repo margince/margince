@@ -179,19 +179,13 @@ func (r *callRuntime) ingressAuthority(ctx context.Context, on extension.UserID)
 		// unit to act for them.
 		return nil, fmt.Errorf("%w: that member has deposited no credential with this unit", extension.ErrForbidden)
 	}
-	rbac, seat, err := liveMemberAuthority(ctx, r.deps.pool, ws, member)
+	acting, err := liveMemberPrincipal(ctx, r.deps.pool, ws, member)
 	if err != nil {
 		return nil, r.ingressRefusal(ctx, err)
 	}
-	acting := principal.Principal{
-		Type:        principal.PrincipalConnector,
-		ID:          ingressPrincipalPrefix + r.unit,
-		UserID:      member,
-		OnBehalfOf:  member,
-		TeamIDs:     rbac.TeamIDs,
-		SeatType:    seat,
-		Permissions: rbac.Permissions,
-	}
+	acting.Type = principal.PrincipalConnector
+	acting.ID = ingressPrincipalPrefix + r.unit
+	acting.OnBehalfOf = member
 	runCtx := principal.WithActor(ctx, acting)
 	return principal.WithCorrelationID(runCtx, ids.NewV7()), nil
 }
