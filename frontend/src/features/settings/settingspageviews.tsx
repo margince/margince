@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, Suspense } from "react";
+import { type ReactNode, Suspense, useState } from "react";
 import { PendingBody } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { useT } from "../../i18n";
@@ -11,19 +11,41 @@ import type { SettingsPageId } from "../../lib/settingscatalog";
 
 type PageAt = Readonly<{ tab: string; route?: Route }>;
 
+/** A lazy view inside a CardBoundary whose Retry loads its code again. */
+export function renewable<Props extends object>(
+  load: () => Promise<{ default: (props: Props) => ReactNode }>,
+) {
+  // React keeps a refused import on its lazy component for good, so a refusal
+  // leaves a fresh one for the next mount and for Retry.
+  const fresh = () =>
+    lazy(async () => {
+      try {
+        return await load();
+      } catch (error) {
+        current = fresh();
+        throw error;
+      }
+    });
+  let current = fresh();
+  return function RenewableView(props: Props) {
+    const [View, setView] = useState(() => current);
+    return (
+      <CardBoundary onRetry={() => setView(() => current)}>
+        <View {...props} />
+      </CardBoundary>
+    );
+  };
+}
+
 /** One settings page whose code loads on its first visit, every tab at once. */
 export function page<Parts>(
   load: () => Promise<Parts>,
   draw: (parts: Parts, at: PageAt) => ReactNode,
 ) {
-  const View = lazy(
-    async () => {
-      const parts = await load();
-      return { default: (at: PageAt) => draw(parts, at) };
-    },
-    "complete",
-    CardBoundary,
-  );
+  const View = renewable(async () => {
+    const parts = await load();
+    return { default: (at: PageAt) => draw(parts, at) };
+  });
   // What one tab draws, as an element tree a test can walk without mounting.
   return Object.assign(View, {
     drawn: async (at: PageAt) => draw(await load(), at),
@@ -47,7 +69,14 @@ export function PageLoading({
   const t = useT();
   return (
     <Suspense
-      fallback={<PendingBody label={t(`settings.tab.${id}`)} lines={6} />}
+      fallback={
+        <PendingBody
+          label={t("settings.pageLoading", {
+            page: t(`settings.tab.${id}`),
+          })}
+          lines={6}
+        />
+      }
     >
       {children}
     </Suspense>

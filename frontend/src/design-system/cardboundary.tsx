@@ -110,7 +110,14 @@ class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
 export function CardBoundary({
   children,
   fallback,
-}: Readonly<{ children: ReactNode; fallback?: ReactNode }>) {
+  onRetry,
+}: Readonly<{
+  children: ReactNode;
+  fallback?: ReactNode;
+  /** Runs on Retry before the card draws again, so a caller can renew what
+   *  the failed render held, such as a rejected lazy import. */
+  onRetry?: () => void;
+}>) {
   const t = useT();
   return (
     <QueryErrorResetBoundary>
@@ -119,6 +126,7 @@ export function CardBoundary({
           onReset={() => {
             resetLocaleFailures();
             reset();
+            onRetry?.();
           }}
           fallback={fallback}
           title={t("card.errorTitle")}

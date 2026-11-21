@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { SETTINGS_PAGES } from "../../lib/settingscatalog";
+import { SETTINGS_PAGES, type SettingsPageId } from "../../lib/settingscatalog";
+import { drawsComponent } from "./drawn-testing";
 import { SETTINGS_PAGE_VIEWS } from "./settings";
 
 // Every catalog page renders something, and nothing renders that is not a page.
@@ -18,13 +19,21 @@ function dispatchedIds(): Set<string> {
   return new Set(Object.keys(SETTINGS_PAGE_VIEWS));
 }
 
+/** Whether a page draws `card` on `tab`, read from the element tree it returns. */
+async function tabDraws(id: SettingsPageId, tab: string, card: string) {
+  return drawsComponent(await SETTINGS_PAGE_VIEWS[id].drawn({ tab }), card);
+}
+
+/** The tab ids a catalog page carries, or the bare page. */
+function tabsOf(id: SettingsPageId): string[] {
+  const page = SETTINGS_PAGES.find((each) => each.id === id);
+  return page && "tabs" in page ? page.tabs.map((tab) => tab.id) : [""];
+}
+
 describe("the moved cards", () => {
   // The settingsdispatch census rule proves every card is still reached, but
   // not where one sits. So the moved cards are asserted by page, against the dispatch.
-  it("dispatches the moved cards to the pages they moved to", () => {
-    const source = ["settings.tsx", "settingspageviews.tsx"]
-      .map((file) => readFileSync(join(here, file), "utf8"))
-      .join("\n");
+  it("dispatches the moved cards to the pages they moved to", async () => {
     /** One component's body, for a page whose entry draws a tab component. */
     function bodyOf(fn: string, file: string): string {
       const text = readFileSync(join(here, file), "utf8");
@@ -34,26 +43,22 @@ describe("the moved cards", () => {
       }
       return text.slice(start, text.indexOf("\n}\n", start));
     }
-    // One page's entry in a view table: from its key to the next key.
-    function cardsOn(page: string): string {
-      const start = source.search(new RegExp(`\n  "?${page}"?: page\\(`));
-      if (start < 0) {
-        throw new Error(`the view table has no entry for ${page}`);
-      }
-      const rest = source.slice(start + 1);
-      const next = rest.search(/\n {2}"?[a-z-]+"?: page\(|\n}/);
-      return rest.slice(0, next);
-    }
     // The mail-sharing switch writes the WORKSPACE's posture. It belongs with
     // the rest of the capture rules, not among the reader's own mailboxes.
-    expect(cardsOn("capture")).toContain("<MailSharingCard />");
-    expect(cardsOn("connections")).not.toContain("<MailSharingCard />");
+    expect(await tabDraws("capture", "sharing", "MailSharingCard")).toBe(true);
+    for (const tab of tabsOf("connections")) {
+      expect(await tabDraws("connections", tab, "MailSharingCard")).toBe(false);
+    }
     // And the personal autonomy choice belongs on the page about agents
     // deciding without you, under the tier reference it is written in terms of.
     // `agents` draws a tab COMPONENT that holds the cards. An assertion on
-    // the entry alone would pass with the card nowhere at all.
-    expect(cardsOn("account")).not.toContain("<AutonomySettingsCard />");
-    expect(cardsOn("agents")).toContain("<AiAccessTab />");
+    // the page alone would pass with the card nowhere at all.
+    for (const tab of tabsOf("account")) {
+      expect(await tabDraws("account", tab, "AutonomySettingsCard")).toBe(
+        false,
+      );
+    }
+    expect(await tabDraws("agents", "", "AiAccessTab")).toBe(true);
     const aiAccess = [
       bodyOf("AiAccessTab", "settings.aiaccess.tsx"),
       bodyOf("DeveloperTabs", "settings.aiaccess.tsx"),
@@ -62,7 +67,8 @@ describe("the moved cards", () => {
     expect(aiAccess).toContain("<ConnectAiToolCard />");
     expect(aiAccess).toContain("<PassportCard />");
     // The mailbox list stays the first thing Connections draws.
-    expect(cardsOn("connections")).toContain("<ConnectorsCard />");
+    expect(tabsOf("connections")[0]).toBe("mail");
+    expect(await tabDraws("connections", "mail", "ConnectorsCard")).toBe(true);
   });
 });
 

@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { CardBoundary } from "../../design-system/cardboundary";
-import { lazy } from "../../i18n/lazy";
 import type { ReviewActions } from "../../lib/reviewactions";
 import type { Route } from "../../lib/router";
 import type { SettingsPageId } from "../../lib/settingscatalog";
@@ -14,6 +12,7 @@ import {
   PageLoading,
   page,
   pick,
+  renewable,
 } from "./settingspageviews";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
@@ -421,13 +420,9 @@ export const SETTINGS_PAGE_VIEWS = {
   ),
 } satisfies Record<SettingsPageId, ReturnType<typeof page>>;
 
-const VoiceIntakeHost = lazy(
-  async () => ({
-    default: (await import("../voice-knowledge/voice-dna")).VoiceIntakeHost,
-  }),
-  "complete",
-  CardBoundary,
-);
+const VoiceIntakeHost = renewable(async () => ({
+  default: (await import("../voice-knowledge/voice-dna")).VoiceIntakeHost,
+}));
 
 export function tabContent(
   id: SettingsPageId,
