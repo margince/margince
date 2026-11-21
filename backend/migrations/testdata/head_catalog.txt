@@ -2,6 +2,7 @@ defacl ext objtype=S acl=ext_runtime=rU/margince_owner
 defacl ext objtype=r acl=ext_runtime=arwd/margince_owner
 defacl public objtype=r acl=margince_app=arwd/margince_owner
 public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity storage=fillfactor=85 toast=-
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.activity.activity_assignee_id_retirement_guard CREATE TRIGGER activity_assignee_id_retirement_guard BEFORE INSERT OR UPDATE ON public.activity FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task'::text) AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')
 public.activity.activity_audience_check CHECK ((audience = ANY (ARRAY['workspace'::text, 'participants'::text, 'selected'::text])))
@@ -482,6 +483,7 @@ public.activity_own_sent_mail_repair_cutoff.singleton boolean NOT NULL gen=- def
 public.activity_own_sent_mail_repair_cutoff_pkey CREATE UNIQUE INDEX activity_own_sent_mail_repair_cutoff_pkey ON public.activity_own_sent_mail_repair_cutoff USING btree (singleton)
 public.activity_own_sent_mail_repair_pkey CREATE UNIQUE INDEX activity_own_sent_mail_repair_pkey ON public.activity_own_sent_mail_repair USING btree (activity_id)
 public.activity_participant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_participant storage=autovacuum_vacuum_scale_factor=0.02,autovacuum_analyze_scale_factor=0.02 toast=-
 public.activity_participant.activity_id uuid NOT NULL gen=- def=-
 public.activity_participant.activity_participant_activity_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_participant.activity_participant_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
@@ -2753,6 +2755,7 @@ public.capture_thread_verdict_held_by_seat_idx CREATE INDEX capture_thread_verdi
 public.capture_thread_verdict_pkey CREATE UNIQUE INDEX capture_thread_verdict_pkey ON public.capture_thread_verdict USING btree (id)
 public.capture_thread_verdict_thread_user_key CREATE UNIQUE INDEX capture_thread_verdict_thread_user_key ON public.capture_thread_verdict USING btree (thread_key, user_id)
 public.capture_trace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_trace storage=autovacuum_vacuum_scale_factor=0.02,autovacuum_analyze_scale_factor=0.02 toast=-
 public.capture_trace.activity_id uuid gen=- def=-
 public.capture_trace.capture_trace_connector_check CHECK (((connector ~ '^[a-z][a-z0-9_:.-]*$'::text) AND (char_length(connector) <= 96)))
 public.capture_trace.capture_trace_counterparty_check CHECK (((counterparty IS NULL) OR (char_length(counterparty) <= 320)))
@@ -5512,6 +5515,7 @@ public.erasure_suppression.text_bound_update CREATE TRIGGER text_bound_update AF
 public.erasure_suppression.value_hash text NOT NULL gen=- def=-
 public.erasure_suppression_pkey CREATE UNIQUE INDEX erasure_suppression_pkey ON public.erasure_suppression USING btree (kind, value_hash)
 public.event_outbox acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.event_outbox storage=autovacuum_vacuum_scale_factor=0.02,autovacuum_analyze_scale_factor=0.02 toast=autovacuum_vacuum_scale_factor=0.02
 public.event_outbox.assurance_inputs_read boolean NOT NULL gen=- def=false
 public.event_outbox.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.event_outbox.envelope jsonb NOT NULL gen=- def=-
@@ -6072,6 +6076,7 @@ public.graph_contact_edge.read_snapshot pg_snapshot gen=- def=-
 public.graph_contact_edge.requested_generation bigint NOT NULL gen=- def=0
 public.graph_contact_edge_pkey CREATE UNIQUE INDEX graph_contact_edge_pkey ON public.graph_contact_edge USING btree (contact_a, contact_b)
 public.graph_interaction_edge acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.graph_interaction_edge storage=autovacuum_vacuum_scale_factor=0.02,autovacuum_analyze_scale_factor=0.02 toast=-
 public.graph_interaction_edge.computed_at timestamp with time zone NOT NULL gen=- def=now()
 public.graph_interaction_edge.contact_id uuid NOT NULL gen=- def=-
 public.graph_interaction_edge.count_90d integer NOT NULL gen=- def=0
@@ -6159,6 +6164,7 @@ public.home_read_forgotten.home_read_forgotten_reader_id_fkey FOREIGN KEY (reade
 public.home_read_forgotten.reader_id uuid NOT NULL gen=- def=-
 public.home_read_forgotten_pkey CREATE UNIQUE INDEX home_read_forgotten_pkey ON public.home_read_forgotten USING btree (reader_id)
 public.idempotency_key acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.idempotency_key storage=autovacuum_vacuum_scale_factor=0.02,autovacuum_analyze_scale_factor=0.02 toast=autovacuum_vacuum_scale_factor=0.02
 public.idempotency_key.attempt_id uuid NOT NULL gen=- def=uuidv7()
 public.idempotency_key.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.idempotency_key.endpoint text NOT NULL gen=- def=-
