@@ -53046,7 +53046,7 @@ type HealthSourceUnit string
 
 // HealthUnplacedChange defines model for HealthUnplacedChange.
 type HealthUnplacedChange struct {
-	// Action The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`.
+	// Action The audit action.
 	Action     string `json:"action"`
 	Count      int    `json:"count" minimum:"1"`
 	EntityType string `json:"entity_type"`

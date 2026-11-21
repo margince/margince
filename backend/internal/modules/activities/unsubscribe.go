@@ -25,10 +25,10 @@ import (
 
 // UnsubscribeLinker resolves a recipient address to their preference-center
 // token so the send path can build the List-Unsubscribe URL. ok is false
-// when the address carries no unsubscribe surface — a locked
-// (transactional) purpose, or an address no contact holds — in which case
-// the send carries no unsubscribe header, and a send that owed one records
-// the missing link as a footer finding.
+// for an address with no unsubscribe surface: a locked (transactional)
+// purpose, or an address no contact holds. The send then carries no
+// unsubscribe header, and one that owed it records the missing link as a
+// footer finding.
 type UnsubscribeLinker interface {
 	// UnsubscribeToken answers the credential the STOP links carry, and ok is
 	// false when this address has no unsubscribe surface at all. purpose is

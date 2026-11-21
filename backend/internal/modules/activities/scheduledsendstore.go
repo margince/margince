@@ -60,23 +60,23 @@ func (s *Store) ListScheduledSends(ctx context.Context, status string) ([]Schedu
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	actor, err := storekit.Actor(ctx)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	// The surrounding transaction only requires a workspace; this predicate is
+	// what narrows the read to the author.
+	own, err := ScheduledSendReadableSQL(ctx, "scheduled_send", arg)
 	if err != nil {
 		return nil, err
 	}
+	statusAt := arg(status)
 	var out []ScheduledSend
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// Scheduled mail is the SENDER's own: an unsent message's body and its
-		// blind-copy list are not workspace-readable the way a sent activity
-		// is. The scheduled_by predicate below is what narrows the read to the
-		// actor; the surrounding transaction only requires a workspace on the
-		// context, it does not filter rows on its own.
-		rows, err := tx.Query(ctx, `
+		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT`+scheduledSendColumns+`
 			  FROM scheduled_send
-			 WHERE scheduled_by = $1 AND ($2 = '' OR `+scheduledSendStatusExpr+` = $2)
-			 ORDER BY scheduled_at ASC`,
-			actor.UserID, status)
+			 WHERE %s AND ($%[2]d = '' OR `+scheduledSendStatusExpr+` = $%[2]d)
+			 ORDER BY scheduled_at ASC`, own, statusAt),
+			args...)
 		if err != nil {
 			return fmt.Errorf("scheduled send: listing: %w", err)
 		}
