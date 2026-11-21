@@ -194,4 +194,4 @@
 1795259683_a_participant_write_clears_only_the_stamps_it_can_move.down.sql | * | restores the row-level participant and contact_email triggers and their functions; no existing row is changed
 1795263247_an_empty_renewal_starter_is_switched_off.up.sql | *, automation, audit_log | the starter template seeds one renewal_reminder row per installation, plus the few a user created; only those with no record type or date field change, each with one audit row
 1795263247_an_empty_renewal_starter_is_switched_off.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795264358_a_contact_stores_its_strength_dates.up.sql | * | the bodies are two read functions and the trigger functions that keep the new columns; the migration adds columns with a constant default and changes no existing row, and the contact_strength_dates data task fills them
+1795269930_a_contact_stores_its_strength_dates.up.sql | * | the bodies are two read functions and the trigger functions that keep the new columns; the migration adds columns with a constant default and changes no existing row, and the contact_strength_dates data task fills them

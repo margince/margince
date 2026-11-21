@@ -26,9 +26,9 @@ import (
 // DataTask is the backfill. An archived contact stores no dates, so it is left.
 func DataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795264358_contact_strength_dates", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795264358_contact_strength_dates"),
-		Requires: []string{"core/1795264358"},
+		ID: "core/1795269930_contact_strength_dates", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795269930_contact_strength_dates"),
+		Requires: []string{"core/1795269930"},
 		Steps:    []datatask.Step{foldStep()},
 	}
 }
