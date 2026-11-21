@@ -27,6 +27,7 @@ import {
 } from "../lib/keymap";
 import {
   leaveRecord,
+  leftRecord,
   listAddress,
   rememberListAddress,
 } from "../lib/listreturn";
@@ -81,13 +82,14 @@ function belowList(route: Route): boolean {
   return Boolean(recordKindOf(route) && route.id) || !!reservedPageTitle(route);
 }
 
-// While the next page loads, the bar has already left the record on screen.
-// Back then undoes that move, as the browser's Back would.
+// While the next page loads, the bar has already left the record on screen. A
+// move that leaves it as Back would is let finish; any other, Back undoes.
 function goBack(onScreen: Route, bar: string): void {
   if (samePage(bar, routeHash(onScreen))) {
     leaveRecord(onScreen);
     return;
   }
+  if (leftRecord(onScreen, bar)) return;
   stepBackOutOf(
     (hash) => samePage(hash, bar),
     () => navigateReplacing(onScreen),

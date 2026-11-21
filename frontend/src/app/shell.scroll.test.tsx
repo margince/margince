@@ -130,6 +130,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   forgetScrollMemory();
   window.history.replaceState(null, "", "#/");
 });
@@ -459,6 +460,26 @@ describe("the chrome while the next page loads", () => {
     await waitFor(() =>
       expect(window.location.hash).toBe(`#/contacts/${ANNA}`),
     );
+  });
+
+  it("takes one step out for a second Back press while the list it left for loads", async () => {
+    const go = vi.spyOn(window.history, "go");
+    window.history.replaceState(null, "", "#/contacts");
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <Loading from={`#/contacts/${ANNA}`} />
+      </Shell>,
+    );
+    await moveTo(`#/contacts/${ANNA}`);
+    fireEvent.click(screen.getByRole("button", { name: "Land" }));
+    const back = () => screen.getByRole("button", { name: en["shell.back"] });
+
+    await act(async () => fireEvent.click(back()));
+    await waitFor(() => expect(window.location.hash).toBe("#/contacts"));
+    await act(async () => fireEvent.click(back()));
+
+    expect(go.mock.calls).toEqual([[-1]]);
+    expect(window.location.hash).toBe("#/contacts");
   });
 
   it("shows no wait for a move that lands inside 200 ms", async () => {
