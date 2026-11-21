@@ -58,18 +58,29 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 	parsed, err := ids.Parse(raw)
 	if err != nil {
 		// A bad cell is a line to fix in the file, not a fault of the run.
-		return targetID{named: true, why: migration.Why(migration.ReasonIDNotACompanyID, "value", raw)}
+		return targetID{named: true, why: migration.Why(w.idReasons().notAnID, "value", raw)}
 	}
 	// The read runs under the caller's own row scope, so a record they may not
 	// read answers not-found, as it would anywhere else. "Gone" and "not yours"
 	// share one sentence so the answer is no oracle.
 	if _, err := w.read(ctx, parsed); err != nil {
-		return targetID{named: true, why: migration.Why(migration.ReasonIDNotVisible, "value", raw)}
+		return targetID{named: true, why: migration.Why(w.idReasons().notVisible, "value", raw)}
 	}
 	if why := w.refTakenBy(ctx, row.ExternalID, parsed); why.Code != "" {
 		return targetID{named: true, why: why}
 	}
 	return targetID{id: parsed, named: true}
+}
+
+// idReasonCodes are the refusals of an id cell. A company row keeps the codes
+// clients already know. The other record types get codes that do not say company.
+type idReasonCodes struct{ notAnID, notVisible, refTaken migration.ReasonCode }
+
+func (w *csvWriters) idReasons() idReasonCodes {
+	if w.object == migration.ObjectCompany {
+		return idReasonCodes{migration.ReasonIDNotACompanyID, migration.ReasonIDNotVisible, migration.ReasonRefTakenByAnotherCompany}
+	}
+	return idReasonCodes{migration.ReasonIDNotARecordID, migration.ReasonIDRecordNotVisible, migration.ReasonRefTakenByAnotherRecord}
 }
 
 // refTakenBy says why a ref cannot be bound to the named record: an earlier
@@ -83,5 +94,5 @@ func (w *csvWriters) refTakenBy(ctx context.Context, ref string, named ids.UUID)
 	if err != nil || !found || binding.RunStatus == migration.StatusUndone || binding.NativeID == named {
 		return migration.Reason{}
 	}
-	return migration.Why(migration.ReasonRefTakenByAnotherCompany, "ref", ref)
+	return migration.Why(w.idReasons().refTaken, "ref", ref)
 }

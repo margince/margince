@@ -11031,9 +11031,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.field_inactive":
     "„{value}“ kann nicht geschrieben werden: Dieses Feld ist nicht mehr aktiv.",
   "import.reason.id_not_a_company_id":
+    "„{value}“ ist keine Unternehmens-ID. Exportiere die Unternehmen, um ihre IDs zu erhalten, oder lasse die Spalte leer, um die Zeile als neues Unternehmen zu importieren.",
+  "import.reason.id_not_a_record_id":
     "„{value}“ ist keine Datensatz-ID. Exportiere die Liste, um die IDs zu erhalten, oder lasse die Spalte leer, um die Zeile als neuen Datensatz zu importieren.",
-  "import.reason.id_not_visible":
+  "import.reason.id_record_not_visible":
     "Kein Datensatz, den du sehen kannst, hat die ID „{value}“. Er kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
+  "import.reason.ref_taken_by_another_record":
+    "Die Referenz „{ref}“ steht bereits für einen anderen Datensatz aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwende eine neue Referenz für diese Zeile oder korrigiere die ID-Spalte.",
+  "import.reason.id_not_visible":
+    "Kein Unternehmen, das du sehen kannst, hat die ID „{value}“. Es kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
   "import.reason.id_on_non_company":
     "Nur eine Zeile für Unternehmen, Kontakte, Leads oder Deals kann „{column}“ angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
   "import.reason.link_ambiguous":
@@ -11077,7 +11083,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.record_archived":
     "Der Datensatz dieser Zeile wurde archiviert und wird daher nicht aktualisiert. Stelle ihn wieder her, um ihn zu aktualisieren.",
   "import.reason.ref_taken_by_another_company":
-    "Die Referenz „{ref}“ steht bereits für einen anderen Datensatz aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwende eine neue Referenz für diese Zeile oder korrigiere die ID-Spalte.",
+    "Die Referenz „{ref}“ steht bereits für ein anderes Unternehmen aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwende eine neue Referenz für dieses Unternehmen oder korrigiere die ID-Spalte.",
   "import.reason.row_key_empty":
     "Die Spalte „{column}“ ist leer, daher kann diese Zeile für einen erneuten Import oder das Rückgängigmachen nicht erkannt werden.",
   "import.reason.row_key_repeated":

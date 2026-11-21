@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -60,7 +61,7 @@ const leadStatusNew = "new"
 
 // leadTargetStatus is the lead's status column. A file may place a lead only
 // on the open ladder; the terminal statuses go through promote and disqualify.
-const leadTargetStatus = "status"
+const leadTargetStatus = recordexport.LeadStatus
 
 // The fields a CSV import may target, per object. Each one round-trips: the
 // writer can both create and update it. A create-only target would stop
@@ -103,7 +104,7 @@ var csvTargets = map[string][]string{
 // way to destroy the wrong company's data when it decides a write.
 //
 // An id has none of that. It names one record or no record.
-const csvTargetID = "id"
+const csvTargetID = recordexport.ID
 
 // csvTargetRef is the column holding the row's own id in the source system, the
 // one other files' links name. It is the part's source key, never a stored field.
@@ -111,7 +112,7 @@ const csvTargetRef = "ref"
 
 // csvTargetCompanyRef names a contact's employer by the company's ref, its
 // domain, its one name or its id. Like the employer name it writes an edge.
-const csvTargetCompanyRef = migration.AssocTargetCompanyRef
+const csvTargetCompanyRef = recordexport.CompanyRef
 
 // recordAddressTargets are the address fields a CSV column may name, spelled with
 // the `address.` prefix the record-fields schema already uses for the nested

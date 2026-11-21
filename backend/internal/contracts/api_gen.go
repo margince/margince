@@ -15209,8 +15209,10 @@ const (
 	ImportReasonCodeFieldInactive                ImportReasonCode = "field_inactive"
 	ImportReasonCodeFxRateMissing                ImportReasonCode = "fx_rate_missing"
 	ImportReasonCodeIdNotACompanyId              ImportReasonCode = "id_not_a_company_id"
+	ImportReasonCodeIdNotARecordId               ImportReasonCode = "id_not_a_record_id"
 	ImportReasonCodeIdNotVisible                 ImportReasonCode = "id_not_visible"
 	ImportReasonCodeIdOnNonCompany               ImportReasonCode = "id_on_non_company"
+	ImportReasonCodeIdRecordNotVisible           ImportReasonCode = "id_record_not_visible"
 	ImportReasonCodeLeadNotFound                 ImportReasonCode = "lead_not_found"
 	ImportReasonCodeLeadNotFoundDropped          ImportReasonCode = "lead_not_found_dropped"
 	ImportReasonCodeLeadStatusNotImportable      ImportReasonCode = "lead_status_not_importable"
@@ -15254,6 +15256,7 @@ const (
 	ImportReasonCodePipelineUnnamed              ImportReasonCode = "pipeline_unnamed"
 	ImportReasonCodeRecordArchived               ImportReasonCode = "record_archived"
 	ImportReasonCodeRefTakenByAnotherCompany     ImportReasonCode = "ref_taken_by_another_company"
+	ImportReasonCodeRefTakenByAnotherRecord      ImportReasonCode = "ref_taken_by_another_record"
 	ImportReasonCodeRowKeyEmpty                  ImportReasonCode = "row_key_empty"
 	ImportReasonCodeRowKeyRepeated               ImportReasonCode = "row_key_repeated"
 	ImportReasonCodeRunInFlight                  ImportReasonCode = "run_in_flight"
@@ -15399,9 +15402,13 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeIdNotACompanyId:
 		return true
+	case ImportReasonCodeIdNotARecordId:
+		return true
 	case ImportReasonCodeIdNotVisible:
 		return true
 	case ImportReasonCodeIdOnNonCompany:
+		return true
+	case ImportReasonCodeIdRecordNotVisible:
 		return true
 	case ImportReasonCodeLeadNotFound:
 		return true
@@ -15488,6 +15495,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeRecordArchived:
 		return true
 	case ImportReasonCodeRefTakenByAnotherCompany:
+		return true
+	case ImportReasonCodeRefTakenByAnotherRecord:
 		return true
 	case ImportReasonCodeRowKeyEmpty:
 		return true

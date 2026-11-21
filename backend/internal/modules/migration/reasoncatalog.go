@@ -118,7 +118,7 @@ const (
 	textValueDetail = "{value:q}: {detail}"
 )
 
-var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
+var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
 	ReasonEmployerRefused: {text: map[textlang.Lang]string{
 		textlang.English:    "The employer could not be resolved. Choose an unambiguous company that you may link.",
 		textlang.German:     "Der Arbeitgeber konnte nicht zugeordnet werden. Wählen Sie ein eindeutiges Unternehmen, das Sie verknüpfen dürfen.",
@@ -276,19 +276,19 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.Vietnamese: "Chỉ hàng công ty, liên hệ, lead hoặc deal mới có thể nêu {column:q}; hàng {object} được nhận diện bằng khóa riêng.",
 	}},
 	ReasonIDNotACompanyID: {params: []string{paramValue}, text: map[textlang.Lang]string{
-		textlang.English:    "“{value}” is not a record id. Export the list to get the ids, or leave the column empty to import this row as a new record.",
-		textlang.German:     "{value:q} ist keine Datensatz-ID. Exportieren Sie die Liste, um die IDs zu erhalten, oder lassen Sie die Spalte leer, um die Zeile als neuen Datensatz zu importieren.",
-		textlang.Vietnamese: "{value:q} không phải mã bản ghi. Hãy xuất danh sách để lấy mã, hoặc để trống cột để nhập hàng này làm bản ghi mới.",
+		textlang.English:    "“{value}” is not a company id. Export the companies to get theirs, or leave the column empty to import this row as a new company.",
+		textlang.German:     "{value:q} ist keine Unternehmens-ID. Exportieren Sie die Unternehmen, um ihre IDs zu erhalten, oder lassen Sie die Spalte leer, um die Zeile als neues Unternehmen zu importieren.",
+		textlang.Vietnamese: "{value:q} không phải mã công ty. Hãy xuất danh sách công ty để lấy mã, hoặc để trống cột để nhập hàng này làm công ty mới.",
 	}},
 	ReasonIDNotVisible: {params: []string{paramValue}, text: map[textlang.Lang]string{
-		textlang.English:    "No record you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
-		textlang.German:     "Kein Datensatz, den Sie sehen können, hat die ID {value:q}. Er kann archiviert oder zusammengeführt worden sein oder zu einem Arbeitsbereich gehören, aus dem diese Datei nicht stammt.",
-		textlang.Vietnamese: "Không có bản ghi nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được lưu trữ, gộp, hoặc thuộc về một không gian làm việc mà tệp này không đến từ đó.",
+		textlang.English:    "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+		textlang.German:     "Kein Unternehmen, das Sie sehen können, hat die ID {value:q}. Es kann archiviert oder zusammengeführt worden sein oder zu einem Arbeitsbereich gehören, aus dem diese Datei nicht stammt.",
+		textlang.Vietnamese: "Không có công ty nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được lưu trữ, gộp, hoặc thuộc về một không gian làm việc mà tệp này không đến từ đó.",
 	}},
 	ReasonRefTakenByAnotherCompany: {params: []string{paramRef}, text: map[textlang.Lang]string{
-		textlang.English:    "The reference “{ref}” already stands for another record from an earlier import, so this row is not applied. Use a new reference for this row or fix the id column.",
-		textlang.German:     "Die Referenz {ref:q} steht bereits für einen anderen Datensatz aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwenden Sie eine neue Referenz für diese Zeile oder korrigieren Sie die ID-Spalte.",
-		textlang.Vietnamese: "Tham chiếu {ref:q} đã đại diện cho một bản ghi khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho hàng này hoặc sửa cột mã.",
+		textlang.English:    "The reference “{ref}” already stands for another company from an earlier import, so this row is not applied. Use a new reference for this company or fix the id column.",
+		textlang.German:     "Die Referenz {ref:q} steht bereits für ein anderes Unternehmen aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwenden Sie eine neue Referenz für dieses Unternehmen oder korrigieren Sie die ID-Spalte.",
+		textlang.Vietnamese: "Tham chiếu {ref:q} đã đại diện cho một công ty khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho công ty này hoặc sửa cột mã.",
 	}},
 	ReasonRowKeyRepeated: {params: []string{paramColumn, paramValue, "line"}, text: map[textlang.Lang]string{
 		textlang.English:    "The “{column}” value “{value}” is already used by row {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
@@ -490,4 +490,4 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
 		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
-})))
+}))))

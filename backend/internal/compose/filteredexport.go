@@ -141,7 +141,7 @@ func (w *FilteredExportWriter) write(ctx context.Context, engine storekit.Query,
 		if err != nil {
 			return err
 		}
-		body, contentType, rowCount, err := renderSlice(ctx, tx, engine.Table, matched, format)
+		body, contentType, rowCount, err := w.renderSlice(ctx, tx, engine.Table, matched, src.Sort, format)
 		if err != nil {
 			return err
 		}
@@ -178,8 +178,8 @@ const csvContentType = "text/csv; charset=utf-8"
 // renderSlice renders the matched rows. The CSV of a contact, company, deal or
 // lead is the file the import reads back. Every other file keeps the stored
 // table's own columns.
-func renderSlice(ctx context.Context, tx pgx.Tx, table string, matched []ids.UUID, format exportFileFormat) (body []byte, contentType string, rowCount int, err error) {
-	if spec, readable := readableExport(table); readable && format == exportFmtCSV {
+func (w *FilteredExportWriter) renderSlice(ctx context.Context, tx pgx.Tx, table string, matched []ids.UUID, sort string, format exportFileFormat) (body []byte, contentType string, rowCount int, err error) {
+	if spec, readable := readableExport(table, InstallationDB(w.pool), sort); readable && format == exportFmtCSV {
 		rows, err := recordexport.Rows(ctx, tx, spec, matched)
 		if err != nil {
 			return nil, "", 0, err
@@ -201,7 +201,7 @@ func renderSlice(ctx context.Context, tx pgx.Tx, table string, matched []ids.UUI
 
 // readableExport is the file the import takes back for an object. It holds the
 // import's own fields, the employer name where the import links one, and the id.
-func readableExport(table string) (recordexport.Spec, bool) {
+func readableExport(table string, db *database.DB, sort string) (recordexport.Spec, bool) {
 	if !selectsByID(table) {
 		return recordexport.Spec{}, false
 	}
@@ -209,7 +209,7 @@ func readableExport(table string) (recordexport.Spec, bool) {
 	if linksEmployer(table) {
 		fields = append(slices.Clone(fields), csvEmployerName)
 	}
-	return recordexport.Spec{Object: table, Targets: recordexport.ExportedTargets(table, fields), Stored: storedText}, true
+	return recordexport.Spec{Object: table, Targets: recordexport.ExportedTargets(table, fields), Sort: sort, DB: db, Stored: storedText}, true
 }
 
 // storedText is a field's text as the import compares it with a mapped cell.

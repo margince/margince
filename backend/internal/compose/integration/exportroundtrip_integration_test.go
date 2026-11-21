@@ -283,8 +283,8 @@ func TestARowNamingAnIDUpdatesThatContactLeadOrDeal(t *testing.T) {
 			for _, issue := range report.Issues {
 				codes = append(codes, issue.ReasonCode)
 			}
-			if !slices.Contains(codes, "id_not_visible") || !slices.Contains(codes, "id_not_a_company_id") {
-				t.Errorf("issue codes = %v, want id_not_visible and id_not_a_company_id", codes)
+			if !slices.Contains(codes, "id_record_not_visible") || !slices.Contains(codes, "id_not_a_record_id") {
+				t.Errorf("issue codes = %v, want id_record_not_visible and id_not_a_record_id", codes)
 			}
 			approveAndRead(t, e, run.ID)
 			var record map[string]any
@@ -292,5 +292,51 @@ func TestARowNamingAnIDUpdatesThatContactLeadOrDeal(t *testing.T) {
 				t.Errorf("GET %s%s → %d, %s = %v, want %q", tc.path, id, status, tc.jsonField, record[tc.jsonField], tc.value)
 			}
 		})
+	}
+}
+
+// The rows follow the sort the view stores, as the list screen does, not the id order.
+func TestAnExportOfASortedViewFollowsTheViewsSort(t *testing.T) {
+	e := setupImportApp(t)
+	seedBundle(t, e, map[string]string{"contacts.csv": "ref,full_name,email\nC1,Charlie Zed,c@x.example\nC2,Alice Able,a@x.example\nC3,Bob Baker,b@x.example\n"},
+		[]AnyMap{identityPart("contacts.csv", "contact", "ref,full_name,email")})
+	for sort, want := range map[string][]string{
+		"full_name":  {"Alice Able", "Bob Baker", "Charlie Zed"},
+		"-full_name": {"Charlie Zed", "Bob Baker", "Alice Able"},
+	} {
+		var view struct {
+			ID string `json:"id"`
+		}
+		if status := e.Call(t, http.MethodPost, "/v1/views", AnyMap{
+			"resource": "contacts", "name": "By name " + sort,
+			"query": AnyMap{
+				"filter": AnyMap{"field": "created_at", "op": "gte", "value": "2000-01-01"},
+				"list":   AnyMap{"q": "", "sort": sort, "includeArchived": false, "filters": AnyMap{}},
+			},
+		}, nil, &view); status != http.StatusCreated {
+			t.Fatalf("create saved view → %d, want 201", status)
+		}
+		raw, err := json.Marshal(AnyMap{"view_id": view.ID, "format": "csv"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		req, err := http.NewRequest(http.MethodPost, e.TS.URL+"/v1/exports", bytes.NewReader(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		//nolint:bodyclose // apptest.CloseBody closes it right below.
+		resp, err := e.Client.Do(req)
+		if err != nil {
+			t.Fatalf("export request: %v", err)
+		}
+		body, readErr := io.ReadAll(resp.Body)
+		apptest.CloseBody(t, resp)
+		if readErr != nil || resp.StatusCode != http.StatusOK {
+			t.Fatalf("export → %d %v", resp.StatusCode, readErr)
+		}
+		if got := CSVColumn(t, body, "full_name"); !slices.Equal(got, want) {
+			t.Errorf("sort %q: names = %v, want %v", sort, got, want)
+		}
 	}
 }

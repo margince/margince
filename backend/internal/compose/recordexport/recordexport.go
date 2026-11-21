@@ -20,6 +20,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
@@ -27,8 +29,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// The import columns that need more than the stored text of one field. The
-// importer's own spellings of them are asserted equal in the compose package.
+// The import's own names for the fields that need more than the stored text of
+// one field. The compose package declares its constants from these, so the
+// import and the export cannot spell one differently.
 const (
 	OwnerEmail = "owner_email"
 	Tags       = "tags"
@@ -36,11 +39,15 @@ const (
 	Stage      = "stage"
 	Amount     = "amount"
 	Currency   = "currency"
-	CompanyRef = "company_ref"
+	CompanyRef = migration.AssocTargetCompanyRef
 	// EmployerName is a contact's employer; a lead's company_name is plain text.
-	EmployerName = "company_name"
+	EmployerName = migration.AssocTargetCompanyName
 	LeadStatus   = "status"
 	ID           = "id"
+	// Author is written on create only, and ContactRef is a deal's stakeholder
+	// edge, so no stored record holds either as a cell.
+	Author     = "author"
+	ContactRef = "contact_ref"
 )
 
 // ByteOrderMark is what Excel needs at the start of a file to read it as UTF-8.
@@ -48,7 +55,9 @@ var ByteOrderMark = []byte{0xEF, 0xBB, 0xBF}
 
 const (
 	objectContact = "contact"
-	authorField   = "author"
+	objectCompany = "company"
+	objectLead    = "lead"
+	objectDeal    = "deal"
 )
 
 // tagSeparator joins tag names in one cell, as the importer splits them.
@@ -59,6 +68,9 @@ const tagSeparator = "; "
 type Spec struct {
 	Object  string
 	Targets []string
+	// Sort is the list sort the rows follow, empty for the default order.
+	Sort string
+	DB   *database.DB
 	// Stored is the text the importer compares a mapped cell against for one
 	// field of the record's JSON.
 	Stored func(record map[string]json.RawMessage, target string) string
@@ -73,10 +85,10 @@ func Renders(object, target string) bool {
 // unrenderable are import fields no stored record carries: the importer writes
 // the author on create only, and a deal's stakeholder contact is an edge.
 var unrenderable = map[string][]string{
-	objectContact: {authorField},
-	"company":     {authorField},
-	"lead":        {authorField},
-	"deal":        {"contact_ref"},
+	objectContact: {Author},
+	objectCompany: {Author},
+	objectLead:    {Author},
+	objectDeal:    {ContactRef},
 }
 
 // ExportedTargets is the import fields of an object that a file carries.
@@ -94,6 +106,10 @@ func ExportedTargets(object string, importFields []string) []string {
 // row of cells per record. A record the read refuses is left out. The ids come
 // from the caller's own scoped selection, so a refusal is a record that went away.
 func Rows(ctx context.Context, tx pgx.Tx, spec Spec, idList []ids.UUID) ([][]string, error) {
+	idList, err := Ordered(ctx, spec.DB, spec.Object, spec.Sort, idList)
+	if err != nil {
+		return nil, err
+	}
 	records := make([]map[string]json.RawMessage, 0, len(idList))
 	for _, id := range idList {
 		record, err := read(ctx, tx, spec.Object, id)
@@ -143,11 +159,11 @@ func read(ctx context.Context, tx pgx.Tx, object string, id ids.UUID) (map[strin
 	switch object {
 	case objectContact:
 		record, err = contacts.NewStore(nil).GetContactTx(ctx, tx, ids.From[ids.ContactKind](id), storekit.LiveOnly, contacts.CustomColumns{})
-	case "company":
+	case objectCompany:
 		record, err = contacts.NewStore(nil).GetCompanyTx(ctx, tx, ids.From[ids.CompanyKind](id), storekit.LiveOnly, contacts.CustomColumns{})
-	case "lead":
+	case objectLead:
 		record, err = contacts.NewStore(nil).GetLeadTx(ctx, tx, ids.From[ids.LeadKind](id), storekit.LiveOnly, contacts.CustomColumns{})
-	case "deal":
+	case objectDeal:
 		record, err = deals.NewStore(nil, deals.Installation{}).GetDealTx(ctx, tx, ids.From[ids.DealKind](id), storekit.LiveOnly, deals.CustomColumns{})
 	default:
 		return nil, fmt.Errorf("export: %q has no readable file", object)
