@@ -74,8 +74,8 @@ var harnessFiles = []string{
 	"e2e/llm/transcript.py", "e2e/llm/mcpclient.py",
 }
 
-// judgeTransport are the grader's imports that only reach the judge, whose
-// model the stamp names on its own, so a change to them moves no verdict.
+// judgeTransport are the grader's imports that only reach the judge. The stamp
+// names the judge's model on its own, so a change to them moves no verdict.
 var judgeTransport = map[string]string{
 	"e2e/llm/candidates.py": "resolves the judge's route; the judge model is its own stamp part",
 	"e2e/llm/clean.py":      "starts the judge's CLI with nothing of the operator's",
