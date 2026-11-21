@@ -355,6 +355,9 @@ type retryFileKeeper struct {
 	staged       []StagedFile
 	// recorded says the current attempt's transaction named the staged files.
 	recorded bool
+	// committing says the current attempt's work ended and its commit was sent,
+	// so a failure may still have committed it.
+	committing bool
 	// superseded are files staged for this record and then replaced, which no
 	// row can name.
 	superseded []StagedFile

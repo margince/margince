@@ -271,7 +271,7 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 	original := rec
 	err = storekit.RetryLockCycles(ctx, func() error {
 		s.beginFileAttempt()
-		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return s.db.Tx(ctx, s.notingCommit(func(tx pgx.Tx) error {
 			rec = original
 			attempt = captureAttempt{}
 			ctx, err := s.admitWriteTx(withAdmissionNote(ctx, &attempt.admission), tx, rec)
@@ -315,10 +315,11 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 			default:
 				return fmt.Errorf("capture: unmapped Fields type %T for %s", rec.Fields, rec.EntityType)
 			}
-		})
+		}))
 	})
 	capturemetrics.ObserveStage(ctx, capturemetrics.StageSink, time.Since(txStart))
 	if err != nil {
+		s.discardFilesOfFailedCapture(ctx)
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
 	}

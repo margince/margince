@@ -357,7 +357,9 @@ func (s *Store) DiscardCapturedFiles(ctx context.Context, staged []StagedFile) e
 	if len(deleted) == 0 {
 		return nil
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	// The workspace the keys were staged under, from the context, as the ledger
+	// recorded them: the capture path reaches this from an installation-wide handle.
+	return s.db.ForWorkspace(workspaceID(ctx)).Tx(ctx, func(tx pgx.Tx) error {
 		for _, key := range deleted {
 			if err := storedobjects.Clear(ctx, tx, key); err != nil {
 				return err

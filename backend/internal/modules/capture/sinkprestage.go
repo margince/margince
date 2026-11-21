@@ -79,10 +79,32 @@ func (s *Sink) discardUnnamedFiles(ctx context.Context) {
 	}
 }
 
+// discardFilesOfFailedCapture deletes what a capture stored before it failed.
+// A failed commit may have committed, so its files are left to the sweep.
+func (s *Sink) discardFilesOfFailedCapture(ctx context.Context) {
+	keeper, ok := s.files.(*retryFileKeeper)
+	if !ok || keeper.committing {
+		return
+	}
+	keeper.recorded = false
+	s.discardUnnamedFiles(ctx)
+}
+
 // beginFileAttempt starts one try of the capture transaction: what an earlier
 // try recorded rolled back with it.
 func (s *Sink) beginFileAttempt() {
 	if keeper, ok := s.files.(*retryFileKeeper); ok {
-		keeper.recorded = false
+		keeper.recorded, keeper.committing = false, false
+	}
+}
+
+// notingCommit runs one try's work and notes whether it reached the commit.
+func (s *Sink) notingCommit(work func(pgx.Tx) error) func(pgx.Tx) error {
+	return func(tx pgx.Tx) error {
+		err := work(tx)
+		if keeper, ok := s.files.(*retryFileKeeper); ok {
+			keeper.committing = err == nil
+		}
+		return err
 	}
 }

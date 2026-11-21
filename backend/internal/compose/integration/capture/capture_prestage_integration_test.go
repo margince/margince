@@ -16,12 +16,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // lockWatchingBlob asks, during every put, whether any session holds the
@@ -100,5 +102,48 @@ func TestFilesStoredForAMessageTheCaptureDropsAreDeleted(t *testing.T) {
 	}
 	if n := countRows(t, env.e, `SELECT count(*) FROM stored_object_intent`); n != 0 {
 		t.Fatalf("%d provisional objects remain after the drop, want 0", n)
+	}
+}
+
+func TestFilesStoredForACaptureItsAuthorityRefusesAreDeleted(t *testing.T) {
+	e := integration.SetupSearch(t)
+	seedShippedRoles(t, e)
+	holdOnlyRole(t, e, e.Rep1, "rep")
+	blob := &lockWatchingBlob{Store: blobstore.NewMemory(), e: e}
+	first, second := "refused-1@globex.example", "refused-2@globex.example"
+	page := &skippingPage{&mailPageConnector{
+		nextToken: "next",
+		raws: [][]byte{
+			emailWithFile("her@globex.example", captureOwner, first, "", "a.pdf", signedContract),
+			emailWithFile("her@globex.example", captureOwner, second, "", "b.pdf", []byte("%PDF-1.4 another")),
+		},
+	}}
+	// The role goes between the two messages: the second one's files are
+	// stored ahead of its transaction, which then refuses the capture.
+	moved := false
+	page.afterMessage = func() {
+		if !moved {
+			moved = true
+			holdOnlyRole(t, e, e.Rep1, "read_only")
+		}
+	}
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{Blob: blob})
+	registry.Register(page)
+	actor := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	if _, err := registry.Connect(actor, "gmail", connector.Auth("refresh")); err != nil {
+		t.Fatal(err)
+	}
+	run, err := registry.StartBackfill(actor, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := registry.RunBackfillStep(principal.WithWorkspaceID(context.Background(), e.WS), run.ID); err == nil {
+		t.Fatal("the page captured under a role that may not capture")
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_id = '`+second+`'`); n != 0 {
+		t.Fatalf("%d activity rows for the refused message, want 0", n)
+	}
+	if blob.puts != 2 || blob.deletes != 1 {
+		t.Fatalf("put %d and deleted %d objects, want 2 and 1: the refused message's file must go", blob.puts, blob.deletes)
 	}
 }
