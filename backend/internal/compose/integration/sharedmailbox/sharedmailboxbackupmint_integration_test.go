@@ -198,10 +198,13 @@ func TestASharedMailboxMintsNothingWithoutABackupOwnerWhoMayHoldIt(t *testing.T)
 func TestASenderWhoseContactNoReaderMayReadGetsNoSecondContact(t *testing.T) {
 	s := newSharedMailboxSuite(t)
 	box := s.backedMailbox(t)
-	s.privateContact(t, "Pat Private", "pat@private.example", s.e.Rep3)
+	pat := s.privateContact(t, "Pat Private", "pat@private.example", s.e.Rep3)
 	s.syncOne(t, box, mailFrom("pat-1@private.example", "pat@private.example"), "hello from pat@private.example")
 
 	if got := s.anyContactFor(t, "pat@private.example"); got != 1 {
 		t.Fatalf("the address is held by %d contacts, want only the one a seat outside the readers owns", got)
+	}
+	if got := s.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE contact_id = $1`, pat); got != 0 {
+		t.Fatal("shared mail was filed under a contact private to a seat outside the reader team")
 	}
 }
