@@ -70,7 +70,10 @@ it("shows company, purpose and author, and requires a reason to revoke exactly t
   const confirm = within(dialog).getByRole("button", {
     name: "Revoke exception",
   });
-  expect(confirm.hasAttribute("disabled")).toBe(true);
+  await user.click(confirm);
+  expect(revoke).not.toHaveBeenCalled();
+  expect(within(dialog).getByText("This field is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(within(dialog).getByRole("textbox"));
   await user.type(within(dialog).getByRole("textbox"), "Wrong context.");
   await user.click(confirm);
   await waitFor(() => expect(revoke).toHaveBeenCalledTimes(1));

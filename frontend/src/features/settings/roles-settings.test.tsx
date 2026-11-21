@@ -390,6 +390,23 @@ describe("RolesSettings", () => {
     );
   });
 
+  it("says a new role needs a name on Create role, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(calls));
+    render(<RolesSettings />);
+
+    await user.click(await screen.findByRole("button", { name: "New role" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: "Create role" }));
+
+    expect(dialog.getByText("Name is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(
+      dialog.getByRole("textbox", { name: /name/i }),
+    );
+    expect(calls.filter((call) => call.method === "POST")).toEqual([]);
+  });
+
   it("opens the new role even when the directory cannot be re-read", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([], { failRefetch: true }));

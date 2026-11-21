@@ -44,6 +44,26 @@ describe("AuthScreen reset deep link", () => {
     expect(await request?.text()).toContain("raw-reset-token");
   });
 
+  it("says the password is required on press, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const calls = stubApi({ password: true, password_reset: true }, () =>
+      ok(204),
+    );
+    vi.stubGlobal("location", {
+      ...window.location,
+      pathname: "/",
+      hash: "#/reset-password?token=raw-reset-token",
+      origin: "http://localhost",
+    });
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    const box = await screen.findByLabelText("New password");
+    await user.click(screen.getByRole("button", { name: "Set new password" }));
+    expect(screen.getByText("New password is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(box);
+    expect(calls).toHaveLength(0);
+  });
+
   // The link is checked only when the password is submitted: the server's one
   // token verdict spends nothing before then. So the card says nothing about it.
   it("claims nothing about the link before the server has checked it", async () => {

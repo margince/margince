@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { RecordFormBody } from "../../components/create.form";
@@ -21,7 +27,10 @@ const fields = dealEditFields((key) => translate("en", key), {
   ["name", "amount", "expected_arr", "currency"].includes(field.key),
 );
 const seeded = { name: "Before", amount: "", expected_arr: "", currency: "" };
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 function Form({ save }: { save: (body: unknown) => void }) {
   const [values, setValues] = useState<Record<string, string>>(seeded);
@@ -59,11 +68,22 @@ it("renames an unpriced deal without inventing a currency", () => {
 it.each(["Value", "Expected ARR"])(
   "requires currency for %s, including zero, until the figure is cleared",
   (label) => {
-    render(<Form save={vi.fn()} />);
+    vi.useFakeTimers();
+    const save = vi.fn();
+    render(<Form save={save} />);
     const input = screen.getByRole("textbox", { name: label });
     fireEvent.change(input, { target: { value: "0" } });
-    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByText("Currency is required.")).toBeInTheDocument();
+    expect(
+      screen.getByText("This amount needs a currency first."),
+    ).toBeInTheDocument();
+    expect(input).toHaveFocus();
     fireEvent.change(input, { target: { value: "" } });
-    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    // The double-press latch lets go a task after the refused press.
+    act(() => vi.runAllTimers());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(save).toHaveBeenCalledTimes(1);
   },
 );

@@ -285,8 +285,6 @@ describe("TeamsCard", () => {
     const save = within(dialog).getByRole("button", {
       name: en["users.teamRenameSave"],
     });
-    // The unchanged name is no rename.
-    expect(save).toBeDisabled();
     await user.clear(field);
     await user.type(field, " Nordost ");
     await user.click(save);
@@ -344,13 +342,14 @@ describe("TeamsCard", () => {
     const submit = within(dialog).getByRole("button", {
       name: en["users.createTeam"],
     }) as HTMLButtonElement;
-    expect(submit.disabled).toBe(true);
-    await user.type(
-      within(dialog).getByLabelText(en["users.teamNameLabel"], {
-        exact: false,
-      }),
-      "  Nord  ",
-    );
+    const name = within(dialog).getByLabelText(en["users.teamNameLabel"], {
+      exact: false,
+    });
+    await user.click(submit);
+    expect(name).toHaveFocus();
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+    await user.type(name, "  Nord  ");
     await user.click(submit);
 
     await waitFor(() =>
