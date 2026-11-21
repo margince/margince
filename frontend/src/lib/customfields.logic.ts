@@ -3,6 +3,8 @@
 // here in isolation.
 
 import type { components } from "../api/schema";
+import { translate } from "../i18n";
+import { DEFAULT_LOCALE, isLocale } from "../i18n/locale";
 import { translatedLabel } from "./labeltranslation";
 
 export type CfObject = components["schemas"]["CustomField"]["object"];
@@ -29,12 +31,25 @@ export function catalogOfRecord(recordKey: string): CfObject | undefined {
   return CF_OBJECTS.find((object) => object === recordKey);
 }
 
-/** A field's label as the reader sees it. */
+/**
+ * A field's label as the reader sees it. A retired field reads "Label (retired)",
+ * because a live field may carry the same name. This is the one place that adds it.
+ */
 export function customFieldLabel(
   field: components["schemas"]["CustomField"],
   locale: string,
 ): string {
-  return translatedLabel(field.label, field.label_translations, locale);
+  const label = translatedLabel(field.label, field.label_translations, locale);
+  if (field.status !== "retired") {
+    return label;
+  }
+  return translate(
+    isLocale(locale) ? locale : DEFAULT_LOCALE,
+    "cf.retiredLabel",
+    {
+      label,
+    },
+  );
 }
 
 // The type set mirrors fieldcatalog.Types() in the backend, in its order.
@@ -62,12 +77,28 @@ export function slug(label: string): string {
     .replace(/^_|_$/g, "");
 }
 
-export function columnName(label: string): string {
-  return `cf_${slug(label) || "…"}`;
+/**
+ * The column a new field takes, as the server picks it. That is cf_<slug>, else
+ * the first cf_<slug>_<n> that no field of the object owns, retired ones included.
+ */
+export function columnName(
+  label: string,
+  owned: readonly string[] = [],
+): string {
+  const base = `cf_${slug(label) || "…"}`;
+  let candidate = base;
+  for (let n = 2; owned.includes(candidate); n++) {
+    candidate = `${base}_${n}`;
+  }
+  return candidate;
 }
 
-export function apiKey(object: CfObject, label: string): string {
-  return `${object}.${columnName(label)}`;
+export function apiKey(
+  object: CfObject,
+  label: string,
+  owned: readonly string[] = [],
+): string {
+  return `${object}.${columnName(label, owned)}`;
 }
 
 // A field is data; an object or a relationship is structure. A label that reads

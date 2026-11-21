@@ -44,12 +44,15 @@ export type NewFieldDraft = {
 
 export function FieldBuilder({
   object,
+  ownedColumns = [],
   pending,
   error,
   onSubmit,
   onCancel,
 }: Readonly<{
   object: CfObject;
+  // The columns the object's fields already own, retired ones included.
+  ownedColumns?: readonly string[];
   pending: boolean;
   // The refused create, for what no field of the form can show.
   error: unknown;
@@ -158,7 +161,7 @@ export function FieldBuilder({
             {(control) => (
               <TextInput
                 {...control}
-                value={apiKey(object, label)}
+                value={apiKey(object, label, ownedColumns)}
                 disabled
                 readOnly
               />

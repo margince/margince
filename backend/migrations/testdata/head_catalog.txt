@@ -11449,7 +11449,7 @@ public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON 
 public.uq_contact_profile_field CREATE UNIQUE INDEX uq_contact_profile_field ON public.contact_profile_field USING btree (contact_id, field, value_key)
 public.uq_contact_source CREATE UNIQUE INDEX uq_contact_source ON public.contact USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)
-public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug)
+public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug) WHERE (status <> 'retired'::text)
 public.uq_deal_risk_day CREATE UNIQUE INDEX uq_deal_risk_day ON public.deal_risk_day USING btree (local_day)
 public.uq_deal_room_comment_request CREATE UNIQUE INDEX uq_deal_room_comment_request ON public.deal_room_comment USING btree (room_id, request_id) WHERE (request_id IS NOT NULL)
 public.uq_deal_room_document_in_room CREATE UNIQUE INDEX uq_deal_room_document_in_room ON public.deal_room_document USING btree (id, room_id)

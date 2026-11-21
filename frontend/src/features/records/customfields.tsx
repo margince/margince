@@ -86,10 +86,20 @@ function cleanOptions(options: string[]): string[] {
   return cleaned;
 }
 
+function ownedColumns(fields: readonly CustomField[]): string[] {
+  return fields.flatMap((field) =>
+    field.column_name ? [field.column_name] : [],
+  );
+}
+
 // The optimistic row shown while the create is in flight — a full CustomField so
 // the table renders it, tagged with STAGED_ID so it gets the pending treatment
 // (no rename/archive affordance) and is rolled back on error.
-function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
+function stagedField(
+  draft: NewFieldDraft,
+  createdBy: string,
+  owned: readonly string[],
+): CustomField {
   const now = new Date().toISOString();
   return {
     id: STAGED_ID,
@@ -98,7 +108,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
     slug: slug(draft.label),
     type: draft.type,
     status: "active",
-    column_name: columnName(draft.label),
+    column_name: columnName(draft.label, owned),
     currency: draft.type === "currency" ? draft.currency : null,
     options: hasOptions(draft.type) ? cleanOptions(draft.options) : null,
     show_in_create: draft.showInCreate,
@@ -191,7 +201,13 @@ export function CustomFieldsAdmin() {
       const previous = queryClient.getQueryData(key);
       queryClient.setQueryData(key, (old) =>
         old
-          ? { ...old, data: [...old.data, stagedField(draft, meUserId ?? "")] }
+          ? {
+              ...old,
+              data: [
+                ...old.data,
+                stagedField(draft, meUserId ?? "", ownedColumns(old.data)),
+              ],
+            }
           : old,
       );
       return { previous, key };
@@ -409,6 +425,7 @@ export function CustomFieldsAdmin() {
         <FieldBuilder
           key={addSeq}
           object={object}
+          ownedColumns={ownedColumns(list.data?.data ?? [])}
           pending={create.isPending}
           error={create.error}
           onSubmit={(draft, refused) =>

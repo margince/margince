@@ -4,6 +4,7 @@ import {
   apiKey,
   CF_OBJECTS,
   columnName,
+  customFieldLabel,
   looksStructural,
   slug,
 } from "./customfields.logic";
@@ -39,6 +40,28 @@ describe("custom-fields logic", () => {
     expect(columnName("")).toBe("cf_…");
     expect(apiKey("company", "Contract end date")).toBe(
       "company.cf_contract_end_date",
+    );
+  });
+
+  it("takes the first column no field of the object owns, retired ones included", () => {
+    expect(columnName("Deal Size", ["cf_deal_size"])).toBe("cf_deal_size_2");
+    expect(columnName("Deal Size", ["cf_deal_size", "cf_deal_size_2"])).toBe(
+      "cf_deal_size_3",
+    );
+    expect(apiKey("deal", "Deal Size", ["cf_deal_size"])).toBe(
+      "deal.cf_deal_size_2",
+    );
+  });
+
+  it("reads a retired field's label with a retired suffix, in the reader's language", () => {
+    const field = {
+      label: "Deal Size",
+      status: "retired",
+    } as Parameters<typeof customFieldLabel>[0];
+    expect(customFieldLabel(field, "en")).toBe("Deal Size (retired)");
+    expect(customFieldLabel(field, "de")).toBe("Deal Size (stillgelegt)");
+    expect(customFieldLabel({ ...field, status: "active" }, "en")).toBe(
+      "Deal Size",
     );
   });
 

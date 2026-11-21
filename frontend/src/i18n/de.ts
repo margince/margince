@@ -15091,6 +15091,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.audit.footer":
     "Jedes Hinzufügen, Bearbeiten und Archivieren wird dauerhaft im Audit-Log erfasst.",
   "cf.retired": "Stillgelegt",
+  "cf.retiredLabel": "{label} (stillgelegt)",
   "cf.retire.title": "„{label}“ archivieren?",
   "cf.retire.body":
     "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten. Das Archivieren lässt sich nicht rückgängig machen.",

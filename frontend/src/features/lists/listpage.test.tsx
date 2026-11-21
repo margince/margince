@@ -340,7 +340,10 @@ describe("an opened list", () => {
 
     expect(
       await screen.findByText(
-        en["lists.retiredField.body_one"].replace("{fields}", "Last Touch"),
+        en["lists.retiredField.body_one"].replace(
+          "{fields}",
+          "Last Touch (retired)",
+        ),
       ),
     ).toBeInTheDocument();
   });
