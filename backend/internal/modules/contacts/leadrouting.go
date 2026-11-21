@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
@@ -141,7 +142,7 @@ func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.User
 		return cfg.CapPerOwner <= 0 || openLoad[id] < cfg.CapPerOwner
 	}
 	for i, rule := range cfg.Rules {
-		if !slices.Contains(RoutableLeadFields, rule.Field) || !strings.EqualFold(rule.Equals, lead.field(rule.Field)) {
+		if !slices.Contains(RoutableLeadFields, rule.Field) || !ruleMatches(rule, lead.field(rule.Field)) {
 			continue
 		}
 		// The cap outranks the rule (AC-S5: caps are never exceeded): a
@@ -435,4 +436,14 @@ func routingDeclineReason(reason string) string {
 func lockLeadRouting(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('lead_routing:' || $1::text, 0))`, storekit.MustWorkspace(ctx))
 	return err
+}
+
+// ruleMatches compares a rule's value with a lead fact, ignoring case. The
+// company key is compared in its stored form, so a Unicode spelling and its
+// punycode twin are one key.
+func ruleMatches(rule RoutingRule, fact string) bool {
+	if rule.Field == candidateCompanyKey {
+		return strings.EqualFold(owndomain.KeyForm(rule.Equals), owndomain.KeyForm(fact))
+	}
+	return strings.EqualFold(rule.Equals, fact)
 }

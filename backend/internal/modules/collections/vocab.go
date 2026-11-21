@@ -331,7 +331,7 @@ var segmentEngines = map[string]storekit.Query{
 			"status":                {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
 			ownerIDField:            {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:        ownerTeamField,
-			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldText},
+			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldCompanyKey, FoldCase: true},
 			tagFilterField:          tagLinkFor("lead"),
 			// The industry a rep typed on the lead, and the linked company's own
 			// facts, so one rule names a market on leads and deals alike.
