@@ -12,7 +12,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,6 +33,7 @@ func (w *weeklyGenerateWorker) openTasksMail(ctx context.Context, review weekly.
 	if err != nil {
 		return emailview.Content{}, err
 	}
+
 	tasks, err := weekTasks(ctx, service)
 	if err != nil {
 		return emailview.Content{}, err
@@ -41,7 +41,11 @@ func (w *weeklyGenerateWorker) openTasksMail(ctx context.Context, review weekly.
 	shown := 0
 	var body emailview.Content
 	for _, item := range tasks {
-		if !taskDueInReportedWeek(item, weekEnd) {
+		due, err := weekly.TaskDueInReportedWeek(item, weekEnd, reportZone)
+		if err != nil {
+			return emailview.Content{}, err
+		}
+		if !due {
 			continue
 		}
 		row, ok := mailWorkItem(item, words, zone)
@@ -86,8 +90,4 @@ func weekTasks(ctx context.Context, service *attention.Service) ([]crmcontracts.
 		}
 	}
 	return out, nil
-}
-
-func taskDueInReportedWeek(item crmcontracts.WorklistItem, end time.Time) bool {
-	return item.Source == crmcontracts.WorklistItemSourceTask && deadline.Passed(item.DueAt, end)
 }

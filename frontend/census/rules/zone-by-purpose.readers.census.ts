@@ -16,6 +16,8 @@ const SERVER_WEEK =
   "The server buckets this week or day on the company's clock (decision B1 on #7894); naming it in another zone would label the bucket with days it does not hold.";
 const SERVER_TODAY =
   "The server reads 'today' on the company's clock, so the form opens on the day the server will count.";
+const DATE_ONLY_TASK =
+  "A task with only a date is overdue by the company's calendar, as the Worklist groups it, so every page agrees on the day it falls on; a timed task reads on the reader's clock.";
 export const companyZoneSites: { file: string; why: string }[] = [
   ...[
     "analytics.decisions.tsx",
@@ -56,6 +58,13 @@ export const companyZoneSites: { file: string; why: string }[] = [
     file: "features/brief/brief.glance.tsx",
     why: "Home holds the server's day and the weekly's week, both bucketed on the company's clock (decision B1), so the day and week it is labelled with are on that clock; the greeting hour is the reader's.",
   },
+  ...[
+    "features/companies/companyhowitstands.tsx",
+    "features/companies/companynextbar.tsx",
+    "features/contacts/contacttoday.tsx",
+    "features/deals/deal360/dealfigures.tsx",
+    "features/deals/deals.overview.tsx",
+  ].map((file) => ({ file, why: DATE_ONLY_TASK })),
   { file: "features/brief/brief.plan.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.teamweekly.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.deals.tsx", why: SERVER_WEEK },
