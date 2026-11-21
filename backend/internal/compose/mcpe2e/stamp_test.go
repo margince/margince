@@ -240,7 +240,7 @@ var (
 func importedModules(body string) []string {
 	var modules []string
 	for _, m := range importLine.FindAllStringSubmatch(body, -1) {
-		for _, item := range strings.Split(m[1], ",") {
+		for item := range strings.SplitSeq(m[1], ",") {
 			if fields := strings.Fields(item); len(fields) > 0 {
 				modules = append(modules, strings.Split(fields[0], ".")[0])
 			}
@@ -252,8 +252,8 @@ func importedModules(body string) []string {
 	return modules
 }
 
-// graderClosure is every lane module check.py reaches through its imports, each
-// with the lane modules that import it.
+// graderClosure walks the imports from check.py and maps each lane module it
+// reaches to the lane modules that import it.
 func graderClosure(t *testing.T, root string) map[string][]string {
 	t.Helper()
 	importers := map[string][]string{"e2e/llm/check.py": nil}

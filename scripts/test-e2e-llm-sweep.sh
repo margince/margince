@@ -5,6 +5,8 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/lib-git-fixture.sh
+. "$(dirname "$0")/lib-git-fixture.sh"
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
 
