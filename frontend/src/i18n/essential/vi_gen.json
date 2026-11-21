@@ -5468,6 +5468,7 @@
   "saveBar.save": "Lưu",
   "saveBar.discard": "Hủy thay đổi",
   "saveBar.unsaved": "Thay đổi chưa lưu",
+  "saveBar.offered": "Lưu để giữ các giá trị này.",
   "saveBar.invalid": "Sửa các ô được đánh dấu để lưu.",
   "aiOutcome.gaveUp.timeout": "hết thời gian",
   "aiOutcome.gaveUp.canceled": "bên gọi đã hủy",

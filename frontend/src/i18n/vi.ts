@@ -12720,10 +12720,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSecretHint":
     "Dùng mật khẩu riêng cho ứng dụng. Mật khẩu được lưu trong kho khóa và dùng để đọc thư theo lịch cho đến khi ngắt kết nối; ngắt kết nối sẽ xóa mật khẩu.",
   "connectors.imapSubmitCta": "Kết nối",
-  "connectors.imapNeeded": "Trường bắt buộc",
-  "connectors.imapStillNeeded": "Bắt buộc: {fields}",
-  "connectors.imapRange": "Từ {min} đến {max}",
-  "connectors.imapOutOfRange": "Ngoài phạm vi: {fields}",
+  "connectors.imapHostName": "Chỉ nhập tên máy chủ, ví dụ imap.example.com.",
+  "connectors.imapSecretEmptied": "Đã xóa sau lần thử lỗi. Hãy nhập lại.",
   "connectors.imapLoginRejected":
     "Hộp thư từ chối thông tin đăng nhập này. Kiểm tra máy chủ, email và mật khẩu ứng dụng.",
   "connectors.imapUnreachable":
@@ -16935,6 +16933,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cuộc họp xuất hiện trên liên hệ và giao dịch, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",
   "connectFlow.calendarImap": "Không khả dụng qua IMAP.",
   "connectFlow.pickService": "Chọn Thư, Lịch hoặc cả hai.",
+  "connectFlow.pickMail": "Chọn Thư.",
   "connectFlow.importLabel": "Nhập email cũ",
   "connectFlow.importNone": "Không nhập",
   "connectFlow.importAfter":
@@ -17550,7 +17549,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm kiếm và truy xuất không có mức suy nghĩ hay thời gian chờ để thiết lập. Đổi nhà cung cấp và mô hình ở dòng Mô hình embedding trong Cấp mô hình.",
   "workingHours.unsetTitle": "Chưa thiết lập",
   "workingHours.unset":
-    "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu, theo múi giờ của bản cài đặt.",
+    "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu.",
   "workingHours.narrowedTitle": "Ít giờ nhận đặt lịch hơn",
   "workingHours.narrowed": "Khách hàng có ít khung giờ để chọn hơn.",
   "workingHours.day.1": "Thứ Hai",
@@ -17890,6 +17889,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "capturePurge.preview": "Kiểm tra trước",
   "capturePurge.confirm": "Xóa vĩnh viễn",
   "capturePurge.done": "Đóng",
+  "capturePurge.recheck": "Kiểm tra lại",
+  "capturePurge.changed":
+    "Thư đã thay đổi kể từ lần kiểm tra. Hãy xem số lượng bên dưới trước khi xóa.",
   "capturePurge.failed":
     "Chưa xóa xong. Một số thư có thể đã bị xóa vĩnh viễn. Kiểm tra lại để xem còn lại những gì.",
   "capturePurge.refused":
@@ -17941,7 +17943,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.containersUnreadableBody":
     "Nhà cung cấp thư không phản hồi, nên danh sách này có thể thiếu thư mục. Thử lại sau giây lát, hoặc loại trừ theo địa chỉ hay tên miền.",
   "captureExclusions.kindLabel": "Loại",
-  "captureExclusions.addLabel": "Loại trừ địa chỉ hoặc tên miền",
+  "captureExclusions.title.address": "Loại trừ một địa chỉ",
+  "captureExclusions.title.domain": "Loại trừ một tên miền",
+  "captureExclusions.title.container": "Loại trừ một thư mục hoặc nhãn",
+  "captureExclusions.field.address": "Địa chỉ",
+  "captureExclusions.field.domain": "Tên miền",
+  "captureExclusions.noMailbox": "Hãy kết nối hộp thư trước.",
   "captureExclusions.placeholder.address": "ten@example.com",
   "captureExclusions.placeholder.domain": "vidu.com",
   "captureExclusions.add": "Loại trừ",
@@ -22565,6 +22572,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "saveBar.save": "Lưu",
   "saveBar.discard": "Hủy thay đổi",
   "saveBar.unsaved": "Thay đổi chưa lưu",
+  "saveBar.offered": "Lưu để giữ các giá trị này.",
   "saveBar.invalid": "Sửa các ô được đánh dấu để lưu.",
   "privacy.typeErasePrompt": "Nhập từ này để xác nhận:",
   "aiFigures.window.24h": "24 giờ",

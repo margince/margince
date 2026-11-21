@@ -5468,6 +5468,7 @@
   "saveBar.save": "Speichern",
   "saveBar.discard": "Verwerfen",
   "saveBar.unsaved": "Ungespeicherte Änderungen",
+  "saveBar.offered": "Speichere, um diese Werte zu übernehmen.",
   "saveBar.invalid": "Korrigiere die markierten Felder, um zu speichern.",
   "aiOutcome.gaveUp.timeout": "Zeitlimit überschritten",
   "aiOutcome.gaveUp.canceled": "vom Aufrufer abgebrochen",

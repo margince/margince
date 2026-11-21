@@ -610,6 +610,11 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"POST /v1/analytics/reports/{id}/questions/{card_id}/explain": {
 		{Name: "revision", Minimum: 1},
 	},
+	"POST /v1/capture/exclusions/{id}/purge": {
+		{Name: "expect_anonymised", Minimum: 0},
+		{Name: "expect_destroyed", Minimum: 0},
+		{Name: "expect_released", Minimum: 0},
+	},
 }
 
 var deprecationTable = map[string]map[string]string{

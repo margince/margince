@@ -125,3 +125,17 @@ func TestTheFallbackIsTheStatedOneAndReadsItsOwnDays(t *testing.T) {
 			"silently falls back to UTC, the defect this setting exists to remove")
 	}
 }
+
+// The refusal of a week with no day is the sentence a user reads, so its words
+// are pinned through the production validator.
+func TestAWeekWithNoDayIsRefusedInPlainWords(t *testing.T) {
+	_, err := validWorkingHours(WorkingHours{StartMinute: 0, EndMinute: 60, Timezone: "UTC"})
+	var fault *WorkingHoursError
+	if !errors.As(err, &fault) {
+		t.Fatalf("err = %v, want a refusal naming a field", err)
+	}
+	field, _, message := fault.FieldFault()
+	if field != fieldWorkDays || message != "choose at least one day" {
+		t.Errorf("refused %q with %q, want the days field and \"choose at least one day\"", field, message)
+	}
+}

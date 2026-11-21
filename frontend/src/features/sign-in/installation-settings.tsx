@@ -23,12 +23,7 @@ import { useCanWrite } from "../../lib/capability";
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
-import {
-  type FieldLabels,
-  percentLimit,
-  refusalSentences,
-  unwrap,
-} from "../../lib/problem";
+import { type FieldLabels, percentLimit, unwrap } from "../../lib/problem";
 // Shared with every upload form, which reads the ceiling off this same record.
 // One query, one key: two hooks on one key would let whichever mounted first
 // decide how a failure behaves for the other.
@@ -50,6 +45,7 @@ import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
 } from "./installation-settings.profile";
+import { installationRefusal } from "./installation-settings.refusal";
 import { RegionalSettingsRows } from "./installation-settings.regional";
 
 export { fiscalYearStartSummary } from "./installation-settings.profile";
@@ -281,7 +277,7 @@ function InstallationSettingsForm({
       return sentence === undefined ? [] : [[fact, sentence] as const];
     }),
   );
-  const blanket = refusalSentences(update.error, t, labels).rest;
+  const blanket = installationRefusal(update.error, t, labels, part).rest;
   const edit = (next: InstallationSettings) => {
     for (const fact of EDITABLE_FACTS) {
       if (next[fact] !== draft[fact]) faults.edited(fact);
@@ -321,7 +317,7 @@ function InstallationSettingsForm({
     }
     update.mutate(patch, {
       onError: (error) =>
-        faults.show(refusalSentences(error, t, labels).byField),
+        faults.show(installationRefusal(error, t, labels, part).byField),
     });
   };
 
