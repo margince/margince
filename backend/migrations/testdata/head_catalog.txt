@@ -8107,9 +8107,6 @@ public.named_time_zone(zone_name text) secdef=false cfg=search_path=pg_catalog a
 DECLARE
  canonical text;
 BEGIN
- IF zone_name ~ '[0-9]' THEN
-  RETURN EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = zone_name);
- END IF;
  IF zone_name ~* '^interval' THEN
   RETURN false;
  END IF;
@@ -8118,9 +8115,16 @@ BEGIN
   canonical := current_setting('TimeZone');
   RAISE EXCEPTION USING ERRCODE = 'MZ001';
  EXCEPTION
-  WHEN SQLSTATE 'MZ001' THEN RETURN canonical = zone_name;
+  WHEN SQLSTATE 'MZ001' THEN NULL;
   WHEN invalid_parameter_value THEN RETURN false;
  END;
+ IF canonical <> zone_name THEN
+  RETURN false;
+ END IF;
+ IF zone_name ~ '[0-9]' AND zone_name = upper(zone_name) THEN
+  RETURN EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = zone_name);
+ END IF;
+ RETURN true;
 END
 
 public.notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
