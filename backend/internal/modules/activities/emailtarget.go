@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -150,7 +151,7 @@ const companyCandidatesSQL = `
 
 // dealContactCandidatesSQL reads the live stakeholders of the deals a task is
 // filed on, under the contact, deal and edge scopes.
-const dealContactCandidatesSQL = `
+var dealContactCandidatesSQL = `
 	SELECT DISTINCT l.activity_id, p.id, p.full_name,
 	       coalesce((SELECT pe.email FROM contact_email pe
 	                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` + contactaddress.ReachableOrder + `
@@ -158,7 +159,7 @@ const dealContactCandidatesSQL = `
 	       false
 	  FROM activity_link l
 	  JOIN deal d ON d.id = l.deal_id AND d.archived_at IS NULL
-	  JOIN relationship r ON r.deal_id = d.id AND r.kind = 'deal_stakeholder' AND r.archived_at IS NULL
+	  JOIN relationship r ON r.deal_id = d.id AND ` + dealseat.CurrentSQL("r") + `
 	  JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
 	 WHERE l.activity_id = ANY($1) AND l.deal_id IS NOT NULL %s`
 

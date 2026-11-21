@@ -50,9 +50,9 @@ func PrivateSenderClause(alias, readerPos string) string {
 	return fmt.Sprintf(`(NOT EXISTS (
 		SELECT 1 FROM contact_email pe
 		  LEFT JOIN capture_pending_counterparty cp
-		         ON cp.email = lower(pe.email) AND cp.owner_id = %[2]s
+		         ON cp.email = pe.email AND cp.owner_id = %[2]s
 		  LEFT JOIN capture_sender_override so
-		         ON so.address = lower(pe.email) AND so.user_id = %[2]s
+		         ON so.address = pe.email AND so.user_id = %[2]s
 		 WHERE pe.contact_id = %[1]s.contact_id
 		   AND pe.archived_at IS NULL
 		   AND (so.decision = '%[4]s'

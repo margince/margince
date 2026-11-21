@@ -167,7 +167,7 @@ func resolvePreferenceTokenTx(ctx context.Context, tx pgx.Tx, token string) (Pre
 	var survivorRow ids.UUID
 	err = tx.QueryRow(ctx, `
 		SELECT id FROM contact_email
-		 WHERE contact_id = $1 AND lower(email) = lower($2) AND archived_at IS NULL
+		 WHERE contact_id = $1 AND `+sameAddressSQL("email", "$2")+` AND archived_at IS NULL
 		 LIMIT 1`, ref.ContactID, *address).Scan(&survivorRow)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ref, nil
@@ -277,7 +277,7 @@ func liveAddressHolderTx(ctx context.Context, tx pgx.Tx, email string) (addresse
 		SELECT DISTINCT pe.contact_id, pe.id
 		FROM contact_email pe
 		JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
-		WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL
+		WHERE pe.email = $1 AND pe.archived_at IS NULL
 		LIMIT 2`, email)
 	if err != nil {
 		return addressedContact{}, false, err

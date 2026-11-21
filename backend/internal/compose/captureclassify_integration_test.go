@@ -345,9 +345,8 @@ func TestCaptureClassifyPass(t *testing.T) {
 	})
 
 	t.Run("a batch that cannot clear the floor ends the pass, not the worker", func(t *testing.T) {
-		// Every verdict — batch and solo — stays below the floor: nothing
-		// commits, and Run must still terminate instead of refetching the
-		// same rows forever.
+		// Every verdict (batch and solo) stays below the floor: no label
+		// commits, the row is stamped, and Run terminates.
 		brain.budgetOut = false
 		brain.soloStaysLow = true
 		stuck := seedUnlabeledEmail(t, e, "???")
@@ -359,9 +358,8 @@ func TestCaptureClassifyPass(t *testing.T) {
 		if l := labelOf(t, e, stuck); l != nil {
 			t.Fatal("a below-floor row must stay unlabeled")
 		}
-		// One pass over the leftover backlog labels what it can, then the
-		// stuck row's batch+solo repeat once and the loop breaks — a
-		// bounded handful of calls, never an unbounded refetch spin.
+		// One pass over the leftover backlog labels what it can. It asks the
+		// stuck row in its batch and once alone, a bounded handful of calls.
 		if brain.calls-before > 4 {
 			t.Fatalf("model calls = %d for one no-progress pass — the loop is refetching", brain.calls-before)
 		}

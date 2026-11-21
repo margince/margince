@@ -156,17 +156,17 @@ func TestRequireSSORoundTripsThroughThePolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the login gate's SSO read: %v", err)
 	}
-	var requireMFA bool
+	var admission identity.AdmissionSettings
 	err = e.DB().Tx(loginCtx, func(tx pgx.Tx) error {
 		var readErr error
-		requireMFA, readErr = store.MFARequired(loginCtx, tx)
+		admission, readErr = store.AdmissionSettings(loginCtx, tx)
 		return readErr
 	})
 	if err != nil {
 		t.Fatalf("the login gate's MFA read: %v", err)
 	}
-	if !enforced || !requireMFA {
-		t.Errorf("the login-path reads did not see the stored policy: sso=%v mfa=%v", enforced, requireMFA)
+	if !enforced || !admission.RequireMFA {
+		t.Errorf("the login-path reads did not see the stored policy: sso=%v mfa=%v", enforced, admission.RequireMFA)
 	}
 }
 

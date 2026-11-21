@@ -31,12 +31,19 @@ func boundedForScoring(s string) string {
 // JaroWinkler applies the Winkler prefix boost unconditionally. The pinned
 // variant has no boost threshold (PO-PARAM-JW-1).
 func JaroWinkler(a, b string) float64 {
-	a, b = boundedForScoring(a), boundedForScoring(b)
-	j := jaro(a, b)
+	return JaroWinklerRunes(ScoringRunes(a), ScoringRunes(b))
+}
+
+// ScoringRunes is a name as JaroWinklerRunes compares it, for a caller that
+// scores one name against many.
+func ScoringRunes(s string) []rune { return []rune(boundedForScoring(s)) }
+
+// JaroWinklerRunes is JaroWinkler of two names already in ScoringRunes form.
+func JaroWinklerRunes(ra, rb []rune) float64 {
+	j := jaro(ra, rb)
 	if j == 0 {
 		return 0
 	}
-	ra, rb := []rune(a), []rune(b)
 	prefix := 0
 	for prefix < len(ra) && prefix < len(rb) && prefix < jaroWinklerMaxPrefix && ra[prefix] == rb[prefix] {
 		prefix++
@@ -46,8 +53,7 @@ func JaroWinkler(a, b string) float64 {
 
 // jaro is the standard Jaro similarity: matches inside a half-length
 // window, discounted by half the transpositions among them.
-func jaro(a, b string) float64 {
-	ra, rb := []rune(a), []rune(b)
+func jaro(ra, rb []rune) float64 {
 	if len(ra) == 0 && len(rb) == 0 {
 		return 1
 	}

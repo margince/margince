@@ -43,6 +43,9 @@ type exportedReference struct {
 	// (a deal's partner and its customer are both companies; its project
 	// is not).
 	target string
+	// carries is a derived column that holds a value of the referenced record.
+	// It leaves with a reference the exporter may not open.
+	carries string
 }
 
 // The reference columns, prefixed for what they are.
@@ -83,7 +86,7 @@ var referencesByTable = map[string][]exportedReference{
 		{column: refColProject, target: tableProject},
 	},
 	tableLead: {
-		{column: refColCompany, target: tableCompany},
+		{column: refColCompany, target: tableCompany, carries: exportLinkedCompanyName},
 		{column: refColFromContact, target: tableContact},
 		{column: refColMergedInto, target: tableLead},
 		{column: refColPartnerCompany, target: tableCompany},
@@ -138,10 +141,15 @@ func withholdUnreadableReferences(
 		if err != nil {
 			return fmt.Errorf("compose: reading which %s rows the exporter may open: %w", ref.target, err)
 		}
+		carried := indexOfColumn(columns, ref.carries)
 		for _, row := range rows {
 			id, named := referencedID(row, at)
 			if named && !visible[id] {
 				row[at] = nil
+			}
+			// A masked reference names nothing, so what it carries goes too.
+			if carried >= 0 && (!named || !visible[id]) {
+				row[carried] = nil
 			}
 		}
 	}

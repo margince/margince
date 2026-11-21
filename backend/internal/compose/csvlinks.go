@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/importkeys"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -61,6 +62,8 @@ type linkResolver struct {
 	pendingNatural map[linkKey]bool
 	// claims are the unique keys of the run's landing rows (newRecordRefusal).
 	claims importkeys.Ledger
+	// batch is what the test run's landing rows leave, for the duplicate check.
+	batch contacts.Batch
 	// landed holds the rows of this slice that named their record by id, so a
 	// link answers before the identity map is read.
 	landed map[linkKey]ids.UUID
@@ -78,10 +81,17 @@ type linkResolver struct {
 }
 
 func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
+	return resolverOn(migration.NewRunStore(db), db.Pool(), sourceSystem)
+}
+
+// fresh is a resolver over the same run with nothing pending, claimed or cached.
+func (r *linkResolver) fresh() *linkResolver { return resolverOn(r.identities, r.pool, r.sourceSystem) }
+
+func resolverOn(identities *migration.RunStore, pool *pgxpool.Pool, sourceSystem string) *linkResolver {
 	r := &linkResolver{
 		sourceSystem:   sourceSystem,
-		identities:     migration.NewRunStore(db),
-		pool:           db.Pool(),
+		identities:     identities,
+		pool:           pool,
 		pending:        map[linkKey]bool{},
 		refused:        map[linkKey]bool{},
 		pendingNatural: map[linkKey]bool{},
@@ -92,6 +102,7 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 		names:          map[string]pendingName{},
 	}
 	r.byBinding, r.byNaturalKey, r.byID = r.bindingOf, r.naturalKeyOf, r.visibleByID
+	r.batch.NameKey = employerKey
 	return r
 }
 

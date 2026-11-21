@@ -11,11 +11,13 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// StakeholderSeats reads roles, without deriving an engagement score.
+// StakeholderSeats reads the current seats and their roles, without deriving an
+// engagement score. A seat whose End day has arrived is off the committee.
 func StakeholderSeats(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID) (map[ids.UUID][]DealStakeholder, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, err
@@ -35,8 +37,8 @@ func StakeholderSeats(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID) (map[i
 	if err != nil {
 		return nil, err
 	}
-	where := []string{fmt.Sprintf(`r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%d)
-		AND r.archived_at IS NULL AND d.archived_at IS NULL AND (%s)`, dealPos, bound)}
+	where := []string{fmt.Sprintf(`%s AND r.deal_id = ANY($%d)
+		AND d.archived_at IS NULL AND (%s)`, dealseat.CurrentSQL("r"), dealPos, bound)}
 	for _, scope := range []string{contactScope, dealScope} {
 		if scope != "" {
 			where = append(where, scope)

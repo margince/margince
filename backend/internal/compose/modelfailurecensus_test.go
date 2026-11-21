@@ -35,6 +35,7 @@ import (
 // shapes need the same entry and one helper several handlers share needs one.
 var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
 	"(*compose.OwedClassifier).reviewedVerdictPredictions": "budget deferral or an unbound lane ends the bounded preview; unattempted messages remain human-review rows with classification_not_attempted, and all other errors propagate to modelfailure.Write",
+	"(*compose.OwedClassifier).predictOne":                 "a decline by every model is that message's outcome and goes to the sink, which stamps it or, in a review, marks it declined; other errors propagate to modelfailure.Write",
 	"(*compose.OwedClassifier).predictBatch":               "a declined batch retries the same messages individually through the ordinary classifier; declined or uncertain outcomes stay review-only, while other errors propagate to modelfailure.Write",
 
 	"(compose.Server).RegenerateOffer":               "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",

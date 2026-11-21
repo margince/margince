@@ -120,6 +120,7 @@ const TWO_ENTITIES = {
       is_default: false,
       display_name: "Gradion Vietnam",
       country: "vn",
+      jurisdiction: "vn",
       address: {},
       member_count: 3,
       version: 1,

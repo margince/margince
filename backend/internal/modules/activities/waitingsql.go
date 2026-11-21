@@ -37,7 +37,7 @@ import (
 func waitingContactRank(contact string) string {
 	return `CASE WHEN ` + contact + ` = sender.contact_id THEN 0
 	   WHEN EXISTS (SELECT 1 FROM contact_email seat_mail
-	         JOIN app_user seat ON lower(seat.email) = lower(seat_mail.email)
+	         JOIN app_user seat ON lower(seat.email) = seat_mail.email
 	        WHERE seat_mail.contact_id = ` + contact + ` AND seat_mail.archived_at IS NULL) THEN 2
 	   ELSE 1 END`
 }

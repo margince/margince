@@ -411,7 +411,7 @@ func metInPersonTx(
 		          OR EXISTS (
 		            SELECT 1 FROM contact_email pe
 		             WHERE pe.contact_id = p.contact_id
-		               AND lower(pe.email) = $1
+		               AND pe.email = $1
 		               AND pe.archived_at IS NULL))
 		     AND `+auth.ActivityExternalEvidenceClause("a"),
 		normalized, capturing).Scan(&met, &elsewhere); err != nil {
@@ -428,7 +428,7 @@ func metInPersonTx(
 // so only what happened after the release may create a record.
 func addressReleasedSQL(address string) string {
 	return `COALESCE((SELECT max(released.archived_at) FROM contact_email released
-	          WHERE lower(released.email) = ` + address + ` AND released.archived_at IS NOT NULL),
+	          WHERE released.email = ` + address + ` AND released.archived_at IS NOT NULL),
 	        '-infinity'::timestamptz)`
 }
 
