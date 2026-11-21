@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -123,6 +125,59 @@ func lockSlotHolders(ctx context.Context, tx pgx.Tx, host ids.UserID, team []ids
 	return nil
 }
 
+// lockInvitationHolders takes the locks of a booked meeting's host and team in
+// lockSlotHolders' order. The team is fixed when the meeting is booked, so it is
+// read before any lock.
+func lockInvitationHolders(ctx context.Context, tx pgx.Tx, host ids.UserID, invitation ids.UUID) error {
+	var team []ids.UUID
+	args := schedulingArgs{}
+	err := tx.QueryRow(ctx, `SELECT team_user_ids FROM meeting_invitation WHERE activity_id=`+args.add(invitation), args...).Scan(&team)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	return lockSlotHolders(ctx, tx, host, team)
+}
+
+// confirmTeamTx takes the host's page lock and reads each member's answer again
+// under it. A member who is no longer confirmed refuses the booking, as a
+// paused page does.
+func confirmTeamTx(ctx context.Context, tx pgx.Tx, host ids.UserID, team []ids.UUID) error {
+	if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
+		return err
+	}
+	if len(team) == 0 {
+		return nil
+	}
+	var stored *storedSchedulingProfile
+	args := schedulingArgs{}
+	err := tx.QueryRow(ctx, `SELECT scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+
+		` AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`, args...).Scan(&stored)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && stored == nil) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	confirmed := confirmedMembers(stored.SchedulingProfile)
+	for _, member := range team {
+		if !confirmed[member] {
+			return apperrors.ErrNotFound
+		}
+	}
+	return nil
+}
+
+// confirmedMembers are the members of a page whose own answer is confirmed.
+func confirmedMembers(profile crmcontracts.SchedulingProfile) map[ids.UUID]bool {
+	out := map[ids.UUID]bool{}
+	for _, m := range teamMembers(profile) {
+		if memberState(m) == crmcontracts.SchedulingTeamMemberStateConfirmed {
+			out[memberUser(m).UUID] = true
+		}
+	}
+	return out
+}
+
 // reserveSlotHolders refuses a time the host or a member already holds, under
 // lockSlotHolders. A member's time is held by their own meetings and by every
 // other team booking that names them.
@@ -136,11 +191,24 @@ func reserveSlotHolders(ctx context.Context, tx pgx.Tx, host ids.UserID, team []
 }
 
 // teamOf is the members a booked meeting holds time for, as calendars to check
-// a move against. A member who left the workspace is dropped. One still here
-// whose calendar cannot be read refuses the move, as the host's own would.
-func (s *Store) teamOf(ctx context.Context, members []ids.UUID) ([]teamCalendar, error) {
+// a move against. Only a member still confirmed on the host's page counts. A
+// member who left the link or the workspace is dropped, and the meeting stands.
+// A confirmed member whose calendar cannot be read refuses the move, as the
+// host's own calendar would.
+func (s *Store) teamOf(ctx context.Context, host ids.UserID, members []ids.UUID) ([]teamCalendar, error) {
+	if len(members) == 0 {
+		return nil, nil
+	}
+	page, err := s.hostSchedulingProfile(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	confirmed := confirmedMembers(page)
 	team := make([]teamCalendar, 0, len(members))
 	for _, member := range members {
+		if !confirmed[member] {
+			continue
+		}
 		calendar, standing, err := s.memberCalendar(ctx, ids.From[ids.UserKind](member))
 		switch {
 		case err != nil:

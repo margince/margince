@@ -20,6 +20,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -79,7 +80,11 @@ func newTeamFixture(t *testing.T) *teamFixture {
 // colleague adds a live colleague whose own booking settings name a calendar.
 func (f *teamFixture) colleague(t *testing.T, name string) ids.UserID {
 	t.Helper()
-	user := ids.NewV7()
+	return f.colleagueWithID(t, name, ids.NewV7())
+}
+
+func (f *teamFixture) colleagueWithID(t *testing.T, name string, user ids.UUID) ids.UserID {
+	t.Helper()
 	if _, err := f.env.owner.Exec(f.ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1,$2,$3)`, user, "member-"+user.String()+"@send.test", name); err != nil {
 		t.Fatal(err)
 	}
@@ -559,5 +564,85 @@ func TestADepartingColleagueIsMarkedOnEveryLinkThatNamesThem(t *testing.T) {
 	}
 	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerTeamNotReady {
 		t.Fatalf("a link whose colleague departed reads %q", got)
+	}
+}
+
+func TestARescheduleReadsOnlyTheMembersStillOnTheLink(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Leaver")
+	f.name(t, true, member)
+	meeting := f.bookAndDeliver(t, monday(11))
+	f.calendar.busyOf[member] = []connector.CalendarInterval{{Start: monday(13), End: monday(14)}}
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(member), f.host, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
+		t.Fatal(err)
+	}
+	free, _, err := f.store.invitationAvailability(f.ctx, f.host, ids.UUID(meeting.Id), monday(12), monday(15))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(starts(free), monday(13).Equal) {
+		t.Fatalf("a member who left the link still holds the move back: %v", starts(free))
+	}
+}
+
+// A booking takes its team from the page it opened. A member who leaves before
+// the booking commits is seen again under the page lock.
+func TestABookingRefusesAMemberWhoLeftAfterThePageOpened(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Leaver")
+	f.name(t, true, member)
+	team := f.openTeam(t)
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(member), f.host, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
+		t.Fatal(err)
+	}
+	request := f.request
+	request.Start, request.End = monday(11), monday(11).Add(30*time.Minute)
+	_, err := f.store.reserveAndQueueInvitation(f.door(), f.host, request, invitationIntent{DescriptionFromBooker: true, Team: team})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a booking with a member who left: %v", err)
+	}
+}
+
+// A member whose id sorts before the host's holds their own lock while the
+// host is rescheduled. A move that took the host's lock first would hold it
+// while it waits, and the second lock below would never be granted.
+func TestARescheduleTakesItsLocksInTheBookingsOrder(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleagueWithID(t, "Early", ids.MustParse("00000000-0000-7000-8000-000000000001"))
+	f.name(t, true, member)
+	meeting := f.bookAndDeliver(t, monday(11))
+
+	ctx, cancel := context.WithTimeout(f.ctx, 30*time.Second)
+	defer cancel()
+	booking, err := f.env.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := booking.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+	if err := storekit.LockWriteIdentity(ctx, booking, "meeting_host", member.String()); err != nil {
+		t.Fatal(err)
+	}
+	moved := make(chan error, 1)
+	go func() { moved <- f.move(meeting, monday(13)) }()
+	for waiting := 0; waiting == 0; {
+		if err := booking.QueryRow(ctx, `SELECT count(*) FROM pg_locks l JOIN pg_database d ON d.oid=l.database WHERE d.datname=current_database() AND l.locktype='advisory' AND NOT l.granted`).Scan(&waiting); err != nil {
+			t.Fatalf("waiting for the move to queue on the member's lock: %v", err)
+		}
+	}
+	if _, err := booking.Exec(ctx, `SET LOCAL lock_timeout = '5s'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.LockWriteIdentity(ctx, booking, "meeting_host", f.host.String()); err != nil {
+		t.Fatalf("the move holds the host's lock while it waits for the member's: %v", err)
+	}
+	if err := booking.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-moved; err != nil {
+		t.Fatalf("the move: %v", err)
 	}
 }

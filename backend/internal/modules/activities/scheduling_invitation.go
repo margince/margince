@@ -301,6 +301,12 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 				return err
 			}
 		}
+		// The page lock comes before every host lock, on every path that takes both.
+		if intent.DescriptionFromBooker || len(row.Team) > 0 {
+			if err := confirmTeamTx(ctx, tx, host, row.Team); err != nil {
+				return err
+			}
+		}
 		if err := lockSlotHolders(ctx, tx, host, row.Team); err != nil {
 			return err
 		}
