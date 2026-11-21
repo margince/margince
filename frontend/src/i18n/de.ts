@@ -11266,7 +11266,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.capture_confidentiality_verdict":
     "Vertraulichkeitsprüfung von E-Mails",
   "jobs.kind.capture_counterparty_verdict": "Prüfung der Absendeadressen",
-  "jobs.kind.capture_digest": "Morgendliche E-Mail-Zusammenfassung",
   "jobs.kind.capture_enrich": "Kontaktdaten aus Signaturen",
   "jobs.kind.captured_deal_refile": "Erfasste Aktivitäten zu Deals zuordnen",
   "jobs.kind.captured_deal_refile_sweep":

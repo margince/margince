@@ -41,7 +41,6 @@ var (
 // with why. An unlisted column must carry the CHECK.
 var notAnAddress = gatekit.Waive(map[string]string{
 	"communication_decision.recipient_address": "a recipient key of two shapes: a folded address, or a channel id whose case its provider may tell apart. decisionRecipientKey folds the address shape at the write",
-	"company_domain_question_reader.domain":    "a foreign key to company_domain_disposition.domain, which the freemail hostname rule already writes folded",
 })
 
 // indexedPart is an index line without the predicate of a partial index.

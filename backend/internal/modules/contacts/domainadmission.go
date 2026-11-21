@@ -245,9 +245,6 @@ func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domai
 func reopenWithheldDispositionTx(
 	ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID, evidenceAt *time.Time, force bool,
 ) error {
-	if err := recordDomainQuestionReader(ctx, tx, domain, ownerID, evidenceAt); err != nil {
-		return err
-	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
 		   SET pending_reason = NULL, candidate_company_id = NULL, site_unreadable = false,

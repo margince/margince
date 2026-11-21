@@ -322,7 +322,7 @@ var Declared = map[string][]string{
 	"GET /v1/dedupe/contact-cases":                                             {"cursor", "limit", "scope"},
 	"GET /v1/dedupe/contact-cases/{contact_id}":                                {},
 	"GET /v1/dedupe/settings":                                                  {},
-	"GET /v1/digest":                                                           {"date"},
+	"GET /v1/digest":                                                           {},
 	"GET /v1/email-signature-template":                                         {},
 	"GET /v1/embeddings/reindex/identities":                                    {},
 	"GET /v1/embeddings/reindex/preview":                                       {},
