@@ -34,7 +34,7 @@ func TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers(t *testing.T) {
 		Kind: "document_extract", AITask: "document_extract", Attempt: 1,
 		ActorScope: aiactivity.ScopePersonal, ActorUserID: a.env.Rep1,
 		State: "running", QueuedAt: started, StartedAt: &started, StaleAfter: &stale,
-		SubjectLabel: "Weber GmbH", EventID: ids.NewV7(),
+		SubjectLabel: "Weber GmbH",
 	}); err != nil {
 		t.Fatalf("projecting the stalled run: %v", err)
 	}
@@ -47,7 +47,6 @@ func TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers(t *testing.T) {
 		Kind: "document_extract", AITask: "document_extract", Attempt: 1,
 		ActorScope: aiactivity.ScopePersonal, ActorUserID: a.env.Rep2,
 		State: "failed", QueuedAt: a.queuedAt, StartedAt: &a.queuedAt, FinishedAt: &a.queuedAt,
-		EventID: ids.NewV7(),
 	}); err != nil {
 		t.Fatalf("projecting the other contact's failed run: %v", err)
 	}
@@ -56,7 +55,6 @@ func TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers(t *testing.T) {
 		Kind: "document_extract", AITask: "document_extract", Attempt: 1,
 		ActorScope: aiactivity.ScopePersonal, ActorUserID: a.env.Rep2,
 		State: "running", QueuedAt: started, StartedAt: &started, StaleAfter: &stale,
-		EventID: ids.NewV7(),
 	}); err != nil {
 		t.Fatalf("projecting the other contact's stalled run: %v", err)
 	}
