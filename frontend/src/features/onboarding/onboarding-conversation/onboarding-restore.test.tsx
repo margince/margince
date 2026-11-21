@@ -524,7 +524,7 @@ describe("restore into the conversational shell", () => {
   });
 
   // Connect is the whole journey for a seat that may read a voice but not
-  // train one, so a failed voice read must not hold it.
+  // train one. A failed voice read must not hold it.
   it("a seat that may read but not train a voice reaches connect when the voice read fails", async () => {
     stubApi({
       state: null,
