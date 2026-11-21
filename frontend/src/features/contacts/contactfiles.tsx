@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { AddDocumentDialog } from "../../components/adddocument";
@@ -10,6 +10,7 @@ import {
   categoryCuts,
 } from "../../components/attachmenttile";
 import { ChatCapture } from "../../components/chatcapture";
+import { FileVerbs } from "../../components/filerowverbs";
 import { Button } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -19,6 +20,7 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import { useCanWriteRecord } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import "./contact360.css";
@@ -99,10 +101,14 @@ function filesState(
 export function ContactFilesTab({
   contactId,
   contactName,
+  writable,
   refusedReasonId,
   onOpenEmail,
 }: Readonly<{
   contactId: string;
+  // The contact's own `writable`: Edit and Delete on a file run through the
+  // contact's write gate, like the upload.
+  writable?: boolean;
   // Named in the warning when a pasted chat shows someone else.
   contactName: string;
   /** Opens a mail in the page's drawer, from the line naming a file's mail. */
@@ -117,6 +123,9 @@ export function ContactFilesTab({
   const [adding, setAdding] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [category, setCategory] = useState<Category | "">("");
+  const mayWrite = useCanWriteRecord("contact", { writable });
+  const listRegion = useRef<HTMLDivElement | null>(null);
+  const focusLanding = useCallback(() => listRegion.current, []);
   const { query, files, hasMore } = useContactFiles(contactId);
   const state = filesState(query, files.length, hasMore);
   const shown = category
@@ -173,7 +182,14 @@ export function ContactFilesTab({
           </PanelBody>
         )}
         {shown.length > 0 && (
-          <FilesGrid files={shown} onOpenEmail={onOpenEmail} />
+          <div ref={listRegion} tabIndex={-1}>
+            <FilesGrid
+              files={shown}
+              mayWrite={mayWrite}
+              focusLanding={focusLanding}
+              onOpenEmail={onOpenEmail}
+            />
+          </div>
         )}
         {state !== "ready" || shown.length === 0 ? (
           <PanelBody>
@@ -240,9 +256,13 @@ function FileCuts({
 // the title if somebody gave it one, else the filename.
 function FilesGrid({
   files,
+  mayWrite,
+  focusLanding,
   onOpenEmail,
 }: Readonly<{
   files: readonly Attachment[];
+  mayWrite: boolean;
+  focusLanding: () => HTMLElement | null;
   onOpenEmail?: (activityId: string) => void;
 }>) {
   return (
@@ -250,7 +270,15 @@ function FilesGrid({
       <AttachmentGrid>
         {files.map((file) => (
           <li key={file.id}>
-            <AttachmentTile file={file} onOpenEmail={onOpenEmail} />
+            <AttachmentTile
+              file={file}
+              onOpenEmail={onOpenEmail}
+              verbs={
+                mayWrite && (
+                  <FileVerbs file={file} focusLanding={focusLanding} />
+                )
+              }
+            />
           </li>
         ))}
       </AttachmentGrid>

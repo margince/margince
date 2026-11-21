@@ -8053,6 +8053,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.deleteTitle": "{name} löschen?",
   "files.deleteBody":
     "Die Datei wird aus diesem Deal entfernt, und die Käuferseite sieht sie in keinem Deal Room mehr. Der Eintrag im Raum bleibt, bis du ihn entfernst.",
+  "files.edit": "Bearbeiten",
+  "files.editTitle": "{name} bearbeiten",
+  "files.editState": "Status",
+  "files.save": "Speichern",
+  "files.deleteBodyRecord":
+    "Die Datei wird aus den Dokumenten dieses Eintrags entfernt.",
   "files.showHidden": "Ausgeblendete Dateien anzeigen",
   "files.hideHidden": "Ausgeblendete Dateien verbergen",
   "dealfiles.origin.from": "Von {who}",

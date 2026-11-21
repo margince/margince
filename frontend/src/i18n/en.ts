@@ -8054,6 +8054,11 @@ export const en = {
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
     "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room.",
+  "files.edit": "Edit",
+  "files.editTitle": "Edit {name}",
+  "files.editState": "State",
+  "files.save": "Save",
+  "files.deleteBodyRecord": "The file is removed from this record’s documents.",
   "files.showHidden": "Show hidden files",
   "files.hideHidden": "Hide hidden files",
   "dealfiles.origin.from": "From {who}",

@@ -1,9 +1,4 @@
-import {
-  type QueryKey,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -13,9 +8,8 @@ import {
   AttachmentTile,
 } from "../../components/attachmenttile";
 import { ChatCapture } from "../../components/chatcapture";
-import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
-import { ConfirmModal } from "../../design-system/confirmmodal";
-import { useFocusHandoff } from "../../design-system/focushandoff";
+import { FileVerbs } from "../../components/filerowverbs";
+import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   type SectionState,
@@ -23,13 +17,7 @@ import {
 } from "../../design-system/surfacestate";
 import { undoAction, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import {
-  dealFilesKey,
-  dealHideKeys,
-  fileListKeys,
-  homeOf,
-} from "../../lib/attachmentkeys";
-import { attachmentTitle } from "../../lib/attachmentlink";
+import { dealFilesKey, dealHideKeys } from "../../lib/attachmentkeys";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 
@@ -46,7 +34,6 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
 type DealDocument = components["schemas"]["DealDocument"];
-type Attachment = components["schemas"]["Attachment"];
 
 // Enough for a working set; the area is not a library somebody pages through.
 const PAGE_LIMIT = 100;
@@ -206,9 +193,9 @@ function FilesGrid({
             verbs={
               mayWrite && (
                 <FileVerbs
-                  dealId={dealId}
-                  doc={doc}
+                  file={doc.attachment}
                   focusLanding={focusLanding}
+                  extra={<HideItems dealId={dealId} doc={doc} />}
                 />
               )
             }
@@ -219,125 +206,43 @@ function FilesGrid({
   );
 }
 
-// A row's menu and the delete it asks about first. The landing takes focus
-// when the row the menu stood in goes away.
-function FileVerbs({
+// The deal-only verbs of a captured file: the deal stops listing it, and the
+// file stays on its message. A hide runs at once with an Undo.
+function HideItems({
   dealId,
   doc,
-  focusLanding,
-}: Readonly<{
-  dealId: string;
-  doc: DealDocument;
-  focusLanding: () => HTMLElement | null;
-}>) {
+}: Readonly<{ dealId: string; doc: DealDocument }>) {
   const t = useT();
-  const file = doc.attachment;
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const verbs = useFileVerbs(dealId, file);
-  const side = useRef<HTMLSpanElement | null>(null);
-  // A ref, not state: the dialog reads it as it closes, before a re-render.
-  const deleted = useRef(false);
-  useFocusHandoff(side, focusLanding);
+  const { hide, unhide } = useHideVerbs(dealId, doc.attachment.id);
+  if (doc.attachment.entity_type !== "activity") return null;
+  const hidden = doc.hidden;
+  const verb = hidden ? unhide : hide;
   return (
-    <span className="cell-actions" ref={side}>
-      <FileMenu
-        doc={doc}
-        hide={verbs.hide}
-        unhide={verbs.unhide}
-        onDelete={() => {
-          deleted.current = false;
-          setConfirmingDelete(true);
-        }}
-      />
-      <ConfirmModal
-        open={confirmingDelete}
-        onClose={() => setConfirmingDelete(false)}
-        returnFocusTo={() => (deleted.current ? focusLanding() : null)}
-        title={t("files.deleteTitle", { name: attachmentTitle(file) })}
-        confirmLabel={t("files.delete")}
-        confirmVariant="danger"
-        pending={verbs.remove.isPending}
-        error={
-          verbs.remove.isError ? problemMessageOf(verbs.remove.error, t) : null
-        }
-        onConfirm={() =>
-          verbs.remove.mutate(undefined, {
-            onSuccess: () => {
-              deleted.current = true;
-              setConfirmingDelete(false);
-            },
-          })
-        }
-      >
-        <p>{t("files.deleteBody")}</p>
-      </ConfirmModal>
-    </span>
-  );
-}
-
-// The row's verbs: a captured file can be hidden or shown again, an upload
-// deleted. The menu is its own component so the row stays readable.
-function FileMenu({
-  doc,
-  hide,
-  unhide,
-  onDelete,
-}: Readonly<{
-  doc: DealDocument;
-  hide: ReturnType<typeof useFileVerbs>["hide"];
-  unhide: ReturnType<typeof useFileVerbs>["unhide"];
-  onDelete: () => void;
-}>) {
-  const t = useT();
-  const captured = doc.attachment.entity_type === "activity";
-  return (
-    <OverflowMenu
-      label={t("table.rowActions", { name: attachmentTitle(doc.attachment) })}
+    <Button
+      variant="ghost"
+      pending={verb.isPending}
+      onClick={() => verb.mutate()}
     >
-      {captured && !doc.hidden ? (
-        <Button
-          variant="ghost"
-          pending={hide.isPending}
-          onClick={() => hide.mutate()}
-        >
-          {t("files.hide")}
-        </Button>
-      ) : null}
-      {captured && doc.hidden ? (
-        <Button
-          variant="ghost"
-          pending={unhide.isPending}
-          onClick={() => unhide.mutate()}
-        >
-          {t("files.unhide")}
-        </Button>
-      ) : null}
-      {!captured ? (
-        <Button variant="ghost" onClick={onDelete}>
-          {t("files.delete")}
-        </Button>
-      ) : null}
-    </OverflowMenu>
+      {t(hidden ? "files.unhide" : "files.hide")}
+    </Button>
   );
 }
 
-// The three writes a row offers. Each refreshes both views of the area (with
-// and without hidden rows), since a hide moves a row from one to the other.
-function useFileVerbs(dealId: string, file: Attachment) {
-  const attachmentId = file.id;
-  const home = homeOf(file);
+// Each write refreshes both views of the area (with and without hidden rows),
+// since a hide moves a row from one to the other.
+function useHideVerbs(dealId: string, attachmentId: string) {
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
   // A hide or unhide moves the row within this deal. That changes its area,
   // the Deal Room picker (same key, without hidden rows), and the rooms that
   // say whether each entry still reaches the buyer.
-  // A delete takes the file out of every list its parent puts it in.
-  const refreshKeys = (keys: readonly QueryKey[]) =>
+  const refresh = () =>
     Promise.all(
-      keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+      dealHideKeys(dealId).map((queryKey) =>
+        queryClient.invalidateQueries({ queryKey }),
+      ),
     );
-  const refresh = () => refreshKeys(dealHideKeys(dealId));
   // A refused hide or Undo has no dialog, and the row has no error slot.
   const sayRefused = (error: Error) =>
     toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
@@ -374,16 +279,5 @@ function useFileVerbs(dealId: string, file: Attachment) {
       toast.show(t("dealfiles.unhidden"));
     },
   });
-  const remove = useMutation({
-    mutationFn: async () => {
-      unwrap(
-        await api.DELETE("/attachments/{id}", {
-          params: { path: { id: attachmentId } },
-        }),
-        t,
-      );
-    },
-    onSuccess: () => refreshKeys(fileListKeys(home, "removed")),
-  });
-  return { hide, unhide, remove };
+  return { hide, unhide };
 }
