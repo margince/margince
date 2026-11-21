@@ -502,6 +502,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approvalPreferences.explain":
     "Stummgeschaltete Arten verschwinden nur aus deiner Worklist. Andere Mitglieder behalten ihre Vorschläge. Stummschalten und Wiederherstellen deaktivieren deine automatischen Änderungen dieser Art. Versand, Buchungen, Zusammenführungen und Vorschläge mit Agentenpass bleiben sichtbar.",
   "approvalPreferences.review": "Auch stumme Vorschläge prüfen",
+  "approvalPreferences.reviewKind": "Auch stumme Vorschläge prüfen: {kind}",
+  "approvalPreferences.reviewTitle": "Stumm: {kind}",
   "approvalPreferences.reviewExplain":
     "Diese Ansicht enthält stumme und abgelaufene Vorschläge. Pakete in deiner normalen Worklist können durch persönliche Einstellungen weniger Einträge zeigen. Prüfe jeden Vorschlag vor der Entscheidung.",
   "approvalPreferences.close": "Prüfung schließen",
@@ -1709,7 +1711,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.evidenceWithheld":
     "Diese Zahl ist für dich verborgen, daher erscheinen weder ihre Datensätze noch deren Anzahl.",
   "reporting.evidenceUnavailable":
-    "Diese Zahl konnte nicht gelesen werden, daher gibt es keine Datensätze. Versuch es erneut, um sie noch einmal zu lesen.",
+    "Diese Zahl konnte nicht gelesen werden, daher gibt es keine Datensätze. Bitte versuche es erneut, um sie noch einmal zu lesen.",
   "reporting.exportStale":
     "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und exportiere ihn dann noch einmal.",
   "reporting.details": "Details",
@@ -2252,8 +2254,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "dealSuggestion.decided":
     "Über diesen Vorschlag wurde schon entschieden. Lade die Seite neu, um den Stand zu sehen.",
   "dealSuggestion.unavailable":
-    "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
-  "dealSuggestion.failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "Der Vorschlag konnte nicht gelesen werden. Bitte versuche es später noch einmal.",
+  "dealSuggestion.failed":
+    "Das hat nicht geklappt. Bitte versuche es noch einmal.",
   "dealSuggestion.evidence.meeting": "Termin fand statt: {title}",
   "dealSuggestion.evidence.signal": "Signal: {title}",
   "dealSuggestion.evidence.attachment": "Gesendet: {title}",
@@ -2643,8 +2646,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.verb.update": "{subject} hat den Datensatz aktualisiert",
   "history.verb.archive": "{subject} hat den Datensatz archiviert",
   "history.verb.merge": "{subject} hat den Datensatz zusammengeführt",
-  "history.verb.promote": "{subject} hat den Datensatz hochgestuft",
-  "history.verb.demote": "{subject} hat den Datensatz herabgestuft",
+  "history.verb.promote": "{subject} hat den Lead qualifiziert",
+  "history.verb.demote": "{subject} hat die Qualifizierung zurückgenommen",
   "history.verb.disqualify": "{subject} hat den Datensatz disqualifiziert",
   "history.verb.restore": "{subject} hat den Datensatz wiederhergestellt",
   "history.verb.export": "{subject} hat den Datensatz exportiert",
@@ -2778,6 +2781,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.full_name": "Name",
   "history.field.win_probability": "Abschlusschance",
   "history.field.stage_id": "Phase",
+  "history.field.disqualify_reason_id": "Disqualifizierungsgrund",
+  "history.field.trigger": "Qualifiziert durch",
   "history.field.win_probability_override": "Abschlusschance am Deal",
   "history.field.win_probability_set_by": "Abschlusschance gesetzt von",
   "history.field.fx_rate_date": "Datum des Wechselkurses",
@@ -2870,6 +2875,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.emptyList": "Nichts festgelegt",
   "history.value.occurred_precision.instant": "Datum und Uhrzeit",
   "history.value.occurred_precision.day": "Nur Datum",
+  "history.value.direction.inbound": "Eingegangen",
+  "history.value.direction.outbound": "Gesendet",
+  "history.value.meeting_status.booked": "Gebucht",
+  "history.value.meeting_status.held": "Stattgefunden",
+  "history.value.meeting_status.no_show": "Nicht erschienen",
+  "history.value.meeting_status.canceled": "Abgesagt",
+  "history.value.relationship_mark.vendor_marketing": "Anbieter-Werbung",
 
   "confidence.high": "hoch",
   "confidence.med": "mittel",
@@ -3326,6 +3338,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.revokeConfirm":
     "{access} auf {record} für {name} widerrufen? Der Zugriff endet mit der nächsten Anfrage und kann anschließend nicht mehr rückgängig gemacht werden.",
   "share.granted": "{name} hat jetzt {access} auf {record}.",
+  "share.limitedByRole":
+    "Mit Lesezugriff gespeichert. {name} kann {record} mit der eigenen Rolle nicht bearbeiten.",
+  "share.companyContactsLimitedByRole":
+    "Mit Lesezugriff gespeichert. {name} kann Kontakte mit der eigenen Rolle nicht bearbeiten.",
   "share.thisRecord": "diesen Datensatz",
   "share.until": "Bis {date}",
   "share.approvalRequired":
@@ -3702,7 +3718,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.loadMore": "Mehr laden",
   "scrollSentinel.loading": "Mehr wird geladen…",
   "scrollSentinel.failed": "Weitere Einträge konnten nicht geladen werden.",
-  "scrollSentinel.stalled": "Die Liste kommt nicht weiter. Versuch es erneut.",
+  "scrollSentinel.stalled":
+    "Die Liste kommt nicht weiter. Bitte versuche es erneut.",
   "scrollSentinel.more": "Weitere Einträge sind verfügbar.",
   "list.viewAll": "Alle",
   "list.viewHot": "Heiß",
@@ -3730,6 +3747,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Nach {column} sortieren",
   "table.noMatches": "Keine {unit} entsprechen diesen Filtern.",
   "table.clearFilters": "Filter zurücksetzen",
+  "table.dialsRefused":
+    "Mit diesen Filtern lässt sich die Liste nicht anzeigen.",
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
@@ -3939,7 +3958,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.unconfirmed_double_opt_in":
     "Einwilligung erfasst, aber nie per Double-Opt-in bestätigt",
   "consent.reason.no_connection":
-    "Der Kontakt hat dir nie geschrieben, und kein Deal und keine Anfrage verbindet euch",
+    "Keine erfasste Nachricht, kein erfasstes Treffen und keine erfasste Anfrage verbindet euch",
   "consent.reason.qualifying_event": "Ein erfasster Austausch verbindet euch",
   "consent.reason.consent_confirmed": "Einwilligung erteilt, mit Bestätigung",
   "consent.reason.consent_withdrawn":
@@ -3952,7 +3971,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.qualifying.inbound_message":
     "Der Kontakt hat dir am {date} geschrieben",
   "consent.reason.qualifying.inquiry": "Der Kontakt hat am {date} angefragt",
-  "consent.reason.qualifying.active_deal": "Ein offener Deal verbindet euch",
   "consent.reason.qualifying.in_person":
     "Ein erfasster Austausch am {date}: {note}",
   "consent.reason.qualifying.meeting": "Ein Termin am {date} verbindet euch",
@@ -5783,7 +5801,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tagSuggestion.decided":
     "Über diesen Vorschlag wurde schon entschieden. Lade die Seite neu, um den Stand zu sehen.",
   "tagSuggestion.unavailable":
-    "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
+    "Der Vorschlag konnte nicht gelesen werden. Bitte versuche es später noch einmal.",
   "tagAdmin.descriptionLabel": "Anzeichen für Interesse",
   "tagAdmin.descriptionHint":
     "Zum Beispiel: fragt nach Preisen oder einer Demo von Produkt X. Ohne KI zählt jede kommagetrennte Wendung als Treffer.",
@@ -7639,6 +7657,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.save": "Erstellen",
   "create.saving": "Wird erstellt…",
   "create.contact": "Neuer Kontakt",
+  "create.added": "{name} hinzugefügt",
+  "create.addedOpen": "Öffnen",
   "vcardImport.action": "vCards importieren",
   "vcardImport.title": "Visitenkarten importieren",
   "vcardImport.fileLabel": "vCard-Datei oder Kartenfoto",
@@ -8509,7 +8529,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.whyHint.marketing":
     "Fügt einen Abmeldelink und die Firmenangaben hinzu. Braucht ihre Einwilligung oder einen früheren Kauf.",
   "compose.met.failed":
-    "Das Treffen wurde nicht gespeichert, daher wurde nichts gesendet. Versuch es erneut.",
+    "Das Treffen wurde nicht gespeichert, daher wurde nichts gesendet. Bitte versuche es erneut.",
   "sendPermission.stopWithReason": "Senden braucht deine Begründung",
   "sendPermission.refused": "Nachricht kann nicht gesendet werden",
   "sendPermission.sayWhy": "Kontaktgrund erfassen",
@@ -8521,7 +8541,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
-  "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.reason.dealFact":
+    "Kein offener Deal mit diesem Kontakt stützt dieses Follow-up.",
   "sendPermission.reason.footerIncomplete":
     "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
   "sendPermission.footer.language": "{detail} auf {language}",
@@ -8678,6 +8699,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "directSend.correctionFailed":
     "Die Korrektur wurde nicht gespeichert. Öffne die Prüfung erneut, um die aktuelle Nachricht und Freigabe zu prüfen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
+  "directSend.alreadySent": "Diese Nachricht wurde bereits gesendet.",
+  "directSend.when": "Wann senden",
+  "directSend.whenLater": "Später",
+  "directSend.whenLaterDetail":
+    "Deine Entscheidung wird jetzt festgehalten. Die Prüfungen laufen erneut, wenn die Nachricht gesendet wird.",
+  "directSend.scheduled": "Als festgehaltene Ausnahme geplant.",
   "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
@@ -8775,6 +8802,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
 
   "tasks.complete": "Erledigt",
+  "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
   "tasks.log.action": "Ergebnis erfassen",
@@ -8903,7 +8931,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.withheld": "Für dich verborgen",
   "analytics.prospect.failed": "Konnte nicht gelesen werden",
   "analytics.prospect.failedDetail":
-    "Die Quelle hat nicht geantwortet. Versuch es später erneut.",
+    "Die Quelle hat nicht geantwortet. Bitte versuche es später erneut.",
   "analytics.prospect.weeksFailed":
     "Die letzten Wochen konnten nicht gelesen werden.",
   "analytics.prospect.noMeetingsWeek":
@@ -9611,6 +9639,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.cancel": "Abbrechen",
   "forecast.saveCall": "Einschätzung speichern",
   "forecast.callAmountNeeded": "Gib zuerst die erwartete Summe ein.",
+  "forecast.callAmountNegative": "Gib einen Betrag ab null ein.",
   "analytics.scopeLabel": "Auswahl der Datensätze",
   "analytics.scopeFixed": "Diese Zahlen umfassen {scope}.",
   "forecast.period": "Zeitraum",
@@ -9890,6 +9919,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Markiere den Passport oben und kopiere ihn manuell.",
   "settings.passportNext": "So nutzt du den Passport",
   "settings.passportLabel": "Agentenname",
+  "settings.passportUnnamed": "Passport ohne Namen",
+  "settings.passportNameRequired": "Gib dem Agenten einen Namen",
+  "settings.passportNameTooLong": "Verwende höchstens 120 Zeichen.",
   "settings.mint": "Passport ausstellen",
   "settings.minting": "Wird ausgestellt…",
   "settings.mintCancel": "Abbrechen",
@@ -15099,6 +15131,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.scopeAriaMixed":
     "Einstellungen auf dieser Seite betreffen unterschiedliche Personen. Jede Einstellung nennt, wen sie betrifft.",
   "settings.readOnlyPageTitle": "Schreibgeschützte Einstellungen",
+  "settings.pageLoading": "{page} wird geladen…",
   "settings.readOnlyPage": "Deine Rolle darf diese Einstellungen nicht ändern.",
   "settings.seatRefused":
     "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",
@@ -20861,8 +20894,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand unter den Empfangenden hat nach der Planung Werbung gestoppt. An diese Adresse wird sie nicht gesendet.",
   "sched.held.recipientReplied":
     "Nach der Planung kam neue Mail von jemandem unter den Empfangenden. Lies sie, bevor du dieses Follow-up sendest.",
-  "sched.held.confirmSendsNow":
-    "Wenn du bestätigst, wird die Nachricht jetzt gesendet, nicht zur geplanten Zeit.",
+  "sched.held.confirmChoosesWhen":
+    "Die geplante Zeit ist vorbei. Beim Bestätigen wählst du, ob die Nachricht jetzt oder zu einer neuen Zeit gesendet wird.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",
@@ -20990,6 +21023,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Archivieren entfernt dieses Projekt aus der aktiven Liste und gibt sein Kürzel frei. Das lässt sich hier nicht rückgängig machen.",
   "project.archivedReadOnly":
     "Dieses Projekt ist archiviert und lässt keine Änderungen zu.",
+  "project.page.notFound": "Projekt nicht gefunden",
+  "project.page.notFoundBody":
+    "Dieses Projekt gibt es nicht, oder du kannst es nicht sehen.",
+  "project.page.backToProjects": "Zurück zu den Projekten",
   "project.notYoursToChange":
     "Du kannst dieses Projekt nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "project.phaseLabel": "Phase",
@@ -22659,6 +22696,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.card.askedOpen": "Nachricht öffnen",
   "lead.card.qualified": "Wenn qualifiziert",
   "lead.card.qualifiedContact": "Kontakt",
+  "lead.card.qualifiedCompany": "Unternehmen",
   "lead.card.qualifiedDeal": "Deal",
   "lead.card.qualifiedDealOptional": "Kann im selben Schritt erstellt werden",
   "lead.card.qualifiedNewContact": "Ein neuer Kontakt",

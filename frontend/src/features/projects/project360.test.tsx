@@ -98,6 +98,13 @@ describe("ProjectScreen", () => {
       stepper.querySelector('[aria-current="step"]')?.textContent,
     ).toContain("Initiative");
     expect(screen.getByTestId("project-step-closed").tagName).toBe("BUTTON");
+    // Each move says what pressing it does, not only the phase it names.
+    expect(
+      screen.getAllByRole("button", { name: "Move to Pursuing" }),
+    ).toContain(screen.getByTestId("project-step-pursuing"));
+    expect(screen.getByRole("button", { name: "Move to Closed" })).toBe(
+      screen.getByTestId("project-step-closed"),
+    );
 
     // The figures: the phase's days, the open tasks, no file attached.
     const figures = screen.getByTestId("project-figures");
@@ -211,6 +218,32 @@ describe("ProjectScreen", () => {
     expect(
       within(drawer).getByText(/No file is attached to this project/),
     ).toBeTruthy();
+    await user.click(
+      within(drawer).getByRole("button", { name: en["docs.add.action"] }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: en["docs.add.title"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no upload on a project this caller may not change", async () => {
+    const user = userEvent.setup();
+    projectsBackend({
+      view: project360({
+        project: project({ owner_id: "u-someone-else", writable: false }),
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(
+      screen.getByRole("button", { name: en["project.documents.title"] }),
+    );
+    const drawer = await screen.findByRole("dialog", {
+      name: en["project.documents.title"],
+    });
+    expect(
+      within(drawer).queryByRole("button", { name: en["docs.add.action"] }),
+    ).toBeNull();
   });
 
   // The update itself is read in the full history, which the More menu opens.
@@ -872,7 +905,9 @@ describe("a commitment's tick", () => {
 
     await userEvent.click(
       lastOf(
-        await screen.findAllByRole("checkbox", { name: en["tasks.complete"] }),
+        await screen.findAllByRole("checkbox", {
+          name: "Mark Confirm the depot slot done",
+        }),
       ),
     );
 

@@ -50050,6 +50050,17 @@ type DirectCommunicationSendRequest struct {
 	// on a contract clause".
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
 
+	// ScheduledAt A future moment to send at instead of now. The decision is recorded now and spent when
+	// the message fires. It sends now only when `scheduled_at`, `scheduled_tz` and
+	// `scheduled_intent` are all absent.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
+	// ScheduledTz The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+	ScheduledTz *string `json:"scheduled_tz,omitempty"`
+
 	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
 	// review's refusals changed since then, the decision is refused with `instruction_stale`
 	// and the director opens the review again.
@@ -54923,7 +54934,7 @@ type IssuePassportRequest struct {
 	// Areas Where the passport may act. Absent means all areas.
 	Areas *PassportAreas `json:"areas,omitempty"`
 
-	// Label Which agent this binds, e.g. "Claude Desktop".
+	// Label Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one.
 	Label *string `json:"label,omitempty"`
 
 	// Scopes Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC.
@@ -61071,7 +61082,7 @@ type Project360 struct {
 		Page PageInfo `json:"page"`
 	} `json:"deals,omitempty"`
 
-	// Documents The files attached to the project itself, newest first.
+	// Documents The project's own uploads and the files of the activities filed under it, newest first.
 	Documents *struct {
 		Data []Attachment `json:"data"`
 		Page PageInfo     `json:"page"`
@@ -62536,6 +62547,11 @@ type RecordGrant struct {
 	GrantedBy openapi_types.UUID `json:"granted_by"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// LimitedByRole Only on the answer to a share, and only when true: the share asked for `write` and the
+	// user's role can neither change records of this type nor create activities, so the grant
+	// was saved as `read`. A team grant is never limited, because its members hold different roles.
+	LimitedByRole *bool `json:"limited_by_role,omitempty"`
+
 	// Reason Accountability/lawful-basis note surfaced in the audit row.
 	Reason     *string               `json:"reason,omitempty"`
 	RecordId   openapi_types.UUID    `json:"record_id"`
@@ -62662,9 +62678,10 @@ type RecordQualifyingEventRequest struct {
 	// a card handed over at a stand. `requested_by_subject` is the contact asking us to write
 	// to them away from every system: a phone call, a conversation at a counter.
 	//
-	// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-	// records the product already holds, and a hand-written one would be a second, unbacked
-	// answer to a question the data already settles.
+	// Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+	// product already holds, and a hand-written one would be a second, unbacked answer to a
+	// question the data already settles. `active_deal` is retired: nothing writes it, and the
+	// guard does not read it.
 	Kind RecordQualifyingEventRequestKind `json:"kind"`
 
 	// Note What happened, in the words of whoever was there. Required — it is the only evidence a hand-recorded exchange has.
@@ -62678,9 +62695,10 @@ type RecordQualifyingEventRequest struct {
 // a card handed over at a stand. `requested_by_subject` is the contact asking us to write
 // to them away from every system: a phone call, a conversation at a counter.
 //
-// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-// records the product already holds, and a hand-written one would be a second, unbacked
-// answer to a question the data already settles.
+// Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+// product already holds, and a hand-written one would be a second, unbacked answer to a
+// question the data already settles. `active_deal` is retired: nothing writes it, and the
+// guard does not read it.
 type RecordQualifyingEventRequestKind string
 
 // RecordReference defines model for RecordReference.
@@ -67751,8 +67769,12 @@ type ShareCompanyContactsRequestSubjectType string
 
 // ShareCompanyContactsResult defines model for ShareCompanyContactsResult.
 type ShareCompanyContactsResult struct {
-	Shared  int `json:"shared" minimum:"0"`
-	Skipped int `json:"skipped" minimum:"0"`
+	// LimitedByRole Present, and true, only when at least one grant was written and the share asked for `write`
+	// while the user's role can neither change contacts nor create activities, so the grants were
+	// saved as `read`.
+	LimitedByRole *bool `json:"limited_by_role,omitempty"`
+	Shared        int   `json:"shared" minimum:"0"`
+	Skipped       int   `json:"skipped" minimum:"0"`
 }
 
 // SharedForecastView What one caller reads through a share.

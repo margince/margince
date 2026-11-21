@@ -35,14 +35,22 @@ function scopeLabelKey(scope: PassportScope): MessageKey {
   return `passport.scope.${scope}`;
 }
 
+// The server counts the trimmed name in code points, so the form does too.
+const PASSPORT_LABEL_MAX = 120;
+const nameTooLong = (label: string) =>
+  Array.from(label.trim()).length > PASSPORT_LABEL_MAX;
+
 // Why New passport cannot be pressed yet, or undefined when it can.
 function mintRefusal(
   t: ReturnType<typeof useT>,
+  label: string,
   scopeCount: number,
   areas: PassportAreas,
   pending: boolean,
 ): string | undefined {
   if (pending) return undefined;
+  if (label.trim() === "") return t("settings.passportNameRequired");
+  if (nameTooLong(label)) return t("settings.passportNameTooLong");
   if (scopeCount === 0) return t("settings.passportScopesRequired");
   return areasComplete(areas) ? undefined : t("workArea.pickOne");
 }
@@ -80,7 +88,7 @@ export function MintDialog({
     }) => {
       const { data, error, response } = await api.POST("/passports", {
         body: {
-          label: request.label.trim() || null,
+          label: request.label.trim(),
           scopes: request.scopes,
           areas: request.areas,
         },
@@ -155,12 +163,24 @@ export function MintDialog({
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
-            if (scopes.size > 0 && areasComplete(areas) && !mint.isPending) {
+            if (
+              label.trim() !== "" &&
+              !nameTooLong(label) &&
+              scopes.size > 0 &&
+              areasComplete(areas) &&
+              !mint.isPending
+            ) {
               mint.mutate({ label, scopes: [...scopes], areas });
             }
           }}
         >
-          <Field label={t("settings.passportLabel")}>
+          <Field
+            label={t("settings.passportLabel")}
+            required
+            error={
+              nameTooLong(label) ? t("settings.passportNameTooLong") : undefined
+            }
+          >
             {(control) => (
               <TextInput
                 {...control}
@@ -217,7 +237,7 @@ export function MintDialog({
               type="submit"
               form={formId}
               variant="primary"
-              reason={mintRefusal(t, scopes.size, areas, mint.isPending)}
+              reason={mintRefusal(t, label, scopes.size, areas, mint.isPending)}
               pending={mint.isPending}
               busyLabel={t("settings.minting")}
             >

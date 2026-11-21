@@ -494,6 +494,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approvalPreferences.explain":
     "Loại bị ẩn chỉ rời hàng đợi của bạn. Thành viên khác vẫn thấy đề xuất. Ẩn hoặc khôi phục một loại sẽ tắt thay đổi tự động của bạn cho loại đó. Gửi tin, đặt lịch, hợp nhất và đề xuất có passport vẫn hiển thị.",
   "approvalPreferences.review": "Xem cả đề xuất đã ẩn",
+  "approvalPreferences.reviewKind": "Xem cả đề xuất đã ẩn: {kind}",
+  "approvalPreferences.reviewTitle": "Đã ẩn: {kind}",
   "approvalPreferences.reviewExplain":
     "Chế độ này gồm đề xuất đã ẩn và hết hạn. Gói trong hàng đợi thường có thể hiển thị ít mục hơn do tùy chọn cá nhân. Xem từng đề xuất trước khi quyết định.",
   "approvalPreferences.close": "Đóng xem xét",
@@ -2568,8 +2570,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.verb.update": "{subject} đã cập nhật hồ sơ",
   "history.verb.archive": "{subject} đã chuyển hồ sơ vào kho lưu trữ",
   "history.verb.merge": "{subject} đã gộp hồ sơ",
-  "history.verb.promote": "{subject} đã nâng cấp hồ sơ",
-  "history.verb.demote": "{subject} đã hạ cấp hồ sơ",
+  "history.verb.promote": "{subject} đã xác nhận lead đủ điều kiện",
+  "history.verb.demote": "{subject} đã hủy xác nhận đủ điều kiện",
   "history.verb.disqualify": "{subject} đã loại hồ sơ",
   "history.verb.restore": "{subject} đã khôi phục hồ sơ",
   "history.verb.export": "{subject} đã xuất hồ sơ",
@@ -2689,6 +2691,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.full_name": "Tên",
   "history.field.win_probability": "Xác suất",
   "history.field.stage_id": "Giai đoạn",
+  "history.field.disqualify_reason_id": "Lý do loại",
+  "history.field.trigger": "Xác nhận bởi",
   "history.field.win_probability_override": "Xác suất đặt cho deal",
   "history.field.win_probability_set_by": "Xác suất do ai đặt",
   "history.field.fx_rate_date": "Ngày tỷ giá",
@@ -2778,6 +2782,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.emptyList": "Chưa có",
   "history.value.occurred_precision.instant": "Ngày và giờ",
   "history.value.occurred_precision.day": "Chỉ ngày",
+  "history.value.direction.inbound": "Đã nhận",
+  "history.value.direction.outbound": "Đã gửi",
+  "history.value.meeting_status.booked": "Đã đặt",
+  "history.value.meeting_status.held": "Đã họp",
+  "history.value.meeting_status.no_show": "Không đến",
+  "history.value.meeting_status.canceled": "Đã hủy",
+  "history.value.relationship_mark.vendor_marketing":
+    "Quảng cáo từ nhà cung cấp",
 
   "confidence.high": "cao",
   "confidence.med": "trung bình",
@@ -3228,6 +3240,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "share.revokeConfirm":
     "Thu hồi quyền {access} với {record} của {name}? Quyền sẽ bị hủy ở yêu cầu tiếp theo và không thể hoàn tác.",
   "share.granted": "{name} giờ có quyền {access} với {record}.",
+  "share.limitedByRole":
+    "Đã lưu với quyền đọc. Vai trò của {name} không cho phép sửa {record}.",
+  "share.companyContactsLimitedByRole":
+    "Đã lưu với quyền đọc. Vai trò của {name} không cho phép sửa liên hệ.",
   "share.thisRecord": "hồ sơ này",
   "share.until": "Đến {date}",
   "share.approvalRequired":
@@ -3612,6 +3628,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Sắp xếp theo {column}",
   "table.noMatches": "Không có {unit} nào khớp với các bộ lọc này.",
   "table.clearFilters": "Bỏ bộ lọc",
+  "table.dialsRefused": "Không thể hiển thị danh sách với bộ lọc này.",
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "Đã tải {first} đến {last} trong {count} {unit}",
@@ -3813,7 +3830,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.reason.unconfirmed_double_opt_in":
     "Đã ghi nhận đồng ý nhưng chưa được xác nhận lần hai",
   "consent.reason.no_connection":
-    "Họ chưa từng viết cho bạn, và không có deal hay yêu cầu nào liên kết hai bên",
+    "Không có tin nhắn, cuộc gặp hay yêu cầu nào đã ghi nhận kết nối hai bên",
   "consent.reason.qualifying_event":
     "Có một lần trao đổi đã ghi nhận giữa hai bên",
   "consent.reason.consent_confirmed": "Họ đã đồng ý, và đã có xác nhận",
@@ -3825,7 +3842,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Họ đã mua hàng của bạn và khi đó đã được báo rằng họ có thể từ chối quảng cáo",
   "consent.reason.qualifying.inbound_message": "Họ đã viết cho bạn ngày {date}",
   "consent.reason.qualifying.inquiry": "Họ đã gửi yêu cầu ngày {date}",
-  "consent.reason.qualifying.active_deal": "Có một deal đang mở giữa hai bên",
   "consent.reason.qualifying.in_person":
     "Trao đổi đã ghi nhận ngày {date}: {note}",
   "consent.reason.qualifying.meeting": "Có cuộc họp ngày {date} giữa hai bên",
@@ -7455,6 +7471,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.save": "Tạo",
   "create.saving": "Đang tạo…",
   "create.contact": "Liên hệ mới",
+  "create.added": "Đã thêm {name}",
+  "create.addedOpen": "Mở",
   "vcardImport.action": "Nhập vCard",
   "vcardImport.title": "Nhập danh thiếp",
   "vcardImport.fileLabel": "Tệp vCard hoặc ảnh danh thiếp",
@@ -8311,7 +8329,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unprovenRefuses": "Không thể gửi cho đến khi ghi nhận lý do.",
   "sendPermission.missingContext": "Tin nhắn này còn thiếu một thông tin",
   "sendPermission.missingPermission": "Cần được phép gửi thư này",
-  "sendPermission.reason.chooseDeal": "Chọn giao dịch cho lần liên hệ lại này.",
+  "sendPermission.reason.dealFact":
+    "Không có giao dịch đang mở với bên nhận này để hỗ trợ việc theo dõi này.",
   "sendPermission.reason.footerIncomplete":
     "Đọc thông tin chân trang bên dưới. Bạn có thể gửi email này kèm lý do được ghi lại.",
   "sendPermission.footer.language": "{detail} bằng {language}",
@@ -8457,6 +8476,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "directSend.correctionFailed":
     "Chưa lưu được bản sửa. Mở lại phần kiểm tra để xem tin nhắn và phê duyệt hiện tại.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
+  "directSend.alreadySent": "Tin nhắn này đã được gửi.",
+  "directSend.when": "Thời điểm gửi",
+  "directSend.whenLater": "Vào lúc khác",
+  "directSend.whenLaterDetail":
+    "Quyết định của bạn được ghi nhận ngay. Các bước kiểm tra sẽ chạy lại khi tin nhắn được gửi.",
+  "directSend.scheduled": "Đã hẹn giờ gửi theo ngoại lệ đã ghi nhận.",
   "directSend.queued": "Đã xếp hàng gửi theo ngoại lệ đã ghi nhận.",
   "directSend.opening": "Đang mở…",
   "directSend.alreadySettled":
@@ -8547,6 +8572,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 
   "tasks.complete": "Xong",
+  "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
   "tasks.log.action": "Ghi lại kết quả",
@@ -9356,6 +9382,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.cancel": "Hủy",
   "forecast.saveCall": "Lưu dự báo",
   "forecast.callAmountNeeded": "Hãy nhập tổng dự kiến trước.",
+  "forecast.callAmountNegative": "Hãy nhập số tiền từ không trở lên.",
   "analytics.scopeLabel": "Phạm vi hồ sơ",
   "analytics.scopeFixed": "Các số liệu này bao gồm {scope}.",
   "forecast.period": "Kỳ",
@@ -9626,6 +9653,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tokenCopyFailed": "Chọn passport ở trên và sao chép thủ công.",
   "settings.passportNext": "Tiếp theo, dùng passport",
   "settings.passportLabel": "Tên agent",
+  "settings.passportUnnamed": "Passport chưa đặt tên",
+  "settings.passportNameRequired": "Hãy đặt tên cho agent",
+  "settings.passportNameTooLong": "Dùng tối đa 120 ký tự.",
   "settings.mint": "Tạo passport",
   "settings.minting": "Đang tạo…",
   "settings.mintCancel": "Hủy",
@@ -14685,6 +14715,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.scopeAriaMixed":
     "Các cài đặt trên trang này ảnh hưởng đến những đối tượng khác nhau; mỗi cài đặt ghi rõ đối tượng.",
   "settings.readOnlyPageTitle": "Cài đặt chỉ đọc",
+  "settings.pageLoading": "Đang tải {page}…",
   "settings.readOnlyPage":
     "Vai trò hiện tại không có quyền thay đổi các cài đặt này.",
   "settings.seatRefused":
@@ -20322,8 +20353,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một địa chỉ nhận đã dừng nhận tiếp thị sau khi bạn lên lịch. Thư sẽ không gửi đến địa chỉ đó.",
   "sched.held.recipientReplied":
     "Có thư mới từ bên nhận sau khi bạn lên lịch thư theo dõi này. Hãy đọc thư đó trước khi gửi.",
-  "sched.held.confirmSendsNow":
-    "Khi bạn xác nhận, tin nhắn sẽ được gửi ngay bây giờ, không theo giờ đã hẹn.",
+  "sched.held.confirmChoosesWhen":
+    "Giờ đã hẹn đã qua. Khi xác nhận, bạn chọn gửi ngay hoặc vào một thời điểm mới.",
   "sched.held.sendRefused":
     "Một bước kiểm tra đã chặn tin nhắn này khi đến giờ gửi. Không có gì được gửi.",
   "sched.inZone": "theo giờ {zone}",
@@ -20450,6 +20481,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chuyển vào kho lưu trữ sẽ gỡ dự án này khỏi danh sách đang hoạt động và giải phóng mã của dự án. Không thể hoàn tác ở đây.",
   "project.archivedReadOnly":
     "Dự án này đang trong kho lưu trữ và không thể thay đổi.",
+  "project.page.notFound": "Không tìm thấy dự án",
+  "project.page.notFoundBody":
+    "Dự án này không tồn tại, hoặc bạn không có quyền xem.",
+  "project.page.backToProjects": "Quay lại danh sách dự án",
   "project.notYoursToChange":
     "Bạn không có quyền sửa dự án này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
   "project.phaseLabel": "Giai đoạn dự án",
@@ -22061,6 +22096,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.card.askedOpen": "Mở tin nhắn",
   "lead.card.qualified": "Nếu đủ điều kiện",
   "lead.card.qualifiedContact": "Liên hệ",
+  "lead.card.qualifiedCompany": "Công ty",
   "lead.card.qualifiedDeal": "Deal mới",
   "lead.card.qualifiedDealOptional": "Có thể mở deal ngay trong cùng bước",
   "lead.card.qualifiedNewContact": "Một liên hệ mới",

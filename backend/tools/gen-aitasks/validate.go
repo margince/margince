@@ -118,6 +118,10 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 	if err := validateDecision(name, def); err != nil {
 		return err
 	}
+	if def.LatencyScalesWithInput && def.ExecutionMode != "interactive" {
+		return fmt.Errorf("task %q: latency_scales_with_input applies only to an interactive task, "+
+			"the only kind held to a time limit from certified latency", name)
+	}
 	if err := validateSubjectRestriction(name, def); err != nil {
 		return err
 	}

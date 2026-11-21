@@ -6,7 +6,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
@@ -180,6 +180,14 @@ afterEach(() => {
   vi.doUnmock("./agentpanel");
 });
 
+// The rail's lazy panel keeps the module it first loads. Loaded after a case
+// resets the modules, it reads another i18n instance and speaks its default.
+beforeAll(async () => {
+  await openPanel();
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
 describe("the agent panel's hierarchy", () => {
   // ONE title, and it names the agent. The head used to lead with whatever
   // sentence the rail was showing, which is a heading that renames the region
@@ -254,8 +262,11 @@ describe("the agent panel's hierarchy", () => {
     );
     cleanup();
     const german = await openPanel({}, "de");
-    expect(german.querySelector(".arpstate")?.textContent).toBe(
-      de["agent.state.idle"],
+    // The German catalog loads after the first paint, which is in English.
+    await waitFor(() =>
+      expect(german.querySelector(".arpstate")?.textContent).toBe(
+        de["agent.state.idle"],
+      ),
     );
     expect(de["agent.state.idle"]).not.toBe(en["agent.state.idle"]);
   });

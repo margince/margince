@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // DuplicateDomainError carries the company already owning a domain: a domain
@@ -47,7 +46,7 @@ type CompanyDomainInput struct {
 // defense in depth). Values are written back in place.
 func parseCompanyDomains(domains []CompanyDomainInput) error {
 	for i, d := range domains {
-		parsed, err := values.ParseDomain(d.Domain)
+		parsed, err := owndomain.ParseDomain(d.Domain)
 		if err != nil {
 			return err
 		}

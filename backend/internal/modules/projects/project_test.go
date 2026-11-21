@@ -6,11 +6,14 @@ package projects
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // A phase move must announce itself as a phase move. Emitting the generic
@@ -133,5 +136,26 @@ func TestProjectCreateInputRequiresAName(t *testing.T) {
 	}
 	if missing.Field != "name" {
 		t.Errorf("required field = %q, want name", missing.Field)
+	}
+}
+
+// The column holds a label's length. A longer name is refused as the caller's
+// mistake before the write, not as a database fault, on create and rename.
+// The limit counts characters, not bytes.
+func TestProjectNameIsRefusedPastTheLabelLimit(t *testing.T) {
+	atLimit := strings.Repeat("ü", values.TextLabelCharacters)
+	tooLong := atLimit + "x"
+	company := openapi_types.UUID{1}
+
+	if _, err := ProjectCreationInput(crmcontracts.CreateProjectRequest{Name: atLimit, CompanyId: company, Source: "manual"}); err != nil {
+		t.Errorf("a name of exactly %d characters was refused: %v", values.TextLabelCharacters, err)
+	}
+	_, createErr := ProjectCreationInput(crmcontracts.CreateProjectRequest{Name: tooLong, CompanyId: company, Source: "manual"})
+	_, updateErr := projectUpdateInput(crmcontracts.UpdateProjectRequest{Name: &tooLong}, nil)
+	for verb, err := range map[string]error{"create": createErr, "update": updateErr} {
+		refusal, ok := errors.AsType[*httperr.DetailedError](err)
+		if !ok || len(refusal.Fields) != 1 || refusal.Fields[0].Field != "name" || refusal.Fields[0].Code != "too_long" {
+			t.Errorf("%s of a %d-character name produced %v, want a too_long refusal of name", verb, values.TextLabelCharacters+1, err)
+		}
 	}
 }

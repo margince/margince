@@ -84,6 +84,22 @@ describe("the consent panel in the reader's language", () => {
     expect(said).not.toContain("{date}");
   });
 
+  it("keeps the server's sentence for the retired active_deal kind", () => {
+    const said = consentReason(
+      entry({
+        reason_code: "qualifying_event",
+        qualifying_event: {
+          kind: "active_deal",
+          occurred_at: "2026-06-03T09:00:00Z",
+        },
+      }),
+      tVi,
+      "vi",
+      browserZone(),
+    );
+    expect(said).toBe("the server's English sentence");
+  });
+
   it("names a seeded purpose in Vietnamese and keeps an operator's own name", () => {
     expect(consentPurposeName(entry({}), tVi)).toBe("Thư công việc");
     expect(

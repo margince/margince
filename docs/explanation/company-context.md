@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/companycontextprompt.go backend/internal/compose/companycontextrollout.go backend/api/ai-tasks.yaml backend/internal/modules/contacts/siteread.go backend/internal/modules/contacts/companyfact.go frontend/src/features/onboarding/onboarding-conversation frontend/src/features/onboarding/onboarding-gate.tsx frontend/src/features/companies/company-context.tsx -->
+<!-- describes: backend/internal/compose/companycontextprompt.go backend/internal/compose/companycontextrollout.go backend/api/ai-tasks.yaml backend/internal/modules/contacts/siteread.go backend/internal/modules/contacts/companyfact.go frontend/src/features/onboarding/onboarding-conversation frontend/src/features/onboarding/onboarding-gate.tsx frontend/src/features/onboarding/onboarding-journey.ts frontend/src/features/companies/company-context.tsx -->
 # Company context: cold-start onboarding and governed AI grounding
 
 One installation serves one company, and Margince keeps a confirmed, lasting picture of that company:
@@ -87,6 +87,10 @@ reads Voice · Connect, and the plan that brings them back puts them in the voic
 here every human whose wizard state is missing or not finished. It does not send a read seat (it cannot
 write the checkpoint the journey ends on). A member invited later sets up their voice and connects their
 mailbox, as the creator did.
+
+When a user finishes, the browser keeps that fact for them until sign-out. On the next load the app
+then shows without waiting for the wizard state. The read still runs, and a state that is not
+finished still sends the user here.
 
 The server refuses a member checkpoint at any step only the creator takes (`read`, `confirm`, `basis`,
 `invite`, `team`). It answers with the text `members begin at Voice`, which is now also the route.

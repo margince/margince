@@ -39480,7 +39480,7 @@ components:
         contracts: {$ref: '#/components/schemas/ContractListResponse'}
         documents:
           type: object
-          description: The files attached to the project itself, newest first.
+          description: The project's own uploads and the files of the activities filed under it, newest first.
           required: [data, page]
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Attachment'}}
@@ -52956,6 +52956,12 @@ components:
         expires_at: {type: [string, 'null'], format: date-time, description: 'Optional TTL; an expired grant matches no rows.'}
         created_at: {type: string, format: date-time}
         version: {type: integer, format: int64}
+        limited_by_role:
+          type: boolean
+          description: |-
+            Only on the answer to a share, and only when true: the share asked for `write` and the
+            user's role can neither change records of this type nor create activities, so the grant
+            was saved as `read`. A team grant is never limited, because its members hold different roles.
     CreateRecordGrantRequest:
       type: object
       required: [record_type, record_id, subject_type, subject_id, access]
@@ -52982,6 +52988,12 @@ components:
       properties:
         shared: {type: integer, minimum: 0}
         skipped: {type: integer, minimum: 0}
+        limited_by_role:
+          type: boolean
+          description: |-
+            Present, and true, only when at least one grant was written and the share asked for `write`
+            while the user's role can neither change contacts nor create activities, so the grants were
+            saved as `read`.
     UserListResponse:
       type: object
       required: [data, page]

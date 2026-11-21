@@ -13,7 +13,6 @@ import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
 import { localeReady } from "./i18n/catalogs";
 import { preferredLocale } from "./i18n/locale";
-import { bootsOnEssentialCopy } from "./lib/essentialscreens";
 import {
   type BrowserInstrument,
   reportError,
@@ -57,10 +56,7 @@ if (!root) {
 async function mountApp(root: HTMLElement) {
   try {
     await Promise.all([
-      localeReady(
-        preferredLocale(),
-        bootsOnEssentialCopy(location.hash) ? "essential" : "complete",
-      ),
+      localeReady(preferredLocale(), "essential"),
       startupSessionReady(),
     ]);
   } catch (error: unknown) {
@@ -91,9 +87,7 @@ async function mountApp(root: HTMLElement) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <AppErrorBoundary>
-          <LocaleProvider
-            initialEssential={bootsOnEssentialCopy(location.hash)}
-          >
+          <LocaleProvider>
             <AppErrorBoundary>
               <AttentionProvider>
                 <ToastProvider>

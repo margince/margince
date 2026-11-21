@@ -9,6 +9,7 @@ import {
 } from "../../../design-system/standingtimeline";
 import { StatCard } from "../../../design-system/statcard";
 import { StatStrip } from "../../../design-system/statstrip";
+import { ACTIVITY_KIND_LABEL } from "../../../design-system/timelineentry";
 import {
   activityDay,
   activityHasHappened,
@@ -64,15 +65,6 @@ function useWords(): Words {
 // The calls and meetings that already happened, newest kept: the axis has room
 // for a handful of labels, and the history tab holds every one.
 const DONE_EVENTS = 5;
-const KIND_LABEL: Record<Activity["kind"], MessageKey> = {
-  email: "timeline.kind.email",
-  call: "timeline.kind.call",
-  meeting: "timeline.kind.meeting",
-  note: "timeline.kind.note",
-  task: "timeline.kind.task",
-  message: "timeline.kind.message",
-};
-
 export function DealFigures({
   inputs,
 }: Readonly<{ inputs: DealStandingInputs }>) {
@@ -244,7 +236,7 @@ function NextStepFigure({ inputs, words }: FigureProps) {
     <StatCard
       label={label}
       value={activityDay(step.at, step.precision, locale, zone, formatDayMonth)}
-      detail={step.subject ?? t(labelFor(KIND_LABEL, step.kind))}
+      detail={step.subject ?? t(labelFor(ACTIVITY_KIND_LABEL, step.kind))}
       tone={tone}
     />
   );
@@ -318,7 +310,7 @@ export function timelineEvents(
       formatDayMonth,
     );
   const titleOf = (row: Activity) =>
-    row.subject || t(labelFor(KIND_LABEL, row.kind));
+    row.subject || t(labelFor(ACTIVITY_KIND_LABEL, row.kind));
   const held = activities
     .filter((row) => isConversation(row) && activityHasHappened(row, now, zone))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
@@ -328,7 +320,7 @@ export function timelineEvents(
         key: row.id,
         at: row.occurred_at,
         title: titleOf(row),
-        sub: `${dayOf(row)} · ${t(labelFor(KIND_LABEL, row.kind))}`,
+        sub: `${dayOf(row)} · ${t(labelFor(ACTIVITY_KIND_LABEL, row.kind))}`,
         kind: "done",
         activityIds: [row.id],
       }),

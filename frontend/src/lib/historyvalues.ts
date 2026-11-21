@@ -2,8 +2,13 @@ import {
   formatActivityWhen,
   type OccurredPrecision,
 } from "../format/activitywhen";
+import { isRealCalendarDay } from "../format/calendarday";
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
-import { formatDateTime, formatMoneyOrAbsent } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatDateTime,
+  formatMoneyOrAbsent,
+} from "../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../format/industry";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -222,12 +227,17 @@ export function historyValue(
   if (field === INDUSTRY_FIELD) {
     return industryWords((key) => translate(ctx.locale, key), value);
   }
-  if (ISO_TIMESTAMP.test(value)) {
-    return historyMoment(value, ctx, precision);
+  const dated = historyDate(field, value, ctx, precision);
+  if (dated !== undefined) {
+    return dated;
   }
   const structured = jsonValue(field, value, ctx.locale);
   if (structured !== undefined) {
     return structured;
+  }
+  // A partner stage is stored by its key, which only the stage list can name.
+  if (field === "relationship_stage") {
+    return ctx.nameOf?.(value) ?? value;
   }
   if (isUuid(value)) {
     // Left EXACTLY as stored when the resolver cannot name it — a shortened
@@ -238,6 +248,33 @@ export function historyValue(
     return value.split("/").at(-1) ?? value;
   }
   return value;
+}
+
+// The columns a record update writes as a calendar day: the contract's
+// `format: date` fields. historyvalues.test.ts derives them from the contract.
+const CALENDAR_DAY_FIELDS: ReadonlySet<string> = new Set([
+  "ended_at",
+  "expected_close_date",
+  "fx_rate_date",
+  "started_at",
+  "target_end_date",
+  "wait_until",
+]);
+
+// An instant or a `format: date` column, dated as the record page dates it;
+// undefined for a value that is neither. Text shaped like a day stays text.
+function historyDate(
+  field: string,
+  value: string,
+  ctx: HistoryValueCtx,
+  precision: OccurredPrecision | undefined,
+): string | undefined {
+  if (ISO_TIMESTAMP.test(value)) {
+    return historyMoment(value, ctx, precision);
+  }
+  return CALENDAR_DAY_FIELDS.has(field) && isRealCalendarDay(value)
+    ? formatDateAbbrev(value, ctx.locale, ctx.zone)
+    : undefined;
 }
 
 // A timestamp on the record's clock. An activity time with a known precision

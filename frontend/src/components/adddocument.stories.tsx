@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { en } from "../../i18n/en";
+import { en } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../../testing/story-utils";
+} from "../testing/story-utils";
 import { AddDocumentDialog } from "./adddocument";
 
 // Adding a document. The states worth looking at are not the empty form — they

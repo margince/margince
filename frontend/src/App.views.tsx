@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   AnalyticsScreen,
+  ArchivedRecordHistory,
   BookingScreen,
   BriefScreen,
   BuyerRoomScreen,
@@ -56,7 +57,7 @@ import {
   useDisabledCoreFeatures,
   useHiddenCoreFeatures,
 } from "./lib/corefeatures";
-import { bootsOnEssentialCopy } from "./lib/essentialscreens";
+import { paintsFromEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { traversalInFlight, traverseTo } from "./lib/historydepth";
 import { routeIdentity } from "./lib/routeidentity";
@@ -111,7 +112,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
       !id || opensReservedPage({ screen: "projects", id }) ? (
         <ProjectsScreen startCreating={id !== undefined} />
       ) : (
-        <ProjectScreen id={id} />
+        <ProjectScreen id={id} archivedHistory={ArchivedRecordHistory} />
       ),
     // One segment, and it names whose day it is. A team board row needs that
     // door. The other three dials stay state: one of four in the address would
@@ -201,9 +202,11 @@ export const screenOfAddress = (address: string) => {
   return SCREEN_VIEWS[route.screen](route);
 };
 
-function screenWithLocale(address: string) {
+// The shell paints from the essential catalog, and the screen's column waits
+// here for the complete one.
+export function screenWithLocale(address: string) {
   const view = screenOfAddress(address);
-  return bootsOnEssentialCopy(address) ? (
+  return paintsFromEssentialCopy(address) ? (
     view
   ) : (
     <CompleteLocale>{view}</CompleteLocale>

@@ -472,6 +472,8 @@ export const en = {
   "approvalPreferences.explain":
     "Muted kinds leave your queue only. Other readers keep their proposals. Muting or restoring a kind turns off your automatic changes for that kind. Sends, bookings, merges and proposals from agent passports stay visible.",
   "approvalPreferences.review": "Review including muted",
+  "approvalPreferences.reviewKind": "Review including muted: {kind}",
+  "approvalPreferences.reviewTitle": "Muted: {kind}",
   "approvalPreferences.reviewExplain":
     "This review includes muted proposals and expired items. Bundles in your ordinary queue can show fewer members because of your personal mutes; review each proposal before deciding.",
   "approvalPreferences.close": "Close review",
@@ -2543,8 +2545,8 @@ export const en = {
   "history.verb.update": "{subject} updated the record",
   "history.verb.archive": "{subject} archived the record",
   "history.verb.merge": "{subject} merged the record",
-  "history.verb.promote": "{subject} promoted the record",
-  "history.verb.demote": "{subject} demoted the record",
+  "history.verb.promote": "{subject} qualified the lead",
+  "history.verb.demote": "{subject} reversed the qualification",
   "history.verb.disqualify": "{subject} disqualified the record",
   "history.verb.restore": "{subject} restored the record",
   "history.verb.export": "{subject} exported the record",
@@ -2666,6 +2668,8 @@ export const en = {
   "history.field.full_name": "Name",
   "history.field.win_probability": "Probability",
   "history.field.stage_id": "Stage",
+  "history.field.disqualify_reason_id": "Disqualify reason",
+  "history.field.trigger": "Qualified by",
   "history.field.win_probability_override": "Probability set on the deal",
   "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
@@ -2757,6 +2761,13 @@ export const en = {
   "history.emptyList": "None set",
   "history.value.occurred_precision.instant": "Date and time",
   "history.value.occurred_precision.day": "Date only",
+  "history.value.direction.inbound": "Received",
+  "history.value.direction.outbound": "Sent",
+  "history.value.meeting_status.booked": "Booked",
+  "history.value.meeting_status.held": "Held",
+  "history.value.meeting_status.no_show": "No-show",
+  "history.value.meeting_status.canceled": "Canceled",
+  "history.value.relationship_mark.vendor_marketing": "Vendor marketing",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -3229,6 +3240,10 @@ export const en = {
   "share.revokeConfirm":
     "Revoke {access} access to {record} for {name}? It ends at the next request and cannot be undone.",
   "share.granted": "{name} now has {access} access to {record}.",
+  "share.limitedByRole":
+    "Saved as read access. {name} cannot edit {record} with their role.",
+  "share.companyContactsLimitedByRole":
+    "Saved as read access. {name} cannot edit contacts with their role.",
   "share.thisRecord": "this record",
   "share.until": "Until {date}",
   "share.approvalRequired":
@@ -3659,6 +3674,7 @@ export const en = {
   "table.sortBy": "Sort by {column}",
   "table.noMatches": "No {unit} match these filters.",
   "table.clearFilters": "Clear filters",
+  "table.dialsRefused": "This list cannot be shown with these filters.",
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
@@ -3868,7 +3884,7 @@ export const en = {
   "consent.reason.unconfirmed_double_opt_in":
     "Consent was recorded but never confirmed by the double opt-in",
   "consent.reason.no_connection":
-    "They have never written to you, and no deal or inquiry connects you",
+    "No message, meeting or request on file connects you",
   "consent.reason.qualifying_event": "A recorded exchange connects you",
   "consent.reason.consent_confirmed":
     "They gave consent, with the confirmation on file",
@@ -3880,7 +3896,6 @@ export const en = {
     "They bought from you and were told then that they may object to advertising",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
-  "consent.reason.qualifying.active_deal": "An open deal connects you",
   "consent.reason.qualifying.in_person":
     "A recorded exchange on {date}: {note}",
   "consent.reason.qualifying.meeting": "A meeting on {date} connects you",
@@ -7650,6 +7665,8 @@ export const en = {
   "create.save": "Create",
   "create.saving": "Creating…",
   "create.contact": "New contact",
+  "create.added": "{name} added",
+  "create.addedOpen": "Open",
   // The fast path beside it: reading a profile in another window and typing
   // what it says. The label names the ACT, not the source, because the same
   // form takes a conference badge and a business card.
@@ -8510,7 +8527,8 @@ export const en = {
     "Sending is refused until a reason is recorded.",
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
-  "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.dealFact":
+    "No open deal with this recipient supports this follow-up.",
   "sendPermission.reason.footerIncomplete":
     "Read the footer details below. You can send this email with a recorded reason.",
   "sendPermission.footer.language": "{detail} in {language}",
@@ -8665,6 +8683,12 @@ export const en = {
   "directSend.correctionFailed":
     "The correction was not saved. Reopen the review to check the current message and approval.",
   "directSend.open": "Send with a recorded exception",
+  "directSend.alreadySent": "This message was already sent.",
+  "directSend.when": "When to send",
+  "directSend.whenLater": "At a later time",
+  "directSend.whenLaterDetail":
+    "Your decision is recorded now. The checks run again when the message goes.",
+  "directSend.scheduled": "Scheduled as a recorded exception.",
   "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
@@ -8758,6 +8782,7 @@ export const en = {
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",
+  "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
   "tasks.log.action": "Log what happened",
@@ -9560,6 +9585,7 @@ export const en = {
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save forecast",
   "forecast.callAmountNeeded": "Type the expected total first.",
+  "forecast.callAmountNegative": "Enter an amount of zero or more.",
   "analytics.scopeLabel": "Record scope",
   "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.period": "Period",
@@ -9832,6 +9858,9 @@ export const en = {
   "settings.tokenCopyFailed": "Select the passport above and copy it by hand.",
   "settings.passportNext": "Next, use it",
   "settings.passportLabel": "Agent name",
+  "settings.passportUnnamed": "Unnamed passport",
+  "settings.passportNameRequired": "Give the agent a name",
+  "settings.passportNameTooLong": "Use at most 120 characters.",
   "settings.mint": "Mint passport",
   "settings.minting": "Minting…",
   "settings.mintCancel": "Cancel",
@@ -15018,6 +15047,7 @@ export const en = {
   "settings.scopeAriaMixed":
     "Settings on this page affect different people; each one states which.",
   "settings.readOnlyPageTitle": "Read-only settings",
+  "settings.pageLoading": "Loading {page}…",
   "settings.readOnlyPage": "Your role cannot change these settings.",
   "settings.seatRefused":
     "Your seat is read-only. Ask an admin for a full seat.",
@@ -20645,8 +20675,8 @@ export const en = {
     "A recipient stopped marketing after you scheduled this. It will not send to them.",
   "sched.held.recipientReplied":
     "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
-  "sched.held.confirmSendsNow":
-    "Confirming sends this message now, not at the time it was scheduled for.",
+  "sched.held.confirmChoosesWhen":
+    "Its scheduled time has passed. When you confirm, choose to send it now or at a new time.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",
@@ -20773,6 +20803,10 @@ export const en = {
   "project.archiveConfirm":
     "Archiving removes this project from the active list and frees its key. This cannot be undone here.",
   "project.archivedReadOnly": "This project is archived and takes no changes.",
+  "project.page.notFound": "Project not found",
+  "project.page.notFoundBody":
+    "This project does not exist, or you cannot see it.",
+  "project.page.backToProjects": "Back to projects",
   "project.notYoursToChange":
     "You cannot edit this project. Ask its owner to share it, or an administrator for edit rights.",
   "project.phaseLabel": "Phase",
@@ -22347,6 +22381,7 @@ export const en = {
   "lead.card.askedOpen": "Open message",
   "lead.card.qualified": "If they are qualified",
   "lead.card.qualifiedContact": "Contact",
+  "lead.card.qualifiedCompany": "Company",
   "lead.card.qualifiedDeal": "Deal",
   "lead.card.qualifiedDealOptional": "You can open one in the same step",
   "lead.card.qualifiedNewContact": "A new contact",

@@ -2,15 +2,25 @@ import { type ComponentProps, Suspense } from "react";
 import { lazy } from "../i18n/lazy";
 import { AuthSplash } from "./bootsplash";
 
-const SignIn = lazy(async () => ({
-  default: (await import("../features/sign-in/auth")).AuthScreen,
-}));
-const Availability = lazy(async () => ({
-  default: (await import("../features/sign-in/auth")).AvailabilityScreen,
-}));
-const Setup = lazy(async () => ({
-  default: (await import("../features/sign-in/setupclaim")).SetupClaimScreen,
-}));
+// On the essential catalog, so a signed-out reader never waits for the complete one.
+const SignIn = lazy(
+  async () => ({
+    default: (await import("../features/sign-in/auth")).AuthScreen,
+  }),
+  "essential",
+);
+const Availability = lazy(
+  async () => ({
+    default: (await import("../features/sign-in/auth")).AvailabilityScreen,
+  }),
+  "essential",
+);
+const Setup = lazy(
+  async () => ({
+    default: (await import("../features/sign-in/setupclaim")).SetupClaimScreen,
+  }),
+  "essential",
+);
 
 export function AuthScreen(props: ComponentProps<typeof SignIn>) {
   return (

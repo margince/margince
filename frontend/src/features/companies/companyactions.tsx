@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useAddedNotice } from "../../components/addednotice";
 import { CreateAction, type CreateField } from "../../components/create";
 import { amountField, currencyField } from "../../components/currencyfield";
 import { useDealCreateFields } from "../../components/dealcreatefields";
@@ -122,6 +123,22 @@ export function NewDealAction({
 }
 
 /**
+ * The Deals tab's verb. The reader stays on the company and is told what was
+ * added, with a way to open it. A deal made from a project still opens.
+ */
+export function CompanyNewDealAction(
+  props: Readonly<{ companyId: string; companyName: string }>,
+) {
+  const added = useAddedNotice();
+  return (
+    <NewDealAction
+      {...props}
+      onCreated={(deal) => added(deal.name, { screen: "deals", id: deal.id })}
+    />
+  );
+}
+
+/**
  * NewProjectAction opens a project on THIS company.
  *
  * The company is not a field, for the same reason the deal's is not: the rep is
@@ -152,6 +169,7 @@ function NewProjectDialog({
 }: Readonly<{ companyId: string; companyName: string }>) {
   const t = useT();
   const form = useProjectCreateForm({ pinned: companyId });
+  const added = useAddedNotice();
   return (
     <CreateAction
       label={t("co.project.new", { name: companyName })}
@@ -164,6 +182,10 @@ function NewProjectDialog({
       onValuesChange={form.onValuesChange}
       fields={form.fields}
       aboutId={companyId}
+      stay
+      onCreated={(project) =>
+        added(project.name, { screen: "projects", id: project.id })
+      }
     />
   );
 }

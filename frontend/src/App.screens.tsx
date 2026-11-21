@@ -1,4 +1,5 @@
 import { lazy, useEffect } from "react";
+import { SCREEN_CODE } from "./App.screencode";
 import { AuthScreen } from "./app/authscreens";
 import { findCustomScreen } from "./app/custom";
 import { firstAvailableRoute, opensReservedPage } from "./app/nav";
@@ -17,265 +18,196 @@ import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
 import { navigate } from "./lib/router";
 import { useAddressWriters } from "./lib/urlstate";
 
-// Every route chunk, registered as it is declared. A screen is split so the
-// login screen does not carry the app. It is warmed once a session exists, so a
-// reader past that point never pays the fetch on a click. Splitting alone moves
-// the cost from first paint onto the first visit to each screen. That visit is
-// when a record open is measured. Wrapping the factory keeps the two lists one
-// list: a screen cannot be added to the router and forgotten here.
-export const ROUTE_CHUNKS: Array<() => Promise<unknown>> = [];
-
-// Registers a screen's chunk for warming and hands the factory back unchanged,
-// so `lazy` keeps the loading and this keeps the list. A warmed chunk still
-// suspends on its first render: `lazy` calls its factory and throws the promise
-// whatever the module cache holds. So warming alone does not make a navigation
-// cheap. ScreenView deferring the route does, since it keeps React from
-// committing the fallback it would then have to hold on screen.
-function routed<T>(factory: () => Promise<T>): () => Promise<T> {
-  ROUTE_CHUNKS.push(factory);
-  return factory;
-}
-
 export const OnboardingScreen = lazy(() =>
-  import("./features/onboarding/onboarding").then((module) => ({
+  SCREEN_CODE.onboarding().then((module) => ({
     default: module.OnboardingScreen,
   })),
 );
 
-export const BookingScreen = lazy(
-  routed(() =>
-    import("./features/booking/book").then((m) => ({
-      default: m.BookingScreen,
-    })),
-  ),
+export const BookingScreen = lazy(() =>
+  SCREEN_CODE.book().then((m) => ({
+    default: m.BookingScreen,
+  })),
 );
 
-export const ClientSurfaceScreen = lazy(
-  routed(() =>
-    import("./features/settings/client").then((m) => ({
-      default: m.ClientSurfaceScreen,
-    })),
-  ),
+export const ClientSurfaceScreen = lazy(() =>
+  SCREEN_CODE.client().then((m) => ({
+    default: m.ClientSurfaceScreen,
+  })),
 );
 
-const DealScreen = lazy(
-  routed(() =>
-    import("./features/deals/deals").then((m) => ({ default: m.DealScreen })),
-  ),
+const DealScreen = lazy(() =>
+  SCREEN_CODE.deals().then((m) => ({ default: m.DealScreen })),
 );
 
-const DealsScreen = lazy(
-  routed(() =>
-    import("./features/deals/deals").then((m) => ({ default: m.DealsScreen })),
-  ),
+const DealsScreen = lazy(() =>
+  SCREEN_CODE.deals().then((m) => ({ default: m.DealsScreen })),
 );
 
-const DealRoomPage = lazy(
-  routed(() =>
-    import("./features/deals/dealroompage").then((m) => ({
-      default: m.DealRoomPage,
-    })),
-  ),
+const DealRoomPage = lazy(() =>
+  SCREEN_CODE.dealRoom().then((m) => ({
+    default: m.DealRoomPage,
+  })),
 );
 
-export const FiltersScreen = lazy(
-  routed(() =>
-    import("./features/lists/filters").then((m) => ({
-      default: m.FiltersScreen,
-    })),
-  ),
+export const FiltersScreen = lazy(() =>
+  SCREEN_CODE.filters().then((m) => ({
+    default: m.FiltersScreen,
+  })),
 );
 
-export const BriefScreen = lazy(
-  routed(() =>
-    import("./features/brief/brief").then((m) => ({ default: m.BriefScreen })),
-  ),
+export const BriefScreen = lazy(() =>
+  SCREEN_CODE.brief().then((m) => ({ default: m.BriefScreen })),
 );
 
-export const LeadScreen = lazy(
-  routed(() =>
-    import("./features/leads/leads").then((m) => ({ default: m.LeadScreen })),
-  ),
+export const LeadScreen = lazy(() =>
+  SCREEN_CODE.leads().then((m) => ({ default: m.LeadScreen })),
 );
 
-export const LeadsScreen = lazy(
-  routed(() =>
-    import("./features/leads/leads").then((m) => ({ default: m.LeadsScreen })),
-  ),
+export const LeadsScreen = lazy(() =>
+  SCREEN_CODE.leads().then((m) => ({ default: m.LeadsScreen })),
 );
 
-export const ProjectScreen = lazy(
-  routed(() =>
-    import("./features/projects/project360").then((m) => ({
-      default: m.ProjectScreen,
-    })),
-  ),
+// The records feature's history panel an archived project's page shows. The
+// shell hands it over, since one feature never imports another.
+export const ArchivedRecordHistory = lazy(() =>
+  SCREEN_CODE.recordHistory().then((m) => ({
+    default: m.ArchivedRecordHistory,
+  })),
 );
 
-export const ProjectsScreen = lazy(
-  routed(() =>
-    import("./features/projects/projects").then((m) => ({
-      default: m.ProjectsScreen,
-    })),
-  ),
+export const ProjectScreen = lazy(() =>
+  SCREEN_CODE.project().then((m) => ({
+    default: m.ProjectScreen,
+  })),
 );
 
-export const OAuthConsent = lazy(
-  routed(() =>
-    import("./features/automations/oauthconsent").then((m) => ({
-      default: m.OAuthConsent,
-    })),
-  ),
+export const ProjectsScreen = lazy(() =>
+  SCREEN_CODE.projects().then((m) => ({
+    default: m.ProjectsScreen,
+  })),
 );
 
-export const OfferScreen = lazy(
-  routed(() =>
-    import("./features/deals/offers").then((m) => ({ default: m.OfferScreen })),
-  ),
+export const OAuthConsent = lazy(() =>
+  SCREEN_CODE.oauthConsent().then((m) => ({
+    default: m.OAuthConsent,
+  })),
 );
 
-export const CompaniesScreen = lazy(
-  routed(() =>
-    import("./features/companies/companies").then((m) => ({
-      default: m.CompaniesScreen,
-    })),
-  ),
+export const OfferScreen = lazy(() =>
+  SCREEN_CODE.offers().then((m) => ({ default: m.OfferScreen })),
 );
 
-export const CompanyScreen = lazy(
-  routed(() =>
-    import("./features/companies/companies").then((m) => ({
-      default: m.CompanyScreen,
-    })),
-  ),
+export const CompaniesScreen = lazy(() =>
+  SCREEN_CODE.companies().then((m) => ({
+    default: m.CompaniesScreen,
+  })),
 );
 
-export const PartnersScreen = lazy(
-  routed(() =>
-    import("./features/projects/partners").then((m) => ({
-      default: m.PartnersScreen,
-    })),
-  ),
+export const CompanyScreen = lazy(() =>
+  SCREEN_CODE.companies().then((m) => ({
+    default: m.CompanyScreen,
+  })),
 );
 
-export const ContactsScreen = lazy(
-  routed(() =>
-    import("./features/contacts/contacts").then((m) => ({
-      default: m.ContactsScreen,
-    })),
-  ),
+export const PartnersScreen = lazy(() =>
+  SCREEN_CODE.partners().then((m) => ({
+    default: m.PartnersScreen,
+  })),
 );
 
-export const ContactPageV2 = lazy(
-  routed(() =>
-    import("./features/contacts/contactpage").then((m) => ({
-      default: m.ContactPageV2,
-    })),
-  ),
+export const ContactsScreen = lazy(() =>
+  SCREEN_CODE.contacts().then((m) => ({
+    default: m.ContactsScreen,
+  })),
+);
+
+export const ContactPageV2 = lazy(() =>
+  SCREEN_CODE.contactPage().then((m) => ({
+    default: m.ContactPageV2,
+  })),
 );
 
 export const BuyerRoomScreen = lazy(() =>
-  import("./features/deals/buyerroom").then((m) => ({
+  SCREEN_CODE.buyerRoom().then((m) => ({
     default: m.BuyerRoomScreen,
   })),
 );
 
-export const PreferenceCenterScreen = lazy(
-  routed(() =>
-    import("./features/settings/preferences").then((m) => ({
-      default: m.PreferenceCenterScreen,
-    })),
-  ),
+export const PreferenceCenterScreen = lazy(() =>
+  SCREEN_CODE.preferences().then((m) => ({
+    default: m.PreferenceCenterScreen,
+  })),
 );
 
-export const UnsubscribeScreen = lazy(
-  routed(() =>
-    import("./features/privacy/unsubscribe").then((m) => ({
-      default: m.UnsubscribeScreen,
-    })),
-  ),
+export const UnsubscribeScreen = lazy(() =>
+  SCREEN_CODE.unsubscribe().then((m) => ({
+    default: m.UnsubscribeScreen,
+  })),
 );
 
-export const ConfirmDetailsScreen = lazy(
-  routed(() =>
-    import("./features/privacy/confirm").then((m) => ({
-      default: m.ConfirmDetailsScreen,
-    })),
-  ),
+export const ConfirmDetailsScreen = lazy(() =>
+  SCREEN_CODE.confirm().then((m) => ({
+    default: m.ConfirmDetailsScreen,
+  })),
 );
 
-export const AnalyticsScreen = lazy(
-  routed(() =>
-    import("./App.analytics").then((m) => ({
-      default: m.AnalyticsScreen,
-    })),
-  ),
+export const AnalyticsScreen = lazy(() =>
+  SCREEN_CODE.analytics().then((m) => ({
+    default: m.AnalyticsScreen,
+  })),
 );
 
-export const ProgressScreen = lazy(
-  routed(() =>
-    import("./features/analytics/progress").then((m) => ({
-      default: m.ProgressScreen,
-    })),
-  ),
+export const ProgressScreen = lazy(() =>
+  SCREEN_CODE.progress().then((m) => ({
+    default: m.ProgressScreen,
+  })),
 );
 
-export const SalesGoalsScreen = lazy(
-  routed(() =>
-    import("./features/analytics/goals").then((m) => ({
-      default: m.SalesGoalsScreen,
-    })),
-  ),
+export const SalesGoalsScreen = lazy(() =>
+  SCREEN_CODE.goals().then((m) => ({
+    default: m.SalesGoalsScreen,
+  })),
 );
 
-export const LegalReviewsRoute = lazy(
-  routed(() =>
-    import("./features/privacy/legalreviews").then((m) => ({
-      default: m.LegalReviewsRoute,
-    })),
-  ),
+export const LegalReviewsRoute = lazy(() =>
+  SCREEN_CODE.legalReviews().then((m) => ({
+    default: m.LegalReviewsRoute,
+  })),
 );
 
-export const ScheduledSendsScreen = lazy(
-  routed(() =>
-    import("./features/mail/scheduledsends").then((m) => ({
-      default: m.ScheduledSendsScreen,
-    })),
-  ),
+export const ScheduledSendsScreen = lazy(() =>
+  SCREEN_CODE.scheduled().then((m) => ({
+    default: m.ScheduledSendsScreen,
+  })),
 );
 
 export const TagResultScreen = lazy(() =>
-  import("./features/lists/tagresult").then((m) => ({
+  SCREEN_CODE.tags().then((m) => ({
     default: m.TagResultScreen,
   })),
 );
 
-export const SearchRoute = lazy(
-  routed(() =>
-    import("./features/voice-knowledge/search").then((m) => ({
-      default: m.SearchRoute,
-    })),
-  ),
+export const SearchRoute = lazy(() =>
+  SCREEN_CODE.search().then((m) => ({
+    default: m.SearchRoute,
+  })),
 );
 
-export const SettingsScreen = lazy(
-  routed(() =>
-    import("./App.settings").then((m) => ({
-      default: m.SettingsScreen,
-    })),
-  ),
+export const SettingsScreen = lazy(() =>
+  SCREEN_CODE.settings().then((m) => ({
+    default: m.SettingsScreen,
+  })),
 );
 
-const ShareScreen = lazy(
-  routed(() =>
-    import("./features/records/share").then((m) => ({
-      default: m.ShareScreen,
-    })),
-  ),
+const ShareScreen = lazy(() =>
+  SCREEN_CODE.share().then((m) => ({
+    default: m.ShareScreen,
+  })),
 );
 
 export const WorklistRedirect = lazy(() =>
-  import("./features/brief/brief.queue").then((m) => ({
+  SCREEN_CODE.worklist().then((m) => ({
     default: m.WorklistRedirect,
   })),
 );
