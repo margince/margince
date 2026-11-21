@@ -11,14 +11,87 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "cb71612989250354",
+    "tools": "1941f6e6445ac369",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:13:13Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:49:32Z"
+  },
   "usage": {
-    "input_tokens": 22,
-    "output_tokens": 3140,
-    "cache_creation_input_tokens": 28918,
-    "cache_read_input_tokens": 898835,
+    "input_tokens": 16,
+    "output_tokens": 2546,
+    "cache_creation_input_tokens": 35084,
+    "cache_read_input_tokens": 659383,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.237
+    "cost_usd": 0.2318
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_reports",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "record_forecast_call",
+        "record_sales_decision",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_reports",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "record_forecast_call",
+        "record_sales_decision",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7,
+      "min": 6,
+      "max": 8
+    },
+    "turns": {
+      "median": 8,
+      "min": 7,
+      "max": 9
+    },
+    "refused": {
+      "median": 2,
+      "min": 1,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 347241.5,
+      "min": 341020,
+      "max": 353463
+    },
+    "output_tokens": {
+      "median": 1273,
+      "min": 1077,
+      "max": 1469
+    },
+    "duration_ms": {
+      "median": 12494.5,
+      "min": 11075,
+      "max": 13914
+    }
   }
 }

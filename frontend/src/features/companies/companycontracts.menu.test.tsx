@@ -101,7 +101,9 @@ describe("the contract row menu", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     expect(screen.getByRole("button", { name: "Renew" })).toBeTruthy();
@@ -111,13 +113,73 @@ describe("the contract row menu", () => {
     ).toBeTruthy();
   });
 
+  // A renewal starts with its predecessor's title, so the menus need more.
+  it("tells two menus of one title apart by number, else by start day", async () => {
+    stub([
+      { ...ACTIVE, id: "c-1", contract_number: "MSA-7" },
+      { ...ACTIVE, id: "c-2", starts_on: "2025-03-01" },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024, MSA-7",
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: /^Actions for Framework agreement 2024, .*2025/,
+      }),
+    ).toBeTruthy();
+  });
+
+  it("numbers menus still named alike by their place in the list", async () => {
+    stub([
+      { ...ACTIVE, id: "c-1" },
+      { ...ACTIVE, id: "c-2" },
+      { ...ACTIVE, id: "c-3", starts_on: "2025-03-01" },
+      { ...ACTIVE, id: "c-4", starts_on: "2025-03-01" },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    const named = (name: string | RegExp) =>
+      screen.getAllByRole("button", { name }).length;
+    await screen.findByRole("button", {
+      name: "Actions for Framework agreement 2024 (1)",
+    });
+    expect(named("Actions for Framework agreement 2024 (2)")).toBe(1);
+    expect(named(/^Actions for Framework agreement 2024, .*2025 \(1\)$/)).toBe(
+      1,
+    );
+    expect(named(/^Actions for Framework agreement 2024, .*2025 \(2\)$/)).toBe(
+      1,
+    );
+  });
+
+  it("gives every menu its own name, a title already ending in a number included", async () => {
+    stub([
+      { ...ACTIVE, id: "c-1", title: "Agreement" },
+      { ...ACTIVE, id: "c-2", title: "Agreement" },
+      { ...ACTIVE, id: "c-3", title: "Agreement (1)" },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    await screen.findByRole("button", { name: "Actions for Agreement (1)" });
+    const names = screen
+      .getAllByRole("button", { name: /^Actions for Agreement/ })
+      .map((menu) => menu.getAttribute("aria-label"));
+    expect(new Set(names).size).toBe(3);
+  });
+
   it("withholds change-status and cancel from a terminal agreement, but not renew", async () => {
     stub([EXPIRED]);
     const user = userEvent.setup();
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     // A terminal status has no valid transition out of it but superseded, and
@@ -140,7 +202,9 @@ describe("the contract row menu", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     // refuseRenewalOfTerminal (contract_lifecycle.go): the ONE status renewal
@@ -161,7 +225,9 @@ describe("the contract row menu", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     expect(screen.queryByRole("button", { name: "Renew" })).toBeNull();
@@ -180,7 +246,9 @@ describe("the contract row menu", () => {
 
     await screen.findByText("Framework agreement 2024");
     expect(
-      screen.queryByRole("button", { name: "Contract actions" }),
+      screen.queryByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     ).toBeNull();
   });
 });

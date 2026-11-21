@@ -51,6 +51,9 @@ openapi: 3.1.0
 #   - `x-human-only: true` on a request body MEMBER — only a human may change it. The agent tool
 #     built from the route is not offered the member, the agent gate refuses an agent body that
 #     carries it, and the store refuses any other principal that changes it.
+#   - `x-agent-values: [...]` on an enum request body MEMBER — the values an agent may send. The
+#     agent is offered those alone (action catalog and skill), the agent gate refuses any other,
+#     and the service enforcing the rule is held to the same list by a compose test.
 #   - `x-agent-access: human-only` — the operation rejects an AGENT (Passport) principal outright
 #     (403 code: permission_denied), whatever its scope/seat. Used for governance the agent must not
 #     self-serve: approval decisions (approve/reject — an agent may STAGE a 🟡 action but never
@@ -4295,9 +4298,8 @@ paths:
                   type: [string, 'null']
                   format: uuid
                   description: >-
-                    The contact to be introduced TO. Must be somebody the caller can see on
-                    this account; a contact they cannot read is `404`, the same answer a
-                    direct read gives. Absent asks for somebody at the account instead.
+                    The contact to be introduced TO. Must be somebody the caller can see at this company; a contact they cannot read is `404`, the same answer a
+                    direct read gives. Absent asks for somebody at the company instead.
                 via_user_id:
                   type: string
                   format: uuid
@@ -4305,8 +4307,8 @@ paths:
                     The colleague being asked. Must hold a recorded route to that contact —
                     asking somebody with no relationship to trade on is a favour they cannot
                     do, and a draft that claims one would be describing a closeness the
-                    account's own page does not show. With no `contact_id`, must be a
-                    colleague with LinkedIn reach into this account, or it is `404`.
+                    company's own page does not show. With no `contact_id`, must be a
+                    colleague with LinkedIn reach into this company, or it is `404`.
                 function:
                   allOf: [ { $ref: '#/components/schemas/LinkedInReachFunction' } ]
                   description: >-
@@ -4318,7 +4320,7 @@ paths:
                   type: [string, 'null']
                   format: uuid
                   description: >-
-                    Which open deal the introduction is for. Absent draws on the account as a
+                    Which open deal the introduction is for. Absent draws on the company as a
                     whole, which is the honest shape when the rep is opening a conversation
                     rather than moving a transaction.
       responses:
@@ -4941,7 +4943,7 @@ paths:
                     sha256 digest in lowercase hex.
 
                     A value of the wrong SHAPE is a 422, so a client that mangled it can
-                    tell that from a hit. A well-formed value the account does not
+                    tell that from a hit. A well-formed value the company does not
                     currently raise is a `204` that stores nothing; see this operation's
                     description for why those two answers differ.
                 project_id:
@@ -4949,13 +4951,13 @@ paths:
                   format: uuid
                   description: |
                     The project the page was scoped to when the suggestion was rendered,
-                    absent on the whole-account page.
+                    absent on the whole-company page.
 
                     A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
                     page reasons over one project's activity — so the same advice raised
-                    on a scoped page and on the account page are two different
+                    on a scoped page and on the company page are two different
                     fingerprints. This route re-derives the suggestions to check the
-                    fingerprint is one the account really raises for this caller, and it
+                    fingerprint is one the company really raises for this caller, and it
                     can only reproduce a scoped one by narrowing the same way.
 
                     Send the project the reader was looking at. Omit it and a dismissal
@@ -7701,7 +7703,7 @@ paths:
       operationId: getAccountCoverage
       x-mcp-tool: { verb: get_company_coverage, router: read_reports, action: company_coverage, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: "The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them."
+      summary: "The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them."
       parameters:
       - name: scope_kind
         in: query
@@ -23002,6 +23004,9 @@ paths:
     get:
       tags: [Capture]
       operationId: getMorningDigest
+      deprecated: true
+      x-deprecated-reason: >
+        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       x-human-only-reason: security
@@ -23014,8 +23019,6 @@ paths:
         answers `404 no_digest_for_date`, which is a different state: digests exist, that day
         has none. An empty `date=` is refused as `422 invalid_date` rather than read as the
         year one. v1 delivery is in-app; email is delivery-only later, same object.
-      parameters:
-        - { name: date, in: query, schema: { type: string, format: date }, description: 'A specific digest day; default: the latest generated.' }
       responses:
         '200':
           description: The digest.
@@ -36922,8 +36925,8 @@ paths:
         effect the same way, and the row and the audit name the agent until the
         user chooses a zone themselves. Saving the zone already stored writes nothing.
 
-        Not open to agents: an agent acting for a user must not change the
-        clock that user's times, bookings and mail are read on.
+        An agent sends `agent` alone, and only once its user asked for the zone:
+        it never passes as the user's own pick or as the browser.
       requestBody:
         required: true
         content:
@@ -50438,7 +50441,7 @@ components:
           type: boolean
           default: false
           description: |
-            Read the account again even though the stored findings' fingerprint matches or
+            Read the company again even though the stored findings' fingerprint matches or
             the rescan floor has not passed. A scan already in flight is still returned as
             it stands rather than started twice.
 
@@ -50875,7 +50878,7 @@ components:
         approval is not a citable record type here, and an answer that named one could
         not be checked the way every other sentence can.
         `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
-        `whats_changed` — what has moved on this account recently.
+        `whats_changed` — what has moved on this company recently.
 
     CompanyAnswer:
       type: object
@@ -56260,6 +56263,7 @@ components:
         source:
           type: string
           enum: [browser, chosen, agent]
+          x-agent-values: [agent]
           description: |
             `browser` is the app's guess from the browser, stored only while no
             zone is stored. `chosen` is the user's own pick, always stored. `agent`
@@ -63058,10 +63062,12 @@ components:
           type: array
           maxItems: 300
           items: { $ref: '#/components/schemas/RecipientCountry' }
+          x-human-only: true
           description: |
             The countries the sender states for this message's recipients, read as the send reads them:
             `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+            Only the human sender states them: an agent's preview carrying this field is refused with 403
+            `permission_denied`, and an integration's with 422 `invalid`.
             Each address may appear once; a second entry is refused with 422 `invalid`.
         subject:
           type: string
@@ -63122,10 +63128,12 @@ components:
           type: array
           maxItems: 300
           items: { $ref: '#/components/schemas/RecipientCountry' }
+          x-human-only: true
           description: |
             The countries the sender states for this message's recipients, read as the send reads them:
             `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+            Only the human sender states them: an agent's preview carrying this field is refused with 403
+            `permission_denied`, and an integration's with 422 `invalid`.
             Each address may appear once; a second entry is refused with 422 `invalid`.
         subject:
           type: string
@@ -65146,7 +65154,7 @@ components:
           type: string
           enum: [company, workstream, unknown]
           x-extensible-enum: true
-          description: Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+          description: Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
         workstream:
           type: string
           description: The engagement named in the cited words, when present. Never inferred from the company name.
@@ -68138,12 +68146,12 @@ components:
     AccountCoverageThresholds:
       type: object
       additionalProperties: false
-      description: "What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints."
+      description: "What the coverage section counts as at risk. Absent fields take the defaults the answer prints."
       properties:
-        max_engaged_seats: { type: integer, minimum: 0, maximum: 10, description: "A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. Account coverage and the deal page both judge by it. Default 1." }
-        untouched_days: { type: integer, minimum: 1, maximum: 365, description: "An account with an open deal and no exchange within this many days is untouched. Default 21." }
-        silent_days: { type: integer, minimum: 1, maximum: 365, description: "A won account with no exchange within this many days is silent. Default 30." }
-        won_within_days: { type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes an account a won account. Default 180." }
+        max_engaged_seats: { type: integer, minimum: 0, maximum: 10, description: "A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. The coverage section and the deal page both judge by it. Default 1." }
+        untouched_days: { type: integer, minimum: 1, maximum: 365, description: "A company with an open deal and no exchange within this many days is untouched. Default 21." }
+        silent_days: { type: integer, minimum: 1, maximum: 365, description: "A won company with no exchange within this many days is silent. Default 30." }
+        won_within_days: { type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes a company a won one. Default 180." }
     ReportingFramework:
       type: object
       additionalProperties: false
@@ -72477,7 +72485,7 @@ components:
       additionalProperties: false
       required: [destination, available]
       properties:
-        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration], x-extensible-enum: true}
+        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional], x-extensible-enum: true, description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.'}
         available: {type: boolean}
         reason: {type: string}
 

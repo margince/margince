@@ -2215,7 +2215,7 @@ func (stubs) UpdateContactCaseSettings(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "UpdateContactCaseSettings")
 }
 
-func (stubs) GetMorningDigest(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMorningDigestParams) {
+func (stubs) GetMorningDigest(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMorningDigest")
 }
 

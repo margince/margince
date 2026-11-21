@@ -8,7 +8,8 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../../testing/story-utils";
-import { type DealCommercial, DealLinesEditor } from "./deallines";
+import { DealLinesEditor } from "./deallines";
+import type { DealCommercial } from "./deallinestotal";
 
 const meta: Meta = {
   title: "Records/Deal 360/Line editor",

@@ -17,13 +17,15 @@ import (
 )
 
 // routeOf names how the assistant was reached. A folder's @suffix is the CLI
-// route; a verdict with no driver predates routes, when only the claude CLI drove.
+// or Agent SDK route; a verdict with no driver predates routes, when only the claude CLI drove.
 func routeOf(folder, driver string) string {
 	switch {
 	case strings.HasSuffix(folder, "@codex-cli"):
 		return "Codex CLI"
 	case strings.HasSuffix(folder, "@agy-cli"):
 		return "Antigravity CLI"
+	case strings.HasSuffix(folder, "@claude-sdk"):
+		return "Claude Agent SDK"
 	case strings.HasSuffix(folder, "@claude-cli"), driver == "":
 		return "Claude Code CLI"
 	case strings.HasSuffix(driver, ":openrouter"):
@@ -113,27 +115,11 @@ func plainWords(m modelCoverage, titles map[string]string) string {
 func writeCoverageJobs(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## What can it do for me?\n\n")
 	p.WriteString("One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably " +
-		"yet, and a dash means not tried yet. What a good answer must do is in the second column. " +
+		"yet, and a dash means not tried yet. What a good answer must do is in the second column, and " +
+		"whose access the assistant was given is in the third. " +
 		"A result can be older than the tools it measured: `make e2e-llm-report` says which still hold.\n\n")
-	header := "| Job | What a good answer does |"
-	rule := "|---|---|"
-	var headerSb115 strings.Builder
-	var ruleSb115 strings.Builder
-	for _, m := range r.Models {
-		fmt.Fprintf(&headerSb115, " `%s`<br>%s |", modelName(m.Model), m.Route)
-		ruleSb115.WriteString(":---:|")
-	}
-	header += headerSb115.String()
-	rule += ruleSb115.String()
-	p.WriteString(header + "\n" + rule + "\n")
-	for _, c := range byCaseNumber(r.Cases) {
-		fmt.Fprintf(p, "| %s | %s |", c.Title, plainCriteria(c.Name, c.Criteria, r.Criteria))
-		for _, m := range r.Models {
-			p.WriteString(" " + jobMark(c, m.Model) + " |")
-		}
-		p.WriteString("\n")
-	}
-	p.WriteString("\n")
+	cli, _ := splitByHarness(r.Models)
+	writeJobTable(p, r.Cases, cli, r.Criteria)
 }
 
 // plainCriteria is criteriaNames without the numbers, which only an engineer
@@ -158,6 +144,9 @@ func jobMark(c caseRow, model string) string {
 			mark := "❌"
 			if run.Held {
 				mark = "✅"
+			}
+			if run.Regraded {
+				mark += " re-graded"
 			}
 			return mark
 		}

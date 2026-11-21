@@ -33,7 +33,8 @@ func tree(t *testing.T) string {
 	write(mcpInfoFile, `{"instructions":"Be careful.","tools":{"tools":[`+
 		`{"name":"log_activity","description":"Log one thing."},`+
 		`{"name":"change_deal","description":"Change a deal."},`+
-		`{"name":"read_record","description":"Read one record."}]}}`)
+		`{"name":"read_record","description":"Read one record."}]},`+
+		`"action_catalog":{"change_deal":{"router":"change_deal","actions":[{"action":"move","body":{"properties":{"stage":{"description":"The stage to move to."}}}}]}}}`)
 	write(routesFile, `{"routers":{"change_deal":{"field":"action","actions":{"move":"move_deal"}}}}`)
 	write(candidatesFile, `{"judge":{"judge_routes":{"api":{"model":"judge-1"}}}}`)
 	for _, name := range append(append(append([]string{}, harnessFiles...), restTools...), restSkill...) {
@@ -93,6 +94,21 @@ func TestAVerbIsStampedByTheRouterThatFrontsIt(t *testing.T) {
 	edit(t, root, mcpInfoFile, "Change a deal.", "Change one deal.")
 	if got := before["case1_log"].Moved(stampsOf(t, root)["case1_log"]); !reflect.DeepEqual(got, []string{"tool copy"}) {
 		t.Errorf("move_deal sits behind change_deal, moved = %v, want [tool copy]", got)
+	}
+}
+
+// A model reads a routed action's body in the action catalog, not in tools/list.
+// A body change stales the scenarios that name a verb behind that router.
+func TestAnActionCatalogChangeStalesOnlyTheScenariosThatReachItsRouter(t *testing.T) {
+	root := tree(t)
+	before := stampsOf(t, root)
+	edit(t, root, mcpInfoFile, "The stage to move to.", "The stage to move to; an agent never sends won.")
+	after := stampsOf(t, root)
+	if got := before["case1_log"].Moved(after["case1_log"]); !reflect.DeepEqual(got, []string{"tool copy"}) {
+		t.Errorf("case1_log names move_deal behind change_deal, moved = %v, want [tool copy]", got)
+	}
+	if got := before["case2_read"].Moved(after["case2_read"]); len(got) != 0 {
+		t.Errorf("case2_read reaches no change_deal, moved = %v, want nothing", got)
 	}
 }
 

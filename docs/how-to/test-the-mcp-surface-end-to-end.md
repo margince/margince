@@ -11,6 +11,19 @@ This is the **lane that costs money**, and you turn it on yourself. Every run us
 
 See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red result), and [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface under test). The lane of [certify-an-ai-model.md](certify-an-ai-model.md) is a different one: one AI feature, one model. The `e2e-llm` row of [reference/make-targets.md](../reference/make-targets.md) lists every setting. [test-the-rest-surface-end-to-end.md](test-the-rest-surface-end-to-end.md) runs the same scenarios through the REST API.
 
+## How a sweep is run
+
+These rules hold for every sweep, on every model.
+
+1. **When.** Run a sweep by hand, in the pull request that changes the tool copy, the server instructions or the harness. No paid run is scheduled. To start one in CI, run [`mcp-sweep.yml`](../../.github/workflows/mcp-sweep.yml) by hand (section 8).
+2. **Order.** Claude runs first. Read each failure in its transcript. Sort it as a scenario bug, a harness bug, a product bug or a model limit. Fix the first three in the same pull request, open an issue for each as the record, and run again.
+   Gemini and GPT run only once no Claude failure is left to fix.
+3. **MCP and REST.** The MCP tools run on every model. The REST API runs on Claude only.
+4. **Grading.** Grade the result, not the path. Pin a path only where the path is what must hold. That is a send, an approval, an ask-first step, privacy, and instructions put in the data.
+   Never fail a case for extra calls. The verdict keeps calls and turns as a score of how direct the run was.
+5. **Re-grading.** When only the checker changes, grade the saved transcripts again instead of paying for a new run. Do this only while the scenario, tool and instruction hashes still match (section 8).
+6. **Quota.** When a model reaches its limit, stop that lane, and go on after the reset. Never retry in a loop.
+
 ## 1. Choose the assistant and how to reach it
 
 | `E2E_LLM_CANDIDATE` | Model (the default of the consumer app) |
@@ -27,11 +40,16 @@ The table is in `e2e/llm/candidates.json`.
 | `api` (default) | `e2e/llm/drive.py`, the neutral bridge | the vendor key: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY` | `<model>` |
 | `openrouter` | the neutral bridge, through OpenRouter | `OPENAI_COMPATIBLE_API_KEY` | `<model>` |
 | `cli` | `claude -p`, `codex exec` or `agy -p` (no Mistral CLI; Gemini runs only here) | a Claude credential, a `codex login`, or an Antigravity sign-in | `<model>@<cli>` |
+| `sdk` | the `claude` binary under the Claude Agent SDK (`e2e/llm/sdk-runner/`), Claude only | the Claude credential the `cli` route uses, and `node` | `<model>@claude-sdk` |
 
 **Only the bridge compares models.** It gives every vendor the same tools, and the instructions of the server as the system prompt. It also gives the same cap of 20 turns, and the same cap on results. A CLI uses the system prompt and agent loop of its own vendor. So its number is filed on its own, and never sits in the comparison column. The CLI routes
 are the way to run a long sweep on a subscription at small cost.
 
 A CLI starts with nothing of yours: `e2e/llm/clean.py` starts it, and the judge, in an empty folder. The claude CLI loads no settings, no `memory_paths` and no `skills`. Codex gets a home folder that holds only a copy of your login, and a new login it gets goes back to yours. The lane stops a run whose `init` line shows a repository folder, a `memory_paths` entry, a user plugin or a skill. It also stops a run with a `hook_started` line. Codex prints neither, so `e2e/llm/tests/test_codex.py` checks how it starts instead.
+
+**The `sdk` route answers forms in the chat.** `claude -p` cancels every form the server puts up, so a change to many records at once never runs on the `cli` route. The `sdk` route runs the same `claude` binary with the same flags and system prompt. Its host answers each form from the scenario's `elicitation:` entries, and writes the question and the answer into the transcript as an `elicitation` line.
+
+Before each run of the lane on this route, it installs again when what is installed is not what `e2e/llm/sdk-runner/package.json` pins. It checks the registry signatures, and runs `npm run selfcheck` there. That folder keeps no lockfile, so the source SBOM never lists the Agent SDK.
 
 Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you run `agy` once and sign in). Each run gets an empty folder that holds one agent file. That agent names the lane's server as its only MCP server, and turns off your own servers, rules and skill files. In print mode `agy` refuses any action it would ask you about, and `--settings` allows only the lane's server.
 
@@ -147,8 +165,8 @@ These numbers come from a full sweep of the test data on one machine, with no ca
 Most of the time of a case goes to the start and seed of its stack, not to the model. `usage:` under each scenario, and `sweep total:` at the end, print what a run used. The committed verdict keeps the same totals.
 
 1. **Run a few scenarios first** (section 3), and read their transcripts. A harness error then costs a few cases.
-2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case that names a tool in `must_call`.
-   Generate the coverage page again (section 8): its count of tools that no case requires must not grow.
+2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case whose runs use a tool.
+   Generate the coverage page again (section 8): its count of tools no case drives must not grow. A case drives a tool it requires, or one a passing run of a held case called.
 3. **Run a discovery pass.** Fix all that it finds ([improve-mcp-quality.md](improve-mcp-quality.md)).
 4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on every target ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
 5. **Read the stamps.** Each verdict carries a `stamp` of what it measured (section 8).
@@ -196,6 +214,22 @@ line it cannot place, a pattern that does not compile and a value of the wrong s
 A scenario that fails lists what failed to hold. That can be a tool it never called,
 a fact it never said, or something it must not say. It can be a judged criterion, with the
 reason of the judge in one sentence. It can also be a record that the run put in the wrong state.
+
+### How directly a run finished
+
+A good model needs fewer rounds, so the lane counts them. After each scenario it prints an
+`efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle
+value of the runs, with the least and the most.
+
+The counts are tool calls, model turns, refused calls, prompt tokens and output tokens. How long a
+run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool
+name that the CLI turned away. A run with no last result is left out, and `runs` says how many runs
+are behind the numbers.
+
+These numbers never fail a case and never change the exit code. A scenario can set
+`expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true`
+and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and
+model, and the calls per case for each model. A verdict from before this measure shows `-`.
 
 ### The end state
 
@@ -249,6 +283,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
 | `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
+| `the client declined a question the server asked in the chat` | The server asked the user to confirm a change in the chat, and the CLI said no by itself: in print mode nobody can answer the form | A harness stop, never a score. Run the case on the `sdk` route with the user's answer in `elicitation:`. A no that the case scripts there is the user's own, so it is scored |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a bug: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) ended part of the way through a run. A CLI that exits with an error code, under a result that reports no error, stops the lane in the same way | A harness stop, never a score. Every driver writes a last result when the model ends the run, at the turn cap too. The stop prints the last lines the driver wrote to stderr |
 
@@ -281,19 +316,26 @@ cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished
 ```
 
 Each verdict carries a `stamp` of what it measured. It holds a short hash of the scenario file and
-of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). It also holds
+of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). For a
+router, that entry includes the bodies `read_workspace topic=actions` serves. It also holds
 a hash of the server instructions and of the grading harness, the judge model, the commit and the
 time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
+
+To grade saved transcripts again, run `check.py --record` with `E2E_LLM_COMMIT` and `E2E_LLM_RAN_AT` set to the run's commit and time, and `E2E_LLM_GRADED_COMMIT` to the commit that grades.
+The stamp then holds `graded_commit` and `graded_at` too. Where the two commits differ, `make e2e-llm-report` and the coverage page say `re-graded`.
 
 A verdict whose stamp no longer matches the tree, or that has none, is stale.
 `make e2e-llm-report` names what moved. A pull request that makes a verdict
 stale gets a comment that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you
 do not run them again.
 
-The weekly scheduled run sweeps every case in parts, side by side. It opens a pull request with its
-verdicts only when every case has a new one from a stack whose search ranks by meaning. The
-`RECORDS_OWNER` repository variable names who owns that pull request. That colleague runs the lane
-by hand when the weekly run cannot.
+`mcp-sweep.yml` sweeps every case in parts, side by side, with `claude-sonnet-5-5` over the Claude CLI. Its header comment says what it needs.
+It uploads verdicts only when every case has a new one from a stack whose search ranks by meaning. Each part keeps its transcripts as an `e2e-llm-transcripts-*` artifact.
+
+Started on `main`, the run opens a pull request with its verdicts, owned by the `RECORDS_OWNER` repository variable. It files an issue on `main` for a run that was cut off, could not run, or has a failing case. Only a later run on `main` that proves the issue wrong closes it.
+
+Started on another branch, it opens no pull request and files no issue. Its `records-llm` artifact holds `llm.patch`, with the verdicts and the page made again, and `llm-table.md`, the scenarios whose result moved.
+Run `git apply llm.patch` from the root of the tree, commit the result, and paste `llm-table.md` into the PR body. If the branch moved and `git apply` refuses the page, generate it again with the `go test` command above.
 
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a run to try something.
@@ -302,4 +344,4 @@ Do not leave it next to the others without a commit.
 ## 9. Run the role sweep with every pass
 
 A pass also needs `make test-roles` green. It calls every tool and action as every seeded role, costs no tokens and needs `make db-up`.
-It checks the `mcp-tool-roles/` and `toolchecks/` folders and `mcp-tool-roles.md`. A change in those files means a role is now allowed or refused a call, so `tools/list` offers the wrong tools: follow [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md). `make e2e-llm` does not run it, as that lane costs money. The weekly scheduled run does both.
+It checks the `mcp-tool-roles/` and `toolchecks/` folders and `mcp-tool-roles.md`. A change in those files means a role is now allowed or refused a call, so `tools/list` offers the wrong tools: follow [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md). `make e2e-llm` does not run it, so a sweep by hand runs both. `scheduled.yml` also runs the role sweep by itself, as it costs no tokens.

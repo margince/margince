@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/knowledge/handbook"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
 
 // handbookKeyPrefix marks a storage key as naming an embedded handbook page
@@ -38,14 +39,19 @@ const handbookKeyPrefix = "handbook:"
 // a prefix typed in two places is one typo from documents nothing can open.
 func handbookStorageKey(filename string) string { return handbookKeyPrefix + filename }
 
-// ErrHandbookPageGone is a document row naming a page this build does not ship.
+// ErrHandbookPageGone is a document row naming a page this build does not ship,
+// or ships in other bytes than the row's checksum names.
 //
-// It is reachable, not theoretical. A release that withdraws a page leaves its
-// rows behind until the boot reconciliation removes them, and a request can
-// arrive in between. A worker older than a release that adds a page meets it
-// too, and an ingest waits that out. It is distinct from a missing object
-// because the repair differs: nobody should go looking in a bucket for it.
+// A release that withdraws a page leaves its rows until the boot reconciliation
+// removes them. A worker older than a release that adds or rewrites a page meets
+// it too, and an ingest waits that out. It is distinct from a missing object
+// because nobody should go looking in a bucket for it.
 var ErrHandbookPageGone = errors.New("knowledge: this release does not ship that handbook page")
+
+// HandbookPageStaleDetail is the ingest_detail a page carries when its ingest
+// failed only because the worker held other bytes than the row names. It is the
+// one failure a later boot of the api may retry, so it is matched by value.
+const HandbookPageStaleDetail = "This handbook page is missing from, or differs in, the handbook the worker holds, so it could not be indexed. An administrator has to update every worker to the current release, or the page has been withdrawn."
 
 // openContent streams a document's bytes, whichever side of the split it is on.
 func (s *Store) openContent(ctx context.Context, storageKey string) (io.ReadCloser, error) {
@@ -64,6 +70,33 @@ func (s *Store) openContent(ctx context.Context, storageKey string) (io.ReadClos
 		return nil, fmt.Errorf("read the stored document: %w", err)
 	}
 	return body, nil
+}
+
+// openIngestContent is openContent for an ingest, which must read the bytes the
+// row's checksum names. An older worker holds the same page name with older
+// bytes. Ingesting them would file old text under the new checksum silently, so
+// a mismatch waits like a page this build lacks.
+func (s *Store) openIngestContent(ctx context.Context, src IngestSource) (io.ReadCloser, error) {
+	body, err := s.openContent(ctx, src.StorageKey)
+	if err != nil {
+		return nil, err
+	}
+	page, isHandbook := strings.CutPrefix(src.StorageKey, handbookKeyPrefix)
+	if !isHandbook {
+		return body, nil
+	}
+	if err := body.Close(); err != nil {
+		return nil, fmt.Errorf("close the handbook page: %w", err)
+	}
+	content, _ := handbook.Open(page)
+	have, _, err := blobstore.Digest(bytes.NewReader(content))
+	if err != nil {
+		return nil, fmt.Errorf("checksum the handbook page: %w", err)
+	}
+	if have != src.Checksum {
+		return nil, fmt.Errorf("%q: this worker holds other bytes than the row names: %w", page, ErrHandbookPageGone)
+	}
+	return io.NopCloser(bytes.NewReader(content)), nil
 }
 
 // discardContent destroys the bytes behind a document, for the paths that

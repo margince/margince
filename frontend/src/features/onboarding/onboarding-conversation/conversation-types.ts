@@ -43,7 +43,6 @@ export type ConversationPhase =
   | "vo.speaker"
   | "vo.building"
   | "vo.result"
-  | "vo.skipped"
   | "in.ask"
   | "tm.ask"
   // The connect act carries BOTH mail and LinkedIn on one surface: mail is
@@ -91,9 +90,8 @@ export type ConversationQuestion = {
   i18nKey: MessageKey;
   params?: Record<string, string>;
   options: QuestionOption[];
-  /** The subordinate local-dismiss action's label (humans outrank the
-   * reader: a clarify is never an unanswerable gate). Absent on questions
-   * that genuinely need an answer to proceed (the speaker ask). */
+  /** The local dismissal's label, so no question is an unanswerable gate.
+   *  Absent where a dismissal would leave nothing true to record. */
   dismissLabelKey?: MessageKey;
 };
 
@@ -137,6 +135,9 @@ export type ConversationState = {
   act: ConversationAct;
   phase: ConversationPhase;
   memberPath: boolean;
+  /** False for a member whose role may not create a voice profile. The voice
+   * act and its rail stop are left out, since every sample would be refused. */
+  voiceStep: boolean;
   pendingQuestion: ConversationQuestion | null;
   thread: ThreadEntry[];
   /** Monotonic entry-id sequence; see ThreadEntry. */
@@ -158,6 +159,8 @@ export type ConversationState = {
   concludedReadId: string | null;
   /** The build run whose events are current; stale runs are ignored. */
   activeBuildId: string | null;
+  /** The profile that run builds, so an act mounted again reads its result. */
+  activeBuildProfileId: string | null;
   /** Last narrated build stage, so a repeated stage poll appends nothing. */
   lastBuildStage: BuildStage | null;
   /** How the last voice build ended: failed may be retried, deferred
@@ -186,7 +189,7 @@ export type BuildTerminalStatus = "succeeded" | "failed" | "deferred";
  */
 export type ResumePoint = Extract<
   ConversationPhase,
-  "bs.ask" | "in.ask" | "tm.ask" | "vo.collecting" | "vo.skipped" | "cn.consent"
+  "bs.ask" | "in.ask" | "tm.ask" | "vo.collecting" | "cn.consent"
 >;
 
 export type ConversationEvent =
@@ -199,6 +202,8 @@ export type ConversationEvent =
   | {
       type: "START";
       memberPath: boolean;
+      /** Absent means the voice act is offered (see ConversationState). */
+      voiceStep?: boolean;
       /** Server-derived recap turns seeded on restore. Narration is never
        * persisted; these entries are recomputed from server state, so a
        * reload summarizes instead of replaying the original narration. */
@@ -249,7 +254,7 @@ export type ConversationEvent =
   | { type: "VOICE_SKIPPED" }
   | { type: "UPLOAD_ADDED"; id: string; name: string }
   | { type: "SPEAKER_NEEDED"; question: ConversationQuestion }
-  | { type: "BUILD_STARTED"; buildId: string }
+  | { type: "BUILD_STARTED"; buildId: string; profileId: string }
   | { type: "BUILD_STAGE"; buildId: string; stage: BuildStage }
   // detail is the build row's own status_detail: safe operator guidance the
   // server composed for exactly this outcome, and the only thing that tells a
@@ -266,6 +271,9 @@ export type ConversationEvent =
   // A succeeded build the reader does not recognise as their own: back to
   // collecting, so more of their writing can go in before the next build.
   | { type: "VOICE_REVISE" }
+  // Back from connect to the voice act, where the reader left it: a built
+  // voice reopens on its result, anything else on collecting.
+  | { type: "CONNECT_BACK" }
   // Leaving the connect act ends the journey, as leaving the team act does:
   // the two are the terminal moves, one per way out.
   | { type: "CONNECT_DONE" };

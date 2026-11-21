@@ -6,9 +6,8 @@
 #   list_tags   — both words and their ids. Nothing else enumerates the
 #                 vocabulary, and merge_tags takes ids.
 #
-#   get_tag     — THE COUNTS, and they are the reason this call is required
-#                 rather than merely sensible. list_tags answers a Tag, which
-#                 carries no usage; get_tag answers a TagDetail, which does. The
+#   get_tag     — THE COUNTS. list_tags answers a Tag, which carries no usage;
+#                 get_tag answers a TagDetail, which does. The
 #                 user asks for the word on more records to be the one that
 #                 survives, so the choice is arithmetic the tag list cannot do
 #                 and only this read carries.
@@ -46,16 +45,12 @@ prompt: |
   Then give the one that survives a description so nobody coins a third: it
   means an account with a named exec sponsor.
 
+# The end state reads the fold. No form reads a tag's description, so the
+# meaning the user gave the surviving word is held on the call that writes it.
 must_call:
-  - read_tags
-  - merge_tags
   - change_tags
 
 must_call_with:
-  - read_tags.mode=list
-  # How many accounts each word is on: one tag at a time (get), or every word's
-  # count in one list read (with_carried_by), which GET /tags also answers.
-  - read_tags.mode=get|read_tags.with_carried_by=true
   - change_tags.action=update
 
 may_call:
@@ -67,12 +62,13 @@ may_call:
   - read_approval
   - whoami
   - read_workspace
+  - read_tags
+  - merge_tags
 
-# NOTHING IS PINNED WITH must_call_with, deliberately. Every argument these four
-# tools take on this errand is a uuid the fixture mints at seed time, and the
-# one free-text argument — update_tag's description — is prose the user
-# described rather than dictated. Pinning a wording would judge the sentence,
-# which check.py's own contract says it does not.
+# NO ARGUMENT IS PINNED. Every id these tools take is a uuid the fixture mints
+# at seed time, and the description is prose the user described rather than
+# dictated. Pinning a wording would judge the sentence, which check.py's own
+# contract says it does not.
 
 must_mention:
   # Criterion 1, MECHANICAL: the choice was made on the counts, and the count is

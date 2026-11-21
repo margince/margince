@@ -10,14 +10,77 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "35482c83ca29a353",
+    "tools": "14e49c68d088e7b0",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:49:44Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:48:55Z"
+  },
   "usage": {
     "input_tokens": 12,
-    "output_tokens": 1843,
-    "cache_creation_input_tokens": 8450,
-    "cache_read_input_tokens": 457298,
+    "output_tokens": 1849,
+    "cache_creation_input_tokens": 8648,
+    "cache_read_input_tokens": 462474,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.098
+    "cost_usd": 0.0994
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "read_attention",
+        "read_record",
+        "whats_slipping_this_week"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "read_attention",
+        "read_record",
+        "whats_slipping_this_week"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "turns": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 235567,
+      "min": 235535,
+      "max": 235599
+    },
+    "output_tokens": {
+      "median": 924.5,
+      "min": 884,
+      "max": 965
+    },
+    "duration_ms": {
+      "median": 9350,
+      "min": 9058,
+      "max": 9642
+    }
   }
 }

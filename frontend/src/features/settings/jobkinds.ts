@@ -28,7 +28,6 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   capture_classify: "systemJob.capture_classify",
   capture_confidentiality_verdict: "jobs.kind.capture_confidentiality_verdict",
   capture_counterparty_verdict: "jobs.kind.capture_counterparty_verdict",
-  capture_digest: "jobs.kind.capture_digest",
   capture_enrich: "jobs.kind.capture_enrich",
   capture_part_slim: "jobs.kind.capture_part_slim",
   capture_sync: "jobs.kind.capture_sync",

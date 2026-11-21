@@ -68,6 +68,8 @@ func TestNormalizeCompanyLinkedInURLRefusesWhatIsNotACompanyURL(t *testing.T) {
 		{"a contact profile", "https://www.linkedin.com/in/lars", "linkedin_url_not_company"},
 		{"a company path with no company", "https://www.linkedin.com/company/", "linkedin_url_not_company"},
 		{"the company index itself", "https://www.linkedin.com/company", "linkedin_url_not_company"},
+		{"a path that climbs out of the company", "https://www.linkedin.com/company/../in/lars", "linkedin_url_not_company"},
+		{"an encoded climb", "https://www.linkedin.com/company/%2e%2e/in/lars", "linkedin_url_not_company"},
 		{"another network entirely", "https://xing.com/company/voltaq", "linkedin_url_not_linkedin"},
 		// Both of these pass a suffix test and fail the column's own regex, so
 		// accepting them would turn a bad URL into a constraint violation.

@@ -66,7 +66,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 		// The country this recipient was decided under, so the row names the
 		// pack that judged it.
 		ruleset := rulesetStamp(countries[i])
-		protection := claims[decisionRecipientKey(d.Recipient)].dataProtection
+		protection := stagedClaimOf(claims, d.Recipient).dataProtection
 		values := []any{
 			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested), string(d.Resolved), string(d.Verdict),
@@ -240,11 +240,24 @@ func reasonForSuppressionKind(kind string) string {
 //
 // A channel identity is therefore stored structurally. It stays inside the
 // installation, where the timeline already holds the same id.
+//
+// An address is stored folded the way the cap count reads it, so one mailbox
+// in two spellings is one row under the uniqueness index. A channel id is kept
+// as supplied, because a provider may tell two ids apart by case.
 func decisionRecipientKey(r connector.Recipient) string {
 	if r.Channel != nil {
 		return r.Channel.Provider + ":" + r.Channel.ChannelUserID
 	}
-	return r.Email
+	return normalizeCapAddress(r.Email)
+}
+
+// stagedClaimOf finds what staging decided for a recipient. A delivery staged
+// by a release that stored the address as typed is found under that spelling.
+func stagedClaimOf(claims map[string]stagedClaim, r connector.Recipient) stagedClaim {
+	if claim, ok := claims[decisionRecipientKey(r)]; ok {
+		return claim
+	}
+	return claims[r.Email]
 }
 
 // deliveryAuthorityTx reads what the staging phase decided this delivery goes

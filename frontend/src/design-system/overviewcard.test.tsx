@@ -67,4 +67,16 @@ describe("Overview card", () => {
       "overviewcard-foot-warn",
     );
   });
+
+  it("holds a foot that is a paragraph of its own without nesting it in another", () => {
+    render(
+      <OverviewCard title="Products" foot={<p>Net value: €200.00</p>}>
+        <OverviewList>
+          <OverviewRow title="Bananas" />
+        </OverviewList>
+      </OverviewCard>,
+    );
+    const words = screen.getByText("Net value: €200.00");
+    expect(words.parentElement?.closest("p")).toBeNull();
+  });
 });

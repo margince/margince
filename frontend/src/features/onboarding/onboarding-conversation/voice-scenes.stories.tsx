@@ -7,7 +7,8 @@ import type { components } from "../../../api/schema";
 import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
 import { StoryProviders } from "../../../testing/story-utils";
 import type { ConversationQuestion } from "./conversation-types";
-import type { CorpusManifestEntry } from "./use-voice-corpus";
+import type { VoiceIngestFailure } from "./use-voice-corpus";
+import type { CorpusManifestEntry } from "./voice-manifest";
 import {
   VoiceBuildScene,
   VoiceCollectScene,
@@ -50,6 +51,8 @@ function summary(totalWords: number, sources: number): CorpusSummary {
 const MANIFEST: readonly CorpusManifestEntry[] = [
   {
     ref: "src-1",
+    id: "src-1",
+    version: 1,
     label: "Sent mail, last quarter.mbox",
     keptWords: 2840,
     inputWords: 2840,
@@ -63,6 +66,8 @@ const MANIFEST: readonly CorpusManifestEntry[] = [
   },
   {
     ref: "src-2",
+    id: "src-2",
+    version: 1,
     label: "Kickoff call, Brandt Automotive.vtt",
     keptWords: 1380,
     inputWords: 4210,
@@ -80,6 +85,7 @@ function Collect({
   canBuild = false,
   startPending = false,
   startError = null,
+  failures = [],
   locale,
 }: Readonly<{
   corpus: CorpusSummary | null;
@@ -87,6 +93,7 @@ function Collect({
   canBuild?: boolean;
   startPending?: boolean;
   startError?: string | null;
+  failures?: readonly VoiceIngestFailure[];
   locale?: "de";
 }>) {
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -95,9 +102,12 @@ function Collect({
       <VoiceCollectScene
         summary={corpus}
         manifest={manifest}
+        failures={failures}
         fileRef={fileRef}
         onFiles={() => {}}
         onAddPaste={() => {}}
+        onRemove={() => {}}
+        removing={null}
         onBuild={() => {}}
         onSkip={() => {}}
         canBuild={canBuild}
@@ -118,6 +128,38 @@ type Story = StoryObj<typeof VoiceCollectScene>;
 
 /** Nothing handed over yet: the drop target, and a meter with nothing in it. */
 export const CollectEmpty: Story = { render: () => <Collect corpus={null} /> };
+
+/** Three files of one pick it could not take, each named on its own line
+ *  under the buttons that took them. */
+export const CollectRefusedFiles: Story = {
+  render: () => (
+    <Collect
+      corpus={null}
+      failures={[
+        {
+          id: "skip:picture.png",
+          i18nKey: "ob.conv.voice.fileSkipped",
+          params: { name: "picture.png" },
+        },
+        {
+          id: "skip:data.csv",
+          i18nKey: "ob.conv.voice.fileSkipped",
+          params: { name: "data.csv" },
+        },
+        {
+          id: "skip:empty.txt",
+          i18nKey: "ob.conv.voice.fileEmpty",
+          params: { name: "empty.txt" },
+        },
+      ]}
+    />
+  ),
+};
+
+export const CollectRefusedFilesDark: Story = {
+  ...CollectRefusedFiles,
+  globals: { theme: "dark" },
+};
 
 /**
  * Short of the floor. The meter says how far off it is rather than only refusing
@@ -196,6 +238,8 @@ export const CollectPhone: Story = {
 const SPEAKER_QUESTION: ConversationQuestion = {
   id: "speaker:src-2",
   i18nKey: "ob.conv.voice.speakerQuestion",
+  params: { name: "standup.vtt" },
+  dismissLabelKey: "ob.conv.voice.speakerSkip",
   options: [
     {
       value: "SPEAKER_00",
@@ -212,17 +256,24 @@ const SPEAKER_QUESTION: ConversationQuestion = {
   ],
 };
 
-/**
- * Which voice in the transcript is the reader's own. Continue stays held until
- * one is picked: a speaker chosen by default would file somebody else's words as
- * this company's writing, and nothing downstream would ever say so.
- */
+/** Which voice in the transcript is the reader's own; a default would file
+ *  someone else's words. Skip this file leaves out a file with none of them. */
 export const SpeakerAsk: Story = {
   render: () => (
     <StoryProviders>
-      <VoiceSpeakerScene question={SPEAKER_QUESTION} onAnswer={() => {}} />
+      <VoiceSpeakerScene
+        question={SPEAKER_QUESTION}
+        failures={[]}
+        onAnswer={() => {}}
+        onSkip={() => {}}
+      />
     </StoryProviders>
   ),
+};
+
+export const SpeakerAskDark: Story = {
+  ...SpeakerAsk,
+  globals: { theme: "dark" },
 };
 
 /** The same decision in German, where the option detail and the foot line both
@@ -230,7 +281,12 @@ export const SpeakerAsk: Story = {
 export const SpeakerAskGerman: Story = {
   render: () => (
     <StoryProviders locale="de">
-      <VoiceSpeakerScene question={SPEAKER_QUESTION} onAnswer={() => {}} />
+      <VoiceSpeakerScene
+        question={SPEAKER_QUESTION}
+        failures={[]}
+        onAnswer={() => {}}
+        onSkip={() => {}}
+      />
     </StoryProviders>
   ),
 };

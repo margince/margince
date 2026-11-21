@@ -20,6 +20,16 @@ dev_state_root() {
   printf '%s' "${MARGINCE_DEV_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/margince/dev}"
 }
 
+# devlog_awk runs awk a line at a time. mawk reads a pipe in 4 KB blocks unless
+# told it is interactive, so a quiet server's lines would arrive late.
+devlog_awk() {
+  if awk -W version 2>&1 </dev/null | grep -qi '^mawk'; then
+    awk -W interactive "$@"
+  else
+    awk "$@"
+  fi
+}
+
 # The primary worktree's stack has no slug, so its state directory needs a name
 # anyway. It is reserved: DEV_SLUG may not take it, or two stacks would share one
 # directory and each stop would remove the other's pids and claim.

@@ -78,6 +78,24 @@ export function useStageTitleFocus(board: string | undefined): void {
   }, [board]);
 }
 
+/** The same hand-off where boards place focus themselves: the title takes it
+ *  only from the body, and with `arrival` a newly mounted step is a swap. */
+export function useStageTitleRescue(
+  board: string | undefined,
+  arrival: boolean,
+): void {
+  const shown = useRef(arrival ? undefined : board);
+  useEffect(() => {
+    const lost =
+      document.activeElement === null ||
+      document.activeElement === document.body;
+    if (lost && board !== undefined && shown.current !== board) {
+      document.getElementById(STAGE_TITLE_ID)?.focus();
+    }
+    shown.current = board;
+  }, [board]);
+}
+
 /**
  * The Core's element id, for a surface that has to send something TO it.
  *
@@ -104,6 +122,7 @@ function StageBand({
   where,
   coreStateLabel,
   aside,
+  account,
   lit,
 }: Readonly<{
   flow: string;
@@ -112,6 +131,7 @@ function StageBand({
   where?: string;
   coreStateLabel?: string;
   aside?: ReactNode;
+  account?: ReactNode;
   lit: boolean;
 }>) {
   return (
@@ -180,6 +200,7 @@ function StageBand({
               is a rule that holds until the screen that forgets it. */}
           <span className="ob-stage-pref">
             <span className="ob-stage-rule" aria-hidden="true" />
+            {account}
             <ThemeToggle />
           </span>
         </div>
@@ -197,6 +218,7 @@ export function OnboardingStage({
   coreStateLabel,
   coreHidden = false,
   aside,
+  account,
   coreFlash,
   coreScale = "hero",
   anchor = "center",
@@ -282,6 +304,9 @@ export function OnboardingStage({
    * The stage keeps the place and stays out of the claim.
    */
   aside?: ReactNode;
+  /** The signed-in reader's way out, a glyph beside the theme switch. A slot,
+   *  since the first-run screens come before any session. */
+  account?: ReactNode;
   /**
    * `center` for a question of a fixed size; `start` for a surface that GROWS
    * while somebody reads it. A centred column re-centres on every arriving
@@ -371,6 +396,7 @@ export function OnboardingStage({
           where={where}
           coreStateLabel={coreStateLabel}
           aside={aside}
+          account={account}
           lit={lit}
         />
         <div className="ob-stage-scene">
@@ -398,10 +424,10 @@ export function OnboardingStage({
             className="ob-stage-board arrive-stack"
             {...boardRegion}
           >
+            {/* A line, not a heading: before the title it would open the
+                outline at level 2. */}
             {eyebrow === undefined ? null : (
-              <Eyebrow as="h2" size="xxsmall">
-                {eyebrow}
-              </Eyebrow>
+              <Eyebrow className="ob-stage-eyebrow">{eyebrow}</Eyebrow>
             )}
             {/* A STABLE id, because on a screen whose title is the question
                 itself the board below is answering this heading, and a control

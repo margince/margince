@@ -75,7 +75,7 @@ export const RetiredAllocation: Story = {
   play: async () => {
     await userEvent.click(
       await screen.findByRole("button", {
-        name: "Target retired",
+        name: "Retired targets",
       }),
     );
   },

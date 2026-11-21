@@ -171,11 +171,7 @@ func (s *Store) refreshWaitingHorizonTx(ctx context.Context, tx pgx.Tx, asOf tim
 	if err != nil {
 		return 0, err
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_waiting_horizon (horizon_days, measured_at) VALUES ($1, $2)
-		ON CONFLICT (singleton) DO UPDATE
-		   SET horizon_days = EXCLUDED.horizon_days, measured_at = EXCLUDED.measured_at`,
-		days, asOf); err != nil {
+	if err := storekit.StoreWaitingHorizonTx(ctx, tx, days, asOf); err != nil {
 		return 0, fmt.Errorf("activities: storing the waiting horizon: %w", err)
 	}
 	return days, nil

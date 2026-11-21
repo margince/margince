@@ -111,7 +111,6 @@ func change(p crmcontracts.InternalEventAiTaskStateChanged, scope string, user i
 		QuantityUnit:  deref(p.QuantityUnit),
 		DegradeReason: deref(p.DegradeReason),
 		Summary:       deref(p.Summary),
-		EventID:       env.EventID,
 	}
 }
 

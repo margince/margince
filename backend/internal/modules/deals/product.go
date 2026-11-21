@@ -349,8 +349,13 @@ var productListFields = map[string]storekit.SortField{
 	listUpdatedAtColumn: storekit.Column(storekit.KindTimestamp),
 	productNameColumn:   storekit.Column(fieldcatalog.TypeText),
 	productSkuColumn:    storekit.Column(fieldcatalog.TypeText),
-	productPriceColumn:  storekit.Column(fieldcatalog.TypeCurrency),
-	productActiveField:  storekit.Column(fieldcatalog.TypeBoolean),
+	// Minor units of two currencies are not one scale, so the price orders
+	// by currency first. The amount is padded to the 16 digits of the largest
+	// exact price, and "C" keeps the comparison byte order.
+	productPriceColumn: {Kind: fieldcatalog.TypeText, CursorField: "unit_price_by_currency", Expr: func(context.Context, func(any) int) (string, error) {
+		return `(currency || lpad(unit_price_minor::text, 16, '0')) COLLATE "C"`, nil
+	}},
+	productActiveField: storekit.Column(fieldcatalog.TypeBoolean),
 }
 
 func (s *Store) ListProducts(ctx context.Context, in ListProductsInput) ([]crmcontracts.Product, storekit.Page, error) {

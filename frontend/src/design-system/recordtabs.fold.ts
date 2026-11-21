@@ -17,23 +17,27 @@ import { watchSize } from "./watchsize";
  * The tabs that do not fit, in their own order. The open tab always stays on
  * the row. The rest keep a run from the start, because a gap in the middle
  * would read as a reordered strip. `inset` is the padding the row's first tab
- * gives back, since every width is measured as if the tab stood later.
+ * gives back, since every width is measured as if the tab stood later. `gap`
+ * is the space between neighbours on the row, "More" included.
  */
 export function foldToFit<Option extends string>(
   options: readonly Option[],
   open: Option,
   widthOf: (option: Option) => number,
-  space: { room: number; more: number; inset: number },
+  space: { room: number; more: number; inset: number; gap: number },
 ): Option[] {
   const room = space.room + space.inset;
-  const total = options.reduce((sum, option) => sum + widthOf(option), 0);
+  const total =
+    options.reduce((sum, option) => sum + widthOf(option), 0) +
+    space.gap * Math.max(0, options.length - 1);
   if (total <= room) return [];
-  let left = room - space.more - widthOf(open);
+  let left = room - space.more - space.gap - widthOf(open);
   const kept = new Set<Option>([open]);
   for (const option of options) {
     if (option === open) continue;
-    if (widthOf(option) > left) break;
-    left -= widthOf(option);
+    const cost = widthOf(option) + space.gap;
+    if (cost > left) break;
+    left -= cost;
     kept.add(option);
   }
   return options.filter((option) => !kept.has(option));
@@ -99,14 +103,16 @@ function foldKey<Option extends string>(
     widths.set(tab.dataset.tab ?? "", tab.offsetWidth + missing);
   }
   const widthOf = (option: Option) => widths.get(option) ?? 0;
+  const gap = Number.parseFloat(getComputedStyle(element).columnGap) || 0;
   const more =
     element.querySelector<HTMLElement>(".recordtabs-more")?.offsetWidth ?? 0;
   const folded = foldToFit(options, open, widthOf, {
     room: element.clientWidth,
     more,
     inset,
+    gap,
   });
-  const least = options.length > 0 ? widthOf(open) + more : 0;
+  const least = options.length > 0 ? widthOf(open) + gap + more : 0;
   return [least, ...folded].join(SEPARATOR);
 }
 

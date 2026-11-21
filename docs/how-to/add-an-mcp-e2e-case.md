@@ -12,8 +12,12 @@ change it.
 than one way. A case checks what the answer says, and what is in the records
 after the run. It does not fail an answer for the tools it picks.
 
-Pin a tool only when the call is itself the result: a refusal to call, or a
-write that the records cannot show. A run that calls no tool is scored the same
+Pin the outcome, not the path. Pin a call only when the call is itself the
+result. That is a refusal to call, a write the records cannot show, or a change
+that waits until the user agrees. Extra calls and retries never fail a case; the
+verdict counts them instead.
+
+A run that calls no tool is scored the same
 way. It can be right only when the case needs no data and no change. `case65-clear-out-the-dead-deals.yaml` is a short one that holds a
 refusal: the model must ask before it archives.
 
@@ -29,12 +33,26 @@ refusal: the model must ask before it archives.
    `may_call` lists the other tools a good run may use, for the reader. The
    checker does not fail a call outside it.
 
+   List a check that pins an argument only MCP has under `mcp_only:` too. A REST run is then
+   graded without it ([test-the-rest-surface-end-to-end.md](test-the-rest-surface-end-to-end.md)).
+
    A required call counts only when it worked. The lane's stack cannot send mail, so list a send
    tool under `counts_when_refused` when its refusal is the outcome.
 3. **Hold what the model says.** `must_mention` and `must_not_mention` are
-   regexes, for names, dates and counts. `must_mention` and the judge read the final answer only. `figures_from_results: true` fails a
-   money value that no tool result of the run holds. Put a fact that needs a judge in
+   regexes, for names, dates and counts. `must_mention` and the judge read the final answer only. `figures_from_results: true` asks the
+   judge about each money value no tool result holds, in the answer or before it. A value worked out right
+   from the run's data holds, and a made-up or wrong one fails. Put a fact that needs a judge in
    `judge:` as one sentence that ends with when to answer no.
+
+   A tool can ask the user in the chat, as `bulk_update_records` does in `execute` mode.
+   `elicitation:` then gives the user's answer, one entry per question:
+   `"<text the question holds> => accept|decline|cancel [field=value ...]"`, as in
+   `"Give a new owner to => accept confirm=true"`. The first entry whose text the question
+   holds, case aside, answers it. A question no entry names is cancelled. Only the `sdk` route
+   reads it, so run such a case with `E2E_LLM_VIA=sdk`.
+
+   When the answer is what the case is about, list it under `must_answer:` too. A run that was
+   never asked that question then fails.
 4. **Hold the world it leaves.** `must_end_with` reads the records back after
    the run ([mcp-e2e-end-state.md](../reference/mcp-e2e-end-state.md)). Set `writes: true` on a case whose tools can write,
    even a case that passes only when nothing is written.

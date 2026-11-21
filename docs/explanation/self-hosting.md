@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dbrole.go backend/internal/compose/schemareadiness.go backend/internal/compose/releaseversion.go backend/internal/compose/releasewatch.go backend/cmd/api/mcpapps.go backend/internal/compose/installationcountry.go docker-bake.hcl frontend/src/api/client.ts -->
+<!-- describes: backend/internal/compose/dbrole.go backend/internal/compose/schemareadiness.go backend/internal/compose/releaseversion.go backend/internal/compose/releasewatch.go backend/cmd/api/mcpapps.go backend/internal/compose/installationcountry.go docker-bake.hcl frontend/src/api/client.ts scripts/deploy/compose/compose.yaml -->
 # Self-hosting: why a deployment is shaped this way
 
 The steps to run Margince on your own servers are in
@@ -42,6 +42,29 @@ cross the split:
   (api) then lands on `/consent#/oauth-consent` (web) instead of `/`. A failure adds
   `?oidc=failed`. So an MCP client that opened the screen in its own window can still
   read the answer from it.
+
+## Postgres memory on one host
+
+The compose file starts Postgres with four settings, because the defaults of Postgres fit no host
+that Margince supports. The defaults give 128 MB of `shared_buffers` and 4 MB of `work_mem`, and
+they set `random_page_cost` to 4, the value for a disk that turns.
+
+| Setting | Compose value | Rule for a larger host |
+|---|---|---|
+| `shared_buffers` | 512 MB | 12.5% of the host's memory |
+| `effective_cache_size` | 1536 MB | Three times `shared_buffers` |
+| `work_mem` | 16 MB | Keep |
+| `random_page_cost` | 1.1 | Keep on storage with no turning disk |
+
+The compose values fit the smallest host, 4 GB. A host with only Postgres would give it 25% of
+the memory. Here the API, the worker and Redis use the same memory, so the rule gives it 12.5%.
+Each connection also needs memory of its own. `POSTGRES_SHARED_BUFFERS` and
+`POSTGRES_EFFECTIVE_CACHE_SIZE` in `.env` set the two values that grow with the host: 1 GB and
+3 GB on 8 GB, 4 GB and 12 GB on 32 GB.
+
+A managed Postgres takes no settings from the compose file. Set `work_mem` and `random_page_cost`
+in the provider's parameter group. Most providers size `shared_buffers` and `effective_cache_size`
+from the instance class, so leave those two as the provider set them.
 
 ## Readiness waits for the schema
 

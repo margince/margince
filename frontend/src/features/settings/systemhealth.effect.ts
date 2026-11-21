@@ -25,6 +25,7 @@ const effects: Readonly<Record<string, MessageKey>> = {
   recovery_unverified: "health.effect.recovery",
   automatic_routing: "health.effect.automatic",
   receipts_missed: "health.effect.receipts",
+  zone_unresolved: "health.effect.zone",
   read_failed: "health.effect.readFailed",
 };
 
@@ -49,6 +50,7 @@ export function findingEffectKey(finding: Finding): MessageKey {
 export function findingNextStepKey(finding: Finding): MessageKey {
   if (finding.code === "read_failed") return "health.readFailedNext";
   if (finding.code === "capture_unread") return "health.unreadNext";
+  if (finding.code === "zone_unresolved") return "health.zoneNext";
   if (finding.responsible === "mailbox_owner") return "health.ownerHandoff";
   if (finding.code === "queue_unverified") return "health.stoppedNext";
   return healthImpacts[finding.source] ?? "health.operatorHandoff";

@@ -61,7 +61,7 @@ const legalPhases: Record<
   // them to the SAME build id and a deferred last status.
   BUILD_STAGE: new Set(["vo.building", "vo.result"]),
   BUILD_TERMINAL: new Set(["vo.building", "vo.result"]),
-  VOICE_DONE: new Set(["vo.result", "vo.skipped"]),
+  VOICE_DONE: new Set(["vo.result"]),
   // Only a build that succeeded can be sent back for more material; the
   // guard below holds that. A failed one retries, a deferred one resumes.
   VOICE_REVISE: new Set(["vo.result"]),
@@ -71,6 +71,7 @@ const legalPhases: Record<
   LINKEDIN_SAVED: new Set(["cn.consent"]),
   LINKEDIN_SKIPPED: new Set(["cn.consent"]),
   CONNECT_DONE: new Set(["cn.consent"]),
+  CONNECT_BACK: new Set(["cn.consent"]),
 };
 
 export function isLegal(
@@ -179,6 +180,9 @@ function eventGuards(
       return state.phase !== "vo.result" || state.lastBuildStatus === "failed";
     case "VOICE_REVISE":
       return state.lastBuildStatus === "succeeded";
+    // A journey that offers no voice act has no step before connect.
+    case "CONNECT_BACK":
+      return state.voiceStep;
     case "BUILD_STAGE":
       if (event.buildId !== state.activeBuildId) return false;
       // From vo.result only a deferred build resumes; while building, a poll

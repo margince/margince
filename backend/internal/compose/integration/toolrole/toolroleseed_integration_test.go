@@ -132,7 +132,7 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *record
 			"stage_id": seeded.Open, "company_id": parentCompany(), "source": "manual",
 		}))
 	}
-	create["sdr_handoff"] = func() string { return seedHandoff(sweepSeed{t: t, e: e, pool: pool, create: create}) }
+	create["sdr_handoff"] = func() string { return seedHandoff(sweepSeed{t: t, e: e, pool: pool, create: create, owner: owner}) }
 	create["lead"] = func() string {
 		email := ids.NewV7().String() + "@lead.test"
 		id := post("/v1/leads", owned(integration.AnyMap{"full_name": "Role Sweep", "email": email, "source": "manual"}))
@@ -153,7 +153,7 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *record
 		return apptest.AttachmentIDOf(t, raw)
 	}
 	maps.Copy(create, configSeeders(post, unique, create))
-	maps.Copy(create, stateSeeders(sweepSeed{t: t, e: e, pool: pool, create: create}))
+	maps.Copy(create, stateSeeders(sweepSeed{t: t, e: e, pool: pool, create: create, owner: owner}))
 	create["voice_profile"] = func() string { return liveVoiceProfile(t, e) }
 	create["commitment"] = func() string {
 		if status := e.Call(t, "POST", "/v1/weekly-plans/current", integration.AnyMap{}, nil, nil); status >= http.StatusBadRequest && status != http.StatusConflict {
@@ -182,7 +182,7 @@ func configSeeders(post func(string, integration.AnyMap) string, unique func(str
 			return post("/v1/record-roles", integration.AnyMap{"label": unique("Sweep"), "record_types": []string{"company"}, "assignee_kinds": []string{"user"}})
 		},
 		"legal_entity": func() string {
-			return post("/v1/legal-entities", integration.AnyMap{"display_name": unique("Sweep"), "legal_name": unique("Sweep GmbH"), "country": "de", "jurisdiction": "zq"})
+			return post("/v1/legal-entities", integration.AnyMap{"display_name": unique("Sweep"), "legal_name": unique("Sweep GmbH"), "country": "de", "jurisdiction": namedValues["jurisdiction"]})
 		},
 		"list": func() string {
 			return post("/v1/lists", integration.AnyMap{"name": unique("Sweep"), "entity_type": "company"})

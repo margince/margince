@@ -122,13 +122,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.As(err, &archiveRefusal):
 		return "Refused on authority: " + refusalDetail(err)
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		// Whose bound it was is in the detail, and the summary must not guess:
-		// an agent has the access of the human it acts for AND no more of it than
-		// they lent, so a refusal here is one of those two and a sentence naming
-		// only the first would send a caller to ask for permissions they already
-		// hold.
-		return "Refused on authority: an agent has exactly the access of the human it acts for, and never " +
-			"more of it than they lent this credential. (" + refusalDetail(err) + ")"
+		return AuthorityRefusal(err)
 	case errors.Is(err, apperrors.ErrNotFound):
 		return "No such record in this workspace (or it is outside the acting user's row scope). (" + refusalDetail(err) + ")"
 	case errors.As(err, &skew):
@@ -200,6 +194,13 @@ func RunRefusal(err error) string {
 		return faultExplanation(fault)
 	}
 	return runFaultAdvice
+}
+
+// AuthorityRefusal is what an agent is told when a gate refused its call. The
+// detail says whose bound it was: the human's own, or what they lent.
+func AuthorityRefusal(err error) string {
+	return "Refused on authority: an agent has exactly the access of the human it acts for, and never " +
+		"more of it than they lent this credential. (" + refusalDetail(err) + ")"
 }
 
 // runFaultAdvice withholds a fault's own words from a run's model.

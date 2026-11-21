@@ -25,7 +25,7 @@ func TestABodySettingAHumanOnlyMemberIsRefused(t *testing.T) {
 	} {
 		r := httptest.NewRequest(http.MethodPatch, "/v1/signals/x", strings.NewReader(body))
 		w := httptest.NewRecorder()
-		if got := Refused(w, r, members, 32); got != refused {
+		if got := Refused(w, r, Marks{HumanOnly: members}, 32); got != refused {
 			t.Errorf("%.30s: refused = %v, want %v", body, got, refused)
 			continue
 		}
@@ -40,7 +40,30 @@ func TestABodySettingAHumanOnlyMemberIsRefused(t *testing.T) {
 			t.Errorf("%.30s: the handler would read %q, want the body unchanged", body, rest)
 		}
 	}
-	if Refused(httptest.NewRecorder(), httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(`{"kind":1}`)), nil, 32) {
+	if Refused(httptest.NewRecorder(), httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(`{"kind":1}`)), Marks{}, 32) {
 		t.Error("a route with no human-only member refused a body")
+	}
+}
+
+// An agent sending a member a value outside the ones it may send is refused.
+func TestAValueTheAgentMayNotSendIsRefused(t *testing.T) {
+	marks := Marks{AgentValues: map[string][]string{"source": {"agent"}}}
+	for body, refused := range map[string]bool{
+		`{"timezone":"Europe/Lisbon","source":"agent"}`:   false,
+		`{"timezone":"Europe/Lisbon","source":"chosen"}`:  true,
+		`{"timezone":"Europe/Lisbon","Source":"browser"}`: true,
+		`{"timezone":"Europe/Lisbon","source":1}`:         true,
+		`{"timezone":"Europe/Lisbon"}`:                    false,
+	} {
+		r := httptest.NewRequest(http.MethodPut, "/v1/me/timezone", strings.NewReader(body))
+		w := httptest.NewRecorder()
+		if got := Refused(w, r, marks, 256); got != refused {
+			t.Errorf("%s: refused = %v, want %v", body, got, refused)
+			continue
+		}
+		if refused && (w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), codeAgentValue) ||
+			!strings.Contains(w.Body.String(), "call again with source agent")) {
+			t.Errorf("%s: answered %d %s, want 422 naming the member and the value to send", body, w.Code, w.Body)
+		}
 	}
 }

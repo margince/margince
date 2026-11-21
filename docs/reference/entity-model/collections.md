@@ -79,7 +79,6 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Indexes**
 
-- `idx_list_evaluation_due`: `btree (evaluated_at)`
 - `list_evaluation_pkey`: `unique, btree (list_id)`
 
 **Triggers**

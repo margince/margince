@@ -11,14 +11,89 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "4b8c594793654078",
+    "tools": "b988605438e85e23",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:13:46Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:47:08Z"
+  },
   "usage": {
     "input_tokens": 18,
-    "output_tokens": 2775,
-    "cache_creation_input_tokens": 17062,
-    "cache_read_input_tokens": 713588,
+    "output_tokens": 2393,
+    "cache_creation_input_tokens": 18643,
+    "cache_read_input_tokens": 719635,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1674
+    "cost_usd": 0.1705
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "add_team_member",
+        "change_access",
+        "create_team",
+        "describe_router_actions",
+        "find_records",
+        "list_colleagues",
+        "read_workspace",
+        "search_records",
+        "share_record"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "add_team_member",
+        "change_access",
+        "create_team",
+        "describe_router_actions",
+        "find_records",
+        "list_colleagues",
+        "read_workspace",
+        "search_records",
+        "share_record"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "turns": {
+      "median": 8.5,
+      "min": 8,
+      "max": 9
+    },
+    "refused": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 369148,
+      "min": 329704,
+      "max": 408592
+    },
+    "output_tokens": {
+      "median": 1196.5,
+      "min": 1144,
+      "max": 1249
+    },
+    "duration_ms": {
+      "median": 11422,
+      "min": 10979,
+      "max": 11865
+    }
   }
 }
