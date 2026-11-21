@@ -23,8 +23,8 @@ func (x *auditIndex) indexInterface(info *types.Info, node *ast.InterfaceType) {
 	if !ok {
 		return
 	}
-	for i := range iface.NumExplicitMethods() {
-		method := iface.ExplicitMethod(i)
+	for method := range iface.ExplicitMethods() {
+		method := method
 		x.ifaceMethods[method.Name()] = append(x.ifaceMethods[method.Name()], auditIfaceMethod{method.FullName(), method, iface})
 	}
 }
@@ -117,8 +117,8 @@ func (x *auditIndex) implementersOf(iface *types.Interface) []*types.Named {
 // method of iface, promoted ones included, with an identical signature. It
 // is read by lookup, since types.Implements leaves a generic type unspecified.
 func auditImplements(named *types.Named, iface *types.Interface) bool {
-	for i := range iface.NumMethods() {
-		method := iface.Method(i)
+	for method := range iface.Methods() {
+		method := method
 		found, ok := auditLookupMethod(named, method)
 		if !ok || !types.Identical(found.Type(), method.Type()) {
 			return false

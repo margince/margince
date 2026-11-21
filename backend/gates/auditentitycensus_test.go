@@ -254,7 +254,7 @@ func auditFuncKey(info *types.Info, decl *ast.FuncDecl) string {
 // auditWriterName is the file and function a use sits in, the key a declared
 // vocabulary is listed under.
 func auditWriterName(use auditFuncUse) string {
-	file := strings.SplitN(auditRepoPos(use.pos), ":", 2)[0]
+	file, _, _ := strings.Cut(auditRepoPos(use.pos), ":")
 	if use.decl == nil {
 		return file + ":"
 	}

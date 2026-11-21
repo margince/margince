@@ -42,8 +42,8 @@ func (x *auditIndex) fields() *auditFields {
 	for i := range x.pkgs {
 		pkg := &x.pkgs[i]
 		for _, inst := range pkg.info.Instances {
-			for j := range inst.TypeArgs.Len() {
-				f.markDecodable(inst.TypeArgs.At(j), map[types.Type]bool{})
+			for t := range inst.TypeArgs.Types() {
+				f.markDecodable(t, map[types.Type]bool{})
 			}
 		}
 		for _, file := range pkg.files {
@@ -67,8 +67,8 @@ func (f *auditFields) own(named *types.Named, t types.Type) {
 	if !ok {
 		return
 	}
-	for i := range st.NumFields() {
-		field := st.Field(i).Origin()
+	for field := range st.Fields() {
+		field := field.Origin()
 		if _, seen := f.owner[field]; seen {
 			continue
 		}
@@ -132,9 +132,9 @@ func (f *auditFields) recordComposite(info *types.Info, lit *ast.CompositeLit, w
 			continue
 		}
 		key, isIdent := kv.Key.(*ast.Ident)
-		for j := range st.NumFields() {
-			if isIdent && st.Field(j).Name() == key.Name {
-				write(st.Field(j).Origin(), kv.Value)
+		for field := range st.Fields() {
+			if isIdent && field.Name() == key.Name {
+				write(field.Origin(), kv.Value)
 			}
 		}
 	}
@@ -186,8 +186,8 @@ func (f *auditFields) markDecodable(t types.Type, seen map[types.Type]bool) {
 	case *types.Chan:
 		f.markDecodable(typ.Elem(), seen)
 	case *types.Struct:
-		for i := range typ.NumFields() {
-			f.markDecodable(typ.Field(i).Type(), seen)
+		for field := range typ.Fields() {
+			f.markDecodable(field.Type(), seen)
 		}
 	}
 }
