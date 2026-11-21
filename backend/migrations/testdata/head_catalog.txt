@@ -6520,7 +6520,6 @@ public.idx_site_read_company CREATE INDEX idx_site_read_company ON public.site_r
 public.idx_site_read_retry_due CREATE INDEX idx_site_read_retry_due ON public.site_read USING btree (next_attempt_at, id) WHERE ((status = ANY (ARRAY['deferred'::text, 'failed'::text])) AND (next_attempt_at IS NOT NULL))
 public.idx_stage_pipeline CREATE INDEX idx_stage_pipeline ON public.stage USING btree (pipeline_id)
 public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC)
-public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
 public.idx_system_log_unkeyed_email CREATE INDEX idx_system_log_unkeyed_email ON public.system_log USING btree (id) WHERE ((action = 'login'::text) AND (detail ? 'email_hash'::text) AND (NOT (detail ? 'email_key_id'::text)))
 public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
@@ -10066,6 +10065,8 @@ public.system_log.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSER
 public.system_log.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.system_log FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"action": 20000, "actor_id": 20000, "actor_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"actor_id":20000,"actor_type":20000}')
 public.system_log.trg_system_log_no_mutate CREATE TRIGGER trg_system_log_no_mutate BEFORE DELETE OR UPDATE ON public.system_log FOR EACH ROW EXECUTE FUNCTION system_log_immutable()
 public.system_log_immutable() secdef=false cfg=- acl=- 
+DECLARE
+  entry_age interval := now() - OLD.occurred_at;
 BEGIN
   IF TG_OP = 'UPDATE' AND OLD.action = 'login'
      AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'
@@ -10074,6 +10075,17 @@ BEGIN
      AND (NEW.detail - ARRAY['email_hash','email_key_id']) = (OLD.detail - 'email_hash')
      AND (to_jsonb(NEW) - 'detail') = (to_jsonb(OLD) - 'detail') THEN
     RETURN NEW;
+  END IF;
+  IF TG_OP = 'DELETE' AND (
+       (entry_age > interval '90 days' AND OLD.action IN (
+          'capture_sync_error', 'capture_ensure_fault', 'capture_deal_attribution_fault',
+          'capture_project_attribution_fault', 'data_task.batch_failed', 'home_repair.skipped',
+          'contact_employer_repair.skipped', 'dedupe_recheck', 'dedupe_near_match',
+          'comms_identity_reconcile_failed', 'ai_task.state_changed'))
+    OR (entry_age > interval '400 days' AND OLD.action IN (
+          'login', 'password_reset', 'password_reset_requested', 'capture.credential_rotated')
+        AND NOT (OLD.action = 'login' AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'))) THEN
+    RETURN OLD;
   END IF;
   RAISE EXCEPTION 'system_log is append-only (attempted % on row %)', TG_OP, OLD.id
     USING ERRCODE = 'check_violation';
