@@ -5,7 +5,8 @@
     "company.read",
     "contact.read",
     "deal.read",
-    "deal.update"
+    "deal.update",
+    "project.read"
   ],
   "takes": [
     "deal",

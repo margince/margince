@@ -27,7 +27,7 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 	// 30-day ceiling. The colleagues' mail is answered within a minute and
 	// outnumbers it: counted, the horizon falls to the fourteen-day floor.
 	e.WsExec(t, `
-		CREATE TEMP TABLE horizon_seed AS
+		CREATE TEMP TABLE horizon_seed ON COMMIT DROP AS
 		  SELECT gen_random_uuid() id, g, g <= 40 AS customer,
 		         now() - interval '200 days' + g * interval '1 hour' AS at_time,
 		         CASE WHEN g <= 40 THEN 'buyer'||g||'@customer.test' ELSE 'rep'||g||'@colleagues.test' END AS addr
@@ -55,7 +55,7 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 
 	var days int
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT horizon_days FROM activity_waiting_horizon`).Scan(&days)
+		return tx.QueryRow(context.Background(), `SELECT (value->>'horizon_days')::int FROM installation_state WHERE key = 'activity_waiting_horizon'`).Scan(&days)
 	})
 	if err != nil || days != 30 {
 		t.Fatalf("the stored horizon is (%d, %v), want the 30-day ceiling from the customers' answers alone", days, err)

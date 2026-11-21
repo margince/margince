@@ -384,7 +384,15 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 			}
 			if existing := s.ownerScalar(`SELECT count(*)::text FROM activity WHERE thread_key = $1`, apptest.ChannelThreadKey); existing != "0" {
 				connected()
-				return s.ownerScalar(`SELECT id::text FROM activity WHERE thread_key = $1`, apptest.ChannelThreadKey)
+				conversation := s.ownerScalar(`SELECT id::text FROM activity WHERE thread_key = $1 AND direction = 'inbound'
+					ORDER BY occurred_at, id LIMIT 1`, apptest.ChannelThreadKey)
+				// A reply files onto the contact, which takes the right to change
+				// it, so the contact passes to this pool's owner.
+				contact := s.ownerScalar(`SELECT contact_id::text FROM activity_link WHERE activity_id = $1 AND contact_id IS NOT NULL
+					ORDER BY contact_id LIMIT 1`, conversation)
+				defer s.asRoles("admin")()
+				s.call("PATCH", "/v1/contacts/"+contact, integration.AnyMap{"owner_id": s.owner}, nil, nil)
+				return conversation
 			}
 			defer s.asRoles("admin")()
 			c.ContactID = s.create["contact"]()

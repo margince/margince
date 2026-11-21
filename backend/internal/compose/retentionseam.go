@@ -54,7 +54,7 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 		WithOutboxReaders(storekit.OutboxReaders{
 			UnreadTypes: assurance.MarkingEventTypes(), NeededBy: []func(string) string{automation.RetryableTriggerSQL},
 		}).
-		WithEmbedCallPrune(ai.PruneEmbedCallsTx).WithOperationalPrunes(privacy.OperationalPrune{
+		WithCallPrunes(ai.PruneEmbedCallsTx, ai.PruneAnswerCallsTx).WithOperationalPrunes(privacy.OperationalPrune{
 		Name: "automation runs that changed nothing", Days: automation.NoEffectRunDays, Remove: automation.PruneNoEffectRunsTx,
 	}).
 		WithExtensions(ExtensionData()).

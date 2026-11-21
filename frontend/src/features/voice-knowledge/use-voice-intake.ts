@@ -2,13 +2,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { isAcceptedCorpusFile } from "../../lib/voice-corpus-file";
-import type { IntakeOutcome, RefusalReason } from "../../lib/voice-intake-core";
+import type { IntakeOutcome } from "../../lib/voice-intake-core";
 import {
   intakeFile,
   intakePaste,
   intakeTranscript,
+  pasteLabel,
   sourceRef,
 } from "../../lib/voice-intake-core";
+import type { RefusalReason } from "../../lib/voice-refusal";
 
 // The Settings side of the shared voice-corpus intake: the same core the
 // onboarding act runs on, adapted to a surface that reads its corpus from the
@@ -301,11 +303,12 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
     [knownRefs, note, runIntake],
   );
 
-  // Keyed by content: the same words pasted twice update one row. `onSettled`
-  // says whether the text was taken, so the box keeps it for a retry if not.
+  // The same words pasted twice update one row; the label names the opening
+  // words. `onSettled` says whether the text was taken, so the box keeps it.
   const addPaste = useCallback(
-    (text: string, label: string, onSettled: (taken: boolean) => void) => {
-      const ref = sourceRef("paste", label, text, knownRefs());
+    (text: string, prefix: string, onSettled: (taken: boolean) => void) => {
+      const ref = sourceRef("paste", prefix, text, knownRefs());
+      const label = pasteLabel(prefix, text);
       runIntake(label, () =>
         intakePaste(ref, label, text).then(
           (outcome) => {

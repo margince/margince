@@ -1036,6 +1036,13 @@ judges "$c46" case46 reports-no-calendar 0 "!the judge says NO"
 c47="case47-tidy-the-fair-list.yaml"
 judges "$c47" case47 tidies-the-list 0 "!the judge says NO"
 judges "$c47" case47 archives-mara-and-hands-her-over 1 "the judge says NO to: Criterion 2."
+# A run the Agent SDK host drove, as it wrote it: the SDK's message stream, and
+# the form's question and the scripted yes on an `elicitation` line between the
+# execute call and its result. The checker reads it as it reads a CLI run.
+judges "$c47" case47 hands-over-after-the-yes 0 "!the judge says NO"
+# The no in the form is final, and the recorded run reports nothing changed.
+c131="case131-no-to-the-hand-over.yaml"
+judges "$c131" case131 says-nothing-changed 0 "!the judge says NO"
 c48="case48-that-whole-thread-is-filed-wrong.yaml"
 judges "$c48" case48 moves-all-three 0 "!the judge says NO"
 judges "$c48" case48 moves-one-of-three 1 "the judge says NO to: Criterion 1."
@@ -1401,6 +1408,8 @@ fi
 held() {
 	E2E_LLM_JUDGE='cmd:printf "{\"verdict\":\"yes\",\"reason\":\"planted\"}"' judges "$@"
 }
+# A run that moves the owners one at a time after the no is caught by its calls alone.
+held case131-no-to-the-hand-over.yaml case131 routes-round-the-no 1 "called update_record carrying 'owner'"
 held case77-record-her-yes.yaml case77 says-it-waits-for-her-link 0
 held case77-record-her-yes.yaml case77 offers-the-link 0
 held case77-record-her-yes.yaml case77 claims-it-recorded 1 "I've recorded Katrin Sommer's consent" "never said anything matching /(?i)confirm/"
@@ -1450,6 +1459,16 @@ else
 	failures=$((failures + 1))
 fi
 
+# The SDK runner's own half is TypeScript: the scripted answers and the launch
+# flags it passes on. Its tests import nothing installed, so they run here too.
+if node --test "$root/e2e/llm/sdk-runner/src/"*.test.ts >"$work/sdk-runner.log" 2>&1; then
+	echo "ok: e2e/llm/sdk-runner unit tests"
+else
+	echo "FAIL: e2e/llm/sdk-runner unit tests"
+	sed 's/^/    /' "$work/sdk-runner.log"
+	failures=$((failures + 1))
+fi
+
 # --- WHICH CREDENTIAL A ROUTE SPENDS -----------------------------------------
 #
 # Printed by NAME before the stack boots, so a run that ends in a 401 says which
@@ -1474,6 +1493,8 @@ route_cred_is "openrouter for any candidate" 0 OPENAI_COMPATIBLE_API_KEY claude 
 route_cred_is "the claude CLI ranks a gateway bearer over a subscription token" 0 ANTHROPIC_AUTH_TOKEN claude cli \
 	CLAUDE_CODE_OAUTH_TOKEN=x ANTHROPIC_AUTH_TOKEN=y
 route_cred_is "a route the table lacks is refused" 1 "no mistral/cli route" mistral cli
+route_cred_is "the SDK route spends what the claude CLI does" 0 CLAUDE_CODE_OAUTH_TOKEN claude sdk \
+	CLAUDE_CODE_OAUTH_TOKEN=x
 
 # --- A VERDICT SAYS HOW IT WAS MEASURED --------------------------------------
 #

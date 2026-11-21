@@ -45,13 +45,22 @@ const BUILD_STAGES: readonly BuildStage[] = [
   "activate",
 ];
 
+type BuildIdentity = Readonly<{ profileId: string; buildId: string }>;
+
 type UseVoiceBuildArgs = Readonly<{
   dispatch: Dispatch<ConversationEvent>;
   /** Live view of the machine, for the poll-failure fallback guards. */
   machine: Readonly<{ current: ConversationState }>;
+  /** The build the conversation recorded as succeeded, which outlives this
+   *  hook: Back from connect mounts the act again over it. */
+  succeeded: BuildIdentity | null;
 }>;
 
-export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
+export function useVoiceBuild({
+  dispatch,
+  machine,
+  succeeded,
+}: UseVoiceBuildArgs) {
   const t = useT();
   const [profileId, setProfileId] = useState<string | null>(null);
   const [buildId, setBuildId] = useState<string | null>(null);
@@ -84,7 +93,7 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
       prevSnapshot.current = null;
       setProfileId(profile);
       setBuildId(build);
-      dispatch({ type: "BUILD_STARTED", buildId: build });
+      dispatch({ type: "BUILD_STARTED", buildId: build, profileId: profile });
     },
   });
 
@@ -173,18 +182,17 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
     });
   }, [poll.isError, buildId, machine, queue, dispatch]);
 
-  // What the finished build produced: the just-built version carries the
-  // structured insights (candidate when it awaits review). A failed version
-  // read degrades the result card to its honest empty line, never blocks.
+  // What the recorded build produced, insights included. It never changes, so
+  // an act mounted again reads the cache; a failed read shows the empty line.
   const builtVersion = useQuery({
-    queryKey: ["voice-built-version", profileId, buildId],
-    enabled: poll.data?.status === "succeeded",
+    queryKey: ["voice-built-version", succeeded?.profileId, succeeded?.buildId],
+    staleTime: Number.POSITIVE_INFINITY,
     queryFn:
-      profileId !== null
+      succeeded !== null
         ? async (): Promise<VoiceProfileVersion | null> => {
             const data = unwrap(
               await api.GET("/voice-profiles/{id}/versions", {
-                params: { path: { id: profileId } },
+                params: { path: { id: succeeded.profileId } },
               }),
             );
             return pickBuiltVersion(data.data);

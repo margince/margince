@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
-import type { components } from "../../api/schema";
 import {
   Button,
   Disclosure,
@@ -31,6 +30,7 @@ import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   LINKEDIN_ACCOUNT_KEY,
+  useLinkedInAccount,
   useSaveLinkedInAccount,
 } from "../../lib/use-linkedin-account";
 
@@ -62,17 +62,6 @@ function useImportConnections() {
       await client.invalidateQueries({ queryKey: LINKEDIN_ACCOUNT_KEY });
       await client.invalidateQueries({ queryKey: ["linkedin-connections"] });
       await client.invalidateQueries({ queryKey: ["linkedin-reach"] });
-    },
-  });
-}
-
-type LinkedInAccount = components["schemas"]["LinkedInAccount"];
-
-function useLinkedInAccount() {
-  return useQuery({
-    queryKey: LINKEDIN_ACCOUNT_KEY,
-    queryFn: async (): Promise<LinkedInAccount> => {
-      return unwrap(await api.GET("/me/linkedin-account", {}));
     },
   });
 }

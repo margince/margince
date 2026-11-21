@@ -6,13 +6,18 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { Button } from "../../../design-system/atoms";
 import { useLocale, useT } from "../../../i18n";
-import { useHoldsAdminRole } from "../../../lib/capability";
+import {
+  useCan,
+  useCanWrite,
+  useHoldsAdminRole,
+} from "../../../lib/capability";
 import {
   type useCompany,
   useInstallationDescribed,
 } from "../../../lib/installationcompany";
 import { throwProblem } from "../../../lib/problem";
 import { useRoute } from "../../../lib/router";
+import { useMe } from "../../../lib/session";
 import { useAddressWriters } from "../../../lib/urlstate";
 import { EMPTY_DRAFT, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
@@ -28,8 +33,13 @@ import {
   initialConversationState,
 } from "./conversation-machine";
 import { InviteAct } from "./invite-act";
-import { restorePlan, type VoiceRestoreProbe } from "./restore";
+import {
+  restorePlan,
+  VOICE_PROBE_KEY,
+  type VoiceRestoreProbe,
+} from "./restore";
 import { TeamAct } from "./team-act";
+import { useStepAddress } from "./use-step-address";
 import type { WizardPersistInput } from "./use-wizard-state";
 import { useWizardStatePersist } from "./use-wizard-state";
 import { VoiceAct } from "./voice-act";
@@ -67,14 +77,15 @@ function voiceProbeNeeded(
   wizard: OnboardingState | null,
   described: boolean,
   mayDescribe: boolean,
+  mayTrainVoice: boolean,
 ): boolean {
-  if (!mayDescribe) {
-    return true;
+  const memberPath =
+    !mayDescribe || (wizard === null ? described : wizard.path === "member");
+  // The member journey offers voice only to a seat that may train one.
+  if (memberPath) {
+    return mayTrainVoice;
   }
-  if (wizard === null) {
-    return described;
-  }
-  return wizard.path === "member" || voiceProbeSteps.has(wizard.step);
+  return wizard !== null && voiceProbeSteps.has(wizard.step);
 }
 
 // One probe per fact the restore needs: does a built version exist, and
@@ -86,7 +97,7 @@ async function probeVoice(): Promise<VoiceRestoreProbe> {
   }
   const profileId = list.data.data[0]?.id;
   if (profileId === undefined) {
-    return { built: false, summary: null };
+    return { built: false, summary: null, sources: [] };
   }
   const [versions, sources] = await Promise.all([
     api.GET("/voice-profiles/{id}/versions", {
@@ -105,6 +116,7 @@ async function probeVoice(): Promise<VoiceRestoreProbe> {
   return {
     built: pickBuiltVersion(versions.data.data) !== null,
     summary: sources.data.summary,
+    sources: sources.data.data,
   };
 }
 
@@ -128,10 +140,12 @@ const actCheckpoints: ReadonlyMap<
   ["co.manual>bs.ask", { step: "basis" }],
   ["bs.ask>in.ask", { step: "invite" }],
   ["in.ask>vo.collecting", { step: "voice", voiceSkipped: false }],
+  ["in.ask>cn.consent", { step: "connect" }],
   ["in.ask>tm.ask", { step: "team", voiceSkipped: true, connectSkipped: true }],
-  ["vo.collecting>vo.skipped", { step: "voice", voiceSkipped: true }],
+  ["vo.collecting>cn.consent", { step: "connect", voiceSkipped: true }],
   ["vo.result>cn.consent", { step: "connect" }],
-  ["vo.skipped>cn.consent", { step: "connect" }],
+  ["cn.consent>vo.collecting", { step: "voice", voiceSkipped: false }],
+  ["cn.consent>vo.result", { step: "voice", voiceSkipped: false }],
 ]);
 
 function actCheckpoint(
@@ -192,6 +206,11 @@ function useRestore(
   const { navigateReplacing } = useAddressWriters();
   const { company: existing, described } = useInstallationDescribed(true);
   const mayDescribe = useHoldsAdminRole();
+  const mayTrainVoice = useCanWrite("voice_profile", "create");
+  // The probe's GET needs this grant, which a custom role may leave out.
+  const readsVoice = useCan("voice_profile", "read");
+  // The grants above read false until /me answers, so the restore waits on it.
+  const meAnswered = useMe().data !== undefined;
   const progress = useQuery({
     ...onboardingProgressOptions,
     staleTime: Number.POSITIVE_INFINITY,
@@ -204,11 +223,12 @@ function useRestore(
   }
   const wizard = atMount?.row ?? null;
   const voiceNeeded =
+    readsVoice &&
     atMount !== undefined &&
     described !== undefined &&
-    voiceProbeNeeded(wizard, described, mayDescribe);
+    voiceProbeNeeded(wizard, described, mayDescribe, mayTrainVoice);
   const voice = useQuery({
-    queryKey: ["onboarding-conv-voice"],
+    queryKey: VOICE_PROBE_KEY,
     queryFn: probeVoice,
     enabled: voiceNeeded,
   });
@@ -243,6 +263,7 @@ function useRestore(
 
   const restored = useRef(false);
   const settled =
+    meAnswered &&
     described !== undefined &&
     atMount !== undefined &&
     (!voiceNeeded || voice.isSuccess) &&
@@ -257,6 +278,7 @@ function useRestore(
       profile: existing.data ?? null,
       described: described === true,
       mayDescribe,
+      mayTrainVoice,
       voice: voice.data ?? null,
       read: persistedRead.data ?? null,
       routeConnect,
@@ -275,6 +297,7 @@ function useRestore(
     dispatch({
       type: "START",
       memberPath: plan.memberPath,
+      voiceStep: plan.voiceStep,
       companyConfirmed: plan.companyConfirmed,
       recap: plan.recap,
     });
@@ -293,6 +316,7 @@ function useRestore(
     existing.data,
     described,
     mayDescribe,
+    mayTrainVoice,
     voice.data,
     persistedRead.data,
     routeConnect,
@@ -319,6 +343,7 @@ export function OnboardingConversationScreen() {
   const { persist } = useWizardStatePersist();
   const { existing, voice, persistedRead, restoredReadId, lookups } =
     useRestore(state, dispatch, route.id === "connect");
+  useStepAddress(state, dispatch, route.id);
 
   // Act-transition checkpoints: the server remembers where the journey is,
   // so a mid-onboarding reload restores to the right act with recap. Only
@@ -413,6 +438,8 @@ function CurrentAct({
           state={state}
           dispatch={dispatch}
           initialSummary={voice.data?.summary ?? null}
+          initialSources={voice.data?.sources ?? []}
+          initialMeterStale={voice.data?.meterStale === true}
         />
       );
     case "basis":

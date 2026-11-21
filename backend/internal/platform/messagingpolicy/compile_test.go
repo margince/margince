@@ -94,6 +94,26 @@ func TestADraftLayerCompilesItsCitations(t *testing.T) {
 	}
 }
 
+func TestAnInstrumentCompilesItsRefreshKeys(t *testing.T) {
+	digest := strings.Repeat("0f", 32)
+	policy, err := Compile(policyFS(country + "instruments:\n" +
+		"  - {name: Act A, source-url: https://example.org/a, text-url: https://example.org/a.pdf, text-digest: " + digest + ", text-fetched: 2026-03-09}\n" +
+		"  - {name: Act B, source-url: https://example.org/b, checked-by-hand: 2026-02-20}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	read, byHand := policy.Rules.Instruments[0], policy.Rules.Instruments[1]
+	if read.TextURL != "https://example.org/a.pdf" || read.TextDigest != digest || day(read.TextFetchedAt) != "2026-03-09" {
+		t.Errorf("the fetched instrument compiled to %+v", read)
+	}
+	if day(byHand.CheckedByHandAt) != "2026-02-20" || byHand.TextDigest != "" {
+		t.Errorf("the instrument checked by hand compiled to %+v", byHand)
+	}
+	if _, err := Compile(policyFS(country + "instruments: [{name: Act A, source-url: https://example.org/a, text-digest: " + digest + "}]\n")); err == nil {
+		t.Error("a digest with no fetch day compiled")
+	}
+}
+
 func TestALaterLayerMayOnlyTighten(t *testing.T) {
 	layered := func(fallback, country string) fstest.MapFS {
 		fsys := policyFS(country)

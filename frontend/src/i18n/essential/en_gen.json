@@ -1314,6 +1314,7 @@
   "systemJob.capture_trace_sweep": "Mail trace cleanup",
   "systemJob.capture_which_deal": "Deal question from mail",
   "systemJob.close_date": "Close date check",
+  "systemJob.installation_zone": "Timezone check",
   "systemJob.commission_accrual": "Commission accrual",
   "systemJob.partner_activation": "Partner activation",
   "systemJob.commitment_settle": "Commitment settlement",

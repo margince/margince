@@ -9,13 +9,15 @@ import { useConnectAiGate } from "../../../design-system/connectai";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Meter } from "../../../design-system/readings";
-import { formatNumber } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
+import { formatBytes, formatNumber } from "../../../format/format";
+import { useLocale, usePlural, useT } from "../../../i18n";
 import { ACCEPTED_CORPUS_ATTR } from "../../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
+import { VOICE_SOURCE_MAX_BYTES } from "../../../lib/voice-refusal";
 import type { ConversationQuestion } from "./conversation-machine";
-import type { CorpusManifestEntry } from "./use-voice-corpus";
+import type { VoiceIngestFailure } from "./use-voice-corpus";
 import { VoiceDistillPanel } from "./voice-distill";
+import { type CorpusManifestEntry, manifestCount } from "./voice-manifest";
 import { VoiceScene } from "./voice-scenes.result";
 import { WayOnward } from "./way-onward";
 
@@ -88,12 +90,20 @@ function useFloorReachedAnnouncement(ready: boolean, words: number): string {
 function VoiceCorpusFloorMeter({
   words,
   ready,
-}: Readonly<{ words: number; ready: boolean }>) {
+}: Readonly<{ words: number | null; ready: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const announcement = useFloorReachedAnnouncement(ready, words);
-  const shown = formatNumber(words, locale);
+  const announcement = useFloorReachedAnnouncement(ready, words ?? 0);
+  const shown = formatNumber(words ?? 0, locale);
   const floor = formatNumber(VOICE_MIN_WORDS, locale);
+  // An unknown count states no figure rather than the last one it held.
+  if (words === null) {
+    return (
+      <p className="ob-voice-meter-line t-sub">
+        {t("ob.conv.voice.meterUnknown")}
+      </p>
+    );
+  }
   return (
     <div className="ob-voice-meter">
       <Meter
@@ -122,12 +132,23 @@ function VoiceCorpusFloorMeter({
 // The meter under it says the same count in words, so the drawing is decoration.
 const PRINT_MIN_AMPLITUDE = 0.25;
 
+// The sources the latest pick could not add, one line each, beside the
+// controls that took them. The board scrolls, and its foot is out of sight.
+function IntakeRefusals({
+  failures,
+}: Readonly<{ failures: readonly VoiceIngestFailure[] }>) {
+  const t = useT();
+  return failures.map((failure) => (
+    <ErrorLine key={failure.id}>{t(failure.i18nKey, failure.params)}</ErrorLine>
+  ));
+}
+
 function VoicePrintCard({
   words,
   ready,
-}: Readonly<{ words: number; ready: boolean }>) {
+}: Readonly<{ words: number | null; ready: boolean }>) {
   const t = useT();
-  const fraction = Math.min(words, VOICE_MIN_WORDS) / VOICE_MIN_WORDS;
+  const fraction = Math.min(words ?? 0, VOICE_MIN_WORDS) / VOICE_MIN_WORDS;
   return (
     <section className="ob-voice-print">
       <Eyebrow>{t("ob.conv.voice.printLabel")}</Eyebrow>
@@ -153,27 +174,38 @@ function VoicePrintCard({
 export function VoiceCollectScene({
   summary,
   manifest,
+  failures,
   fileRef,
   onFiles,
   onAddPaste,
+  onRemove,
+  removing,
   onBuild,
   onSkip,
   canBuild,
+  meterKnown = true,
   startPending,
   startError,
 }: Readonly<{
   summary: CorpusSummary | null;
   manifest: readonly CorpusManifestEntry[];
+  failures: readonly VoiceIngestFailure[];
   fileRef: RefObject<HTMLInputElement | null>;
   onFiles: (event: ChangeEvent<HTMLInputElement>) => void;
   onAddPaste: (text: string) => void;
+  onRemove: (entry: CorpusManifestEntry) => void;
+  /** The source_ref of the sample being removed, or null. */
+  removing: string | null;
   onBuild: () => void;
   onSkip: () => void;
   canBuild: boolean;
+  /** False while the corpus count is unknown, so no stale figure is shown. */
+  meterKnown?: boolean;
   startPending: boolean;
   startError: ReactNode;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const words = summary?.total_words ?? 0;
   // The floor alone — never `canBuild`, which also folds in a request in
@@ -181,8 +213,34 @@ export function VoiceCollectScene({
   // would tell the reader they lost ground they never lost.
   const floorCleared = words >= VOICE_MIN_WORDS;
   const aiGate = useConnectAiGate("voice-collect-ai");
+  // An early press names what is still missing; the foot already states the
+  // floor, and saying it twice side by side reads as a glitch.
+  const shortBy = VOICE_MIN_WORDS - words;
+  const buildBlocker =
+    floorCleared || !meterKnown
+      ? t("ob.conv.voice.waitForSamples")
+      : plural("ob.conv.voice.floorShort", shortBy, {
+          words: formatNumber(shortBy, locale),
+        });
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const pasteOpener = useRef<HTMLButtonElement>(null);
+  const pasteField = useRef<HTMLTextAreaElement>(null);
+  const pasteWasOpen = useRef(false);
+  // Opening the box puts the cursor in it; closing it unmounts the button
+  // just pressed, so focus goes back to the one that opened it.
+  useEffect(() => {
+    if (pasteOpen) {
+      pasteField.current?.focus();
+    } else if (pasteWasOpen.current) {
+      pasteOpener.current?.focus();
+    }
+    pasteWasOpen.current = pasteOpen;
+  }, [pasteOpen]);
+  const closePaste = () => {
+    setPasteText("");
+    setPasteOpen(false);
+  };
   return (
     <VoiceScene wide>
       <VoiceHeroBand />
@@ -208,24 +266,37 @@ export function VoiceCollectScene({
               <Button onClick={() => fileRef.current?.click()}>
                 {t("ob.conv.voice.browse")}
               </Button>
-              <Button variant="ghost" onClick={() => setPasteOpen(true)}>
+              <Button
+                ref={pasteOpener}
+                variant="ghost"
+                onClick={() => setPasteOpen(true)}
+              >
                 {t("ob.conv.voice.pasteInstead")}
               </Button>
             </div>
+            <IntakeRefusals failures={failures} />
             {!pasteOpen && (
               <p className="ob-voice-drop-sub t-sub">
-                {t("ob.conv.voice.dropHint")}
+                {t("ob.conv.voice.dropHint", {
+                  limit: formatBytes(VOICE_SOURCE_MAX_BYTES, locale),
+                })}
               </p>
             )}
             {pasteOpen && (
               <div className="ob-voice-paste">
                 <textarea
+                  ref={pasteField}
                   className="ob-voice-paste-area"
                   rows={5}
                   value={pasteText}
                   placeholder={t("ob.conv.voice.composer")}
                   aria-label={t("ob.conv.voice.composer")}
                   onChange={(event) => setPasteText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      closePaste();
+                    }
+                  }}
                 />
                 <div className="ob-voice-drop-acts">
                   <Button
@@ -233,19 +304,12 @@ export function VoiceCollectScene({
                     disabled={pasteText.trim() === ""}
                     onClick={() => {
                       onAddPaste(pasteText.trim());
-                      setPasteText("");
-                      setPasteOpen(false);
+                      closePaste();
                     }}
                   >
                     {t("ob.conv.voice.pasteAdd")}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setPasteText("");
-                      setPasteOpen(false);
-                    }}
-                  >
+                  <Button variant="ghost" onClick={closePaste}>
                     {t("ob.conv.voice.pasteDiscard")}
                   </Button>
                 </div>
@@ -264,17 +328,20 @@ export function VoiceCollectScene({
                     <span className="ob-voice-source-body">
                       <b>{entry.label}</b>
                       <small className="t-caption">
-                        {entry.transcript
-                          ? t("ob.conv.voice.manifestKept", {
-                              kept: formatNumber(entry.keptWords, locale),
-                              total: formatNumber(entry.inputWords, locale),
-                            })
-                          : t("ob.conv.voice.manifestWords", {
-                              words: formatNumber(entry.keptWords, locale),
-                            })}
+                        {manifestCount(entry, plural, locale)}
                       </small>
                     </span>
                     <Check className="ob-voice-source-check" aria-hidden />
+                    <Button
+                      aria-label={t("ob.conv.voice.removeSourceNamed", {
+                        name: entry.label,
+                      })}
+                      pending={removing === entry.ref}
+                      disabled={removing !== null && removing !== entry.ref}
+                      onClick={() => onRemove(entry)}
+                    >
+                      {t("ob.conv.voice.removeSource")}
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -285,8 +352,14 @@ export function VoiceCollectScene({
           <ErrorLine>{startError}</ErrorLine>
         </div>
         <div className="ob-voice-collect-side">
-          <VoicePrintCard words={words} ready={floorCleared} />
-          <VoiceDistillPanel manifest={manifest} summary={summary} />
+          <VoicePrintCard
+            words={meterKnown ? words : null}
+            ready={floorCleared}
+          />
+          <VoiceDistillPanel
+            manifest={manifest}
+            summary={meterKnown ? summary : null}
+          />
         </div>
       </div>
 
@@ -303,13 +376,7 @@ export function VoiceCollectScene({
         label={t("ob.conv.voice.buildChip")}
         pending={startPending}
         blockers={[
-          ...(canBuild
-            ? []
-            : [
-                t("ob.conv.voice.footFloor", {
-                  min: formatNumber(VOICE_MIN_WORDS, locale),
-                }),
-              ]),
+          ...(canBuild ? [] : [buildBlocker]),
           ...(aiGate.reasonId === undefined ? [] : [t("connectAi.first")]),
         ]}
         stillNeeded={(why) => why.join(" ")}
@@ -333,10 +400,16 @@ export function VoiceCollectScene({
  */
 export function VoiceSpeakerScene({
   question,
+  failures,
   onAnswer,
+  onSkip,
 }: Readonly<{
   question: ConversationQuestion;
+  /** Other sources of the same pick that could not be added. */
+  failures: readonly VoiceIngestFailure[];
   onAnswer: (questionId: string, value: string) => void;
+  /** Leaves this file out; offered when the question carries its label. */
+  onSkip: () => void;
 }>) {
   const t = useT();
   const group = useId();
@@ -374,6 +447,7 @@ export function VoiceSpeakerScene({
           })}
         </div>
       </div>
+      <IntakeRefusals failures={failures} />
       <div className="ob-scene-foot">
         <p>{t("ob.conv.voice.speakerFoot")}</p>
       </div>
@@ -388,7 +462,13 @@ export function VoiceSpeakerScene({
             onAnswer(question.id, picked);
           }
         }}
-      />
+      >
+        {question.dismissLabelKey !== undefined && (
+          <Button variant="ghost" onClick={onSkip}>
+            {t(question.dismissLabelKey)}
+          </Button>
+        )}
+      </WayOnward>
     </VoiceScene>
   );
 }

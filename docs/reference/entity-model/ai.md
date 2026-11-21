@@ -283,7 +283,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `voice_profile_id` | `uuid` | yes | Points at `voice_profile.id`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone` |  | When the row last changed. Refreshed on every write. |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
@@ -348,7 +348,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
-| `updated_at` | `timestamp with time zone` |  | When the row last changed. Refreshed on every write. |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
@@ -402,7 +402,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
-| `updated_at` | `timestamp with time zone` |  | When the row last changed. Refreshed on every write. |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
@@ -455,7 +455,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
-| `updated_at` | `timestamp with time zone` |  | When the row last changed. Refreshed on every write. |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
@@ -502,7 +502,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `voice_profile_id` | `uuid` | yes | Points at `voice_profile.id`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone` |  | When the row last changed. Refreshed on every write. |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -560,7 +560,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
-| `updated_at` | `timestamp with time zone` |  | When the row last changed. Refreshed on every write. |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Row concurrency version; distinct from the immutable artifact's profile_version. |
 
 **Points at**

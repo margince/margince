@@ -12,7 +12,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -338,10 +337,6 @@ func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcont
 	voiceProfileMD := p.VoiceProfileMD
 	maturity := crmcontracts.VoiceProfileMaturity(summary.Maturity)
 	qualityBand := crmcontracts.VoiceProfileQualityBand(summary.QualityBand)
-	updatedAt := p.CreatedAt
-	if p.UpdatedAt != nil {
-		updatedAt = *p.UpdatedAt
-	}
 	wire := crmcontracts.VoiceProfile{
 		Id:                       openapi_types.UUID(p.ID),
 		Status:                   crmcontracts.VoiceProfileStatus(p.Status),
@@ -359,7 +354,7 @@ func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcont
 		CapturedBy:               &p.CapturedBy,
 		Version:                  version,
 		CreatedAt:                p.CreatedAt,
-		UpdatedAt:                updatedAt,
+		UpdatedAt:                p.UpdatedAt,
 		ArchivedAt:               p.ArchivedAt,
 	}
 	if view.LatestBuild != nil {
@@ -402,7 +397,7 @@ func wireVoiceSource(s VoiceCorpusSource) crmcontracts.VoiceCorpusSource {
 		CapturedBy:       &s.CapturedBy,
 		Version:          int(s.Version),
 		CreatedAt:        s.CreatedAt,
-		UpdatedAt:        updatedAt(s.CreatedAt, s.UpdatedAt),
+		UpdatedAt:        s.UpdatedAt,
 		ArchivedAt:       s.ArchivedAt,
 	}
 }
@@ -416,13 +411,6 @@ func wireCorpusSummary(sum CorpusSummary) crmcontracts.VoiceCorpusSummary {
 		RegisterWords: sum.RegisterWords,
 		SourceCount:   sum.SourceCount,
 	}
-}
-
-func updatedAt(created time.Time, updated *time.Time) time.Time {
-	if updated != nil {
-		return *updated
-	}
-	return created
 }
 
 // sourceWithSummary is the ingest/patch response pair: the touched

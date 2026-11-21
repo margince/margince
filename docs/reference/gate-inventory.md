@@ -142,6 +142,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendthreadingfloor_test.go` | H3 | The deal page names the seat a single-threaded deal is missing. |
 | `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
 | `frontendvendorservices_test.go` | H3 | Which calendar belongs beside which mailbox is answered on both sides of the wire, and the two answers must be the same pairs. |
+| `frontendvoicesourcecap_test.go` | H3 | The browser names the server's body cap as a constant it cannot ask for, so this gate fails when either side moves without the other. |
 | `frontendwebformsigning_test.go` | H3 | The setup dialog hands a website's developer the code that signs a server form's posts. |
 | `frontendwriteverbs_test.go` | H3 | The browser hides a moment verb a seat may not take by asking whether the verb writes an activity. |
 | `geocodestatuses_test.go` | H3 | A company's geocode status is spelled once in Go and once in the column's CHECK, and the two are the same set. |
@@ -519,6 +520,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |
 | `unvalidatedconstraints_test.go` | H2 | A constraint left NOT VALID is declared, with the reason it stays that way. |
+| `updatedatshape_test.go` | H2 | A row that was never changed carries the moment it was written in updated\_at. |
 | `usertimezonewriters_test.go` | H2 | A user's time zone has one writer after their row exists: writeTimezoneTx in identity/usertimezone.go. |
 | `uuidkeydefault_test.go` | H2 | Every uuid `id` column defaults to uuidv7(). |
 | `validatedreplypath_test.go` | H2 | A model reply this tree can refuse must be asked for through the validated lane, so the refusal reaches the model that can act on it. |

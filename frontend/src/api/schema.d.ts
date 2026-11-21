@@ -52468,8 +52468,11 @@ export interface components {
             action: components["schemas"]["HealthAction"];
         };
         HealthAction: {
-            /** @enum {string} */
-            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration";
+            /**
+             * @description Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+             * @enum {string}
+             */
+            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration" | "regional";
             available: boolean;
             reason?: string;
         };

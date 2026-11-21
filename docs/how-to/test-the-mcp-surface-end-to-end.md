@@ -40,11 +40,16 @@ The table is in `e2e/llm/candidates.json`.
 | `api` (default) | `e2e/llm/drive.py`, the neutral bridge | the vendor key: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY` | `<model>` |
 | `openrouter` | the neutral bridge, through OpenRouter | `OPENAI_COMPATIBLE_API_KEY` | `<model>` |
 | `cli` | `claude -p`, `codex exec` or `agy -p` (no Mistral CLI; Gemini runs only here) | a Claude credential, a `codex login`, or an Antigravity sign-in | `<model>@<cli>` |
+| `sdk` | the `claude` binary under the Claude Agent SDK (`e2e/llm/sdk-runner/`), Claude only | the Claude credential the `cli` route uses, and `node` | `<model>@claude-sdk` |
 
 **Only the bridge compares models.** It gives every vendor the same tools, and the instructions of the server as the system prompt. It also gives the same cap of 20 turns, and the same cap on results. A CLI uses the system prompt and agent loop of its own vendor. So its number is filed on its own, and never sits in the comparison column. The CLI routes
 are the way to run a long sweep on a subscription at small cost.
 
 A CLI starts with nothing of yours: `e2e/llm/clean.py` starts it, and the judge, in an empty folder. The claude CLI loads no settings, no `memory_paths` and no `skills`. Codex gets a home folder that holds only a copy of your login, and a new login it gets goes back to yours. The lane stops a run whose `init` line shows a repository folder, a `memory_paths` entry, a user plugin or a skill. It also stops a run with a `hook_started` line. Codex prints neither, so `e2e/llm/tests/test_codex.py` checks how it starts instead.
+
+**The `sdk` route answers forms in the chat.** `claude -p` cancels every form the server puts up, so a change to many records at once never runs on the `cli` route. The `sdk` route runs the same `claude` binary with the same flags and system prompt. Its host answers each form from the scenario's `elicitation:` entries, and writes the question and the answer into the transcript as an `elicitation` line.
+
+Before each run of the lane on this route, it installs again when what is installed is not what `e2e/llm/sdk-runner/package.json` pins. It checks the registry signatures, and runs `npm run selfcheck` there. That folder keeps no lockfile, so the source SBOM never lists the Agent SDK.
 
 Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you run `agy` once and sign in). Each run gets an empty folder that holds one agent file. That agent names the lane's server as its only MCP server, and turns off your own servers, rules and skill files. In print mode `agy` refuses any action it would ask you about, and `--settings` allows only the lane's server.
 
@@ -282,7 +287,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
 | `the stack did not answer an authenticated call after the restore` | The snapshot restore between runs cuts every database connection, and the api still answered 503 after 30 seconds | A harness stop, never a score. Read `make dev-logs DEV_SLUG=<slug> FOLLOW=0 N=500` before the next boot replaces the log |
-| `the client declined a question the server asked in the chat` | The server asked the user to confirm a change in the chat, and the CLI said no by itself: in print mode nobody can answer the form | A harness stop, never a score. The case cannot be measured on that CLI until the lane can answer a question in the chat |
+| `the client declined a question the server asked in the chat` | The server asked the user to confirm a change in the chat, and the CLI said no by itself: in print mode nobody can answer the form | A harness stop, never a score. Run the case on the `sdk` route with the user's answer in `elicitation:`. A no that the case scripts there is the user's own, so it is scored |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a bug: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) ended part of the way through a run. A CLI that exits with an error code, under a result that reports no error, stops the lane in the same way | A harness stop, never a score. Every driver writes a last result when the model ends the run, at the turn cap too. The stop prints the last lines the driver wrote to stderr |
 
