@@ -37,7 +37,7 @@ func AssertCheckViolationsReachTheSharedNet(t *testing.T, table string, write fu
 		{"an unnamed rule", table, table + "_unnamed_rule", http.StatusUnprocessableEntity, "value_not_allowed", ""},
 	} {
 		rec := httptest.NewRecorder()
-		cause := &pgconn.PgError{Code: "23514", TableName: tc.table, ConstraintName: tc.constraint}
+		cause := &pgconn.PgError{Code: storekit.CheckViolationCode, TableName: tc.table, ConstraintName: tc.constraint}
 		write(rec, httptest.NewRequest(http.MethodPatch, "/v1/records/x", nil), fmt.Errorf("writing: %w", cause))
 		var body struct {
 			Code    string `json:"code"`

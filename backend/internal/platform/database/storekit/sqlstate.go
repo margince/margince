@@ -146,6 +146,10 @@ func CheckViolation(err error) (constraint string, ok bool) {
 	return pgViolation(err, pgCheckViolation)
 }
 
+// CheckViolationCode is the SQLSTATE CheckViolation reads, for a test that
+// builds the refusal Postgres sends.
+const CheckViolationCode = pgCheckViolation
+
 // CustomColumnPrefix starts every custom field's physical column name.
 const CustomColumnPrefix = "cf_"
 

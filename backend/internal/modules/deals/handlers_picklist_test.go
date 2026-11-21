@@ -55,8 +55,8 @@ func TestEveryDealPicklistIsAPicklistCheckOnTheDeal(t *testing.T) {
 func wireKeys(requests ...reflect.Type) map[string]bool {
 	keys := map[string]bool{}
 	for _, typ := range requests {
-		for i := range typ.NumField() {
-			name, _, _ := strings.Cut(typ.Field(i).Tag.Get("json"), ",")
+		for field := range typ.Fields() {
+			name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 			keys[name] = true
 		}
 	}
