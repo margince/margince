@@ -838,26 +838,35 @@ elif [[ "${LLM_RESULT:-}" = "success" ]]; then
   resolve "a use case is failing when driven by a real model"
 fi
 
-# The records pull request. Both callers of _records.yml hand in its result and
-# whether it proposed: one records unit, so one finding whichever part found it.
-# A failed render or proposal fails the call, and means a measurement was taken
-# and nobody was asked to publish it.
-if [[ "${RECORDS_RESULT:-}" = "failure" ]]; then
-  report "the records pull request could not be opened" "priority: normal,area: ci-tests,bug" \
-"A run recorded a measurement, but no pull request proposes it: $RUN_URL
+# The records pull requests, one finding per part: each caller of _records.yml
+# hands in its own part's result, so a green speed proposal never closes a red
+# MCP one. A failed render or proposal fails the call, and means a measurement
+# was taken and nobody was asked to publish it.
+records_body() {
+  local part="$1"
+  printf '%s' "A run recorded a measurement, but no pull request proposes it: $RUN_URL
 
-The \`render\` job of \`_records.yml\` renders the pages the record feeds
-(\`make perfdoc\` or the MCP tool coverage generator) and hands over a patch;
-\`propose\` commits it on a \`records/weekly-<part>\` branch and opens the pull
-request. The job log names the step that failed.
+The \`render\` job of \`_records.yml\` renders the pages the record feeds and
+uploads a patch; \`propose\` commits it on \`records/weekly-$part\` and opens the
+pull request. The job log names the step that failed.
 
-If the branch was pushed and only \`gh pr create\` failed, the repository may not
-let GitHub Actions open pull requests (Settings, Actions, General). Open the pull
-request from the branch by hand. The patch is kept on the run as
-\`records-<part>\` for 30 days."\
-    || unreported=1
-elif [[ "${RECORDS_PR_RESULT:-}" = "success" ]]; then
-  resolve "the records pull request could not be opened"
+If \`render\` failed, no patch exists: fix the generator it names and run the
+workflow again. If only \`propose\` failed, the patch is kept on the run as
+\`records-$part\` for 30 days. The repository may not let GitHub Actions open
+pull requests (Settings, Actions, General); open the pull request from the
+patch by hand."
+}
+if [[ "${SPEED_RECORDS_RESULT:-}" = "failure" ]]; then
+  report "the speed records pull request could not be opened" "priority: normal,area: ci-tests,bug" \
+    "$(records_body speed)" || unreported=1
+elif [[ "${SPEED_RECORDS_PR_RESULT:-}" = "success" ]]; then
+  resolve "the speed records pull request could not be opened"
+fi
+if [[ "${MCP_RECORDS_RESULT:-}" = "failure" ]]; then
+  report "the MCP verdicts pull request could not be opened" "priority: normal,area: ci-tests,bug" \
+    "$(records_body llm)" || unreported=1
+elif [[ "${MCP_RECORDS_PR_RESULT:-}" = "success" ]]; then
+  resolve "the MCP verdicts pull request could not be opened"
 fi
 
 # --- merge-attest.yml -----------------------------------------------------------

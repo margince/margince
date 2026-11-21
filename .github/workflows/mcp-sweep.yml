@@ -92,7 +92,9 @@ jobs:
       - name: Deal the scenario folder into shards
         id: plan
         if: steps.funded.outputs.funded == 'yes'
-        run: echo "shards=$(python3 e2e/llm/shards.py plan 8)" >> "$GITHUB_OUTPUT"
+        run: |
+          shards="$(python3 e2e/llm/shards.py plan 8)"
+          echo "shards=$shards" >> "$GITHUB_OUTPUT"
 
   llm-use-cases:
     name: use cases, driven by a model (shard ${{ matrix.shard }})
@@ -106,6 +108,10 @@ jobs:
       matrix: ${{ fromJSON(needs.llm-plan.outputs.shards) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # The sweep step's limit, read by the step and by the outcome that tells a
+    # cut-off from a sweep that stopped early.
+    env:
+      LANE_LIMIT_MINUTES: 100
     permissions:
       contents: read
     steps:
@@ -153,7 +159,7 @@ jobs:
       # summary named the token as what funds it.
       - name: Sweep this shard (scripts/e2e-llm-sweep.sh)
         id: lane
-        timeout-minutes: 100
+        timeout-minutes: ${{ fromJSON(env.LANE_LIMIT_MINUTES) }}
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           MARGINCE_E2E_LLM: "1"
@@ -165,6 +171,7 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: |
           set -o pipefail
+          date +%s > "$RUNNER_TEMP/lane-start"
           # A fresh folder per shard holds exactly what this run wrote; the
           # records job files it in the records tree once every shard is in.
           E2E_SWEEP_SINCE="$(date +%s)"
@@ -191,7 +198,10 @@ jobs:
           if grep -q '^LANE DONE' "$log" 2>/dev/null; then
             if grep -qE '^ci[0-9]+ +case[0-9]+_[a-z0-9_]+: FAIL' "$log"; then outcome=scenario-failed; else outcome=ok; fi
             cp "$RUNNER_TEMP"/verdicts/*.json "$out/verdicts/"
-          elif [ "$STEP" = failure ] && ! grep -q '^LANE STOPPED' "$log" 2>/dev/null; then
+          elif [ "$STEP" = failure ] && ! grep -q '^LANE STOPPED' "$log" 2>/dev/null \
+            && [ $(( $(date +%s) - $(cat "$RUNNER_TEMP/lane-start" 2>/dev/null || date +%s) )) -ge $(( LANE_LIMIT_MINUTES * 60 - 60 )) ]; then
+            # Only a step that ran out its limit is a cut-off; one that failed
+            # sooner, before any case or at its stamp, could not run.
             outcome=cut-off
           else
             outcome=lane-failed
@@ -324,8 +334,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          LLM_RESULT: ${{ needs['llm-collect'].result }}
+          # A planner that failed skips the collector, so its failure stands in
+          # for the lane's: the reporter reads it as "could not run".
+          LLM_RESULT: ${{ needs['llm-plan'].result == 'failure' && 'failure' || needs['llm-collect'].result }}
           LLM_OUTCOME: ${{ needs['llm-collect'].outputs.outcome }}
-          RECORDS_RESULT: ${{ needs.records.result }}
-          RECORDS_PR_RESULT: ${{ needs.records.outputs.proposed }}
+          MCP_RECORDS_RESULT: ${{ needs.records.result }}
+          MCP_RECORDS_PR_RESULT: ${{ needs.records.outputs.proposed }}
         run: ./scripts/scheduled-report.sh

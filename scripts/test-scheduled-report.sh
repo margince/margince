@@ -278,13 +278,20 @@ expect_actions "a red all-stories render files its issue" \
 expect_actions "a green all-stories render closes it" \
 	"close 40" "$(printf '40\t%s\n' "$STORIES_TITLE")" STORIES_RESULT=success
 
-RECORDS_TITLE="the records pull request could not be opened"
-expect_actions "records/a failed render or proposal files its issue" \
-	"create $RECORDS_TITLE" "" RECORDS_RESULT=failure RECORDS_PR_RESULT=
-expect_actions "records/an opened pull request closes it" \
-	"close 41" "$(printf '41\t%s\n' "$RECORDS_TITLE")" RECORDS_RESULT=success RECORDS_PR_RESULT=success
+SPEED_TITLE="the speed records pull request could not be opened"
+MCP_RECORDS_TITLE="the MCP verdicts pull request could not be opened"
+expect_actions "records/a failed render or proposal files its part's issue" \
+	"create $SPEED_TITLE" "" SPEED_RECORDS_RESULT=failure SPEED_RECORDS_PR_RESULT=
+expect_actions "records/an opened pull request closes its part's issue" \
+	"close 41" "$(printf '41\t%s\n' "$SPEED_TITLE")" SPEED_RECORDS_RESULT=success SPEED_RECORDS_PR_RESULT=success
 expect_actions "records/nothing proposed neither files nor closes" \
-	"" "$(printf '41\t%s\n' "$RECORDS_TITLE")" RECORDS_RESULT=success RECORDS_PR_RESULT=
+	"" "$(printf '41\t%s\n' "$SPEED_TITLE")" SPEED_RECORDS_RESULT=success SPEED_RECORDS_PR_RESULT=
+expect_actions "records/a green speed proposal leaves the MCP part's issue open" \
+	"" "$(printf '42\t%s\n' "$MCP_RECORDS_TITLE")" SPEED_RECORDS_RESULT=success SPEED_RECORDS_PR_RESULT=success
+expect_actions "records/a failed MCP proposal files its own issue" \
+	"create $MCP_RECORDS_TITLE" "" MCP_RECORDS_RESULT=failure MCP_RECORDS_PR_RESULT=
+expect_actions "records/an opened MCP pull request closes its issue" \
+	"close 42" "$(printf '42\t%s\n' "$MCP_RECORDS_TITLE")" MCP_RECORDS_RESULT=success MCP_RECORDS_PR_RESULT=success
 
 # --- retraction where ONE job result feeds TWO titles ---------------------------
 #

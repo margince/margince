@@ -963,8 +963,8 @@ jobs:
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
           MOBILE_RESULT: ${{ needs['perf-mobile'].result }}
           MOBILE_OUTCOME: ${{ needs['perf-mobile'].outputs.outcome }}
-          RECORDS_RESULT: ${{ needs.records.result }}
-          RECORDS_PR_RESULT: ${{ needs.records.outputs.proposed }}
+          SPEED_RECORDS_RESULT: ${{ needs.records.result }}
+          SPEED_RECORDS_PR_RESULT: ${{ needs.records.outputs.proposed }}
           CACHE_RESULT: ${{ needs.reap-caches.result }}
           TREND_RESULT: ${{ needs['slop-trend'].result }}
           VENDOR_LIVE_RESULT: ${{ needs['vendor-live'].result }}
