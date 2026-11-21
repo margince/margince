@@ -31,6 +31,14 @@ export function catalogOfRecord(recordKey: string): CfObject | undefined {
   return CF_OBJECTS.find((object) => object === recordKey);
 }
 
+/** A field's name in the reader's language, without any retired mark. */
+export function customFieldName(
+  field: components["schemas"]["CustomField"],
+  locale: string,
+): string {
+  return translatedLabel(field.label, field.label_translations, locale);
+}
+
 /**
  * A field's label as the reader sees it. A retired field reads "Label (retired)",
  * because a live field may carry the same name. This is the one place that adds it.
@@ -39,7 +47,7 @@ export function customFieldLabel(
   field: components["schemas"]["CustomField"],
   locale: string,
 ): string {
-  const label = translatedLabel(field.label, field.label_translations, locale);
+  const label = customFieldName(field, locale);
   if (field.status !== "retired") {
     return label;
   }
@@ -77,28 +85,12 @@ export function slug(label: string): string {
     .replace(/^_|_$/g, "");
 }
 
-/**
- * The column a new field takes, as the server picks it. That is cf_<slug>, else
- * the first cf_<slug>_<n> that no field of the object owns, retired ones included.
- */
-export function columnName(
-  label: string,
-  owned: readonly string[] = [],
-): string {
-  const base = `cf_${slug(label) || "…"}`;
-  let candidate = base;
-  for (let n = 2; owned.includes(candidate); n++) {
-    candidate = `${base}_${n}`;
-  }
-  return candidate;
+export function columnName(label: string): string {
+  return `cf_${slug(label) || "…"}`;
 }
 
-export function apiKey(
-  object: CfObject,
-  label: string,
-  owned: readonly string[] = [],
-): string {
-  return `${object}.${columnName(label, owned)}`;
+export function apiKey(object: CfObject, label: string): string {
+  return `${object}.${columnName(label)}`;
 }
 
 // A field is data; an object or a relationship is structure. A label that reads

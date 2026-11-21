@@ -247,6 +247,38 @@ func TestCustomFieldCreate_OntoARetiredFieldsName_TakesAFreeColumnAndLeavesTheOl
 	}
 }
 
+func TestCustomFieldRename_OntoARetiredFieldsName_IsAllowedButOntoALiveOneIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+
+	old, err := svc.Create(ctx, dateSpec("Renewal date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Retire(ctx, ids.UUID(old.Id)); err != nil {
+		t.Fatal(err)
+	}
+	live, err := svc.Create(ctx, dateSpec("Signed date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	renamed, err := svc.Update(ctx, ids.UUID(live.Id), renameTo("Renewal date"), nil)
+	if err != nil {
+		t.Fatalf("renaming onto a retired field's name is allowed: %v", err)
+	}
+	if renamed.Label != "Renewal date" {
+		t.Fatalf("label = %q, want the retired field's name", renamed.Label)
+	}
+	other, err := svc.Create(ctx, dateSpec("Closed date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Update(ctx, ids.UUID(other.Id), renameTo("Renewal date"), nil); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("renaming onto a live field's name must conflict, got %v", err)
+	}
+}
+
 func TestCustomFieldSetOptions_RegeneratesTheCheck(t *testing.T) {
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))

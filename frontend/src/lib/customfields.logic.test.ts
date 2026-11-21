@@ -43,16 +43,6 @@ describe("custom-fields logic", () => {
     );
   });
 
-  it("takes the first column no field of the object owns, retired ones included", () => {
-    expect(columnName("Deal Size", ["cf_deal_size"])).toBe("cf_deal_size_2");
-    expect(columnName("Deal Size", ["cf_deal_size", "cf_deal_size_2"])).toBe(
-      "cf_deal_size_3",
-    );
-    expect(apiKey("deal", "Deal Size", ["cf_deal_size"])).toBe(
-      "deal.cf_deal_size_2",
-    );
-  });
-
   it("reads a retired field's label with a retired suffix, in the reader's language", () => {
     const field = {
       label: "Deal Size",

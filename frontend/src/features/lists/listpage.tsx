@@ -334,7 +334,7 @@ function noticeOf(list: List): ListNotice | null {
 function RetiredFieldNotice({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const plural = usePlural();
-  const labelOf = useCustomColumnLabel(list.entity_type);
+  const labelOf = useCustomColumnLabel(list.entity_type, true, true);
   const fields = list.retired_fields ?? [];
   return (
     <Callout
