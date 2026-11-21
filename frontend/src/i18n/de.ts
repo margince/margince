@@ -8524,7 +8524,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.dealFact":
-    "Dieses Follow-up gehört zu keinem offenen Deal.",
+    "Kein offener Deal mit diesem Kontakt stützt dieses Follow-up.",
   "sendPermission.reason.footerIncomplete":
     "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
   "sendPermission.footer.language": "{detail} auf {language}",

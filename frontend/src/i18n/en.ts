@@ -8514,7 +8514,7 @@ export const en = {
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.dealFact":
-    "This follow-up is not tied to an open deal.",
+    "No open deal with this recipient supports this follow-up.",
   "sendPermission.reason.footerIncomplete":
     "Read the footer details below. You can send this email with a recorded reason.",
   "sendPermission.footer.language": "{detail} in {language}",

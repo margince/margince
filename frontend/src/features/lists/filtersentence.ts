@@ -9,7 +9,10 @@
 
 import { useQueries } from "@tanstack/react-query";
 import { entityNameObserverQuery } from "../../components/entityref.queries";
-import { useRoster } from "../../components/roster";
+import {
+  type ReferenceOption,
+  useReferenceOptions,
+} from "../../components/filterreference";
 import {
   formatDateAbbrev,
   formatMoney,
@@ -113,7 +116,15 @@ export type SentenceWords = Readonly<{
 }>;
 
 /** The references a sentence names by looking the record up, not by counting. */
-const NAMED_REFERENCES = ["company", "app_user", "team"] as const;
+const NAMED_REFERENCES = [
+  "company",
+  "app_user",
+  "team",
+  "stage",
+  "pipeline",
+  "project",
+  "product",
+] as const;
 type NamedReference = (typeof NAMED_REFERENCES)[number];
 
 function isNamedReference(value: string | undefined): value is NamedReference {
@@ -123,11 +134,19 @@ function isNamedReference(value: string | undefined): value is NamedReference {
 /** The ids of each named reference that a sentence will have to name. */
 export type ReferencedIds = Readonly<Record<NamedReference, readonly string[]>>;
 
-const NO_REFERENCES: ReferencedIds = { company: [], app_user: [], team: [] };
+const NO_REFERENCES: ReferencedIds = {
+  company: [],
+  app_user: [],
+  team: [],
+  stage: [],
+  pipeline: [],
+  project: [],
+  product: [],
+};
 
 /**
- * The ids the clauses of these trees hold for a field that points at a company,
- * a colleague or a team. A caller hands them to `useSentenceWords`, which reads
+ * The ids the clauses of these trees hold for a field that points at a record
+ * a sentence can name. A caller hands them to `useSentenceWords`, which reads
  * the names; nothing else walks a tree for them.
  */
 export function referencedIdsOf(
@@ -170,6 +189,10 @@ export function referencedIdsOfClauses(
     company: idsOf("company"),
     app_user: idsOf("app_user"),
     team: idsOf("team"),
+    stage: idsOf("stage"),
+    pipeline: idsOf("pipeline"),
+    project: idsOf("project"),
+    product: idsOf("product"),
   };
 }
 
@@ -184,20 +207,36 @@ export function mergeReferencedIds(
     company: all("company"),
     app_user: all("app_user"),
     team: all("team"),
+    stage: all("stage"),
+    pipeline: all("pipeline"),
+    project: all("project"),
+    product: all("product"),
   };
 }
 
-function useRecordNames(
-  refs: ReferencedIds,
-): ReadonlyMap<string, string> | undefined {
+function optionNames(
+  options: readonly ReferenceOption[],
+  ids: readonly string[],
+): [string, string][] {
+  return options
+    .filter((option) => ids.includes(option.value))
+    .map((option): [string, string] => [option.value, option.label]);
+}
+
+/**
+ * The names of the records the clauses point at. Companies and colleagues are
+ * read by id. The rest come from the catalogues the filter pickers read.
+ */
+function useRecordNames(refs: ReferencedIds): ReadonlyMap<string, string> {
   const companies = useQueries({
-    queries: refs.company.map((id) => ({
-      ...entityNameObserverQuery("company", id),
-    })),
+    queries: refs.company.map((id) => entityNameObserverQuery("company", id)),
   });
   const members = useMemberNames(refs.app_user);
-  // roster-failure: only names ids; a team without a name is counted instead.
-  const teams = useRoster("team", refs.team.length > 0);
+  const teams = useReferenceOptions("team", refs.team.length > 0);
+  const stages = useReferenceOptions("stage", refs.stage.length > 0);
+  const pipelines = useReferenceOptions("pipeline", refs.pipeline.length > 0);
+  const projects = useReferenceOptions("project", refs.project.length > 0);
+  const products = useReferenceOptions("product", refs.product.length > 0);
   const names = new Map(members);
   refs.company.forEach((id, index) => {
     const name = companies[index]?.data;
@@ -205,9 +244,16 @@ function useRecordNames(
       names.set(id, name);
     }
   });
-  for (const entry of teams.data ?? []) {
-    if ("name" in entry && refs.team.includes(entry.id)) {
-      names.set(entry.id, entry.name);
+  const catalogues: [readonly ReferenceOption[], readonly string[]][] = [
+    [teams.options, refs.team],
+    [stages.options, refs.stage],
+    [pipelines.options, refs.pipeline],
+    [projects.options, refs.project],
+    [products.options, refs.product],
+  ];
+  for (const [options, ids] of catalogues) {
+    for (const [id, name] of optionNames(options, ids)) {
+      names.set(id, name);
     }
   }
   return names;

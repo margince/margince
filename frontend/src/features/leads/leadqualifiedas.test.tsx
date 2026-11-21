@@ -48,9 +48,11 @@ function open(lead: Lead, employer: object | undefined) {
     }),
     ...recordNamesRoutes({
       contact: { "c-1": "Dana Buyer" },
-      company: { "co-1": "Pad AG" },
+      company: { "co-1": "Pad AG", "co-2": "Later Employer GmbH" },
       deal: { "d-1": "Pad AG renewal" },
     }),
+    "GET /deals/d-1": () =>
+      jsonResponse({ id: "d-1", name: "Pad AG renewal", company_id: "co-1" }),
     "GET /contacts/c-1": () =>
       jsonResponse({ id: "c-1", full_name: "Dana Buyer", employer }),
   });
@@ -81,10 +83,22 @@ describe("the Qualified as card", () => {
     ).toBeInTheDocument();
   });
 
-  it("draws no company or deal row when qualifying made neither", async () => {
-    open(promoted, undefined);
+  it("shows the company qualification used, not the contact's later employer", async () => {
+    open(
+      { ...promoted, qualified_deal_id: "d-1" },
+      { company_id: "co-2", company_name: "Later Employer GmbH" },
+    );
+    expect(
+      await screen.findByRole("link", { name: "Pad AG" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Later Employer GmbH")).not.toBeInTheDocument();
+  });
+
+  it("draws no company row without a deal, whoever employs the contact now", async () => {
+    open(promoted, { company_id: "co-2", company_name: "Later Employer GmbH" });
     await screen.findByRole("link", { name: "Dana Buyer" });
     expect(screen.queryByText("Company")).not.toBeInTheDocument();
+    expect(screen.queryByText("Later Employer GmbH")).not.toBeInTheDocument();
     expect(screen.queryByText("Deal")).not.toBeInTheDocument();
   });
 });

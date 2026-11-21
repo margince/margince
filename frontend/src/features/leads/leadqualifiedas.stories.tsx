@@ -23,6 +23,12 @@ const meta: Meta<typeof LeadQualifyPreviewCard> = {
           company: { "co-1": "Pad AG" },
           deal: { "d-1": "Pad AG renewal" },
         }),
+        "GET /deals/d-1": () =>
+          jsonResponse({
+            id: "d-1",
+            name: "Pad AG renewal",
+            company_id: "co-1",
+          }),
         "GET /contacts/c-1": () =>
           jsonResponse({
             id: "c-1",

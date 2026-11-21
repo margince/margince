@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
@@ -15,7 +14,7 @@ import {
 import type { RecordTimeline } from "../../design-system/recordtimeline";
 import { emailSummaryText } from "../../format/emailtext";
 import { useT } from "../../i18n";
-import { contactQuery } from "../../lib/contact.queries";
+import { useDeal } from "../../lib/dealread";
 import type { Lead } from "./leads";
 import { type PromotionRecord, promotionSummary } from "./leads.promotion";
 import { usePromotePreview } from "./leads.qualify";
@@ -125,16 +124,14 @@ export function LeadQualifyPreviewCard({
   );
 }
 
-// Every record the qualification left: the contact, the company the contact
-// works for today and the deal the call opened or joined. The company is read
-// off the contact's `employer`, which is where promotion put it.
+// Every record the qualification left: the contact, the deal the call opened
+// or joined, and that deal's company. A contact's own employer can change
+// later, so it is never read here.
 function QualifiedAsCard({
   lead,
   promotion,
 }: Readonly<{ lead: Lead; promotion: PromotionRecord }>) {
   const t = useT();
-  const contact = useQuery(contactQuery(lead.promoted_contact_id ?? undefined));
-  const employer = contact.data?.employer;
   return (
     <OverviewCard title={t("lead.card.qualifiedAs")}>
       <OverviewList>
@@ -143,26 +140,30 @@ function QualifiedAsCard({
           sub={promotionSummary(promotion, t)}
           right={<EntityRef kind="contact" id={lead.promoted_contact_id} />}
         />
-        {employer && (
-          <OverviewRow
-            title={t("lead.card.qualifiedCompany")}
-            right={
-              <EntityRef
-                kind="company"
-                id={employer.company_id}
-                name={employer.company_name}
-              />
-            }
-          />
-        )}
         {lead.qualified_deal_id && (
-          <OverviewRow
-            title={t("lead.card.qualifiedDeal")}
-            right={<EntityRef kind="deal" id={lead.qualified_deal_id} />}
-          />
+          <QualifiedDealRows dealId={lead.qualified_deal_id} />
         )}
       </OverviewList>
     </OverviewCard>
+  );
+}
+
+function QualifiedDealRows({ dealId }: Readonly<{ dealId: string }>) {
+  const t = useT();
+  const deal = useDeal(dealId);
+  return (
+    <>
+      {deal.data?.company_id && (
+        <OverviewRow
+          title={t("lead.card.qualifiedCompany")}
+          right={<EntityRef kind="company" id={deal.data.company_id} />}
+        />
+      )}
+      <OverviewRow
+        title={t("lead.card.qualifiedDeal")}
+        right={<EntityRef kind="deal" id={dealId} />}
+      />
+    </>
   );
 }
 

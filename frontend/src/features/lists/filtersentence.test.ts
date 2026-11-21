@@ -455,6 +455,10 @@ describe("record references in a sentence", () => {
       company: ["co-1", "co-2"],
       app_user: ["u1"],
       team: ["tm-1"],
+      stage: ["s1"],
+      pipeline: [],
+      project: [],
+      product: [],
     });
   });
 });
