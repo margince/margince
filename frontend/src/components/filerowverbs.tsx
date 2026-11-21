@@ -157,7 +157,7 @@ function changesOf(
   const patch: Patch = {};
   const title = draft.title.trim();
   if (title !== (file.title ?? "")) patch.title = title === "" ? null : title;
-  if (draft.category && draft.category !== file.category) {
+  if (draft.category && draft.category !== (file.category ?? "other")) {
     patch.category = draft.category;
   }
   if (draft.state !== (file.doc_state ?? "current")) {
@@ -172,11 +172,14 @@ function EditFileDialog({
 }: Readonly<{ file: Attachment; onClose: () => void }>) {
   const t = useT();
   const refresh = useRefreshFile(file);
-  const choosable = (UPLOADABLE_CATEGORIES as readonly string[]).includes(
-    file.category ?? "",
-  );
+  // An upload filed as Other arrives with no category, so absence is choosable.
+  const choosable =
+    !file.category ||
+    (UPLOADABLE_CATEGORIES as readonly string[]).includes(file.category);
   const [title, setTitle] = useState(file.title ?? "");
-  const [category, setCategory] = useState(file.category as Category);
+  const [category, setCategory] = useState(
+    (file.category as Category | undefined) ?? "other",
+  );
   const [state, setState] = useState<DocState>(file.doc_state ?? "current");
   const save = useMutation({
     mutationFn: async (body: Patch) => {

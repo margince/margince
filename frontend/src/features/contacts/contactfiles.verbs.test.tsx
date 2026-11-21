@@ -30,7 +30,6 @@ const UPLOAD: Attachment = {
   entity_type: "contact",
   entity_id: "p-1",
   filename: "scan.pdf",
-  category: "other",
   doc_state: "current",
   source: "upload",
   captured_by: "human:u-1",
@@ -53,7 +52,11 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function stubServer(files: Attachment[], mayUpdate = true) {
+function stubServer(
+  files: Attachment[],
+  mayUpdate = true,
+  refuseWritesWith?: number,
+) {
   const writes: { method: string; path: string; body: unknown }[] = [];
   const gone = new Set<string>();
   const patched = new Map<string, Partial<Attachment>>();
@@ -76,6 +79,12 @@ function stubServer(files: Attachment[], mayUpdate = true) {
         .filter((file) => !gone.has(file.id))
         .map((file) => ({ ...file, ...patched.get(file.id) }));
       return json({ data, page: { has_more: false, next_cursor: null } });
+    }
+    if (refuseWritesWith) {
+      return json(
+        { title: "Refused", detail: "Refused for the test" },
+        refuseWritesWith,
+      );
     }
     const text = await request.text();
     const body = text ? JSON.parse(text) : null;
@@ -185,3 +194,110 @@ it("shows no verbs when the contact row is not writable", async () => {
   await screen.findByText("scan.pdf");
   expect(screen.queryByRole("button", { name: /Actions for/ })).toBeNull();
 });
+
+async function openEdit(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: /Actions for/ }));
+  await user.click(screen.getByRole("button", { name: en["files.edit"] }));
+  return screen.findByRole("dialog");
+}
+
+it("sends a null title when the title is cleared", async () => {
+  const writes = stubServer([{ ...UPLOAD, title: "Old name" }]);
+  const user = userEvent.setup();
+  show();
+
+  const dialog = await openEdit(user);
+  await user.clear(within(dialog).getByRole("textbox"));
+  await user.click(
+    within(dialog).getByRole("button", { name: en["files.save"] }),
+  );
+
+  await waitFor(() =>
+    expect(writes.map((write) => write.body)).toEqual([{ title: null }]),
+  );
+});
+
+it("offers Category on an upload with no category and sends only a change to it", async () => {
+  const writes = stubServer([UPLOAD]);
+  const user = userEvent.setup();
+  show();
+
+  const dialog = await openEdit(user);
+  await user.click(
+    within(dialog).getByRole("combobox", { name: en["docs.add.category"] }),
+  );
+  await user.click(
+    await screen.findByRole("option", { name: en["docs.category.legal"] }),
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: en["files.save"] }),
+  );
+
+  await waitFor(() =>
+    expect(writes.map((write) => write.body)).toEqual([{ category: "legal" }]),
+  );
+});
+
+it("sends nothing when the dialog is saved unchanged", async () => {
+  const writes = stubServer([UPLOAD]);
+  const user = userEvent.setup();
+  show();
+
+  const dialog = await openEdit(user);
+  await user.click(
+    within(dialog).getByRole("button", { name: en["files.save"] }),
+  );
+
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(writes).toEqual([]);
+});
+
+it("hides Category for a link, which has no assignable category", async () => {
+  stubServer([{ ...UPLOAD, category: "link", url: "https://example.com/a" }]);
+  const user = userEvent.setup();
+  show();
+
+  const dialog = await openEdit(user);
+  expect(
+    within(dialog).queryByRole("combobox", { name: en["docs.add.category"] }),
+  ).toBeNull();
+});
+
+it.each([403, 404, 500])(
+  "says so and keeps the row when an edit is refused with %i",
+  async (status) => {
+    stubServer([UPLOAD], true, status);
+    const user = userEvent.setup();
+    show();
+
+    const dialog = await openEdit(user);
+    await user.type(within(dialog).getByRole("textbox"), "New name");
+    await user.click(
+      within(dialog).getByRole("button", { name: en["files.save"] }),
+    );
+
+    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("scan.pdf")).toBeInTheDocument();
+  },
+);
+
+it.each([403, 404, 500])(
+  "says so and keeps the row when a delete is refused with %i",
+  async (status) => {
+    stubServer([UPLOAD], true, status);
+    const user = userEvent.setup();
+    show();
+
+    await user.click(
+      await screen.findByRole("button", { name: /Actions for scan/ }),
+    );
+    await user.click(screen.getByRole("button", { name: en["files.delete"] }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: en["files.delete"] }),
+    );
+
+    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("scan.pdf")).toBeInTheDocument();
+  },
+);

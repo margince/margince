@@ -7860,7 +7860,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "files.editTitle": "Chỉnh sửa {name}",
   "files.editState": "Trạng thái",
   "files.save": "Lưu",
-  "files.deleteBodyRecord": "Tệp sẽ bị gỡ khỏi tài liệu của bản ghi này.",
+  "files.deleteBodyRecord": "Tệp sẽ bị gỡ khỏi tài liệu của hồ sơ này.",
   "files.showHidden": "Hiển thị tệp đã ẩn",
   "files.hideHidden": "Thôi hiển thị tệp đã ẩn",
   "dealfiles.origin.from": "Từ {who}",
