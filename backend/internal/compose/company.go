@@ -154,16 +154,13 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
-	// Only a blank name is refused here. The company record judges the length,
-	// and it refuses only a changed name, so an existing long name still saves.
+	// The company record judges length, and only for a changed name.
 	if refused := values.CompanyNameMissing("display_name", req.DisplayName); refused != nil {
 		httperr.Write(w, r, refused)
 		return
 	}
-	// New onboarding requires the three semantic answers. During the pre-live
-	// compatibility transition the former complete legal block remains an
-	// accepted legacy submission; it is returned as minimum_complete=false and
-	// the current UI asks for the semantic fields on the next edit.
+	// Onboarding needs the semantic answers; a complete legacy legal block is
+	// still accepted, answered as minimum_complete=false.
 	legacyComplete := optionalFilled(req.LegalName) && optionalFilled(req.RegisteredAddress) &&
 		optionalFilled(req.RegisterVat) && optionalFilled(req.Industry)
 	if !legacyComplete {
@@ -181,10 +178,8 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 			}
 		}
 	}
-	// The website is normalized ONCE, here: what the validator judged is what
-	// the store receives. Passing the raw pointer onward would let "  acme.com"
-	// (or a whitespace-only value, which skips validation as not-sent) reach
-	// the domain parser and turn a typing slip into a 500.
+	// Normalized once, here, so the store gets what the validator judged and
+	// a stray space never reaches the domain parser as a 500.
 	website := req.Website
 	if website != nil {
 		trimmed := strings.TrimSpace(*website)
@@ -284,10 +279,8 @@ func toContractCompany(c contacts.Company) crmcontracts.CompanyProfile {
 		CompanyId:   openapi_types.UUID(c.CompanyID.UUID),
 		DisplayName: c.DisplayName,
 		Website:     c.Website,
-		// The module's own spelling of the logo endpoint, not a second one: the
-		// shell draws the installation's mark from this profile and the record
-		// screens draw it from Company.logo_url, and a company with two
-		// faces is a company nobody recognises.
+		// The module's own logo endpoint, so the shell and the record screens
+		// draw the same mark.
 		LogoUrl: contacts.LogoURL(c.CompanyID.UUID, c.LogoObjectKey, contacts.LogoWide),
 		// The square badge the collapsed sidebar draws, absent until somebody
 		// uploads one — which is what makes the rail fall back to the wide mark
