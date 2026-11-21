@@ -52,7 +52,7 @@ func (s *Store) applyInvitationChange(ctx context.Context, host ids.UserID, id i
 
 	var result invitationRow
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := storekit.LockWriteIdentity(ctx, tx, "meeting_host", host.String()); err != nil {
+		if err := lockInvitationHolders(ctx, tx, host, id); err != nil {
 			return err
 		}
 		if _, err := readActivity(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly); err != nil {
@@ -162,7 +162,7 @@ func (s *Store) claimInvitation(ctx context.Context) (invitationRow, bool, error
 
 func (s *Store) finishInvitation(ctx context.Context, claimed invitationRow, receipt *connector.CalendarReceipt, deliveryErr error) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		if err := storekit.LockWriteIdentity(ctx, tx, "meeting_host", claimed.Host.String()); err != nil {
+		if err := lockSlotHolders(ctx, tx, claimed.Host, claimed.Team); err != nil {
 			return err
 		}
 		row, err := readInvitation(ctx, tx, claimed.ID, true)
@@ -312,7 +312,7 @@ func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in
 		if row.Status != invitationConfirmed {
 			return apperrors.ErrConflict
 		}
-		if err := reserveInvitation(ctx, tx, row.Host, *in.Start, *in.End, buffer, row.ID); err != nil {
+		if err := reserveSlotHolders(ctx, tx, row.Host, row.Team, *in.Start, *in.End, buffer, row.ID); err != nil {
 			return err
 		}
 		row.Appointment.Start, row.Appointment.End = *in.Start, *in.End

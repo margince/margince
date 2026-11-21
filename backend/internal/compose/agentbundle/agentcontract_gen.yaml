@@ -8201,6 +8201,49 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '204': {description: The booking page is marked as used.}
         '404': {$ref: '#/components/responses/NotFound'}
+  /scheduling/team-candidates:
+    get:
+      tags: [Activities]
+      operationId: listSchedulingTeamCandidates
+      summary: List the colleagues the caller may name on their booking link.
+      description: |-
+        A colleague is offered when they are a live member other than the caller and their own
+        booking settings name a calendar connection Margince can read. A colleague without one is
+        left out, so a time a team link offers is free for everyone on it.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '200':
+          description: The colleagues who may be named, by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/SchedulingTeamCandidate'}
+  /scheduling/team-requests:
+    get:
+      tags: [Activities]
+      operationId: listSchedulingTeamRequests
+      summary: List the colleagues' booking links that name the caller.
+      description: |-
+        Each live booking link that names the caller as a team member, with whether the caller
+        confirmed it. A link that the caller left is not listed.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '200':
+          description: The links that name the caller.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/SchedulingTeamRequest'}
   /scheduling/invitations:
     post:
       tags: [Activities]
@@ -8289,7 +8332,9 @@ paths:
       description: |-
         With reliable=true, reads live calendar occupancy and applies bookable hours,
         notice, buffers and booking horizon. Without it, returns CRM-only availability
-        for compatibility. This read never books or sends an invitation.
+        for compatibility. This read never books or sends an invitation. It reads the named
+        host alone: the colleagues a booking link names are not counted, so a time it returns
+        may still be taken for one of them.
       parameters:
         - {name: reliable, in: query, required: false, schema: {type: boolean, default: false}}
         - {name: host_user_id, in: query, required: false, schema: {type: string, format: uuid}, description: 'Host to check (defaults to the caller).'}
@@ -40548,12 +40593,52 @@ components:
         blocker:
           type: string
           readOnly: true
-          enum: [none, no_calendar, calendar_read_only, calendar_unavailable]
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable, team_not_ready]
           description: |-
             Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
             the page names no calendar (a page saved before the profile existed reads this way).
             `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-            the connection is gone or refused. Answered on the host's own profile read only.
+            the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+            left, or has no calendar Margince can read; `team_members` says which. Answered on the
+            host's own profile read only.
+        team_members:
+          type: array
+          maxItems: 5
+          items: {$ref: '#/components/schemas/SchedulingTeamMember'}
+          description: |-
+            Colleagues who must attend every meeting booked through this page. Guests see only the
+            times when the host and every member are free, inside each one's own working hours, and
+            each booking invites every member. A member named here starts as `pending` and the page
+            takes no bookings until every member has confirmed. Only `user_id` is read from a
+            request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+    SchedulingTeamMember:
+      type: object
+      required: [user_id]
+      properties:
+        user_id: {type: string, format: uuid}
+        name: {type: string, readOnly: true}
+        state:
+          type: string
+          readOnly: true
+          enum: [pending, confirmed, left, unavailable]
+          description: |-
+            `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+            `left`: the member left the link; remove them to take bookings again. `unavailable`:
+            the member left the workspace or Margince cannot read their calendar.
+    SchedulingTeamCandidate:
+      type: object
+      required: [user_id, name]
+      properties:
+        user_id: {type: string, format: uuid}
+        name: {type: string}
+    SchedulingTeamRequest:
+      type: object
+      required: [host_user_id, host_name, title, state]
+      properties:
+        host_user_id: {type: string, format: uuid}
+        host_name: {type: string}
+        title: {type: string, description: The meeting title the link offers.}
+        state: {type: string, enum: [pending, confirmed]}
     SchedulingAliasRequest:
       type: object
       required: [alias]

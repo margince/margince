@@ -48,7 +48,7 @@ func (h Handlers) PublicBookingPreview(ctx context.Context, slug string) (Bookin
 	if err != nil {
 		return BookingPreview{}, err
 	}
-	paused, err := h.store.pagePaused(ctx, page.HostUserID, profile)
+	paused, _, err := h.store.pagePaused(ctx, page.HostUserID, profile)
 	if err != nil || paused {
 		return BookingPreview{}, err
 	}

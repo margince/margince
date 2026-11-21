@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 276.0 KB |
+| Tool catalog | 276.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 72067 |
+| Approx. wire tokens | 72100 |
 | Largest tool | `read_details` (17.6 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.7 KB | 19% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.9 KB | 19% | Yes, every step |
 | Input schemas | 158.8 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **212.5 KB** | **77%** | **the recurring cost** |
+| **Description + input schema** | **212.7 KB** | **77%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -81,7 +81,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3209 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2301 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 652 |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 891 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 465 |
@@ -3735,11 +3735,13 @@ for this call themselves; requires passport scope "write".)
 Find candidate times for a host without booking or sending anything. Set reliable=true to check the
 acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only
 meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live
-occupancy was checked. This never checks invitees' availability. Use schedule_meeting with
-action=invite to request an approved calendar invitation after a time is agreed. change_activities
-with action=log records a meeting without inviting anyone. read_context with about=meeting prepares
-for an existing meeting. Keep the exact start and end, the calendar_backing value, and the truncated
-flag. Availability is checked again when reserving the time.
+occupancy was checked. This never checks invitees' availability. It reads the host alone: the
+colleagues a team booking link names are not counted, and the public booking page checks them
+itself. Use schedule_meeting with action=invite to request an approved calendar invitation after a
+time is agreed. change_activities with action=log records a meeting without inviting anyone.
+read_context with about=meeting prepares for an existing meeting. Keep the exact start and end, the
+calendar_backing value, and the truncated flag. Availability is checked again when reserving the
+time.
 ```
 
 <details><summary>Input schema</summary>

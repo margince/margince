@@ -57,8 +57,8 @@ type BookingHealth interface {
 // BookingConcern is the reader's paused booking page and why it is paused.
 type BookingConcern struct {
 	PageID ids.UUID
-	// Blocker is the profile's own reason: no_calendar, calendar_read_only or
-	// calendar_unavailable.
+	// Blocker is the profile's own reason: no_calendar, calendar_read_only,
+	// calendar_unavailable or team_not_ready.
 	Blocker string
 }
 

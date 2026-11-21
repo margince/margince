@@ -5460,6 +5460,7 @@
   "magic.consequence.capture_not_collecting": "Erfassung angehalten.",
   "magic.consequence.capture_may_be_incomplete": "Die letzten Daten sind möglicherweise unvollständig.",
   "magic.consequence.capture_history_incomplete": "Import des Verlaufs unvollständig.",
+  "worklist.untitled.booking_health_team_not_ready": "Deine Buchungsseite ist pausiert: Ein Teammitglied hat nicht bestätigt, hat den Link verlassen oder hat keinen lesbaren Kalender",
   "checklist.stepDone": "Erledigt",
   "checklist.stepOpen": "Noch offen",
   "checklist.stepWaiting": "Wartet",

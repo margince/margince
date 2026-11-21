@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 51654,
+    "tokens": 51687,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1075
+    "mean_tool_tokens": 1076
   },
   "agents": [
     {
@@ -228,6 +228,10 @@
       "tokens": 395
     },
     {
+      "name": "check_availability",
+      "tokens": 375
+    },
+    {
       "name": "read_attention",
       "tokens": 365
     },
@@ -238,10 +242,6 @@
     {
       "name": "read_tags",
       "tokens": 358
-    },
-    {
-      "name": "check_availability",
-      "tokens": 342
     },
     {
       "name": "list_documents",

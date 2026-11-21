@@ -7703,6 +7703,7 @@ public.meeting_invitation.public_intent jsonb gen=- def=-
 public.meeting_invitation.receipt jsonb gen=- def=-
 public.meeting_invitation.reminder_status text NOT NULL gen=- def='off'::text
 public.meeting_invitation.status text NOT NULL gen=- def=-
+public.meeting_invitation.team_user_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.meeting_invitation.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.meeting_invitation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "command": 20000, "provider": 20000, "calendar_id": 20000, "management_ref": 20000, "management_hash": 20000, "reminder_status": 20000, "attention_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"attention_reason":2000,"calendar_id":20000,"command":20000,"management_hash":20000,"management_ref":20000,"provider":20000,"reminder_status":20000,"status":20000}')
 public.meeting_invitation.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.meeting_invitation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "command": 20000, "provider": 20000, "calendar_id": 20000, "management_ref": 20000, "management_hash": 20000, "reminder_status": 20000, "attention_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"attention_reason":2000,"calendar_id":20000,"command":20000,"management_hash":20000,"management_ref":20000,"provider":20000,"reminder_status":20000,"status":20000}')
 public.meeting_invitation.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -7720,6 +7721,7 @@ public.meeting_invitation_due CREATE INDEX meeting_invitation_due ON public.meet
 public.meeting_invitation_management_hash_key CREATE UNIQUE INDEX meeting_invitation_management_hash_key ON public.meeting_invitation USING btree (management_hash)
 public.meeting_invitation_pkey CREATE UNIQUE INDEX meeting_invitation_pkey ON public.meeting_invitation USING btree (activity_id)
 public.meeting_invitation_public_intent CREATE UNIQUE INDEX meeting_invitation_public_intent ON public.meeting_invitation USING btree (((public_intent ->> 'key_hash'::text))) WHERE (public_intent IS NOT NULL)
+public.meeting_invitation_team_user_ids CREATE INDEX meeting_invitation_team_user_ids ON public.meeting_invitation USING gin (team_user_ids)
 public.meeting_proposal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.meeting_proposal.activity_id uuid NOT NULL gen=- def=-
 public.meeting_proposal.created_at timestamp with time zone NOT NULL gen=- def=now()

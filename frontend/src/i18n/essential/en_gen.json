@@ -5460,6 +5460,7 @@
   "magic.consequence.capture_not_collecting": "Capture stopped.",
   "magic.consequence.capture_may_be_incomplete": "Recent capture may be incomplete.",
   "magic.consequence.capture_history_incomplete": "History import incomplete.",
+  "worklist.untitled.booking_health_team_not_ready": "Your booking page is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
   "checklist.stepDone": "Done",
   "checklist.stepOpen": "Still to do",
   "checklist.stepWaiting": "Waiting",

@@ -65,6 +65,8 @@ function mount(
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () => jsonResponse(server.profile),
     "GET /scheduling/calendars": () => jsonResponse(calendars),
+    "GET /scheduling/team-candidates": () => jsonResponse([]),
+    "GET /scheduling/team-requests": () => jsonResponse([]),
     "PUT /scheduling/profile": (body) => {
       server.profile = body as Profile;
       server.profileWrites.push(server.profile);

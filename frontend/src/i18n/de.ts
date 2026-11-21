@@ -23013,6 +23013,33 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Deine Kurzadresse {url} funktioniert dann auch nicht mehr. Du kannst sie danach wieder wählen.",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
+  "scheduling.team.title": "Teammitglieder auf diesem Link",
+  "scheduling.team.foot":
+    "Gäste sehen nur Zeiten, in denen du und alle Teammitglieder hier frei sind, jeweils in deren eigenen Arbeitszeiten. Jede Buchung lädt alle Teammitglieder ein.",
+  "scheduling.team.add": "Teammitglied hinzufügen",
+  "scheduling.team.addHelp":
+    "Angeboten werden nur Mitglieder mit verbundenem Kalender. Jedes Teammitglied bestätigt, bevor der Link Buchungen annimmt.",
+  "scheduling.team.full":
+    "Dieser Link nennt bereits fünf Teammitglieder, mehr geht nicht.",
+  "scheduling.team.choose": "Teammitglied wählen",
+  "scheduling.team.noneToAdd":
+    "Kein anderes Mitglied hat einen verbundenen Kalender",
+  "scheduling.team.remove": "Entfernen",
+  "scheduling.team.pending": "Wartet auf Bestätigung",
+  "scheduling.team.confirmed": "Bestätigt",
+  "scheduling.team.left": "Hat den Link verlassen",
+  "scheduling.team.unavailable":
+    "Nicht verfügbar: kein Mitglied mehr oder Kalender nicht lesbar",
+  "scheduling.team.requestsTitle": "Links anderer Mitglieder, die dich nennen",
+  "scheduling.team.requestLabel": "{title} mit {name}",
+  "scheduling.team.requestPending":
+    "Bestätige, damit Gäste Zeiten buchen können, in denen du frei bist. Du wirst zu jedem Termin eingeladen, der über diesen Link gebucht wird.",
+  "scheduling.team.requestConfirmed":
+    "Gäste buchen Zeiten, in denen du frei bist. Du wirst zu jedem Termin eingeladen, der über diesen Link gebucht wird.",
+  "scheduling.team.confirm": "Bestätigen",
+  "scheduling.team.leave": "Verlassen",
+  "worklist.untitled.booking_health_team_not_ready":
+    "Deine Buchungsseite ist pausiert: Ein Teammitglied hat nicht bestätigt, hat den Link verlassen oder hat keinen lesbaren Kalender",
   "scheduling.personalLinksFoot":
     "Termin mit einer bestimmten Person? Öffne ihren Kontakt und wähle Termin buchen, um einige Zeiten oder einen persönlichen Link zu senden, den nur sie nutzen kann.",
   "scheduling.liveNoInvitesTitle":
