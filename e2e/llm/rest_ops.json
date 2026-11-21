@@ -1926,6 +1926,10 @@
     "get_deal_win_evidence": [
       "id"
     ],
+    "get_edit_access_request": [
+      "id",
+      "record_type"
+    ],
     "get_extension_settings": [
       "name"
     ],
@@ -3162,6 +3166,11 @@
       "idempotency_key",
       "request_body"
     ],
+    "request_edit_access": [
+      "id",
+      "idempotency_key",
+      "record_type"
+    ],
     "request_legal_review": [
       "id",
       "request_body"
@@ -3821,6 +3830,10 @@
     "whoami": [],
     "withdraw_capture_sender_decision": [
       "address"
+    ],
+    "withdraw_edit_access_request": [
+      "id",
+      "record_type"
     ],
     "withdraw_legal_review": [
       "id"

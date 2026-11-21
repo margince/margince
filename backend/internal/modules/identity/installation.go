@@ -200,6 +200,21 @@ const (
 	originClaimed
 )
 
+// underClaimedZone replaces a claimed workspace's zone with one the database
+// loads, or refuses the claim when the zone is unknown. Other origins keep
+// theirs.
+func (in InstallationBootstrap) underClaimedZone(ctx context.Context, tx pgx.Tx, origin provisioningOrigin) (InstallationBootstrap, error) {
+	if origin != originClaimed {
+		return in, nil
+	}
+	zone, err := claimedZone(in.Timezone, func(zone string) (bool, error) { return databaseKnowsZoneTx(ctx, tx, zone) })
+	if err != nil {
+		return in, err
+	}
+	in.Timezone = zone
+	return in, nil
+}
+
 // createInstallation writes company + first admin + system roles +
 // module seeds in the caller's transaction — either everything exists
 // afterwards or nothing does (the ADR-0043 bootstrap atomicity, kept).
@@ -210,13 +225,9 @@ const (
 // against the previous revision. The values it collects are a second OUTCOME of
 // a successful create, not a second result of the call.
 func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
-	in = in.underBootValues(c)
-	if origin == originClaimed {
-		var err error
-		in.Timezone, err = claimedZone(in.Timezone, func(zone string) (bool, error) { return databaseKnowsZoneTx(ctx, tx, zone) })
-		if err != nil {
-			return ids.WorkspaceID{}, err
-		}
+	in, err := in.underBootValues(c).underClaimedZone(ctx, tx, origin)
+	if err != nil {
+		return ids.WorkspaceID{}, err
 	}
 	boot := BootstrapInput{
 		WorkspaceName: in.CompanyName,

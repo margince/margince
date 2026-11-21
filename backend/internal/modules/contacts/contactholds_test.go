@@ -10,8 +10,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The contact a lead was worked from holds keys that are the lead's by design,
-// so a lead write and an import's test run refuse only over another contact.
+// The contact a lead was worked from holds keys that are the lead's by design.
+// So a lead write and an import's test run refuse only over another contact.
 func TestALeadsWorkedFromContactIsNoRival(t *testing.T) {
 	workedFrom, other := ids.New[ids.ContactKind](), ids.New[ids.ContactKind]()
 	for _, tc := range []struct {
