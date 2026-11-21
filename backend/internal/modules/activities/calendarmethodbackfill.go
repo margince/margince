@@ -85,6 +85,20 @@ func CalendarMethodCandidatesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, 
 	return out, nil
 }
 
+// MarkCalendarMethodsUnreadableTx records the unchecked mail among activities
+// as unreadable. Its original is about to be destroyed, so no later read can
+// check it. A mail the task passed while it was held still ends checked.
+func MarkCalendarMethodsUnreadableTx(ctx context.Context, tx pgx.Tx, activities []ids.UUID) error {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO activity_calendar_method_backfill (activity_id, activity_created_at, outcome, direction)
+		SELECT a.id, a.created_at, @outcome, a.direction `+calendarMethodScope+` AND a.id = ANY(@activities)
+		ON CONFLICT (activity_id) DO NOTHING`,
+		pgx.NamedArgs{"outcome": CalendarMethodBackfillUnreadable, "activities": activities}); err != nil {
+		return fmt.Errorf("activities: marking the calendar-method re-read of erased mail: %w", err)
+	}
+	return nil
+}
+
 // EstimateCalendarMethodCandidates counts the unchecked mails for the data
 // task's estimate, reading at most maximum plus one.
 func EstimateCalendarMethodCandidates(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {

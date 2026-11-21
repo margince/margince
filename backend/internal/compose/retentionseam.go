@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -87,6 +88,15 @@ func RawCapturePurgerFor(db *database.DB) privacy.RawCapturePurger {
 type capturedTextPurger struct {
 	*capture.PendingStore
 	db *database.DB
+}
+
+// PurgeRawCaptureTx marks unchecked legacy mail as unreadable for the
+// calendar-method re-read, then destroys the originals.
+func (p capturedTextPurger) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	if err := activities.MarkCalendarMethodsUnreadableTx(ctx, tx, activityIDs); err != nil {
+		return err
+	}
+	return p.PendingStore.PurgeRawCaptureTx(ctx, tx, activityIDs)
 }
 
 // PurgeTextCopiesTx empties the voice samples read from the activities.

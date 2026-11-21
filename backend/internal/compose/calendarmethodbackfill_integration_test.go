@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -284,7 +285,8 @@ func TestTheBackfillRestoresASlimmedOriginalToReadItsMethod(t *testing.T) {
 }
 
 // Whether a decline is owed changes later, so every legacy row is read, owed
-// or not, archived or not. A row under a hold is neither read nor marked.
+// or not, archived or not. A row under a hold is neither read nor marked
+// until its release, which destroys its original.
 func TestTheBackfillReadsEveryLegacyDeclineButAHeldOne(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -320,6 +322,20 @@ func TestTheBackfillReadsEveryLegacyDeclineButAHeldOne(t *testing.T) {
 	}
 	if n := runCalendarMethodBackfill(t, o, nil); n != 0 {
 		t.Errorf("a drained pass settled %d messages, want none", n)
+	}
+
+	// Its release destroys the original, so the release marks it unreadable.
+	reason, err := privacy.ParseStatedReason("the supplier obligation ended: contract closed out")
+	if err != nil {
+		t.Fatal(err)
+	}
+	eraser := eraserWithGraph(o.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(o.e.DB()))
+	if err := eraser.ReleaseRestriction(releaseControllerCtx(o.e), held, reason); err != nil {
+		t.Fatalf("releasing the hold: %v", err)
+	}
+	if n := o.count(t, `SELECT count(*) FROM activity_calendar_method_backfill
+		WHERE activity_id = $1 AND outcome = 'unreadable'`, held); n != 1 {
+		t.Errorf("the released decline was marked unreadable %d times, want 1", n)
 	}
 }
 
