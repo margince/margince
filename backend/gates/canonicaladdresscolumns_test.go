@@ -6,7 +6,7 @@
 package gates
 
 // A column that holds an address or a domain and takes part in a unique index
-// is stored lowercased and trimmed, and the database holds that with a CHECK.
+// is stored lowercased and trimmed. The database holds that with a CHECK.
 //
 // A unique index over the raw value sees "A@x.com" and "a@x.com" as two rows,
 // while a reader that folds sees one. The CHECK makes the stored form the
