@@ -63,7 +63,7 @@ export function buildColumns(
       ),
       asOf: stageTotals?.asOf ?? null,
       timezone: stageTotals?.timezone ?? null,
-      unpricedCount: stageTotals?.unpricedCount ?? null,
+      coverage: stageTotals?.coverage ?? null,
       sumHidden: totalsWithheld !== undefined,
       sumHiddenReason: totalsWithheld,
     };

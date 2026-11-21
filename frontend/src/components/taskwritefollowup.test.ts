@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, test, vi } from "vitest";
 import type { components } from "../api/schema";
+import { UTC_ZONE } from "../format/timezone";
 import { readingsDay, taskRow } from "../testing/brief.fixtures";
 import { refreshMovedTask } from "./taskwritefollowup";
 
@@ -35,7 +36,7 @@ test("moving a task updates its queue and focus without touching reconnections o
   const relationshipKey = ["worklist", "relationships", "mine", ""];
   client.setQueryData(relationshipKey, relationships);
 
-  await refreshMovedTask(client, [["worklist"]], movedTask);
+  await refreshMovedTask(client, [["worklist"]], movedTask, UTC_ZONE);
 
   expect(client.getQueryData(["activity", "task-1"])).toEqual(movedTask);
   expect(client.getQueryData(relationshipKey)).toBe(relationships);

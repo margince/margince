@@ -125,6 +125,36 @@ describe("companyTimeline", () => {
     );
   });
 
+  it("builds a task with only a date from its picked day, whichever zone the reader is in", () => {
+    const view = {
+      ...BASE,
+      next_steps: {
+        data: [
+          {
+            activity_id: "s-2",
+            subject: "Send the contract",
+            // Picked for 16 Nov in Los Angeles; 07:59 UTC on the 17th.
+            due_at: "2026-11-17T07:59:59Z",
+            due_has_time: false,
+            due_intent: {
+              wall_clock: "2026-11-16T23:59:59",
+              timezone: "America/Los_Angeles",
+            },
+            overdue: false,
+          },
+        ],
+        page: { has_more: false, next_cursor: null },
+      },
+    } satisfies Company360;
+    const seen = ["Asia/Tokyo", "Pacific/Honolulu"].map(
+      (zone) =>
+        companyTimeline(view, { ...WORDS, zone, companyZone: "Europe/Berlin" })
+          .events[0],
+    );
+    expect(seen[0]?.at).toBe(seen[1]?.at);
+    expect(seen.map((event) => event?.sub)).toEqual(["16 Nov", "16 Nov"]);
+  });
+
   it("counts the wait from our last message when they owe the reply", () => {
     const view = {
       ...BASE,

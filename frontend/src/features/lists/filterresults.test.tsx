@@ -435,7 +435,12 @@ describe("the columns past the opening six", () => {
           truncated: false,
         }}
         resource="company"
-        fields={[]}
+        fields={WIDE.slice(1).map((name) => ({
+          name,
+          type: "text",
+          operators: ["eq"],
+          custom: false,
+        }))}
         named={[]}
         unit="companies"
         widthsKey="filter-preview-wide"
@@ -456,6 +461,40 @@ describe("the columns past the opening six", () => {
     await user.click(offered);
 
     expect(screen.getByRole("columnheader", { name: "f" })).toBeTruthy();
+  });
+
+  it("leave out a stored column the product has no word for", async () => {
+    const user = userEvent.setup();
+    render(
+      <FilterResults
+        preview={{
+          resource: "company",
+          match_count: 1,
+          columns: ["id", "name", "captured_by", "anonymized_address_hashes"],
+          rows: [{ id: "c1", name: "Acme", captured_by: "human:x" }],
+          truncated: false,
+        }}
+        resource="company"
+        fields={[
+          { name: "name", type: "text", operators: ["eq"], custom: false },
+        ]}
+        named={[]}
+        unit="companies"
+        widthsKey="filter-preview-stored"
+        pending={false}
+      />,
+      { wrapper },
+    );
+
+    const step = await openViewStep(user, "Columns");
+    expect(
+      within(step).queryByRole("checkbox", { name: /captured by/i }),
+    ).toBeNull();
+    expect(
+      within(step).queryByRole("checkbox", {
+        name: /anonymized address hashes/i,
+      }),
+    ).toBeNull();
   });
 });
 

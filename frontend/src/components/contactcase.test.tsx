@@ -347,6 +347,31 @@ describe("who may own the remaining contact", () => {
     expect(widened).toEqual(["Ana Owner", "Ben Seller", "Cleo Reader"]);
   });
 
+  it("marks an owner who has not signed in yet as invited", async () => {
+    const base = contactCase();
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () =>
+          jsonResponse({
+            ...base,
+            owners: base.owners.map((one) =>
+              one.name === "Ben Seller" ? { ...one, status: "invited" } : one,
+            ),
+          }),
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mount();
+    const owner = await screen.findByRole("combobox", { name: /Owner/ });
+    await user.click(member(/Mira Kovač/));
+    await user.click(owner);
+    const offered = within(await screen.findByRole("listbox"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(offered).toEqual(["Ana Owner", "Ben Seller (invited)"]);
+  });
+
   it("follows the kept record until the reviewer picks an owner", async () => {
     stubWithSession(
       { [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()) },

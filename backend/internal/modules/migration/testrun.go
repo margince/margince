@@ -141,12 +141,20 @@ func (s *RunStore) RefuseValidation(ctx context.Context, l Lease, cause string) 
 	}
 	ctx = database.Detached(ctx)
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return refuseValidationInTx(ctx, tx, l, cause)
+		return refuseValidationInTx(ctx, tx, l, cause, nil)
 	})
 }
 
-func refuseValidationInTx(ctx context.Context, tx pgx.Tx, l Lease, cause string) error {
+func refuseValidationInTx(ctx context.Context, tx pgx.Tx, l Lease, cause string, refusal *StopRefusal) error {
+	values := []runValue{{errorColumn, cause}}
+	if refusal != nil {
+		encoded, err := json.Marshal(refusal)
+		if err != nil {
+			return fmt.Errorf("encoding the refusal of import run %s: %w", l.Run, err)
+		}
+		values = append(values, runValue{refusalColumn, encoded})
+	}
 	return stageTransition(ctx, tx, l.Run, moveRefuse, runChange{
-		lease: &l, values: []runValue{{errorColumn, cause}}, literals: testRunEnded,
+		lease: &l, values: values, literals: testRunEnded,
 	})
 }

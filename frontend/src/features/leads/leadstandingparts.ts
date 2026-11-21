@@ -15,6 +15,7 @@ import {
   activityIsAhead,
   type OccurredPrecision,
 } from "../../format/activitywhen";
+import { taskDueOnDay, taskDueZone } from "../../format/calendarday";
 import {
   daysAgoText,
   formatDayMonth,
@@ -465,7 +466,19 @@ export function leadNext(lead: Lead, ctx: ReadingContext): LeadNext {
   if (!lead.next_task_subject) {
     return { qualify: false, more: tasks };
   }
-  const due = lead.next_task_due_at;
+  const due = lead.next_task_due_at
+    ? taskDueOnDay(
+        lead.next_task_due_at,
+        lead.next_task_due_has_time,
+        lead.next_task_due_intent,
+        ctx.record,
+      )
+    : undefined;
+  // A date with no time prints as its picked day, so it reads in the zone it
+  // was counted in. A timed task reads on the reader's clock.
+  const dueZone = lead.next_task_due_intent
+    ? taskDueZone(lead.next_task_due_has_time, zone, ctx.record)
+    : zone;
   const late = due
     ? daysPast(Date.parse(due), Date.parse(ctx.asOf)).late
     : false;
@@ -473,7 +486,7 @@ export function leadNext(lead: Lead, ctx: ReadingContext): LeadNext {
     title: lead.next_task_subject,
     late: late ? { label: t("co.next.overdue"), tone: "danger" } : undefined,
     sub: due
-      ? t("co.next.due", { when: formatDayMonth(due, locale, zone) })
+      ? t("co.next.due", { when: formatDayMonth(due, locale, dueZone) })
       : t("co.next.undated"),
     qualify: false,
     more: Math.max(0, tasks - 1),

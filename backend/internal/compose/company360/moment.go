@@ -36,6 +36,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 )
@@ -116,7 +119,11 @@ func (s *Service) promisesFrom(
 	if err != nil {
 		return nil, err
 	}
-	return accountPromises(tasks, filed, claims), nil
+	loc, err := identity.ZoneAppliedTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	return accountPromises(tasks, filed, claims, loc), nil
 }
 
 // markAttentionWithheld says the page is speaking about less than the account.
@@ -139,7 +146,7 @@ const companyMomentScanCap = 200
 // accountMoment is the card itself: the promise that most needs answering, or
 // the quiet state when there is none.
 func (said momentCopy) accountMoment(now time.Time, tasks []crmcontracts.Company360NextStep, filed []time.Time, claims []contacts.CompanyCommitment) crmcontracts.ContactMoment {
-	return said.momentOf(now, accountPromises(tasks, filed, claims))
+	return said.momentOf(now, accountPromises(tasks, filed, claims, time.UTC))
 }
 
 // momentOf ranks the promises still in play and draws the card for the winner.
@@ -162,10 +169,11 @@ func (said momentCopy) momentOf(now time.Time, items []owedwork.Item) crmcontrac
 // The claims arrive without the ones that became tasks
 // (contacts.ourPromiseNotYetATask), so a promise is counted once. A task a rep
 // typed beside an extracted promise stays a second row: nothing links them.
-func accountPromises(tasks []crmcontracts.Company360NextStep, filed []time.Time, claims []contacts.CompanyCommitment) []owedwork.Item {
+func accountPromises(tasks []crmcontracts.Company360NextStep, filed []time.Time, claims []contacts.CompanyCommitment, loc *time.Location) []owedwork.Item {
 	var items []owedwork.Item
 	for i, step := range tasks {
-		item := owedwork.Item{Ref: step, Source: owedwork.FromTask, DueAt: step.DueAt}
+		dated := deadline.TaskDueOn(step.DueAt, step.DueHasTime != nil && *step.DueHasTime, storekit.WallClock(step.DueIntent), loc)
+		item := owedwork.Item{Ref: step, Source: owedwork.FromTask, DueAt: dated}
 		// The filing moment breaks ties between two promises sharing a due
 		// date, and the contact page ranks on it too. Leaving it zero here
 		// would make the same two promises rank differently on the two pages.

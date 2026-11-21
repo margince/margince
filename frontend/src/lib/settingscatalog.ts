@@ -15,7 +15,7 @@
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
 // `accessgrants`, not `capability`: the latter's hooks pull the component graph
-// and its CSS into `e2e/ac.spec.ts`, whose Playwright transform cannot load it.
+// and its CSS into `e2e/screens.ts`, whose Playwright transform cannot load it.
 import { type AccessSnapshot, grants, type RbacObject } from "./accessgrants";
 import { BUSINESS_PAGES } from "./settingscatalog.business";
 import { PLATFORM_PAGES } from "./settingscatalog.platform";

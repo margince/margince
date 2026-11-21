@@ -439,7 +439,13 @@ describe("DealsScreen", () => {
             deals: 1,
             base_minor: 10000,
             weighted_base_minor: 4000,
-            priced_deals: 1,
+            coverage: {
+              aggregates: ["raw_minor"],
+              partial: false,
+              no_value_deals: 0,
+              no_rate_deals: 0,
+              missing_currencies: [],
+            },
           },
         ],
       }),
@@ -571,7 +577,6 @@ describe("DealsScreen", () => {
         { fn: "count", as: "deals" },
         { fn: "sum", field: "amount_base_minor", as: "base_minor" },
         { fn: "sum", field: "weighted_base_minor", as: "weighted_base_minor" },
-        { fn: "count", field: "amount_base_minor", as: "priced_deals" },
       ],
     });
   });

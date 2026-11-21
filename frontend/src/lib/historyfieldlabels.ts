@@ -235,12 +235,22 @@ export function historyFieldLabel(
   field: string,
   t: (key: MessageKey) => string,
 ): string {
-  const key =
+  const key = fieldWordKey(field);
+  return key ? t(key) : field.replaceAll("_", " ");
+}
+
+function fieldWordKey(field: string): MessageKey | undefined {
+  return (
     HISTORY_FIELD_LABELS.get(field) ??
     STORED_COLUMN_LABELS.get(field) ??
     SYNTHETIC_AUDIT_FIELD_LABELS.get(field) ??
-    profileFieldLabelKey(field);
-  return key ? t(key) : field.replaceAll("_", " ");
+    profileFieldLabelKey(field)
+  );
+}
+
+/** Whether a column has a word of its own, rather than its stored name with spaces. */
+export function hasFieldWord(field: string): boolean {
+  return fieldWordKey(field) !== undefined;
 }
 
 // The same map as a lookup, for the census that holds it against the contract.

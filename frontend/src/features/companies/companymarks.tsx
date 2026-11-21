@@ -9,6 +9,7 @@ import {
   partnerStageLabel,
 } from "../../lib/partnerstages.queries";
 import { RecordAccess } from "../records/recordaccess";
+import { CompanyDuplicatesEntry } from "./companyduplicates";
 import { CompanyNameLine } from "./companylifecycle";
 
 type Company = components["schemas"]["Company"];
@@ -29,6 +30,10 @@ export function CompanyMarks({ company }: Readonly<{ company: Company }>) {
       <CompanyNameLine company={company} />
       <CompanyRoleMarks company={company} />
       <RecordAccess key={company.id} kind="company" record={company} />
+      <CompanyDuplicatesEntry
+        key={`pairs-${company.id}`}
+        companyId={company.id}
+      />
     </>
   );
 }

@@ -7,10 +7,13 @@ package activities
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -198,4 +201,45 @@ func TestOverdueByPickedDateAgreesAcrossTheReaders(t *testing.T) {
 	}
 	until := time.Date(2026, 11, 17, 23, 0, 0, 0, time.UTC)
 	wantWindow(t, "today", p.window(t, ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf}), []ids.UUID{id, today})
+}
+
+// The SQL sort key of a date-only task equals deadline.TaskDueOn on every row
+// of the table both read. That covers a DST day and a final fraction of a second.
+func TestTheSortKeyOfADateOnlyTaskMatchesTheGoDueRule(t *testing.T) {
+	raw, err := os.ReadFile("../../shared/kernel/deadline/testdata/pickedday.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		WallClock string `json:"wall_clock"`
+		Zone      string `json:"zone"`
+		EndUTC    string `json:"end_utc"`
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	checked := 0
+	for _, c := range cases {
+		if c.EndUTC == "" {
+			continue
+		}
+		checked++
+		p := newPickedDayEnv(t, c.Zone)
+		id := p.dated(t, "Sorted", c.WallClock[:10], "Asia/Tokyo")
+		var got time.Time
+		if err := p.e.owner.QueryRow(context.Background(),
+			`SELECT `+storekit.TaskDueOrderSQL("a")+` FROM activity a WHERE a.id = $1`, id).Scan(&got); err != nil {
+			t.Fatal(err)
+		}
+		want, err := time.Parse(time.RFC3339Nano, c.EndUTC)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !got.Equal(want.Truncate(time.Microsecond)) {
+			t.Errorf("%s in %s: SQL sorts it at %s, Go says %s", c.WallClock, c.Zone, got.UTC().Format(time.RFC3339Nano), c.EndUTC)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("the shared table has no end_utc case, so this proves nothing")
+	}
 }

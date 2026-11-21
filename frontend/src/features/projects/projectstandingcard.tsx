@@ -10,6 +10,7 @@ import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { PROJECT_PHASES } from "../../format/projectphase";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { reveal } from "../../lib/reveal";
 import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
@@ -111,7 +112,7 @@ export function ProjectStanding({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const ctx = { t, plural, locale, zone };
+  const ctx = { t, plural, locale, zone, companyZone: useCompanyZone() };
   // The 360's page seeds the line; a wider zoom pages older rows from the list.
   const history = useRecordTimeline("project", view.project.id, {
     firstPage: view.activities,

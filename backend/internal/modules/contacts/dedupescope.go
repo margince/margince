@@ -20,6 +20,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // dedupePairSides is the three entity types a pair can be, with the columns
@@ -189,4 +191,61 @@ func andClauses(a, b string) string {
 	default:
 		return a + " AND " + b
 	}
+}
+
+// dedupePairOwnerClause narrows the queue to the pairs an owner set decides. A
+// pair belongs to every owner of either end. It is unassigned only when
+// neither end has a live owner, as for a contact case. Nil is unrestricted.
+func dedupePairOwnerClause(owners *storekit.OwnerSet, arg func(any) int) string {
+	if owners == nil {
+		return ""
+	}
+	arms := make([]string, 0, len(dedupePairSides))
+	for i, side := range dedupePairSides {
+		alias := fmt.Sprintf("o%d", i)
+		ends := fmt.Sprintf("%s.id IN (dedupe_candidate.%s, dedupe_candidate.%s)", alias, side.left, side.right)
+		var terms []string
+		if len(owners.IDs) > 0 {
+			terms = append(terms, fmt.Sprintf("EXISTS (SELECT 1 FROM %s %s WHERE %s AND %s.owner_id = ANY($%d::uuid[]))",
+				side.entity, alias, ends, alias, arg(owners.IDs)))
+		}
+		if owners.Unassigned {
+			terms = append(terms, fmt.Sprintf("NOT EXISTS (SELECT 1 FROM %s %s LEFT JOIN app_user u ON u.id = %s.owner_id WHERE %s AND %s)",
+				side.entity, alias, alias, ends, liveCaseOwnerSQL))
+		}
+		if len(terms) == 0 {
+			terms = append(terms, "false")
+		}
+		arms = append(arms, fmt.Sprintf("(entity_type = '%s' AND (%s))", side.entity, strings.Join(terms, " OR ")))
+	}
+	return "(" + strings.Join(arms, " OR ") + ")"
+}
+
+// dedupeRecordClause keeps the pairs that name one record on either end.
+func dedupeRecordClause(entityType string, id ids.UUID, arg func(any) int) (string, error) {
+	side, ok := dedupePairSideFor(entityType)
+	if !ok {
+		return "", &DedupeInputError{Field: auditKeyEntityType, Msg: "must name a record type"}
+	}
+	n := arg(id)
+	return fmt.Sprintf("(entity_type = '%s' AND (%s = $%d OR %s = $%d))", entityType, side.left, n, side.right, n), nil
+}
+
+// dedupeNarrowing appends the list's own filters to the query: record types,
+// owners and one named record.
+func dedupeNarrowing(out string, in DedupeQueueInput, arg func(any) int) (string, error) {
+	if len(in.EntityTypes) > 0 {
+		out += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(in.EntityTypes))
+	}
+	if clause := dedupePairOwnerClause(in.Owners, arg); clause != "" {
+		out += " AND " + clause
+	}
+	if in.RecordID != nil {
+		clause, err := dedupeRecordClause(in.EntityType, *in.RecordID, arg)
+		if err != nil {
+			return out, err
+		}
+		out += " AND " + clause
+	}
+	return out, nil
 }

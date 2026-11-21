@@ -88,8 +88,8 @@ func TestPrebuiltConvertedTotalsAndTheirEvidenceKeepMissingValues(t *testing.T) 
 			plan := fmt.Sprintf(`{"group_by":[],"aggregates":[{"fn":%q,"field":"amount_base_minor","as":"base"}]}`, fn)
 			report := e.runReport(e.Admin(), t, "pipeline-current", plan)
 			for _, row := range report.Rows {
-				if row["base"] != nil {
-					t.Errorf("report served incomplete money: %v", row["base"])
+				if fn == analyticsquery.Sum && wireInt(t, row, "base") != 40000 || fn != analyticsquery.Sum && row["base"] != nil {
+					t.Errorf("report served %v for %s, want 40000 for a sum and nothing otherwise", row["base"], fn)
 				}
 			}
 			generic, err := e.askAnalytics(e.reportReaderCtx(), t, analyticsquery.Query{Entity: "pipeline-current", Measures: []analyticsquery.Measure{{Fn: fn, Field: "amount_base_minor", As: "base"}}})

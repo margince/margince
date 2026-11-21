@@ -2536,6 +2536,11 @@ span.error-line {
 .segmented button:disabled {
   cursor: not-allowed;
 }
+/* A refused option is struck through, as the calendar draws a refused day. It
+   keeps the track's ink, the one the contrast gate measures on --bgChip. */
+.segmented button[data-refused] {
+  text-decoration: line-through;
+}
 
 /* The two chip-shaped links, and the disclosure and table rows beside them. All
    four changed colour on hover in a single frame. */

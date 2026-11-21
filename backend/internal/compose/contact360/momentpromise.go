@@ -18,6 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -49,7 +51,7 @@ const (
 // here was how a contact owing nothing but an extracted commitment showed
 // "nothing needed" while the commitments card beneath said otherwise.
 func (said momentCopy) openPromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
-	next, ok := owedwork.Soonest(owedPromises(page), now)
+	next, ok := owedwork.Soonest(owedPromises(page, said.zone), now)
 	if !ok {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -197,7 +199,7 @@ func (said momentCopy) openPromiseWhyNow(now time.Time, task crmcontracts.Activi
 // and every other surface answering "what do we owe them?" name the same one.
 // That package states why the latest slip wins and why a tie goes to the claim.
 func (said momentCopy) overduePromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
-	slipped, ok := owedwork.MostRecentlySlipped(owedPromises(page), now)
+	slipped, ok := owedwork.MostRecentlySlipped(owedPromises(page, said.zone), now)
 	if !ok {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -224,7 +226,7 @@ func (said momentCopy) overduePromiseMoment(ctx context.Context, now time.Time, 
 // A claim is counted once: claimStandsAlone leaves it to a listed task. A task
 // a rep typed for a promise an extractor also read stays a second row. Nothing
 // links the two, and guessing which pairs mean one promise would invent a fact.
-func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
+func owedPromises(page *crmcontracts.Contact360, zone *time.Location) []owedwork.Item {
 	var items []owedwork.Item
 	listed := map[openapi_types.UUID]bool{}
 	if page.NextSteps != nil {
@@ -245,7 +247,8 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 			}
 			items = append(items, owedwork.Item{
 				Ref: task, Source: owedwork.FromTask,
-				DueAt: task.DueAt, FiledAt: task.OccurredAt,
+				DueAt:   deadline.TaskDueOn(task.DueAt, task.DueHasTime != nil && *task.DueHasTime, storekit.WallClock(task.DueIntent), zone),
+				FiledAt: task.OccurredAt,
 			})
 		}
 	}

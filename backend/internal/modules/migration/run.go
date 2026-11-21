@@ -57,6 +57,9 @@ type Run struct {
 	// nil on a run nobody has tried to undo.
 	UndoReport *UndoReport
 	Error      string
+	// ErrorRefusal is Error as a code and values, for a test run refused for
+	// its file. nil for any other stop, and for a row stored before it existed.
+	ErrorRefusal *StopRefusal
 	// CapturedBy is the authenticated principal that opened the run,
 	// server-stamped — the governance attribution every surface must carry.
 	// Empty on the reads that do not select it (the flip's own paths).
@@ -260,7 +263,7 @@ func (s *RunStore) complete(ctx context.Context, id RunID, rep Report) error {
 // record, understating a one-way cutover to the operator reading it.
 func (s *RunStore) failRun(ctx context.Context, id RunID, rep Report, cause error) error {
 	return s.transition(ctx, id, StatusFailed, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE import_run SET error = $2 WHERE id = $1`, id, StopCause(StatusRunning, cause)); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE import_run SET error = $2, error_refusal = NULL WHERE id = $1`, id, StopCause(StatusRunning, cause)); err != nil {
 			return err
 		}
 		return storeReport(ctx, tx, id, rep)
@@ -298,7 +301,7 @@ func (s *RunStore) Resume(ctx context.Context, id RunID) error {
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
-			UPDATE import_run SET status = 'running', error = NULL, updated_at = now()
+			UPDATE import_run SET status = 'running', `+errorCleared+`, updated_at = now()
 			WHERE id = $1 AND status = 'failed'`, id)
 		if err != nil {
 			return fmt.Errorf("resuming import run: %w", err)

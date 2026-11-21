@@ -17,6 +17,7 @@ import {
 } from "./dealranges";
 import { useHealthScope } from "./healthscope";
 import { translatedPipeline } from "./labeltranslation";
+import { coverageOf, type MoneyCoverage } from "./moneycoverage";
 import {
   defaultPipelineOf,
   pipelinesOptions,
@@ -296,7 +297,6 @@ export function useStageTotals(f: DealFilters, enabled = true) {
               field: "weighted_base_minor",
               as: "weighted_base_minor",
             },
-            { fn: "count", field: "amount_base_minor", as: "priced_deals" },
           ],
           filters: reportFilters,
         },
@@ -325,7 +325,7 @@ export type StageTotals = {
   currency: string | null;
   asOf: string | null;
   timezone: string | null;
-  unpricedCount: number | null;
+  coverage: MoneyCoverage | null;
 };
 
 function reportMinor(value: unknown): number | null {
@@ -343,7 +343,6 @@ export function buildStageTotals(
   return new Map(
     rows.map((row) => {
       const count = reportMinor(row.deals) ?? 0;
-      const priced = reportMinor(row.priced_deals);
       return [
         String(row.stage_id ?? ""),
         {
@@ -355,7 +354,7 @@ export function buildStageTotals(
           currency,
           asOf,
           timezone,
-          unpricedCount: priced == null ? null : Math.max(0, count - priced),
+          coverage: coverageOf(row),
         },
       ];
     }),

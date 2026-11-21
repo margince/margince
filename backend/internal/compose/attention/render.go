@@ -72,6 +72,7 @@ const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
 // contacts.MayMergePair, the rule the merge itself asks of a filed pair.
 func (s *Service) duplicateItem(
 	pair DuplicatePair, known pairFaces, decidable pairAuthority, settleable map[ids.UUID]bool,
+	recipient *ids.UUID,
 ) crmcontracts.AttentionItem {
 	kind := pair.EntityType
 	confidence := float32(pair.Confidence)
@@ -81,6 +82,9 @@ func (s *Service) duplicateItem(
 		Kind:       &kind,
 		Confidence: &confidence,
 		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	if recipient != nil {
+		item.RequestedDeciderId = idPtr(*recipient)
 	}
 	left, leftKnown := known.side(pair.EntityType, pair.LeftID)
 	right, rightKnown := known.side(pair.EntityType, pair.RightID)

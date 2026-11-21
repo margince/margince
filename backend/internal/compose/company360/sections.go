@@ -235,7 +235,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		LEFT JOIN app_user u ON u.id = a.assignee_id AND %[8]s
 		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s%[6]s%[7]s
-		ORDER BY (`+storekit.TaskDueSQL("a")+` IS NULL), `+storekit.TaskDueSQL("a")+`, a.occurred_at, a.id
+		ORDER BY (`+storekit.TaskDueSQL("a")+` IS NULL), `+storekit.TaskDueOrderSQL("a")+`, a.occurred_at, a.id
 		LIMIT %[5]d`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), linkVisible, contactVisible, limit+1,
 		opts.projectScope(arg)+opts.recipientTaskScope(arg), extra, identity.LiveMemberSQL("u"), nowPos)

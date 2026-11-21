@@ -43,6 +43,10 @@ func TestEachContactDoorRefusesASendingSystemsAddressOnItsOwnField(t *testing.T)
 			body: AnyMap{"full_name": "Signing", "source": "manual", "emails": []AnyMap{{"email": "signing-noreply@doors.example", "is_primary": true}}},
 		},
 		{
+			door: "typed create, e-signature sender", path: "/v1/contacts", field: "emails", code: "email_names_no_one",
+			body: AnyMap{"full_name": "Signing", "source": "manual", "emails": []AnyMap{{"email": "dse_na3@docusign.net", "is_primary": true}}},
+		},
+		{
 			door: "quick capture", path: "/v1/contacts/quick-capture", field: "email", code: "email_names_no_one",
 			body: AnyMap{"full_name": "Receipts", "email": "receipts@doors.example"},
 		},

@@ -37,8 +37,8 @@ const (
 // pairs reach it as cases (attentioncontactcases.go).
 var pairLaneTypes = []string{entityCompany, entityLead}
 
-func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]attention.DuplicatePair, error) {
-	rows, _, err := d.store.ListDedupeCandidates(ctx, contacts.DedupeQueueInput{Limit: limit, EntityTypes: pairLaneTypes})
+func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int, owners *attention.PairOwners) ([]attention.DuplicatePair, error) {
+	rows, _, err := d.store.ListDedupeCandidates(ctx, contacts.DedupeQueueInput{Limit: limit, EntityTypes: pairLaneTypes, Owners: owners})
 	if err != nil {
 		return nil, err
 	}
@@ -51,6 +51,7 @@ func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]a
 			LeftID:     row.LeftID,
 			RightID:    row.RightID,
 			Evidence:   comparisons(ctx, row.ID, row.Evidence),
+			Owners:     row.Owners,
 		})
 	}
 	return pairs, nil
@@ -99,8 +100,8 @@ func (d attentionDuplicates) DecidableSubset(
 	return d.store.DecidableForMerge(ctx, entityType, rowIDs)
 }
 
-func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
-	return d.store.CountOpenDedupeCandidates(ctx, pairLaneTypes...)
+func (d attentionDuplicates) CountOpen(ctx context.Context, owners *attention.PairOwners) (int, error) {
+	return d.store.CountOpenDedupePairsOf(ctx, owners, pairLaneTypes...)
 }
 
 // SettleablePairs answers which pairs a merge would actually accept.

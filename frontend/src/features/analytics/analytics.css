@@ -275,3 +275,8 @@
   flex: none;
   min-width: 0;
 }
+
+/* The mark on a figure that adds only the deals that convert. */
+.analytics-partial {
+  color: var(--textSecondary);
+}

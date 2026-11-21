@@ -241,7 +241,10 @@ export function CaseForm({
               aria-describedby={control["aria-describedby"]}
               options={choices.map((one) => ({
                 value: one.user_id,
-                label: one.name,
+                label:
+                  one.status === "invited"
+                    ? t("list.ownerInvited", { name: one.name })
+                    : one.name,
               }))}
               value={owner}
               placeholder={t("contactCase.ownerPlaceholder")}

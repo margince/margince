@@ -8458,6 +8458,24 @@ func (e ContactCaseOwnerSeat) Valid() bool {
 	}
 }
 
+// Defines values for ContactCaseOwnerStatus.
+const (
+	ContactCaseOwnerStatusActive  ContactCaseOwnerStatus = "active"
+	ContactCaseOwnerStatusInvited ContactCaseOwnerStatus = "invited"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseOwnerStatus enum.
+func (e ContactCaseOwnerStatus) Valid() bool {
+	switch e {
+	case ContactCaseOwnerStatusActive:
+		return true
+	case ContactCaseOwnerStatusInvited:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactCaseShareAccess.
 const (
 	ContactCaseShareAccessRead  ContactCaseShareAccess = "read"
@@ -15191,8 +15209,10 @@ const (
 	ImportReasonCodeFieldInactive                ImportReasonCode = "field_inactive"
 	ImportReasonCodeFxRateMissing                ImportReasonCode = "fx_rate_missing"
 	ImportReasonCodeIdNotACompanyId              ImportReasonCode = "id_not_a_company_id"
+	ImportReasonCodeIdNotARecordId               ImportReasonCode = "id_not_a_record_id"
 	ImportReasonCodeIdNotVisible                 ImportReasonCode = "id_not_visible"
 	ImportReasonCodeIdOnNonCompany               ImportReasonCode = "id_on_non_company"
+	ImportReasonCodeIdRecordNotVisible           ImportReasonCode = "id_record_not_visible"
 	ImportReasonCodeLeadNotFound                 ImportReasonCode = "lead_not_found"
 	ImportReasonCodeLeadNotFoundDropped          ImportReasonCode = "lead_not_found_dropped"
 	ImportReasonCodeLeadStatusNotImportable      ImportReasonCode = "lead_status_not_importable"
@@ -15236,6 +15256,7 @@ const (
 	ImportReasonCodePipelineUnnamed              ImportReasonCode = "pipeline_unnamed"
 	ImportReasonCodeRecordArchived               ImportReasonCode = "record_archived"
 	ImportReasonCodeRefTakenByAnotherCompany     ImportReasonCode = "ref_taken_by_another_company"
+	ImportReasonCodeRefTakenByAnotherRecord      ImportReasonCode = "ref_taken_by_another_record"
 	ImportReasonCodeRowKeyEmpty                  ImportReasonCode = "row_key_empty"
 	ImportReasonCodeRowKeyRepeated               ImportReasonCode = "row_key_repeated"
 	ImportReasonCodeRunInFlight                  ImportReasonCode = "run_in_flight"
@@ -15381,9 +15402,13 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeIdNotACompanyId:
 		return true
+	case ImportReasonCodeIdNotARecordId:
+		return true
 	case ImportReasonCodeIdNotVisible:
 		return true
 	case ImportReasonCodeIdOnNonCompany:
+		return true
+	case ImportReasonCodeIdRecordNotVisible:
 		return true
 	case ImportReasonCodeLeadNotFound:
 		return true
@@ -15470,6 +15495,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeRecordArchived:
 		return true
 	case ImportReasonCodeRefTakenByAnotherCompany:
+		return true
+	case ImportReasonCodeRefTakenByAnotherRecord:
 		return true
 	case ImportReasonCodeRowKeyEmpty:
 		return true
@@ -38994,13 +39021,19 @@ type BackfillStatus struct {
 	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
 
 	// Resumable The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.
-	Resumable *bool               `json:"resumable,omitempty"`
-	StartedAt *time.Time          `json:"started_at,omitempty"`
-	State     BackfillStatusState `json:"state"`
+	Resumable *bool `json:"resumable,omitempty"`
+
+	// RetryAttempts Pages in a row that failed and will be tried again; 0 once a page succeeds. The committed counts are kept across a retry, and only the unfinished page is read again.
+	RetryAttempts *int                `json:"retry_attempts,omitempty"`
+	StartedAt     *time.Time          `json:"started_at,omitempty"`
+	State         BackfillStatusState `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
 	Window    *BackfillStatusWindow `json:"window,omitempty"`
+
+	// WindowRestarts How many times the scan began again from the newest message because the provider no longer accepted its place. `counts.messages_scanned`, `captured` and `skipped` start again from zero each time; the contacts and companies already created stay counted. A client says so rather than showing the lower count as lost work.
+	WindowRestarts *int `json:"window_restarts,omitempty"`
 }
 
 // BackfillStatusOfferedWindows defines model for BackfillStatus.OfferedWindows.
@@ -45275,11 +45308,17 @@ type ContactCaseOwner struct {
 	MemberIds []openapi_types.UUID `json:"member_ids"`
 	Name      string               `json:"name"`
 	Seat      ContactCaseOwnerSeat `json:"seat"`
-	UserId    openapi_types.UUID   `json:"user_id"`
+
+	// Status `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+	Status ContactCaseOwnerStatus `json:"status"`
+	UserId openapi_types.UUID     `json:"user_id"`
 }
 
 // ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
 type ContactCaseOwnerSeat string
+
+// ContactCaseOwnerStatus `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+type ContactCaseOwnerStatus string
 
 // ContactCasePreference Where the selected members disagree, the member whose value the remaining contact takes.
 // Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
@@ -53748,6 +53787,9 @@ type ImportRun struct {
 	// Error Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string `json:"error,omitempty"`
 
+	// ErrorRefusal `error` as the field error an upload refusal carries, for a draft whose test run refused its file: a screen words it in the reader's language and keeps `error` for a code it does not know. Absent for any other stop, and on a run stored before it was kept.
+	ErrorRefusal *ImportRunRefusal `json:"error_refusal,omitempty"`
+
 	// EtaScope `object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.
 	EtaScope *ImportRunEtaScope `json:"eta_scope,omitempty"`
 
@@ -53994,6 +54036,21 @@ type ImportRunProgress struct {
 		RowsDone  int    `json:"rows_done" minimum:"0"`
 		RowsTotal int    `json:"rows_total" minimum:"0"`
 	} `json:"objects"`
+}
+
+// ImportRunRefusal A refusal of a run's file by field and code, with the values its sentence names.
+type ImportRunRefusal struct {
+	// Code The refusal code, as in a 422 `errors` entry.
+	Code string `json:"code"`
+
+	// Field The field the refusal names, as in a 422 `errors` entry.
+	Field string `json:"field"`
+
+	// Max The limit the refusal names. Absent when it names none.
+	Max *int `json:"max,omitempty" minimum:"1"`
+
+	// Params The values the code's sentence names, by name. Absent when it names none.
+	Params *map[string]string `json:"params,omitempty"`
 }
 
 // ImportRunReport The same shape before and after approval: a dry run reports what the
@@ -55765,6 +55822,12 @@ type Lead struct {
 	// NextTaskDueAt Due time of the earliest open task linked to this lead; undated tasks follow dated ones.
 	NextTaskDueAt *time.Time `json:"next_task_due_at,omitempty"`
 
+	// NextTaskDueHasTime True when next_task_due_at names a time of day; false when the next task is due on a date with no time.
+	NextTaskDueHasTime *bool `json:"next_task_due_has_time,omitempty"`
+
+	// NextTaskDueIntent The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader.
+	NextTaskDueIntent *IntentTime `json:"next_task_due_intent,omitempty"`
+
 	// NextTaskSubject Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written.
 	NextTaskSubject *string `json:"next_task_subject,omitempty"`
 
@@ -56556,7 +56619,13 @@ type LegalReviewPacketStage struct {
 type LegalReviewPacketTask struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 	DueAt      *time.Time         `json:"due_at,omitempty"`
-	Subject    *string            `json:"subject,omitempty"`
+
+	// DueHasTime True when due_at names a time of day; false when the task was due on a date with no time.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   *string     `json:"subject,omitempty"`
 }
 
 // LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
@@ -58952,7 +59021,7 @@ type MorningDigest struct {
 			Other *int `json:"other,omitempty"`
 		} `json:"classify,omitempty"`
 
-		// DedupeOpen Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
+		// DedupeOpen Every open duplicate review item on the reader's own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
 		DedupeOpen *int `json:"dedupe_open,omitempty"`
 	} `json:"review"`
 }
@@ -63614,7 +63683,7 @@ type ReportResult struct {
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 	Report             string              `json:"report"`
 
-	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
+	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
@@ -65888,7 +65957,13 @@ type SalesProgressNextTask struct {
 	// AssigneeId Who the task is for. It may differ from the deal's owner.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
-	Subject    string              `json:"subject"`
+
+	// DueHasTime True when due_at names a time of day; false when the task is due on a date with no time.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   string      `json:"subject"`
 }
 
 // SalesProgressScenario defines model for SalesProgressScenario.
@@ -80117,6 +80192,9 @@ type GetDealStatusParams struct {
 type ListDedupeCandidatesParams struct {
 	Status     *ListDedupeCandidatesParamsStatus     `form:"status,omitempty" json:"status,omitempty"`
 	EntityType *ListDedupeCandidatesParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
+
+	// RecordId Only the pairs naming this record on either end. Needs `entity_type`, the record's type; without it the answer is 422.
+	RecordId *openapi_types.UUID `form:"record_id,omitempty" json:"record_id,omitempty"`
 
 	// Cursor Opaque keyset cursor.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
@@ -94799,6 +94877,22 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "next_task_due_at")
 	}
 
+	if raw, found := object["next_task_due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.NextTaskDueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'next_task_due_has_time': %w", err)
+		}
+		delete(object, "next_task_due_has_time")
+	}
+
+	if raw, found := object["next_task_due_intent"]; found {
+		err = json.Unmarshal(raw, &a.NextTaskDueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'next_task_due_intent': %w", err)
+		}
+		delete(object, "next_task_due_intent")
+	}
+
 	if raw, found := object["next_task_subject"]; found {
 		err = json.Unmarshal(raw, &a.NextTaskSubject)
 		if err != nil {
@@ -95279,6 +95373,20 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["next_task_due_at"], err = json.Marshal(a.NextTaskDueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'next_task_due_at': %w", err)
+		}
+	}
+
+	if a.NextTaskDueHasTime != nil {
+		object["next_task_due_has_time"], err = json.Marshal(a.NextTaskDueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'next_task_due_has_time': %w", err)
+		}
+	}
+
+	if a.NextTaskDueIntent != nil {
+		object["next_task_due_intent"], err = json.Marshal(a.NextTaskDueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'next_task_due_intent': %w", err)
 		}
 	}
 
@@ -135547,6 +135655,19 @@ func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
 		}
 		return
 	}

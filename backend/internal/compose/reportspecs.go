@@ -217,6 +217,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
 		sumCoverage:    baseMoneyCoverage(),
+		partialSums:    true,
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		// No stage_id filter: nothing serves it (the screen groups BY stage_id
 		// instead), and a filter key this report has no caller for is public
@@ -436,6 +437,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
 		sumCoverage:    baseMoneyCoverage(),
+		partialSums:    true,
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:            colOwnerID,

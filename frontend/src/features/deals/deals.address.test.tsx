@@ -172,6 +172,8 @@ const SAMPLE: Record<
   stage_id: { value: "s1", sent: { stage_id: "s1" } },
   company_id: { value: "c-nw", sent: { company_id: "c-nw" } },
   status: { value: "lost", sent: { status: "lost" } },
+  owner_id: { value: "u-1", sent: { owner_id: "u-1" } },
+  owner_team_id: { value: "t-1", sent: { owner_team_id: "t-1" } },
   win_probability: {
     value: "60..89",
     sent: { win_probability_min: 60, win_probability_max: 89 },

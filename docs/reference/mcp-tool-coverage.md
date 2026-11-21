@@ -146,7 +146,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 5 |
 | … **no case requires** | 6 |
 | … of those, permitted somewhere but never required | 2 |
-| Prompt tokens spent on tools no case requires | 5925 |
+| Prompt tokens spent on tools no case requires | 5930 |
 | Use cases | 82 |
 | Acceptance criteria the cases declare, each with a statement | 131 |
 
@@ -776,7 +776,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Near miss in | Permitted in | Attached to |
 |---|---:|---|---|---|---|
-| `read_view` | 1915 | - | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case123_take_over_sofias_deal`, `case76_she_said_yes_at_the_fair`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
+| `read_view` | 1920 | - | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case123_take_over_sofias_deal`, `case76_she_said_yes_at_the_fair`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
 | `run_research` | 1365 | - | - | `case108_ask_sofia_for_an_intro` | - |
 | `change_record_parts` | 1017 | - | - | - | - |
 | `change_relationships` | 816 | - | - | - | - |
