@@ -296,6 +296,28 @@ describe("the email composer that decides at Send", () => {
     expect(screen.getByText("Queued as a recorded exception.")).toBeTruthy();
   });
 
+  it("closes and says so when another tab already sent the message", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const onClose = vi.fn();
+    stubRoutes({
+      "POST /emails": refused,
+      "POST /communication-reviews/r-1/direct-send": () =>
+        problemResponse(
+          { code: "already_sent", title: "Conflict", status: 409 },
+          409,
+        ),
+    });
+    render(<Composer onClose={onClose} />);
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillMessage(user);
+    await pressSend(user);
+    await user.type(await reasonField(), "They asked on the phone.");
+    await user.click(await sendAnyway());
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(screen.getByText("This message was already sent.")).toBeTruthy();
+  });
+
   // Each stray event alone, since the button's own press latch would hold
   // back any event that follows a first one.
   it.each([

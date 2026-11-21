@@ -150,17 +150,21 @@ func TestTheDecisionHistogramTimesOnlyAHumansFreshSend(t *testing.T) {
 
 func TestEachSendAnywayConfirmationCountsWhatItCameTo(t *testing.T) {
 	c := newCollector()
-	c.observeSendAnyway(nil)
-	c.observeSendAnyway(nil)
-	c.observeSendAnyway(&consent.InstructionStaleError{Why: "the email warnings changed"})
-	c.observeSendAnyway(&consent.ValidationError{Field: "warning_version", Reason: "not served"})
-	c.observeSendAnyway(refusedSend(commsauthz.CategoryMarketing))
-	c.observeSendAnyway(errors.New("connection reset"))
-	c.observeSendAnyway(fmt.Errorf("mail provider: %w", apperrors.ErrProviderUnusable))
+	c.observeSendAnyway(nil, confirmSent)
+	c.observeSendAnyway(nil, confirmSent)
+	c.observeSendAnyway(nil, confirmScheduled)
+	c.observeSendAnyway(&consent.MessageAlreadySentError{}, confirmSent)
+	c.observeSendAnyway(&consent.InstructionStaleError{Why: "the email warnings changed"}, confirmSent)
+	c.observeSendAnyway(&consent.ValidationError{Field: "warning_version", Reason: "not served"}, confirmSent)
+	c.observeSendAnyway(refusedSend(commsauthz.CategoryMarketing), confirmSent)
+	c.observeSendAnyway(errors.New("connection reset"), confirmSent)
+	c.observeSendAnyway(fmt.Errorf("mail provider: %w", apperrors.ErrProviderUnusable), confirmSent)
 
 	got := scrape(c)
 	for series, want := range map[string]string{
 		`margince_email_send_anyway_total{result="sent"}`:           "2",
+		`margince_email_send_anyway_total{result="scheduled"}`:      "1",
+		`margince_email_send_anyway_total{result="already_sent"}`:   "1",
 		`margince_email_send_anyway_total{result="stale_revision"}`: "1",
 		`margince_email_send_anyway_total{result="wrong_warning"}`:  "1",
 		`margince_email_send_anyway_total{result="refused"}`:        "1",
@@ -178,7 +182,7 @@ func TestEveryLabelValueIsFromAClosedSet(t *testing.T) {
 	c.observeSend(humanCtx(), activities.SendOutcome{}, refusedSend(commsauthz.CategoryMarketing, consent.ActionDirectSend))
 	c.observeSend(humanCtx(), activities.SendOutcome{}, nil)
 	c.observeDecision(true, 40*time.Millisecond)
-	c.observeSendAnyway(&consent.InstructionStaleError{Why: "anna.private@customer.test"})
+	c.observeSendAnyway(&consent.InstructionStaleError{Why: "anna.private@customer.test"}, confirmSent)
 	got := scrape(c)
 
 	closed := map[string][]string{

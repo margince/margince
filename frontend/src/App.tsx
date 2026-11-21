@@ -34,7 +34,7 @@ import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import { WriteToHost } from "./features/settings/writetohost";
 import type { AuthNotice } from "./features/sign-in/auth";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
-import { CompleteLocale, useAccountLocale, useLocale } from "./i18n";
+import { useAccountLocale, useLocale } from "./i18n";
 import { lazy } from "./i18n/lazy";
 import { useSkewedApiRelease } from "./lib/capabilities";
 import {
@@ -50,8 +50,8 @@ import { SPA_RELEASE } from "./lib/release";
 import { routePattern } from "./lib/routepattern";
 import { type Screen, takeHashCredential, watchAddress } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import { sessionSeenNow } from "./lib/session.read";
 import {
-  readStored,
   removeStored,
   STORAGE_KEYS,
   watchStored,
@@ -153,9 +153,7 @@ function ResetEntry({
   }
   return (
     <RaillessFrame>
-      <CompleteLocale>
-        <ResetRoute />
-      </CompleteLocale>
+      <ResetRoute />
     </RaillessFrame>
   );
 }
@@ -163,7 +161,6 @@ function ResetEntry({
 // Watched, so a sign-out here or in another tab ends Home's early reads at once.
 const watchSessionSeen = (changed: () => void) =>
   watchStored(STORAGE_KEYS.sessionSeen, changed);
-const sessionSeenNow = () => readStored(STORAGE_KEYS.sessionSeen) === "1";
 
 // Marks whether this browser has a session, and answers whether the probe was
 // refused. A refused refetch keeps the last data beside its error.
@@ -260,6 +257,7 @@ function AuthedApp({
     authed &&
       described === true &&
       me.data?.authorization?.seat_type === "full",
+    me.data?.user?.id,
   );
   // The company's clock, for every record date under this boundary. Read
   // here rather than per screen so all of them agree, and gated on the session

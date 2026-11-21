@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/lib/pwa.ts frontend/src/bootstrap.ts frontend/scripts/pwa-icons.mjs frontend/src/offline/serviceworker.js frontend/src/offline/page.ts frontend/scripts/vite-pwa.ts frontend/public/manifest.webmanifest frontend/src/lib/connectivity.ts frontend/src/lib/installhint.ts frontend/src/app/installhint.tsx -->
+<!-- describes: frontend/src/lib/pwa.ts frontend/src/bootstrap.ts frontend/scripts/pwa-icons.mjs frontend/src/offline/serviceworker.js frontend/src/offline/page.ts frontend/scripts/vite-pwa.ts frontend/public/manifest.webmanifest frontend/src/lib/connectivity.ts frontend/src/lib/installhint.ts frontend/src/app/installhint.tsx frontend/nginx.conf -->
 # The app you can install: manifest, service worker, offline page
 
 Margince can be installed from the browser as an app. It gets its own window, its own icon and its
@@ -104,8 +104,10 @@ app ships, with the text from the `offline.*` keys of the catalogs. Its CSS is p
 with `tokens.css` and `base.css` built in. So its colors and button are the product's own in both
 themes. It carries no font file, so its text shows in the device's own font.
 
-Its script is the one thing it loads. The site's content security policy allows no script written
-inside the page, so the script is a file of its own under `/assets/`. The worker answers it from the
+Its script is the one thing it loads. The site's content security policy admits one script written
+inside a page, the theme script of `index.html`, by its hash. It refuses any other, and a second one
+would need its own hash in each place `nginx.conf` sets the policy. So the script is a file of its
+own under `/assets/`. The worker answers it from the
 cache it installed it into. The browser's HTTP cache is not enough: `vite preview` sends no cache
 headers, and any browser may drop an entry.
 

@@ -90,6 +90,12 @@ type InstructionStaleError struct {
 	Why string
 }
 
+// ErrNothingHeld answers a decision on a review refused before its message
+// could be kept, so there is nothing to send.
+var ErrNothingHeld error = &InstructionStaleError{
+	Why: "this review holds no message to send; it was refused before the message could be kept",
+}
+
 func (e *InstructionStaleError) Error() string {
 	return "the decision to send this message no longer describes it: " + e.Why
 }

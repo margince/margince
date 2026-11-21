@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -20,19 +20,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// A refused password leaves the sign-in surface standing.
-//
-// The probe holds no data while the reader is signed out, and a query with
-// no data returns to `pending` for every refetch. The refusal watch re-asks
-// /me after any non-/me 401, and a wrong password is one.
-//
-// So the boundary went from "signed out" to "nothing known yet" and back on
-// each attempt. That took the form down and built a new one, losing the
-// refusal and the email with it.
-//
-// Built on createQueryClient, the client the application runs. A hand-made
-// one with other defaults does not re-ask, and the case then passes over
-// the defect.
+// A refetch of the signed-out probe returns it to `pending`; the form must
+// survive that. Built on createQueryClient, whose defaults the app runs.
 describe("a password the server refuses", () => {
   const problem = (body: unknown, status: number) =>
     new Response(JSON.stringify(body), {
@@ -92,12 +81,18 @@ describe("a password the server refuses", () => {
 
       const alert = await screen.findByRole("alert");
       expect(alert.textContent).toContain("Sign-in failed");
+      // The watch leaves a probe that already refused alone.
+      expect(probes).toBe(1);
+      await act(async () => {
+        void client.refetchQueries({ queryKey: ["me"], exact: true });
+      });
+      expect(probes).toBe(2);
       // The same input node: a remount would answer a different element.
       expect(screen.getByLabelText("Email")).toBe(email);
       expect(email).toHaveProperty("value", "ada@example.com");
+      expect(screen.getByRole("alert").textContent).toContain("Sign-in failed");
       // The re-ask was still in flight for every assertion above, which is
       // what this case is about. Let it finish so nothing outlives the test.
-      expect(probes).toBe(2);
       releaseProbe();
     } finally {
       api.eject(watch);
