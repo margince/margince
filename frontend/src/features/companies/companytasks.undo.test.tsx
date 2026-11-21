@@ -67,7 +67,11 @@ describe("ticking a task on a company's Tasks tab", () => {
       </QueryClientProvider>,
     );
     await user.click(await screen.findByRole("button", { name: /^Tasks/ }));
-    await user.click(await screen.findByRole("checkbox", { name: "Done" }));
+    await user.click(
+      await screen.findByRole("checkbox", {
+        name: "Mark Follow up on contract renewal done",
+      }),
+    );
 
     expect(await screen.findByText("Task completed")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Undo" }));

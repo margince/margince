@@ -78,7 +78,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	identitySvc := identity.NewService(pool).
 		WithConfig(StoredConfig(pool)).
 		WithRequireSSO(authPolicy.SSOEnforced).
-		WithRequireMFA(authPolicy.MFARequired).
+		WithAdmissionSettings(authPolicy.AdmissionSettings).
 		WithGroupRoleMap(authPolicy.GroupRoleMap).
 		WithMailCapture(mailCaptureSeam{})
 	// The standing-grant edge: identity mints the credential, agents/runner
