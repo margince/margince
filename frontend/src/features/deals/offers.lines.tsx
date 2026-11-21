@@ -289,7 +289,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           label={t("offer.lines")}
           columns={columns}
           rows={offer.line_items}
-          rowKey={(line) => `${line.id}:${line.version ?? 0}`}
+          rowKey={(line) => line.id}
         />
       </PanelBody>
       {/* Its own body, so the seam divides the lines that exist from the one

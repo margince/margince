@@ -8,6 +8,7 @@ import {
   writtenDecimal,
 } from "../../format/decimalinput";
 import { useLocale, useT } from "../../i18n";
+import { useSavedDraft } from "../../lib/usesaveddraft";
 import type { OfferLineItem, UpdateOfferLineItemRequest } from "./offers";
 import { storedUnitOf, UnitPicker, unitChoiceOf } from "./productunit";
 
@@ -18,18 +19,22 @@ export function DescriptionCell({
   line: OfferLineItem;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
-  const [value, setValue] = useState(line.description);
+  const { draft, edit, leave } = useSavedDraft({
+    saved: line.description,
+    toDraft: (saved) => saved,
+    submit: (text) => {
+      if (text !== line.description) {
+        onSave({ description: text });
+      }
+    },
+  });
   return (
     <TextInput
       data-testid={`line-description-${line.id}`}
       className="offers-line-description"
-      value={value}
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => {
-        if (value !== line.description) {
-          onSave({ description: value });
-        }
-      }}
+      value={draft}
+      onChange={(event) => edit(event.target.value)}
+      onBlur={() => leave()}
     />
   );
 }
@@ -41,18 +46,26 @@ export function UnitCell({
   line: OfferLineItem;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
-  const [value, setValue] = useState(() => unitChoiceOf(line.unit));
+  const { draft, edit, leave } = useSavedDraft({
+    saved: line.unit,
+    toDraft: unitChoiceOf,
+    submit: (next) => {
+      // An "Other" with nothing typed yet names no unit, and the server
+      // refuses a blank one.
+      const unit = storedUnitOf(next.choice, next.other);
+      if (unit !== "" && unit !== line.unit) {
+        onSave({ unit });
+      }
+    },
+  });
   return (
     <UnitPicker
       testId={`line-unit-${line.id}`}
-      value={value}
+      value={draft}
       onChange={(next, settled) => {
-        setValue(next);
-        // An "Other" with nothing typed yet names no unit, and the server
-        // refuses a blank one.
-        const unit = storedUnitOf(next.choice, next.other);
-        if (settled && unit !== "" && unit !== line.unit) {
-          onSave({ unit });
+        edit(next);
+        if (settled) {
+          leave(next);
         }
       }}
     />
@@ -80,11 +93,23 @@ export function NumericCell({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [value, setValue] = useState(() =>
-    writtenDecimal(String(savedValue), locale),
-  );
   const [fault, setFault] = useState<string | undefined>();
   const errorId = useId();
+  const { draft, edit, leave, restore } = useSavedDraft({
+    saved: savedValue,
+    toDraft: (saved) => writtenDecimal(String(saved), locale),
+    submit: (text) => {
+      const refusal = check ? check(text) : typedNumberFault(text, locale, t);
+      if (refusal) {
+        setFault(refusal);
+        return;
+      }
+      const num = typedNumberOrNaN(text, locale);
+      if (num !== savedValue) {
+        onSave(num);
+      }
+    },
+  });
   return (
     <>
       <input
@@ -93,29 +118,19 @@ export function NumericCell({
         className="input"
         style={{ width }}
         data-testid={testId}
-        value={value}
+        value={draft}
         aria-invalid={fault ? true : undefined}
         aria-describedby={fault ? errorId : undefined}
         onChange={(event) => {
-          setValue(event.target.value);
+          edit(event.target.value);
           setFault(undefined);
         }}
         onBlur={() => {
-          if (value.trim() === "") {
-            setValue(writtenDecimal(String(savedValue), locale));
+          if (draft.trim() === "") {
+            restore();
             return;
           }
-          const refusal = check
-            ? check(value)
-            : typedNumberFault(value, locale, t);
-          if (refusal) {
-            setFault(refusal);
-            return;
-          }
-          const num = typedNumberOrNaN(value, locale);
-          if (num !== savedValue) {
-            onSave(num);
-          }
+          leave();
         }}
       />
       {fault && <ErrorLine id={errorId}>{fault}</ErrorLine>}
@@ -132,19 +147,23 @@ export function UnitPriceCell({
   currency: string;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
-  const [minor, setMinor] = useState(line.unit_price_minor);
+  const { draft, edit, leave } = useSavedDraft({
+    saved: line.unit_price_minor,
+    toDraft: (saved) => saved,
+    submit: (minor) => {
+      if (minor !== line.unit_price_minor) {
+        onSave({ unit_price_minor: minor });
+      }
+    },
+  });
   return (
     <MoneyInput
       data-testid={`line-unit-price-${line.id}`}
       className="offers-line-price"
       currency={currency}
-      valueMinor={minor}
-      onChangeMinor={setMinor}
-      onBlur={() => {
-        if (minor !== line.unit_price_minor) {
-          onSave({ unit_price_minor: minor });
-        }
-      }}
+      valueMinor={draft}
+      onChangeMinor={edit}
+      onBlur={() => leave()}
     />
   );
 }
