@@ -283,7 +283,11 @@ func (w *csvWriters) validateReviewedDisposition(ctx context.Context, row migrat
 	return apperrors.ErrVersionSkew
 }
 
+// validateReviewRows checks every reviewed row before any lands, so a skip it
+// re-predicts meets the file's earlier new records as the test run did. They
+// are dropped once checked: from then on the import meets them stored.
 func (w *csvWriters) validateReviewRows(ctx context.Context, source migration.Source, object string) error {
+	defer func() { w.fileCreates = fileCreates{} }()
 	seen := map[string]bool{}
 	for offset := 0; ; offset += importPredictPage {
 		rows, err := source.Rows(ctx, object, offset, importPredictPage)
@@ -297,6 +301,9 @@ func (w *csvWriters) validateReviewRows(ctx context.Context, source migration.So
 			seen[row.ExternalID] = true
 			if err := w.reviewSource(ctx, row); err != nil {
 				return err
+			}
+			if outcome := w.reviewRows[row.ExternalID].Outcome; outcome == importRowCreate || outcome == importRowCreateDuplicate {
+				w.rememberCreate(row)
 			}
 		}
 		if len(rows) < importPredictPage {

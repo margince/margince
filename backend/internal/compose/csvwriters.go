@@ -119,6 +119,8 @@ type csvWriters struct {
 	// predictedWarnings are a predicted row's warnings beyond the one predictRow
 	// returns; predictPages reports and clears them.
 	predictedWarnings []migration.SkippedRow
+	// fileCreates are the new records a test run carries; the import has none.
+	fileCreates fileCreates
 }
 
 var _ migration.Writers = (*csvWriters)(nil)
@@ -283,37 +285,15 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 	if why.Code != "" {
 		return skippedFor(why), nil
 	}
-	// Not a row this importer has landed before — but the estate may hold the
-	// record anyway, and the run says what to do about that. The check runs on
-	// the commit as well as the dry run so the two cannot disagree.
-	//
-	// It runs on BOTH branches of that decision, and it did not always. Asking
-	// only when the run said "skip" made a duplicate that CREATES invisible to
-	// the commit, so a finished report could only ever repeat the prediction —
-	// and the estate moves between the preview and the approval, which is the
-	// whole reason a duplicate count is worth reading. The cost is one
-	// dedupe query per row this importer has not landed before, which is what
-	// the preview already spends on the same rows.
+	// The estate may hold the record anyway, and the run says what to do. The
+	// check runs on both branches, so the report counts a duplicate that creates.
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
 	if collides && w.onDuplicate == string(crmcontracts.ImportOnDuplicateSkip) {
-		// discloseOnly, so a collision this caller may not see is answered as no
-		// collision — and the row CREATES.
-		//
-		// Skipping it instead is the intuitive choice and it leaks. An opaque
-		// reason hides WHICH company was hit; the outcome still says one was.
-		// "Your row was not created" is an answer to "is this company in your
-		// CRM", and a finished run's report is readable on the import_run grant,
-		// so a caller could probe a colleague's owner-private estate one CSV row
-		// at a time. Wording cannot fix that — only the outcome can.
-		//
-		// What creating costs is a twin of a record the caller cannot see, which
-		// the dedupe review queue picks up like any other and a merge resolves.
-		// What skipping costs is a disclosure that no merge undoes. It also keeps
-		// the preview and the commit answering alike, since the preview is
-		// disclosure-filtered for the same reason.
+		// Only a match the caller can see collides (csvcollision.go), so the
+		// outcome never tells them a record they cannot read exists.
 		_, skipWhy := collisionWordingFor(object)
 		skipped := skippedFor(skipWhy)
 		skipped.Duplicate = true

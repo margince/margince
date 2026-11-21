@@ -3,28 +3,14 @@
 
 package compose
 
-// Whether a row names a company THIS CALLER CAN SEE that the estate already
-// holds.
-//
-// One question, deliberately — an earlier shape asked two, deciding on the
-// estate and disclosing on what may be read, and every version of that leaked.
-// Filtering the preview moved the answer into the finished report, which needs
-// only the import_run grant. Making the report's wording opaque left the
-// OUTCOME saying what the words would not: "your row was not created" answers
-// "is this company in your CRM" about a colleague's owner-private capture,
-// probed one row at a time.
-//
-// So an invisible incumbent is answered as no incumbent, and the row creates.
-// The cost is a twin the dedupe review queue picks up like any other and a merge
-// resolves. The cost of the alternative is a disclosure no merge undoes.
-//
-// The ladder itself still reads every company, by design: it is the write
-// path's collision check. What is filtered is what this caller is TOLD, never
-// what the estate knows.
+// Whether a row names a record the caller can see that the estate holds, or
+// one an earlier row of the same file will create. The import meets that
+// earlier record stored. The test run writes nothing and carries it instead.
 
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -69,12 +55,8 @@ func (w *csvWriters) collidesWithExisting(ctx context.Context, row migration.Row
 }
 
 func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bool, error) {
-	fields := textFields(row.Fields)
-	candidate := contacts.CompanyCandidate{
-		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
-		LegalName:   strings.TrimSpace(fields["legal_name"]),
-		Address:     addressFrom(fields),
-	}
+	named := newCompanyOf(textFields(row.Fields))
+	candidate := contacts.CompanyCandidate{DisplayName: named.DisplayName, LegalName: named.LegalName, Address: named.Address}
 	if candidate.DisplayName == "" && candidate.LegalName == "" {
 		return false, nil
 	}
@@ -84,35 +66,10 @@ func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bo
 		if err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
 		}
-		// EVERY candidate at or above the ladder's threshold, not just its
-		// winner.
-		//
-		// The winner is chosen by confidence with the lowest uuid breaking ties,
-		// which has nothing to do with who may read it — so an invisible record
-		// ranking first MASKS a visible one behind it. Asking only about the
-		// winner then made the hidden record change what this caller is told: with
-		// it present the row created and reported no duplicate, without it the
-		// visible candidate won and the row was skipped. The hidden company was
-		// inferable from the disposition either way, which is the whole leak
-		// wearing a different hat.
-		//
-		// A collision this caller can see is a collision. One they cannot see is,
-		// as far as they are told, not there — and Ranked carries the set that
-		// question has to be asked of.
-		//
-		// The ladder itself still reads every company, by design: it is the
-		// write path's collision check. What is filtered is what this caller is
-		// TOLD, never what the estate knows.
-		// EVERY candidate is asked, with no early exit once one answers yes.
-		//
-		// Returning on the first visible match would make the number of queries
-		// depend on where the visible candidate sits among the hidden ones — and
-		// a caller who can time the call reads that ordering back. It is a
-		// narrow channel and it is the same fact by another route: whether
-		// records they cannot see are there.
-		//
-		// The loop is bounded by the ladder's own threshold, so the cost is the
-		// candidate set and not the estate.
+		// Every candidate over the threshold is asked, not only the winner. The
+		// winner is ranked by score and id, not by who may read it. So a hidden
+		// record ranked first would mask a visible one behind it. No early exit
+		// either: the number of queries would tell where the visible one sits.
 		for _, candidate := range candidatesOf(match) {
 			seen, err := auth.VisibleTo(ctx, tx, "company", candidate.UUID)
 			if err != nil {
@@ -146,4 +103,57 @@ func candidatesOf(match contacts.CompanyMatch) []ids.CompanyID {
 		out = append(out, scored.CompanyID)
 	}
 	return out
+}
+
+// fileCreates are the records earlier rows of a test run's file will create.
+type fileCreates struct {
+	companies []contacts.NewCompany
+	contacts  []contacts.NewContact
+}
+
+// rememberCreate files a row the test run says will create a record.
+func (w *csvWriters) rememberCreate(row migration.Row) {
+	fields := textFields(row.Fields)
+	switch w.object {
+	case migration.ObjectCompany:
+		held := newCompanyOf(fields)
+		held.Domains = []string{strings.TrimSpace(fields[fieldDomain])}
+		w.fileCreates.companies = append(w.fileCreates.companies, held)
+	case migration.ObjectContact:
+		held := w.contactCandidateOf(fields)
+		w.fileCreates.contacts = append(w.fileCreates.contacts, contacts.NewContact{FullName: held.FullName, Emails: held.Emails})
+	}
+}
+
+// collidesInFile answers whether the import, reaching this row, meets an
+// earlier new record of the file as its duplicate. The caller sees each one.
+func (w *csvWriters) collidesInFile(row migration.Row) bool {
+	fields := textFields(row.Fields)
+	switch w.object {
+	case migration.ObjectCompany:
+		asked := newCompanyOf(fields)
+		return slices.ContainsFunc(w.fileCreates.companies, func(held contacts.NewCompany) bool { return contacts.CompanyLookAlike(asked, held) })
+	case migration.ObjectContact:
+		asked := w.contactCandidateOf(fields)
+		return slices.ContainsFunc(w.fileCreates.contacts, func(held contacts.NewContact) bool { return contacts.ContactLookAlike(asked, held) })
+	}
+	return false
+}
+
+// newCompanyOf is the company a row names, as the duplicate check reads it.
+func newCompanyOf(fields map[string]string) contacts.NewCompany {
+	return contacts.NewCompany{
+		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
+		LegalName:   strings.TrimSpace(fields[fieldLegalName]), Address: addressFrom(fields),
+	}
+}
+
+// contactCandidateOf is the contact a row names, as the duplicate check reads
+// it. It files no pair, and its mail list is the one contactCollides read.
+func (w *csvWriters) contactCandidateOf(fields map[string]string) contacts.ContactCandidate {
+	var emails []string
+	if email := strings.TrimSpace(fields[fieldEmail]); email != "" {
+		emails = []string{email}
+	}
+	return contacts.ContactCandidate{FullName: contactFullName(fields), Emails: emails, ConsumerMail: w.consumerMail}
 }

@@ -206,16 +206,9 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		if err != nil {
 			return err
 		}
-		var emails []string
-		if email != "" {
-			emails = []string{email}
-		}
-		match, err := contacts.DedupeContact(ctx, tx, contacts.ContactCandidate{
-			FullName: name, Emails: emails, ConsumerMail: consumerMail,
-			// The preview writes nothing and routes nothing, so it has no
-			// business filing a review pair for what it merely looked at.
-			QueueNameCollisions: false,
-		})
+		candidate := w.contactCandidateOf(fields)
+		candidate.ConsumerMail = consumerMail
+		match, err := contacts.DedupeContact(ctx, tx, candidate)
 		if err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
 		}

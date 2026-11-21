@@ -13,6 +13,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -27,18 +28,8 @@ func TestReviewedImportReplaysItsOwnAtomicUpdateButRefusesAnInterveningEdit(t *t
 		t.Fatal(err)
 	}
 	ctx := importAdmin(e)
-	profile, err := handler.profileAndStore(ctx, migration.ObjectLead, "corrected-leads.csv", []byte("Email,Full Name\nada@lovelace.example,Ada Lovelace\n"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	validation := queuedLeadTest(t, e, handler, profile)
-	if err := validateWorkerFor(e, handler).Work(context.Background(), &river.Job[ImportValidateArgs]{Args: validation}); err != nil {
-		t.Fatal(err)
-	}
-	run, err := migration.NewRunStore(e.DB()).GetStaged(ctx, validation.RunID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	run := testedImportRun(t, e, handler, migration.ObjectLead, "Email,Full Name\nada@lovelace.example,Ada Lovelace\n",
+		testedLeadMapping(), crmcontracts.ImportOnDuplicateCreate)
 	if run.Report == nil || run.Report.ReviewPlan == nil || len(run.Report.ReviewPlan.Rows) != 1 || run.Report.ReviewPlan.Rows[0].Outcome != "update" {
 		t.Fatalf("native test did not prepare the expected update: %+v", run.Report)
 	}
