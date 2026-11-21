@@ -111,7 +111,7 @@ describe("ShareScreen", () => {
 
     const notice = await screen.findByTestId("share-limited-by-role");
     expect(notice.textContent).toMatch(
-      /^Saved as read access\. Priya Shah can't edit .+ with their role\.$/,
+      /^Saved as read access\. Priya Shah cannot edit .+ with their role\.$/,
     );
     expect(posts).toMatchObject([{ access: "write" }]);
     expect(screen.queryByText(/now has/)).toBeNull();
@@ -139,7 +139,7 @@ describe("ShareScreen", () => {
     expect(
       (await screen.findByTestId("share-limited-by-role")).textContent,
     ).toBe(
-      "Saved as read access. Priya Shah can't edit contacts with their role.",
+      "Saved as read access. Priya Shah cannot edit contacts with their role.",
     );
   });
 

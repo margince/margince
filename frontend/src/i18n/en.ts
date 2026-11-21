@@ -3226,9 +3226,9 @@ export const en = {
     "Revoke {access} access to {record} for {name}? It ends at the next request and cannot be undone.",
   "share.granted": "{name} now has {access} access to {record}.",
   "share.limitedByRole":
-    "Saved as read access. {name} can't edit {record} with their role.",
+    "Saved as read access. {name} cannot edit {record} with their role.",
   "share.companyContactsLimitedByRole":
-    "Saved as read access. {name} can't edit contacts with their role.",
+    "Saved as read access. {name} cannot edit contacts with their role.",
   "share.thisRecord": "this record",
   "share.until": "Until {date}",
   "share.approvalRequired":
