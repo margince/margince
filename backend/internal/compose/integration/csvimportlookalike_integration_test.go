@@ -120,6 +120,13 @@ func TestTheTestRunCountsLookAlikesInsideTheFile(t *testing.T) {
 		stored: AnyMap{"source": "manual", "display_name": "Kestrel Data", "legal_name": "Kestrel Data GmbH"},
 		file:   "Id,Company\n{stored},Falcon Works\n,Kestrel Data AG\n",
 		want:   []string{"created=0 updated=1 unchanged=0 skipped=1 duplicates=1", "line 3: company_duplicate_skipped"},
+	}, {
+		name: "a twin of an updated contact that names an employer", object: "contact", onDuplicate: "skip",
+		mapping: map[string]string{"Ref": "ref", "Name": "full_name", "Email": "email", "Employer": "company_name"},
+		stored:  storedCompany("Twinco", "twinco.example"),
+		earlier: "Ref,Name,Email,Employer\nc1,Anna Schmidt,anna@gmail.com,\n",
+		file:    "Ref,Name,Email,Employer\nc1,Bea Brandt,bea@gmail.com,Twinco\nc2,Bea Brand,b.brand@twinco.example,\n",
+		want:    []string{"created=1 updated=1 unchanged=0 skipped=0 duplicates=0"},
 	}} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupImportApp(t)

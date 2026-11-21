@@ -41,10 +41,19 @@ func testedImportRun(t *testing.T, e *integration.Env, handler importHandlers, o
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := handler.stageRun(ctx, crmcontracts.CreateImportRunRequest{
-		Connector: crmcontracts.CreateImportRunRequestConnectorCsv, Object: new(crmcontracts.ImportObject(object)),
-		SourceRef: profile.SourceRef, Mapping: &mapping, OnDuplicate: &onDuplicate,
-	}); err != nil {
+	return testedRun(t, e, handler, profile, crmcontracts.CreateImportRunRequest{
+		Object: new(crmcontracts.ImportObject(object)), Mapping: &mapping, OnDuplicate: &onDuplicate,
+	})
+}
+
+// testedRun starts the test run req asks for on a stored source, and works its job.
+func testedRun(t *testing.T, e *integration.Env, handler importHandlers, profile crmcontracts.ImportSourceProfile,
+	req crmcontracts.CreateImportRunRequest,
+) migration.Run {
+	t.Helper()
+	ctx := importAdmin(e)
+	req.Connector, req.SourceRef = crmcontracts.CreateImportRunRequestConnectorCsv, profile.SourceRef
+	if _, err := handler.stageRun(ctx, req); err != nil {
 		t.Fatal(err)
 	}
 	runs := migration.NewRunStore(e.DB())
@@ -146,6 +155,34 @@ func TestImportApprovalReleasesTheDisplayedRowsThroughTheQueuedWriter(t *testing
 	}
 }
 
+// approvedAsShown stages the commit of a tested run, checks the approval shows
+// the outcomes want, approves it and works the commit. It answers the run once
+// the commit completes.
+func approvedAsShown(t *testing.T, e *integration.Env, handler importHandlers, run migration.Run, want []string) migration.Run {
+	t.Helper()
+	service, id, hash := stagedImportApproval(t, e, run)
+	proposal, err := service.GetWire(importAdmin(e), id)
+	if err != nil || proposal.Preview == nil || proposal.Preview.ImportRows == nil {
+		t.Fatalf("the approval shows no rows: %+v (%v)", proposal.Preview, err)
+	}
+	var shown []string
+	for _, row := range *proposal.Preview.ImportRows {
+		shown = append(shown, string(row.Outcome))
+	}
+	if !slices.Equal(shown, want) {
+		t.Fatalf("the approval shows %v, want %v", shown, want)
+	}
+	commit := ImportCommitArgs{Workspace: e.WS, RunID: run.ID, Attempt: approvedThroughDecision(t, e, service, id, hash, run).JobAttempt}
+	if err := commitWorkerFor(e, handler).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: commit}); err != nil {
+		t.Fatal(err)
+	}
+	finished, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), run.ID)
+	if err != nil || finished.Status != migration.StatusComplete || finished.Report == nil {
+		t.Fatalf("the approved run = %+v (%v), want it complete", finished, err)
+	}
+	return finished
+}
+
 // A file renaming a stored company and naming it and a new one twice is shown
 // with each second spelling skipped. The approved import holds every row to that.
 func TestAnApprovedImportSkipsTheLookAlikeItsApproverWasShown(t *testing.T) {
@@ -158,25 +195,31 @@ func TestAnApprovedImportSkipsTheLookAlikeItsApproverWasShown(t *testing.T) {
 	}
 	file := fmt.Sprintf("Id,Company\n%s,Skipco Trading\n,Skipco Trading GmbH\n,Nordwind Logistik\n,Nordwind Logistik AG\n", stored.Id)
 	run := testedImportRun(t, e, handler, migration.ObjectCompany, file, map[string]string{"Id": "id", "Company": "display_name"}, crmcontracts.ImportOnDuplicateSkip)
-	service, id, hash := stagedImportApproval(t, e, run)
-	proposal, err := service.GetWire(importAdmin(e), id)
-	if err != nil || proposal.Preview == nil || proposal.Preview.ImportRows == nil {
-		t.Fatalf("the approval shows no rows: %+v (%v)", proposal.Preview, err)
-	}
-	var shown []string
-	for _, row := range *proposal.Preview.ImportRows {
-		shown = append(shown, string(row.Outcome))
-	}
-	if want := []string{"update", importRowSkip, importRowCreate, importRowSkip}; !slices.Equal(shown, want) {
-		t.Fatalf("the approval shows %v, want %v", shown, want)
-	}
-	approved := approvedThroughDecision(t, e, service, id, hash, run)
-	commit := ImportCommitArgs{Workspace: e.WS, RunID: run.ID, Attempt: approved.JobAttempt}
-	if err := commitWorkerFor(e, handler).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: commit}); err != nil {
+	approvedAsShown(t, e, handler, run, []string{"update", importRowSkip, importRowCreate, importRowSkip})
+}
+
+// A ZIP whose contacts name a company of the same upload by its ref lands as
+// approved. The check before the commit caches nothing the commit then reads.
+func TestAnApprovedZipLinksItsContactsToItsOwnCompanies(t *testing.T) {
+	e := integration.Setup(t)
+	e.GrantRole(t, e.AdminUser, "admin")
+	handler, _ := leadSourceHandlers(t, e)
+	body, err := zipImportFiles([]agents.ImportFile{
+		{Object: migration.ObjectCompany, CSV: "ref,name,domain\nk1,Twinco,twinco.example\n"},
+		{Object: migration.ObjectContact, CSV: "ref,full_name,email,company_ref\nc1,Anna Schmidt,anna.schmidt@gmail.com,k1\nc2,Anna Schmitt,a.schmitt@twinco.example,\n"},
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
-	finished, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), run.ID)
-	if err != nil || finished.Status != migration.StatusComplete || finished.Report == nil {
-		t.Fatalf("the approved run = %+v (%v), want it complete", finished, err)
+	profile, err := handler.profileBundle(importAdmin(e), importUpload{FileName: pastedBundleName, Body: body})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := testedRun(t, e, handler, profile, crmcontracts.CreateImportRunRequest{OnDuplicate: new(crmcontracts.ImportOnDuplicateSkip), Parts: &[]crmcontracts.ImportPartRequest{
+		{File: "companies.csv", Object: migration.ObjectCompany, Mapping: map[string]string{"ref": "ref", "name": "display_name", "domain": "domain"}},
+		{File: "contacts.csv", Object: migration.ObjectContact, Mapping: map[string]string{"ref": "ref", "full_name": "full_name", "email": "email", "company_ref": "company_ref"}},
+	}})
+	if finished := approvedAsShown(t, e, handler, run, []string{importRowCreate, importRowCreate, importRowSkip}); finished.Report.Imported != 2 {
+		t.Fatalf("the approved run imported %d, want the company and one contact", finished.Report.Imported)
 	}
 }

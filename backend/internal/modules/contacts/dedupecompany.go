@@ -236,8 +236,7 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 	//
 	// searchAxes drops a value equal to one already there, so the common case —
 	// a name with no legal form to strip — adds no arms.
-	arms := companyTrigramArms(&args, searchAxes(c)...)
-	arms = append(arms, companyExactNameArms(&args, c)...)
+	arms := companyAdmissionArms(&args, c)
 	if len(arms) == 0 {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
 	}
@@ -308,6 +307,12 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 		Confidence: ranked[0].Confidence,
 		Ranked:     ranked,
 	}, nil
+}
+
+// companyAdmissionArms are the conditions under which the fuzzy tier returns a
+// stored company for scoring, over the columns display_name and legal_name.
+func companyAdmissionArms(args *[]any, c CompanyCandidate) []string {
+	return append(companyTrigramArms(args, searchAxes(c)...), companyExactNameArms(args, c)...)
 }
 
 // searchAxes are the strings the candidate query searches on: each name as the
@@ -433,68 +438,4 @@ func companyTrigramArms(args *[]any, axes ...string) []string {
 		}
 	}
 	return arms
-}
-
-// bestCompanyNamePairing scores every pairing of the two name axes and reports
-// which one won, with the raw values behind it so the queue can show the
-// comparison that was actually made.
-//
-// An empty axis scores nothing rather than matching every other empty one: two
-// companies that both lack a registered name have said nothing about being the
-// same company.
-//
-// A pairing is only SCORED once the two names share a distinctive word
-// (companynamegate.go). Jaro-Winkler cannot see a word boundary, and on company
-// names — where every name in a market ends in the same nouns — that made it
-// read shared vocabulary as shared identity: measured at 179 false pairs
-// against 1 true one across one real workspace.
-//
-// The gate and the score read the SAME string (companyNameForMatching), so a word
-// the gate refused to count cannot come back to lift the score. A Vietnamese
-// name carries its legal form in front, where Jaro-Winkler's prefix boost is
-// strongest, so scoring the unstripped name put two unrelated companies over
-// the threshold on their boilerplate alone.
-func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLegal string) CompanyCandidateScore {
-	sides := []struct {
-		value string
-		field string
-	}{{rowDisplay, fieldDisplayName}, {rowLegal, fieldLegalName}}
-
-	var best CompanyCandidateScore
-	var exact, sameBrand bool
-	for _, left := range []string{candidateDisplay, candidateLegal} {
-		for _, right := range sides {
-			normalizedLeft, normalizedRight := companyNameForMatching(left), companyNameForMatching(right.value)
-			if normalizedLeft == "" || normalizedRight == "" {
-				continue
-			}
-			// BEFORE the score, not a filter applied after it: a pair with no
-			// word in common has said nothing about being one company, whatever
-			// their letters do.
-			if !sharesADistinctiveWord(left, right.value) {
-				continue
-			}
-			// Asked of every eligible pairing and carried out separately: the
-			// winner below is chosen on score alone, so a pairing that ties
-			// the best score would otherwise take exactness away from the one
-			// that actually had it.
-			if companyNamesAreTheSame(left, right.value) {
-				exact = true
-			}
-			if squashed := squashedCompanyName(left); squashed != "" && squashed == squashedCompanyName(right.value) {
-				sameBrand = true
-			}
-			score := nameSimilarity(normalizedLeft, normalizedRight)
-			if score > best.Confidence {
-				best = CompanyCandidateScore{
-					Confidence:     score,
-					MatchedField:   right.field,
-					CandidateValue: left,
-					IncumbentValue: right.value,
-				}
-			}
-		}
-	}
-	best.ExactName, best.SameBrand = exact, sameBrand
-	return best
 }

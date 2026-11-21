@@ -200,8 +200,8 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		if err != nil {
 			return err
 		}
-		candidate := w.contactCandidateOf(fields)
-		candidate.ConsumerMail = consumerMail
+		asked := w.newContactOf(fields)
+		candidate := contacts.ContactCandidate{FullName: asked.FullName, Emails: asked.Emails, ConsumerMail: consumerMail}
 		match, err := contacts.DedupeContact(ctx, tx, candidate)
 		if match = match.Without(w.links.batch.Changes); err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err

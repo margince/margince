@@ -43,7 +43,7 @@ func reviewDisposition(outcome predictedOutcome) (string, error) {
 	case predictUpdate:
 		return "update", nil
 	case predictUnchanged:
-		return importRowUnchanged, nil
+		return "unchanged", nil
 	case predictUnwritable, predictCollidesSkipped:
 		return importRowSkip, nil
 	default:

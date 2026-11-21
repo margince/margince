@@ -165,10 +165,13 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 		return predictUnwritable, why, err
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
+	if err == nil && !collides {
+		collides, err = w.collidesInFile(ctx, row)
+	}
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
-	if !collides && !w.collidesInFile(row) {
+	if !collides {
 		return predictCreate, migration.Reason{}, nil
 	}
 	if w.onDuplicate == string(crmcontracts.ImportOnDuplicateSkip) {

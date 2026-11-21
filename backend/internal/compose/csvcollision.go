@@ -10,7 +10,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -78,8 +77,9 @@ func (w *csvWriters) rememberRow(row migration.Row, outcome predictedOutcome) {
 		if employer.Effect == contacts.ContactEmployerCreateEffect {
 			batch.AddCompany(contacts.NewCompany{DisplayName: employer.CompanyName, Domains: employer.DomainNames()})
 		}
-		held := w.contactCandidateOf(fields)
-		batch.AddContact(contacts.NewContact{FullName: held.FullName, Emails: held.Emails, EmployerDomains: w.employerDomainsOf(row)})
+		held := w.newContactOf(fields)
+		held.EmployerDomains = w.employerDomainsOf(row)
+		batch.AddContact(held)
 	}
 }
 
@@ -90,11 +90,10 @@ func (w *csvWriters) employerDomainsOf(row migration.Row) []string {
 	if employer.CompanyID != nil {
 		return employer.EmployerDomains
 	}
-	ref, name := strings.TrimSpace(textFields(row.Fields)[csvTargetCompanyRef]), employerKey(employer.CompanyName)
-	held, _ := w.links.batch.Company(func(c contacts.NewCompany) bool {
-		return ref != "" && (c.Ref == ref || slices.Contains(c.Domains, ref)) ||
-			name != "" && (employerKey(c.DisplayName) == name || employerKey(c.LegalName) == name)
-	})
+	held, _ := w.links.batch.CompanyNamed(employer.CompanyName)
+	if ref := strings.TrimSpace(textFields(row.Fields)[csvTargetCompanyRef]); ref != "" {
+		held, _ = w.links.batch.CompanyByRef(ref)
+	}
 	return held.Domains
 }
 
@@ -117,36 +116,33 @@ func (w *csvWriters) changeOf(ctx context.Context, id ids.UUID, changed map[stri
 		})
 		return func(b *contacts.Batch) { b.AddContact(held) }, err
 	}
-	return nil, nil
+	return func(*contacts.Batch) {}, nil
 }
 
 // collidesInFile answers whether the import, reaching this row, meets a record
 // an earlier row of the file creates or changes as its duplicate.
-func (w *csvWriters) collidesInFile(row migration.Row) bool {
+func (w *csvWriters) collidesInFile(ctx context.Context, row migration.Row) (bool, error) {
 	fields := textFields(row.Fields)
+	inTx := func(fn func(pgx.Tx) error) error { return database.WithWorkspaceTx(ctx, w.pool, fn) }
 	switch w.object {
 	case migration.ObjectCompany:
-		return w.links.batch.CompanyLookAlike(newCompanyOf(fields))
+		return w.links.batch.CompanyLookAlike(ctx, inTx, newCompanyOf(fields))
 	case migration.ObjectContact:
-		return w.links.batch.ContactLookAlike(w.contactCandidateOf(fields))
+		return w.links.batch.ContactLookAlike(ctx, inTx, w.newContactOf(fields), w.consumerMail)
 	}
-	return false
+	return false, nil
 }
 
 // newCompanyOf is the company a row names, as the duplicate check reads it.
 func newCompanyOf(fields map[string]string) contacts.NewCompany {
-	return contacts.NewCompany{
-		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
-		LegalName:   strings.TrimSpace(fields[fieldLegalName]), Address: addressFrom(fields),
-	}
+	return contacts.NewCompany{DisplayName: strings.TrimSpace(fields[fieldDisplayName]), LegalName: strings.TrimSpace(fields[fieldLegalName]), Address: addressFrom(fields)}
 }
 
-// contactCandidateOf is the contact a row names, as the duplicate check reads
-// it. It files no pair, and its mail list is the one contactCollides read.
-func (w *csvWriters) contactCandidateOf(fields map[string]string) contacts.ContactCandidate {
+// newContactOf is the contact a row names, as the duplicate check reads it.
+func (w *csvWriters) newContactOf(fields map[string]string) contacts.NewContact {
 	var emails []string
 	if email := strings.TrimSpace(fields[fieldEmail]); email != "" {
 		emails = []string{email}
 	}
-	return contacts.ContactCandidate{FullName: contactFullName(fields), Emails: emails, ConsumerMail: w.consumerMail}
+	return contacts.NewContact{FullName: contactFullName(fields), Emails: emails}
 }

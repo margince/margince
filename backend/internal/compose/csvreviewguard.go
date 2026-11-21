@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -173,17 +172,14 @@ func (w *csvWriters) reviewSource(ctx context.Context, row migration.Row) error 
 	return nil
 }
 
-// validateReviewSource drops the records the check filed once it ends: from
-// then on the import meets them stored.
+// validateReviewSource checks every part before any row lands. The check runs
+// on copies of the writers over a resolver of their own, which it then drops.
+// So the import starts with nothing cached from before its rows exist.
 func (b *bundleWriters) validateReviewSource(ctx context.Context, source migration.Source) error {
 	if b.reviewPlan == nil {
 		return nil
 	}
-	defer func() {
-		for _, part := range b.parts {
-			part.links.batch = contacts.Batch{}
-		}
-	}()
+	var scratch *linkResolver
 	objects := source.Objects()
 	if len(objects) != len(b.parts) {
 		return apperrors.ErrVersionSkew
@@ -201,7 +197,12 @@ func (b *bundleWriters) validateReviewSource(ctx context.Context, source migrati
 		if part.reviewRows == nil {
 			continue
 		}
-		if err := part.validateReviewRows(ctx, source, object); err != nil {
+		if scratch == nil {
+			scratch = part.links.fresh()
+		}
+		check := *part
+		check.links, check.predictedEmployers, check.predictedNotes, check.predictedChange = scratch, nil, nil, nil
+		if err := check.validateReviewRows(ctx, source, object); err != nil {
 			return err
 		}
 	}
@@ -291,8 +292,8 @@ func (w *csvWriters) validateReviewedDisposition(ctx context.Context, row migrat
 	return apperrors.ErrVersionSkew
 }
 
-// validateReviewRows checks every reviewed row before any lands. A skip it
-// re-predicts meets the records earlier rows leave, as the test run did.
+// validateReviewRows checks every reviewed row and marks it as the test run
+// did, so a skip it re-predicts meets what the rows before it leave.
 func (w *csvWriters) validateReviewRows(ctx context.Context, source migration.Source, object string) error {
 	seen := map[string]bool{}
 	for offset := 0; ; offset += importPredictPage {
@@ -308,13 +309,11 @@ func (w *csvWriters) validateReviewRows(ctx context.Context, source migration.So
 			if err := w.reviewSource(ctx, row); err != nil {
 				return err
 			}
-			if outcome := w.reviewRows[row.ExternalID].Outcome; outcome != importRowSkip && outcome != importRowUnchanged {
-				predicted, err := w.Predict(ctx, row)
-				if err != nil {
-					return err
-				}
-				w.rememberRow(row, predicted)
+			predicted, err := w.Predict(ctx, row)
+			if err != nil {
+				return err
 			}
+			w.markPredictedRow(row, predicted)
 		}
 		if len(rows) < importPredictPage {
 			break
