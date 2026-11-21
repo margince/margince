@@ -212,17 +212,17 @@ func normalizeMyLinkedInProfileURL(s string) (string, error) {
 	if s == "" {
 		return "", nil
 	}
-	if len(s) > maxLinkedInProfileURLLength {
-		return "", &values.ParseError{
-			Field: profileURLRequestField, Code: codeTooLong,
-			Message: "the profile URL is too long", Max: maxLinkedInProfileURLLength,
-		}
-	}
 	normalized, err := NormalizeContactLinkedInURL(s)
 	if err != nil {
 		return "", &values.ParseError{
 			Field: profileURLRequestField, Code: linkedInProfileURLInvalid,
 			Message: "Enter a LinkedIn profile address such as https://www.linkedin.com/in/your-name.",
+		}
+	}
+	if len(normalized) > maxLinkedInProfileURLLength {
+		return "", &values.ParseError{
+			Field: profileURLRequestField, Code: codeTooLong,
+			Message: "the profile URL is too long", Max: maxLinkedInProfileURLLength,
 		}
 	}
 	return normalized, nil

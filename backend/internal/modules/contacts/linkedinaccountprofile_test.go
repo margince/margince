@@ -70,3 +70,20 @@ func TestAnOverlongProfileIsRefusedWithItsLimit(t *testing.T) {
 		t.Fatalf("err = %#v, want too_long naming max %d", err, maxLinkedInProfileURLLength)
 	}
 }
+
+// The limit holds for the address as stored, so the scheme and host the
+// normalizer adds count, and tracking noise it drops does not.
+func TestTheLengthLimitMeasuresTheStoredAddress(t *testing.T) {
+	t.Parallel()
+	bare := "linkedin.com/in/" + strings.Repeat("a", 280)
+	_, err := normalizeMyLinkedInProfileURL(bare)
+	fault, ok := errors.AsType[*values.ParseError](err)
+	if !ok || fault.Code != codeTooLong {
+		t.Fatalf("%d-character paste stored past the limit: err = %v", len(bare), err)
+	}
+	tracked := "https://www.linkedin.com/in/qa?trk=" + strings.Repeat("x", maxLinkedInProfileURLLength)
+	got, err := normalizeMyLinkedInProfileURL(tracked)
+	if err != nil || got != "https://www.linkedin.com/in/qa" {
+		t.Fatalf("a long tracking query was refused: got %q, err %v", got, err)
+	}
+}
