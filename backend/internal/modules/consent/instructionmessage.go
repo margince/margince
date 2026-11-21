@@ -28,7 +28,7 @@ type instructionMessage struct {
 }
 
 // All payload fields except wording belong to the frozen scope, even ones this
-// reader does not name. The columns that only time the send stay out.
+// reader does not name. Timing and bookkeeping a fire or a move writes stay out.
 func instructionMessageTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) (instructionMessage, error) {
 	var out instructionMessage
 	var scope []byte
@@ -38,8 +38,8 @@ func instructionMessageTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) (in
 		       coalesce(s.payload->>'html_body', ''), coalesce(s.status, ''),
 		       coalesce(s.held_reason, ''), coalesce(s.scheduled_by, '00000000-0000-0000-0000-000000000000'::uuid),
 		       (to_jsonb(s) - ARRAY['payload','status','held_reason','version','updated_at',
-		         'scheduled_at','scheduled_tz','scheduled_wall','activity_id','delivery_id','created_at']) ||
-		       jsonb_build_object('payload', s.payload - ARRAY['subject','body','html_body'])
+		         'scheduled_at','scheduled_tz','scheduled_wall','rearmed_at','activity_id','delivery_id','created_at']) ||
+		       jsonb_build_object('payload', s.payload - ARRAY['subject','body','html_body','replies_reviewed_at'])
 		  FROM (SELECT 1) clock LEFT JOIN scheduled_send s ON s.id = @intent`,
 		pgx.StrictNamedArgs{"intent": intentID}).Scan(&out.RecordedAt, &out.Known, &out.Version,
 		&out.Subject, &out.Body, &out.HTMLBody, &out.Status, &out.HeldReason, &out.ScheduledBy, &scope)

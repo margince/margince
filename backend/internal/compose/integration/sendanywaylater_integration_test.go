@@ -48,12 +48,7 @@ func TestSendAnywayWithAMomentWaitsAndSpendsTheDecisionAtTheFire(t *testing.T) {
 
 	p.makeDue(t, id)
 	p.fire(t, id)
-	var deliveries int
-	var authority string
-	if err := p.Owner.QueryRow(context.Background(),
-		`SELECT count(*), coalesce(min(execution_authority), '') FROM comms_outbound`).Scan(&deliveries, &authority); err != nil {
-		t.Fatal(err)
-	}
+	deliveries, authority := p.deliveriesUnderAuthority(t)
 	if deliveries != 1 || authority != "instruction" {
 		t.Fatalf("%d deliveries under %q at the moment, want 1 under instruction", deliveries, authority)
 	}
@@ -325,15 +320,82 @@ func TestSendAnywayAtALocalTimeSpendsTheDecisionAtTheFire(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.fire(t, id)
+	deliveries, authority := p.deliveriesUnderAuthority(t)
+	if deliveries != 1 || authority != "instruction" {
+		t.Fatalf("%d deliveries under %q at the local time, want 1 under instruction", deliveries, authority)
+	}
+}
+
+// A decision on a held follow-up outlasts a reply hold the rep then releases.
+// The release notes when the replies were read, and that is not the message.
+func TestSendAnywayLaterOutlastsAReplyTheRepReviewed(t *testing.T) {
+	p := setupPreflight(t)
+	p.activityID = logConsentInbound(t, p.AppEnv, p.contactID)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
+	id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
+	p.withdrawConsent(t)
+	p.makeDue(t, id)
+	p.fire(t, id)
+	review := p.liveReviewFor(t, id)
+	body := confirmationFor(t, p.AppEnv, review)
+	body["scheduled_at"] = momentIn(time.Hour)
+	body["scheduled_tz"] = "UTC"
+	if status := p.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", body, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("Send anyway later on the held follow-up → %d, want 202", status)
+	}
+	arrived := p.scheduledCreation(t, id).Add(time.Microsecond)
+	p.theyWrite(t, inbound{dated: arrived, arrived: arrived, authenticated: true})
+	p.makeDue(t, id)
+	p.fire(t, id)
+	if status, reason := p.scheduledStatus(t, id); status != activities.ScheduledStatusHeld || reason != activities.HeldRecipientReplied {
+		t.Fatalf("after the reply the message reads %q %q, want held because the recipient replied", status, reason)
+	}
+	p.rescheduleTo(t, id, clocktest.Now(t).Add(time.Hour))
+	p.makeDue(t, id)
+	p.fire(t, id)
+	deliveries, authority := p.deliveriesUnderAuthority(t)
+	if deliveries != 1 || authority != "instruction" {
+		t.Fatalf("%d deliveries under %q after the reviewed reply, want 1 under instruction", deliveries, authority)
+	}
+}
+
+// A decided message the recovery pass re-arms still spends its decision. The
+// re-arm stamp is the pass's cursor, not part of the approved message.
+func TestSendAnywayLaterOutlastsARecoveryReArm(t *testing.T) {
+	p, id := heldByAnObjectionAtFire(t)
+	review := p.liveReviewFor(t, id)
+	body := confirmationFor(t, p.AppEnv, review)
+	body["scheduled_at"] = momentIn(time.Hour)
+	body["scheduled_tz"] = "UTC"
+	if status := p.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", body, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("Send anyway later → %d, want 202", status)
+	}
+	// Past the recovery grace and still inside the window a fire sends in.
+	p.setDueAt(t, id, clocktest.Now(t).Add(-40*time.Minute))
+	if err := p.runRecovery(t); err != nil {
+		t.Fatalf("the recovery pass: %v", err)
+	}
+	if n := countRows(t, p, `SELECT count(*) FROM scheduled_send WHERE rearmed_at IS NOT NULL`); n != 1 {
+		t.Fatalf("%d re-armed message(s), want the decided one", n)
+	}
+	p.fire(t, id)
+	deliveries, authority := p.deliveriesUnderAuthority(t)
+	if deliveries != 1 || authority != "instruction" {
+		t.Fatalf("%d deliveries under %q after the re-arm, want 1 under instruction", deliveries, authority)
+	}
+}
+
+// deliveriesUnderAuthority counts the queued deliveries and names the
+// authority they went under.
+func (p *preflightEnv) deliveriesUnderAuthority(t *testing.T) (int, string) {
+	t.Helper()
 	var deliveries int
 	var authority string
 	if err := p.Owner.QueryRow(context.Background(),
 		`SELECT count(*), coalesce(min(execution_authority), '') FROM comms_outbound`).Scan(&deliveries, &authority); err != nil {
 		t.Fatal(err)
 	}
-	if deliveries != 1 || authority != "instruction" {
-		t.Fatalf("%d deliveries under %q at the local time, want 1 under instruction", deliveries, authority)
-	}
+	return deliveries, authority
 }
 
 func countRows(t *testing.T, p *preflightEnv, query string) int {
