@@ -24,16 +24,27 @@ export function useStepAddress(
   routeId: string | undefined,
 ) {
   const seen = useRef({ act: state.act, routeId });
+  // The addresses this hook wrote that the route has not reached yet, in order.
+  const written = useRef<string[]>([]);
   const { navigateReplacing } = useAddressWriters();
   useEffect(() => {
     const prev = seen.current;
     seen.current = { act: state.act, routeId };
+    const arrived = routeId !== prev.routeId;
+    const echo =
+      arrived && routeId !== undefined && written.current.includes(routeId);
+    if (echo) {
+      written.current = written.current.slice(
+        written.current.indexOf(routeId) + 1,
+      );
+    }
     const address = STEP_ADDRESSES[state.act];
     if (address === undefined || routeId === address) {
       return;
     }
     if (
-      routeId !== prev.routeId &&
+      arrived &&
+      !echo &&
       routeId === STEP_ADDRESSES.voice &&
       isLegal(state, { type: "CONNECT_BACK" })
     ) {
@@ -41,6 +52,7 @@ export function useStepAddress(
       return;
     }
     const next = { screen: "onboarding", id: address } as const;
+    written.current = [...written.current, address];
     // Only a step forward is a history entry, so Back has one to return to;
     // any other disagreement is corrected in place.
     if (prev.act === "voice" && state.act === "connect") {
