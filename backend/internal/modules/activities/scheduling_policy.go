@@ -45,7 +45,7 @@ func (s *Store) calendarBusy(ctx context.Context, host ids.UserID, p crmcontract
 // by their buffer. skip leaves out the one event a move must not count.
 func (s *Store) providerBusy(ctx context.Context, host ids.UserID, p crmcontracts.SchedulingProfile, from, to time.Time, skip func(calendar string, interval connector.CalendarInterval) bool) ([]slot, error) {
 	if s.calendar == nil {
-		return nil, errCalendarNotConnected()
+		return nil, apperrors.ErrPermissionDenied
 	}
 	calendars := []string{p.CalendarId}
 	if p.BlockingCalendars != nil {
@@ -135,15 +135,31 @@ func mayReadLiveCalendar(ctx context.Context, host ids.UserID) error {
 	return nil
 }
 
+// calendarReadable asks calendarBlocker, the one readiness decision, and says
+// the answer as a refusal: the host connects a calendar, or the installation
+// has no calendar service and only an operator can fix that.
+func (s *Store) calendarReadable(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) error {
+	blocker, err := s.calendarBlocker(ctx, host, profile)
+	if err != nil {
+		return err
+	}
+	switch {
+	case blocker == crmcontracts.SchedulingProfileBlockerNoCalendar:
+		return errCalendarNotConnected()
+	case blocker != crmcontracts.SchedulingProfileBlockerCalendarUnavailable:
+		return nil
+	case s.calendar == nil:
+		return connector.NewCalendarUnavailable("", "no_service", nil)
+	}
+	return errCalendarNotConnected()
+}
+
 func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration, team []teamCalendar) ([]slot, bool, error) {
 	profile, err := s.hostSchedulingProfile(ctx, host)
 	if err != nil {
 		return nil, false, err
 	}
-	if profile.Provider == "" || s.calendar == nil {
-		return nil, false, errCalendarNotConnected()
-	}
-	if err := unconnectedAsRefusal(s.calendar.Check(ctx, host, string(profile.Provider))); err != nil {
+	if err := s.calendarReadable(ctx, host, profile); err != nil {
 		return nil, false, err
 	}
 	if duration <= 0 {
@@ -259,7 +275,7 @@ func (s *Store) validatePolicyTime(ctx context.Context, host ids.UserID, profile
 		return &SchedulingArgumentError{Field: fieldStart, Code: codeOutsideAvailability, Message: "Choose a future time within the host's bookable hours and notice period"}
 	}
 	if s.calendar == nil {
-		return errCalendarNotConnected()
+		return apperrors.ErrPermissionDenied
 	}
 	return unconnectedAsRefusal(s.calendar.Check(ctx, host, string(profile.Provider)))
 }
