@@ -3,12 +3,9 @@
 
 package compose
 
-// The request-time send pre-flight, over the SAME capture registry the connect
-// flows write to (telegram-oa design §8.1). It sits apart from the transmit lane
-// in commsjobs.go because it answers a different question at a different moment:
-// not "which credential carries this delivery", but "is there a credential at
-// all", asked while the contact who can do something about the answer is still on
-// the screen.
+// The request-time send pre-flight reads the capture registry the connect flows
+// write to. It sits apart from the transmit lane in commsjobs.go. It asks whether
+// any credential exists while the user who can fix it is still on screen.
 //
 // Which table holds that credential is the whole subtlety, and it is why this is
 // one type with one branch rather than two authorities: a mailbox is one human's
@@ -139,11 +136,10 @@ func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, an
 			configured, err := m.mailAppConfigured(ctx, mailbox.Provider)
 			return configured && slices.Contains(mailbox.ProviderScopes, scope), err
 		})
-	switch {
-	case errors.Is(err, capture.ErrNoConnection):
+	if errors.Is(err, capture.ErrNoConnection) {
 		return "", ids.Nil, &activities.MailboxNotConnectedError{}
-	case err != nil:
-		// A lookup fault names no mailbox, even one it reached before failing.
+	}
+	if err != nil {
 		return "", ids.Nil, err
 	}
 	return chosen.Provider, chosen.ID, nil

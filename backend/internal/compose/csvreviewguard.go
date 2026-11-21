@@ -165,7 +165,7 @@ func (w *csvWriters) reviewSource(ctx context.Context, row migration.Row) error 
 		if err != nil {
 			return err
 		}
-		if outcome != predictUnwritable && outcome != predictHeldKey && outcome != predictCollidesSkipped {
+		if outcome != predictUnwritable && outcome != predictCollidesSkipped {
 			return apperrors.ErrVersionSkew
 		}
 	}

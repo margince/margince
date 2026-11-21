@@ -48261,7 +48261,8 @@ export interface components {
             columns: string[];
             /**
              * @description Up to `limit` matching rows as column→value maps, ordered by id,
-             *     after the request's `cursor` when it names one.
+             *     after the request's `cursor` when it names one. A date column is
+             *     its calendar day (`2026-12-01`); a timestamp is an RFC 3339 instant.
              *     Deliberately the export's projection rather than a shape invented for
              *     this screen: a preview that showed different columns than the export
              *     of the same filter would be a preview of something else.
