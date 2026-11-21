@@ -129,7 +129,9 @@ def _codex_result_text(entry):
     text = "\n".join(
         block.get("text", "") for block in result.get("content") or () if block.get("type") == "text"
     )
-    return text, bool(result.get("isError"))
+    # codex drops the server's isError and marks the item failed instead,
+    # keeping the result, so a refused call reads as one only by its status.
+    return text, bool(result.get("isError")) or entry.get("status") == "failed"
 
 
 def _codex_item(out, entry):

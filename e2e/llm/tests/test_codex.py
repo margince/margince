@@ -130,6 +130,20 @@ class FromCodexTest(unittest.TestCase):
         self.assertIn("permission denied", raw)
 
 
+    def test_a_call_the_server_refused_is_an_error_though_codex_drops_is_error(self):
+        # codex 0.171 for a tools/call answered with isError: true.
+        lines = sample()
+        lines.insert(2, json.dumps({"type": "item.completed", "item": {
+            "id": "item_7", "type": "mcp_tool_call", "server": transcript.SERVER, "tool": "list_pipelines",
+            "arguments": {}, "result": {"content": [{"type": "text", "text": "refused: not allowed"}],
+                                        "structured_content": None},
+            "error": None, "status": "failed"}}))
+        _code, out, _raw = convert(lines)
+        self.assertEqual(check.read_effort(out)["refused"], 1)
+        run = check.read_run(out)
+        self.assertEqual([name.rsplit("__", 1)[-1] for name, _args in run.refused], ["list_pipelines"])
+        self.assertEqual(len(run.worked), 1)
+
 
 class CodexArgumentsTest(unittest.TestCase):
     def test_arguments_codex_sends_as_an_object_are_read(self):
