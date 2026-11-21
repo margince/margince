@@ -118,64 +118,122 @@ func lockThenEnsureWritable(ctx context.Context, tx pgx.Tx, id ids.DealID) error
 	return auth.EnsureWritable(ctx, tx, dealTable, id.UUID)
 }
 
-// updateDealInTx is UpdateDeal's transactional body, shared by the
-// store-opened (UpdateDeal) and caller-opened (UpdateDealTx) entry points.
+// updateDealInTx is the body UpdateDeal and UpdateDealTx share. It writes, then
+// reads the deal as this caller may read it.
 func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	id ids.DealID, in UpdateDealInput, active []fieldcatalog.Column,
 ) (crmcontracts.Deal, error) {
-	if err := lockThenEnsureWritable(ctx, tx, id); err != nil {
-		return crmcontracts.Deal{}, err
-	}
-	// current reads WITH active columns so the patch's audit before-image
-	// carries the honest pre-update cf values.
-	current, err := readDeal(ctx, tx, id, storekit.LiveOnly, active)
-	if err != nil {
-		return crmcontracts.Deal{}, fmt.Errorf("read deal before update: %w", err)
-	}
-
-	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
-	p, err := s.dealUpdatePatch(ctx, tx, current, in)
+	written, err := s.lockAndWriteDealInTx(ctx, tx, id, in, active)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	// A stale version answers 409 before a refused custom field answers 422.
-	if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
-		return crmcontracts.Deal{}, err
-	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
-		return crmcontracts.Deal{}, err
-	}
-	if p.Empty() {
-		if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
-			return crmcontracts.Deal{}, err
-		}
+	if !written.changed {
 		// Nothing changed, but the echo is still a read: `current` came from
-		// the unmasked readDeal above, which the before-image needs and the
-		// caller must not have.
-		return finishDealForCaller(ctx, tx, current)
-	}
-
-	if err := s.applyMoneyInvariants(ctx, tx, current, in, p); err != nil {
-		return crmcontracts.Deal{}, err
-	}
-
-	if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
-		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameCompanyConstraint {
-			return crmcontracts.Deal{}, &DealProjectCompanyMismatchError{}
-		}
-		return crmcontracts.Deal{}, fmt.Errorf("apply deal patch: %w", err)
-	}
-	if err := recordDealUpdate(ctx, tx, id, current, in, p); err != nil {
-		return crmcontracts.Deal{}, err
-	}
-	if err := s.followPatchedOwner(ctx, tx, id, current, in, p); err != nil {
-		return crmcontracts.Deal{}, err
+		// the unmasked readDeal, which the before-image needs and the caller
+		// must not have.
+		return finishDealForCaller(ctx, tx, written.current)
 	}
 	out, err := readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("read updated deal: %w", err)
 	}
 	return out, nil
+}
+
+// ApplyDealUpdate is UpdateDeal for a caller that does not read the deal back,
+// so it costs no read for the caller.
+func (s *Store) ApplyDealUpdate(ctx context.Context, id ids.DealID, in UpdateDealInput) error {
+	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
+		return err
+	}
+	return s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
+		_, err = s.lockAndWriteDealInTx(ctx, tx, id, in, active)
+		return err
+	})
+}
+
+// ApplyDealUpdateTx is UpdateDealTx for a caller that does not read the deal back.
+func (s *Store) ApplyDealUpdateTx(ctx context.Context, tx pgx.Tx, id ids.DealID, in UpdateDealInput, active CustomColumns) error {
+	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
+		return err
+	}
+	_, err := s.lockAndWriteDealInTx(ctx, tx, id, in, active.cols)
+	return err
+}
+
+// dealUpdated is what one update did: the row as it stood before it, and
+// whether the update changed anything.
+type dealUpdated struct {
+	current crmcontracts.Deal
+	changed bool
+}
+
+func (s *Store) lockAndWriteDealInTx(ctx context.Context, tx pgx.Tx,
+	id ids.DealID, in UpdateDealInput, active []fieldcatalog.Column,
+) (dealUpdated, error) {
+	lock, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly)
+	if err != nil {
+		return dealUpdated{}, err
+	}
+	return s.writeDealInTx(ctx, tx, lock, in, active)
+}
+
+// writeDealInTx is the update itself on a deal row this transaction holds
+// locked. It runs the write check, the patch, the audit row and event, and the
+// hand-on of pending proposals. The write check runs after the lock, so a
+// reassignment that commits between the two cannot let the former owner write.
+func (s *Store) writeDealInTx(ctx context.Context, tx pgx.Tx,
+	lock storekit.RowLock, in UpdateDealInput, active []fieldcatalog.Column,
+) (dealUpdated, error) {
+	id := ids.From[ids.DealKind](lock.ID())
+	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+		return dealUpdated{}, err
+	}
+	// current reads WITH active columns so the patch's audit before-image
+	// carries the honest pre-update cf values.
+	current, err := readDeal(ctx, tx, id, storekit.LiveOnly, active)
+	if err != nil {
+		return dealUpdated{}, fmt.Errorf("read deal before update: %w", err)
+	}
+
+	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
+	p, err := s.dealUpdatePatch(ctx, tx, current, in)
+	if err != nil {
+		return dealUpdated{}, err
+	}
+	// A stale version answers 409 before a refused custom field answers 422,
+	// and an update that changes nothing still answers it.
+	if err := storekit.EnsureVersionMatches(current.Version, in.IfVersion); err != nil {
+		return dealUpdated{}, err
+	}
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return dealUpdated{}, err
+	}
+	if p.Empty() {
+		return dealUpdated{current: current}, nil
+	}
+
+	if err := s.applyMoneyInvariants(ctx, tx, current, in, p); err != nil {
+		return dealUpdated{}, err
+	}
+
+	if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
+		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameCompanyConstraint {
+			return dealUpdated{}, &DealProjectCompanyMismatchError{}
+		}
+		return dealUpdated{}, fmt.Errorf("apply deal patch: %w", err)
+	}
+	if err := recordDealUpdate(ctx, tx, id, current, in, p); err != nil {
+		return dealUpdated{}, err
+	}
+	if err := s.followPatchedOwner(ctx, tx, id, current, in, p); err != nil {
+		return dealUpdated{}, err
+	}
+	return dealUpdated{current: current, changed: true}, nil
 }
 
 // followPatchedOwner hands the pending proposals on when this update set or

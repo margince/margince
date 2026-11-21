@@ -93,14 +93,34 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 	return out, s.AskHolderToShare(ctx, err)
 }
 
-// updateContactInTx is the edit itself, on the caller's transaction: the write
-// check, the patch, the child rows it replaces, and the record of what it did.
-//
-//nolint:cyclop // one edit applies each optional field in turn; splitting it would scatter the single write it records.
+// updateContactInTx is the edit on the caller's transaction, then the contact
+// as it now stands.
 func (s *Store) updateContactInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
-	var out crmcontracts.Contact
+	edit, err := s.writeContactInTx(ctx, tx, id, in, active)
+	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	if !edit.changed {
+		return withContactCreator(ctx, tx, edit.current)
+	}
+	out, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
+	if err != nil {
+		return out, fmt.Errorf("read updated contact: %w", err)
+	}
+	return out, nil
+}
+
+// writeContactInTx is the edit itself, on the caller's transaction. It runs the
+// write check and the patch, replaces the child rows and records what it did.
+// It reads nothing back for a caller.
+//
+//nolint:cyclop // one edit applies each optional field in turn; splitting it would scatter the single write it records.
+func (s *Store) writeContactInTx(
+	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
+) (recordEdit[crmcontracts.Contact], error) {
+	var out recordEdit[crmcontracts.Contact]
 	if err := auth.EnsureChangeable(ctx, tx, "contact", id.UUID); err != nil {
 		return out, err
 	}
@@ -131,7 +151,7 @@ func (s *Store) updateContactInTx(
 	// The If-Match check comes first. The replace-sets write child rows before the
 	// guarded write could refuse a stale version. A stale version also answers 409
 	// before a refused custom field answers 422.
-	if err := storekit.EnsureIfMatch(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
+	if err := storekit.EnsureVersionMatches(current.Version, in.IfVersion); err != nil {
 		return out, err
 	}
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
@@ -153,7 +173,7 @@ func (s *Store) updateContactInTx(
 		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 	}
 	if p.Empty() {
-		return withContactCreator(ctx, tx, current)
+		return recordEdit[crmcontracts.Contact]{current: current}, nil
 	}
 
 	if err := guardVisibilityWrite(ctx, tx, p, id, current, in.Visibility); err != nil {
@@ -182,10 +202,9 @@ func (s *Store) updateContactInTx(
 	if err := s.convertEditedLeads(ctx, tx, id, in.converting); err != nil {
 		return out, err
 	}
-	if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
-		return out, fmt.Errorf("read updated contact: %w", err)
-	}
-	return out, s.followShareOwnerTx(ctx, tx, entityContact, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
+	owner := ownerAfterEdit(p, (*ids.UUID)(current.OwnerId), in.OwnerID)
+	return recordEdit[crmcontracts.Contact]{current: current, changed: true},
+		s.followShareOwnerTx(ctx, tx, entityContact, id.UUID, (*ids.UUID)(current.OwnerId), owner)
 }
 
 // recordContactUpdate writes the audit row and the contact.updated event of

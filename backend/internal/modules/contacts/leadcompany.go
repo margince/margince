@@ -183,7 +183,7 @@ func (s *Store) carryLeadIndustry(ctx context.Context, tx pgx.Tx, company *ids.C
 	if err != nil || code == nil {
 		return err
 	}
-	_, err = s.updateCompanyInTx(ctx, tx, *company, UpdateCompanyInput{Industry: code}, nil)
+	_, err = s.writeCompanyInTx(ctx, tx, *company, UpdateCompanyInput{Industry: code}, nil)
 	return err
 }
 

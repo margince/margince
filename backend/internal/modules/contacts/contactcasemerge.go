@@ -91,7 +91,7 @@ func (s *Store) handOverSurvivor(ctx context.Context, tx pgx.Tx, plan caseMergeP
 		return err
 	}
 	owner := ids.From[ids.UserKind](plan.owner)
-	if _, err := s.updateContactInTx(ctx, tx, plan.survivorID(), UpdateContactInput{OwnerID: &owner}, active); err != nil {
+	if _, err := s.writeContactInTx(ctx, tx, plan.survivorID(), UpdateContactInput{OwnerID: &owner}, active); err != nil {
 		return fmt.Errorf("contacts: handing the survivor to its owner: %w", err)
 	}
 	carry, err := s.carryOwnerAccessTx(ctx, tx, plan.survivorID(), &plan.owner, previous, ids.Nil)

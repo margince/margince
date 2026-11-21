@@ -124,60 +124,77 @@ func (s *Store) ReplaceUnitCompanyTypesTx(
 	return s.updateCompanyInTx(ctx, tx, id, UpdateCompanyInput{ExtensionRelationshipTypes: &desired}, active.cols)
 }
 
-// updateCompanyInTx is the edit itself: the locks it owes, the patch it
-// stages, the write, and the record of what the write did. It answers with the
-// row as it now stands.
+// updateCompanyInTx is the edit, then the company as it now stands.
 func (s *Store) updateCompanyInTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
-	if err := auth.EnsureChangeable(ctx, tx, "company", id.UUID); err != nil {
+	edit, err := s.writeCompanyInTx(ctx, tx, id, in, active)
+	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if !edit.changed {
+		return withCompanyCreator(ctx, tx, edit.current)
+	}
+	out, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)
+	if err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("read updated company: %w", err)
+	}
+	return out, nil
+}
+
+// writeCompanyInTx is the edit itself: the locks it owes, the patch it stages,
+// the write, and the record of what the write did. It reads nothing back for a
+// caller.
+func (s *Store) writeCompanyInTx(
+	ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, active []fieldcatalog.Column,
+) (recordEdit[crmcontracts.Company], error) {
+	var none recordEdit[crmcontracts.Company]
+	if err := auth.EnsureChangeable(ctx, tx, "company", id.UUID); err != nil {
+		return none, err
+	}
 	if err := lockCompanyNameWritesForEdit(ctx, tx, in); err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 	current, err := readCompanyRow(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
-		return crmcontracts.Company{}, fmt.Errorf("read company before update: %w", err)
+		return none, fmt.Errorf("read company before update: %w", err)
 	}
 	if err := refuseUnreadableCompany(current, in); err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 	if err := checkCompanyEditText(ctx, current, in); err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, err := buildCompanyPatch(ctx, tx, current, in)
 	if err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
-	// A stale version answers 409 before a refused custom field answers 422.
-	if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
-		return crmcontracts.Company{}, err
+	// A stale version answers 409 before a refused custom field answers 422,
+	// and an edit that changes nothing still answers it.
+	if err := storekit.EnsureVersionMatches(current.Version, in.IfVersion); err != nil {
+		return none, err
 	}
 	if err := stageAdoptedSource(ctx, tx, id, p, in.AdoptSource); err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 
 	by, err := s.stageCompanyReplaceSets(ctx, tx, id, current, in, p)
 	if err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 	if p.Empty() {
-		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
-			return crmcontracts.Company{}, err
-		}
-		return withCompanyCreator(ctx, tx, current)
+		return recordEdit[crmcontracts.Company]{current: current}, nil
 	}
 	if in.Visibility != nil {
 		if err := refuseStaleCompanyVisibility(ctx, tx, id, current); err != nil {
-			return crmcontracts.Company{}, err
+			return none, err
 		}
 	}
 	// MOVED, not merely set. Re-sending the same name is not a re-authoring.
@@ -189,32 +206,30 @@ func (s *Store) updateCompanyInTx(
 	}
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
-			return crmcontracts.Company{}, &RequiredFieldError{Field: filterOwnerID}
+			return none, &RequiredFieldError{Field: filterOwnerID}
 		}
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
-			return crmcontracts.Company{}, &DuplicateCompanyLinkedInError{URL: deref(in.LinkedInURL)}
+			return none, &DuplicateCompanyLinkedInError{URL: deref(in.LinkedInURL)}
 		}
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companySourceKey {
-			return crmcontracts.Company{}, fmt.Errorf("a company with this source_system and source_id already exists: %w", apperrors.ErrConflict)
+			return none, fmt.Errorf("a company with this source_system and source_id already exists: %w", apperrors.ErrConflict)
 		}
-		return crmcontracts.Company{}, fmt.Errorf("apply company patch: %w", err)
+		return none, fmt.Errorf("apply company patch: %w", err)
 	}
 	if err := s.relocateIfAddressMoved(ctx, tx, id, p); err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 	if err := recordCompanyUpdate(ctx, tx, id, p, in, by); err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 	if _, renamed := p.Moved()[fieldDisplayName]; renamed {
 		if err := s.followAnchorNameTx(ctx, tx, id); err != nil {
-			return crmcontracts.Company{}, err
+			return none, err
 		}
 	}
-	out, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)
-	if err != nil {
-		return crmcontracts.Company{}, fmt.Errorf("read updated company: %w", err)
-	}
-	return out, s.followShareOwnerTx(ctx, tx, entityCompany, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
+	owner := ownerAfterEdit(p, (*ids.UUID)(current.OwnerId), in.OwnerID)
+	return recordEdit[crmcontracts.Company]{current: current, changed: true},
+		s.followShareOwnerTx(ctx, tx, entityCompany, id.UUID, (*ids.UUID)(current.OwnerId), owner)
 }
 
 // recordCompanyUpdate is everything the write OWES once it has landed: the

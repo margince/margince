@@ -130,7 +130,7 @@ func (s *Store) renameKeyNamedDealTx(ctx context.Context, tx pgx.Tx, entry KeyNa
 		result.Outcome = KeyNameWouldRename
 		return result, nil
 	}
-	_, err = s.updateDealInTx(ctx, tx, match.id, UpdateDealInput{
+	_, err = s.lockAndWriteDealInTx(ctx, tx, match.id, UpdateDealInput{
 		Name:  &to,
 		Trail: storekit.AuditTrail{Evidence: map[string]any{"repair": "imported_key_name", "source_key": entry.SourceKey}},
 	}, active)

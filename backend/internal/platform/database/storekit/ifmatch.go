@@ -55,3 +55,16 @@ func EnsureIfMatchIn(
 	}
 	return nil
 }
+
+// EnsureVersionMatches is EnsureIfMatch against the version of a row the caller
+// has just read in this transaction, so it costs no statement. A nil current
+// version is a row read without one, which no If-Match can match.
+func EnsureVersionMatches(current, ifVersion *int64) error {
+	if ifVersion == nil {
+		return nil
+	}
+	if current == nil || *current != *ifVersion {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
+}

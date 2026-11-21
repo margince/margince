@@ -80,7 +80,7 @@ func (s *Store) FillBookerGaps(ctx context.Context, contact ids.UUID, host ids.U
 			if err != nil {
 				return err
 			}
-			if _, err := s.UpdateContactTx(ctx, tx, id, UpdateContactInput{OwnerID: &host, Source: source}, CustomColumns{cols: cols}); err != nil {
+			if _, err := s.writeContactInTx(ctx, tx, id, UpdateContactInput{OwnerID: &host, Source: source}, cols); err != nil {
 				return err
 			}
 			owner = &host.UUID
