@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -114,7 +115,7 @@ func TestATaskTheReaderCannotSeeLeavesNoPromiseOwed(t *testing.T) {
 		t.Fatalf("the rep reads the task (%v), so the fixture does not hide it", err)
 	}
 
-	page, err := taskOpenService(e, time.Now()).Assemble(rep, contact)
+	page, err := taskOpenService(e, clocktest.Now(t)).Assemble(rep, contact)
 	if err != nil {
 		t.Fatalf("assembling the rep's page: %v", err)
 	}

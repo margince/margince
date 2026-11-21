@@ -24,7 +24,9 @@ When you write with the contact yourself, the tab names you **You**: in the top 
 ### What does Reach on the Overview count?
 **Reach** on a contact's **How it stands** card counts the colleagues in touch with them. In touch means both sides wrote in the last 90 days, and the line under it names them.
 
-A colleague who sent the contact a message with no reply follows, after "also wrote". With no colleague in touch, **Reach** reads "No two-way contact" and names who wrote. A colleague who was only copied on a mail is not named. **Your commitments** on the same card counts open tasks filed for the contact, and promises from conversations that no task holds yet. A promise whose task is still open counts once, even when the contact has more open tasks than the page shows. A promise whose task is done counts no more. When colleagues filed more tasks than the page shows, the count says "at least", as in "25+ open". A reminder Margince set itself is not counted.
+A colleague who sent the contact a message with no reply follows, after "also wrote". With no colleague in touch, **Reach** reads "No two-way contact" and names who wrote. A colleague who was only copied on a mail is not named.
+
+**Your commitments** on the same card counts open tasks filed for the contact, and promises from conversations that no task holds yet. A promise whose task is still open counts once, even when the contact has more open tasks than the page shows. A promise whose task is done counts no more. When colleagues filed more tasks than the page shows, the count says "at least", as in "25+ open". A reminder Margince set itself is not counted.
 
 ### How strength is worked out
 Relationship strength in Margince comes from one rule, worked out from captured interactions, such as mail and meetings, **each time you look**:
