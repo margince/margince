@@ -17,8 +17,8 @@ const FREE: SendHold = { blocks: false, withReason: false };
 
 /**
  * The hold on Send when the send itself is the check. Nothing is asked while
- * the rep writes, so only a refusal no press can lift holds it: an older
- * server's footer refusal, or no mailbox to send from.
+ * the rep writes. Only a refusal no press can lift holds it, such as an older
+ * server's footer refusal or no mailbox to send from.
  */
 export function inlineSendHold(unliftable: boolean): SendHold {
   return unliftable ? { blocks: true, withReason: false } : FREE;
