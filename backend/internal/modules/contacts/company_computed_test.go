@@ -111,18 +111,17 @@ func TestCompanyComputedFields_NothingCouldBePriced_AwaitingFX(t *testing.T) {
 // confident figure on the page covering part of the account, with nothing to
 // say which part, and a reader has no way to know it is short. That is worse
 // than the "not computable" this replaces, so it floors instead.
-func TestCompanyComputedFields_SomeDealsPriced_RefusesTheShortTotal(t *testing.T) {
+func TestCompanyComputedFields_SomeDealsPriced_StatesTheShortTotalAsPartial(t *testing.T) {
 	sum := int64(10_000)
-	rows := companyComputedFields(openPipeline{minorBase: &sum, dealCount: 2, pricedCount: 1})
+	currencies := "JPY"
+	rows := companyComputedFields(openPipeline{minorBase: &sum, dealCount: 3, pricedCount: 1, noValue: 1, noRate: 1, noRateCurrencies: &currencies})
 	open := rows[0]
-	if open.Computable {
-		t.Fatalf("a total covering 1 of 2 open deals was reported as computable: %+v", open)
+	if !open.Computable || open.ValueMinor == nil || *open.ValueMinor != 10_000 {
+		t.Fatalf("a total covering 1 of 3 open deals = %+v, want the 10000 that converts", open)
 	}
-	if open.Reason == nil || *open.Reason != partialPipelineReason {
-		t.Fatalf("open_pipeline.reason = %v, want %q", open.Reason, partialPipelineReason)
-	}
-	if open.ValueMinor != nil {
-		t.Fatalf("open_pipeline.value_minor = %v, want nil — a short sum must not be shown as the total", open.ValueMinor)
+	c := open.Coverage
+	if c == nil || !c.Partial || c.NoValueDeals != 1 || c.NoRateDeals != 1 || len(c.MissingCurrencies) != 1 || c.MissingCurrencies[0] != "JPY" {
+		t.Fatalf("coverage = %+v, want partial with one deal with no amount and one with no rate in JPY", c)
 	}
 }
 
@@ -137,5 +136,15 @@ func TestCompanyComputedFields_EveryDealPriced_ReportsTheTotal(t *testing.T) {
 	}
 	if open.ValueMinor == nil || *open.ValueMinor != sum {
 		t.Fatalf("open_pipeline.value_minor = %v, want %d", open.ValueMinor, sum)
+	}
+}
+
+// A reader whose deal amount is masked gets no total: the sum would add what
+// the mask hides. The deal count stays, since the field carries no money.
+func TestCompanyComputedFields_AMaskedReaderGetsNoTotal(t *testing.T) {
+	sum := int64(10_000)
+	open := companyComputedFields(openPipeline{minorBase: &sum, dealCount: 2, pricedCount: 2, withheld: true})[0]
+	if open.Computable || open.ValueMinor != nil || open.Reason == nil || *open.Reason != amountWithheldReason {
+		t.Fatalf("open_pipeline for a masked reader = %+v, want no total and the withheld reason", open)
 	}
 }

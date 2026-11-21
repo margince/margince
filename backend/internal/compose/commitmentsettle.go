@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // commitmentSettleActor names this consumer on the audit rows it writes.
@@ -170,17 +171,14 @@ func (t *CommitmentSettleTrigger) actingAs(ctx context.Context, by events.Actor)
 	if !ok {
 		return ctx, by.Type == string(principal.PrincipalSystem), nil
 	}
-	rbac, seatType, err := t.identity.EffectiveAuthority(ctx, ws.UUID, seat)
+	member, err := authz.MemberPrincipal(ctx, t.identity, ws.UUID, seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, fmt.Errorf("commitment settle: resolving who caused the change: %w", err)
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + seat.String(), UserID: seat,
-		SeatType: seatType, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions,
-	}), true, nil
+	return principal.WithActor(ctx, member), true, nil
 }
 
 // refused reports an answer that means "not theirs to do": the write is

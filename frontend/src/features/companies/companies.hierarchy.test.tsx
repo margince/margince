@@ -123,6 +123,36 @@ describe("HierarchyRollupPanel periods", () => {
   });
 });
 
+describe("HierarchyRollupPanel partial won figure", () => {
+  it("marks the won figure partial and names the deals it leaves out", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) =>
+        jsonResponse(
+          new URL(request.url).pathname.endsWith("/hierarchy-rollup")
+            ? {
+                ...answerFor(new URL(request.url).searchParams),
+                closed_won_coverage: {
+                  aggregates: ["closed_won"],
+                  partial: true,
+                  no_value_deals: 1,
+                  no_rate_deals: 2,
+                  missing_currencies: ["JPY"],
+                },
+              }
+            : {},
+        ),
+      ),
+    );
+    renderWithQueryClient(<HierarchyRollupPanel companyId="o-1" />);
+
+    await waitFor(() => expect(screen.getByText("Partial")).toBeTruthy());
+    expect(
+      screen.getByText("2 deals have no exchange rate (JPY)"),
+    ).toBeTruthy();
+  });
+});
+
 describe("HierarchyRollupPanel while a new grain loads", () => {
   it("holds the arrows until the answer for the picked grain arrives", async () => {
     let release: () => void = () => {};

@@ -33226,7 +33226,10 @@ type AccountCoverageRow struct {
 	// NamedSeats Contacts named on the deal, engaged or not.
 	NamedSeats *int `json:"named_seats,omitempty"`
 
-	// OpenAmountMinor Their amounts, in the installation currency, when every one carries a rate.
+	// OpenAmountCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	OpenAmountCoverage *ReportRowCoverage `json:"open_amount_coverage,omitempty"`
+
+	// OpenAmountMinor Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`.
 	OpenAmountMinor *int64 `json:"open_amount_minor,omitempty"`
 
 	// OpenDeals Open deals on the account, for an untouched row.
@@ -43292,9 +43295,9 @@ type CompanyGrowthFit struct {
 //
 // `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
 // weighted by its stage's win probability, and never a past period's pipeline.
-// `closed_won` is the deals won in `closed_won_period`; a null amount means at least
-// one of them has no base value on file, so the total is incomplete rather than
-// smaller. `activity_count_30d` counts the activities that reached a counted account
+// `closed_won` is the deals won in `closed_won_period` that have a base value on file.
+// `closed_won_coverage` counts the others by cause, for the deals this reader may read, and
+// its `partial` flag is true when any deal is left out. A null amount means none converts. `activity_count_30d` counts the activities that reached a counted account
 // in `activity_window`, the 30 days before the read, which no period parameter moves.
 type CompanyHierarchyRollup struct {
 	ActivityCount30d int             `json:"activity_count_30d"`
@@ -43305,6 +43308,9 @@ type CompanyHierarchyRollup struct {
 
 	// ClosedWon Money as integer minor-units + ISO-4217 currency. Never a float.
 	ClosedWon Money `json:"closed_won"`
+
+	// ClosedWonCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	ClosedWonCoverage *ReportRowCoverage `json:"closed_won_coverage,omitempty"`
 
 	// ClosedWonPeriod The period `closed_won` sums: one bucket of the period reports, cut in the
 	// installation's reporting zone and fiscal calendar. A period still under way holds
@@ -44082,8 +44088,11 @@ type ComposedExtensionRoute struct {
 // `reason` is the honest floor for a field with no backend data model yet — the row is
 // still returned, never omitted or fabricated.
 type ComputedField struct {
-	Computable   bool     `json:"computable"`
-	Dependencies []string `json:"dependencies"`
+	Computable bool `json:"computable"`
+
+	// Coverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	Coverage     *ReportRowCoverage `json:"coverage,omitempty"`
+	Dependencies []string           `json:"dependencies"`
 
 	// FormulaSql The literal GENERATED-column/view SQL definition; empty string when computable=false.
 	FormulaSql string            `json:"formula_sql"`
@@ -44091,7 +44100,7 @@ type ComputedField struct {
 	Kind       ComputedFieldKind `json:"kind"`
 	Label      string            `json:"label"`
 
-	// Reason Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx".
+	// Reason Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx", "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked.
 	Reason *string `json:"reason,omitempty"`
 
 	// Value Present (and non-null) only when kind is count/duration_months/percent and computable=true.
@@ -52616,6 +52625,9 @@ type ForecastSufficiency struct {
 
 	// Basis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
 	Basis *ForecastSufficiencyBasis `json:"basis,omitempty"`
+
+	// ComparableUnpriced For each comparable period behind a historical median, newest first, the won deals its total leaves out for want of an amount or an exchange rate.
+	ComparableUnpriced *[]int `json:"comparable_unpriced,omitempty"`
 
 	// CoverageBp Current over needed in BASIS POINTS, so the server chooses no rounding for the client. Nothing needed is 10000 (full) rather than a division by zero or an unbounded ratio, because "covered" is actionable and "infinity" is not.
 	CoverageBp       *int64 `json:"coverage_bp,omitempty"`
@@ -63703,6 +63715,24 @@ type ReportResult struct {
 	TotalRows *int `json:"total_rows,omitempty"`
 }
 
+// ReportRowCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+type ReportRowCoverage struct {
+	// Aggregates The aliases of the row's partial sums, which this coverage qualifies.
+	Aggregates []string `json:"aggregates"`
+
+	// MissingCurrencies The currencies with no exchange rate, from the same statement as the sums.
+	MissingCurrencies []string `json:"missing_currencies"`
+
+	// NoRateDeals Deals in the group with an amount whose currency has no exchange rate as of the answer's date.
+	NoRateDeals int `json:"no_rate_deals"`
+
+	// NoValueDeals Deals in the group with no amount.
+	NoValueDeals int `json:"no_value_deals"`
+
+	// Partial True when at least one deal is left out of those sums.
+	Partial bool `json:"partial"`
+}
+
 // ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
 type ReportRun struct {
 	// Answer The question re-asked under the reading caller's authority. NOT the rows the asker saw: those were narrowed for them.
@@ -69343,8 +69373,11 @@ type TeamMarginceChangeGroup struct {
 	// before Margince kept the amount it was valued from.
 	Unvalued int `json:"unvalued"`
 
-	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
 	ValueBaseMinor int64 `json:"value_base_minor"`
+
+	// ValueCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	ValueCoverage *ReportRowCoverage `json:"value_coverage,omitempty"`
 
 	// ValueMovedBaseMinor How much value these changes moved, in the base currency's minor units. Each deal's
 	// changes of this kind net out first and the group adds the size of each net move.
@@ -69648,10 +69681,14 @@ type TeamWeeklyReview struct {
 	// from age out under retention.
 	Outlook *[]WeeklyReviewOutlook `json:"outlook,omitempty"`
 
-	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
-	// be converted — summing only the ones that did would be a confident number quietly
-	// missing a rep.
+	// Pipeline What the team's week did to the pipeline: the members' figures added together. ABSENT when
+	// a member's week is unread or has a figure no deal converts into, or members differ in
+	// currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+	// review was frozen before it said what it leaves out.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// PipelineCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	PipelineCoverage *ReportRowCoverage `json:"pipeline_coverage,omitempty"`
 
 	// Quality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
 	// snapshot frozen before it was measured, which is not zero.
@@ -72998,12 +73035,16 @@ type WeeklyReview struct {
 	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
 	// applied when the review was written.
 	//
-	// ABSENT when the week held a deal that could not be converted — an open deal freezes no
-	// rate, so a currency with no usable rate makes the whole figure unanswerable. A total
-	// covering three of four deals would be a confident number that is quietly short, and
-	// nothing is ever converted at an invented rate of 1. Absent is also the answer when the
-	// installation names no base currency.
+	// Each figure adds the deals that convert. ABSENT when no deal of one of the three figures
+	// converts, or when the installation names no base currency. Nothing is ever converted at an
+	// invented rate of 1.
+	//
+	// `pipeline_coverage` says how many deals the figures leave out, by cause, and which
+	// currencies have no rate. It is absent for a review frozen before it said so.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// PipelineCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	PipelineCoverage *ReportRowCoverage `json:"pipeline_coverage,omitempty"`
 
 	// Prior The same rep's previous review, so a reader can see what CHANGED rather than only what
 	// happened. Absent for their first week.

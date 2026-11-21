@@ -17020,6 +17020,10 @@ export const en = {
     "Measured against the call for this period.",
   "forecast.pipelineBasisWhy.historical_median":
     "Measured against the median of the last 4 comparable periods.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} won deal in those periods has no amount or exchange rate and is left out of the median.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} won deals in those periods have no amount or exchange rate and are left out of the median.",
   "forecast.pipelineAbsentTitle": "No coverage figure for this period",
   "forecast.pipelineAbsent.call_withheld":
     "The manager’s call is not shown here, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",

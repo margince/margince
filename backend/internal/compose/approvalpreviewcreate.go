@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -224,7 +225,7 @@ func (r approvalPreviewReader) creationAuthority(ctx context.Context, approval c
 	if err != nil {
 		return principal.Principal{}, err
 	}
-	actor.Permissions, actor.TeamIDs, actor.SeatType = rbac.Permissions, rbac.TeamIDs, seat
+	actor = authz.WithAuthority(actor, rbac, seat)
 	if !seat.CanMutate() {
 		return principal.Principal{}, apperrors.ErrSeatTierInsufficient
 	}

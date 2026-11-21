@@ -179,13 +179,9 @@ func (r *Registry) requireCapturingGrantor(ctx context.Context, ws, userID ids.U
 	if r.authority == nil {
 		return errors.New("capture: no authority resolver configured — a connector grant cannot be checked against live authority")
 	}
-	rbac, err := r.authority.EffectiveRBAC(ctx, ws, userID)
+	rbac, seat, err := r.authority.AdmittedAuthority(ctx, ws, userID, ids.Nil)
 	if err != nil {
 		return fmt.Errorf("capture: the granting human's authority does not resolve: %w", err)
-	}
-	seat, err := r.authority.SeatType(ctx, ws, userID)
-	if err != nil {
-		return fmt.Errorf("capture: the granting human's seat does not resolve: %w", err)
 	}
 	for _, object := range captureWriterGrants {
 		create := auth.Check{Object: object, Actions: []principal.Action{principal.ActionCreate}}

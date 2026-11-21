@@ -168,6 +168,21 @@ describe("whether the open deals support the reference", () => {
     ).toBeTruthy();
   });
 
+  it("says how many won deals the median's periods leave out", async () => {
+    const user = userEvent.setup();
+    draw(
+      <SufficiencyCard
+        sufficiency={sufficiency({ comparable_unpriced: [0, 2, 0, 1] })}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+    await user.click(await screen.findByRole("button", { name: "Evidence" }));
+    expect(
+      await screen.findByText(/3 won deals in those periods have no amount/),
+    ).toBeTruthy();
+  });
+
   // The need is the VALUE, so a detail that repeated it said one number twice.
   it("says what is open and what it is reaching for, never the need again", () => {
     draw(

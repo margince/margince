@@ -148,8 +148,7 @@ func withAuthority(ctx context.Context, rbac authz.RBAC, seat principal.SeatType
 	if !ok {
 		return ctx, apperrors.ErrPermissionDenied
 	}
-	actor.Permissions, actor.TeamIDs, actor.SeatType = rbac.Permissions, rbac.TeamIDs, seat
-	return principal.WithActor(ctx, actor), nil
+	return principal.WithActor(ctx, authz.WithAuthority(actor, rbac, seat)), nil
 }
 
 // captureAllowedTx asks CaptureRefusal of the member's authority as of tx. A

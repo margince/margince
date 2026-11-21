@@ -1,0 +1,4 @@
+/* The mark on a figure that adds only the deals that convert. */
+.partial-mark {
+  color: var(--textSecondary);
+}

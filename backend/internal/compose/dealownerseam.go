@@ -114,17 +114,9 @@ func (a dealOwnerAuthority) asOwner(ctx context.Context, owner ids.UUID) (contex
 	if !ok {
 		return nil, errors.New("compose: reading as a deal owner outside a bound workspace")
 	}
-	rbac, seat, err := a.users.EffectiveAuthority(ctx, wsID, owner)
+	member, err := authz.MemberPrincipal(ctx, a.users, wsID, owner)
 	if err != nil {
 		return nil, fmt.Errorf("compose: deal owner %s authority: %w", owner, err)
-	}
-	member := principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          principal.HumanIDPrefix + owner.String(),
-		UserID:      owner,
-		SeatType:    seat,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
 	}
 	lang, err := a.users.ReadingLanguage(ctx, member)
 	return withOwnersLanguage(ctx, member, lang, err)
@@ -138,11 +130,11 @@ func ownersAgent(ctx context.Context, users *identity.Service, owner ids.UUID, a
 	if !ok {
 		return nil, errors.New("compose: acting for a deal owner outside a bound workspace")
 	}
-	rbac, seat, err := users.EffectiveAuthority(ctx, wsID, owner)
+	member, err := authz.MemberPrincipal(ctx, users, wsID, owner)
 	if err != nil {
 		return nil, fmt.Errorf("compose: authority of the owner to act for: %w", err)
 	}
-	agent := ownersAgentPrincipal(owner, actorID, rbac, seat)
+	agent := ownersAgentPrincipal(member, actorID)
 	lang, err := users.ReadingLanguage(ctx, agent)
 	return withOwnersLanguage(ctx, agent, lang, err)
 }
@@ -155,7 +147,7 @@ func ownersAgentTx(users *identity.Service, owner ids.UUID, actorID string) deal
 		if err != nil {
 			return nil, fmt.Errorf("compose: authority of the owner to act for: %w", err)
 		}
-		agent := ownersAgentPrincipal(owner, actorID, rbac, seat)
+		agent := ownersAgentPrincipal(authz.HumanPrincipal(owner, rbac, seat), actorID)
 		lang, err := identity.ReadingLanguageTx(ctx, tx, agent)
 		return withOwnersLanguage(ctx, agent, lang, err)
 	}
@@ -171,17 +163,17 @@ func withOwnersLanguage(ctx context.Context, actor principal.Principal, lang tex
 	return principal.WithActor(ctx, actor), nil
 }
 
-func ownersAgentPrincipal(owner ids.UUID, actorID string, rbac authz.RBAC, seat principal.SeatType) principal.Principal {
+func ownersAgentPrincipal(owner principal.Principal, actorID string) principal.Principal {
 	return principal.Principal{
-		Type:       principal.PrincipalAgent,
-		ID:         actorID,
-		UserID:     owner,
-		OnBehalfOf: owner,
-		SeatType:   seat,
-		TeamIDs:    rbac.TeamIDs,
+		Type:        principal.PrincipalAgent,
+		ID:          actorID,
+		UserID:      owner.UserID,
+		OnBehalfOf:  owner.UserID,
+		SeatType:    owner.SeatType,
+		TeamIDs:     owner.TeamIDs,
+		Permissions: owner.Permissions,
 		// Write, and only write: a pass acting unattended changes records and
 		// never puts a message on the wire.
-		Scopes:      principal.ScopeSet{principal.ScopeWrite: struct{}{}},
-		Permissions: rbac.Permissions,
+		Scopes: principal.ScopeSet{principal.ScopeWrite: struct{}{}},
 	}
 }

@@ -4442,6 +4442,8 @@
   "forecast.pipelineNeededDetail": "{open} offen · um {landing} zu erreichen",
   "forecast.pipelineBasisWhy.manager_call": "Gemessen an der Einschätzung für diesen Zeitraum.",
   "forecast.pipelineBasisWhy.historical_median": "Gemessen am Median der letzten 4 vergleichbaren Zeiträume.",
+  "forecast.pipelineBasisLeftOut_one": "{count} gewonnener Deal dieser Perioden hat keinen Betrag oder Wechselkurs und fehlt im Median.",
+  "forecast.pipelineBasisLeftOut_other": "{count} gewonnene Deals dieser Perioden haben keinen Betrag oder Wechselkurs und fehlen im Median.",
   "forecast.pipelineAbsentTitle": "Keine Pipeline-Abdeckung für diesen Zeitraum",
   "forecast.pipelineAbsent.call_withheld": "Die Einschätzung ist hier nicht sichtbar, und weniger als 4 vergleichbare Zeiträume sind abgeschlossen. Gemessen an diesen offenen Deals selbst sähe die Abdeckung immer ausreichend aus.",
   "forecast.pipelineAbsent.insufficient_basis": "Für diesen Zeitraum ist keine Einschätzung erfasst, und weniger als 4 vergleichbare Zeiträume sind abgeschlossen. Gemessen an diesen offenen Deals selbst sähe die Abdeckung immer ausreichend aus.",
