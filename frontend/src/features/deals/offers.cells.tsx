@@ -8,9 +8,9 @@ import {
   writtenDecimal,
 } from "../../format/decimalinput";
 import { useLocale, useT } from "../../i18n";
-import { useSavedDraft } from "../../lib/usesaveddraft";
 import type { OfferLineItem, UpdateOfferLineItemRequest } from "./offers";
 import { storedUnitOf, UnitPicker, unitChoiceOf } from "./productunit";
+import { useSavedDraft } from "./usesaveddraft";
 
 // A save that answers when its request settles, so a cell can tell an answer
 // from the draft it carried.
