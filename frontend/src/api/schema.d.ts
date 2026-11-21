@@ -37695,6 +37695,8 @@ export interface components {
              * @description The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
              */
             task_activity_id?: string | null;
+            /** @description True when the task `task_activity_id` names is open and this reader may see it. Set only by the contact 360 read; absent elsewhere and when the claim names no task. `next_steps` is capped, so a claim whose task is past the cap still counts as owed, and one whose task is done or hidden does not. */
+            task_open?: boolean;
             /**
              * Format: uuid
              * @description The colleague who took over this promise when nobody was asked to keep it. Null when nobody took it over, and after that colleague's account was deleted.

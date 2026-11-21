@@ -201,6 +201,24 @@ describe("the Commitments card's rows", () => {
     expect(screen.queryByText(/Send the pilot quote/)).toBeNull();
   });
 
+  it("keeps a promise whose open task is past the next steps cap, and drops one whose task is closed", () => {
+    const view = viewWith([
+      claim({ task_activity_id: "t-past", task_open: true }),
+      claim({
+        id: "c-closed",
+        body: "Book the workshop room",
+        task_activity_id: "t-closed",
+        task_open: false,
+      }),
+    ]);
+    view.next_steps = { data: [], page: { has_more: true } };
+    renderCard(view);
+    expect(screen.getAllByText(/Send the pilot quote/).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByText(/Book the workshop room/)).toBeNull();
+  });
+
   it("says nothing is promised when nothing is", () => {
     renderCard(viewWith([]));
     expect(screen.getByText(/No commitments or questions/)).toBeTruthy();

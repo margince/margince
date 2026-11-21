@@ -317,6 +317,9 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		if tag.RowsAffected() != 1 {
 			return apperrors.ErrNotFound
 		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE auth_token SET used_at = now() WHERE id = $1`, tokenID); err != nil {
 			return err

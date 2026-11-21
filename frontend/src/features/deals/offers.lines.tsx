@@ -92,7 +92,12 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
     queryClient.setQueryData(["offer", offer.id], updated);
   };
 
+  // One scope per offer: the line writes carry no version, so the server
+  // keeps whichever request lands last. Running them in send order keeps the
+  // newest draft the last write and each answer newer than the one before.
+  const lineWrites = { id: `offer-lines:${offer.id}` };
   const addMutation = useMutation({
+    scope: lineWrites,
     mutationFn: async (input: OfferLineItemInput) => {
       return unwrap(
         await api.POST("/offers/{id}/line-items", {
@@ -113,6 +118,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   // header-level Offer PATCH, a line item's own `version` is not a
   // precondition the API accepts, and the generated client refuses one.
   const updateMutation = useMutation({
+    scope: lineWrites,
     mutationFn: async (variables: {
       lineItemId: string;
       patch: UpdateOfferLineItemRequest;
@@ -130,6 +136,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   });
 
   const removeMutation = useMutation({
+    scope: lineWrites,
     mutationFn: async (lineItemId: string) => {
       return unwrap(
         await api.DELETE("/offers/{id}/line-items/{lineItemId}", {
@@ -160,7 +167,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const saveLine =
     (lineItemId: string) => (patch: UpdateOfferLineItemRequest) => {
       attempt(updateMutation);
-      updateMutation.mutate({ lineItemId, patch });
+      return updateMutation.mutateAsync({ lineItemId, patch });
     };
 
   const columns = [
@@ -289,7 +296,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           label={t("offer.lines")}
           columns={columns}
           rows={offer.line_items}
-          rowKey={(line) => `${line.id}:${line.version ?? 0}`}
+          rowKey={(line) => line.id}
         />
       </PanelBody>
       {/* Its own body, so the seam divides the lines that exist from the one

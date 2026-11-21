@@ -95,7 +95,7 @@ func countingMint(calls *int, lifetime time.Duration) func(context.Context) (Min
 
 func TestACachedTokenIsReusedUntilFiveMinutesBeforeItExpires(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 11, 12, 9, 0, 0, 0, time.UTC)}
-	cache := NewTokenCache(clock.now)
+	cache := NewTokenCache(clock.now, SharedTokenLimit)
 	calls := 0
 	mint := countingMint(&calls, time.Hour)
 
@@ -115,7 +115,7 @@ func TestACachedTokenIsReusedUntilFiveMinutesBeforeItExpires(t *testing.T) {
 
 func TestATokenWithNoLifetimeIsNotKeptAndKeysDoNotShare(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 11, 12, 9, 0, 0, 0, time.UTC)}
-	cache := NewTokenCache(clock.now)
+	cache := NewTokenCache(clock.now, SharedTokenLimit)
 	calls := 0
 
 	for range 2 {
@@ -138,7 +138,7 @@ func TestATokenWithNoLifetimeIsNotKeptAndKeysDoNotShare(t *testing.T) {
 }
 
 func TestAFailedMintIsNotCached(t *testing.T) {
-	cache := NewTokenCache((&fakeClock{at: time.Date(2026, 11, 12, 9, 0, 0, 0, time.UTC)}).now)
+	cache := NewTokenCache((&fakeClock{at: time.Date(2026, 11, 12, 9, 0, 0, 0, time.UTC)}).now, SharedTokenLimit)
 	refused := errors.New("refused")
 	if _, err := cache.Token(context.Background(), "k", func(context.Context) (MintedToken, error) {
 		return MintedToken{}, refused
@@ -153,7 +153,7 @@ func TestAFailedMintIsNotCached(t *testing.T) {
 
 func TestTheCacheDropsExpiredTokensAndEvictsTheSoonestDueWhenFull(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 11, 12, 9, 0, 0, 0, time.UTC)}
-	cache := NewTokenCache(clock.now)
+	cache := NewTokenCache(clock.now, SharedTokenLimit)
 	calls := 0
 	if _, err := cache.Token(context.Background(), "short", countingMint(&calls, 10*time.Minute)); err != nil {
 		t.Fatal(err)
@@ -167,19 +167,19 @@ func TestTheCacheDropsExpiredTokensAndEvictsTheSoonestDueWhenFull(t *testing.T) 
 	}
 
 	// Fill to the cap; the first key is due soonest, so it is the one evicted.
-	for i := range maxCachedTokens + 1 {
+	for i := range SharedTokenLimit + 1 {
 		clock.at = clock.at.Add(time.Second)
 		if _, err := cache.Token(context.Background(), "k"+strconv.Itoa(i), countingMint(&calls, time.Hour)); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if len(cache.tokens) != maxCachedTokens {
-		t.Errorf("the cache holds %d tokens, want the cap %d", len(cache.tokens), maxCachedTokens)
+	if len(cache.tokens) != SharedTokenLimit {
+		t.Errorf("the cache holds %d tokens, want the cap %d", len(cache.tokens), SharedTokenLimit)
 	}
 	if _, kept := cache.tokens["k0"]; kept {
 		t.Error("the token due soonest survived a full cache")
 	}
-	if _, kept := cache.tokens["k"+strconv.Itoa(maxCachedTokens)]; !kept {
+	if _, kept := cache.tokens["k"+strconv.Itoa(SharedTokenLimit)]; !kept {
 		t.Error("the newest token was not kept")
 	}
 }

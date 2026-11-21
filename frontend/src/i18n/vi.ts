@@ -7525,7 +7525,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.city": "Thành phố",
   "create.region": "Tỉnh hoặc vùng",
   "create.postalCode": "Mã bưu chính",
-  "create.country": "Mã quốc gia (ISO 3166)",
+  "create.country": "Quốc gia",
   "create.companyName": "Công ty",
   "create.companyPicked": "Thêm liên hệ vào công ty có sẵn này.",
   "create.companyNew":
@@ -7547,8 +7547,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hãy nhập đường liên kết tới hồ sơ cá nhân, ví dụ linkedin.com/in/ten.",
   "create.dateRangeReversed":
     "Ngày kết thúc đứng trước ngày bắt đầu. Hãy chọn ngày kết thúc muộn hơn.",
-  "create.countryCodeInvalid":
-    "Hãy nhập quốc gia bằng mã hai chữ cái, ví dụ DE hoặc US.",
   "create.referenceNotFound":
     "Bản ghi này không còn tồn tại hoặc bạn không thể xem.",
   "create.currency": "Loại tiền",
@@ -19506,7 +19504,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Mối quan hệ đang thế nào",
   "contact.standing.dim.promises": "Cam kết của bạn",
   "contact.standing.dim.promisesNone": "Không có cam kết mở",
-  "contact.standing.dim.promisesUncounted": "Quá nhiều việc để đếm",
   "standing.overdue_one": "{count} quá hạn",
   "standing.overdue_other": "{count} quá hạn",
   "standing.ofOpen_one": "trong {count} đang mở",

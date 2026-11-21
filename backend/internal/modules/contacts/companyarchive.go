@@ -178,6 +178,9 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 			return storekit.ArchiveCascade{}, fmt.Errorf("retire what hangs off the account: %w", err)
 		}
 	}
+	if err := storekit.OwnCompanyDomainsChanged(ctx, tx, id.UUID); err != nil {
+		return storekit.ArchiveCascade{}, err
+	}
 	if err := cascade.Retire(ctx, tx, tableRelationship,
 		`UPDATE relationship SET archived_at = @archived WHERE `+companyArchiveRelationships+` RETURNING id`,
 		pgx.StrictNamedArgs{archiveRecordKey: id, archiveStateKey: now}); err != nil {

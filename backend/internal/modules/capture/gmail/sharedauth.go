@@ -81,7 +81,7 @@ func NewSharedAuthorizer(cfg SharedAuthConfig) *SharedAuthorizer {
 		now = time.Now
 	}
 	return &SharedAuthorizer{
-		tokenURL: cfg.TokenURL, http: netguard.NoRedirect(client), now: now, tokens: oauthflow.NewTokenCache(now),
+		tokenURL: cfg.TokenURL, http: netguard.NoRedirect(client), now: now, tokens: oauthflow.NewTokenCache(now, oauthflow.SharedTokenLimit),
 	}
 }
 
