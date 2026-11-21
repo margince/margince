@@ -3,7 +3,11 @@
 
 package approvalsubject
 
-import "github.com/margince/margince/backend/internal/shared/kernel/ids"
+import (
+	"encoding/json"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 // KindEditAccess asks the owner of a record a colleague can see but not change
 // to share it with that colleague for writing. The owner stays the owner.
@@ -16,4 +20,13 @@ type EditAccess struct {
 	RecordID    ids.UUID `json:"record_id"`
 	OwnerID     ids.UUID `json:"owner_id"`
 	RequesterID ids.UUID `json:"requester_id"`
+}
+
+// EditAccessRequester is the colleague who asked, or zero for a malformed body.
+func EditAccessRequester(body json.RawMessage) ids.UUID {
+	var ask EditAccess
+	if err := json.Unmarshal(body, &ask); err != nil {
+		return ids.Nil
+	}
+	return ask.RequesterID
 }
