@@ -205,7 +205,9 @@ type caseModelRun struct {
 	Driver string `json:"driver,omitempty"`
 	Search string `json:"search,omitempty"`
 	// SelfJudged is a judge of the model's own family decided its criteria.
-	SelfJudged bool `json:"self_judged,omitempty"`
+	SelfJudged bool               `json:"self_judged,omitempty"`
+	Efficiency *mcpe2e.Efficiency `json:"efficiency,omitempty"`
+	Slow       bool               `json:"slow,omitempty"`
 }
 
 // modelCoverage is the whole lane as ONE model ran it. Driven/never-driven is
@@ -234,6 +236,9 @@ type modelCoverage struct {
 	Search string `json:"search,omitempty"`
 	// SelfJudged is true when a judge of its own family decided any of them.
 	SelfJudged bool `json:"self_judged"`
+	// CallsPerCase and Slow say how directly it finished: scores, never a fail.
+	CallsPerCase string   `json:"calls_per_case"`
+	Slow         []string `json:"slow_cases"`
 }
 
 type mcpToolCoverage struct {
@@ -835,8 +840,9 @@ func modelsThatRan(cases []caseRow) []string {
 
 // summariseModel folds one model's whole lane for the page's top table.
 func summariseModel(cases []caseRow, model string) modelCoverage {
-	summary := modelCoverage{Model: model, BelowBar: []string{}}
+	summary := modelCoverage{Model: model, BelowBar: []string{}, Slow: []string{}}
 	var routes []string
+	var measured []*mcpe2e.Efficiency
 	for _, c := range cases {
 		for _, run := range c.ByModel {
 			if run.Model != model {
@@ -850,6 +856,10 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 			summary.SelfJudged = summary.SelfJudged || run.SelfJudged
 			summary.Runs += run.Runs
 			summary.Passed += run.Passed
+			measured = append(measured, run.Efficiency)
+			if run.Slow {
+				summary.Slow = append(summary.Slow, c.Name)
+			}
 			if run.Held {
 				summary.CasesHeld++
 				continue
@@ -862,6 +872,8 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 		summary.Reliability = float64(summary.Passed) / float64(summary.Runs)
 	}
 	sort.Strings(summary.BelowBar)
+	sort.Strings(summary.Slow)
+	summary.CallsPerCase = mcpe2e.CallsPerCase(measured)
 	summary.Route = strings.Join(sortedCopy(routes), " + ")
 	summary.Name, summary.Trust = modelName(model), trustVerdict(summary.CasesHeld, summary.CasesRecorded, len(cases))
 	return summary
@@ -953,6 +965,7 @@ func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string) []caseMode
 		out = append(out, caseModelRun{
 			Model: v.Folder, Runs: v.Runs, Passed: v.Passed, PassAt: v.PassAt,
 			Held: v.PassAt > 0 && v.Passed >= v.PassAt, Driver: v.Driver, Search: v.Search, SelfJudged: v.SelfJudged,
+			Efficiency: v.Efficiency, Slow: v.Slow,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })

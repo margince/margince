@@ -77,6 +77,7 @@ import json
 import os
 import re
 import shlex
+import statistics
 import sys
 import tempfile
 
@@ -134,7 +135,7 @@ _SCHEMA = {
     "criteria": "list", "must_call": "list", "may_call": "list", "must_call_with": "list",
     "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
     "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
-    "mcp_only": "list",
+    "mcp_only": "list", "expected_calls": "count",
 }
 # The checks an mcp_only entry may name: the ones that pin an MCP call's name or
 # argument, which a REST door spells by route. Every other check reads the
@@ -704,6 +705,103 @@ def usage_line(expected, usage):
     )
 
 
+# A call the CLI turned away before any server saw it: a bare tool name the
+# model made up, which it then retries under the real one.
+_NO_SUCH_TOOL = re.compile(r"No such tool available", re.IGNORECASE)
+
+
+def read_effort(path):
+    """How directly one run finished: its calls, refused calls, turns, tokens
+    and wall time, or None when the run never reached its terminal `result`.
+
+    An unfinished run is left out rather than counted short, because its few
+    calls would read as the most direct run of all. A key the transcript does
+    not carry is absent, never 0.
+    """
+    calls, refused, result = 0, 0, None
+    with _open_checked(path) as handle:
+        for line in handle:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("type") == "result":
+                result = event
+            for block in (event.get("message") or {}).get("content") or []:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "tool_use":
+                    calls += 1
+                elif block.get("type") == "tool_result" and _refused_result(block):
+                    refused += 1
+    if result is None:
+        return None
+    effort = {"calls": calls, "refused": refused}
+    for field in ("num_turns", "duration_ms"):
+        if isinstance(result.get(field), int):
+            effort["turns" if field == "num_turns" else field] = result[field]
+    usage = read_usage(path)
+    if usage is not None:
+        counted = usage[0]
+        effort["prompt_tokens"] = sum(counted[field] for field in _USAGE_FIELDS if field != "output_tokens")
+        effort["output_tokens"] = counted["output_tokens"]
+    return effort
+
+
+def _refused_result(block):
+    if block.get("is_error") and not staged(block.get("content")):
+        return True
+    return bool(_NO_SUCH_TOOL.search(_tool_result_text(block)))
+
+
+_EFFORT_METRICS = ("calls", "turns", "refused", "prompt_tokens", "output_tokens", "duration_ms")
+
+
+def _spread(values):
+    median = statistics.median(values)
+    return {"median": int(median) if median == int(median) else median, "min": min(values), "max": max(values)}
+
+
+def efficiency(paths, expected_calls=None):
+    """The median and spread of each effort metric over the finished runs, or
+    None when no run finished.
+
+    A metric is reported only when every finished run carries it, so all of
+    them share the one denominator `runs`. It is a score and never a verdict:
+    nothing here moves PASS, FAIL or the exit code.
+    """
+    efforts = [effort for effort in map(read_effort, paths) if effort is not None]
+    if not efforts:
+        return None
+    out = {"runs": len(efforts)}
+    for metric in _EFFORT_METRICS:
+        if all(metric in effort for effort in efforts):
+            out[metric] = _spread([effort[metric] for effort in efforts])
+    if expected_calls is not None:
+        out["expected_calls"] = expected_calls
+        out["slow"] = out["calls"]["median"] > expected_calls
+    return out
+
+
+def efficiency_line(measured):
+    """The report's one line for how directly a scenario's runs finished."""
+    if measured is None:
+        return "  efficiency: no run finished, nothing measured"
+    parts = [f"{measured['runs']} run(s) finished"]
+    for metric in ("calls", "turns", "refused"):
+        if metric in measured:
+            spread = measured[metric]
+            parts.append(f"{metric} {spread['median']} ({spread['min']}-{spread['max']})")
+    if "duration_ms" in measured:
+        parts.append(f"{measured['duration_ms']['median'] / 1000:.1f}s median")
+    slow = ""
+    if measured.get("slow"):
+        slow = f"  <-- slow: median {measured['calls']['median']} calls, {measured['expected_calls']} expected"
+    return "  efficiency: " + ", ".join(parts) + slow
+
+
 # The failures that mean the model was never reached, rather than that it
 # answered badly. Matched on the message because the transport reports both the
 # same way — `is_error` on the terminal result — and only the message says which
@@ -1121,6 +1219,11 @@ def main():
             # sweep from one whose transcripts it could not read, which the
             # totals alone cannot say.
             record["usage"] = usage
+        measured = efficiency(sys.argv[5:], scenario.get("expected_calls")) if len(sys.argv) > 5 else None
+        if measured is not None:
+            if "slow" in measured:
+                record["slow"] = measured.pop("slow")
+            record["efficiency"] = measured
         print(json.dumps(record, indent=2))
         return 0
 
@@ -1133,6 +1236,11 @@ def main():
         # file owns what a usage total means — the shell would otherwise parse
         # the JSON and spell the same shape a second time.
         print(usage_line(int(sys.argv[2]), total_usage(sys.argv[3:])))
+        return 0
+
+    if sys.argv[1] == "--efficiency":
+        scenario = parse_scenario(sys.argv[2])
+        print(efficiency_line(efficiency(sys.argv[3:], scenario.get("expected_calls"))))
         return 0
 
     if sys.argv[1] == "--ran":

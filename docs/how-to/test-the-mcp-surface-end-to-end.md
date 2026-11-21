@@ -197,6 +197,20 @@ A scenario that fails lists what failed to hold. That can be a tool it never cal
 a fact it never said, or something it must not say. It can be a judged criterion, with the
 reason of the judge in one sentence. It can also be a record that the run put in the wrong state.
 
+### How directly a run finished
+
+A stronger model should need fewer rounds. After each scenario the lane prints an `efficiency:` line,
+and the verdict keeps an `efficiency` object. For each metric it holds the median, the lowest and the
+highest value over the runs that finished: tool calls, model turns, refused calls, prompt and output
+tokens, and the wall time when the transcript carries `duration_ms`. A refused call includes a bare
+tool name that the CLI turned away. A run with no terminal result is left out, and `runs` says how
+many runs are behind the numbers.
+
+These numbers never fail a case and never change the exit code. A scenario can set a soft budget,
+`expected_calls: 4`. When the median calls go past it, the verdict says `"slow": true` and the
+`efficiency:` line ends with `slow`. The page shows the median calls and turns for each case and
+model, and the median calls per case for each model. A verdict from before this measure shows `-`.
+
 ### The end state
 
 A case that writes can name the state it must leave behind:
