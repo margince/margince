@@ -49,7 +49,7 @@ func TestTheOneRowTablesAndTheBarsMoveAndComeBack(t *testing.T) {
 		}
 	}
 
-	moved := namespaceThroughVersion(t, core, "1795278059")
+	moved := namespaceThroughVersion(t, core, "1795283823")
 	if _, err := dbmigrate.Up(ctx, conn, moved); err != nil {
 		t.Fatalf("migrating up: %v", err)
 	}
