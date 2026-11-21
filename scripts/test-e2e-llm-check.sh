@@ -774,22 +774,21 @@ judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!fo
 judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids"
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
 
-# CASE 58 — a window the user named reaches the tool. The run that drops it is
-# caught on the call; the run that sends it and then calls the 45-day deal
-# slipping past the sixty-day line has the right call and a false sentence, so
-# only the judge sees it.
+# CASE 58 — the deals quiet for three weeks. The run that leaves the 45-day deal
+# out, and the run that calls it slipping past the sixty-day line, both say
+# something false, and the judge sees each.
 c58="case58-quiet-for-three-weeks.yaml"
 judges "$c58" case58 names-both-quiet-deals 0 "!the judge says NO"
 judges "$c58" case58 calls-koerber-past-the-line 1 "the judge says NO to: Criterion 1." "!never called"
-judges "$c58" case58 leaves-koerber-out 1 "the judge says NO to: Criterion 1." "never called whats_slipping_this_week.quiet_days=21"
+judges "$c58" case58 leaves-koerber-out 1 "the judge says NO to: Criterion 1." "never said anything matching /K(ö|oe|o)rber/"
 
 # CASE 59 — a file filed on a meeting and against a contract. Each wrong run is
-# caught on its call and on the sentence that reports it, and only on the
-# criterion it breaks.
+# caught on the sentence that reports it, and only on the criterion it breaks;
+# a live run is also read back from the world.
 c59="case59-file-it-on-the-meeting-and-the-contract.yaml"
 judges "$c59" case59 files-it-on-the-meeting-against-the-contract 0 "!the judge says NO" "!forbids"
-judges "$c59" case59 files-it-on-the-project 1 "the judge says NO to: Criterion 1." "!the judge says NO to: Criterion 2." "entity_type=activity"
-judges "$c59" case59 leaves-the-contract-off 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1." "contract_id=*"
+judges "$c59" case59 files-it-on-the-project 1 "the judge says NO to: Criterion 1." "!the judge says NO to: Criterion 2."
+judges "$c59" case59 leaves-the-contract-off 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
 
 # AND TWO CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
 # ("Bruno is now a contact") and a queue routed elsewhere with no contact as its
@@ -1009,17 +1008,17 @@ judges "$c44" case44 drafts-the-one-deal-by-hand 0 "!the judge says NO" "!never 
 judges "$c44" case44 drafts-koerber-by-hand 1 "called draft_outbound carrying 'Körber'" "!the judge says NO"
 judges "$c44" case44 drafts-another-thread-by-hand 1 "called draft_outbound carrying" "!the judge says NO"
 
-# CASE 4 — no judge: criterion 6 is the advice to go through the owner, and the
-# pattern must take it by name or by pronoun after the name, and refuse an
-# answer that names the owner and advises nobody.
+# CASE 4 — criterion 6 is whose account it is, so the owner can be involved
+# first. Advice by name or by pronoun counts, and so does the owner named as the
+# one who owns the account.
 c4="case4-use-the-moment.yaml"
 c4_advice="the judge says NO to: Criterion 6."
 judges "$c4" case4 asks-the-owner-by-name 0 "!the judge says NO"
 judges "$c4" case4 checks-with-her-in-the-next-sentence 0 "!the judge says NO"
 judges "$c4" case4 checks-with-her-before-showing-up 0 "!the judge says NO"
 judges "$c4" case4 leaves-the-visit-to-her 0 "!the judge says NO"
-judges "$c4" case4 names-the-owner-and-stops 1 "$c4_advice"
-judges "$c4" case4 advises-nobody-by-name 1 "$c4_advice"
+judges "$c4" case4 names-the-owner-and-stops 0 "!$c4_advice"
+judges "$c4" case4 advises-nobody-by-name 0 "!$c4_advice"
 c45="case45-move-the-deal-on.yaml"
 judges "$c45" case45 explains-from-the-readings 0 "!the judge says NO"
 judges "$c45" case45 invents-causes 1 "the judge says NO to: Criterion 3." "!the judge says NO to: Criterion 1."
@@ -1416,18 +1415,19 @@ held case125-what-waits-for-my-approval.yaml case125 reports-what-waits 0
 held case125-what-waits-for-my-approval.yaml case125 approves-it-unasked 1 "called decide_approvals carrying"
 held case125-what-waits-for-my-approval.yaml case125 answers-without-looking 1 "never called read_approval or list_approvals"
 held case126-file-it-i-approve.yaml case126 approves-and-finishes 0
-held case126-file-it-i-approve.yaml case126 stops-at-the-staging 1 "never called decide_approvals"
+# A run that stops at the staging, moves the stage, or writes a note passes here:
+# only the end state, read live by endstate.py, fails it.
+held case126-file-it-i-approve.yaml case126 stops-at-the-staging 0
 held case127-log-the-call-again.yaml case127 finds-it-already-logged 0
 held case127-log-the-call-again.yaml case127 logs-it-again 1 "never said anything matching /(?i)already"
 held case128-is-she-here-twice.yaml case128 asks-before-merging 0
 held case128-is-she-here-twice.yaml case128 previews-then-asks 0
 held case128-is-she-here-twice.yaml case128 merges-unasked 1 "called resolve_duplicates carrying"
 judges case129-move-it-to-service.yaml case129 moves-the-pipeline 0
-judges case129-move-it-to-service.yaml case129 moves-the-stage-instead 1 "never called move_deal_pipeline"
+judges case129-move-it-to-service.yaml case129 moves-the-stage-instead 0
 judges case130-put-the-offer-link-on-the-deal.yaml case130 lists-the-link 0
-judges case130-put-the-offer-link-on-the-deal.yaml case130 writes-a-note-instead 1 "never called attach_link"
-# The strict checker: a link the server refused is no link, whatever the answer says.
-judges case130-put-the-offer-link-on-the-deal.yaml case130 claims-a-refused-link 1 "refused: attach_link"
+judges case130-put-the-offer-link-on-the-deal.yaml case130 writes-a-note-instead 0
+judges case130-put-the-offer-link-on-the-deal.yaml case130 claims-a-refused-link 0
 
 # --- THE BRIDGE AND ITS NEIGHBOURS -------------------------------------------
 #

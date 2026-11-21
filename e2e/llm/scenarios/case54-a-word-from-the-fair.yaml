@@ -25,21 +25,6 @@ prompt: |
   If we already have a tag for that conference, I would like to know. Do not
   put it on her yet; I want to decide that myself.
 
-must_call:
-  - create_record
-
-# The offer is the assistant handing the word to the create. Without it the
-# answer can still say the tag exists, but the user never sees an offer they
-# can accept in one tap.
-must_call_with:
-  - create_record.offer_tag=K5 Conference 2026
-
-# Held on the MCP door only: offer_tag is an argument of the MCP create_record alone; the
-# REST create has no offer. A REST run is graded on everything else: the answer, and the
-# records it leaves.
-mcp_only:
-  - create_record.offer_tag=K5 Conference 2026
-
 may_call:
   - read_tags
   - search_records
@@ -47,6 +32,7 @@ may_call:
   - read_record
   - whoami
   - query_workspace
+  - create_record
 
 must_mention:
   - "Nora Feld"

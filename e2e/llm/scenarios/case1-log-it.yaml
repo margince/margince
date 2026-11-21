@@ -35,7 +35,9 @@ prompt: |
   Matthias: Passt, dann schauen wir uns das nächste Woche an.
 
 # The meeting has to be recorded; change_activities log and create_record with
-# record_type activity both do it, so either holds.
+# record_type activity both do it, so either holds. The run picks the subject and
+# may add a task beside it, so no end-state entry can name the meeting: the call
+# that writes it is its only trace.
 must_call:
   - create_record|log_activity
 must_call_with:

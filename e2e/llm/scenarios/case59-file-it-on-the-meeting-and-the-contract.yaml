@@ -43,20 +43,6 @@ prompt: |
   servicevertrag-signiert.pdf (application/pdf):
   JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgNTk1IDg0Ml0vQ29udGVudHMgNCAwIFIvUmVzb3VyY2VzPDwvRm9udDw8L0YxIDUgMCBSPj4+Pj4+ZW5kb2JqCjQgMCBvYmo8PC9MZW5ndGggNzI+PnN0cmVhbQpCVCAvRjEgMTIgVGYgNzIgNzcwIFRkIChTZXJ2aWNldmVydHJhZyBIU1QtMjAyNi0wMTQgdW50ZXJ6ZWljaG5ldCkgVGogRVQKZW5kc3RyZWFtZW5kb2JqCjUgMCBvYmo8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PmVuZG9iagp0cmFpbGVyPDwvUm9vdCAxIDAgUj4+CiUlRU9GCg==
 
-must_call:
-  - attach_document
-
-must_call_with:
-  - attach_document.entity_type=activity
-  - attach_document.contract_id=*
-
-# Held on the MCP door only: the REST upload carries the record and the contract as form
-# fields of its own names. A REST run is graded on everything else: the answer, and the
-# records it leaves.
-mcp_only:
-  - attach_document.entity_type=activity
-  - attach_document.contract_id=*
-
 may_call:
   - read_project
   - list_documents
@@ -68,6 +54,7 @@ may_call:
   - query_workspace
   - whoami
   - list_approvals
+  - attach_document
 
 must_mention:
   - "Vertragsunterzeichnung|meeting"

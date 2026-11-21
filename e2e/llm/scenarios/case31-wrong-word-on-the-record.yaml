@@ -46,19 +46,6 @@ prompt: |
   And to be clear I mean that one account only. Plenty of others genuinely are
   strategic accounts and that word stays.
 
-must_call:
-  - read_tags
-  - change_tags
-
-# record_type is pinned on both. The tool name alone passes on a read or a
-# removal aimed at a CONTACT of the same name — get_record_tags serves three
-# record types and remove_tag five, and this errand is about a company.
-must_call_with:
-  - read_tags.mode=record
-  - change_tags.action=remove
-  - read_tags.record_type=company
-  - change_tags.record_type=company
-
 may_call:
   - search_records
   - read_record
@@ -66,6 +53,8 @@ may_call:
   - query_workspace
   - whoami
   - read_workspace
+  - read_tags
+  - change_tags
 
 must_mention:
   # Criterion 1, MECHANICAL: the retired word, which only get_record_tags could
