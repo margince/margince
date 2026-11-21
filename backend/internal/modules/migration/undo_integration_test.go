@@ -337,7 +337,7 @@ func TestARestartedUndoDoesNotKeepTheCauseOfTheStopBeforeIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("claimUndoLease: %v", err)
 	}
-	if err := s.FailLease(ctx, l, CauseStale); err != nil {
+	if err := s.FailLease(ctx, l, stopWith(CauseStale)); err != nil {
 		t.Fatalf("FailLease: %v", err)
 	}
 	if got := mustGetStaged(ctx, t, s, run.ID); got.Status != StatusUndoing || got.Error == "" {

@@ -20,9 +20,9 @@ import {
   roleCannotCaptureCopy,
 } from "./problemcodecopy";
 
+export { blankRequired } from "./blankrequired";
 export type { FieldLabel, FieldLabels } from "./faultsentence";
 export {
-  blankRequired,
   faultSentence,
   fieldCheckSentence,
   moneyLimit,

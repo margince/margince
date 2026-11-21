@@ -3773,6 +3773,8 @@
   "ob.field.register_number": "Số đăng ký kinh doanh",
   "ob.field.industry": "Ngành",
   "ob.field.history": "Lịch sử công ty",
+  "backfill.restartedNote": "Đợt nhập đã bắt đầu lại vì hộp thư mất vị trí đang đọc. Số email được đếm lại từ đầu; các liên hệ đã tìm thấy vẫn được giữ.",
+  "backfill.retryNote": "Đợt nhập gặp sự cố kết nối và đang thử lại. Trang cuối được đọc lại nên email của trang đó được đếm lại.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGdocs": "Google Docs",

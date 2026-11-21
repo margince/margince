@@ -104,6 +104,9 @@ type ConversionHistory struct {
 	// ComparableWon is the actual Won of completed comparable periods, newest
 	// first. Four are needed for a median.
 	ComparableWon []int64
+	// ComparableUnpriced is, per period of ComparableWon, how many won deals
+	// its total leaves out for want of an amount or an exchange rate.
+	ComparableUnpriced []int
 }
 
 // AssessSufficiency answers whether the open pipeline supports the reference.

@@ -104,7 +104,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"FinishValidation", func() error { return s.FinishValidation(ctx, lease, Report{}) }},
 		{"RefuseValidation", func() error { return s.RefuseValidation(ctx, lease, CauseStopped) }},
 		{"Flush", func() error { return s.Flush(ctx, lease, Flush{}) }},
-		{"FailLease", func() error { return s.FailLease(ctx, lease, CauseStopped) }},
+		{"FailLease", func() error { return s.FailLease(ctx, lease, stopWith(CauseStopped)) }},
 		{"LockRunWrites", func() error { _, err := s.LockRunWrites(ctx, runID); return err }},
 		{"UndoSlice", func() error { _, err := s.UndoSlice(ctx, lease, nil, Budget{}); return err }},
 	} {

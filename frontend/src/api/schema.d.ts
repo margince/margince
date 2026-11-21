@@ -11372,7 +11372,11 @@ export interface paths {
          *     lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
          *     with a `filter` (the canonical §13.5 predicate), a `view_id`, or a `list_id` (while lists are
          *     switched on): a Live List exports the records its filter matches, a Shortlist its members, and
-         *     the export is then listed on the list as a use. Bulk record read
+         *     the export is then listed on the list as a use. The CSV of a contact, company, deal or lead is
+         *     the file Data import reads back: the import's own columns (owner by email, tags, company,
+         *     pipeline and stage by name, amounts in major units) with `id` last, a byte order mark for
+         *     Excel, and a file name made of the list or view name and the day. The JSON stays the raw
+         *     stored form. Bulk record read
          *     that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
          *     export writes one `audit_log` entry (who exported what slice, when — P7/P12).
          *     A CSV text cell beginning with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed
@@ -31668,6 +31672,10 @@ export interface components {
             };
             /** @description The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again. */
             resumable?: boolean;
+            /** @description How many times the scan began again from the newest message because the provider no longer accepted its place. `counts.messages_scanned`, `captured` and `skipped` start again from zero each time; the contacts and companies already created stay counted. A client says so rather than showing the lower count as lost work. */
+            window_restarts?: number;
+            /** @description Pages in a row that failed and will be tried again; 0 once a page succeeds. The committed counts are kept across a retry, and only the unfinished page is read again. */
+            retry_attempts?: number;
             /** Format: date-time */
             started_at?: string | null;
             /** Format: date-time */
@@ -31751,7 +31759,7 @@ export interface components {
                 companies_created?: number;
             };
             review: {
-                /** @description Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own. */
+                /** @description Every open duplicate review item on the reader's own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own. */
                 dedupe_open?: number;
                 /** @description Pending 🟡 items (enrich, quarantine, merge). */
                 approvals_pending?: number;
@@ -32375,6 +32383,11 @@ export interface components {
             name: string;
             /** @enum {string} */
             seat: "full" | "read";
+            /**
+             * @description `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+             * @enum {string}
+             */
+            status: "active" | "invited";
             member_ids: string[];
         };
         ContactCaseResolution: {
@@ -33402,7 +33415,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -33815,6 +33828,19 @@ export interface components {
                 reason_code?: components["schemas"]["ImportReasonCode"];
             }[];
         };
+        /** @description A refusal of a run's file by field and code, with the values its sentence names. */
+        ImportRunRefusal: {
+            /** @description The field the refusal names, as in a 422 `errors` entry. */
+            field: string;
+            /** @description The refusal code, as in a 422 `errors` entry. */
+            code: string;
+            /** @description The limit the refusal names. Absent when it names none. */
+            max?: number;
+            /** @description The values the code's sentence names, by name. Absent when it names none. */
+            params?: {
+                [key: string]: string;
+            };
+        };
         ImportRun: {
             /** Format: uuid */
             id: string;
@@ -33840,6 +33866,8 @@ export interface components {
             checkpoint: number;
             /** @description Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message. */
             error?: string | null;
+            /** @description `error` as the field error an upload refusal carries, for a draft whose test run refused its file: a screen words it in the reader's language and keeps `error` for a code it does not know. Absent for any other stop, and on a run stored before it was kept. */
+            readonly error_refusal?: components["schemas"]["ImportRunRefusal"];
             /** @description Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another. */
             version: number;
             draft_step?: components["schemas"]["ImportDraftStep"];
@@ -53240,7 +53268,7 @@ export interface components {
                 [key: string]: unknown;
             };
             columns: string[];
-            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). */
+            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -53253,6 +53281,19 @@ export interface components {
             generated_at?: string;
             /** @description Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell. */
             derivation_url?: string | null;
+        };
+        /** @description What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one. */
+        ReportRowCoverage: {
+            /** @description The aliases of the row's partial sums, which this coverage qualifies. */
+            aggregates: string[];
+            /** @description True when at least one deal is left out of those sums. */
+            partial: boolean;
+            /** @description Deals in the group with no amount. */
+            no_value_deals: number;
+            /** @description Deals in the group with an amount whose currency has no exchange rate as of the answer's date. */
+            no_rate_deals: number;
+            /** @description The currencies with no exchange rate, from the same statement as the sums. */
+            missing_currencies: string[];
         };
         /**
          * @description The "Explain This Number" resolution (features/03 §1.3): a plain-language definition of
@@ -91438,6 +91479,8 @@ export interface operations {
             query?: {
                 status?: "open" | "merged" | "not_a_duplicate";
                 entity_type?: "contact" | "company" | "lead";
+                /** @description Only the pairs naming this record on either end. Needs `entity_type`, the record's type; without it the answer is 422. */
+                record_id?: string;
                 /** @description Opaque keyset cursor. */
                 cursor?: string;
                 limit?: number;

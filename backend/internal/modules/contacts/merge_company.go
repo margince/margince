@@ -194,6 +194,8 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
 			return nil, fmt.Errorf("apply survivorship fill: %w", err)
 		}
+	} else if err := storekit.TouchLocked(ctx, tx, tgtLock); err != nil {
+		return nil, fmt.Errorf("move the survivor's version: %w", err)
 	}
 	// An inherited value arrives with its author still attached. Without this
 	// the survivor holds a sentence that field_provenance says nobody wrote, and

@@ -36,6 +36,7 @@ import {
 import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
+import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
@@ -59,6 +60,7 @@ import {
 import type { Company } from "./companies";
 import { DORMANCY_LABELS, DORMANCY_RUNGS } from "./companyactivity";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
+import { announceCompanyDuplicates } from "./companyduplicates";
 import { displayHost } from "./companyheader";
 import { partnerMarkText } from "./companymarks";
 import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
@@ -98,6 +100,7 @@ export function CompaniesScreen({
 }: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const pageName = usePageName("companies");
   const { locale } = useLocale();
   const readerZone = useViewerZone();
@@ -202,7 +205,15 @@ export function CompaniesScreen({
                 createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
-              onCreated={(company) => offerDomainContacts(queryClient, company)}
+              onCreated={(company) => {
+                offerDomainContacts(queryClient, company);
+                void announceCompanyDuplicates(
+                  queryClient,
+                  toast,
+                  t,
+                  company.id,
+                );
+              }}
               fields={[...companyCreateFields(t, locale), ...cf.formFields]}
             />
           </>

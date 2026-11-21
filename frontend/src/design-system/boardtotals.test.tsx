@@ -78,13 +78,28 @@ describe("the stage totals at the head of a board column", () => {
     expect(largestStageTotal(columns)).toBe(200_000);
   });
 
+  it("marks both the total and the weighted figure as partial", () => {
+    board([
+      stage("a", 100_000, {
+        weightedMinor: 40_000,
+        coverage: { partial: true, noValue: 1, noRate: 0, rateCurrencies: [] },
+      }),
+    ]);
+    expect(screen.getAllByText("Partial")).toHaveLength(2);
+  });
+
   // The figures are rounded, so the exact amounts must be one focus away.
   it("spells out the exact amounts and the notes in the total's tip", () => {
     board([
       stage("a", 106_254_800, {
         weightedMinor: 10_625_480,
         probabilityPct: 10,
-        unpricedCount: 6,
+        coverage: {
+          partial: true,
+          noValue: 0,
+          noRate: 6,
+          rateCurrencies: ["JPY"],
+        },
         asOf: "2026-11-03T08:00:00Z",
       }),
     ]);
@@ -98,9 +113,8 @@ describe("the stage totals at the head of a board column", () => {
       "€1,062,548.00 open, €106,254.80 weighted by each deal’s probability.",
     );
     expect(tip).not.toContain("10%");
-    expect(tip).toContain(
-      "6 deals have no price and are left out of both totals.",
-    );
+    expect(tip).toContain("Partial total: it leaves out these deals.");
+    expect(tip).toContain("6 deals have no exchange rate (JPY).");
     expect(tip).toContain(
       `Converted at exchange rates as of ${formatDate("2026-11-03T08:00:00Z", "en", UTC_ZONE)}.`,
     );

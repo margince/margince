@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Fragment, useContext, useRef } from "react";
 import { formatNumber, formatPercent } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
+import type { MoneyCoverage } from "../lib/moneycoverage";
 import { AnsweredSearch } from "./answeredsearch";
 import { Button, OptionCount } from "./atoms";
 import { ColumnTotals, largestStageTotal } from "./boardtotals";
@@ -180,7 +181,7 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
   currency: string | null;
   asOf?: string | null;
   timezone?: string | null;
-  unpricedCount?: number | null;
+  coverage?: MoneyCoverage | null;
 };
 
 type BoardHandlers<Record extends BoardRecord> = {

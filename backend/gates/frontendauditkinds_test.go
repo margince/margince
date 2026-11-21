@@ -56,9 +56,9 @@ var runtimeTypedAuditWriters = map[string]func(t *testing.T) []string{
 	"backend/internal/platform/config/spec.go:DefineStored":  settingObjects,
 	"backend/internal/platform/config/sealed.go:sealedEntry": settingObjects,
 	// These name only rows of an extension's own `ext_` tables.
-	"backend/internal/modules/privacy/erasure_extension.go:clearExtensionRows":   noCoreTypes,
-	"backend/internal/modules/privacy/retention_extension.go:expireExtensionRow": noCoreTypes,
-	"backend/internal/compose/extledger.go:recordExtensionChange":                noCoreTypes,
+	"backend/internal/modules/privacy/erasure_extension.go:clearExtensionRows":   extensionTypes,
+	"backend/internal/modules/privacy/retention_extension.go:expireExtensionRow": extensionTypes,
+	"backend/internal/compose/extledger.go:recordExtensionChange":                extensionTypes,
 	// The masking repair re-audits a record whose audit images it read back, so
 	// its type is one another writer named first.
 	"backend/internal/compose/credentialrepair/credentialrepair.go:maskAuditImagesBatch": noCoreTypes,
@@ -111,6 +111,8 @@ func retentionDispatchObjects(t *testing.T) []string {
 }
 
 func noCoreTypes(*testing.T) []string { return nil }
+
+func extensionTypes(*testing.T) []string { return []string{extensionRecordTypes} }
 
 // confirmedSubjectKinds reads the kinds requireSubjectVisible admits, from the
 // cases of its switch. A confirmation of any other kind is refused there.

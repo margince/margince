@@ -25,7 +25,7 @@ const machineAddressTaggedBy = "data_task_run"
 
 func machineAddressDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1792645085_machine_address_contacts", Version: 3,
+		ID: "core/1792645085_machine_address_contacts", Version: 4,
 		Title: systemtext.Literal("datatask.title.core.1792645085_machine_address_contacts"), Requires: []string{"core/1788327300"},
 		Steps: []datatask.Step{{
 			Name: "tag_machine_address_contacts", Limit: 200, MinLimit: 1,

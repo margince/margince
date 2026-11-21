@@ -319,7 +319,7 @@ var Declared = map[string][]string{
 	"GET /v1/deals/{id}/status":                                                {"facts_only", "if_recommendation", "if_rule", "refresh"},
 	"GET /v1/deals/{id}/viability":                                             {},
 	"GET /v1/deals/{id}/win-evidence":                                          {},
-	"GET /v1/dedupe/candidates":                                                {"cursor", "entity_type", "limit", "status"},
+	"GET /v1/dedupe/candidates":                                                {"cursor", "entity_type", "limit", "record_id", "status"},
 	"GET /v1/dedupe/candidates/{id}":                                           {},
 	"GET /v1/dedupe/contact-cases":                                             {"cursor", "limit", "scope"},
 	"GET /v1/dedupe/contact-cases/{contact_id}":                                {},

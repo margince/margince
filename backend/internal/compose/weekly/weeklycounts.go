@@ -73,17 +73,18 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	var c Counts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
         WITH tasks AS (
-          SELECT `+storekit.TaskDueSQL("a")+` AS due_at, %[6]s AS completed_at FROM activity a
+          SELECT `+storekit.TaskDueFromSQL("a", "$%[1]d")+` AND `+storekit.TaskDueBeforeSQL("a", "$%[2]d")+` AS due_in_week,
+                 `+storekit.TaskDueBeforeSQL("a", "$%[2]d")+` AS due_by_end, %[6]s AS completed_at FROM activity a
            WHERE a.kind='task' AND a.archived_at IS NULL AND (a.is_done OR %[7]s)
              AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s)
-             AND ((`+storekit.TaskDueSQL("a")+` >= $%[1]d AND `+storekit.TaskDueSQL("a")+` < $%[2]d)
-               OR a.done_at >= $%[1]d OR (`+storekit.TaskDueSQL("a")+` < $%[2]d AND NOT a.is_done)
+             AND ((`+storekit.TaskDueFromSQL("a", "$%[1]d")+` AND `+storekit.TaskDueBeforeSQL("a", "$%[2]d")+`)
+               OR a.done_at >= $%[1]d OR (`+storekit.TaskDueBeforeSQL("a", "$%[2]d")+` AND NOT a.is_done)
                OR a.updated_at >= $%[2]d))
         SELECT
           (SELECT count(*) FROM tasks WHERE completed_at >= $%[1]d AND completed_at < $%[2]d),
-          (SELECT count(*) FROM tasks WHERE due_at >= $%[1]d AND due_at < $%[2]d),
-          (SELECT count(*) FROM tasks WHERE due_at >= $%[1]d AND due_at < $%[2]d AND completed_at < $%[2]d),
-          (SELECT count(*) FROM tasks WHERE due_at < $%[2]d AND (completed_at IS NULL OR completed_at >= $%[2]d)),
+          (SELECT count(*) FROM tasks WHERE due_in_week),
+          (SELECT count(*) FROM tasks WHERE due_in_week AND completed_at < $%[2]d),
+          (SELECT count(*) FROM tasks WHERE due_by_end AND (completed_at IS NULL OR completed_at >= $%[2]d)),
 		  -- Moved EXCLUDES deals that closed this week. The stage change that
 		  -- closed a deal is the same event as the win, and counting both tells
 		  -- the rep one thing twice — and the deal lines below already exclude

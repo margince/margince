@@ -255,33 +255,32 @@ func nullable(s string) *string {
 	return &s
 }
 
-// FailLease records why the attempt stopped. A test run returns to its draft
-// with the cause. A commit becomes failed, which a resume continues from its
-// checkpoint. An undo stays undoing with the cause, because failing it would
-// let a resume re-run the commit over a half-undone run.
-// Its job_status is cleared: no job is queued for it, so the sweep leaves it to
-// an undo request.
-func (s *RunStore) FailLease(ctx context.Context, l Lease, cause string) error {
+// FailLease records StopCause's sentence for why. A test run returns to its
+// draft with it and the refusal why carries. A commit becomes failed, which a
+// resume continues from its checkpoint. An undo stays undoing with the cause,
+// because failing it would let a resume re-run the commit over a half-undone
+// run. Its job_status is cleared, so the sweep leaves it to an undo request.
+func (s *RunStore) FailLease(ctx context.Context, l Lease, why error) error {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return failLeaseInTx(ctx, tx, l, cause)
+		return failLeaseInTx(ctx, tx, l, StopCause(l.Status, why), RefusalOf(why))
 	})
 }
 
 // failLeaseInTx is FailLease on the caller's transaction.
-func failLeaseInTx(ctx context.Context, tx pgx.Tx, l Lease, cause string) error {
+func failLeaseInTx(ctx context.Context, tx pgx.Tx, l Lease, cause string, refusal *StopRefusal) error {
 	switch l.Status {
 	case StatusRunning:
-		if err := execFenced(ctx, tx, l, `status = $4, error = $5, updated_at = now()`, StatusFailed, cause); err != nil {
+		if err := execFenced(ctx, tx, l, `status = $4, error = $5, error_refusal = NULL, updated_at = now()`, StatusFailed, cause); err != nil {
 			return err
 		}
 		_, err := storekit.Audit(ctx, tx, "update", ImportRunObject, l.Run,
 			map[string]any{auditFieldStatus: l.Status}, map[string]any{auditFieldStatus: StatusFailed})
 		return err
 	case StatusValidating:
-		return refuseValidationInTx(ctx, tx, l, cause)
+		return refuseValidationInTx(ctx, tx, l, cause, refusal)
 	case StatusUndoing:
 		var prior *string
 		err := tx.QueryRow(ctx, `SELECT error FROM import_run`+fence+` FOR UPDATE`, l.args()...).Scan(&prior)
@@ -291,7 +290,7 @@ func failLeaseInTx(ctx context.Context, tx pgx.Tx, l Lease, cause string) error 
 		if err != nil {
 			return fmt.Errorf("reading import run %s: %w", l.Run, err)
 		}
-		if err := execFenced(ctx, tx, l, `error = $4, job_status = NULL, updated_at = now()`, cause); err != nil {
+		if err := execFenced(ctx, tx, l, `error = $4, error_refusal = NULL, job_status = NULL, updated_at = now()`, cause); err != nil {
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, l.Run,

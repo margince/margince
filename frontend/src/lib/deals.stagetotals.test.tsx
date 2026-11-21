@@ -60,7 +60,6 @@ it("reuses fresh totals after a table sort and sends the same body", async () =>
       { fn: "count", as: "deals" },
       { fn: "sum", field: "amount_base_minor", as: "base_minor" },
       { fn: "sum", field: "weighted_base_minor", as: "weighted_base_minor" },
-      { fn: "count", field: "amount_base_minor", as: "priced_deals" },
     ],
     filters: { pipeline_id: "pipeline" },
   });
