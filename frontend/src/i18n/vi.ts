@@ -9204,7 +9204,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.share.linkWarning":
     "Liên kết chỉ hiển thị một lần. Sao chép ngay; sau này không thể lấy lại.",
   "analytics.share.leaveWarning":
-    "Nếu rời đi mà không sao chép, liên kết sẽ không thể hiển thị lại. Liên kết vẫn mở cho đến khi hết hạn hoặc bạn đóng nó trong Liên kết đã chia sẻ.",
+    "Nếu rời đi mà không sao chép, liên kết sẽ không thể hiển thị lại. Liên kết vẫn mở cho đến khi hết hạn, bạn đóng nó trong Liên kết đã chia sẻ, hoặc bạn mất quyền truy cập dự báo.",
   "analytics.share.copy": "Sao chép liên kết",
   "analytics.share.copied": "Đã sao chép",
   "analytics.share.copyFailed": "Chọn liên kết ở trên và sao chép thủ công.",
