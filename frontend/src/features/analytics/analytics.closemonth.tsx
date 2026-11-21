@@ -17,7 +17,7 @@ import {
   rowMoney,
 } from "./analytics.cells";
 import { CellExplain, rowDerivationUrl } from "./analytics.explain";
-import { CoverageFootnote, PartialMark } from "./analytics.pipeline";
+import { CoverageFootnote, PartialMark } from "./analytics.moneygap";
 
 const closeMonth = (row: ReportRow) =>
   typeof row.close_month === "string" ? row.close_month : null;

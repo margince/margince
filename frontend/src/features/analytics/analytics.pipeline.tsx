@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { AppLink } from "../../design-system/applink";
 import { StatCard } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Popover } from "../../design-system/popover";
@@ -10,7 +9,6 @@ import {
   formatAnalyticsNumber,
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
-import { RATE_SHEET, useCoverageWords } from "../../lib/coveragewords";
 import { WIN_PROBABILITY_DIAL } from "../../lib/dealranges";
 import { dealsFilteredBy, type scopeDealDials } from "../../lib/dealsaddress";
 import {
@@ -34,6 +32,12 @@ import {
   type Stage,
 } from "./analytics.cells";
 import { CellExplain, rowDerivationUrl } from "./analytics.explain";
+import {
+  CoverageFootnote,
+  CoverageNote,
+  PartialMark,
+  withPartial,
+} from "./analytics.moneygap";
 
 // One row of the deals-by-stage table: a stage and a currency. A stage holding
 // deals in two currencies has two totals and no third one that means anything.
@@ -51,59 +55,6 @@ type StageAgg = {
   coverage: MoneyCoverage | null;
   derivationUrl: string | null;
 };
-
-// The two reasons a deal is left out of a figure, worded apart. The rate note
-// links to the rates, the one cause a reader can fix.
-export function CoverageNote({
-  coverage,
-}: Readonly<{ coverage: MoneyCoverage }>) {
-  const { rate, value } = useCoverageWords()(coverage);
-  return (
-    <>
-      {rate && <AppLink href={RATE_SHEET}>{rate}</AppLink>}
-      {rate && value && " · "}
-      {value}
-    </>
-  );
-}
-
-// The word that marks a figure adding only the deals that convert. It stands
-// beside the raw and the weighted figure alike, since both leave the deals out.
-export function PartialMark({
-  coverage,
-}: Readonly<{ coverage: MoneyCoverage | null | undefined }>) {
-  const t = useT();
-  return hasGap(coverage) ? (
-    <span className="t-caption analytics-partial">
-      {" "}
-      {t("coverage.partial")}
-    </span>
-  ) : null;
-}
-
-// The same mark for a figure a stat card holds as text.
-function withPartial(
-  figure: string,
-  coverage: MoneyCoverage | null | undefined,
-  t: ReturnType<typeof useT>,
-): string {
-  return hasGap(coverage) ? `${figure} ${t("coverage.partial")}` : figure;
-}
-
-// The footnote under a money figure that leaves deals out: how many, and why.
-// Nothing when every deal is in the figure.
-export function CoverageFootnote({
-  coverage,
-}: Readonly<{ coverage: MoneyCoverage | null }>) {
-  if (!hasGap(coverage)) {
-    return null;
-  }
-  return (
-    <span className="t-caption">
-      <CoverageNote coverage={coverage} />
-    </span>
-  );
-}
 
 // What a band with deals and no money says: which deals the money cannot
 // cover, or that none carries an amount.
