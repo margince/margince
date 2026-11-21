@@ -122,6 +122,33 @@ func TestCallMeterWritesTraceAndOptInPayload(t *testing.T) {
 	}
 }
 
+// The writer is where no_payload holds. An embed call that reaches CallMeter
+// with a mail's text on it is traced, and its content is not kept.
+func TestCallMeterKeepsNoPayloadForANoPayloadTask(t *testing.T) {
+	e := Setup(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if !ai.NoPayload(ai.TaskEmbeddings) {
+		t.Fatal("the embed workload is no longer no_payload; pick a task that is")
+	}
+	if err := ai.NewCallMeter(e.DB()).Record(ctx, []ai.Call{{
+		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: "embedding",
+		Task: ai.TaskEmbeddings, Tier: ai.TierEmbedLane, Provider: "gemini", ModelID: "gemini-embedding-001",
+		ServedIdentitySource: "configured", TokensIn: 30,
+		Payload: &ai.Payload{
+			Request:  json.RawMessage(`{"inputs":["Renewal terms. Hi Anna, the board approved the discount."]}`),
+			Response: json.RawMessage(`{"vector_count":1,"dims":1536}`),
+		},
+	}}); err != nil {
+		t.Fatalf("record: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM ai_call WHERE task = 'embeddings'`); n != 1 {
+		t.Fatalf("ai_call rows = %d, want the embed call traced once", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM ai_call_payload`); n != 0 {
+		t.Fatalf("ai_call_payload rows = %d, want 0: a no_payload task's content reached the table", n)
+	}
+}
+
 // TestRecordWritesEveryAttemptOfOneLogicalCallInOneTransaction proves the
 // grain-change contract at the store (spec §4): a batch of attempts
 // sharing one LogicalCallID lands as that many ai_call rows, with

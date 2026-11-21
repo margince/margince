@@ -31,6 +31,7 @@ function seat(role: string, kind: RoleKind = "deal_stakeholder") {
     ...(kind === "project_stakeholder" ? { project_id: PROJECT } : {}),
     contact_id: CONTACT,
     role,
+    can_archive: true,
     is_current_primary: false,
     source: "manual",
     captured_by: "human:u-1",

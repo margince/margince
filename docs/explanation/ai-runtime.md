@@ -392,7 +392,10 @@ Every attempt writes one `ai_call` row (migration `0100`), not one row per final
 - **Company context provenance** goes on the same row (migration `0102`): the context scopes,
   fingerprint and size that shaped the prompt. So "what did the model know about us" can be answered per
   attempt.
-- Embedding calls are traced too. The privacy retention check removes their rows after 90 days.
+- Embedding calls are traced too. A new one keeps no payload, as the `embed` row of
+  [ai-egress.md](../reference/ai-egress.md) says. The privacy retention check removes their rows after
+  90 days. When the installation is set to delete nothing, the check skips an older call that still
+  has a payload row, so that row stays.
 
 The write path is the standard one (`ai_call` + `ai_call_payload` in one `WithWorkspaceTx`). So a trace
 is written and audited like any domain row. See [write-backbone.md](write-backbone.md).
