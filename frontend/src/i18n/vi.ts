@@ -11092,6 +11092,40 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.recoveryHealth": "Diễn tập khôi phục",
   "settings.recoveryHealthSub":
     "Lần gần nhất diễn tập khôi phục từ bản sao lưu và thời gian thực hiện.",
+  "settings.vacuumHealth": "Dung lượng bảng",
+  "settings.vacuumHealthSub":
+    "Các bảng có tệp chứa nhiều chỗ trống không có hàng còn sống. Margince không tự chạy việc dọn dẹp.",
+  "vacuumHealth.adminOnly":
+    "Dung lượng bảng áp dụng cho toàn bộ bản cài đặt và cần một quyền mà vai trò của bạn không có.",
+  "vacuumHealth.scope":
+    "Chỉ tính tệp riêng của bảng. Các chỉ mục và vùng lưu riêng cho giá trị dài (TOAST) không được tính.",
+  "vacuumHealth.thresholds":
+    "Một bảng được liệt kê khi ít nhất {percent} tệp của nó, và ít nhất {size}, không chứa hàng còn sống. Các kích thước là ước tính từ thống kê của cơ sở dữ liệu.",
+  "vacuumHealth.empty":
+    "Không có bảng nào có nhiều chỗ trống như vậy. Không cần chạy gì.",
+  "vacuumHealth.unmeasured_one":
+    "{count} bảng lớn chưa có thống kê nên chưa có ước tính. Cơ sở dữ liệu thu thập thống kê khi phân tích bảng lần tới.",
+  "vacuumHealth.unmeasured_other":
+    "{count} bảng lớn chưa có thống kê nên chưa có ước tính. Cơ sở dữ liệu thu thập thống kê khi phân tích bảng lần tới.",
+  "vacuumHealth.col.table": "Bảng",
+  "vacuumHealth.col.size": "Kích thước",
+  "vacuumHealth.col.waste": "Chỗ trống không có hàng còn sống",
+  "vacuumHealth.col.run": "Lệnh cần chạy",
+  "vacuumHealth.runAs": "Chạy với vai trò {owner}.",
+  "vacuumHealth.copy": "Sao chép lệnh",
+  "vacuumHealth.copied": "Đã sao chép",
+  "vacuumHealth.copyRemedy": "Chọn lệnh và sao chép thủ công.",
+  "vacuumHealth.howTitle": "Cách chạy",
+  "vacuumHealth.step.window":
+    "Lên lịch một khung giờ bảo trì. VACUUM FULL khóa bảng trong khi chạy, nên không ai đọc hoặc sửa được bảng cho đến khi xong.",
+  "vacuumHealth.step.disk":
+    "Kiểm tra dung lượng đĩa còn trống. Việc ghi lại cần chỗ cho một bản sao mới của bảng và các chỉ mục.",
+  "vacuumHealth.step.owner":
+    "Kết nối cơ sở dữ liệu bằng vai trò ghi ở hàng đó. Vai trò này sở hữu bảng; vai trò mà Margince dùng không làm được việc này.",
+  "vacuumHealth.step.run":
+    "Chạy lệnh. Lệnh cũng làm mới thống kê, nên bảng sẽ rời danh sách này ở lần đọc sau.",
+  "vacuumHealth.repack":
+    "Để tránh khóa, công cụ pg_repack ghi lại bảng trong khi bảng vẫn được dùng. Công cụ này phải được cài trên máy chủ cơ sở dữ liệu.",
   "settings.automaticWork": "Việc tự động",
   "settings.automaticWorkSub":
     "Những việc Margince tự giao cho từng đồng nghiệp, và bao nhiêu trong số đó họ nói không thuộc về họ.",

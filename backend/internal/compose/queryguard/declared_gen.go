@@ -115,6 +115,7 @@ var Declared = map[string][]string{
 	"GET /v1/admin/job-health/history":                                         {"cursor", "days", "kind", "state"},
 	"GET /v1/admin/recovery-health":                                            {},
 	"GET /v1/admin/system-health":                                              {},
+	"GET /v1/admin/vacuum-recommendations":                                     {},
 	"GET /v1/agent-bundle":                                                     {},
 	"GET /v1/agent-tools":                                                      {},
 	"GET /v1/ai-model-rates":                                                   {"model_id", "provider"},

@@ -1455,6 +1455,7 @@
     "getUserAccess": "members",
     "getUserAvatar": "members",
     "getUserHandover": "members",
+    "getVacuumRecommendations": "system_health",
     "getVoiceBuild": "voice",
     "getVoiceLearningSummary": "voice",
     "getVoiceProfile": "voice",
