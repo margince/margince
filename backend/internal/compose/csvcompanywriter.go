@@ -66,38 +66,36 @@ func (w *csvWriters) claimRow(row migration.Row, typed map[string]any) {
 // The store refuses the other stored keys, and the import skips that row.
 func (w *csvWriters) movedKeyRefusal(ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any, changed map[string]string) (migration.Reason, error) {
 	keys, ledger := w.keysOf(row, typed), w.links.claims
-	moved := func(field string) bool { _, ok := changed[field]; return ok }
-	linkedIn := moved(fieldLinkedIn) && w.object != migration.ObjectContact &&
-		ledger.Held(importkeys.LinkedIn, keys[importkeys.LinkedIn], w.object)
-	switch w.object {
-	case migration.ObjectCompany:
-		if !moved(fieldDomain) {
-			break
-		}
-		domain := keys[importkeys.Domain]
-		held, err := importkeys.DomainHeldByAnother(ctx, w.pool, domain, id)
-		if err != nil {
-			return migration.Reason{}, err
-		}
-		if held || ledger.Held(importkeys.Domain, domain, w.object) {
-			return domainClaimedWhy, nil
-		}
-	case migration.ObjectLead:
-		if moved(fieldEmail) && ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectLead) {
-			return naturalKeyTakenWhy, nil
-		}
-	case migration.ObjectContact:
-		if moved(fieldEmail) && ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectContact) {
-			return duplicateEmailWhy, nil
-		}
-		if moved(fieldEmail) && ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectLead) {
-			return contactEmailClaimedWhy, nil
-		}
-	}
-	if linkedIn {
+	_, emailMoved := changed[fieldEmail]
+	_, linkedInMoved := changed[fieldLinkedIn]
+	if linkedInMoved && w.object != migration.ObjectContact && ledger.Held(importkeys.LinkedIn, keys[importkeys.LinkedIn], w.object) {
 		return linkedInClaimedWhy, nil
 	}
+	email := keys[importkeys.Email]
+	switch {
+	case w.object == migration.ObjectCompany:
+		return w.movedDomainRefusal(ctx, id, keys[importkeys.Domain], changed)
+	case !emailMoved:
+	case w.object == migration.ObjectLead && ledger.Held(importkeys.Email, email, migration.ObjectLead):
+		return naturalKeyTakenWhy, nil
+	case w.object == migration.ObjectContact && ledger.Held(importkeys.Email, email, migration.ObjectContact):
+		return duplicateEmailWhy, nil
+	case w.object == migration.ObjectContact && ledger.Held(importkeys.Email, email, migration.ObjectLead):
+		return contactEmailClaimedWhy, nil
+	}
 	return migration.Reason{}, nil
+}
+
+// movedDomainRefusal is movedKeyRefusal for the domain a company update moves.
+func (w *csvWriters) movedDomainRefusal(ctx context.Context, id ids.UUID, domain string, changed map[string]string) (migration.Reason, error) {
+	if _, moved := changed[fieldDomain]; !moved {
+		return migration.Reason{}, nil
+	}
+	held, err := importkeys.DomainHeldByAnother(ctx, w.pool, domain, id)
+	if err != nil || !held && !w.links.claims.Held(importkeys.Domain, domain, w.object) {
+		return migration.Reason{}, err
+	}
+	return domainClaimedWhy, nil
 }
 
 // keyCheck is one key the create door refuses: held by an earlier row of the

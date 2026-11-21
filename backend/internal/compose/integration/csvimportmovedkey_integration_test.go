@@ -5,8 +5,8 @@
 
 package integration
 
-// A row that moves a key onto a record meets the same holders in the test run
-// and in the import: the stored records and the rows of the file before it.
+// A row that moves a key onto a record meets the same holders in both runs.
+// The holders are the stored records and the rows of the file before it.
 
 import (
 	"slices"
@@ -39,10 +39,14 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 	}} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupImportApp(t)
-			first := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Stored One",
-				"domains": []AnyMap{{"domain": "one.stored.test", "is_primary": true}}})
-			second := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Stored Two",
-				"domains": []AnyMap{{"domain": "two.stored.test", "is_primary": true}}})
+			storedCompany := func(name, domain string) string {
+				return createdID(t, e, "/v1/companies", AnyMap{
+					"source": "manual", "display_name": name,
+					"domains": []AnyMap{{"domain": domain, "is_primary": true}},
+				})
+			}
+			first := storedCompany("Stored One", "one.stored.test")
+			second := storedCompany("Stored Two", "two.stored.test")
 			files := map[string]string{"companies.csv": tc.file(first, second)}
 			parts := []AnyMap{{"file": "companies.csv", "object": "company", "mapping": AnyMap{
 				"ref": "ref", "id": "id", "name": "display_name", "domain": "domain",
