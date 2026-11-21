@@ -400,4 +400,54 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
     await waitFor(() => expect(cached()?.sources).toHaveLength(2));
     expect(cached()?.summary?.total_words).toBe(1800);
   });
+
+  it("takes the meter from the probe read again when the read after a removal fails", async () => {
+    stubApi({
+      ingests: [{ stats: documentStats, summary: summaryOf(900) }],
+      afterRemoveStatus: 500,
+    });
+    const client = new QueryClient();
+    client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, {
+      built: false,
+      summary: null,
+      sources: [],
+    });
+    const probe = vi.fn(
+      async (): Promise<VoiceRestoreProbe> => ({
+        built: false,
+        summary: summaryOf(0),
+        sources: [],
+      }),
+    );
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result } = renderHook(
+      () => {
+        useQuery({
+          queryKey: VOICE_PROBE_KEY,
+          queryFn: probe,
+          staleTime: Infinity,
+        });
+        return useVoiceCorpus({ state: collectingState, dispatch });
+      },
+      {
+        wrapper: ({ children }) =>
+          createElement(QueryClientProvider, { client }, children),
+      },
+    );
+    act(() => {
+      result.current.addPaste("A paragraph I actually wrote.", "Pasted text");
+    });
+    await waitFor(() => expect(result.current.manifest).toHaveLength(1));
+    const [added] = result.current.manifest;
+    if (added) {
+      act(() => result.current.removeSample(added));
+    }
+
+    await waitFor(() => expect(result.current.summary?.total_words).toBe(0));
+    expect(result.current.busy).toBe(false);
+    expect(
+      client.getQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY)?.summary
+        ?.total_words,
+    ).toBe(0);
+  });
 });

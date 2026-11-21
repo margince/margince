@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import type { components } from "../../../api/schema";
 import { formatNumber } from "../../../format/format";
 import type { Locale } from "../../../i18n";
@@ -31,6 +32,31 @@ export type VoiceRestoreProbe = Readonly<{
 /** The probe's query key; the voice step writes each corpus change into it,
  * so re-entering the step lists what the server holds now. */
 export const VOICE_PROBE_KEY = ["onboarding-conv-voice"] as const;
+
+export type ProbeChange = (
+  old: VoiceRestoreProbe,
+) => Partial<VoiceRestoreProbe>;
+
+// The screen keeps the probe mounted, so an invalidation would read it again
+// at once. Each change is written in instead, and a Back remount reads it.
+export function patchVoiceProbe(client: QueryClient, change: ProbeChange) {
+  client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, (old) =>
+    old === undefined ? undefined : { ...old, ...change(old) },
+  );
+}
+
+/** Reads the restore probe again and answers its summary, or null when that
+ *  read failed or the probe is not on screen to be read. */
+export async function refreshedProbeSummary(
+  client: QueryClient,
+): Promise<VoiceRestoreProbe["summary"]> {
+  const before = client.getQueryState(VOICE_PROBE_KEY)?.dataUpdatedAt ?? 0;
+  await client.invalidateQueries({ queryKey: VOICE_PROBE_KEY });
+  const after = client.getQueryState<VoiceRestoreProbe>(VOICE_PROBE_KEY);
+  return after !== undefined && after.dataUpdatedAt > before
+    ? (after.data?.summary ?? null)
+    : null;
+}
 
 export type RestoreInputs = Readonly<{
   /** GET /onboarding/state; null when nothing was persisted (404). */

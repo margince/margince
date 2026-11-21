@@ -24,7 +24,11 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { diffCorpus, useNarrationQueue } from "./narration";
-import { VOICE_PROBE_KEY, type VoiceRestoreProbe } from "./restore";
+import {
+  type ProbeChange,
+  patchVoiceProbe,
+  refreshedProbeSummary,
+} from "./restore";
 import { excerptLines } from "./voice-excerpts";
 import { type CorpusManifestEntry, storedEntry } from "./voice-manifest";
 import { refusalEntry, skipKeys } from "./voice-refusal-line";
@@ -82,6 +86,7 @@ export function useVoiceCorpus({
     initialSources.filter((source) => source.included).map(storedEntry),
   );
   const [removing, setRemoving] = useState<string | null>(null);
+  const [meterStale, setMeterStale] = useState(false);
   const [asks, setAsks] = useState<readonly SpeakerAsk[]>([]);
   const [probesInFlight, setProbesInFlight] = useState(0);
   const [failures, setFailures] = useState<readonly VoiceIngestFailure[]>([]);
@@ -157,14 +162,8 @@ export function useVoiceCorpus({
   const ingestSeq = useRef(0);
   const appliedSummarySeq = useRef(0);
 
-  // The screen keeps the restore probe mounted, so an invalidation would read
-  // it again at once. Each change is written in, and a Back remount reads it.
   const patchProbe = useCallback(
-    (change: (old: VoiceRestoreProbe) => Partial<VoiceRestoreProbe>) => {
-      queryClient.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, (old) =>
-        old === undefined ? undefined : { ...old, ...change(old) },
-      );
-    },
+    (change: ProbeChange) => patchVoiceProbe(queryClient, change),
     [queryClient],
   );
 
@@ -211,6 +210,7 @@ export function useVoiceCorpus({
       queue.push(diffCorpus(summaryRef.current, next, locale));
       summaryRef.current = next;
       setSummary(next);
+      setMeterStale(false);
     },
     [locale, queue, say, patchProbe],
   );
@@ -418,6 +418,7 @@ export function useVoiceCorpus({
       if (mounted.current) {
         summaryRef.current = next;
         setSummary(next);
+        setMeterStale(false);
       }
     },
     [patchProbe],
@@ -444,9 +445,13 @@ export function useVoiceCorpus({
             }
             return readCorpusSummary(profileId).then(
               (next) => applyRemovalSummary(seq, next),
-              // The meter is re-read by the next probe rather than left stale there.
-              () =>
-                queryClient.invalidateQueries({ queryKey: VOICE_PROBE_KEY }),
+              // The meter still counts the removed words, so Build waits for a fresh read.
+              () => {
+                if (mounted.current) setMeterStale(true);
+                return refreshedProbeSummary(queryClient).then(
+                  (next) => next && applyRemovalSummary(seq, next),
+                );
+              },
             );
           },
           (err: unknown) => {
@@ -482,7 +487,8 @@ export function useVoiceCorpus({
     answerSpeaker,
     /** True while any probe, ingest, removal or speaker question is still
      * open: a build starting now would misrepresent what the voice is made of. */
-    busy: probesInFlight > 0 || asks.length > 0 || removing !== null,
+    busy:
+      probesInFlight > 0 || asks.length > 0 || removing !== null || meterStale,
     /** Each source of the latest pick the corpus could not add; cleared
      * when the reader hands over the next file, paste or speaker answer. */
     failures,

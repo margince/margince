@@ -163,6 +163,28 @@ describe("the Sources list on the voice step", () => {
     expect(screen.queryByText(/could not remove/i)).toBeNull();
   });
 
+  // The meter still counts the removed sample until a read says otherwise.
+  it("holds Build when the meter cannot be read after a removal", async () => {
+    const calls = stubApi({ afterRemoveStatus: 500 });
+    const user = userEvent.setup();
+    render(
+      <Resumed
+        words={1052}
+        sources={[
+          stored({ id: "s1", source_label: "offer.pdf", word_count: 701 }),
+          stored({ id: "s2", source_label: "notes.txt", word_count: 351 }),
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Remove offer.pdf" }));
+    await waitFor(() => expect(screen.queryByText("offer.pdf")).toBeNull());
+    await user.click(
+      screen.getByRole("button", { name: /Build my voice profile/ }),
+    );
+    expect(requestsTo(calls, "/builds", "POST")).toHaveLength(0);
+  });
+
   it("names two pasted texts by their own opening words", async () => {
     stubApi({
       ingests: [
