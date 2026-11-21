@@ -495,3 +495,18 @@ func TestRenderOfferPDF_PrintsTheIssuerBlockAndEmbedsItsLogo(t *testing.T) {
 		t.Error("a logo that does not decode was embedded")
 	}
 }
+
+// Text typed as a letter and its accents apart reaches fpdf as the composed
+// letter. Drawn mark by mark, fpdf sets a second accent beside the first.
+func TestThePDFTextCheckComposesAccentsTypedApart(t *testing.T) {
+	check, err := newPDFTextCheck()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := check.text("Nguye\u0302\u0303n Thi\u0323"), "Nguy\u1EC5n Th\u1ECB"; got != want {
+		t.Errorf("text() = %+q, want %+q", got, want)
+	}
+	if err := check.err(); err != nil {
+		t.Errorf("the composed letters print: %v", err)
+	}
+}

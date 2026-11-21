@@ -10,7 +10,15 @@ import (
 
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/text/unicode/bidi"
+	"golang.org/x/text/unicode/norm"
 )
+
+// Composed is s with each letter and the accents typed after it joined into
+// one character where Unicode has one. A renderer that places one glyph per
+// character sets a second accent beside the first instead of over it.
+func Composed(s string) string {
+	return norm.NFC.String(s)
+}
 
 // Typeface is a set of parsed faces that must each draw a character, such as
 // a regular and a bold face. It is read-only and safe to share.

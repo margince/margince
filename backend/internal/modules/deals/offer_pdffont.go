@@ -62,6 +62,7 @@ func newPDFTextCheck() (*pdfTextCheck, error) {
 // text records what s holds that cannot be printed, and hands s back with each
 // such character as "?". fpdf's width tables stop at U+FFFF and index past
 // them, so an emoji must never reach a draw call; the render is refused anyway.
+// Accents typed apart from their letter are joined to it first.
 func (c *pdfTextCheck) text(s string) string {
 	return strings.Map(func(r rune) rune {
 		ok, seen := c.printable[r]
@@ -76,7 +77,7 @@ func (c *pdfTextCheck) text(s string) string {
 			return '?'
 		}
 		return r
-	}, s)
+	}, glyphcover.Composed(s))
 }
 
 func (c *pdfTextCheck) hasGlyph(r rune) bool {

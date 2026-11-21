@@ -33,3 +33,9 @@ func TestParseRefusesBytesThatAreNoFont(t *testing.T) {
 		t.Fatal("Parse() must refuse bytes that are no font face")
 	}
 }
+
+func TestComposedJoinsALetterWithTheAccentsTypedAfterIt(t *testing.T) {
+	if got, want := Composed("e\u0302\u0303 i\u0323"), "\u1EC5 \u1ECB"; got != want {
+		t.Errorf("Composed() = %+q, want %+q", got, want)
+	}
+}
