@@ -72,8 +72,6 @@ class QueueProblemsTest(unittest.TestCase):
                       casesetup.queue_problems([self.review("Wiebke Brandstätter"), other], self.NAMES))
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class RecordingAdmin:
@@ -121,3 +119,22 @@ class StagedMoveTest(unittest.TestCase):
     def test_a_staged_answer_with_no_row_in_the_queue_stops_the_case(self):
         with self.assertRaisesRegex(casesetup.SetupFault, "no pending relink of the mail"):
             self.staged_with_queue([{"kind": "relink_activity", "preview": {"activity": "another-mail"}}])
+
+
+
+class AdminIdTest(unittest.TestCase):
+    def ids_for(self, users):
+        admin = unittest.mock.Mock()
+        admin.call.return_value = {"data": users}
+        return casesetup._admin_id(admin)
+
+    def test_only_the_exact_address_is_the_admin(self):
+        users = [{"id": "other", "email": "admin@demo.test.example"}, {"id": "me", "email": "Admin@demo.test"}]
+        self.assertEqual(self.ids_for(users), "me")
+
+    def test_no_exact_address_stops_the_setup(self):
+        with self.assertRaisesRegex(casesetup.SetupFault, "0 users have the address"):
+            self.ids_for([{"id": "other", "email": "superadmin@demo.test"}])
+
+if __name__ == "__main__":
+    unittest.main()

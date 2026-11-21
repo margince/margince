@@ -223,45 +223,113 @@ func TestTheCommittedTreeStampsEveryScenario(t *testing.T) {
 	}
 }
 
-// pythonImport is one import statement of a lane module: `import x` or
-// `from x import y`, at any indentation, since the grader imports some lazily.
-var pythonImport = regexp.MustCompile(`(?m)^\s*(?:import\s+(\w+)|from\s+(\w+)\s+import\b)`)
+// judgeTransport are the modules only judge.py imports, to reach the judge:
+// how its CLI starts and the wire to its API. The stamp names the judge's model
+// on its own, so a change to them moves no verdict and they are not harness.
+var judgeTransport = []string{"e2e/llm/clean.py", "e2e/llm/providers.py"}
+
+// importLine and fromLine are one import statement of a lane module, at any
+// indentation, since the grader imports some lazily: `import a, b as c` and
+// `from x import y`.
+var (
+	importLine = regexp.MustCompile(`(?m)^[ \t]*import[ \t]+([\w., \t]+)`)
+	fromLine   = regexp.MustCompile(`(?m)^[ \t]*from[ \t]+([\w.]+)[ \t]+import\b`)
+)
+
+// importedModules names every top-level module a Python source imports.
+func importedModules(body string) []string {
+	var modules []string
+	for _, m := range importLine.FindAllStringSubmatch(body, -1) {
+		for _, item := range strings.Split(m[1], ",") {
+			if fields := strings.Fields(item); len(fields) > 0 {
+				modules = append(modules, strings.Split(fields[0], ".")[0])
+			}
+		}
+	}
+	for _, m := range fromLine.FindAllStringSubmatch(body, -1) {
+		modules = append(modules, strings.Split(m[1], ".")[0])
+	}
+	return modules
+}
+
+// graderClosure is every lane module check.py reaches through its imports, each
+// with the lane modules that import it.
+func graderClosure(t *testing.T, root string) map[string][]string {
+	t.Helper()
+	importers := map[string][]string{"e2e/llm/check.py": nil}
+	queue := []string{"e2e/llm/check.py"}
+	for len(queue) > 0 {
+		file := queue[0]
+		queue = queue[1:]
+		body, err := os.ReadFile(filepath.Join(root, file)) // #nosec G304 -- a lane file under the repository root
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, name := range importedModules(string(body)) {
+			module := "e2e/llm/" + name + ".py"
+			if _, err := os.Stat(filepath.Join(root, module)); err != nil {
+				continue
+			}
+			if _, seen := importers[module]; !seen {
+				queue = append(queue, module)
+			}
+			if !slices.Contains(importers[module], file) {
+				importers[module] = append(importers[module], file)
+			}
+		}
+	}
+	return importers
+}
 
 func TestTheHarnessHoldsEveryModuleTheGraderImports(t *testing.T) {
 	if err := gatekit.DeclareInputs(os.Getenv, "../../../../e2e"); err != nil {
 		t.Fatal(err)
 	}
 	root := filepath.Join("..", "..", "..", "..")
-	seen := map[string]bool{}
-	queue := slices.Clone(harnessFiles)
-	for len(queue) > 0 {
-		file := queue[0]
-		queue = queue[1:]
-		if seen[file] || !strings.HasSuffix(file, ".py") {
-			continue
-		}
-		seen[file] = true
-		body, err := os.ReadFile(filepath.Join(root, file)) // #nosec G304 -- a lane file under the repository root
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, m := range pythonImport.FindAllStringSubmatch(string(body), -1) {
-			module := "e2e/llm/" + m[1] + m[2] + ".py"
-			if _, err := os.Stat(filepath.Join(root, module)); err != nil {
-				continue
+	closure := graderClosure(t, root)
+	for module, by := range closure {
+		switch {
+		case slices.Contains(judgeTransport, module):
+			for _, importer := range by {
+				if importer != "e2e/llm/judge.py" && !slices.Contains(judgeTransport, importer) {
+					t.Errorf("%s is exempt as judge transport, but %s imports it, so it grades and belongs in harnessFiles", module, importer)
+				}
 			}
-			if _, why := judgeTransport[module]; why {
-				continue
-			}
-			if !slices.Contains(harnessFiles, module) {
-				t.Errorf("%s imports %s, which grades a run but is not in harnessFiles, so a change to it stales no verdict", file, module)
-			}
-			queue = append(queue, module)
+		case !slices.Contains(harnessFiles, module):
+			t.Errorf("%s imports %s, which grades a run but is not in harnessFiles, so a change to it stales no verdict", by, module)
 		}
 	}
-	for _, module := range []string{"e2e/llm/transcript.py", "e2e/llm/judge.py"} {
-		if !seen[module] {
-			t.Errorf("the walk never reached %s; it reads fewer imports than the grader makes", module)
+	for _, file := range harnessFiles {
+		if _, reached := closure[file]; strings.HasSuffix(file, ".py") && !reached {
+			t.Errorf("harnessFiles names %s, which no grader imports: the walk reads fewer imports than the grader makes, or the entry is stale", file)
+		}
+	}
+	for _, module := range judgeTransport {
+		if _, reached := closure[module]; !reached {
+			t.Errorf("judgeTransport exempts %s, which nothing the grader imports reaches any more", module)
+		}
+	}
+}
+
+func TestTheGraderWalkReadsEveryImportForm(t *testing.T) {
+	root := t.TempDir()
+	for name, body := range map[string]string{
+		"check.py":     "import json\nimport judge, endstate as ends\n\ndef grade():\n    from casesetup import STEPS\n",
+		"judge.py":     "",
+		"endstate.py":  "",
+		"casesetup.py": "",
+	} {
+		if err := os.MkdirAll(filepath.Join(root, "e2e", "llm"), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, "e2e", "llm", name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	closure := graderClosure(t, root)
+	for _, module := range []string{"e2e/llm/judge.py", "e2e/llm/endstate.py", "e2e/llm/casesetup.py"} {
+		if _, reached := closure[module]; !reached {
+			t.Errorf("the walk missed %s; got %v", module, closure)
 		}
 	}
 }

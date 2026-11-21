@@ -14,8 +14,8 @@
 # A subscription limit makes it wait and go on. A case that stops the harness
 # waits until the others have run, since the lane runs a batch in file order
 # and stops at the first such case; once only such cases are left, they run
-# one per batch, and a batch that finishes nothing twice stops the lane, so
-# that you read the log.
+# one per batch, and when every one of them has had a batch that finished
+# nothing, the lane stops, so that you read the log.
 #
 # Run each lane from its own worktree: a worktree owns one dev stack, and two
 # lanes building in one would race. Lanes share the Postgres, Redis and object
@@ -128,7 +128,10 @@ while :; do
   fi
   stalled=$((stalled + 1))
   echo "NO PROGRESS $slug ($stalled): $(grep -m1 '^HARNESS' "$log")"
-  if [[ $stalled -ge 2 ]]; then
+  # Every case left gets its turn before the lane gives up, since only stopped
+  # cases rotate one per batch and the one that would finish may be last.
+  limit=$((${#left[@]} > 2 ? ${#left[@]} : 2))
+  if [[ $stalled -ge $limit ]]; then
     echo "LANE STOPPED $slug: read $log" >&2
     exit 1
   fi

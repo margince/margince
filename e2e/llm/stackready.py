@@ -55,9 +55,9 @@ def settled(open_session, wait, clock=time.monotonic, pause=time.sleep):
     """"" once the stack answers an authenticated initialize, or why it did not.
 
     A snapshot restore drops every database connection under the running api,
-    and a call that draws one before the pool replaces it is answered 503. A run
-    that started then would be scored on an outage, so the lane waits it out;
-    any other refusal is no outage and is not waited on.
+    so for a while a call can be answered 5xx, fail inside the server, or not
+    be answered at all. A run that started then would be scored on an outage,
+    so the lane waits it out. A refused credential is no outage and stops at once.
     """
     deadline = clock() + wait
     while True:
@@ -65,7 +65,7 @@ def settled(open_session, wait, clock=time.monotonic, pause=time.sleep):
             open_session()
             return ""
         except mcpclient.McpFault as fault:
-            if "HTTP 503" not in str(fault) or clock() >= deadline:
+            if fault.refused or clock() >= deadline:
                 return f"the stack did not answer an authenticated call after the restore: {fault}"
             pause(1)
 

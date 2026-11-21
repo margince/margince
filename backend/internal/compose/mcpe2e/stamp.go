@@ -71,15 +71,7 @@ var (
 var harnessFiles = []string{
 	"e2e/llm/check.py", "e2e/llm/judge.py", "e2e/llm/endstate.py",
 	"e2e/llm/casesetup.py", "e2e/llm/seed-llm-fixtures.sh",
-	"e2e/llm/transcript.py", "e2e/llm/mcpclient.py",
-}
-
-// judgeTransport are the grader's imports that only reach the judge. The stamp
-// names the judge's model on its own, so a change to them moves no verdict.
-var judgeTransport = map[string]string{
-	"e2e/llm/candidates.py": "resolves the judge's route; the judge model is its own stamp part",
-	"e2e/llm/clean.py":      "starts the judge's CLI with nothing of the operator's",
-	"e2e/llm/providers.py":  "the wire to the judge's API",
+	"e2e/llm/transcript.py", "e2e/llm/mcpclient.py", "e2e/llm/candidates.py",
 }
 
 // inputs are the committed files every scenario's stamp is computed from. On

@@ -1524,6 +1524,10 @@ c112="case112-my-plan-and-the-dossier.yaml"
 judges "$c112" case112 plan-first-says-none 0
 judges "$c112" case112 says-no-plan 0
 judges "$c112" case112 reads-a-plan-that-is-not-there 1 "never said anything matching"
+# The none must be the plan's own: an empty dossier beside it, or nothing
+# overdue on a plan that holds calls, is not a plan that does not exist.
+judges "$c112" case112 a-plan-with-calls-beside-an-empty-dossier 1 "never said anything matching"
+judges "$c112" case112 nothing-overdue-is-not-no-plan 1 "never said anything matching"
 
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2
