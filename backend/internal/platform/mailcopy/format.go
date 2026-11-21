@@ -59,6 +59,12 @@ func (c Copy) Money(minor int64, currency string) string {
 	return moneynotation.Grouped(minor, currency, textlang.Lang(c.Language)) + " " + currency
 }
 
+// Number writes a plain decimal such as "-1234567.891" in this language's
+// digit marks.
+func (c Copy) Number(plain string) string {
+	return moneynotation.GroupedDecimal(plain, textlang.Lang(c.Language))
+}
+
 func zoneOffset(at time.Time) string {
 	_, offset := at.Zone()
 	if offset == 0 {

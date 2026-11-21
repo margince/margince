@@ -17,6 +17,8 @@ import "./offers.css";
 import { RecordGone } from "../../components/recordgone";
 import {
   AcceptOfferAction,
+  DiscardOfferAction,
+  isOpenDraft,
   RegenerateOfferAction,
   RejectOfferAction,
   RenderOfferPdfAction,
@@ -27,6 +29,7 @@ import { OfferLinesPanel } from "./offers.fromdeal";
 // surface is its own because buyer_company_id needs the shared RecordPicker and
 // template_id a server-sourced select — EditAction/CreateField fits neither.
 import { EditOfferHeaderModal } from "./offers.header";
+import { OfferHeaderFields } from "./offers.summary";
 
 export type Offer = components["schemas"]["Offer"];
 
@@ -163,12 +166,11 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
         }),
       );
     },
-    // RegenerateOfferAction seeds this exact key with its 201 response — the
-    // only place ai_disclosure/diff_from_previous are ever populated — right
-    // before navigating here, and the default refetchOnMount would re-GET and
-    // wipe both the instant this screen mounts. A genuinely fresh navigation
-    // is unaffected: refetchOnMount only skips when the key is already cached.
-    refetchOnMount: false,
+    // RegenerateOfferAction seeds this exact key with its 201 response right
+    // before navigating here. Only that response carries ai_disclosure and
+    // diff_from_previous, and a re-GET on mount would wipe both. Every
+    // other cached offer is re-read, since its status may have moved on.
+    refetchOnMount: (query) => query.state.data?.ai_generated !== true,
   });
 
   return (
@@ -184,7 +186,13 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                 change it, so they take the band rather than the head. */}
             <Panel
               title={offer.offer_number}
-              titleAction={<Badge>{offerStatusLabel(offer.status, t)}</Badge>}
+              titleAction={
+                <Badge>
+                  {offer.archived_at
+                    ? t("record.archived")
+                    : offerStatusLabel(offer.status, t)}
+                </Badge>
+              }
               actions={
                 <>
                   <Button
@@ -194,18 +202,19 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                   >
                     <ArrowLeft aria-hidden /> {t("offer.backToDeal")}
                   </Button>
-                  {offer.status === "draft" && (
-                    <Button
-                      data-testid="edit-offer-header"
-                      onClick={() => setEditing(true)}
-                    >
-                      <PenLine aria-hidden /> {t("offer.edit")}
-                    </Button>
+                  {isOpenDraft(offer) && (
+                    <>
+                      <Button
+                        data-testid="edit-offer-header"
+                        onClick={() => setEditing(true)}
+                      >
+                        <PenLine aria-hidden /> {t("offer.edit")}
+                      </Button>
+                      <SendOfferAction offer={offer} />
+                      <DiscardOfferAction offer={offer} />
+                    </>
                   )}
-                  {offer.status === "draft" && (
-                    <SendOfferAction offer={offer} />
-                  )}
-                  {offer.status === "sent" && (
+                  {offer.status === "sent" && !offer.archived_at && (
                     <>
                       <AcceptOfferAction offer={offer} />
                       <RejectOfferAction offer={offer} />
@@ -215,13 +224,15 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                 </>
               }
             >
-              {null}
+              <PanelBody>
+                <OfferHeaderFields offer={offer} />
+              </PanelBody>
             </Panel>
             <AiDisclosureBanner offer={offer} />
             <OfferTotalsPanel offer={offer} />
-            <RenderOfferPdfAction offer={offer} />
+            {!offer.archived_at && <RenderOfferPdfAction offer={offer} />}
             <OfferLinesPanel offer={offer} />
-            {offer.status === "draft" && (
+            {isOpenDraft(offer) && (
               <EditOfferHeaderModal
                 open={editing}
                 onClose={() => setEditing(false)}

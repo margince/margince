@@ -258,8 +258,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_company_domain_disposition_candidate`: `btree (candidate_company_id) WHERE (candidate_company_id IS NOT NULL)`
 - `idx_company_domain_disposition_company`: `btree (company_id)`
 - `idx_company_domain_disposition_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
-- `idx_domain_disposition_admission`: `btree (admission_at DESC) WHERE (admission IS NOT NULL)`
-- `idx_domain_disposition_unevidenced`: `btree (updated_at DESC) WHERE (pending_reason = 'unevidenced')`
 - `uq_company_domain_disposition`: `unique, btree (domain)`
 
 **Triggers**
@@ -2394,7 +2392,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `idx_technical_lookup_cache_expiry`: `btree (expires_at)`
 - `technical_lookup_cache_pkey`: `unique, btree (query, record_kind)`
 
 **Triggers**
