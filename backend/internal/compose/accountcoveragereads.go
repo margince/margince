@@ -16,10 +16,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -125,7 +127,7 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 
 // accountsInPipeline lists the accounts with an open deal in the population,
 // with how many and how much, largest first. The sum is in the installation
-// currency, and absent when a deal carries no rate or a masked amount.
+// currency and adds the deals that convert. Its coverage counts the rest.
 func accountsInPipeline(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
 	scope, err := scopedPopulation(ctx, pop)
 	if err != nil {
@@ -135,16 +137,25 @@ func accountsInPipeline(ctx context.Context, tx pgx.Tx, pop *coveragePopulation)
 	if err != nil {
 		return nil, err
 	}
+	amount, err := auth.MaskedColumnSQL(ctx, tableDeal, "amount_minor", "d", "amount_minor", scope.arg)
+	if err != nil {
+		return nil, err
+	}
+	currency, err := auth.MaskedColumnSQL(ctx, tableDeal, "currency", "d", "currency", scope.arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.display_name, c.owner_id, count(d.id),
-		       CASE WHEN bool_and(v.base_minor IS NOT NULL) THEN sum(v.base_minor) END
+		       %s, %s
 		  FROM deal d
 		  JOIN company c ON c.id = d.company_id AND c.archived_at IS NULL
 		 CROSS JOIN LATERAL (SELECT %s AS base_minor) v
 		 WHERE d.status = 'open' AND d.archived_at IS NULL AND %s
 		 GROUP BY c.id, c.display_name, c.owner_id
 		 ORDER BY sum(v.base_minor) DESC NULLS LAST, c.id
-		 LIMIT %d`, value, scope.where, coverageCandidates), scope.args...)
+		 LIMIT %d`, moneytotal.PartialSumSQL("sum(v.base_minor)"), moneytotal.CoverageSQL("v.base_minor", amount, currency),
+		value, scope.where, coverageCandidates), scope.args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the accounts in pipeline: %w", err)
 	}
@@ -153,10 +164,12 @@ func accountsInPipeline(ctx context.Context, tx pgx.Tx, pop *coveragePopulation)
 	for rows.Next() {
 		var row crmcontracts.AccountCoverageRow
 		var open int
-		if err := rows.Scan(&row.Company.Id, &row.Company.Name, &row.Company.OwnerId, &open, &row.OpenAmountMinor); err != nil {
+		var gaps dealcoverage.Counts
+		if err := rows.Scan(append([]any{&row.Company.Id, &row.Company.Name, &row.Company.OwnerId, &open, &row.OpenAmountMinor}, gaps.Dest()...)...); err != nil {
 			return nil, fmt.Errorf("read an account in pipeline: %w", err)
 		}
-		row.OpenDeals = &open
+		coverage := gaps.Wire("open_amount_minor")
+		row.OpenDeals, row.OpenAmountCoverage = &open, &coverage
 		out = append(out, row)
 	}
 	pop.noteCap(len(out))

@@ -1,3 +1,4 @@
+import { PartialMark } from "../../components/partialmark";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -17,7 +18,7 @@ import {
   rowMoney,
 } from "./analytics.cells";
 import { CellExplain, rowDerivationUrl } from "./analytics.explain";
-import { CoverageFootnote, PartialMark } from "./analytics.moneygap";
+import { CoverageFootnote } from "./analytics.moneygap";
 
 const closeMonth = (row: ReportRow) =>
   typeof row.close_month === "string" ? row.close_month : null;

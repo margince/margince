@@ -2,12 +2,14 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { CoverageNote, PartialMark } from "../../components/partialmark";
 import { EmptyState, Skeleton } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Stack } from "../../design-system/stack";
 import { formatDateTime, formatMoney, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
+import { coverageOfWire, hasGap } from "../../lib/moneycoverage";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import {
   type RollupPeriod,
@@ -75,6 +77,7 @@ export function HierarchyRollupPanel({
 
   const rollup = rollupQuery.data;
   const won = rollup.closed_won_period;
+  const closedWonCoverage = coverageOfWire(rollup.closed_won_coverage);
   const money = (value: CompanyHierarchyRollup["weighted_pipeline"]) =>
     value.amount_minor != null && value.currency
       ? formatMoney(value.amount_minor, value.currency, locale)
@@ -104,7 +107,15 @@ export function HierarchyRollupPanel({
                 ? t("rollup.wonIn", { period: won.label })
                 : t("rollup.closedWon")}
             </dt>
-            <dd className="t-num">{money(rollup.closed_won)}</dd>
+            <dd className="t-num">
+              {money(rollup.closed_won)}
+              <PartialMark coverage={closedWonCoverage} />
+              {hasGap(closedWonCoverage) && (
+                <span className="t-caption">
+                  <CoverageNote coverage={closedWonCoverage} />
+                </span>
+              )}
+            </dd>
           </div>
           <div>
             <dt className="t-eyebrow">{t("rollup.activity30d")}</dt>

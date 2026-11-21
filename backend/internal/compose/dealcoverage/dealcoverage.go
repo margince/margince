@@ -9,6 +9,8 @@ package dealcoverage
 import (
 	"slices"
 	"strings"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // Key is the row key a report puts its coverage under.
@@ -27,6 +29,28 @@ func NoValueSQL(alias string) string { return alias + ".amount_minor IS NULL" }
 // It excludes NoValueSQL, so a deal is counted under one cause only.
 func NoRateSQL(alias, baseValueSQL string) string {
 	return alias + ".amount_minor IS NOT NULL AND (" + baseValueSQL + ") IS NULL"
+}
+
+// Counts is what moneytotal.CoverageSQL reads back.
+type Counts struct {
+	NoValue, NoRate int64
+	Currencies      *string
+}
+
+// Dest lists the scan targets for the coverage terms, in order.
+func (c *Counts) Dest() []any { return []any{&c.NoValue, &c.NoRate, &c.Currencies} }
+
+// Wire states the counts as the contract's coverage, naming the figures they
+// qualify.
+func (c Counts) Wire(figures ...string) crmcontracts.ReportRowCoverage {
+	currencies := []string{}
+	if c.Currencies != nil && *c.Currencies != "" {
+		currencies = strings.Split(*c.Currencies, ",")
+	}
+	return crmcontracts.ReportRowCoverage{
+		Aggregates: figures, Partial: c.NoValue+c.NoRate > 0,
+		NoValueDeals: int(c.NoValue), NoRateDeals: int(c.NoRate), MissingCurrencies: currencies,
+	}
 }
 
 // Attach adds, after the plan's own terms and columns, the terms that count a

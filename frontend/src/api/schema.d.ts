@@ -35347,6 +35347,7 @@ export interface components {
             formula_sql: string;
             dependencies: string[];
             computable: boolean;
+            coverage?: components["schemas"]["ReportRowCoverage"];
             /** @description Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx". */
             reason?: string | null;
         };
@@ -35634,6 +35635,7 @@ export interface components {
              */
             pipeline_state_at: string;
             closed_won: components["schemas"]["Money"];
+            closed_won_coverage?: components["schemas"]["ReportRowCoverage"];
             closed_won_period: components["schemas"]["CompanyRollupWonPeriod"];
             activity_count_30d: number;
             activity_window: components["schemas"]["ReportingWindow"];
@@ -40922,9 +40924,10 @@ export interface components {
             open_deals?: number;
             /**
              * Format: int64
-             * @description Their amounts, in the installation currency, when every one carries a rate.
+             * @description Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`.
              */
             open_amount_minor?: number;
+            open_amount_coverage?: components["schemas"]["ReportRowCoverage"];
             won_deal?: components["schemas"]["AccountCoverageDeal"];
             /** Format: date-time */
             last_inbound?: string;
@@ -51000,6 +51003,8 @@ export interface components {
          *     NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
          */
         ForecastSufficiency: {
+            /** @description For each comparable period behind a historical median, newest first, the won deals its total leaves out for want of an amount or an exchange rate. */
+            comparable_unpriced?: number[];
             /**
              * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
              * @enum {string}
@@ -63703,9 +63708,10 @@ export interface components {
             undone: number;
             /**
              * Format: int64
-             * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+             * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
              */
             value_base_minor: number;
+            value_coverage?: components["schemas"]["ReportRowCoverage"];
             /**
              * Format: int64
              * @description How much value these changes moved, in the base currency's minor units. Each deal's

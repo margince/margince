@@ -33226,7 +33226,10 @@ type AccountCoverageRow struct {
 	// NamedSeats Contacts named on the deal, engaged or not.
 	NamedSeats *int `json:"named_seats,omitempty"`
 
-	// OpenAmountMinor Their amounts, in the installation currency, when every one carries a rate.
+	// OpenAmountCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	OpenAmountCoverage *ReportRowCoverage `json:"open_amount_coverage,omitempty"`
+
+	// OpenAmountMinor Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`.
 	OpenAmountMinor *int64 `json:"open_amount_minor,omitempty"`
 
 	// OpenDeals Open deals on the account, for an untouched row.
@@ -43306,6 +43309,9 @@ type CompanyHierarchyRollup struct {
 	// ClosedWon Money as integer minor-units + ISO-4217 currency. Never a float.
 	ClosedWon Money `json:"closed_won"`
 
+	// ClosedWonCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	ClosedWonCoverage *ReportRowCoverage `json:"closed_won_coverage,omitempty"`
+
 	// ClosedWonPeriod The period `closed_won` sums: one bucket of the period reports, cut in the
 	// installation's reporting zone and fiscal calendar. A period still under way holds
 	// the deals won by the moment of the read.
@@ -44082,8 +44088,11 @@ type ComposedExtensionRoute struct {
 // `reason` is the honest floor for a field with no backend data model yet — the row is
 // still returned, never omitted or fabricated.
 type ComputedField struct {
-	Computable   bool     `json:"computable"`
-	Dependencies []string `json:"dependencies"`
+	Computable bool `json:"computable"`
+
+	// Coverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	Coverage     *ReportRowCoverage `json:"coverage,omitempty"`
+	Dependencies []string           `json:"dependencies"`
 
 	// FormulaSql The literal GENERATED-column/view SQL definition; empty string when computable=false.
 	FormulaSql string            `json:"formula_sql"`
@@ -52611,6 +52620,9 @@ type ForecastSufficiency struct {
 
 	// Basis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
 	Basis *ForecastSufficiencyBasis `json:"basis,omitempty"`
+
+	// ComparableUnpriced For each comparable period behind a historical median, newest first, the won deals its total leaves out for want of an amount or an exchange rate.
+	ComparableUnpriced *[]int `json:"comparable_unpriced,omitempty"`
 
 	// CoverageBp Current over needed in BASIS POINTS, so the server chooses no rounding for the client. Nothing needed is 10000 (full) rather than a division by zero or an unbounded ratio, because "covered" is actionable and "infinity" is not.
 	CoverageBp       *int64 `json:"coverage_bp,omitempty"`
@@ -63696,6 +63708,24 @@ type ReportResult struct {
 	TotalRows *int `json:"total_rows,omitempty"`
 }
 
+// ReportRowCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+type ReportRowCoverage struct {
+	// Aggregates The aliases of the row's partial sums, which this coverage qualifies.
+	Aggregates []string `json:"aggregates"`
+
+	// MissingCurrencies The currencies with no exchange rate, from the same statement as the sums.
+	MissingCurrencies []string `json:"missing_currencies"`
+
+	// NoRateDeals Deals in the group with an amount whose currency has no exchange rate as of the answer's date.
+	NoRateDeals int `json:"no_rate_deals"`
+
+	// NoValueDeals Deals in the group with no amount.
+	NoValueDeals int `json:"no_value_deals"`
+
+	// Partial True when at least one deal is left out of those sums.
+	Partial bool `json:"partial"`
+}
+
 // ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
 type ReportRun struct {
 	// Answer The question re-asked under the reading caller's authority. NOT the rows the asker saw: those were narrowed for them.
@@ -69336,8 +69366,11 @@ type TeamMarginceChangeGroup struct {
 	// before Margince kept the amount it was valued from.
 	Unvalued int `json:"unvalued"`
 
-	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
 	ValueBaseMinor int64 `json:"value_base_minor"`
+
+	// ValueCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	ValueCoverage *ReportRowCoverage `json:"value_coverage,omitempty"`
 
 	// ValueMovedBaseMinor How much value these changes moved, in the base currency's minor units. Each deal's
 	// changes of this kind net out first and the group adds the size of each net move.

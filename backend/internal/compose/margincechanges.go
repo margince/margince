@@ -23,6 +23,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -167,8 +168,11 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 		return
 	}
 	for _, g := range report.Groups {
+		gaps := dealcoverage.Counts{NoValue: int64(g.ValueNoAmount), NoRate: int64(g.ValueNoRate), Currencies: &g.ValueMissingCurrencies}
+		coverage := gaps.Wire("value_base_minor")
 		out.Groups = append(out.Groups, crmcontracts.TeamMarginceChangeGroup{
-			OwnerId: openapi_types.UUID(g.OwnerID), OwnerName: names[g.OwnerID], Kind: g.Kind,
+			ValueCoverage: &coverage,
+			OwnerId:       openapi_types.UUID(g.OwnerID), OwnerName: names[g.OwnerID], Kind: g.Kind,
 			Deals: g.Deals, Undone: g.Undone, ValueBaseMinor: g.ValueBaseMinor, ValueMovedBaseMinor: g.ValueMovedBaseMinor,
 			Unvalued: g.Unvalued,
 		})

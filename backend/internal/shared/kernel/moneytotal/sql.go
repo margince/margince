@@ -15,6 +15,16 @@ func PartialSumSQL(sumSQL string) string {
 	return FinalizeBaseTotalSQL(sumSQL, "count(*)")
 }
 
+// CoverageSQL is three aggregate terms over a group of deals. They count the
+// deals with no amount, count those with an amount valueSQL cannot convert, and
+// list the currencies of those. amountSQL is the amount as the reader may see it, so a withheld amount
+// counts as no value.
+func CoverageSQL(valueSQL, amountSQL, currencySQL string) string {
+	noRate := "(" + amountSQL + ") IS NOT NULL AND (" + valueSQL + ") IS NULL"
+	return "count(*) FILTER (WHERE (" + amountSQL + ") IS NULL), count(*) FILTER (WHERE " + noRate + "), " +
+		"string_agg(DISTINCT " + currencySQL + ", ',' ORDER BY " + currencySQL + ") FILTER (WHERE " + noRate + ")"
+}
+
 // StrictBaseTotalSQL answers null for a group holding an amount that cannot be
 // priced, rather than an aggregate over the rest of it.
 //

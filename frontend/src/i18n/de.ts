@@ -17160,6 +17160,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gemessen an der Einschätzung für diesen Zeitraum.",
   "forecast.pipelineBasisWhy.historical_median":
     "Gemessen am Median der letzten 4 vergleichbaren Zeiträume.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} gewonnener Deal dieser Perioden hat keinen Betrag oder Wechselkurs und fehlt im Median.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} gewonnene Deals dieser Perioden haben keinen Betrag oder Wechselkurs und fehlen im Median.",
   "forecast.pipelineAbsentTitle":
     "Keine Pipeline-Abdeckung für diesen Zeitraum",
   "forecast.pipelineAbsent.call_withheld":

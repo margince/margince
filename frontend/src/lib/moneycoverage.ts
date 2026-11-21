@@ -24,7 +24,11 @@ function count(value: unknown): number | null {
 // is missing". A client older than the server meets that on a row it did not
 // ask the server to qualify.
 export function coverageOf(row: Row): MoneyCoverage | null {
-  const stated = row.coverage;
+  return coverageOfWire(row.coverage);
+}
+
+// The same, for a coverage object met outside a report row.
+export function coverageOfWire(stated: unknown): MoneyCoverage | null {
   if (stated == null || typeof stated !== "object") return null;
   const fields = stated as Row;
   const noValue = count(fields.no_value_deals);
