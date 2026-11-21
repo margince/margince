@@ -35,7 +35,7 @@ func RefoldClocksTx(ctx context.Context, tx pgx.Tx, targets storekit.LastActivit
 		targets.Contacts, targets.Deals, targets.Companies); err != nil {
 		return fmt.Errorf("contacts: refolding last-activity clocks: %w", err)
 	}
-	return refreshStrengthDatesTx(ctx, tx, targets.Contacts)
+	return RefreshStrengthDatesTx(ctx, tx, targets.Contacts)
 }
 
 // CompaniesWhoseEmploymentEndedTx answers the next limit companies after

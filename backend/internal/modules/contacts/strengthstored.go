@@ -95,10 +95,13 @@ func storedStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, n
 	return byContact, err
 }
 
-// refreshStrengthDatesTx folds the stored dates of each contact again from its
+// RefreshStrengthDatesTx folds the stored dates of each contact again from its
 // history at now(). The clock refold calls it once an activity's time has come,
-// because no row changes then.
-func refreshStrengthDatesTx(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) error {
+// because no row changes then, and the backfill calls it for each live contact.
+func RefreshStrengthDatesTx(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) error {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return err
+	}
 	if len(contacts) == 0 {
 		return nil
 	}

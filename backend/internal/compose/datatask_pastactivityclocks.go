@@ -28,17 +28,11 @@ func pastActivityClocksDataTask() datatask.Task {
 		ID: "core/1792656701_past_activity_clocks", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1792656701_past_activity_clocks"), Requires: []string{"core/1792656701"},
 		Steps: []datatask.Step{
-			futureClockStep("contacts", storekit.ClockContacts, audit),
-			futureClockStep("companies", storekit.ClockCompanies, audit),
-			futureClockStep("deals", storekit.ClockDeals, audit),
+			clockRefoldStep("contacts", storekit.ClockContacts, storekit.ClockInFuture, audit),
+			clockRefoldStep("companies", storekit.ClockCompanies, storekit.ClockInFuture, audit),
+			clockRefoldStep("deals", storekit.ClockDeals, storekit.ClockInFuture, audit),
 		},
 	}
-}
-
-// futureClockStep refolds each record of one table whose stored clock is
-// later than now.
-func futureClockStep(name string, table storekit.ClockTable, audit datatask.AuditPolicy) datatask.Step {
-	return clockRefoldStep(name, table, storekit.ClockInFuture, audit)
 }
 
 // clockRefoldStep walks one table by id in bounded pages and refolds each
@@ -88,18 +82,4 @@ func clockTargets(table storekit.ClockTable, records []ids.UUID) storekit.LastAc
 		targets.Contacts = records
 	}
 	return targets
-}
-
-// strengthDatesDataTask folds the stored strength dates of every live contact
-// the migration that added them found, through the refold the clock job runs.
-// An archived contact stores no dates, so it is left.
-func strengthDatesDataTask() datatask.Task {
-	return datatask.Task{
-		ID: "core/1795264358_contact_strength_dates", Version: 1,
-		Title: systemtext.Literal("datatask.title.core.1795264358_contact_strength_dates"), Requires: []string{"core/1795264358"},
-		Steps: []datatask.Step{
-			clockRefoldStep("contacts", storekit.ClockContacts, storekit.ClockStrengthUnfolded,
-				datatask.AuditPolicy{Reason: clockRefoldAuditReason}),
-		},
-	}
 }
