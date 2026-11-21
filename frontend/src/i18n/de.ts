@@ -20048,7 +20048,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Wie die Beziehung steht",
   "contact.standing.dim.promises": "Deine Zusagen",
   "contact.standing.dim.promisesNone": "Keine offen",
-  "contact.standing.dim.promisesUncounted": "Zu viele Aufgaben zum Zählen",
   "standing.overdue_one": "{count} überfällig",
   "standing.overdue_other": "{count} überfällig",
   "standing.ofOpen_one": "von {count} offenen",

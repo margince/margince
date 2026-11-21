@@ -46609,6 +46609,9 @@ type ConversationClaim struct {
 
 	// TaskActivityId The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
 	TaskActivityId *openapi_types.UUID `json:"task_activity_id,omitempty"`
+
+	// TaskOpen True when the task `task_activity_id` names is open and this reader may see it. The contact 360 read sets it on every claim with a task, because `next_steps` is capped: a claim whose task is past the cap still counts as owed, and one whose task is done or hidden does not. Absent when the claim names no task.
+	TaskOpen *bool `json:"task_open,omitempty"`
 }
 
 // ConversationClaimStatus `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.

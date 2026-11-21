@@ -359,7 +359,7 @@ describe("contactDims", () => {
     ]);
   });
 
-  it("reads the count as a floor when open tasks run past the section's cap", () => {
+  it("counts a promise whose task is past the cap once, and not one whose task is done or hidden", () => {
     const task = {
       id: "t-1",
       kind: "task" as const,
@@ -376,16 +376,37 @@ describe("contactDims", () => {
     };
     const view: Contact360 = {
       ...VIEW,
-      claims: [],
+      claims: [
+        {
+          ...promise("c-listed", null),
+          task_activity_id: "t-1",
+          task_open: true,
+        },
+        {
+          ...promise("c-past", null),
+          task_activity_id: "t-past",
+          task_open: true,
+        },
+        {
+          ...promise("c-done", null),
+          task_activity_id: "t-done",
+          task_open: false,
+        },
+        {
+          ...promise("c-hidden", null),
+          task_activity_id: "t-hidden",
+          task_open: false,
+        },
+      ],
       next_steps: { data: [task], page: { has_more: true } },
     };
     expect(contactDims(view, t, "en")[0]).toMatchObject({
       key: "promises",
-      value: "1+ open",
+      value: "2 open",
     });
   });
 
-  it("does not read a capped page of reminders alone as nothing owed", () => {
+  it("reads a capped page of reminders alone as nothing owed", () => {
     const reminder = {
       id: "t-9",
       kind: "task" as const,
@@ -406,7 +427,7 @@ describe("contactDims", () => {
     };
     expect(contactDims(view, t, "en")[0]).toMatchObject({
       key: "promises",
-      value: "Too many tasks to count",
+      value: t("contact.standing.dim.promisesNone"),
     });
   });
 
