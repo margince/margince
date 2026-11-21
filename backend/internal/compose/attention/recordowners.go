@@ -55,6 +55,16 @@ func (s *Service) pairOwners(ctx context.Context) (*storekit.OwnerSet, error) {
 	return nil, nil
 }
 
+// pairRecipient is the owner a pair's card is raised for, by the rule a
+// contact case follows. A pair nobody owns names nobody.
+func (s *Service) pairRecipient(ctx context.Context, pair DuplicatePair) *ids.UUID {
+	q, err := s.caseQuery(ctx, 0)
+	if err != nil {
+		return nil
+	}
+	return s.caseRecipient(q, ContactCase{Owners: pair.Owners}, readerOf(ctx))
+}
+
 func (s *Service) duplicateCandidates(ctx context.Context, depth int) ([]DuplicatePair, int, error) {
 	owners, err := s.pairOwners(ctx)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {

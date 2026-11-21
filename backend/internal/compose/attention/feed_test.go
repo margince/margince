@@ -50,6 +50,9 @@ type stubDuplicates struct {
 	// ownerless says the pairs have no owner on either end, so a page for an
 	// owner set that names owners has none of them.
 	ownerless bool
+	// byOwner narrows the pairs to the ones a read's owner set decides, as the
+	// store does.
+	byOwner bool
 	// owners records the owner set each read was narrowed to.
 	owners *[]*storekit.OwnerSet
 	// unreadable is a record this caller may not name. The pair still comes
@@ -81,16 +84,34 @@ func (s stubDuplicates) holds(owners *storekit.OwnerSet) bool {
 	return !s.ownerless || owners == nil || owners.Unassigned
 }
 
+// within is the pairs a read narrowed to these owners returns.
+func (s stubDuplicates) within(owners *storekit.OwnerSet) []DuplicatePair {
+	if !s.byOwner || owners == nil {
+		return s.pairs
+	}
+	var kept []DuplicatePair
+	for _, pair := range s.pairs {
+		mine := slices.ContainsFunc(pair.Owners, func(o ids.UUID) bool { return slices.Contains(owners.IDs, o) })
+		if mine || (owners.Unassigned && len(pair.Owners) == 0) {
+			kept = append(kept, pair)
+		}
+	}
+	return kept
+}
+
 func (s stubDuplicates) OpenCandidates(_ context.Context, _ int, owners *storekit.OwnerSet) ([]DuplicatePair, error) {
 	if !s.holds(owners) {
 		return nil, nil
 	}
-	return s.pairs, s.err
+	return s.within(owners), s.err
 }
 
 func (s stubDuplicates) CountOpen(_ context.Context, owners *storekit.OwnerSet) (int, error) {
 	if !s.holds(owners) {
 		return 0, nil
+	}
+	if s.byOwner {
+		return len(s.within(owners)), s.err
 	}
 	return s.open, s.err
 }

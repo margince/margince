@@ -107,6 +107,8 @@ type DuplicatePair struct {
 	LeftID     ids.UUID
 	RightID    ids.UUID
 	Evidence   []FieldComparison
+	// Owners are the live owners of the two records.
+	Owners []ids.UUID
 }
 
 // FieldComparison is one row of the detection-time snapshot.

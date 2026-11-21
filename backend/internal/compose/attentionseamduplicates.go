@@ -51,6 +51,7 @@ func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int, owne
 			LeftID:     row.LeftID,
 			RightID:    row.RightID,
 			Evidence:   comparisons(ctx, row.ID, row.Evidence),
+			Owners:     row.Owners,
 		})
 	}
 	return pairs, nil

@@ -195,7 +195,7 @@ func andClauses(a, b string) string {
 
 // dedupePairOwnerClause narrows the queue to the pairs an owner set decides. A
 // pair belongs to every owner of either end. It is unassigned only when
-// neither end has an owner. Nil is unrestricted.
+// neither end has a live owner, as for a contact case. Nil is unrestricted.
 func dedupePairOwnerClause(owners *storekit.OwnerSet, arg func(any) int) string {
 	if owners == nil {
 		return ""
@@ -210,8 +210,8 @@ func dedupePairOwnerClause(owners *storekit.OwnerSet, arg func(any) int) string 
 				side.entity, alias, ends, alias, arg(owners.IDs)))
 		}
 		if owners.Unassigned {
-			terms = append(terms, fmt.Sprintf("NOT EXISTS (SELECT 1 FROM %s %s WHERE %s AND %s.owner_id IS NOT NULL)",
-				side.entity, alias, ends, alias))
+			terms = append(terms, fmt.Sprintf("NOT EXISTS (SELECT 1 FROM %s %s LEFT JOIN app_user u ON u.id = %s.owner_id WHERE %s AND %s)",
+				side.entity, alias, alias, ends, liveCaseOwnerSQL))
 		}
 		if len(terms) == 0 {
 			terms = append(terms, "false")

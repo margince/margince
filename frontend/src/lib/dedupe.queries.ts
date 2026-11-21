@@ -143,26 +143,32 @@ export function pairDecisionFailure(error: unknown): PairDecisionFailure {
   return "failed";
 }
 
-/** The most pairs one company's page reads; a company in more shows this many. */
-const COMPANY_PAIRS_PAGE = 5;
-
-/** The ids of the other companies an open pair puts beside this one. */
+/** The ids of the other companies an open pair puts beside this one, every page of them. */
 export async function readCompanyPairs(companyId: string): Promise<string[]> {
-  const page = unwrap(
-    await api.GET("/dedupe/candidates", {
-      params: {
-        query: {
-          status: "open",
-          entity_type: "company",
-          record_id: companyId,
-          limit: COMPANY_PAIRS_PAGE,
+  const others: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = unwrap(
+      await api.GET("/dedupe/candidates", {
+        params: {
+          query: {
+            status: "open",
+            entity_type: "company",
+            record_id: companyId,
+            limit: 100,
+            cursor,
+          },
         },
-      },
-    }),
-  );
-  return page.data.map((pair) =>
-    pair.left_id === companyId ? pair.right_id : pair.left_id,
-  );
+      }),
+    );
+    for (const pair of page.data) {
+      others.push(pair.left_id === companyId ? pair.right_id : pair.left_id);
+    }
+    cursor = page.page.has_more
+      ? (page.page.next_cursor ?? undefined)
+      : undefined;
+  } while (cursor !== undefined);
+  return others;
 }
 
 export function useCompanyPairs(companyId: string) {

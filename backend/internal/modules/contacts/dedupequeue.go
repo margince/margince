@@ -94,6 +94,9 @@ type DedupeCandidateRow struct {
 	// names the end that must survive when only one direction is admitted.
 	CanMerge bool
 	KeepID   *ids.UUID
+	// Owners are the live owners of the pair's two records. Only the list read
+	// fills them.
+	Owners []ids.UUID
 }
 
 // DedupeQueueInput filters one list page.
@@ -277,23 +280,11 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 
 	var rows []DedupeCandidateRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		res, err := tx.Query(ctx, query, args...)
-		if err != nil {
+		var err error
+		if rows, err = queryCandidateRows(ctx, tx, query, args); err != nil {
 			return err
 		}
-		defer res.Close()
-		for res.Next() {
-			var r DedupeCandidateRow
-			var writers PairWriters
-			if err := res.Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
-				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt,
-				&writers.Left, &writers.Right); err != nil {
-				return err
-			}
-			r.pairAuthority(writers)
-			rows = append(rows, r)
-		}
-		return res.Err()
+		return readPairOwners(ctx, tx, rows)
 	})
 	if err != nil {
 		return nil, "", fmt.Errorf("contacts: listing dedupe candidates: %w", err)
@@ -438,23 +429,9 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 
 	var rows []DedupeCandidateRow
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		res, err := tx.Query(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-		defer res.Close()
-		for res.Next() {
-			var r DedupeCandidateRow
-			var writers PairWriters
-			if err := res.Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
-				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt,
-				&writers.Left, &writers.Right); err != nil {
-				return err
-			}
-			r.pairAuthority(writers)
-			rows = append(rows, r)
-		}
-		return res.Err()
+		var err error
+		rows, err = queryCandidateRows(ctx, tx, query, args)
+		return err
 	}); err != nil {
 		return nil, fmt.Errorf("contacts: listing the candidates naming %s: %w", id, err)
 	}

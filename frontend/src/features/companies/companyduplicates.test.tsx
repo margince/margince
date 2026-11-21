@@ -117,3 +117,32 @@ it("says nothing when the new company filed no pair", async () => {
   await announceCompanyDuplicates(new QueryClient(), toast, (key) => key, HERE);
   expect(toast.show).not.toHaveBeenCalled();
 });
+
+it("counts every page of pairs, so a sixth pair is not lost", async () => {
+  const cursors: Array<string | null> = [];
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read"] }),
+    "GET /dedupe/candidates": (_body, url) => {
+      const cursor = url.searchParams.get("cursor");
+      cursors.push(cursor);
+      if (cursor === null) {
+        return jsonResponse({
+          ...pairPage(
+            ...[1, 2, 3, 4, 5].map((n): [string, string] => [`co-${n}`, HERE]),
+          ),
+          page: { has_more: true, next_cursor: "next" },
+        });
+      }
+      return jsonResponse(pairPage(["co-6", HERE]));
+    },
+  });
+  render(
+    <StoryProviders>
+      <CompanyDuplicatesEntry companyId={HERE} />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByRole("button", { name: "Possible duplicates (6)" }),
+  ).toBeVisible();
+  expect(cursors).toEqual([null, "next"]);
+});

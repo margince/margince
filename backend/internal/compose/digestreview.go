@@ -43,17 +43,11 @@ func newDigestReviewSource(pool *pgxpool.Pool, svc *approvals.Service) capture.D
 	cases := attentionContactCases{store: store}
 	pending := attentionApprovals{svc: svc}
 	return func(ctx context.Context) (capture.DigestReviewCounts, error) {
-		// Company and lead pairs, and contact cases, over the same visible
-		// set the wider queue pages.
-		pairs, err := countOrNoneVisible(duplicates.CountOpen(ctx, nil))
+		// The duplicate cards of the reader's own Mine page.
+		open, err := attention.CountOwnReview(ctx, duplicates, cases)
 		if err != nil {
 			return capture.DigestReviewCounts{}, err
 		}
-		grouped, err := countOrNoneVisible(cases.CountCases(ctx, attention.CaseQuery{Scope: attention.CaseScopeAll}))
-		if err != nil {
-			return capture.DigestReviewCounts{}, err
-		}
-		open := pairs + grouped
 		waiting, err := countOrNoneVisible(pending.CountPending(ctx, attention.ApprovalQuery{RequestedForReader: true}))
 		if err != nil {
 			return capture.DigestReviewCounts{}, err
