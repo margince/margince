@@ -5,7 +5,7 @@
 import type { Locale } from "../i18n";
 import { isAssignedCurrency } from "./assignedcurrencies";
 import { holdsEveryWord, searchWords } from "./collate";
-import { INTL_LOCALE } from "./intllocale";
+import { displayNames } from "./formatters";
 
 export type LeadingCurrencies = readonly [string, ...string[]];
 
@@ -60,15 +60,8 @@ export function currencyOptions(
   }));
 }
 
-const currencyNames = new Map<Locale, Intl.DisplayNames>();
-
 function currencyNamer(locale: Locale): (code: string) => string {
-  let names = currencyNames.get(locale);
-  if (!names) {
-    names = new Intl.DisplayNames(INTL_LOCALE[locale], { type: "currency" });
-    currencyNames.set(locale, names);
-  }
-  const table = names;
+  const table = displayNames(locale, { type: "currency" });
   return (code) => {
     const name = table.of(code);
     // The table answers a code it does not know with the code itself.

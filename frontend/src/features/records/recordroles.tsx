@@ -32,7 +32,7 @@ import { PanelNotices } from "../../design-system/panelnotices";
 import { useSinglePress } from "../../design-system/presslatch";
 import { QueryStates } from "../../design-system/querystates";
 import { Switch } from "../../design-system/switch";
-import { INTL_LOCALE } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
@@ -58,7 +58,7 @@ function heldByKey(kinds: readonly AssignmentSubjectKind[]): MessageKey | null {
 function RoleReach({ role }: Readonly<{ role: RecordRole }>) {
   const t = useT();
   const { locale } = useLocale();
-  const records = new Intl.ListFormat(INTL_LOCALE[locale], {
+  const records = listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(

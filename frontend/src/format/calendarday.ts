@@ -13,6 +13,7 @@
 // as input, so nothing here has to be tested against the machine's own zone.
 
 import { type ISODate, isISODate } from "./datepattern";
+import { pinnedDateTimeFormat } from "./formatters";
 import {
   DAY_MS,
   endOfDayInZone,
@@ -28,23 +29,13 @@ import {
 // which is the whole reason this string is comparable — a locale's date format is
 // data, it varies with the runtime's ICU, and a bucketing rule that reads
 // "yesterday" because a format changed under it would be invisible.
-// One formatter per zone: constructing an Intl.DateTimeFormat is the expensive
-// part, and a task list asks this question once per row.
-const dayFormatters = new Map<string, Intl.DateTimeFormat>();
-
 function dayFormatter(zone: string): Intl.DateTimeFormat {
-  const cached = dayFormatters.get(zone);
-  if (cached) {
-    return cached;
-  }
-  const made = new Intl.DateTimeFormat("en-CA", {
+  return pinnedDateTimeFormat("en-CA", {
     timeZone: zone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
-  dayFormatters.set(zone, made);
-  return made;
 }
 
 /**

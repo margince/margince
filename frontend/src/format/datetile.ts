@@ -1,5 +1,6 @@
 import type { Locale } from "../i18n";
-import { assertIanaZone, displayDay, INTL_LOCALE } from "./format";
+import { assertIanaZone, displayDay } from "./format";
+import { dateTimeFormat } from "./formatters";
 
 /**
  * A day split into the three pieces a CARD's own date tile draws on separate
@@ -17,7 +18,7 @@ export function dateTileParts(
   zone: string,
 ): { weekday: string; day: string; month: string } {
   assertIanaZone(zone);
-  const parts = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  const parts = dateTimeFormat(locale, {
     timeZone: zone,
     weekday: "short",
     day: "numeric",

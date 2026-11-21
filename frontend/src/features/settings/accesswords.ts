@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { INTL_LOCALE } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { EntityKind } from "../../lib/entity";
@@ -20,7 +20,7 @@ export function useKindList(): (kinds: readonly EntityKind[]) => string {
   const t = useT();
   const { locale } = useLocale();
   return (kinds) =>
-    new Intl.ListFormat(INTL_LOCALE[locale], {
+    listFormat(locale, {
       style: "long",
       type: "conjunction",
     }).format(kinds.map((kind) => t(KIND_NOUN[kind])));
