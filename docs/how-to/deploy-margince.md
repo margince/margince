@@ -44,21 +44,21 @@ common Go builder base. Every image builds with the **repo root** as context. Th
 the `extensions/*` packs via `gen-composition`, and `docker buildx bake` builds all three through
 `docker-bake.hcl`.
 
-Stamp all three with one release identifier, or the [release guard](../explanation/self-hosting.md#every-role-runs-at-one-release)
-is off:
+Stamp all three with one release identifier and one commit, or the [release guard](../explanation/self-hosting.md#every-role-runs-at-one-release)
+is off and the web app shows "Development build". The web app compiles both in at build time, so it cannot learn them later.
+Run these lines as a script: `scripts/release-version-stamped.sh` stops it on an empty or `dev` identifier.
 
 ```bash
-docker build --target api    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" -t margince-api:local .
-docker build --target worker --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" -t margince-worker:local .
-docker build --target web    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" -t margince-web:local .
+set -euo pipefail
+MY_BUILD_ID="$(./scripts/release-version-stamped.sh "$MY_BUILD_ID")"
+docker build --target api    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" --build-arg MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" -t margince-api:local .
+docker build --target worker --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" --build-arg MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" -t margince-worker:local .
+docker build --target web    --build-arg MARGINCE_RELEASE_VERSION="$MY_BUILD_ID" --build-arg MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" -t margince-web:local .
 ```
 
-It does **not** have to be a published release version. Any stable per-build identifier your pipeline
-already has will do, such as a commit sha or a build number. Every role in one deployment must get the
-same one. What it must not be is empty or `dev`, which the roles read as "make no comparison".
+Any stable per-build identifier, such as a build number, will do, and need not be a published release version. Every role in one deployment must get the same identifier and commit. An empty or `dev` identifier is read as "make no comparison".
 
-`docker-bake.hcl` does this for the release workflow, declaring the argument once on the shared `role` target.
-The release workflow refuses to publish a set stamped `dev` or nothing at all (`scripts/release-version-stamped.sh`).
+`docker-bake.hcl` does this for the release workflow, declaring both arguments once on the shared `role` target. Set the environment variables `VERSION` and `MARGINCE_BUILD_REVISION`, and `docker buildx bake` stamps every role with them. The release workflow refuses to publish a set stamped `dev` or nothing at all.
 
 ## Bootstrap the database once
 
