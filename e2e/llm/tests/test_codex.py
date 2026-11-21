@@ -49,6 +49,12 @@ class FromCodexTest(unittest.TestCase):
         self.assertEqual((counted["input_tokens"], counted["cache_read_input_tokens"]), (102413 - 86784, 86784))
         self.assertIsNone(cost)
 
+    def test_turns_are_unmeasured_since_codex_reports_no_count_of_requests(self):
+        _code, out, _raw = convert(sample())
+        effort = check.read_effort(out)
+        self.assertNotIn("turns", effort)
+        self.assertEqual(effort["calls"], 1)
+
     def test_the_offered_tools_are_the_lanes_own_listing(self):
         _code, _out, raw = convert(sample())
         self.assertIn('"status": "listed-by-lane"', raw)

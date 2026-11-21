@@ -57,6 +57,12 @@ class FromAgyTest(unittest.TestCase):
         self.assertIn("The sum of 2 and 3 is 5", said)
         self.assertEqual(check.unrun(out), "")
 
+    def test_turns_are_the_models_responses_not_agys_one_prompt(self):
+        # The sample's model answered three times (steps 1, 4 and 7); agy's own
+        # num_turns says 1, the prompts the user sent.
+        _code, out, _raw = convert(sample())
+        self.assertEqual(check.read_effort(out)["turns"], 3)
+
     def test_a_tool_result_reaches_the_transcript(self):
         _code, _out, raw = convert(sample())
         self.assertIn("Echo: pelican", raw)
