@@ -234,10 +234,14 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   });
   const { key: offerKey, renew: renewOfferKey } = useIdempotencyKey();
   const createOffer = useMutation({
-    mutationFn: async (input: { currency: string; fromRevision?: number }) => {
+    mutationFn: async (input: {
+      currency: string;
+      fromRevision?: number;
+      key: string;
+    }) => {
       return unwrap(
         await api.POST("/deals/{id}/offers", {
-          params: { path: { id }, header: { "Idempotency-Key": offerKey } },
+          params: { path: { id }, header: { "Idempotency-Key": input.key } },
           body: {
             currency: input.currency,
             source: "manual",
@@ -400,7 +404,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     creatingOffer={createOffer.isPending}
                     locale={locale}
                     onCreateOffer={(currency, fromRevision) =>
-                      createOffer.mutate({ currency, fromRevision })
+                      createOffer.mutate({
+                        currency,
+                        fromRevision,
+                        key: offerKey,
+                      })
                     }
                     readOnly={readOnly}
                     refusedReasonId={refusedReasonId}

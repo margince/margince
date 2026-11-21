@@ -247,12 +247,12 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
   const { key, renew } = useIdempotencyKey();
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (requestKey: string) => {
       return unwrap(
         await api.POST("/offers/{id}/regenerate", {
           params: {
             path: { id: offer.id },
-            header: { "Idempotency-Key": key },
+            header: { "Idempotency-Key": requestKey },
           },
         }),
       );
@@ -283,7 +283,7 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       <Button
         data-testid="regenerate-offer"
         pending={mutation.isPending}
-        onClick={() => mutation.mutate()}
+        onClick={() => mutation.mutate(key)}
       >
         <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
