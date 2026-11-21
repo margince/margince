@@ -221,8 +221,8 @@ run lasted is there too when the transcript carries `duration_ms`. A refused cal
 name that the CLI turned away. A run with no last result is left out, and `runs` says how many runs
 are behind the numbers.
 
-A turn is one request to the model. A Gemini run counts its agent's answers. codex reports no count of
-requests, so a GPT verdict has no turns, and the page shows `-` for them.
+A turn is one request to the model, and a Gemini run counts its agent's answers. The codex CLI
+reports no such count. So a GPT verdict has no turns, and the page shows `-`.
 
 These numbers never fail a case and never change the exit code. A scenario can set
 `expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true`
