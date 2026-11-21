@@ -126,9 +126,8 @@ var tableOwners = map[string]string{
 	// What a mail domain is allowed to create. It governs COMPANY
 	// creation, which contacts owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
-	"company_domain_disposition":     "internal/modules/contacts",
-	"company_domain_question_reader": "internal/modules/contacts",
-	"site_read":                      "internal/modules/contacts",
+	"company_domain_disposition": "internal/modules/contacts",
+	"site_read":                  "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate":  "internal/modules/contacts",
 	"dedupe_scan_state": "internal/modules/contacts",
@@ -140,8 +139,6 @@ var tableOwners = map[string]string{
 	"stage":                     "internal/modules/deals",
 	"stage_exit_criterion":      "internal/modules/deals",
 	"deal_stage_evidence":       "internal/modules/deals",
-	"stage_progression_outcome": "internal/modules/deals",
-	"stage_progression_policy":  "internal/modules/deals",
 	"deal_stage_history":        "internal/modules/deals",
 	"deal_acquisition_source":   "internal/modules/deals",
 	"deal_loss_reason":          "internal/modules/deals",
@@ -276,7 +273,6 @@ var tableOwners = map[string]string{
 	// table from all of them through platform's helper — which is why the helper, and
 	// the table with it, sit below every module rather than inside one.
 	"stored_object_intent":     "internal/platform/storedobjects",
-	"data_task_run_history":    "internal/platform/datatask",
 	"data_task_review":         "internal/platform/datatask",
 	"data_task_run":            "internal/platform/datatask",
 	"deal_document_hide":       "internal/modules/activities",
@@ -349,7 +345,6 @@ var tableOwners = map[string]string{
 	"capture_import":                   "internal/modules/capture",
 	"capture_thread_verdict":           "internal/modules/capture",
 	"capture_counterparty_hold":        "internal/modules/capture",
-	"capture_digest":                   "internal/modules/capture",
 	"capture_auto_enrich_state":        "internal/modules/capture",
 	"capture_pending_counterparty":     "internal/modules/capture",
 	"capture_auto_enrich_budget":       "internal/modules/capture",

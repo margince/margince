@@ -64,14 +64,6 @@ type Registry struct {
 	// ownershipWatch is how often a running page checks it still owns its
 	// execution (backfillwatch.go).
 	ownershipWatch time.Duration
-
-	// digestProjects answers the morning digest's projects section
-	// (digestprojects.go); nil builds a digest without one.
-	digestProjects DigestProjectsSource
-
-	// digestReview answers what is waiting for the digest's reader
-	// (digestreview.go); nil leaves those counts at zero.
-	digestReview DigestReviewSource
 }
 
 // NewRegistry builds the connector registry over the pool, the capture Sink,

@@ -506,7 +506,6 @@ public.company_domain_disposition.evidence exempt carries model reasons and craw
 public.company_domain_disposition.pending_reason note
 public.company_domain_disposition.source document
 public.company_domain_disposition.status document
-public.company_domain_question_reader.domain document
 public.company_dossier.fingerprint document
 public.company_dossier.generated_by document
 public.company_fact.captured_by document
@@ -696,8 +695,6 @@ public.data_task_run.last_error_class document
 public.data_task_run.status document
 public.data_task_run.step document
 public.data_task_run.task_id document
-public.data_task_run_history.step document
-public.data_task_run_history.task_id document
 public.deal.acquisition_source document
 public.deal.captured_by document
 public.deal.commercial_mode document
@@ -1373,11 +1370,6 @@ public.stage_exit_criterion.hint line
 public.stage_exit_criterion.key document
 public.stage_exit_criterion.kind document
 public.stage_exit_criterion.label label
-public.stage_progression_outcome.evidence_kinds document
-public.stage_progression_outcome.outcome document
-public.stage_progression_outcome.rejection_reason note
-public.stage_progression_policy.mode document
-public.stage_progression_policy.suspended_reason note
 public.stored_object_intent.kind document
 public.stored_object_intent.storage_key document
 public.suggestion_dismissal.fingerprint document

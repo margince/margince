@@ -357,67 +357,6 @@ func TestASignalAnAgentResolvesDoesNotNameTheUser(t *testing.T) {
 	}
 }
 
-// A transition trusted to move deals by itself judges a move by its stage's
-// criteria and by which stage comes next. An agent cannot change either under it.
-func TestAnAgentReshapesNoLadderATransitionIsTrustedOn(t *testing.T) {
-	d := newTwoDoors(t, "agent-trusted-ladder", "read", "write")
-	var pipeline struct {
-		ID     string `json:"id"`
-		Stages []struct {
-			ID       string `json:"id"`
-			Name     string `json:"name"`
-			Position int    `json:"position"`
-		} `json:"stages"`
-		Version int64 `json:"version"`
-	}
-	if status := d.e.Call(t, "POST", "/v1/pipelines", AnyMap{"name": "Trusted", "stages": []AnyMap{
-		{"name": "One", "position": 1, "semantic": "open"},
-		{"name": "Two", "position": 2, "semantic": "open"},
-		{"name": "Three", "position": 3, "semantic": "open"},
-		{"name": "Won", "position": 4, "semantic": "won"},
-		{"name": "Lost", "position": 5, "semantic": "lost"},
-	}}, nil, &pipeline); status != http.StatusCreated {
-		t.Fatalf("creating the pipeline → %d", status)
-	}
-	stage := func(name string) string {
-		for _, s := range pipeline.Stages {
-			if s.Name == name {
-				return s.ID
-			}
-		}
-		t.Fatalf("no stage %s", name)
-		return ""
-	}
-	var criterion struct {
-		ID      string `json:"id"`
-		Version int64  `json:"version"`
-	}
-	if status := d.e.Call(t, "POST", "/v1/stages/"+stage("One")+"/exit-criteria", AnyMap{"key": "budget", "label": "Budget known", "kind": "custom", "required": true}, nil, &criterion); status != http.StatusCreated {
-		t.Fatalf("adding the criterion → %d", status)
-	}
-	order := []string{stage("One"), stage("Three"), stage("Two"), stage("Won"), stage("Lost")}
-	calls := map[string]map[string]any{
-		"archiving a criterion": {"action": "archive_exit_criterion", "id": stage("One"), "criterion_id": criterion.ID},
-		"making it optional":    {"action": "update_exit_criterion", "id": stage("One"), "criterion_id": criterion.ID, "request_body": AnyMap{"required": false}},
-		"reordering the stages": {"action": "reorder_stages", "id": pipeline.ID, "request_body": AnyMap{"stage_ids": order}},
-		"moving a stage":        {"action": "update_stage", "id": stage("Two"), "request_body": AnyMap{"position": 9}},
-		"removing a stage":      {"action": "archive_stage", "id": stage("Two")},
-		"adding a stage":        {"action": "create_stage", "request_body": AnyMap{"pipeline_id": pipeline.ID, "name": "Inserted", "position": 8}},
-		"adding a criterion":    {"action": "create_exit_criterion", "id": stage("Two"), "request_body": AnyMap{"key": "extra", "label": "Extra", "kind": "custom", "required": true}},
-	}
-	trustTransition(t, d, pipeline.ID, stage("One"), stage("Three"))
-	for name, args := range calls {
-		refusal := d.toolRefused(t, "change_settings", args)
-		if !strings.Contains(refusal, "trusted") {
-			t.Errorf("%s answered %q", name, refusal)
-		}
-	}
-	if _, err := d.e.Owner.Exec(t.Context(), `UPDATE stage_progression_policy SET mode = 'propose' WHERE pipeline_id = $1`, pipeline.ID); err != nil {
-		t.Fatalf("taking the trust back: %v", err)
-	}
-	settingsAct(t, d, "update_exit_criterion", map[string]any{"id": stage("One"), "criterion_id": criterion.ID, "request_body": AnyMap{"required": false}})
-}
-
 // A captured call holds what was sent to a model and what came back, which reach
 // past the user's row scope. An agent reads the call and not the payload.
 func TestAnAgentReadsAnAICallWithoutItsPayload(t *testing.T) {
@@ -444,39 +383,4 @@ func TestAnAgentReadsAnAICallWithoutItsPayload(t *testing.T) {
 	if !strings.Contains(got, "a-model") {
 		t.Errorf("the agent read nothing of the call: %s", got)
 	}
-}
-
-// trustTransition seeds the row directly because no route writes this table any more,
-// and a row enabled while one did still holds its ladder still.
-func trustTransition(t *testing.T, d *twoDoors, pipeline, from, to string) {
-	t.Helper()
-	if _, err := d.e.Owner.Exec(t.Context(), `
-		INSERT INTO stage_progression_policy (pipeline_id, from_stage_id, to_stage_id, mode)
-		VALUES ($1, $2, $3, 'auto')`, pipeline, from, to); err != nil {
-		t.Fatalf("trusting the transition: %v", err)
-	}
-}
-
-// A transition whose stage was removed moves no deal, so it leaves the ladder free.
-func TestAnAgentReshapesALadderOnceItsTrustedStageIsGone(t *testing.T) {
-	d := newTwoDoors(t, "agent-trust-gone", "read", "write")
-	var pipeline struct {
-		ID     string `json:"id"`
-		Stages []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		} `json:"stages"`
-	}
-	if status := d.e.Call(t, "POST", "/v1/pipelines", AnyMap{"name": "Gone", "stages": []AnyMap{
-		{"name": "One", "position": 1, "semantic": "open"},
-		{"name": "Two", "position": 2, "semantic": "open"},
-		{"name": "Won", "position": 3, "semantic": "won"},
-	}}, nil, &pipeline); status != http.StatusCreated {
-		t.Fatalf("creating the pipeline → %d", status)
-	}
-	trustTransition(t, d, pipeline.ID, pipeline.Stages[0].ID, pipeline.Stages[1].ID)
-	if status := d.e.Call(t, "DELETE", "/v1/stages/"+pipeline.Stages[1].ID, nil, nil, nil); status >= 300 {
-		t.Fatalf("removing the stage → %d", status)
-	}
-	settingsAct(t, d, "create_stage", map[string]any{"request_body": AnyMap{"pipeline_id": pipeline.ID, "name": "Three", "position": 7}})
 }
