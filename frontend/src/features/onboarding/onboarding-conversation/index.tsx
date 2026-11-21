@@ -77,14 +77,15 @@ function voiceProbeNeeded(
   wizard: OnboardingState | null,
   described: boolean,
   mayDescribe: boolean,
+  mayTrainVoice: boolean,
 ): boolean {
-  if (!mayDescribe) {
-    return true;
+  const memberPath =
+    !mayDescribe || (wizard === null ? described : wizard.path === "member");
+  // The member journey offers voice only to a seat that may train one.
+  if (memberPath) {
+    return mayTrainVoice;
   }
-  if (wizard === null) {
-    return described;
-  }
-  return wizard.path === "member" || voiceProbeSteps.has(wizard.step);
+  return wizard !== null && voiceProbeSteps.has(wizard.step);
 }
 
 // One probe per fact the restore needs: does a built version exist, and
@@ -224,7 +225,7 @@ function useRestore(
     readsVoice &&
     atMount !== undefined &&
     described !== undefined &&
-    voiceProbeNeeded(wizard, described, mayDescribe);
+    voiceProbeNeeded(wizard, described, mayDescribe, mayTrainVoice);
   const voice = useQuery({
     queryKey: VOICE_PROBE_KEY,
     queryFn: probeVoice,

@@ -145,6 +145,8 @@ type StubOptions = {
   voiceGrant?: boolean;
   /** The /me grants in full, where a case needs more than the voice grant. */
   allow?: GrantSpec;
+  /** A failing status for GET /voice-profiles. */
+  voiceListStatus?: number;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -257,6 +259,9 @@ function stubApi(options: StubOptions = {}) {
           : jsonResponse({ detail: "no company yet" }, 404);
       }
       if (path.endsWith("/voice-profiles") && request.method === "GET") {
+        if (options.voiceListStatus !== undefined) {
+          return jsonResponse({ code: "internal" }, options.voiceListStatus);
+        }
         return jsonResponse({ data: options.voiceProfiles ?? [], page: {} });
       }
       if (path.includes("/voice-profiles/") && path.endsWith("/versions")) {
@@ -516,6 +521,22 @@ describe("restore into the conversational shell", () => {
       await screen.findByText("Connect your mail and calendar"),
     ).toBeTruthy();
     expect(requestsTo(calls, "/voice-profiles", "GET")).toHaveLength(0);
+  });
+
+  // Connect is the whole journey for a seat that may read a voice but not
+  // train one, so a failed voice read must not hold it.
+  it("a seat that may read but not train a voice reaches connect when the voice read fails", async () => {
+    stubApi({
+      state: null,
+      roles: ["viewer"],
+      allow: { activity: ["create"], voice_profile: ["read"] },
+      voiceListStatus: 500,
+    });
+    render(<OnboardingScreen />);
+
+    expect(
+      await screen.findByText("Connect your mail and calendar"),
+    ).toBeTruthy();
   });
 
   it("reopens the invite for a creator whose company is confirmed", async () => {
