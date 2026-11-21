@@ -80,7 +80,7 @@ export type RestoreInputs = Readonly<{
    * company: any other seat walks the member path, whatever its row says. */
   mayDescribe: boolean;
   /** Whether this seat may create a voice profile, which the first sample
-   * mints: a member without it never reaches the voice act. */
+   * mints: a seat without it never reaches the voice act. */
   mayTrainVoice: boolean;
   /** Voice server truth; null when the probe was not needed (member path,
    * or the journey has not reached the voice act). */
@@ -261,18 +261,23 @@ function recapEntries(
   return entries;
 }
 
-// A member's plan opens confirmed: voice, or connect for a role that may not
-// train one, and a returning member resumes where their row says.
+// Where a confirmed journey lands. Its own connect address wins, and so does
+// connect over a voice act the seat may not train.
+function landingPoint(inputs: RestoreInputs, wanted: ResumePoint): ResumePoint {
+  const pastVoice = !inputs.mayTrainVoice && wanted === "vo.collecting";
+  return inputs.routeConnect || pastVoice ? "cn.consent" : wanted;
+}
+
+// A member's plan opens confirmed at voice, and a returning member resumes
+// where their row says.
 function memberPlan(
   inputs: RestoreInputs,
   state: OnboardingState | null,
 ): RestorePlan {
-  let target: ResumePoint = "vo.collecting";
-  if (inputs.routeConnect || !inputs.mayTrainVoice) {
-    target = "cn.consent";
-  } else if (state !== null) {
-    target = resumeTarget(state);
-  }
+  const target = landingPoint(
+    inputs,
+    state === null ? "vo.collecting" : resumeTarget(state),
+  );
   return {
     kind: "start",
     memberPath: true,
@@ -285,7 +290,7 @@ function memberPlan(
 }
 
 export function restorePlan(inputs: RestoreInputs): RestorePlan {
-  const { state, described, mayDescribe, read, routeConnect, locale } = inputs;
+  const { state, described, mayDescribe, read, locale } = inputs;
   // "complete" is the wizard row's own word, and it can outrun the record it
   // claims: the state row and the company profile are separate writes, and the
   // connect act persists completion without requiring a saved profile. An
@@ -316,7 +321,7 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
     return {
       kind: "start",
       memberPath,
-      voiceStep: true,
+      voiceStep: inputs.mayTrainVoice,
       companyConfirmed: false,
       resumeTarget: null,
       adoptRead:
@@ -324,11 +329,11 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
       recap: read !== null ? readRecap(read, locale) : [],
     };
   }
-  const target: ResumePoint = routeConnect ? "cn.consent" : resumeTarget(state);
+  const target = landingPoint(inputs, resumeTarget(state));
   return {
     kind: "start",
     memberPath: false,
-    voiceStep: true,
+    voiceStep: inputs.mayTrainVoice,
     companyConfirmed: true,
     resumeTarget: target,
     adoptRead: null,

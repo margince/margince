@@ -140,6 +140,7 @@ const actCheckpoints: ReadonlyMap<
   ["co.manual>bs.ask", { step: "basis" }],
   ["bs.ask>in.ask", { step: "invite" }],
   ["in.ask>vo.collecting", { step: "voice", voiceSkipped: false }],
+  ["in.ask>cn.consent", { step: "connect" }],
   ["in.ask>tm.ask", { step: "team", voiceSkipped: true, connectSkipped: true }],
   ["vo.collecting>cn.consent", { step: "connect", voiceSkipped: true }],
   ["vo.result>cn.consent", { step: "connect" }],

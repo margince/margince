@@ -83,8 +83,10 @@ the team act does the same for a creator who will not work in Margince.
 
 A member invited later walks the personal stops. Their company and its basis are already settled: the
 server refuses every new seat with 409 `company_not_described` until the company is saved. Their rail
-reads Voice · Connect, and the plan that brings them back puts them in the voice act. A member whose role
-may not create a voice profile has a rail with Connect alone and starts there.
+reads Voice · Connect, and the plan that brings them back puts them in the voice act.
+
+A seat whose role may not create a voice profile has no Voice stop, creator and member alike. A member
+starts at Connect. A creator goes on from the invite question to Connect, and resumes there.
 
 The app's onboarding gate sends here every human whose wizard state is missing or not finished. It does not send a read seat (it cannot
 write the checkpoint the journey ends on). A member invited later sets up their voice and connects their

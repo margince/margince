@@ -4,14 +4,13 @@ import { isLegal } from "./conversation-legality";
 import type {
   BuildStage,
   BuildTerminalStatus,
-  ConversationAct,
   ConversationEvent,
   ConversationPhase,
   ConversationState,
   OutcomeTone,
-  ResumePoint,
   ThreadEntry,
 } from "./conversation-types";
+import { landingFor } from "./resume-landing";
 
 // The onboarding conversation as a pure reducer. Every legal move lives in
 // the transition table in conversation-legality.ts; an event that is not
@@ -80,16 +79,6 @@ const buildTerminalTones: Record<BuildTerminalStatus, OutcomeTone> = {
   succeeded: "success",
   failed: "failure",
   deferred: "deferred",
-};
-
-// Which act owns each restorable landing point; RESUME derives the act from
-// the phase so the pair can never disagree.
-const resumeActs: Record<ResumePoint, ConversationAct> = {
-  "bs.ask": "basis",
-  "in.ask": "invite",
-  "tm.ask": "team",
-  "vo.collecting": "voice",
-  "cn.consent": "connect",
 };
 
 export const THREAD_CAP = 200;
@@ -184,31 +173,6 @@ function applyReadTerminal(
       },
     ],
   );
-}
-
-// The landing points that exist only on the creator's route. A member
-// resumed there would stand in an act whose every event is illegal for them,
-// so the member path resolves these to the first act that is theirs.
-const creatorOnlyResume = new Set<ResumePoint>(["bs.ask", "in.ask", "tm.ask"]);
-
-// Restore normalization out of co.confirmed: the same routing the live
-// confirmation takes, without repeating the confirmation outcome. A target
-// fast-forwards to the stable point the wizard state recorded; without one, a
-// creator opens the basis act the confirmation would have opened, and a
-// member opens the voice act their journey begins with.
-function applyResume(
-  state: ConversationState,
-  event: Extract<ConversationEvent, { type: "RESUME" }>,
-): ConversationState {
-  let phase: ResumePoint =
-    event.target ?? (state.memberPath ? "vo.collecting" : "bs.ask");
-  if (state.memberPath && creatorOnlyResume.has(phase)) {
-    phase = "vo.collecting";
-  }
-  if (!state.voiceStep && resumeActs[phase] === "voice") {
-    phase = "cn.consent";
-  }
-  return withEntries(state, { act: resumeActs[phase], phase });
 }
 
 // The answered question leaves the thread as the user's own turn: the
@@ -331,8 +295,10 @@ function applyEvent(
           tone: "success",
         },
       ]);
+    // Restore out of co.confirmed: the routing the live confirmation takes,
+    // to the point the wizard state recorded, without its outcome entry.
     case "RESUME":
-      return applyResume(state, event);
+      return withEntries(state, landingFor(state, event.target));
     case "BASIS_DONE":
       return withEntries(state, { act: "invite", phase: "in.ask" }, [
         {
@@ -343,7 +309,7 @@ function applyEvent(
         },
       ]);
     case "INVITE_ACCEPTED":
-      return withEntries(state, { act: "voice", phase: "vo.collecting" }, [
+      return withEntries(state, landingFor(state, "vo.collecting"), [
         {
           kind: "user",
           id: "invite:accepted",

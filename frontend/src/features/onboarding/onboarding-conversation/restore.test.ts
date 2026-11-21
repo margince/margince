@@ -471,6 +471,56 @@ describe("restorePlan", () => {
     expect(plan.resumeTarget).toBeNull();
   });
 
+  // A creator seat whose role lost voice_profile.create is refused the first
+  // sample, as a member is: voice is left out and connect follows.
+  it.each([
+    ["a first visit", null, false],
+    ["a row at invite", stateRow({ step: "invite" }), true],
+    ["a row at voice", stateRow({ step: "voice" }), true],
+  ])(
+    "leaves voice out of %s for a creator that may not train one",
+    (_, state, described) => {
+      const plan = restorePlan({
+        state,
+        profile: described ? profile : null,
+        described,
+        mayDescribe: true,
+        mayTrainVoice: false,
+        voice: emptyVoice,
+        read: null,
+        routeConnect: false,
+        locale: "en",
+      });
+      if (plan.kind !== "start") {
+        throw new Error("expected a start plan");
+      }
+      expect(plan.memberPath).toBe(false);
+      expect(plan.voiceStep).toBe(false);
+      const keys = plan.recap.map((entry) => entry.i18nKey);
+      expect(keys).not.toContain("ob.conv.recap.corpus");
+    },
+  );
+
+  it("restores a creator row at voice into connect without the grant", () => {
+    const plan = restorePlan({
+      state: stateRow({ step: "voice" }),
+      profile,
+      described: true,
+      mayDescribe: true,
+      mayTrainVoice: false,
+      voice: emptyVoice,
+      read: null,
+      routeConnect: false,
+      locale: "en",
+    });
+    expect(plan).toMatchObject({
+      memberPath: false,
+      voiceStep: false,
+      companyConfirmed: true,
+      resumeTarget: "cn.consent",
+    });
+  });
+
   // A seat that is not an admin may not read the profile, so it arrives with
   // none — over an installation that is described, or it could not have been
   // invited into it.

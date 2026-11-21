@@ -413,6 +413,22 @@ describe("a member who may not train a voice", () => {
   });
 });
 
+describe("a creator who may not train a voice", () => {
+  it("goes on from the invite to connect", () => {
+    const state = run([
+      {
+        type: "START",
+        memberPath: false,
+        companyConfirmed: true,
+        voiceStep: false,
+      },
+      { type: "RESUME", target: "in.ask" },
+      { type: "INVITE_ACCEPTED" },
+    ]);
+    expect(state).toMatchObject({ act: "connect", phase: "cn.consent" });
+  });
+});
+
 describe("back from connect", () => {
   const member = (target: "vo.collecting") =>
     run([
