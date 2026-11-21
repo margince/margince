@@ -3528,7 +3528,7 @@ export const en = {
   "common.duplicate.linkedinUrl":
     "Another lead already has this LinkedIn profile, so it was not saved here.",
   "common.linkedinProfileInvalid":
-    "Enter a LinkedIn profile address such as https://www.linkedin.com/in/your-name.",
+    "This is not a LinkedIn profile address. Enter one such as https://www.linkedin.com/in/your-name.",
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",

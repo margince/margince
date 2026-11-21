@@ -1811,7 +1811,7 @@
   "common.heldByColleague.asked": "Một đồng nghiệp đã có liên hệ này. Margince đã đề nghị họ chia sẻ liên hệ với bạn.",
   "common.duplicate.domain": "Một công ty khác đã có tên miền này, nên tên miền chưa được lưu ở đây.",
   "common.duplicate.linkedinUrl": "Một lead khác đã có hồ sơ LinkedIn này, nên hồ sơ chưa được lưu ở đây.",
-  "common.linkedinProfileInvalid": "Nhập địa chỉ hồ sơ LinkedIn, ví dụ https://www.linkedin.com/in/ten-ban.",
+  "common.linkedinProfileInvalid": "Đây không phải địa chỉ hồ sơ LinkedIn. Hãy nhập một địa chỉ, ví dụ https://www.linkedin.com/in/ten-ban.",
   "common.duplicate.slotTaken": "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
   "reporting.sharedForecastGone": "Liên kết này không còn dùng được. Hãy hỏi bên gửi để có liên kết mới.",

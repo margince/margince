@@ -3513,7 +3513,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.linkedinUrl":
     "Một lead khác đã có hồ sơ LinkedIn này, nên hồ sơ chưa được lưu ở đây.",
   "common.linkedinProfileInvalid":
-    "Nhập địa chỉ hồ sơ LinkedIn, ví dụ https://www.linkedin.com/in/ten-ban.",
+    "Đây không phải địa chỉ hồ sơ LinkedIn. Hãy nhập một địa chỉ, ví dụ https://www.linkedin.com/in/ten-ban.",
   "common.duplicate.slotTaken":
     "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
