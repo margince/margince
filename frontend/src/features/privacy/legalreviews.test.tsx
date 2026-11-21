@@ -122,11 +122,14 @@ describe("one review", () => {
     const record = screen.getByRole("button", {
       name: en["legalReview.decide"],
     });
-    expect(record).toBeDisabled();
-    await user.type(
-      screen.getByLabelText(en["legalReview.commentsLabel"]),
-      "Cap the liability.",
+    await user.click(record);
+    const comments = screen.getByLabelText(
+      new RegExp(`^${en["legalReview.commentsLabel"]}`),
     );
+    expect(screen.getByText("Comments is required.")).toBeInTheDocument();
+    expect(comments).toHaveFocus();
+    expect(posted).toHaveLength(0);
+    await user.type(comments, "Cap the liability.");
     await user.click(record);
     await vi.waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toEqual({

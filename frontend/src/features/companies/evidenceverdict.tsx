@@ -5,9 +5,10 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { useFieldFaults } from "../../design-system/savepage";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 import { useViewerZone } from "../../lib/viewerzone";
 import { factsKey } from "./companyfactspanel";
@@ -201,6 +202,8 @@ export function EvidenceVerdict({
     failure === null ? undefined : problemMessageOf(failure, t);
   const corrected = reasonFor(correct.error);
   const confirmed = reasonFor(confirm.error);
+  const [faults, faultsRoot] = useFieldFaults<HTMLSpanElement>();
+  const valueLabel = t("evidence.correctedValue");
 
   // Already a human's word. Saying who and when is the whole point — a
   // confirmed value that does not say who confirmed it is no better evidenced
@@ -232,25 +235,33 @@ export function EvidenceVerdict({
 
   if (correcting) {
     return (
-      <span className="evidence-verdict">
+      <span className="evidence-verdict" ref={faultsRoot}>
         <Field
-          label={t("evidence.correctedValue")}
+          label={valueLabel}
           labelHidden
-          error={corrected}
+          required
+          error={faults.of("value") ?? corrected}
         >
           {(control) => (
             <TextInput
               {...control}
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                faults.edited("value");
+              }}
             />
           )}
         </Field>
         <Button
-          disabled={!correct.isPending && draft.trim() === ""}
           pending={correct.isPending}
           busyLabel={t("evidence.saving")}
-          onClick={() => correct.mutate({ ruled: claim, value: draft.trim() })}
+          onClick={() => {
+            const blank = blankRequired(locale, { value: [valueLabel, draft] });
+            if (!faults.show(blank)) {
+              correct.mutate({ ruled: claim, value: draft.trim() });
+            }
+          }}
         >
           {t("evidence.save")}
         </Button>
@@ -274,6 +285,7 @@ export function EvidenceVerdict({
         onClick={() => {
           // A correction abandoned earlier does not speak for this one.
           correct.reset();
+          faults.show(new Map());
           setDraft(claim.value);
           setCorrecting(true);
         }}

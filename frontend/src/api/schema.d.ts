@@ -573,6 +573,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/vacuum-recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which tables would win back enough space from a full vacuum run out of band.
+         * @description Admin and ops only (`job_health:read`). Estimates, from the database's own statistics, how much of each table's file holds no live row. Sizes and row counts are those of the table's last `VACUUM` or `ANALYZE`; indexes and TOAST are not counted, and a table that was never updated or deleted from is left out. A table is listed when that share is at least `min_waste_percent` and the space is at least `min_waste_bytes`, largest first. Each entry carries the statement to run and the role that owns the table. Margince never runs it: `VACUUM FULL` locks the table for reads and writes until it ends. A table the statistics do not yet describe, and that is large enough to qualify, is counted in `unmeasured_tables`.
+         */
+        get: operations["getVacuumRecommendations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/automatic-work-health": {
         parameters: {
             query?: never;
@@ -48260,7 +48280,8 @@ export interface components {
             columns: string[];
             /**
              * @description Up to `limit` matching rows as column→value maps, ordered by id,
-             *     after the request's `cursor` when it names one.
+             *     after the request's `cursor` when it names one. A date column is
+             *     its calendar day (`2026-12-01`); a timestamp is an RFC 3339 instant.
              *     Deliberately the export's projection rather than a shape invented for
              *     this screen: a preview that showed different columns than the export
              *     of the same filter would be a preview of something else.
@@ -52290,6 +52311,36 @@ export interface components {
             data_loss_target_seconds: number;
             /** @description The most recent drill, or null when none was ever recorded. */
             last_drill: components["schemas"]["RestoreDrill"] | null;
+        };
+        /**
+         * @description The tables a full vacuum would shrink by enough to be worth a maintenance window. Sizes are
+         *     estimates from the statistics the database keeps for its query planner.
+         */
+        VacuumRecommendations: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description The smallest share of a table's file, in percent, that must be empty for it to be listed. */
+            min_waste_percent: number;
+            /** @description The smallest empty space, in bytes, for a table to be listed. */
+            min_waste_bytes: number;
+            /** @description The tables over both thresholds, most empty space first. */
+            tables: components["schemas"]["VacuumRecommendation"][];
+            /** @description Tables large enough to qualify that have no statistics yet, so no estimate. */
+            unmeasured_tables: number;
+        };
+        VacuumRecommendation: {
+            schema: string;
+            table: string;
+            /** @description The database role that owns the table. Only it can run the statement. */
+            owner: string;
+            /** @description The size of the table's file at its last `VACUUM` or `ANALYZE`, without its indexes or TOAST. */
+            table_bytes: number;
+            /** @description The estimated space in that file that holds no live row. */
+            waste_bytes: number;
+            /** @description `waste_bytes` as a whole percent of `table_bytes`, rounded down. */
+            waste_percent: number;
+            /** @description The statement to run, with the names quoted. */
+            statement: string;
         };
         /**
          * @description What automation handed out per colleague, per day and per kind of item, and what each item
@@ -64437,10 +64488,12 @@ export interface components {
             };
         };
         /**
-         * @description The send failed validation, or no mailbox can carry it. The second answers with the top-level
-         *     `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
-         *     fix it: the sender must connect a mailbox that can send, or an administrator must set up
-         *     sending for the installation. A scheduled send is checked the same way when it is created.
+         * @description The send failed validation, or no mailbox can carry it. The second answers with a top-level
+         *     `code` and no `details.errors`, because no field of the request can fix it. `mailbox_not_connected`
+         *     means the sender holds no mailbox at all and must connect one. `mailbox_not_send_capable` means
+         *     they hold mailboxes that cannot send, so they must reconnect one with permission to send, or an
+         *     administrator must set up sending for the installation. A scheduled send is checked the same way
+         *     when it is created.
          */
         SendValidationError: {
             headers: {
@@ -65486,6 +65539,36 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             /** @description Refused: the caller, or the user an agent works for, holds no `job_health:read` (the admin and ops roles hold it). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getVacuumRecommendations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tables worth a full vacuum, with the thresholds that chose them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacuumRecommendations"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller holds no `job_health:read` (the admin and ops roles hold it). */
             403: {
                 headers: {
                     [name: string]: unknown;

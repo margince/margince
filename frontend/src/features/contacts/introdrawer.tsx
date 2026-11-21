@@ -21,7 +21,9 @@ import {
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired } from "../../lib/problem";
 import { RouteLine } from "./contactroutes";
 import {
   type IntroRequest,
@@ -68,15 +70,23 @@ export function IntroDrawer({
   const [replacementReason, setReplacementReason] = useState("");
   const saving = replacement ? replace : create;
 
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const labels = {
+    reason: t("contact.intro.reasonLabel"),
+    replacement: t("contact.intro.replaceReason"),
+  };
+
   // An ask with no reason is a favour with no case behind it, and the server
   // refuses it too. Saying so here means the reader learns it before they send.
-  const ready =
-    reason.trim().length > 0 &&
-    route !== undefined &&
-    (!replacement || replacementReason.trim().length > 0);
-
   const submit = () => {
-    if (!ready || !route) {
+    const blank = blankRequired(locale, {
+      reason: [labels.reason, reason],
+      ...(replacement
+        ? { replacement: [undefined, replacementReason] as const }
+        : {}),
+    });
+    if (faults.show(blank) || !route) {
       return;
     }
     const body: IntroRequestInput = {
@@ -117,20 +127,24 @@ export function IntroDrawer({
         {t("contact.intro.askTitle", { name: contactName })}
       </Heading>
 
-      <div className="form-stack">
+      <div className="form-stack" ref={faultsRoot}>
         {replacement ? (
           <>
             <p>{t("contact.intro.replaceHint")}</p>
             <Field
-              label={t("contact.intro.replaceReason")}
+              label={labels.replacement}
               hint={t("contact.intro.replaceReasonHint")}
               required
+              error={faults.of("replacement")}
             >
               {(control) => (
                 <Textarea
                   {...control}
                   value={replacementReason}
-                  onChange={(e) => setReplacementReason(e.target.value)}
+                  onChange={(e) => {
+                    setReplacementReason(e.target.value);
+                    faults.edited("replacement");
+                  }}
                   maxLength={2000}
                 />
               )}
@@ -145,15 +159,20 @@ export function IntroDrawer({
           <p className="pn-route">{t("contact.graph.noRoute")}</p>
         )}
         <Field
-          label={t("contact.intro.reasonLabel")}
+          label={labels.reason}
           hint={t("contact.intro.reasonHint")}
+          required
+          error={faults.of("reason")}
         >
           {(control) => (
             <Textarea
               {...control}
               rows={3}
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => {
+                setReason(e.target.value);
+                faults.edited("reason");
+              }}
             />
           )}
         </Field>
@@ -217,7 +236,11 @@ export function IntroDrawer({
         <Button onClick={onClose} variant="ghost" disabled={saving.isPending}>
           {t("contact.intro.cancel")}
         </Button>
-        <Button onClick={submit} disabled={!ready} pending={saving.isPending}>
+        <Button
+          onClick={submit}
+          disabled={route === undefined}
+          pending={saving.isPending}
+        >
           {t("contact.intro.askAction")}
         </Button>
       </div>

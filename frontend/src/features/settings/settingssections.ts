@@ -355,6 +355,7 @@ export const SETTINGS_SECTIONS = {
       "settings.captureHealth",
       "settings.automaticWork",
       "settings.recoveryHealth",
+      "settings.vacuumHealth",
     ],
     configuration: [
       "health.configuration",

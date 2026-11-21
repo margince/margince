@@ -6069,6 +6069,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.bulkAssignedDone_other": "{count} Leads an {owner} zugewiesen.",
   "lead.bulkDisqualifiedDone_one": "{count} Lead disqualifiziert.",
   "lead.bulkDisqualifiedDone_other": "{count} Leads disqualifiziert.",
+  "lead.bulkAssignTitle_one": "Diesen Lead an {owner} zuweisen?",
+  "lead.bulkAssignTitle_other": "{count} Leads an {owner} zuweisen?",
   "lead.bulkFailed": "{count} nicht übernommen:",
   "lead.bulkFailedRow": "nicht gespeichert",
   "lead.bulkOutcomeConflict": "inzwischen von jemand anderem geändert",
@@ -6871,6 +6873,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.bulkStage": "In Phase verschieben",
   "deals.bulkStagePick": "Phase wählen",
   "deals.bulkMove": "Verschieben",
+  "deals.bulkMoveTitle_one": "{count} Deal nach {stage} verschieben?",
+  "deals.bulkMoveTitle_other": "{count} Deals nach {stage} verschieben?",
+  "deals.bulkMoveWill_one": "{count} Deal wird nach {stage} verschoben.",
+  "deals.bulkMoveWill_other": "{count} Deals werden nach {stage} verschoben.",
   "deals.bulkMoved_one": "{count} Deal nach {stage} verschoben.",
   "deals.bulkMoved_other": "{count} Deals nach {stage} verschoben.",
   "deals.bulkAlreadyThere_one": "{count} war schon in {stage}.",
@@ -8047,6 +8053,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.deleteTitle": "{name} löschen?",
   "files.deleteBody":
     "Die Datei wird aus diesem Deal entfernt, und die Käuferseite sieht sie in keinem Deal Room mehr. Der Eintrag im Raum bleibt, bis du ihn entfernst.",
+  "files.edit": "Bearbeiten",
+  "files.editTitle": "{name} bearbeiten",
+  "files.editState": "Status",
+  "files.save": "Speichern",
+  "files.deleteBodyRecord":
+    "Die Datei wird aus den Dokumenten dieses Eintrags entfernt.",
   "files.showHidden": "Ausgeblendete Dateien anzeigen",
   "files.hideHidden": "Ausgeblendete Dateien verbergen",
   "dealfiles.origin.from": "Von {who}",
@@ -8777,6 +8789,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapable":
     "Dein Postfach ist nur zum Erfassen verbunden, ohne Berechtigung zum Senden. Verbinde das Postfach neu und erlaube das Senden. Ein Postfach, das vor Einführung des Versands verbunden wurde, lässt sich nicht nachträglich erweitern.",
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
+  "compose.mailboxNotConnected":
+    "Es ist kein Postfach verbunden. Verbinde eines, um aus Margince zu senden.",
+  "compose.mailboxNotConnectedGoto": "Postfach verbinden",
   "compose.sharedUnsubscribeToken":
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
@@ -11398,6 +11413,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.recoveryHealth": "Wiederherstellungstests",
   "settings.recoveryHealthSub":
     "Wann die Wiederherstellung aus dem Backup zuletzt getestet wurde und wie lange sie gedauert hat.",
+  "settings.vacuumHealth": "Tabellenspeicher",
+  "settings.vacuumHealthSub":
+    "Tabellen, deren Dateien viel Platz ohne lebende Zeilen enthalten. Margince führt die Bereinigung nicht selbst aus.",
+  "vacuumHealth.adminOnly":
+    "Der Tabellenspeicher betrifft die ganze Installation und braucht eine Berechtigung, die deine Rolle nicht hat.",
+  "vacuumHealth.scope":
+    "Gezählt wird nur die Datei der Tabelle selbst. Die Indizes der Tabelle und der eigene Speicher für lange Werte (TOAST) zählen nicht.",
+  "vacuumHealth.thresholds":
+    "Eine Tabelle wird gelistet, wenn mindestens {percent} ihrer Datei und mindestens {size} keine lebende Zeile enthalten. Die Größen sind Schätzungen aus den Statistiken der Datenbank.",
+  "vacuumHealth.empty":
+    "Keine Tabelle hat so viel Platz ohne lebende Zeilen. Es ist nichts auszuführen.",
+  "vacuumHealth.unmeasured_one":
+    "{count} große Tabelle hat noch keine Statistiken und daher keine Schätzung. Die Datenbank erhebt sie bei der nächsten Analyse der Tabelle.",
+  "vacuumHealth.unmeasured_other":
+    "{count} große Tabellen haben noch keine Statistiken und daher keine Schätzung. Die Datenbank erhebt sie bei der nächsten Analyse jeder Tabelle.",
+  "vacuumHealth.col.table": "Tabelle",
+  "vacuumHealth.col.size": "Größe",
+  "vacuumHealth.col.waste": "Platz ohne lebende Zeilen",
+  "vacuumHealth.col.run": "Auszuführen",
+  "vacuumHealth.runAs": "Als {owner} ausführen.",
+  "vacuumHealth.copy": "Befehl kopieren",
+  "vacuumHealth.copied": "Kopiert",
+  "vacuumHealth.copyRemedy": "Markiere den Befehl und kopiere ihn von Hand.",
+  "vacuumHealth.howTitle": "So führst du es aus",
+  "vacuumHealth.step.window":
+    "Plane ein Wartungsfenster. VACUUM FULL sperrt die Tabelle, solange es läuft: Niemand kann sie bis zum Ende lesen oder ändern.",
+  "vacuumHealth.step.disk":
+    "Prüfe den freien Speicherplatz. Das Neuschreiben braucht Platz für eine neue Kopie der Tabelle und ihrer Indizes.",
+  "vacuumHealth.step.owner":
+    "Verbinde dich mit der Datenbank als die Rolle aus der Zeile. Diese Rolle besitzt die Tabelle; die Rolle, unter der Margince läuft, kann das nicht.",
+  "vacuumHealth.step.run":
+    "Führe den Befehl aus. Er erneuert auch die Statistiken, sodass die Tabelle beim nächsten Lesen von dieser Liste verschwindet.",
+  "vacuumHealth.repack":
+    "Ohne Sperre geht es mit dem Werkzeug pg_repack, das eine Tabelle neu schreibt, während sie in Gebrauch bleibt. Es muss auf dem Datenbankserver installiert sein.",
   "settings.automaticWork": "Automatische Arbeit",
   "settings.automaticWorkSub":
     "Was Margince jedem Teammitglied von selbst gegeben hat, und wie viel davon als „Nicht meins“ zurückkam.",

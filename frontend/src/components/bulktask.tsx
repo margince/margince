@@ -10,10 +10,12 @@ import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DateInput, type ISODate } from "../design-system/dateinput";
+import { useFieldFaults } from "../design-system/savepage";
 import { Select } from "../design-system/select";
 import { dueDayBounds } from "../format/calendarday";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
+import { blankRequired } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { useAssignableUserOptions } from "./assigneepicker";
 import { useRosterHint, useRosterPartial } from "./entityref";
@@ -32,8 +34,11 @@ export function TaskVerb({
   onReady: (task: BulkTask) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState("");
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const subjectLabel = t("bulk.taskSubject");
   const [due, setDue] = useState<ISODate | "">("");
   const [assigneeId, setAssigneeId] = useState("");
   const readerZone = useViewerZone();
@@ -43,6 +48,7 @@ export function TaskVerb({
     setSubject("");
     setDue("");
     setAssigneeId("");
+    faults.show(new Map());
     setOpen(true);
   };
   return (
@@ -56,8 +62,12 @@ export function TaskVerb({
         title={t("bulk.taskTitle")}
         intent="form"
         confirmLabel={t("bulk.taskNext")}
-        confirmDisabled={subject.trim() === ""}
+        bodyRef={faultsRoot}
         onConfirm={() => {
+          const blank = blankRequired(locale, {
+            subject: [subjectLabel, subject],
+          });
+          if (faults.show(blank)) return;
           setOpen(false);
           onReady({
             subject: subject.trim(),
@@ -66,13 +76,16 @@ export function TaskVerb({
           });
         }}
       >
-        <Field label={t("bulk.taskSubject")} required>
+        <Field label={subjectLabel} required error={faults.of("subject")}>
           {(control) => (
             <TextInput
               {...control}
               value={subject}
               maxLength={500}
-              onChange={(event) => setSubject(event.target.value)}
+              onChange={(event) => {
+                setSubject(event.target.value);
+                faults.edited("subject");
+              }}
             />
           )}
         </Field>

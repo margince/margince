@@ -14,6 +14,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { MultiSelect, Select } from "../../design-system/select";
 import { useLocale, useT } from "../../i18n";
 import {
@@ -32,7 +33,7 @@ import {
   partnerStageLabel,
   usePartnerStages,
 } from "../../lib/partnerstages.queries";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { blankRequired, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { PartnerCommissions } from "./partnercommissions";
@@ -119,6 +120,9 @@ function PartnerForm({
   intent: SubmitIntent;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
+  const kindsLabel = t("partner.kinds");
   // This form mounts only while editing (PartnerDetail/PartnerTab remount it
   // each time `editing` flips true), so the lazy initializer is all the
   // seeding it needs. A re-sync effect keyed on `partner` would re-run on a
@@ -157,27 +161,33 @@ function PartnerForm({
 
   return (
     <form
+      ref={faultsRoot}
       onSubmit={(event) => {
         event.preventDefault();
+        const blank = blankRequired(locale, {
+          partner_kinds: [kindsLabel, values.partner_kinds.join(",")],
+        });
+        if (faults.show(blank)) return;
         if (!refuseUnreadableField(event.currentTarget)) {
           mutation.mutate(partner);
         }
       }}
       className="form-stack"
     >
-      <Field label={t("partner.kinds")} required>
+      <Field label={kindsLabel} required error={faults.of("partner_kinds")}>
         {(control) => (
           <MultiSelect
             {...control}
             values={values.partner_kinds}
-            onChange={(picked) =>
+            onChange={(picked) => {
+              faults.edited("partner_kinds");
               setValues({
                 ...values,
                 partner_kinds: PARTNER_KINDS.filter((kind) =>
                   picked.includes(kind),
                 ),
-              })
-            }
+              });
+            }}
             options={PARTNER_KINDS.map((kind) => ({
               value: kind,
               label: t(labelFor(KIND_LABELS, kind)),
@@ -272,7 +282,6 @@ function PartnerForm({
         <Button
           variant="primary"
           type="submit"
-          disabled={!mutation.isPending && values.partner_kinds.length === 0}
           pending={mutation.isPending}
           busyLabel={t(SUBMIT_COPY[intent].busy)}
         >

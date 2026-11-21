@@ -89,10 +89,12 @@ describe("the stops on a contact", () => {
       (button) => button.textContent === "Correct this stop",
     );
     if (!confirm) throw new Error("the dialog has no confirm button");
-    expect(confirm.disabled).toBe(true);
+    await user.click(confirm);
+    expect(lifted).not.toHaveBeenCalled();
+    expect(screen.getByText("This field is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("textbox"));
 
     await user.type(screen.getByRole("textbox"), "typed on the wrong contact");
-    expect(confirm.disabled).toBe(false);
     await user.click(confirm);
 
     await waitFor(() => expect(lifted).toHaveBeenCalledTimes(1));

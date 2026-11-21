@@ -538,12 +538,15 @@ describe("adding a company", () => {
     mount(emptyButGranted);
     await screen.findByRole("button", { name: "Add company" });
     await openAndPickEmployer(user);
-    await user.type(screen.getByLabelText("Start date"), "not-a-date");
+    const start = screen.getByLabelText("Start date");
+    await user.type(start, "not-a-date");
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
-    expect(screen.getByRole("button", { name: "Create" })).toHaveProperty(
-      "disabled",
-      true,
-    );
+    expect(screen.getByText("Enter a valid date for Start date.")).toBeTruthy();
+    expect(document.activeElement).toBe(start);
+    expect(
+      sent.some((request) => request.path.endsWith("/relationships")),
+    ).toBe(false);
   });
 
   it("starts unticked for somebody who already has a current job", async () => {

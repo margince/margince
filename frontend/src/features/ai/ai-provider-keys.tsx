@@ -301,8 +301,8 @@ function ProviderConnection({
   }, [save.isSuccess, remove.isSuccess, resetTest]);
 
   const busy = save.isPending || remove.isPending;
-  // Trimmed here as well as on the server, so the button does not offer to
-  // submit a key that is only whitespace.
+  // Trimmed here as well as on the server, so a key that is only whitespace
+  // reads as empty and Save says it is required.
   const trimmed = value.trim();
   const failure = save.error ?? remove.error;
   // A vendor with no variable name is one this build reaches without a
@@ -323,19 +323,25 @@ function ProviderConnection({
         // and announces nothing — see Button's own note on the
         // precedence.
         pending={save.isPending}
-        disabled={!canManage || remove.isPending || trimmed === ""}
-        onClick={() => {
+        disabled={!canManage || remove.isPending}
+        onClick={(event) => {
           // The other mutation's failure is no longer the current
           // story; without this its Callout stays under the row it
           // did not come from.
           remove.reset();
           const problem =
-            kind === "service_account"
-              ? serviceAccountProblem(trimmed)
-              : undefined;
+            trimmed === ""
+              ? "record.fieldRequired"
+              : kind === "service_account"
+                ? serviceAccountProblem(trimmed)
+                : undefined;
           if (problem) {
             save.reset();
             setRefusal(problem);
+            event.currentTarget
+              .closest(".ai-key-entry, .ai-key-stack")
+              ?.querySelector<HTMLElement>("input, textarea")
+              ?.focus();
             return;
           }
           save.mutate(

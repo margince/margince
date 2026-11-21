@@ -5992,6 +5992,8 @@ export const en = {
   "lead.bulkAssignedDone_other": "{count} leads assigned to {owner}.",
   "lead.bulkDisqualifiedDone_one": "{count} lead disqualified.",
   "lead.bulkDisqualifiedDone_other": "{count} leads disqualified.",
+  "lead.bulkAssignTitle_one": "Assign this lead to {owner}?",
+  "lead.bulkAssignTitle_other": "Assign {count} leads to {owner}?",
   "lead.bulkFailed": "{count} not applied:",
   "lead.bulkFailedRow": "not saved",
   "lead.bulkOutcomeConflict": "changed by someone else in the meantime",
@@ -6832,6 +6834,10 @@ export const en = {
   "deals.bulkStage": "Move to stage",
   "deals.bulkStagePick": "Pick a stage",
   "deals.bulkMove": "Move",
+  "deals.bulkMoveTitle_one": "Move {count} deal to {stage}?",
+  "deals.bulkMoveTitle_other": "Move {count} deals to {stage}?",
+  "deals.bulkMoveWill_one": "{count} deal will move to {stage}.",
+  "deals.bulkMoveWill_other": "{count} deals will move to {stage}.",
   "deals.bulkMoved_one": "{count} deal moved to {stage}.",
   "deals.bulkMoved_other": "{count} deals moved to {stage}.",
   "deals.bulkAlreadyThere_one": "{count} was already in {stage}.",
@@ -8048,6 +8054,11 @@ export const en = {
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
     "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room.",
+  "files.edit": "Edit",
+  "files.editTitle": "Edit {name}",
+  "files.editState": "State",
+  "files.save": "Save",
+  "files.deleteBodyRecord": "The file is removed from this record’s documents.",
   "files.showHidden": "Show hidden files",
   "files.hideHidden": "Hide hidden files",
   "dealfiles.origin.from": "From {who}",
@@ -8760,6 +8771,9 @@ export const en = {
   "compose.mailboxNotSendCapable":
     "Your mailbox is connected for capture only, without permission to send. Reconnect it and approve sending; a mailbox connected before sending existed cannot be upgraded in place.",
   "compose.mailboxNotSendCapableGoto": "Reconnect your mailbox",
+  "compose.mailboxNotConnected":
+    "No mailbox is connected. Connect one to send from Margince.",
+  "compose.mailboxNotConnectedGoto": "Connect a mailbox",
   "compose.sharedUnsubscribeToken":
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
@@ -11362,6 +11376,40 @@ export const en = {
   "settings.recoveryHealth": "Restore drills",
   "settings.recoveryHealthSub":
     "When the restore from backup was last rehearsed, and how long it took.",
+  "settings.vacuumHealth": "Table space",
+  "settings.vacuumHealthSub":
+    "Tables whose files hold much space without live rows. Margince does not run the fix itself.",
+  "vacuumHealth.adminOnly":
+    "Table space covers the whole installation and needs a permission your role does not have.",
+  "vacuumHealth.scope":
+    "Only the table’s own file is counted. Its indexes and the separate store for long values (TOAST) are not.",
+  "vacuumHealth.thresholds":
+    "A table is listed when at least {percent} of its file, and at least {size}, holds no live row. The sizes are estimates from the database statistics.",
+  "vacuumHealth.empty":
+    "No table has that much space without live rows. There is nothing to run.",
+  "vacuumHealth.unmeasured_one":
+    "{count} large table has no statistics yet, so it has no estimate. The database collects them when it next analyzes the table.",
+  "vacuumHealth.unmeasured_other":
+    "{count} large tables have no statistics yet, so they have no estimate. The database collects them when it next analyzes each table.",
+  "vacuumHealth.col.table": "Table",
+  "vacuumHealth.col.size": "Size",
+  "vacuumHealth.col.waste": "Space without live rows",
+  "vacuumHealth.col.run": "What to run",
+  "vacuumHealth.runAs": "Run as {owner}.",
+  "vacuumHealth.copy": "Copy statement",
+  "vacuumHealth.copied": "Copied",
+  "vacuumHealth.copyRemedy": "Select the statement and copy it by hand.",
+  "vacuumHealth.howTitle": "How to run it",
+  "vacuumHealth.step.window":
+    "Plan a maintenance window. VACUUM FULL locks the table while it runs, so nothing can read or change it until it ends.",
+  "vacuumHealth.step.disk":
+    "Check the free disk space. The rewrite needs room for a new copy of the table and its indexes.",
+  "vacuumHealth.step.owner":
+    "Connect to the database as the role named in the row. It owns the table; the role Margince runs as cannot do this.",
+  "vacuumHealth.step.run":
+    "Run the statement. It also refreshes the statistics, so the table leaves this list on the next read.",
+  "vacuumHealth.repack":
+    "To avoid the lock, the pg_repack tool rewrites a table while it stays in use. It must be installed on the database server.",
   "settings.automaticWork": "Automatic work",
   "settings.automaticWorkSub":
     "What Margince gave each colleague by itself, and how much of it they said was not theirs.",

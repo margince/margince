@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importkeys"
 	"github.com/margince/margince/backend/internal/compose/importtextbounds"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -355,6 +356,13 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return skippedFor(cannotEditWhy(w.object)), nil
 	}
+	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if why.Code != "" {
+		return skippedFor(why), nil
+	}
 	// A reviewed plan lands the row inside one shared transaction, so a refused
 	// write is rolled back to here before the row is skipped.
 	if err := database.WithSavepoint(ctx, func(ctx context.Context) error {
@@ -367,16 +375,8 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		if contacts.IsClaimedEmail(err) {
 			return skippedFor(duplicateEmailWhy), nil
 		}
-		if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
-			// The company half of the same case: a corrected file moving a domain
-			// onto a company that is not its owner.
-			return skippedFor(domainClaimedWhy), nil
-		}
-		if why, held := leadKeyHeld(err); held {
+		if why, held := importkeys.StoreKeyWhy(err); held {
 			return skippedFor(why), nil
-		}
-		if linkedInClaimed(err) {
-			return skippedFor(linkedInClaimedWhy), nil
 		}
 		if refusedAsErased(err) {
 			return skippedFor(addressErasedWhy), nil
@@ -459,15 +459,8 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 		}
 		return ids.UUID(company.Id), nil
 	})
-	if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
-		// A domain names ONE company across the estate, so a row claiming one
-		// another company already holds is refused by the store — the same shape
-		// a contact's claimed email has. One bad row is a skip with a reason, not
-		// a failed run: the rest of the file still lands.
-		return skippedFor(domainClaimedWhy), nil
-	}
-	if linkedInClaimed(err) {
-		return skippedFor(linkedInClaimedWhy), nil
+	if why, held := importkeys.StoreKeyWhy(err); held {
+		return skippedFor(why), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err

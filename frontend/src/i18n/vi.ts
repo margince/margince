@@ -5907,6 +5907,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.bulkAssignedDone_other": "Đã giao {count} lead cho {owner}.",
   "lead.bulkDisqualifiedDone_one": "Đã loại {count} lead.",
   "lead.bulkDisqualifiedDone_other": "Đã loại {count} lead.",
+  "lead.bulkAssignTitle_one": "Giao lead này cho {owner}?",
+  "lead.bulkAssignTitle_other": "Giao {count} lead cho {owner}?",
   "lead.bulkFailed": "Không thể áp dụng cho {count} lead:",
   "lead.bulkFailedRow": "không thể lưu",
   "lead.bulkOutcomeConflict": "người khác đã thay đổi trong lúc đó",
@@ -6692,6 +6694,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.bulkStage": "Chuyển sang giai đoạn",
   "deals.bulkStagePick": "Chọn giai đoạn",
   "deals.bulkMove": "Chuyển",
+  "deals.bulkMoveTitle_one": "Chuyển {count} deal sang {stage}?",
+  "deals.bulkMoveTitle_other": "Chuyển {count} deal sang {stage}?",
+  "deals.bulkMoveWill_one": "{count} deal sẽ chuyển sang {stage}.",
+  "deals.bulkMoveWill_other": "{count} deal sẽ chuyển sang {stage}.",
   "deals.bulkMoved_one": "Đã chuyển {count} deal sang {stage}.",
   "deals.bulkMoved_other": "Đã chuyển {count} deal sang {stage}.",
   "deals.bulkAlreadyThere_one": "{count} deal đã ở {stage} từ trước.",
@@ -7850,6 +7856,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
     "Tệp sẽ bị gỡ khỏi deal này và bên mua sẽ không còn thấy tệp trong bất kỳ Deal Room nào. Mục trong Deal Room vẫn còn cho đến khi bạn gỡ nó.",
+  "files.edit": "Chỉnh sửa",
+  "files.editTitle": "Chỉnh sửa {name}",
+  "files.editState": "Trạng thái",
+  "files.save": "Lưu",
+  "files.deleteBodyRecord": "Tệp sẽ bị gỡ khỏi tài liệu của hồ sơ này.",
   "files.showHidden": "Hiển thị tệp đã ẩn",
   "files.hideHidden": "Thôi hiển thị tệp đã ẩn",
   "dealfiles.origin.from": "Từ {who}",
@@ -8550,6 +8561,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapable":
     "Hộp thư chỉ được kết nối để thu thập, không có quyền gửi. Kết nối lại và cho phép gửi; hộp thư kết nối từ trước khi có tính năng gửi không thể nâng cấp trực tiếp.",
   "compose.mailboxNotSendCapableGoto": "Kết nối lại hộp thư",
+  "compose.mailboxNotConnected":
+    "Chưa kết nối hộp thư nào. Hãy kết nối một hộp thư để gửi từ Margince.",
+  "compose.mailboxNotConnectedGoto": "Kết nối hộp thư",
   "compose.sharedUnsubscribeToken":
     "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",
@@ -11083,6 +11097,40 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.recoveryHealth": "Diễn tập khôi phục",
   "settings.recoveryHealthSub":
     "Lần gần nhất diễn tập khôi phục từ bản sao lưu và thời gian thực hiện.",
+  "settings.vacuumHealth": "Dung lượng bảng",
+  "settings.vacuumHealthSub":
+    "Các bảng có tệp chứa nhiều chỗ trống không có hàng còn sống. Margince không tự chạy việc dọn dẹp.",
+  "vacuumHealth.adminOnly":
+    "Dung lượng bảng áp dụng cho toàn bộ bản cài đặt và cần một quyền mà vai trò của bạn không có.",
+  "vacuumHealth.scope":
+    "Chỉ tính tệp riêng của bảng. Các chỉ mục và vùng lưu riêng cho giá trị dài (TOAST) không được tính.",
+  "vacuumHealth.thresholds":
+    "Một bảng được liệt kê khi ít nhất {percent} tệp của nó, và ít nhất {size}, không chứa hàng còn sống. Các kích thước là ước tính từ thống kê của cơ sở dữ liệu.",
+  "vacuumHealth.empty":
+    "Không có bảng nào có nhiều chỗ trống như vậy. Không cần chạy gì.",
+  "vacuumHealth.unmeasured_one":
+    "{count} bảng lớn chưa có thống kê nên chưa có ước tính. Cơ sở dữ liệu thu thập thống kê khi phân tích bảng lần tới.",
+  "vacuumHealth.unmeasured_other":
+    "{count} bảng lớn chưa có thống kê nên chưa có ước tính. Cơ sở dữ liệu thu thập thống kê khi phân tích bảng lần tới.",
+  "vacuumHealth.col.table": "Bảng",
+  "vacuumHealth.col.size": "Kích thước",
+  "vacuumHealth.col.waste": "Chỗ trống không có hàng còn sống",
+  "vacuumHealth.col.run": "Lệnh cần chạy",
+  "vacuumHealth.runAs": "Chạy với vai trò {owner}.",
+  "vacuumHealth.copy": "Sao chép lệnh",
+  "vacuumHealth.copied": "Đã sao chép",
+  "vacuumHealth.copyRemedy": "Chọn lệnh và sao chép thủ công.",
+  "vacuumHealth.howTitle": "Cách chạy",
+  "vacuumHealth.step.window":
+    "Lên lịch một khung giờ bảo trì. VACUUM FULL khóa bảng trong khi chạy, nên không ai đọc hoặc sửa được bảng cho đến khi xong.",
+  "vacuumHealth.step.disk":
+    "Kiểm tra dung lượng đĩa còn trống. Việc ghi lại cần chỗ cho một bản sao mới của bảng và các chỉ mục.",
+  "vacuumHealth.step.owner":
+    "Kết nối cơ sở dữ liệu bằng vai trò ghi ở hàng đó. Vai trò này sở hữu bảng; vai trò mà Margince dùng không làm được việc này.",
+  "vacuumHealth.step.run":
+    "Chạy lệnh. Lệnh cũng làm mới thống kê, nên bảng sẽ rời danh sách này ở lần đọc sau.",
+  "vacuumHealth.repack":
+    "Để tránh khóa, công cụ pg_repack ghi lại bảng trong khi bảng vẫn được dùng. Công cụ này phải được cài trên máy chủ cơ sở dữ liệu.",
   "settings.automaticWork": "Việc tự động",
   "settings.automaticWorkSub":
     "Những việc Margince tự giao cho từng đồng nghiệp, và bao nhiêu trong số đó họ nói không thuộc về họ.",

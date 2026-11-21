@@ -11,8 +11,9 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
-import { useT } from "../../i18n";
-import { problemMessageOf } from "../../lib/problem";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
 import { useRecordTargets } from "../../lib/recordtargets";
 import { useAddCommitment } from "../worklist/weeklyplan.queries";
 
@@ -24,32 +25,41 @@ import { useAddCommitment } from "../worklist/weeklyplan.queries";
 
 export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const add = useAddCommitment();
   const { search, kindOf } = useRecordTargets();
   const [record, setRecord] = useState<RecordPickerCandidate | null>(null);
   const type = record ? kindOf(record.id) : null;
   const [label, setLabel] = useState("");
   const [dueOn, setDueOn] = useState<ISODate | "">("");
+  const labelLabel = t("plan.new.label");
 
   return (
     <PanelBody>
-      <div data-date-scope>
+      <div data-date-scope ref={faultsRoot}>
         <RecordPicker
           label={t("brief.plan.select")}
           searchTargets={search}
           selected={record}
           onPick={(next) => {
             setRecord(next);
-            if (label === "" && next) setLabel(next.name);
+            if (label === "" && next) {
+              setLabel(next.name);
+              faults.edited("label");
+            }
           }}
         />
-        <Field label={t("plan.new.label")} required>
+        <Field label={labelLabel} required error={faults.of("label")}>
           {(control) => (
             <TextInput
               {...control}
               value={label}
               maxLength={500}
-              onChange={(event) => setLabel(event.target.value)}
+              onChange={(event) => {
+                setLabel(event.target.value);
+                faults.edited("label");
+              }}
             />
           )}
         </Field>
@@ -75,6 +85,10 @@ export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
           </Button>
           <Button
             onClick={(event) => {
+              const blank = blankRequired(locale, {
+                label: [labelLabel, label],
+              });
+              if (faults.show(blank)) return;
               if (refuseUnreadableField(event.currentTarget)) {
                 return;
               }
@@ -98,10 +112,6 @@ export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
                 },
               );
             }}
-            // An empty label is a precondition the reader can meet; a write in
-            // flight is a wait of seconds. Spelling the second as `disabled`
-            // takes focus off the control they just pressed.
-            disabled={label.trim() === ""}
             pending={add.isPending}
           >
             {t("plan.new.save")}

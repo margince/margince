@@ -8,11 +8,12 @@ import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
+import { useFieldFaults } from "../../design-system/savepage";
 import { SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { unwrap } from "../../lib/problem";
+import { blankRequired, unwrap } from "../../lib/problem";
 import { type MfaStatus, MY_MFA_KEY, useMyMfa } from "./mfa.queries";
 import { enteredCode, MfaCodeField } from "./mfacode";
 import {
@@ -71,7 +72,10 @@ function RemoveModal({
   onStale: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [code, setCode] = useState("");
+  const codeLabel = t("mfa.removeCode");
   const unfinished = mfa?.confirmed !== true;
   const entered = enteredCode(code);
   const remove = useMutation({
@@ -97,12 +101,17 @@ function RemoveModal({
     remove.data === "wrong-code" && remove.variables?.unfinished === true;
   const refused = confirmedElsewhere ? null : refusalCopy(remove.data);
   const submit = () => {
-    if (remove.isPending || (!unfinished && entered === "")) return;
+    if (remove.isPending) return;
+    const blank = unfinished
+      ? new Map<string, string>()
+      : blankRequired(locale, { code: [codeLabel, entered] });
+    if (faults.show(blank)) return;
     remove.mutate({ code: unfinished ? "" : entered, unfinished });
   };
   const close = () => {
     remove.reset();
     setCode("");
+    faults.show(new Map());
     onClose();
   };
 
@@ -113,7 +122,7 @@ function RemoveModal({
       title={t(unfinished ? "mfa.discardTitle" : "mfa.removeTitle")}
       confirmLabel={t(unfinished ? "mfa.discard" : "mfa.removeConfirm")}
       confirmVariant="danger"
-      confirmDisabled={!remove.isPending && !unfinished && entered === ""}
+      bodyRef={faultsRoot}
       pending={remove.isPending}
       error={removalFailure(remove.error, confirmedElsewhere, t)}
       onConfirm={submit}
@@ -121,17 +130,21 @@ function RemoveModal({
       <p>{t(unfinished ? "mfa.discardBody" : "mfa.removeBody")}</p>
       {!unfinished && (
         <form
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             submit();
           }}
         >
           <MfaCodeField
-            label={t("mfa.removeCode")}
+            label={codeLabel}
             hint={t("mfa.removeCodeHint")}
-            error={refused ? t(refused) : undefined}
+            error={faults.of("code") ?? (refused ? t(refused) : undefined)}
             value={code}
-            onChange={setCode}
+            onChange={(next) => {
+              setCode(next);
+              faults.edited("code");
+            }}
           />
         </form>
       )}

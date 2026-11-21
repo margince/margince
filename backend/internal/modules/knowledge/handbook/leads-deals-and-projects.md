@@ -177,7 +177,7 @@ To create a deal in Margince, open **Deals** in the sidebar and choose **New dea
    The form opens on your base currency. Type a code or a name, such as "dong", to find another.
 3. You may add a **Value**, a **Company**, and a **Project** (offered once a company is chosen).
    You may also set the **Owner** (you by default), **Acquisition source**, partner details, **Expected close** and custom fields.
-4. Choose **Create**. It stays turned off until every required field is filled.
+4. Choose **Create**. If a required field is empty, Create says so under it and takes you to the first one.
 The currency is saved only when you also enter a value.
 Also called: new opportunity, add a deal, open a deal.
 

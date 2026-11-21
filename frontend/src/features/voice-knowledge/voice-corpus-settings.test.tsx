@@ -250,9 +250,12 @@ describe("handing a file to the Settings voice card", () => {
   it("takes pasted text as a sample and empties the box", async () => {
     const bodies = stubApi(PROSE);
     render(<Intake profileId="vp-1" onChanged={() => {}} />);
-    const box = screen.getByLabelText("Paste text");
+    const box = screen.getByLabelText(/^Paste text/);
     const add = screen.getByRole("button", { name: "Add text" });
-    expect(add).toHaveProperty("disabled", true);
+    await userEvent.click(add);
+    expect(screen.getByText("Paste text is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(box);
+    expect(bodies).toHaveLength(0);
 
     await userEvent.type(box, "Short sentences. Concrete nouns.");
     await userEvent.click(add);
@@ -280,7 +283,7 @@ describe("handing a file to the Settings voice card", () => {
       },
     });
     render(<Intake profileId="vp-1" onChanged={() => {}} />);
-    const box = screen.getByLabelText("Paste text");
+    const box = screen.getByLabelText(/^Paste text/);
 
     await userEvent.type(box, "some words");
     await userEvent.click(screen.getByRole("button", { name: "Add text" }));

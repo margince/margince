@@ -14,9 +14,15 @@ import {
   useClipboardCopy,
 } from "../../design-system/clipboardcopy";
 import { Heading } from "../../design-system/heading";
-import { useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
+import {
+  blankRequired,
+  problemCodeOf,
+  problemMessageOf,
+  unwrap,
+} from "../../lib/problem";
 import { enteredCode, MfaCodeField } from "./mfacode";
 import "./mfasetup.css";
 
@@ -233,6 +239,8 @@ export function MfaSetupSteps({
   onRetry: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
   const refused = refusalCopy(flow.confirm.data?.refusal);
   if (flow.codes) return <RecoveryCodes codes={flow.codes} />;
   if (!enrolment) {
@@ -247,10 +255,15 @@ export function MfaSetupSteps({
   return (
     <form
       id={formId}
+      ref={faultsRoot}
       className="form-stack"
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        flow.submit();
+        const blank = blankRequired(locale, {
+          code: [t("mfa.code"), flow.entered],
+        });
+        if (!faults.show(blank)) flow.submit();
       }}
     >
       <p>{t("mfa.scan")}</p>
@@ -268,9 +281,12 @@ export function MfaSetupSteps({
       <p>{t("mfa.signsOut")}</p>
       <MfaCodeField
         label={t("mfa.code")}
-        error={refused ? t(refused) : undefined}
+        error={faults.of("code") ?? (refused ? t(refused) : undefined)}
         value={flow.code}
-        onChange={flow.setCode}
+        onChange={(next) => {
+          flow.setCode(next);
+          faults.edited("code");
+        }}
       />
     </form>
   );
@@ -307,7 +323,7 @@ export function MfaSetupActions({
             type="submit"
             form={formId}
             variant="primary"
-            disabled={!pending && (!enrolment || flow.entered === "")}
+            disabled={!pending && !enrolment}
             pending={pending}
             busyLabel={t("mfa.turningOn")}
           >

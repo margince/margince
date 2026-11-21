@@ -50,7 +50,7 @@ export function projectFields(
       label: "project.name",
       required: true,
       // No `maxLength`: the server trims before it counts, and so does this
-      // refusal, which holds Save.
+      // refusal, which Save shows on press.
       validate: (value) =>
         characterCount(trimServerSpace(value)) > TEXT_LIMITS.label
           ? faultSentenceFor(

@@ -146,7 +146,14 @@ export const NameOnly: Story = {
     await expect(
       body.getByText("Add at least one email, phone or LinkedIn URL."),
     ).toBeVisible();
-    await expect(body.getByRole("button", { name: "Create" })).toBeDisabled();
+    await user.click(body.getByRole("button", { name: "Create" }));
+    await expect(document.activeElement).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(document.activeElement).toHaveAccessibleDescription(
+      expect.stringContaining("Add at least one email, phone or LinkedIn URL."),
+    );
   },
 };
 export const NameOnlyDark: Story = { ...NameOnly, globals: { theme: "dark" } };

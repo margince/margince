@@ -336,21 +336,25 @@ describe("the rate sheets", () => {
     );
     await user.click(screen.getByRole("option", { name: "gemini" }));
     for (const label of [
-      "Provider",
-      "Model",
-      "Input $/M",
-      "Output $/M",
+      "Provider *",
+      "Model *",
+      "Input $/M *",
+      "Output $/M *",
       "Cache read $/M",
       "Cache write $/M",
-      "Effective",
+      "Effective *",
     ]) {
       expect(within(dialog).getByLabelText(label)).toBeTruthy();
     }
-    // Provider, model and the two prices are required; the cache columns
-    // default to 0 and do not hold the button.
-    expect(within(dialog).getByRole("button", { name: "Save" })).toHaveProperty(
-      "disabled",
-      true,
+    // Model and the two prices are required; the cache columns default to 0
+    // and are left alone by Save.
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(within(dialog).getByText("Model is required.")).toBeTruthy();
+    expect(within(dialog).getByText("Input $/M is required.")).toBeTruthy();
+    expect(within(dialog).getByText("Output $/M is required.")).toBeTruthy();
+    expect(within(dialog).queryByText(/^Cache .* is required\.$/)).toBeNull();
+    expect(document.activeElement).toBe(
+      within(dialog).getByRole("combobox", { name: "Model" }),
     );
   });
 

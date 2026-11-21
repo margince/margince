@@ -15,6 +15,7 @@ import { Heading } from "../../design-system/heading";
 import { IconAction } from "../../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { formatDate } from "../../format/format";
@@ -22,6 +23,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import {
+  blankRequired,
   problemCodeOf,
   problemMessageOf,
   throwProblem,
@@ -289,12 +291,15 @@ function IdentityRow({
 // rather than waiting there under a kind nobody re-chose.
 function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const add = useAddIdentity();
   const headingId = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
   const [kind, setKind] = useState<Kind>("address");
   const [draft, setDraft] = useState("");
   const value = draft.trim();
+  const valueLabel = t("ownerIdentities.valueLabel");
   return (
     <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
@@ -302,12 +307,13 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
       </Heading>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (value === "") {
-            return;
-          }
+          const blank = blankRequired(locale, { value: [valueLabel, value] });
+          if (faults.show(blank)) return;
           add.mutate({ kind, value }, { onSuccess: onClose });
         }}
       >
@@ -322,15 +328,20 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           label={t("ownerIdentities.kindLabel")}
         />
         <Field
-          label={t("ownerIdentities.valueLabel")}
+          label={valueLabel}
           labelHidden
+          required
           hint={t("ownerIdentities.notRetroactive")}
+          error={faults.of("value")}
         >
           {(control) => (
             <TextInput
               {...control}
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                faults.edited("value");
+              }}
               placeholder={
                 kind === "address"
                   ? t("ownerIdentities.addressPlaceholder")
@@ -375,11 +386,7 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
         <Button variant="ghost" onClick={onClose} type="button">
           {t("create.cancel")}
         </Button>
-        <Button
-          type="submit"
-          form={formId}
-          disabled={value === "" || add.isPending}
-        >
+        <Button type="submit" form={formId} disabled={add.isPending}>
           {t("ownerIdentities.confirm")}
         </Button>
       </div>
