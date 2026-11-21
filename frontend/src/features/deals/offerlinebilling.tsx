@@ -242,39 +242,35 @@ function sameBilling(a: LineBilling, b: LineBilling): boolean {
 
 type BillingField = keyof LineBilling;
 
+// How many times the reader has changed each field. A save carries the counts
+// it was built from, so an answer can tell which edit it belongs to.
+type Generations = Readonly<Record<BillingField, number>>;
+
+const NO_EDITS: Generations = {
+  billingModel: 0,
+  billingIntervalMonths: 0,
+  intervalCount: 0,
+};
+
 const BILLING_FIELDS: readonly BillingField[] = [
   "billingModel",
   "billingIntervalMonths",
   "intervalCount",
 ];
 
-// The fields the reader changed whose value no saved answer has shown yet.
-function editedSince(
-  edited: ReadonlySet<BillingField>,
-  before: LineBilling,
-  after: LineBilling,
-): ReadonlySet<BillingField> {
-  const next = new Set(edited);
+function bumped(gens: Generations, before: LineBilling, after: LineBilling) {
+  const next: Record<BillingField, number> = { ...gens };
   for (const field of BILLING_FIELDS) {
-    if (before[field] !== after[field]) next.add(field);
+    if (before[field] !== after[field]) next[field] += 1;
   }
   return next;
 }
 
-// A newer answer moves each control the reader has not edited. An edited one
-// stays, and its mark clears once an answer shows the value it holds.
-function reconciled(
-  value: LineBilling,
-  edited: ReadonlySet<BillingField>,
-  saved: LineBilling,
-): [LineBilling, ReadonlySet<BillingField>] {
-  const next = { ...value };
-  const still = new Set<BillingField>();
-  for (const field of BILLING_FIELDS) {
-    if (!edited.has(field)) next[field] = saved[field];
-    else if (saved[field] !== value[field]) still.add(field);
-  }
-  return [next, still];
+function latest(a: Generations, b: Generations): Generations {
+  const next: Record<BillingField, number> = { ...a };
+  for (const field of BILLING_FIELDS)
+    next[field] = Math.max(a[field], b[field]);
+  return next;
 }
 
 // The three controls in a line's row: a pick saves at once, the term on blur.
@@ -285,22 +281,35 @@ export function BillingCell({
 }: Readonly<{
   line: OfferLineItem;
   label: (column: string) => string;
-  onSave: (patch: UpdateOfferLineItemRequest) => void;
+  // Settles once the server has answered this save.
+  onSave: (patch: UpdateOfferLineItemRequest) => Promise<unknown>;
 }>) {
   const saved = lineBillingOf(line);
   const [value, setValue] = useState(saved);
-  // Typed back to the old value, a field still counts as edited.
-  const [edited, setEdited] = useState<ReadonlySet<BillingField>>(new Set());
   const [base, setBase] = useState(saved);
+  // Each field's edit count, the count last sent, and the count an answer
+  // has confirmed. A field is the reader's own until its newest edit is
+  // confirmed, even when an answer happens to hold the same value.
+  const [edits, setEdits] = useState(NO_EDITS);
+  const [sentEdits, setSentEdits] = useState(NO_EDITS);
+  const [answered, setAnswered] = useState(NO_EDITS);
+  const [lastSent, setLastSent] = useState(saved);
+  const own = (field: BillingField) => edits[field] > answered[field];
   if (!sameBilling(base, saved)) {
-    const [next, still] = reconciled(value, edited, saved);
+    const pick = (field: BillingField) =>
+      own(field) ? value[field] : saved[field];
     setBase(saved);
-    setValue(next);
-    setEdited(still);
+    setValue({
+      billingModel: pick("billingModel"),
+      billingIntervalMonths: pick("billingIntervalMonths"),
+      intervalCount: pick("intervalCount"),
+    });
   }
   const change = (next: LineBilling) => {
-    setEdited(editedSince(edited, value, next));
+    const gens = bumped(edits, value, next);
+    setEdits(gens);
     setValue(next);
+    return gens;
   };
   const commit = (next: LineBilling) => {
     const patch = lineBillingPatch(next);
@@ -308,12 +317,17 @@ export function BillingCell({
     // back, since the server keeps it until another one is picked.
     if (!patch && line.billing_interval_months) {
       setValue(saved);
-      setEdited(new Set());
+      setAnswered(edits);
       return;
     }
-    change(next);
+    const gens = change(next);
     if (patch) {
-      onSave(patch);
+      setSentEdits(gens);
+      setLastSent(next);
+      void onSave(patch).then(
+        (answer) =>
+          answer !== undefined && setAnswered((prev) => latest(prev, gens)),
+      );
     }
   };
   return (
@@ -324,13 +338,17 @@ export function BillingCell({
         onChange={commit}
         onTermTyped={(intervalCount) => change({ ...value, intervalCount })}
         onTermBlur={() => {
-          if (value.intervalCount !== saved.intervalCount) {
+          // While a term is on its way, the next one is measured against it,
+          // not against the saved term the answer is about to replace.
+          const waiting = sentEdits.intervalCount > answered.intervalCount;
+          const against = waiting ? lastSent : saved;
+          if (value.intervalCount !== against.intervalCount) {
             commit(value);
-          } else if (edited.has("intervalCount")) {
-            // Left at the saved term: nothing is waiting for an answer.
-            const rest = new Set(edited);
-            rest.delete("intervalCount");
-            setEdited(rest);
+          } else if (!waiting && own("intervalCount")) {
+            setAnswered((prev) => ({
+              ...prev,
+              intervalCount: edits.intervalCount,
+            }));
           }
         }}
       />

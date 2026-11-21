@@ -90,7 +90,11 @@ export function EditableLineTable({
 }: Readonly<{
   offer: Offer;
   refusals: LineRefusals;
-  onSave: (lineItemId: string, patch: UpdateOfferLineItemRequest) => void;
+  // Settles with the saved offer, or undefined once the save is refused.
+  onSave: (
+    lineItemId: string,
+    patch: UpdateOfferLineItemRequest,
+  ) => Promise<Offer | undefined>;
   onRemove: (lineItemId: string) => void;
   removing: boolean;
 }>) {
@@ -116,7 +120,7 @@ export function EditableLineTable({
       onSave={(num) => {
         const patch: UpdateOfferLineItemRequest = {};
         patch[field] = num;
-        onSave(line.id, patch);
+        void onSave(line.id, patch);
       }}
     />
   );

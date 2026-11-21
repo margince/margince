@@ -81,6 +81,46 @@ function serve(draftOffer: Offer, answer: (call: Call) => Answer): Call[] {
   return calls;
 }
 
+const periods = () =>
+  screen.getByRole("spinbutton", { name: "Periods, line 1" });
+
+async function typeTerm(
+  user: ReturnType<typeof userEvent.setup>,
+  term: string,
+) {
+  await user.clear(periods());
+  await user.type(periods(), term);
+}
+
+function termed(
+  line: OfferLineItem,
+  term: number,
+  total: number,
+): OfferLineItem {
+  return { ...line, interval_count: term, line_total_minor: total };
+}
+
+// A quarterly line whose term saves wait until the case answers each one.
+function holdTermSaves() {
+  const quarterly: OfferLineItem = {
+    ...line1,
+    billing_model: "recurring",
+    billing_interval_months: 3,
+    interval_count: 4,
+  };
+  const sent: unknown[] = [];
+  const answers: ((response: Response) => void)[] = [];
+  installFetchStub({
+    "GET /me": meRoute({ offer: ["read", "update"] }),
+    "GET /offers/o-1": () => jsonResponse(draft([quarterly])),
+    "PATCH /offers/o-1/line-items/li-1": (body) => {
+      sent.push(body);
+      return new Promise<Response>((resolve) => answers.push(resolve));
+    },
+  });
+  return { sent, answers, quarterly };
+}
+
 describe("the Add line form", () => {
   it("starts the next line unclassified once a recurring line is added", async () => {
     const calls = serve(draft([line1]), () => ({
@@ -503,6 +543,45 @@ describe("a line's billing", () => {
     await user.tab();
     await waitFor(() => expect(sent).toHaveLength(2));
     expect(sent[1]).toMatchObject({ interval_count: 4 });
+  });
+
+  it("sends a term typed back to the saved one while the term before it is unanswered", async () => {
+    const { sent, answers, quarterly } = holdTermSaves();
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+
+    await typeTerm(user, "6");
+    await user.tab();
+    await waitFor(() => expect(sent).toHaveLength(1));
+    await typeTerm(user, "4");
+    await user.tab();
+    answers[0](jsonResponse(draft([termed(quarterly, 6, 4321)])));
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]).toMatchObject({ interval_count: 4 });
+    answers[1](jsonResponse(draft([termed(quarterly, 4, 1234)])));
+    expect(await screen.findByText("€12.34")).toBeTruthy();
+    expect(periods()).toHaveProperty("value", "4");
+  });
+
+  it("keeps a term re-typed to an earlier one while later answers arrive", async () => {
+    const { sent, answers, quarterly } = holdTermSaves();
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+
+    await typeTerm(user, "6");
+    await user.tab();
+    await typeTerm(user, "8");
+    await user.tab();
+    await waitFor(() => expect(sent).toHaveLength(1));
+    await typeTerm(user, "6");
+    answers[0](jsonResponse(draft([termed(quarterly, 6, 4321)])));
+    await waitFor(() => expect(sent).toHaveLength(2));
+    answers[1](jsonResponse(draft([termed(quarterly, 8, 1234)])));
+    expect(await screen.findByText("€12.34")).toBeTruthy();
+    expect(periods()).toHaveProperty("value", "6");
+    expect(document.activeElement).toBe(periods());
   });
 
   it("saves a line made recurring only once it has a period", async () => {

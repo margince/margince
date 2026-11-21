@@ -172,7 +172,10 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           offer={offer}
           refusals={refusals}
           onSave={(lineItemId, patch) =>
-            updateMutation.mutate({ lineItemId, patch })
+            // A refusal is shown in its row by the mutation itself.
+            updateMutation
+              .mutateAsync({ lineItemId, patch })
+              .catch(() => undefined)
           }
           onRemove={(lineItemId) => removeMutation.mutate(lineItemId)}
           removing={removeMutation.isPending}
