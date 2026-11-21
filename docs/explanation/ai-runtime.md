@@ -372,8 +372,8 @@ attempt timeout on it. So one slow host spends at most its share, and the walk s
 above. A call that its deadline stops is recorded with the `timeout` sentinel.
 
 A task a user waits on gets a shorter deadline, built from the time its slowest certified model took.
-It also has a bound on all its calls together, so the retries and steps up of one answer cannot keep the
-user for many minutes. A background task keeps 300 seconds on each call and no bound. How the numbers
+It also has a bound on all its calls together. So the retries and steps up of one answer cannot keep
+the user for many minutes. A background task keeps 300 seconds on each call and no bound. How the numbers
 are built, the limits an admin may set, and the call figures:
 [ai-request-settings.md](../reference/ai-request-settings.md).
 

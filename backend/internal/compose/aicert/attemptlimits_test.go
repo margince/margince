@@ -33,8 +33,10 @@ func TestTheAttemptLimitTableIsCurrent(t *testing.T) {
 }
 
 func latencyRecord(task ai.Task, model, verdict string, p95ms int64) Record {
-	return Record{Task: string(task), Provider: "openai_compatible", ServedModel: model, EnvClass: "cloud_frontier",
-		Verdict: verdict, LatencyP95: p95ms}
+	return Record{
+		Task: string(task), Provider: "openai_compatible", ServedModel: model, EnvClass: "cloud_frontier",
+		Verdict: verdict, LatencyP95: p95ms,
+	}
 }
 
 func TestTheSlowestRecordThatMayServeSetsTheLimit(t *testing.T) {

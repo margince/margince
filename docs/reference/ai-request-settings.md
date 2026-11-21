@@ -31,11 +31,11 @@ for a task that a later release drops, and the preview names it as stale.
 A task whose `execution_mode` is `interactive` gets its own default for each call. `make gen` builds it
 from the committed certification records into `backend/internal/modules/ai/attemptlimits_gen.go`, and
 `make drift` fails a table the records no longer give. It reads the slowest record whose verdict lets the
-model serve the task: `certified` or `supported_degraded`. The limit is 1.5 times that record's p95,
+model serve the task: `certified` or `supported_degraded`. The limit is 1.5 times that record's `p95`,
 rounded up to a whole second, at least 30 seconds and at most 300 (`InteractiveAttemptTimeout`).
 
 Two kinds of task keep 300 seconds: a task no such record measures, and `transcript`. The time of a
-transcript grows with the length of its recording, so the p95 of short test recordings cannot bound it.
+transcript grows with the length of its recording, so the `p95` of a short test file cannot bound it.
 
 The same tasks also have a bound on the whole call. It covers every try: the steps up the ladder, the retry
 after an answer the check refused, and the step up after that. The bound is two calls at the task's limit,

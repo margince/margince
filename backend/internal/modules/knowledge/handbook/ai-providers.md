@@ -217,6 +217,7 @@ The same users who may change a provider may change these.
   If **p95** is close to the line and the fallback answers, give it a little more time.
 - **Model call timeout** runs from 10 to 300 seconds. A call that runs longer is stopped, and the next tier gets a try.
   Lower it when a host stops answering and the tier above it works.
+
   A task that runs in the background has 300 seconds by default.
   A task you wait on has a shorter default, set from how long its slowest tested model took. The sheet shows it.
   All the calls of one answer to a task you wait on also stop after twice the timeout, and after 300 seconds at most.
