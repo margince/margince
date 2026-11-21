@@ -23,21 +23,21 @@ import (
 
 type stubGrants struct {
 	granted []string
-	// grantedFor answers per provider, for the cases about choosing between two
-	// mailboxes. nil falls back to `granted` for all of them.
+	// grantedFor answers per provider; nil falls back to `granted` for all.
 	grantedFor map[string][]string
 	err        error
 	calls      int
-	// channelBound is what the WORKSPACE lookup answers, and channelCalls counts
-	// it separately: the two lookups read different tables, and a pre-flight
-	// that asked the wrong one is exactly the defect that refused every channel
-	// reply while every mail test still passed.
+	// channelBound answers the WORKSPACE lookup and channelCalls counts it apart:
+	// asking the wrong table is what once refused every channel reply.
 	channelBound bool
 	channelErr   error
 	channelCalls int
 }
 
 func (s *stubGrants) ChooseSendingMailbox(ctx context.Context, user ids.UserID, _ ids.UUID, _ ids.ActivityID, providers []string, canSend func(capture.SendingMailbox) (bool, error)) (capture.SendingMailbox, error) {
+	if user.IsZero() || len(providers) == 0 {
+		return capture.SendingMailbox{}, errors.New("a mailbox lookup must name the sender and the mail providers")
+	}
 	for _, provider := range providers {
 		scopes, err := s.GrantedScopesFor(ctx, user, provider)
 		if can, canErr := canSend(capture.SendingMailbox{Provider: provider, ProviderScopes: scopes}); err != nil || canErr != nil || can {

@@ -119,6 +119,7 @@ describe("ComposeWindow send refusals", () => {
     expect(
       screen.getByRole("link", { name: "Connect a mailbox" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });
 
   it("explains an older server's footer refusal without promising an unusable override", async () => {

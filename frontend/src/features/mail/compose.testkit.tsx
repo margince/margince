@@ -12,6 +12,7 @@ import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { ComposeWindow } from "./composewindow";
 

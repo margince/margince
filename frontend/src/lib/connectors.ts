@@ -7,7 +7,7 @@ import type { components } from "../api/schema";
 import { isMailbox } from "../format/connectorprovider";
 import type { MessageKey } from "../i18n/en";
 import { connectorsPollInterval } from "./capture-progress";
-import { holdsSendGrant } from "./connector-status";
+import { holdsSendGrant, isLiveConnection } from "./connector-status";
 import { problemCode, throwProblem } from "./problem";
 import { captureRefusalCopy } from "./problemcodecopy";
 
@@ -95,32 +95,35 @@ export function captureRefusalOf(
 }
 
 /**
- * Whether this reader has a mailbox the product can send from: a connected
- * mail connection, not a calendar. Unanswered reads as none, because a drawer
- * offered on a guess would open onto a refusal.
+ * Whether this reader holds a live mail connection, by the rule the server
+ * applies: a connected or degraded mailbox, not a calendar. `undefined` while
+ * the roster has not answered or mail capture is not wired.
  */
-export function useMailboxConnected(enabled = true): boolean {
-  const connectors = useConnectors({ enabled });
-  return (connectors.data?.data ?? []).some(
+function holdsLiveMailbox(
+  connectors: ConnectorsResult | undefined,
+): boolean | undefined {
+  if (!connectors || connectors.notConfigured) return undefined;
+  return connectors.data.some(
     (connection) =>
-      connection.status === "connected" && isMailbox(connection.provider),
+      isLiveConnection(connection) && isMailbox(connection.provider),
   );
 }
 
 /**
+ * Whether this reader has a mailbox the product can send from. Unanswered
+ * reads as none, because a drawer offered on a guess would open onto a refusal.
+ */
+export function useMailboxConnected(enabled = true): boolean {
+  return holdsLiveMailbox(useConnectors({ enabled }).data) ?? false;
+}
+
+/**
  * True once the roster has answered and holds no live mail connection, the
- * same fact the server's send refusal `mailbox_not_connected` states. Unlike
- * `useMailboxConnected` it reads false while unanswered, so a line built on it
- * never flashes on a roster that is still loading.
+ * fact the server's `mailbox_not_connected` refusal states. It reads false
+ * while unanswered, so a line built on it never flashes on a loading roster.
  */
 export function useNoMailboxConnected(): boolean {
-  const connectors = useConnectors();
-  if (!connectors.data || connectors.data.notConfigured) return false;
-  return !connectors.data.data.some(
-    (connection) =>
-      (connection.status === "connected" || connection.status === "error") &&
-      isMailbox(connection.provider),
-  );
+  return holdsLiveMailbox(useConnectors().data) === false;
 }
 
 /** The path and query that name one of the reader's mailboxes. A member may
@@ -140,8 +143,5 @@ export function mailboxParams(
 export function sendingMailboxes(
   connections: readonly CaptureConnection[],
 ): CaptureConnection[] {
-  return connections.filter(
-    (c) =>
-      holdsSendGrant(c) && (c.status === "connected" || c.status === "error"),
-  );
+  return connections.filter((c) => holdsSendGrant(c) && isLiveConnection(c));
 }
