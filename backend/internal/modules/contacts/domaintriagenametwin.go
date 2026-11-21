@@ -28,12 +28,11 @@ func withholdForNameTwin(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageI
 	return true, nil
 }
 
-// auditKeyDomains names the domain list in an audit image, so the before and
-// after of an adoption are read as one field changing rather than two facts.
+// auditKeyDomains names the domain list in an audit image. Its before and after
+// read as one field changing.
 const auditKeyDomains = "domains"
 
-// liveCompanyDomains lists a company's unarchived domains, for the audit
-// image an adoption writes.
+// liveCompanyDomains lists a company's unarchived domain names.
 func liveCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]string, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT domain FROM company_domain
@@ -154,7 +153,7 @@ func (s *Store) adoptDomainIntoCompany(
 	// Read BEFORE the insert. The audit's before-image is what this company's
 	// domains were, and reading after the write would record the answer as
 	// though it were the question.
-	before, err := liveCompanyDomains(ctx, tx, companyID)
+	seen, err := seeCompanyDomains(ctx, tx, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -181,9 +180,11 @@ func (s *Store) adoptDomainIntoCompany(
 		companyID); err != nil {
 		return nil, fmt.Errorf("contacts: marking the company changed by an adopted domain: %w", err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", entityCompany, companyID.UUID,
-		map[string]any{auditKeyDomains: before},
-		map[string]any{auditKeyDomains: append(append([]string{}, before...), in.Domain)})
+	beforeImage, afterImage := map[string]any{}, map[string]any{}
+	if err := seen.recordCompanyDomainChange(ctx, tx, companyID, beforeImage, afterImage); err != nil {
+		return nil, err
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", entityCompany, companyID.UUID, beforeImage, afterImage)
 	if err != nil {
 		return nil, err
 	}

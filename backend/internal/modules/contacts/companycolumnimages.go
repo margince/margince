@@ -121,5 +121,8 @@ func anchorSaveImages(ctx context.Context, tx pgx.Tx, target anchorTarget) (map[
 		return nil, nil, nil, err
 	}
 	before, changed := changedColdStartColumns(target.before, after)
+	if err := target.domains.recordCompanyDomainChange(ctx, tx, target.id, before, changed); err != nil {
+		return nil, nil, nil, err
+	}
 	return before, changed, profileFieldReceipts(target.rows, rows, changed), nil
 }

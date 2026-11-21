@@ -127,3 +127,25 @@ func waitsOnAnAdvisoryLock(ctx context.Context, t *testing.T, tx pgx.Tx, finishe
 	}
 	return false
 }
+
+// The website moves the company's primary domain, so the save's audit entry
+// carries the domain set for Put back to see.
+func TestSavingACompanyWebsiteRecordsTheDomainSetInItsAuditImage(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.asAdmin()
+	first, second := "https://first-house.test", "https://second-house.test"
+	saved, err := e.store.SaveCompany(ctx, SaveCompanyInput{DisplayName: "Our House GmbH", Website: &first})
+	if err != nil {
+		t.Fatalf("first save: %v", err)
+	}
+	if _, err := e.store.SaveCompany(ctx, SaveCompanyInput{DisplayName: "Our House GmbH", Website: &second}); err != nil {
+		t.Fatalf("second save: %v", err)
+	}
+	before, after := auditImagesHolding(ctx, t, e.store, entityCompany, saved.CompanyID.UUID, auditKeyDomains)
+	if got := imageDomains(t, before); len(got) != 1 || got[0] != "first-house.test" {
+		t.Fatalf("before image domains = %v, want the first website's domain", got)
+	}
+	if got := imageDomains(t, after); len(got) != 2 {
+		t.Fatalf("after image domains = %v, want both domains the company now holds", got)
+	}
+}

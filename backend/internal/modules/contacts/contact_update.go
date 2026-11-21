@@ -236,10 +236,10 @@ func contactChangeImages(
 		}
 	}
 	if sets.emails {
-		before["emails"], after["emails"] = current.Emails, sets.emailRows
+		recordEmails(before, after, current.Emails, sets.emailRows)
 	}
 	if sets.phones {
-		before["phones"], after["phones"] = current.Phones, sets.phoneRows
+		recordPhones(before, after, current.Phones, sets.phoneRows)
 	}
 	return before, after
 }

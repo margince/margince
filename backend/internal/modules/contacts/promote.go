@@ -442,7 +442,22 @@ func carryLeadPhone(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, cont
 	if err != nil || len(phones) == 0 {
 		return err
 	}
-	return insertContactPhones(ctx, tx, contactID, lead.Source, by, phones)
+	seen, err := seeContactSets(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	if err := insertContactPhones(ctx, tx, contactID, lead.Source, by, phones); err != nil {
+		return err
+	}
+	before, after := map[string]any{}, map[string]any{}
+	if err := seen.recordContactSetChange(ctx, tx, contactID, before, after); err != nil || len(after) == 0 {
+		return err
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID.UUID, before, after)
+	if err != nil {
+		return fmt.Errorf("audit the number a promotion carried: %w", err)
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, contactID.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after})
 }
 
 // unwritablePromotionTarget answers a promotion whose exact match the promoter

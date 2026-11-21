@@ -404,8 +404,7 @@ func reconcileCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 		if err != nil {
 			return err
 		}
-		before["domains"] = domainsBefore
-		after["domains"] = domainSummaries(*in.Domains)
+		recordDomains(before, after, domainsBefore, domainSummaries(*in.Domains))
 	}
 	if in.RelationshipTypes != nil {
 		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, id, "manual", by, *in.RelationshipTypes, false)
