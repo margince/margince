@@ -3628,6 +3628,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Sắp xếp theo {column}",
   "table.noMatches": "Không có {unit} nào khớp với các bộ lọc này.",
   "table.clearFilters": "Bỏ bộ lọc",
+  "table.dialsRefused": "Không thể hiển thị danh sách với bộ lọc này.",
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "Đã tải {first} đến {last} trong {count} {unit}",
@@ -8551,6 +8552,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 
   "tasks.complete": "Xong",
+  "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
   "tasks.log.action": "Ghi lại kết quả",
@@ -20457,6 +20459,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chuyển vào kho lưu trữ sẽ gỡ dự án này khỏi danh sách đang hoạt động và giải phóng mã của dự án. Không thể hoàn tác ở đây.",
   "project.archivedReadOnly":
     "Dự án này đang trong kho lưu trữ và không thể thay đổi.",
+  "project.page.notFound": "Không tìm thấy dự án",
+  "project.page.notFoundBody":
+    "Dự án này không tồn tại, hoặc bạn không có quyền xem.",
+  "project.page.backToProjects": "Quay lại danh sách dự án",
   "project.notYoursToChange":
     "Bạn không có quyền sửa dự án này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
   "project.phaseLabel": "Giai đoạn dự án",

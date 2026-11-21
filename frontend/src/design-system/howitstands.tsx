@@ -16,10 +16,12 @@ type WashVars = CSSProperties & Record<`--${string}`, string>;
 /**
  * Who wrote the verdict. `records` is a rule over the CRM's own rows, which is
  * every record type but one. `model` is a sentence a model wrote, and only then
- * does the card wear the indigo sources pill.
+ * does the card wear the indigo sources pill. `colleague` is a call a colleague
+ * made; its sentence names who made it, so the card wears no pill.
  */
 export type StandingSources =
   | Readonly<{ by: "records" }>
+  | Readonly<{ by: "colleague" }>
   | Readonly<{ by: "model"; count: number }>;
 
 /** The call at the head of the card: one word, the sentence under it, and
@@ -214,6 +216,9 @@ function SourcesPill({ sources }: Readonly<{ sources: StandingSources }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  if (sources.by === "colleague") {
+    return null;
+  }
   if (sources.by === "model") {
     return (
       <Badge tone="ai">
