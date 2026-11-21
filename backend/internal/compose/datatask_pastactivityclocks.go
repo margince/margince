@@ -95,8 +95,8 @@ func clockTargets(table storekit.ClockTable, records []ids.UUID) storekit.LastAc
 // An archived contact stores no dates, so it is left.
 func strengthDatesDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795258153_contact_strength_dates", Version: 1,
-		Title: systemtext.Literal("datatask.title.core.1795258153_contact_strength_dates"), Requires: []string{"core/1795258153"},
+		ID: "core/1795264358_contact_strength_dates", Version: 1,
+		Title: systemtext.Literal("datatask.title.core.1795264358_contact_strength_dates"), Requires: []string{"core/1795264358"},
 		Steps: []datatask.Step{
 			clockRefoldStep("contacts", storekit.ClockContacts, storekit.ClockStrengthUnfolded,
 				datatask.AuditPolicy{Reason: clockRefoldAuditReason}),
