@@ -165,11 +165,11 @@ export function ForecastTile({
         t,
       )}
       detail={
-        parts.length > 0 ? (
-          parts.flatMap((part, index) =>
+        parts.length > 0
+          ? parts.flatMap((part, index) =>
               index === 0 ? [part] : [" · ", part],
             )
-        ) : undefined
+          : undefined
       }
     />
   );

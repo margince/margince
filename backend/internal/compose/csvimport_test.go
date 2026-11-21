@@ -145,7 +145,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			for _, target := range targets {
 				if nonFieldTargets.Waived(t, target) {
 					// Not a field. Each exemption is asserted below as reaching neither
-					// input on purpose, so a target with no entry is held to the rule.
+					// input, so a target with no entry is held to the rule.
 					continue
 				}
 				if isCreateOnly(object, target) && createOnlyTargets.Waived(t, target) {
