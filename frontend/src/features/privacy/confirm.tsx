@@ -47,9 +47,7 @@ import "./confirm.css";
 export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
   const t = useT();
   if (!token) {
-    return (
-      <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>
-    );
+    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
   }
   return <ConfirmDetailsBody token={token} />;
 }

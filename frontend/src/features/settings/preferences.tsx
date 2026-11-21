@@ -45,9 +45,7 @@ export function PreferenceCenterScreen({
 }: Readonly<{ token?: string }>) {
   const t = useT();
   if (!token) {
-    return (
-      <DeadLinkPage>{t("prefs.unsub.deadLinkBody")}</DeadLinkPage>
-    );
+    return <DeadLinkPage>{t("prefs.unsub.deadLinkBody")}</DeadLinkPage>;
   }
   return <PreferenceCenterBody token={token} />;
 }

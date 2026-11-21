@@ -8,7 +8,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../../i18n";
-import { PreferenceCenterScreen } from "../settings/preferences";
 import { ConfirmDetailsScreen } from "./confirm";
 import { UnsubscribeScreen } from "./unsubscribe";
 
@@ -87,21 +86,22 @@ describe("the unsubscribe page names the purpose in the reader's words", () => {
 describe("the dead-link pages share one layout", () => {
   const cases: [string, () => React.ReactNode, number][] = [
     ["unsubscribe", () => <UnsubscribeScreen />, 0],
-    ["preferences", () => <PreferenceCenterScreen />, 0],
     ["confirm", () => <ConfirmDetailsScreen />, 0],
-    ["preferences, token refused", () => <PreferenceCenterScreen token="x" />, 404],
     ["confirm, token refused", () => <ConfirmDetailsScreen token="x" />, 404],
   ];
-  it.each(cases)("%s shows the heading and the tab title", async (_n, ui, status) => {
-    if (status) stubEdge(status, { title: "not found" });
-    show(ui());
-    expect(
-      await screen.findByRole("heading", {
-        name: "This link is no longer valid",
-      }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(document.title).toBe("This link is no longer valid"),
-    );
-  });
+  it.each(cases)(
+    "%s shows the heading and the tab title",
+    async (_n, ui, status) => {
+      if (status) stubEdge(status, { title: "not found" });
+      show(ui());
+      expect(
+        await screen.findByRole("heading", {
+          name: "This link is no longer valid",
+        }),
+      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(document.title).toBe("This link is no longer valid"),
+      );
+    },
+  );
 });

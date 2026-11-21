@@ -1,10 +1,9 @@
 import { type ReactNode, type RefObject, useEffect, useRef } from "react";
-import { Logomark } from "../../design-system/logomark";
-import { usePrefersReducedMotion } from "../../design-system/motion";
 import { Card } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
+import { Logomark } from "../../design-system/logomark";
+import { usePrefersReducedMotion } from "../../design-system/motion";
 import { useT } from "../../i18n";
-import { useBookingTitle } from "../booking/booking-common";
 import { usePublicLocale } from "./publiclocale";
 import "../settings/preferences.css";
 
@@ -28,7 +27,14 @@ export function PublicPage({ children }: Readonly<{ children: ReactNode }>) {
  * reason under it. The tab title names the answer, not the product. */
 export function DeadLinkPage({ children }: Readonly<{ children: ReactNode }>) {
   const t = useT();
-  useBookingTitle(t("prefs.unsub.deadLinkTitle"));
+  const title = t("prefs.unsub.deadLinkTitle");
+  useEffect(() => {
+    const previous = document.title;
+    document.title = title;
+    return () => {
+      document.title = previous;
+    };
+  }, [title]);
   return (
     <PublicPage>
       <Heading size="xlarge" className="t-display">

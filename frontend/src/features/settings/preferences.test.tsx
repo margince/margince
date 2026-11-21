@@ -316,7 +316,10 @@ describe("PreferenceCenterScreen", () => {
 
   it("early-returns honestly with no token", () => {
     render(<PreferenceCenterScreen />);
-    expect(screen.getByText(/link is no longer valid/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /link is no longer valid/i }),
+    ).toBeInTheDocument();
+    expect(document.title).toMatch(/no longer valid/i);
   });
 
   // The PUT is non-atomic (handlers_public.go loops choices in separate
