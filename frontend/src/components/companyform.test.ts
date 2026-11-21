@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { addressFields, addressFrom } from "./companyform";
+import { addressFields, addressFrom, addressPatch } from "./companyform";
 
 describe("the address country field", () => {
   it("offers countries by name in the reader's language and stores the code", () => {
@@ -31,5 +31,35 @@ describe("the address country field", () => {
 
   it("prefills a stored lower-case code so the list can show it chosen", () => {
     expect(addressFrom({ country: "de" }).address_country).toBe("DE");
+  });
+});
+
+describe("a country stored as a name before the code rule", () => {
+  const legacy = { country: "Germany", city: "Berlin" };
+
+  it("is prefilled as stored and sent back as stored on a city-only edit", () => {
+    const values = { ...addressFrom(legacy), address_city: "Hamburg" };
+    expect(values.address_country).toBe("Germany");
+    expect(addressPatch(values)?.country).toBe("Germany");
+  });
+
+  it("is offered as the current value so the list does not read blank", () => {
+    const country = addressFields("en", "Germany").find(
+      (field) => field.key === "address_country",
+    );
+    expect(country?.options).toContainEqual({
+      value: "Germany",
+      label: "Germany",
+    });
+    const coded = addressFields("en", "de").find(
+      (field) => field.key === "address_country",
+    );
+    expect(coded?.options?.some((option) => option.value === "de")).toBe(false);
+  });
+
+  it("is replaced by the code the user picks", () => {
+    expect(
+      addressPatch({ ...addressFrom(legacy), address_country: "de" })?.country,
+    ).toBe("DE");
   });
 });

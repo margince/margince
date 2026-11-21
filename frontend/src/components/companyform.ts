@@ -19,7 +19,10 @@ import { ifMatch, requireVersion } from "../api/version";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
-import { countryOptions } from "../format/assignedcountries";
+import {
+  ASSIGNED_COUNTRIES,
+  countryOptions,
+} from "../format/assignedcountries";
 import { industryOptions } from "../format/industry";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -205,7 +208,13 @@ export function mapCompanyUpdate(
 // The six columns behind Address, flattened into form fields. The wire shape is
 // one nested object and the form channel is flat, so addressFrom and
 // addressPatch map the two. The country is chosen by name, stored as its code.
-export function addressFields(locale: Locale): CreateField[] {
+//
+// A country stored as free text before the code rule is kept as one more option,
+// so the list shows what the record holds and a save without a pick sends it back.
+export function addressFields(
+  locale: Locale,
+  stored?: string | null,
+): CreateField[] {
   return ADDRESS_COLUMN_LABELS.map(([key, label]) =>
     key === "address_country"
       ? {
@@ -213,13 +222,26 @@ export function addressFields(locale: Locale): CreateField[] {
           label,
           wireField: "address.country",
           type: "select",
-          options: countryOptions(locale).map(({ value, label: name }) => ({
-            value,
-            label: name,
-          })),
+          options: [
+            ...countryOptions(locale),
+            ...(stored && !isAssignedCountry(stored)
+              ? [{ value: stored, label: stored }]
+              : []),
+          ],
         }
       : { key, label },
   );
+}
+
+function isAssignedCountry(value: string): boolean {
+  return ASSIGNED_COUNTRIES.includes(value.toUpperCase());
+}
+
+// An assigned code in its canonical upper case. Any other text is a legacy
+// country name and stays as stored, since the server reads a changed spelling
+// as an edit and refuses it.
+function canonicalCountry(value: string): string {
+  return isAssignedCountry(value) ? value.toUpperCase() : value;
 }
 
 // addressFrom prefills the six flat fields from the record's nested address.
@@ -232,7 +254,7 @@ export function addressFrom(
     address_postal_code: address?.postal_code ?? "",
     address_city: address?.city ?? "",
     address_region: address?.region ?? "",
-    address_country: address?.country?.toUpperCase() ?? "",
+    address_country: canonicalCountry(address?.country ?? ""),
   };
 }
 
@@ -260,7 +282,8 @@ export function addressPatch(
     region: field("address_region"),
     // ISO-3166 alpha-2, and the server compares on the canonical spelling, so
     // "de" typed in lower case is the same country as "DE".
-    country: stringField(values.address_country).trim().toUpperCase() || null,
+    country:
+      canonicalCountry(stringField(values.address_country).trim()) || null,
   };
 }
 
@@ -343,6 +366,7 @@ export function companyEditFields(
   hasOwner: boolean,
   t: Translator,
   locale: Locale,
+  storedCountry?: string | null,
 ): CreateField[] {
   return [
     { key: "display_name", label: "create.displayName", required: true },
@@ -411,7 +435,7 @@ export function companyEditFields(
     // Where the company actually is. It has been in the API since the record
     // existed and reachable from no form on this page, so a rep who knew the
     // address had nowhere to put it.
-    ...addressFields(locale),
+    ...addressFields(locale, storedCountry),
     {
       key: "domains",
       label: "company.domains",

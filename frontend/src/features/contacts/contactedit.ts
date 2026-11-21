@@ -37,7 +37,7 @@ export function useContactEdit(contact: Contact): RailEdit {
     canEdit,
     fields: [
       ...contactEditFields(t),
-      ...addressFields(locale),
+      ...addressFields(locale, contact.address?.country),
       {
         // Still reads visibility, and does not offer it. An owner-private
         // contact must name an owner, and this field states the rule the
