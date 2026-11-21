@@ -28,6 +28,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
@@ -130,7 +131,11 @@ func CompanyCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (Com
 	// would cost them a confident wrong verdict, so the comparison leans this
 	// way on purpose.
 	out.CoverageIncomplete = total > len(visible)
-	out.Threading = threadingVerdict(len(visible), out.CoverageIncomplete)
+	thresholds, _, err := reporting.AccountCoverageThresholds(ctx, tx)
+	if err != nil {
+		return out, err
+	}
+	out.Threading = threadingVerdict(len(visible), out.CoverageIncomplete, *thresholds.MaxEngagedSeats)
 	return out, nil
 }
 
@@ -139,9 +144,10 @@ func CompanyCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (Com
 // The asymmetry is deliberate. Seeing ENOUGH is safe to report whatever is
 // hidden, because hidden contacts can only add to the count. Seeing too few is
 // only a finding when there is nothing left to hide behind — otherwise the
-// honest answer is that we do not know.
-func threadingVerdict(visible int, incomplete bool) ThreadingVerdict {
-	if visible >= ReportThreadingFloor {
+// answer is that we do not know. The account's contacts are judged by
+// the deal's rule at the published threshold.
+func threadingVerdict(visible int, incomplete bool, maxEngagedSeats int) ThreadingVerdict {
+	if !reporting.SingleThreaded(true, visible, maxEngagedSeats) {
 		return ThreadingMultiple
 	}
 	if incomplete {

@@ -123,7 +123,14 @@ func TestTheWirePayloadCarriesTheOmissionAndIsNeverNull(t *testing.T) {
 	if len(withheld.SectionsOmitted) != 3 {
 		t.Errorf("the withheld payload names %v, want three sections", withheld.SectionsOmitted)
 	}
-	ordinary := wireCoverage(DealCoverage{DealID: ids.NewV7()}, nil, nil)
+	// A withheld view judged nothing, so it states no threshold either.
+	if withheld.MaxEngagedSeats != nil {
+		t.Errorf("the withheld payload states a threshold of %d", *withheld.MaxEngagedSeats)
+	}
+	ordinary := wireCoverage(DealCoverage{DealID: ids.NewV7(), MaxEngagedSeats: 2}, nil, nil)
+	if ordinary.MaxEngagedSeats == nil || *ordinary.MaxEngagedSeats != 2 {
+		t.Errorf("the ordinary payload states threshold %v, want the 2 it was judged at", ordinary.MaxEngagedSeats)
+	}
 	if ordinary.SectionsOmitted == nil {
 		t.Error("the ordinary payload's sections_omitted is null, want an empty array")
 	}

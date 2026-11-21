@@ -33236,7 +33236,7 @@ type AccountCoverageRow struct {
 
 // AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
 type AccountCoverageThresholds struct {
-	// MaxEngagedSeats A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1.
+	// MaxEngagedSeats A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. Account coverage and the deal page both judge by it. Default 1.
 	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" maximum:"10" minimum:"0"`
 
 	// SilentDays A won account with no exchange within this many days is silent. Default 30.
@@ -48869,6 +48869,11 @@ type DealCoverage struct {
 	// cannot read has none. Absent, not empty, when the caller has no `activity` grant or
 	// the edge sections are withheld: absence says nothing about who has talked.
 	Lines *[]DealCoverageLine `json:"lines,omitempty"`
+
+	// MaxEngagedSeats The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+	// judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+	// Absent when the edge sections are withheld, since no finding is judged then.
+	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" minimum:"0"`
 
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the

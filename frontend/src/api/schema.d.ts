@@ -39834,6 +39834,12 @@ export interface components {
             lines?: components["schemas"]["DealCoverageLine"][];
             risks: components["schemas"]["DealCoverageRisk"][];
             /**
+             * @description The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+             *     judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+             *     Absent when the edge sections are withheld, since no finding is judged then.
+             */
+            max_engaged_seats?: number;
+            /**
              * @description The sections withheld for lack of the `relationship` grant — so a client can say
              *     "you can't see this" instead of "there is none". Never returned absent, and empty
              *     on the ordinary read: empty and forbidden are different answers, and a client that
@@ -50048,7 +50054,7 @@ export interface components {
         };
         /** @description What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints. */
         AccountCoverageThresholds: {
-            /** @description A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1. */
+            /** @description A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. Account coverage and the deal page both judge by it. Default 1. */
             max_engaged_seats?: number;
             /** @description An account with an open deal and no exchange within this many days is untouched. Default 21. */
             untouched_days?: number;
@@ -64347,7 +64353,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. */
+        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. On the same reads, `code: owner_not_measurable` means a filter names an owner whose figures the caller may not measure. */
         PermissionDenied: {
             headers: {
                 [name: string]: unknown;
@@ -85588,7 +85594,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             /** @description The plan failed validation (out-of-vocabulary field, invalid aggregate). */
             422: {

@@ -143,7 +143,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendsignaturecap_test.go` | H3 | The personal HTML signature cap is one rule with three spellings. |
 | `frontendsocialplatforms_test.go` | H3 | The keys a contact's social map takes are decided on both sides of the wire. |
 | `frontendtaskorigins_test.go` | H3 | Every automatic task source has a sentence in the browser saying what made the task. |
-| `frontendthreadingfloor_test.go` | H3 | The deal page names the seat a single-threaded deal is missing. |
 | `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
 | `frontendvendorservices_test.go` | H3 | Which calendar belongs beside which mailbox is answered on both sides of the wire, and the two answers must be the same pairs. |
 | `frontendwebformsigning_test.go` | H3 | The setup dialog hands a website's developer the code that signs a server form's posts. |

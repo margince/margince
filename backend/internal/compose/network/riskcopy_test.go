@@ -54,7 +54,7 @@ func TestTheFoldWritesInTheLanguageItIsGiven(t *testing.T) {
 func singleThreadedCoverage() DealCoverage {
 	return DealCoverage{
 		DealID:      ids.NewV7(),
-		EverTouched: true,
+		EverTouched: true, MaxEngagedSeats: 1,
 		Stakeholders: []deals.DealStakeholder{
 			seat(true, roleChampion), seat(false, "user"), seat(false, "legal"),
 		},

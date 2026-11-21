@@ -3604,6 +3604,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Server hat zu lange gebraucht und die Anfrage abgebrochen. Versuche es gleich noch einmal.",
   "common.individualPerformanceOff":
     "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben. Eine Prognose wird ganz zurückgehalten, wenn eine ihrer Teilgruppen die Zahlen eines einzelnen Mitglieds zeigen würde.",
+  "common.ownerNotMeasurable":
+    "Die Zahlen dieser verantwortlichen Person darfst du nicht auswerten. Entferne den Filter nach verantwortlicher Person, oder lass deine Reichweite von einem Admin erweitern.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
@@ -21266,6 +21268,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur ein Kontakt. Füge einen zweiten hinzu.",
   "deal.committee.missing.secondEngaged":
     "Weniger als zwei im Austausch. Erreiche einen zweiten Kontakt.",
+  "deal.committee.missing.anotherContact":
+    "Zu wenige Kontakte. Füge einen weiteren hinzu.",
+  "deal.committee.missing.anotherEngaged":
+    "Zu wenige im Austausch. Erreiche einen weiteren Kontakt.",
   "deal.committee.foot": "{named} benannt · {engaged} von {named} aktiv",
   "deal.brief.title": "Worum es geht",
   "deal.brief.byModel": "Von Margince aus der Mail des Kunden geschrieben",

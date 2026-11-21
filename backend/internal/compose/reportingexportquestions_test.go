@@ -5,6 +5,7 @@ package compose
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -101,5 +102,18 @@ func TestAnEditionWhoseAnswersWereRemovedWritesNoQuestionRows(t *testing.T) {
 	edition.Questions = nil
 	if rows := questionCSVRows(edition); len(rows) != 0 {
 		t.Fatalf("an edition with its answers removed wrote %q", rows)
+	}
+}
+
+// The page writes the assessment, so the file records the card without its sentences.
+func TestAnEditionNamesItsAssessmentCardAsNotExported(t *testing.T) {
+	edition := questionEdition("deals")
+	without, err := editionCSV(edition)
+	layout := append(*edition.Evaluation.Selection.Layout, crmcontracts.ReportingSection{Cards: []crmcontracts.ReportingCard{{Id: "summary", Kind: crmcontracts.ReportingCardKindAssessment}}})
+	edition.Evaluation.Selection.Layout = &layout
+	with, withErr := editionCSV(edition)
+	const row = "assessment,assessment,Assessment,,,,,,,,not_exported,false,,2026-09-24T13:00:00Z\n"
+	if err != nil || withErr != nil || !strings.Contains(string(with), row) || strings.Contains(string(without), "assessment") {
+		t.Fatalf("with the card the file is %q (%v), without it %q (%v)", with, withErr, without, err)
 	}
 }

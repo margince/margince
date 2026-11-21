@@ -3498,6 +3498,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Máy chủ xử lý quá lâu nên đã dừng yêu cầu này. Hãy thử lại sau giây lát.",
   "common.individualPerformanceOff":
     "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên. Toàn bộ dự báo bị ẩn nếu một nhóm trong đó có thể cho thấy số liệu của riêng một đồng nghiệp.",
+  "common.ownerNotMeasurable":
+    "Bạn không được xem số liệu của người chịu trách nhiệm này. Hãy bỏ bộ lọc theo người chịu trách nhiệm, hoặc liên hệ quản trị viên để mở rộng phạm vi của bạn.",
   "common.permissionDenied":
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
@@ -20715,6 +20717,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mới có 1 liên hệ. Thêm liên hệ thứ hai.",
   "deal.committee.missing.secondEngaged":
     "Chưa tới 2 liên hệ đang tương tác. Tiếp cận thêm một liên hệ.",
+  "deal.committee.missing.anotherContact":
+    "Còn quá ít liên hệ. Thêm một liên hệ nữa.",
+  "deal.committee.missing.anotherEngaged":
+    "Còn quá ít liên hệ đang tương tác. Tiếp cận thêm một liên hệ.",
   "deal.committee.foot":
     "{named} người được nêu tên · {engaged}/{named} đang tương tác",
   "deal.brief.title": "Deal này là gì",
