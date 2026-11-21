@@ -63,8 +63,11 @@ mail. A backup owner who leaves the reader team, or leaves the company, gets no 
 membership each time it runs. Moving the mailbox to another reader team removes a backup owner that team does not
 hold.
 
-A reply reminder needs mail open to the workspace. Held mail is never sent to a model to judge whether it asks
-for an answer, so held mail gets no reply reminder from anyone.
+A reply reminder needs a model to judge that the mail asks for an answer. A model reads held mail for that while
+the setting **Check private mail for requests** is on, and it is on by default. With it off, held mail gets no reply
+reminder. The waiting list does not depend on that setting. A promise follow-up needs the same model read of the
+thread, so it follows the setting. The question which deal a mail is about is asked for held mail too, and only the
+colleague who gets it sees it.
 
 A sender with no contact is filed under nothing and gets no contact, with or without a backup owner.
 
