@@ -9457,7 +9457,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.share.linkWarning":
     "Der Link wird nur einmal angezeigt und lässt sich später nicht mehr abrufen. Kopiere den Link jetzt.",
   "analytics.share.leaveWarning":
-    "Schließen ohne Kopieren verwirft den Link, und ein neuer muss erstellt werden.",
+    "Wenn du ohne Kopieren schließt, lässt sich der Link nicht mehr anzeigen. Er bleibt offen, bis er abläuft oder du ihn unter Geteilte Links schließt.",
   "analytics.share.copy": "Link kopieren",
   "analytics.share.copied": "Kopiert",
   "analytics.share.copyFailed":
