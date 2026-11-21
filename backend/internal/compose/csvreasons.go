@@ -10,6 +10,7 @@ package compose
 import (
 	"errors"
 
+	"github.com/margince/margince/backend/internal/compose/importkeys"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
@@ -19,13 +20,13 @@ import (
 // duplicateEmailWhy is a merge candidate the run discloses and does not resolve.
 var (
 	boundArchivedWhy        = migration.Why(migration.ReasonRecordArchived)
-	linkedInClaimedWhy      = migration.Why(migration.ReasonLinkedinHeld)
-	domainClaimedWhy        = migration.Why(migration.ReasonDomainHeld)
-	contactEmailClaimedWhy  = migration.Why(migration.ReasonContactEmailHeld)
-	contactHoldsLeadWhy     = migration.Why(migration.ReasonContactHoldsLead)
+	linkedInClaimedWhy      = importkeys.LinkedInHeldWhy
+	domainClaimedWhy        = importkeys.DomainHeldWhy
+	contactEmailClaimedWhy  = importkeys.ContactEmailHeldWhy
+	contactHoldsLeadWhy     = importkeys.ContactHoldsLeadWhy
 	addressErasedWhy        = migration.Why(migration.ReasonAddressErased)
-	duplicateEmailWhy       = migration.Why(migration.ReasonDuplicateEmail)
-	naturalKeyTakenWhy      = migration.Why(migration.ReasonNaturalKeyTaken)
+	duplicateEmailWhy       = importkeys.DuplicateEmailWhy
+	naturalKeyTakenWhy      = importkeys.NaturalKeyTakenWhy
 	ownerRefusedWhy         = migration.Why(migration.ReasonOwnerRefused)
 	unknownOwnerWhy         = migration.WhyCount(migration.ReasonOwnerUnknown, "rows", 1)
 	newTagWhy               = migration.Why(migration.ReasonTagNew)

@@ -67,17 +67,17 @@ func MovedKeyWhy(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object 
 	case err != nil || !found:
 		return migration.Reason{}, err
 	case held.Kind == LinkedIn && object == migration.ObjectCompany:
-		return migration.Why(migration.ReasonLinkedinHeld), nil
+		return LinkedInHeldWhy, nil
 	case held.Kind == Domain:
-		return migration.Why(migration.ReasonDomainHeld), nil
+		return DomainHeldWhy, nil
 	case object == migration.ObjectLead && held.Object == migration.ObjectContact:
-		return migration.Why(migration.ReasonContactHoldsLead), nil
+		return ContactHoldsLeadWhy, nil
 	case object == migration.ObjectLead:
-		return migration.Why(migration.ReasonNaturalKeyTaken), nil
+		return NaturalKeyTakenWhy, nil
 	case held.Object == migration.ObjectContact:
-		return migration.Why(migration.ReasonDuplicateEmail), nil
+		return DuplicateEmailWhy, nil
 	}
-	return migration.Why(migration.ReasonContactEmailHeld), nil
+	return ContactEmailHeldWhy, nil
 }
 
 // MovedKeyHeld names the first holder of a key a row moves, asking the kinds in
