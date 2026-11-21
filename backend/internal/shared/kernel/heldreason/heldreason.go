@@ -6,6 +6,8 @@
 // read this list.
 package heldreason
 
+import "errors"
+
 const (
 	// SendRefused is a message an immediate send froze when refused.
 	SendRefused = "send_refused"
@@ -16,4 +18,20 @@ const (
 // Reviewable are the hold reasons a review's message may carry.
 func Reviewable() []string {
 	return []string{SendRefused, ConsentWithdrawn}
+}
+
+// Holder is an error that names the hold reason it stops a scheduled message
+// with, so the module that holds the message need not import the module that
+// raised the error.
+type Holder interface {
+	error
+	HeldReason() string
+}
+
+// Of answers the hold reason an error carries.
+func Of(err error) (string, bool) {
+	if holder, ok := errors.AsType[Holder](err); ok {
+		return holder.HeldReason(), true
+	}
+	return "", false
 }

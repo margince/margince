@@ -44,6 +44,7 @@ type mailboxGrants interface {
 	// — so it cannot be answered by the scope lookup above, and a pre-flight
 	// that tried would report every channel send as ungranted.
 	ChannelSendCapable(ctx context.Context, provider string) (bool, error)
+	SendingMailboxes(ctx context.Context, userID ids.UserID, providers []string) ([]capture.SendingMailbox, error)
 	ChooseSendingMailbox(ctx context.Context, userID ids.UserID, from ids.UUID, anchor ids.ActivityID, providers []string,
 		canSend func(capture.SendingMailbox) (bool, error)) (capture.SendingMailbox, error)
 }
@@ -129,7 +130,10 @@ func installSendPreflight(s *Server, pool *pgxpool.Pool) {
 // of every live mailbox they hold (capture.Registry.ChooseSendingMailbox). Each
 // is asked what SendCapable asks of a provider: an app this deployment
 // configured, and a grant holding comms' own send scope. Empty means none can
-// transmit, which the caller turns into the refusal naming what to fix.
+// transmit, which the caller turns into the refusal naming what to fix. A user
+// with no mail connection at all is told so apart from one whose connections
+// only read, because connecting is the fix for the first and reconnecting for
+// the second.
 func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, anchor ids.ActivityID) (string, ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
@@ -144,7 +148,17 @@ func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, an
 	if err != nil {
 		return "", ids.Nil, err
 	}
-	return chosen.Provider, chosen.ID, nil
+	if chosen.Provider != "" {
+		return chosen.Provider, chosen.ID, nil
+	}
+	held, err := m.grants.SendingMailboxes(ctx, ids.From[ids.UserKind](actor.UserID), comms.MailSendProviders())
+	if err != nil {
+		return "", ids.Nil, err
+	}
+	if len(held) == 0 {
+		return "", ids.Nil, &activities.MailboxNotConnectedError{}
+	}
+	return "", ids.Nil, nil
 }
 
 func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (bool, error) {

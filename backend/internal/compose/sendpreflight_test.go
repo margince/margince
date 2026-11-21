@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -47,6 +48,16 @@ func (s *stubGrants) ChooseSendingMailbox(ctx context.Context, user ids.UserID, 
 		}
 	}
 	return capture.SendingMailbox{}, nil
+}
+
+func (s *stubGrants) SendingMailboxes(ctx context.Context, user ids.UserID, providers []string) ([]capture.SendingMailbox, error) {
+	var out []capture.SendingMailbox
+	for _, provider := range providers {
+		if scopes, err := s.GrantedScopesFor(ctx, user, provider); err != nil || len(scopes) > 0 {
+			out = append(out, capture.SendingMailbox{Provider: provider, ProviderScopes: scopes})
+		}
+	}
+	return out, nil
 }
 
 func (s *stubGrants) GrantedScopesFor(_ context.Context, _ ids.UserID, provider string) ([]string, error) {
@@ -297,8 +308,7 @@ func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testin
 		"only the first vendor":  {sendable(first), first},
 		// Holding both is not something any surface asks for, and the answer is
 		// the census's own order — stable beats arbitrary-looking.
-		"both":    {sendable(mail...), first},
-		"neither": {map[string][]string{}, ""},
+		"both": {sendable(mail...), first},
 	} {
 		t.Run(name, func(t *testing.T) {
 			authority := mailboxAuthority{
@@ -518,5 +528,32 @@ func TestNoMicrosoftAppRegistersNoMicrosoftConnector(t *testing.T) {
 		if descriptor.Name == providerGraph || descriptor.Name == providerGraphCal {
 			t.Errorf("%s was registered with no Microsoft app to run on", descriptor.Name)
 		}
+	}
+}
+
+// A sender with no mail connection is told to connect one. A sender whose
+// connections cannot send keeps the answer that says to reconnect.
+func TestSendableMailboxTellsNoConnectionApartFromAConnectionThatCannotSend(t *testing.T) {
+	human := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
+	})
+	for name, tc := range map[string]struct {
+		grants           *stubGrants
+		wantNotConnected bool
+	}{
+		"no connection":       {&stubGrants{grantedFor: map[string][]string{}}, true},
+		"a read-only mailbox": {&stubGrants{granted: []string{"read-only"}}, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			authority := mailboxAuthority{
+				grants:            tc.grants,
+				mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
+			}
+			got, _, err := authority.SendableMailbox(human, ids.Nil, ids.ActivityID{})
+			_, notConnected := errors.AsType[*activities.MailboxNotConnectedError](err)
+			if got != "" || notConnected != tc.wantNotConnected || (err != nil && !notConnected) {
+				t.Errorf("SendableMailbox = (%q, %v), want not-connected=%v", got, err, tc.wantNotConnected)
+			}
+		})
 	}
 }

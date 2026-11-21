@@ -107,6 +107,22 @@ export function useMailboxConnected(enabled = true): boolean {
   );
 }
 
+/**
+ * True once the roster has answered and holds no live mail connection, the
+ * same fact the server's send refusal `mailbox_not_connected` states. Unlike
+ * `useMailboxConnected` it reads false while unanswered, so a line built on it
+ * never flashes on a roster that is still loading.
+ */
+export function useNoMailboxConnected(): boolean {
+  const connectors = useConnectors();
+  if (!connectors.data || connectors.data.notConfigured) return false;
+  return !connectors.data.data.some(
+    (connection) =>
+      (connection.status === "connected" || connection.status === "error") &&
+      isMailbox(connection.provider),
+  );
+}
+
 /** The path and query that name one of the reader's mailboxes. A member may
  *  connect several accounts of one provider, so a call names the row by id. */
 export function mailboxParams(
