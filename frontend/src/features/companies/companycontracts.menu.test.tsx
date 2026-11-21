@@ -133,6 +133,29 @@ describe("the contract row menu", () => {
     ).toBeTruthy();
   });
 
+  it("numbers menus still named alike by their place in the list", async () => {
+    stub([
+      { ...ACTIVE, id: "c-1" },
+      { ...ACTIVE, id: "c-2" },
+      { ...ACTIVE, id: "c-3", starts_on: "2025-03-01" },
+      { ...ACTIVE, id: "c-4", starts_on: "2025-03-01" },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    const named = (name: string | RegExp) =>
+      screen.getAllByRole("button", { name }).length;
+    await screen.findByRole("button", {
+      name: "Actions for Framework agreement 2024 (1)",
+    });
+    expect(named("Actions for Framework agreement 2024 (2)")).toBe(1);
+    expect(named(/^Actions for Framework agreement 2024, .*2025 \(1\)$/)).toBe(
+      1,
+    );
+    expect(named(/^Actions for Framework agreement 2024, .*2025 \(2\)$/)).toBe(
+      1,
+    );
+  });
+
   it("withholds change-status and cancel from a terminal agreement, but not renew", async () => {
     stub([EXPIRED]);
     const user = userEvent.setup();

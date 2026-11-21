@@ -63,9 +63,8 @@ function contractsState(
   mayRead: boolean,
   count: number,
 ): SectionState {
-  // A reader without the grant is WITHHELD, never empty: "this account has no
-  // agreements" and "you may not see them" are different sentences, and only
-  // one of them is about the account.
+  // A reader without the grant is WITHHELD, never empty: "no agreements" and
+  // "you may not see them" are different sentences.
   if (!mayRead) {
     return "withheld";
   }
@@ -85,31 +84,21 @@ export function CompanyContractsCard({
   companyId,
 }: Readonly<{ companyId: string }>) {
   const t = useT();
-  // `useCan` for the READ — the grant alone decides what may be shown. The
-  // three below gate MUTATING controls, so they take the seat as well: the
-  // server clamps the licensing seat on the HTTP method, before RBAC runs, and a
-  // read seat holding a full contract grant would otherwise be offered verbs
-  // whose every press is refused.
-  //
-  // ADD and EDIT are different grants, because they are different writes:
-  // createContract demands `create` (contract_write.go:49) and patchContract
-  // demands `update` (contract_lifecycle.go:84). One `mayWrite` for both offered
-  // Add to a principal who may only correct existing paper, and hid it from one
-  // who may only file new.
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
+  // `useCan` for the read. The three below gate writes and take the seat too,
+  // since the server clamps a read seat before RBAC runs. Add and Edit differ:
+  // createContract demands `create` and patchContract `update`.
   const mayRead = useCan("contract", "read");
   const mayAdd = useCanWrite("contract", "create");
   const mayEdit = useCanWrite("contract", "update");
   const mayArchive = useCanWrite("contract", "delete");
-  // Renew asserts BOTH grants at once (Store.Renew, contract_lifecycle.go: it
-  // requires contract_write's create AND contract_lifecycle's update in one
-  // call, because a renewal both creates the successor and supersedes the
-  // predecessor) — so a seat holding only one of them would see the verb and
-  // have every press refused.
+  // Renew asks for both grants at once (Store.Renew): it creates the successor
+  // and supersedes the predecessor, so one grant alone is refused every time.
   const mayRenew = mayAdd && mayEdit;
   const [activeOnly, setActiveOnly] = useState(false);
-  // `editing` carries the contract being corrected; undefined means the form is
-  // adding a new one. One form serves both, because "record what we agreed" and
-  // "fix what I typed wrong" are the same fields.
+  // `editing` is the contract being corrected, undefined for a new one: one
+  // form serves both, since recording and correcting take the same fields.
   const [editing, setEditing] = useState<Contract | undefined>();
   const [formOpen, setFormOpen] = useState(false);
 
@@ -129,6 +118,7 @@ export function CompanyContractsCard({
     },
   });
   const contracts = query.data ?? [];
+  const names = menuNames(contracts, locale, readerZone);
   const state = contractsState(
     query.isPending,
     query.isError,
@@ -191,10 +181,11 @@ export function CompanyContractsCard({
               </EmptyState>
             </PanelBody>
           ) : (
-            contracts.map((contract) => (
+            contracts.map((contract, index) => (
               <ContractRow
                 key={contract.id}
                 contract={contract}
+                menuName={names[index] ?? contract.title}
                 companyId={companyId}
                 mayWrite={mayEdit}
                 mayArchive={mayArchive}
@@ -222,18 +213,26 @@ export function CompanyContractsCard({
   );
 }
 
-// A renewal starts with its predecessor's title, so a row's menu also names
-// the contract's number, or its first day where it has none.
-function menuName(contract: Contract, locale: Locale, zone: string): string {
-  const day =
-    contract.starts_on && formatDate(contract.starts_on, locale, zone);
-  return [contract.title, contract.contract_number ?? day]
-    .filter(Boolean)
-    .join(", ");
+// A renewal starts with its predecessor's title. So a row's menu also names
+// its number or first day, then its place among the rows still named alike.
+function menuNames(contracts: Contract[], locale: Locale, zone: string) {
+  const names = contracts.map((contract) => {
+    const day =
+      contract.starts_on && formatDate(contract.starts_on, locale, zone);
+    return [contract.title, contract.contract_number ?? day]
+      .filter(Boolean)
+      .join(", ");
+  });
+  const alike = (name: string, upTo = names.length) =>
+    names.slice(0, upTo).filter((other) => other === name).length;
+  return names.map((name, index) =>
+    alike(name) > 1 ? `${name} (${alike(name, index + 1)})` : name,
+  );
 }
 
 function ContractRow({
   contract,
+  menuName,
   companyId,
   mayWrite,
   mayArchive,
@@ -241,6 +240,7 @@ function ContractRow({
   onEdit,
 }: Readonly<{
   contract: Contract;
+  menuName: string;
   companyId: string;
   mayWrite: boolean;
   mayArchive: boolean;
@@ -249,7 +249,6 @@ function ContractRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const readerZone = useViewerZone();
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState(false);
   const [renewing, setRenewing] = useState(false);
@@ -343,7 +342,7 @@ function ContractRow({
         {(mayWrite || mayArchive || mayRenewThis) && (
           <OverflowMenu
             label={t("table.rowActions", {
-              name: menuName(contract, locale, readerZone),
+              name: menuName,
             })}
           >
             {/* Menu items are Buttons, like every other menu in the product.

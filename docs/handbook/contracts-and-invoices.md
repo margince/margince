@@ -26,7 +26,7 @@ Also called: add an agreement, upload a signed contract.
 
 ### How do I make a contract active or change its status?
 To change a contract's status in Margince, open the company's **Documents** tab and use the contract row's actions menu → **Change status**.
-1. Open the actions menu on the contract's row. A screen reader names it **Actions for** and the contract's title, then its number or, without one, its start day.
+1. Open the actions menu on the contract's row. A screen reader names it **Actions for** and the contract's title, then its number or, without one, its start day. Two menus that would still read the same end in (1) and (2).
 2. Choose **Change status**, pick the **New status** (Draft, Active, Expired or Canceled), and click **Change status**.
 A contract that is already Expired, Canceled or Superseded offers no status change, because those are final. Superseded cannot be chosen at all; renewing sets it.
 Also called: activate a contract, mark a contract expired.
