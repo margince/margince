@@ -164,13 +164,13 @@ func (s *Store) writeEmbedding(ctx context.Context, entityType string, entityID 
 			}
 		}
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
-			SELECT $1, $2, 0, $3, $4, $5::vector
+			INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding_half)
+			SELECT $1, $2, 0, $3, $4, $5::halfvec
 			 WHERE NOT EXISTS (SELECT 1 FROM activity a WHERE $1 = 'activity' AND a.id = $2
 			                     AND NOT (`+activityIndexable("a")+`))
 			ON CONFLICT (entity_type, entity_id, chunk_ix)
 			DO UPDATE SET chunk_hash = EXCLUDED.chunk_hash, model = EXCLUDED.model,
-			              embedding = EXCLUDED.embedding, created_at = now()
+			              embedding_half = EXCLUDED.embedding_half, embedding = NULL, created_at = now()
 			WHERE embedding.chunk_hash IS NOT DISTINCT FROM $6 AND embedding.model IS NOT DISTINCT FROM $7`,
 			entityType, entityID, next.hash, next.model, vectorLiteral(vec), read.hash, read.model)
 		if err != nil {
@@ -282,7 +282,7 @@ func similarBranchSQL(ctx context.Context, types []string, vecPos, identityPos i
 		}
 		sql := fmt.Sprintf(
 			`SELECT '%s'::text AS rtype, e.entity_id AS id, %s AS title,
-			        (1 - (e.embedding <=> $%d::vector))::float8 AS sim
+			        (1 - (`+storedVectorSQL("e")+` <=> $%d::halfvec))::float8 AS sim
 			 FROM embedding e JOIN %s t ON t.id = e.entity_id
 			 WHERE e.entity_type = '%s' AND t.archived_at IS NULL AND e.model = $%d`,
 			branch.entity, branch.title, vecPos, branch.table, branch.entity, identityPos,

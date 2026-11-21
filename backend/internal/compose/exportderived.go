@@ -13,16 +13,24 @@ import (
 const (
 	exportPrimaryEmail = "primary_email"
 	exportPrimaryPhone = "primary_phone"
+	// exportLinkedCompanyName is what the lead's linked company is called now.
+	// company_name stays the name typed on the lead, which an import writes back.
+	exportLinkedCompanyName = "linked_company_name"
 )
 
 // derivedExportColumns lists, per table, the columns that follow its stored ones.
 var derivedExportColumns = map[string][]string{
 	string(recordTypeContact): {exportPrimaryEmail, exportPrimaryPhone},
+	tableLead:                 {exportLinkedCompanyName},
 }
 
 // derivedColumnExpr is the expression for a derived column on a row aliased t.
 // It picks the address the record page prints, and never a retired one.
 func derivedColumnExpr(table, column string) (string, bool) {
+	if table == tableLead && column == exportLinkedCompanyName {
+		return `(SELECT lc.display_name FROM company lc
+		          WHERE lc.id = t.company_id AND lc.archived_at IS NULL)`, true
+	}
 	if table != string(recordTypeContact) {
 		return "", false
 	}
