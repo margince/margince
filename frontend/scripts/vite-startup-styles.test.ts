@@ -138,9 +138,10 @@ describe("the startup stylesheets and fonts in the shell", () => {
     const page = (Array.isArray(result) ? result : [result])
       .flatMap((output) => ("output" in output ? output.output : []))
       .find((file) => file.fileName === "iframe.html");
-    expect(page?.type === "asset" && String(page.source)).not.toMatch(
-      /rel="(?:stylesheet|preload)"/,
-    );
+    if (page?.type !== "asset")
+      throw new Error("the fixture built no iframe.html");
+    expect(String(page.source)).toContain('<script type="module"');
+    expect(String(page.source)).not.toMatch(/rel="(?:stylesheet|preload)"/);
   });
 
   it("refuses an app shell whose startup entries no chunk holds", async () => {

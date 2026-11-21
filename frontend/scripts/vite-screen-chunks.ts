@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type * as TS from "typescript";
 import type { HtmlTagDescriptor, Plugin, Rolldown } from "vite";
 import { SCREEN_CHUNKS_ID, type ScreenChunks } from "../src/lib/screenchunks";
@@ -49,8 +50,8 @@ function importSpecifier(
 }
 
 /**
- * Each entry of the object literal `name` declares in `file`, with the module
- * its `() => import("…")` names; undefined for an entry of any other shape.
+ * Each entry of the object literal `name`, with the module its `() => import("…")` names.
+ * Any other value reads as undefined, and an entry with no plain name is keyed by its text.
  */
 export function importMapEntries(
   ts: typeof TS,
@@ -61,8 +62,10 @@ export function importMapEntries(
   if (!literal) return undefined;
   const entries = new Map<string, string | undefined>();
   for (const property of literal.properties) {
-    if (property.name && ts.isIdentifier(property.name))
-      entries.set(property.name.text, importSpecifier(ts, property));
+    const key = property.name;
+    if (key && (ts.isIdentifier(key) || ts.isStringLiteral(key)))
+      entries.set(key.text, importSpecifier(ts, property));
+    else entries.set(property.getText(file), undefined);
   }
   return entries;
 }
@@ -101,15 +104,17 @@ export function screenChunksTag(map: ScreenChunks): HtmlTagDescriptor {
 export function screenChunks(screenCodeFile: string): Plugin {
   const modules = new Map<string, string>();
   let base = "/";
+  let shell = "";
   return {
     name: "screen-chunks",
     apply: "build",
     configResolved(config) {
       base = config.base;
+      shell = join(config.root, SHELL);
     },
     async buildEnd(error) {
-      if (error) return;
       modules.clear();
+      if (error || ![...this.getModuleIds()].includes(shell)) return;
       const specifiers = await screenCodeSpecifiers(
         readFileSync(screenCodeFile, "utf8"),
       );

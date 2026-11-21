@@ -136,7 +136,11 @@ function bindingsOf(
       readImport(walk, file, statement, out);
     } else if (ts.isExportDeclaration(statement)) {
       readReExport(walk, file, statement, out);
-    } else if (ts.isVariableStatement(statement)) {
+    }
+  }
+  // After the imports: a lazy screen may name a code map imported below it.
+  for (const statement of file.statements) {
+    if (ts.isVariableStatement(statement)) {
       readLazyImport(walk, file, statement, out);
     }
   }

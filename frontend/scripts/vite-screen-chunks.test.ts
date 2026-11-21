@@ -101,16 +101,42 @@ it("fails the build when a screen's module does not resolve", async () => {
   ).rejects.toThrow(/gone\.js/);
 });
 
+it("reads a quoted screen name as a plain one", async () => {
+  await expect(
+    screenCodeSpecifiers(
+      'export const SCREEN_CODE = { "contactPage": () => import("./c.js"), deals: () => import("./d.js") };',
+    ),
+  ).resolves.toEqual(
+    new Map([
+      ["contactPage", "./c.js"],
+      ["deals", "./d.js"],
+    ]),
+  );
+});
+
+it("refuses an entry that is not a named loader", async () => {
+  for (const entry of [
+    '"deals": import("./d.js")',
+    '...{ deals: () => import("./d.js") }',
+    '["dea" + "ls"]: () => import("./d.js")',
+  ])
+    await expect(
+      screenCodeSpecifiers(`export const SCREEN_CODE = { ${entry} };`),
+      entry,
+    ).rejects.toThrow("is not `() => import(");
+});
+
 it("refuses a file with no SCREEN_CODE to read", async () => {
   await expect(
     screenCodeSpecifiers("export const OTHER = {};"),
   ).rejects.toThrow("no SCREEN_CODE entry was read");
 });
 
+// Storybook never loads the screens, so a registry it would refuse must not fail its build.
 it("leaves another page of a build alone, as Storybook's iframe.html", async () => {
   await writeFile(
     join(dir, "screencode.js"),
-    'export const SCREEN_CODE = { deals: () => import("./deals.js") };',
+    'export const SCREEN_CODE = { deals: () => import("./deals.js"), gone: () => import("./gone.js"), odd: () => Promise.resolve() };',
   );
   await writeFile(join(dir, "deals.js"), "export const deals = 1;");
   await writeFile(
@@ -131,7 +157,8 @@ it("leaves another page of a build alone, as Storybook's iframe.html", async () 
   const page = (Array.isArray(result) ? result : [result])
     .flatMap((output) => ("output" in output ? output.output : []))
     .find((file) => file.fileName === "iframe.html");
-  expect(page?.type === "asset" && String(page.source)).not.toContain(
-    SCREEN_CHUNKS_ID,
-  );
+  if (page?.type !== "asset")
+    throw new Error("the fixture built no iframe.html");
+  expect(String(page.source)).toContain('<script type="module"');
+  expect(String(page.source)).not.toContain(SCREEN_CHUNKS_ID);
 });
