@@ -60,11 +60,13 @@ func New(pool *pgxpool.Pool) *Cache {
 }
 
 // Stamp is what a read records before it is assembled. It holds the fence
-// generation, when the read began, and the last instant it may be served.
+// generation, when the read began and the last instant it may be served. It
+// also names the reader's reply and meeting snoozes that had lifted.
 type Stamp struct {
 	fence      int64
 	at         time.Time
 	validUntil time.Time
+	lifted     []byte
 }
 
 // ReaderOf answers the human whose answer this request may read or keep. Any
@@ -117,7 +119,7 @@ func NoWalk[A Answer]() Walk[A] {
 // Lookup answers the reader's kept answer to read and key, how it stands, and
 // whether one was still valid. An answer behind the reader's write stays valid
 // and says so in Kept.Written, and one whose walk has ended says so in
-// Kept.WalkEnded. The access fence and expiry end it.
+// Kept.WalkEnded. The access fence, expiry and a lifted snooze end it.
 func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, Kept, bool, error) {
 	var out A
 	var payload []byte
@@ -134,7 +136,8 @@ func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 			  FROM home_read_cache c
 			  JOIN home_read_fence f ON f.generation = c.fence
 			 WHERE c.reader_id = $1 AND c.read = $2 AND c.request_key = $3
-			   AND c.valid_until > now()`,
+			   AND c.valid_until > now()
+			   AND c.lifted_snooze_digest IS NOT DISTINCT FROM `+briefs.LiftedSnoozesDigestSQL("c.reader_id", "now()"),
 			reader, string(read), key).Scan(&payload, &ageSeconds, &standing.Written, &standing.WalkEnded)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -257,7 +260,8 @@ func (c *Cache) Settle() { c.background.Wait() }
 // commits after this read moves the fence past the stamp, so the answer is
 // never served beside it. Expiry writes nothing, so the next of the reader's
 // own grants to expire, and the next of their brief snoozes to end, bound the
-// life.
+// life. A reply or meeting snooze lifts without a write too. The stamp names
+// the lifted ones, and Lookup ends the answer once that set changes.
 func (c *Cache) Stamp(ctx context.Context) (Stamp, error) {
 	actor, _ := principal.Actor(ctx)
 	var s Stamp
@@ -271,9 +275,10 @@ func (c *Cache) Stamp(ctx context.Context) (Stamp, error) {
 			                                AND g.subject_id IN (SELECT unnest(member_identity_family($2::uuid))))
 			                            OR (g.subject_type = 'team' AND g.subject_id = ANY($3)))),
 			                      'infinity'::timestamptz),
-			             coalesce(`+briefs.NextSnoozeEndSQL("$2::uuid", "now()")+`, 'infinity'::timestamptz))
+			             coalesce(`+briefs.NextSnoozeEndSQL("$2::uuid", "now()")+`, 'infinity'::timestamptz)),
+			       `+briefs.LiftedSnoozesDigestSQL("$2::uuid", "now()")+`
 			  FROM home_read_fence f`,
-			(Life+StaleGrace).Seconds(), actor.UserID, actor.TeamIDs).Scan(&s.fence, &s.at, &s.validUntil)
+			(Life+StaleGrace).Seconds(), actor.UserID, actor.TeamIDs).Scan(&s.fence, &s.at, &s.validUntil, &s.lifted)
 	})
 	if err != nil {
 		return Stamp{}, fmt.Errorf("homecache: reading the access fence: %w", err)
@@ -297,14 +302,14 @@ func Store[A Answer](
 		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO home_read_cache
-			       (reader_id, read, request_key, fence, computed_at, valid_until, walk_id, payload)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			       (reader_id, read, request_key, fence, computed_at, valid_until, walk_id, payload, lifted_snooze_digest)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			ON CONFLICT (reader_id, read, request_key) DO UPDATE
 			   SET fence = EXCLUDED.fence, computed_at = EXCLUDED.computed_at,
 			       valid_until = EXCLUDED.valid_until, walk_id = EXCLUDED.walk_id,
-			       payload = EXCLUDED.payload
+			       payload = EXCLUDED.payload, lifted_snooze_digest = EXCLUDED.lifted_snooze_digest
 			 WHERE home_read_cache.computed_at <= EXCLUDED.computed_at`,
-			reader, string(read), key, stamp.fence, stamp.at, stamp.validUntil, walk, payload)
+			reader, string(read), key, stamp.fence, stamp.at, stamp.validUntil, walk, payload, stamp.lifted)
 		return err
 	})
 	if err != nil {
