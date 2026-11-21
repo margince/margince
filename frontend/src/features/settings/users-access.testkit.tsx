@@ -142,7 +142,8 @@ export function backend(
       if (request.method !== "GET") {
         await opts.holdWrites;
       }
-      if (opts.refuse?.(calls[calls.length - 1])) {
+      const last = calls.at(-1);
+      if (last && opts.refuse?.(last)) {
         return new Response(JSON.stringify({ detail: "the team was merged" }), {
           status: 409,
           headers: { "Content-Type": "application/problem+json" },

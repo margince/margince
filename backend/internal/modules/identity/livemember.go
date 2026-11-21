@@ -24,7 +24,7 @@ func DepartedMemberSQL(alias string) string {
 
 // TeamSeatSQL is the seat a team shows as a member: a human who is active or
 // invited and not archived. The team count, the invite preview and the team's
-// member list all read it, so they cannot disagree.
+// member list read it.
 func TeamSeatSQL(alias string) string {
 	prefix := ""
 	if alias != "" {
