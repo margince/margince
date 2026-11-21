@@ -203,10 +203,8 @@ export function mapCompanyUpdate(
 }
 
 // The six columns behind Address, flattened into form fields. The wire shape is
-// one nested object; the form channel is flat string values, so the two are
-// mapped at the boundary (addressFrom / addressPatch) rather than teaching the
-// form about nesting for one record type. The country is chosen by name in the
-// reader's language and stored as its code.
+// one nested object and the form channel is flat, so addressFrom and
+// addressPatch map the two. The country is chosen by name, stored as its code.
 export function addressFields(locale: Locale): CreateField[] {
   return ADDRESS_COLUMN_LABELS.map(([key, label]) =>
     key === "address_country"
