@@ -1,36 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../../api/client";
 import { useActivity } from "../../lib/activityread";
 import type { CommunicationContext } from "../../lib/compose-context";
 import { contact360Query } from "../../lib/contact.queries";
-import { unwrap } from "../../lib/problem";
-
-async function readBookingDeal(contactId: string, dealId: string) {
-  const deal = unwrap(
-    await api.GET("/deals/{id}", { params: { path: { id: dealId } } }),
-  );
-  if (deal.status !== "open" || deal.archived_at) return null;
-  let cursor: string | undefined;
-  do {
-    const page = unwrap(
-      await api.GET("/relationships", {
-        params: {
-          query: {
-            contact_id: contactId,
-            deal_id: dealId,
-            kind: "deal_stakeholder",
-            limit: 100,
-            cursor,
-          },
-        },
-      }),
-    );
-    if (page.data.some((edge) => !edge.ended_at && !edge.archived_at))
-      return dealId;
-    cursor = page.page.next_cursor ?? undefined;
-  } while (cursor);
-  return null;
-}
+import { dealChoicesOf } from "../mail/composedeal";
 
 export function useProposalContext(
   contactId: string,
@@ -42,14 +14,13 @@ export function useProposalContext(
     enabled: Boolean(contactId),
   });
   const reply = useActivity(replyToActivityId);
-  const selected = useQuery({
-    queryKey: ["booking-deal-context", dealId, contactId],
-    enabled: Boolean(dealId),
-    retry: false,
-    queryFn: () => readBookingDeal(contactId, dealId ?? ""),
-  });
+  // The contact page's own seat read decides whether the contact still sits on
+  // the starting deal. An End date ends the claim the day the server says.
+  const seated = dealChoicesOf(contact.data?.deal_roles?.data ?? []).some(
+    (deal) => deal.id === dealId,
+  );
   const activeDealId =
-    (selected.isError ? undefined : selected.data) ??
+    (dealId && seated ? dealId : undefined) ??
     (contact.isError ? undefined : contact.data?.commercial?.deal?.deal_id);
   const answersContact =
     reply.data?.direction === "inbound" &&
@@ -61,8 +32,6 @@ export function useProposalContext(
       ? "requested_followup"
       : undefined;
   const contextPending =
-    contact.isPending ||
-    (Boolean(dealId) && selected.isPending) ||
-    (Boolean(replyToActivityId) && reply.isPending);
+    contact.isPending || (Boolean(replyToActivityId) && reply.isPending);
   return { activeDealId, initialReason, contextPending };
 }

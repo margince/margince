@@ -6,22 +6,30 @@
 package integration
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"maps"
 	"slices"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
+
 	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // installationToday is the day dealseat.CurrentSQL compares an End date with,
@@ -113,12 +121,25 @@ func TestADealSeatLeavesTheCommitteeOnItsEndDay(t *testing.T) {
 
 func compareUUID(a, b ids.UUID) int { return slices.Compare(a[:], b[:]) }
 
+// memberSeat is Rep1 holding the grants the shipped Member role seeds, read
+// from the seed itself, so the test proves the role a salesperson has.
+func memberSeat(t *testing.T, e *Env) context.Context {
+	t.Helper()
+	grants := seededRoleGrants(t)[roleRep]
+	if !grants["relationship"].Create || grants["relationship"].Delete {
+		t.Fatalf("the seeded Member role holds relationship %+v; this test needs create without delete", grants["relationship"])
+	}
+	return e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{roleRep}, Objects: grants, RowScope: principal.RowScopeTeam,
+	})
+}
+
 // Whoever may write a deal may take a stakeholder off it, without the
 // relationship delete grant; the Member role holds create and not delete.
 func TestARepWhoMayWriteTheDealRemovesItsStakeholder(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	rep := memberSeat(t, e)
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Wrongly seated", &e.Rep1))
 	seat := func(deal ids.DealID) ids.UUID {
 		edge, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
@@ -132,6 +153,12 @@ func TestARepWhoMayWriteTheDealRemovesItsStakeholder(t *testing.T) {
 
 	owned := ids.From[ids.DealKind](e.SeedDeal(t, "Rep's own deal", pipeline, open, &e.Rep1))
 	edge := seat(owned)
+	if err := e.Contacts.RefuseEdgeWrite(rep, "deal_stakeholder", "create"); err != nil {
+		t.Errorf("the undo of seating a stakeholder is refused to the deal's owner: %v", err)
+	}
+	if err := e.Contacts.RefuseEdgeWrite(rep, "employment", "create"); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("the undo of an employment link is offered without the delete grant: %v", err)
+	}
 	if err := e.Contacts.RefuseArchiveRelationship(rep, edge); err != nil {
 		t.Fatalf("the stage-time check refuses the deal's owner: %v", err)
 	}
@@ -172,10 +199,10 @@ func TestARepWhoMayWriteTheDealRemovesItsStakeholder(t *testing.T) {
 }
 
 // Only the deal seat comes off with the create grant. Every other kind of
-// edge still needs delete.
+// edge still needs delete, and the delete grant removes it.
 func TestTheCreateGrantRemovesNoOtherKindOfEdge(t *testing.T) {
 	e := Setup(t)
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	rep := memberSeat(t, e)
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Colleague contact", &e.Rep1))
 	peer := ids.From[ids.ContactKind](e.SeedContact(t, "Their peer", &e.Rep1))
 	edge, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
@@ -186,5 +213,57 @@ func TestTheCreateGrantRemovesNoOtherKindOfEdge(t *testing.T) {
 	}
 	if _, err := e.Contacts.ArchiveRelationship(rep, edge.ID, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a seat without the delete grant removed a works_with edge: %v", err)
+	}
+	withDelete := RepPerms
+	withDelete.Objects = maps.Clone(RepPerms.Objects)
+	withDelete.Objects["relationship"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	if _, err := e.Contacts.ArchiveRelationship(e.As(e.Rep1, []ids.UUID{e.Team1}, withDelete), edge.ID, nil); err != nil {
+		t.Errorf("a seat with the delete grant could not remove the works_with edge: %v", err)
+	}
+}
+
+// A seat that may put a contact on a deal it writes may decide the staged
+// archive of that seat, without the delete grant. Every other kind of edge
+// still needs delete to decide.
+func TestARepDecidesTheStagedArchiveOfADealSeat(t *testing.T) {
+	e := Setup(t)
+	rep := memberSeat(t, e)
+	svc := compose.NewApprovalsService(e.DB())
+	stage := func(edge ids.UUID) ids.ApprovalID {
+		t.Helper()
+		raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"record_type":"relationship","id":%q}`, edge)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		approval, err := svc.Stage(e.Admin(), approvals.StageInput{
+			Kind: "archive_record", TargetType: "relationship", TargetID: edge, ProposedChange: raw, DiffHash: hash,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return approval
+	}
+	pipeline, open, _ := DealFixture(t, e)
+	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Rep's deal", pipeline, open, &e.Rep1))
+	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Seated Example", &e.Rep1))
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Employer GmbH", &e.Rep1))
+	seat, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "deal_stakeholder", ContactID: &contact, DealID: &deal, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contact, CompanyID: &company, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Decide(rep, stage(job.ID), true, nil); err == nil {
+		t.Error("a rep without delete decided the staged archive of an employment edge")
+	}
+	decided, err := svc.Decide(rep, stage(seat.ID), true, nil)
+	if err != nil || decided.Status == "pending" {
+		t.Fatalf("the deal's owner deciding the staged archive of its seat → %v (%s), want it decided", err, decided.Status)
 	}
 }

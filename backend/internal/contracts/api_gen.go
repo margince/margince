@@ -44889,7 +44889,7 @@ type Contact360DealRole struct {
 	// Role The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title.
 	Role string `json:"role"`
 
-	// SeatCurrent False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it.
+	// SeatCurrent False once the seat's End day has arrived in the installation's time zone; an End date still ahead keeps it current. A seat that ended stays listed as history, and a follow-up cannot rest on it.
 	SeatCurrent *bool `json:"seat_current,omitempty"`
 }
 

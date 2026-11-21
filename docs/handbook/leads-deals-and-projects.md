@@ -78,8 +78,7 @@ A warning on that preview: the matching contact may be one you are not allowed t
 
 The only open deal you can change at the employer starts selected. Choose **Qualify without a deal** to create no deal. When you pick one, the contact joins its team and the lead links to it. A deal that closes or moves to another company before you confirm is refused.
 
-A deal opened in the same step takes the lead's owner and the contact's employer, when one exists. The amount is a whole number in the base currency of your
-installation.
+A deal opened in the same step takes the lead's owner and the contact's employer, when one exists. The amount is a whole number in the base currency of your installation.
 
 ### How do I reverse a qualification?
 To reverse a lead qualification in Margince, open the qualified lead, choose **More**, then **Reverse qualification**.
@@ -145,8 +144,7 @@ Also called: lead score explained, why is this lead hot.
 
 ### Scoring
 
-Leads carry a score from 0 to 100. You can override it by hand, but a reason is
-required. The override stops the score being updated until you clear it.
+Leads carry a score from 0 to 100. You can override it by hand, but a reason is required. The override stops the score being updated until you clear it.
 
 The score falls over time: under the score the panel says "activity points halve every 14
 days".
@@ -237,7 +235,9 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 1. Search for and pick the **Contact** (required). It must already exist.
 2. You may type a **Role**, such as economic buyer, and a **Started** date.
 3. Choose **Create**.
-To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit stakeholder** on the row to change the role. To take the contact off, choose **Remove** on the row and confirm in **Remove stakeholder?**; there is no undo. A contact with several roles has a row for each role, and each row needs its own **Remove**. The **Buying committee** panel names a contact once, with each role, and counts them once. Anyone who may add a stakeholder to the deal may also remove one; if your role lets you edit but not remove, the fold is called **Change stakeholders**. To show that a contact no longer takes part, set an **End** date on the row instead. On that date the contact leaves the **Buying committee** and its count, and the contact's page stops showing the deal. The row stays under the fold with its dates.
+To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit stakeholder** on the row to change the role. To take the contact off, choose **Remove** on the row and confirm in **Remove stakeholder?**; there is no undo. A contact with several roles has a row for each role, and each row needs its own **Remove**. The **Buying committee** panel names a contact once, with each role, and counts them once.
+
+Anyone who may add a stakeholder to the deal may also remove one. If your role lets you edit but not remove, the fold is called **Change stakeholders**. To show that a contact no longer takes part, set an **End** date on the row instead. On that date the contact leaves the **Buying committee** and its count. The contact's **Deals** tab still lists the deal and marks it **No longer on this deal**. The row stays under the fold with its dates.
 
 From a contact's **Deals** tab, **Add to a deal** does the same from the other end. Select the search field to see open deals at their current employers. Typing searches open deals, with employer deals first and each deal's company shown.
 Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.

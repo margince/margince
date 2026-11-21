@@ -38,6 +38,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -84,8 +85,8 @@ func existingCustomerGround(
 		   AND o.legal_entity_id = $3
 		   AND (EXISTS (
 		         SELECT 1 FROM relationship r
-		          WHERE r.kind = 'deal_stakeholder' AND r.deal_id = o.deal_id
-		            AND r.contact_id = $1 AND r.archived_at IS NULL
+		          WHERE `+dealseat.CurrentAtSQL("r", "o.accepted_at")+` AND r.deal_id = o.deal_id
+		            AND r.contact_id = $1
 		            AND r.role = ANY($4) AND r.created_at <= o.accepted_at)
 		     OR EXISTS (
 		         SELECT 1 FROM relationship b

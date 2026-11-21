@@ -25,3 +25,10 @@ func TestCurrentSQLWithoutAnAliasNamesBareColumns(t *testing.T) {
 		t.Fatalf("CurrentSQL(\"\") = %q, want unqualified columns", got)
 	}
 }
+
+func TestCurrentAtSQLComparesWithTheDayOfTheNamedInstant(t *testing.T) {
+	t.Parallel()
+	if got := CurrentAtSQL("r", "o.accepted_at"); !strings.Contains(got, "CAST(o.accepted_at AS timestamptz)") || strings.Contains(got, "now()") {
+		t.Fatalf("CurrentAtSQL(r, o.accepted_at) = %q, want the day of o.accepted_at", got)
+	}
+}

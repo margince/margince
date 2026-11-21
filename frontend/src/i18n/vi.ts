@@ -19317,6 +19317,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.deals.noClose": "Chưa có ngày chốt",
   "contact.deals.untitled": "Deal chưa có tên",
   "contact.deals.noStage": "Chưa có giai đoạn",
+  "contact.deals.seatEnded": "Không còn tham gia cơ hội này",
   "contact.meetings.upcoming": "Sắp tới",
   "contact.meetings.past": "Đã diễn ra",
   "contact.meetings.noneBooked": "Chưa có cuộc họp nào sắp tới.",

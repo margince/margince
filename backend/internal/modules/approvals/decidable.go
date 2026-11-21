@@ -5,10 +5,12 @@ package approvals
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -129,10 +131,26 @@ func narrowToWrittenCoTargets(ctx context.Context, tx pgx.Tx, rows []row, out []
 	return nil
 }
 
+// decisionActions are the actions that admit one decision grant. An owner's
+// archive may use update, and a deal seat's archive the grant that seated it.
+// narrowToOwnArchives then narrows a decider without delete to those rows.
+func decisionActions(kind string, grant DecisionGrant) []principal.Action {
+	if kind != kindArchiveRecord || grant.Action != principal.ActionDelete {
+		return []principal.Action{grant.Action}
+	}
+	if grant.Object == targetRelationship {
+		return dealseat.AnyRemovalGrant()
+	}
+	if _, ruled := auth.ArchiveRuleFor(grant.Object); ruled {
+		return []principal.Action{principal.ActionDelete, principal.ActionUpdate}
+	}
+	return []principal.Action{grant.Action}
+}
+
 // narrowToOwnArchives keeps a staged archive decidable, for a decider without
 // the target's delete grant, only while the record is theirs to archive. It
-// asks the archive's own rule, once per record type. A decider holding delete
-// is not narrowed.
+// asks the archive's own rule, once per record type, and for an edge whether it
+// is a deal seat. A decider holding delete is not narrowed.
 func narrowToOwnArchives(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row, out []bool) error {
 	targets := map[string][]ids.UUID{}
 	for i, a := range rows {
@@ -142,11 +160,7 @@ func narrowToOwnArchives(ctx context.Context, tx pgx.Tx, p principal.Principal, 
 	}
 	archivable := make(map[string]map[ids.UUID]bool, len(targets))
 	for table, rowIDs := range targets {
-		rule, ruled := auth.ArchiveRuleFor(table)
-		if !ruled {
-			continue
-		}
-		subset, err := auth.OwnedArchivableSubset(ctx, tx, rule, rowIDs)
+		subset, err := archivableWithoutDelete(ctx, tx, table, rowIDs)
 		if err != nil {
 			return err
 		}
@@ -165,4 +179,30 @@ func narrowToOwnArchives(ctx context.Context, tx pgx.Tx, p principal.Principal, 
 func narrowedAsArchive(p principal.Principal, a row, decidable bool) bool {
 	return decidable && a.Kind == kindArchiveRecord && a.TargetType != nil && a.TargetID != nil &&
 		!p.Permissions.Allows(*a.TargetType, principal.ActionDelete)
+}
+
+// archivableWithoutDelete answers which rows of table a decider without delete
+// may archive: a record they own under its archive rule, or a deal seat. A
+// deal seat's anchor write authority is asked when the archive runs.
+func archivableWithoutDelete(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	if table == targetRelationship {
+		rows, err := tx.Query(ctx, `SELECT r.id FROM relationship r WHERE r.id = ANY($1) AND `+dealseat.SeatSQL("r"), rowIDs)
+		if err != nil {
+			return nil, fmt.Errorf("approvals: reading which staged edges are deal seats: %w", err)
+		}
+		seats, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		if err != nil {
+			return nil, fmt.Errorf("approvals: reading which staged edges are deal seats: %w", err)
+		}
+		out := make(map[ids.UUID]bool, len(seats))
+		for _, id := range seats {
+			out[id] = true
+		}
+		return out, nil
+	}
+	rule, ruled := auth.ArchiveRuleFor(table)
+	if !ruled {
+		return nil, nil
+	}
+	return auth.OwnedArchivableSubset(ctx, tx, rule, rowIDs)
 }

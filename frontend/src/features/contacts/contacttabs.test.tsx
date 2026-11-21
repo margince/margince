@@ -472,6 +472,35 @@ describe("the deals tab", () => {
     expect(screen.getByText("Economic buyer")).toBeTruthy();
   });
 
+  // A seat whose End day has passed stays listed as history. Both the card and
+  // the row drawn before the deal is read say so.
+  it("marks a seat that has ended, on the card and on the row", async () => {
+    stubWithSession({ "GET /deals/d-1": () => jsonResponse(DEAL_D1) }, {});
+    const ended: Contact360 = {
+      ...view,
+      deal_roles: {
+        data: [
+          {
+            relationship_id: "r-1",
+            deal_id: "d-1",
+            deal_title: "Fleet renewal 2026",
+            role: "economic_buyer",
+            seat_current: false,
+          },
+        ],
+        page: { has_more: false },
+      },
+    };
+    withProviders(<ContactDealsTab view={ended} />);
+    expect(screen.getByText(/No longer on this deal/)).toBeTruthy();
+    expect(await screen.findByText("No longer on this deal")).toBeTruthy();
+  });
+
+  it("marks nothing on a current seat", () => {
+    withProviders(<ContactDealsTab view={view} />);
+    expect(screen.queryByText(/No longer on this deal/)).toBeNull();
+  });
+
   // The card draws its money, its close date and its company off the deal
   // itself: `deal_roles` names neither. The committee used to live a second
   // time in a panel of its own below this list, read off `commercial.deal`;

@@ -172,6 +172,9 @@ function DealTile({ role }: Readonly<{ role: DealRole }>) {
               {role.deal_stage ?? t("contact.deals.noStage")}
             </Badge>
             {roleWord && <Badge>{roleWord}</Badge>}
+            {role.seat_current === false && (
+              <Badge>{t("contact.deals.seatEnded")}</Badge>
+            )}
           </>
         }
       />
@@ -192,6 +195,7 @@ function DealRow({
   const meta = [
     role.deal_stage ?? t("contact.deals.noStage"),
     closeLine(deal, t, locale, readerZone),
+    role.seat_current === false ? t("contact.deals.seatEnded") : null,
   ]
     .filter(Boolean)
     .join(" · ");
