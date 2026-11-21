@@ -5,7 +5,7 @@ import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { Component, type ReactNode } from "react";
 import { useT } from "../i18n";
 import { resetLocaleFailures } from "../i18n/catalogs";
-import { reloadForNewBuild, retryStaleChunk } from "../lib/stalebuild";
+import { retryStaleChunk } from "../lib/stalebuild";
 import { Button, EmptyState } from "./atoms";
 import "./cardboundary.css";
 
@@ -75,7 +75,12 @@ class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
 
   private readonly retry = () => {
     if (retryStaleChunk(this.state.error)) return;
-    if (this.props.reloadsOn?.(this.state.error) && reloadForNewBuild()) return;
+    // Not reloadForNewBuild: its guard stops automatic reload loops, and a
+    // pressed Retry must always reload.
+    if (this.props.reloadsOn?.(this.state.error)) {
+      window.location.reload();
+      return;
+    }
     // The cache is reset BEFORE the re-render: a query that threw keeps its
     // failed result, so a boundary that only cleared its own state would hand
     // the same error straight back and the button would do nothing visible.
