@@ -199,6 +199,8 @@ export function DealOverviewPane({
             id: row.id,
             subject: row.subject ?? t("task.untitled"),
             dueAt: row.due_at,
+            dueHasTime: row.due_has_time,
+            dueIntent: row.due_intent,
             overdue: row.due_at
               ? Date.parse(
                   taskDueOnDay(
@@ -210,7 +212,7 @@ export function DealOverviewPane({
                 ) < Date.parse(inputs.asOf)
               : false,
           })),
-          { t, plural, locale, zone },
+          { t, plural, locale, zone, companyZone },
           others.length,
           () => onOpenTab("history"),
         ),

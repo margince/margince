@@ -47,6 +47,11 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 			return agents.HandoffFacts{}, err
 		}
 		facts := handoffFacts(res)
+		zone, err := installationZone(ctx, pool)
+		if err != nil {
+			return agents.HandoffFacts{}, err
+		}
+		facts.TimeZone = zone.String()
 		// The receiving side, named: an id restates the question. The owner is a
 		// seat and not a record, so identity names it.
 		if facts.Project.OwnerID != nil {

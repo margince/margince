@@ -156,7 +156,7 @@ func (r Reader) ReviewActivity(ctx context.Context, dealID ids.UUID) ([]deals.Pa
 	tasks := make([]deals.PacketTask, 0, len(open))
 	for _, t := range open {
 		if _, ok := readable[t.ID]; ok {
-			tasks = append(tasks, deals.PacketTask{ActivityID: t.ID, DueAt: t.DueAt})
+			tasks = append(tasks, deals.PacketTask{ActivityID: t.ID, DueAt: t.DueAt, DueHasTime: t.DueHasTime, DueIntent: t.DueIntent})
 		}
 	}
 	return touches, tasks, nil

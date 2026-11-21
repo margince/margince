@@ -94,12 +94,12 @@ it("counts the picked day from today the way the backend does", () => {
   }
 });
 
-it("counts a dated task on the company's calendar and a timed one on the reader's", () => {
+it("counts a dated task on the company's calendar and any other on the reader's", () => {
   expect(taskDueZone(false, "Asia/Tokyo", "Europe/Berlin")).toBe(
     "Europe/Berlin",
   );
   expect(taskDueZone(undefined, "Asia/Tokyo", "Europe/Berlin")).toBe(
-    "Europe/Berlin",
+    "Asia/Tokyo",
   );
   expect(taskDueZone(true, "Asia/Tokyo", "Europe/Berlin")).toBe("Asia/Tokyo");
 });

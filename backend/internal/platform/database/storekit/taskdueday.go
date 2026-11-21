@@ -50,10 +50,11 @@ func TaskDueFromSQL(alias, instant string) string {
 		taskDueCompareSQL(alias, instant, ">=", ">=") + `)`
 }
 
-// TaskDueOrderSQL is the instant a due queue sorts a task by. A chosen date
-// sorts at the end of that date in the installation's zone, so a capped window
-// keeps one day's tasks together. Any other task sorts by its due instant.
+// TaskDueOrderSQL is the instant a due queue sorts a task by. A chosen date is
+// due until the start of the next day in the installation's zone. It sorts at
+// the last microsecond before that start. Any other task sorts by its due
+// instant. The Go form is deadline.TaskDueOn, and a shared table holds them equal.
 func TaskDueOrderSQL(alias string) string {
-	return `CASE WHEN ` + datedOnlySQL(alias) + ` THEN ((` + alias + `.due_wall::date + time '23:59:59') AT TIME ZONE ` +
-		occurredday.InstallationZoneSQL + `) ELSE ` + TaskDueSQL(alias) + ` END`
+	return `CASE WHEN ` + datedOnlySQL(alias) + ` THEN (((` + alias + `.due_wall::date + 1)::timestamp AT TIME ZONE ` +
+		occurredday.InstallationZoneSQL + `) - interval '1 microsecond') ELSE ` + TaskDueSQL(alias) + ` END`
 }
