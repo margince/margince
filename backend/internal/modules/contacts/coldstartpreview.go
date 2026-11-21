@@ -43,11 +43,11 @@ func (s *Store) PreviewColdStart(ctx context.Context, in ApplyColdStartProfileIn
 	candidate, _ := coldStartCandidate(host, in.Fields)
 	out.Name, out.Domain = candidate.DisplayName, host
 	out.QueuesVATCheck = statesAVatNumber(in.Fields)
-	active, err := s.activeColumns(ctx, companyEntity)
-	if err != nil {
-		return out, err
-	}
 	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, companyEntity)
+		if err != nil {
+			return err
+		}
 		match, err := DedupeCompany(ctx, tx, candidate)
 		if err != nil {
 			return err

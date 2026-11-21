@@ -76,15 +76,14 @@ func (s *Store) RenameKeyNamedDeals(ctx context.Context, entries []KeyNamedDeal,
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return nil, err
-	}
 	results := make([]KeyNameResult, 0, len(entries))
 	for _, entry := range entries {
 		var result KeyNameResult
 		err := s.Tx(ctx, func(tx pgx.Tx) error {
-			var err error
+			active, err := s.activeColumnsIn(ctx, tx)
+			if err != nil {
+				return err
+			}
 			result, err = s.renameKeyNamedDealTx(ctx, tx, entry, apply, active)
 			return err
 		})

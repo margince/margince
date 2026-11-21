@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -23,7 +24,7 @@ const customFieldObject = string(fieldcatalog.TargetActivity)
 // FieldCatalog is the custom-field seam. Reads and writes use the active
 // columns; an erase empties every column, retired ones included.
 type FieldCatalog interface {
-	fieldcatalog.Reader
+	storekit.FieldCatalog
 	fieldcatalog.FilterableReader
 }
 
@@ -57,17 +58,26 @@ func (s *Store) customColumns(ctx context.Context) ([]fieldcatalog.Column, error
 	return s.catalog.ActiveColumns(ctx, customFieldObject)
 }
 
+// customColumnsIn is customColumns on a transaction the store already holds,
+// so no second connection is taken.
+func (s *Store) customColumnsIn(ctx context.Context, tx pgx.Tx) ([]fieldcatalog.Column, error) {
+	if s.catalog == nil {
+		return nil, nil
+	}
+	return s.catalog.ActiveColumnsIn(ctx, tx, customFieldObject)
+}
+
 // withCustomColumns reads the catalog for a create that names a custom field,
 // and checks the values against it. An automatic writer names none and skips both.
 //
-// A request the store already checked keeps its columns. Accepting an email
-// request logs the task inside the transaction, where a second read must not run.
-func (s *Store) withCustomColumns(ctx context.Context, in *LogActivityInput) error {
+// A request the store already checked keeps its columns, so accepting an email
+// request checks the task's values once.
+func (s *Store) withCustomColumns(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
 	if len(in.CustomFields) == 0 || in.customChecked {
 		return nil
 	}
 	var err error
-	if in.customColumns, err = s.customColumns(ctx); err != nil {
+	if in.customColumns, err = s.customColumnsIn(ctx, tx); err != nil {
 		return err
 	}
 	in.customChecked = true
@@ -101,15 +111,15 @@ func kindsInWords(kinds []string) string {
 	return strings.Join(words, " or ")
 }
 
-// readPatchColumns reads the catalog for a patch that names a custom field,
-// before its transaction opens. The values are checked inside it, after the
-// row-scope arm, so an activity the caller cannot see answers 404, not 422.
-func (s *Store) readPatchColumns(ctx context.Context, in *UpdateActivityInput) error {
+// readPatchColumns reads the catalog for a patch that names a custom field. The
+// values are checked after the row-scope arm, so an activity the caller cannot
+// see answers 404, not 422.
+func (s *Store) readPatchColumns(ctx context.Context, tx pgx.Tx, in *UpdateActivityInput) error {
 	if len(in.CustomFields) == 0 {
 		return nil
 	}
 	var err error
-	in.customColumns, err = s.customColumns(ctx)
+	in.customColumns, err = s.customColumnsIn(ctx, tx)
 	return err
 }
 

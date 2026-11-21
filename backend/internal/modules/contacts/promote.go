@@ -138,16 +138,16 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
-	active, err := s.activeColumns(ctx, "contact")
-	if err != nil {
-		return PromoteOutcome{}, err
-	}
 
 	// The retry is outside the transaction, so a restart rolls back every
 	// write of the attempt it replaces. A move is caught before the first one.
 	for range promoteAttempts {
 		var out PromoteOutcome
 		err = s.tx(ctx, func(tx pgx.Tx) error {
+			active, err := s.activeColumnsIn(ctx, tx, "contact")
+			if err != nil {
+				return err
+			}
 			candidate, err := s.promoteCandidate(ctx, tx, id)
 			if err != nil {
 				return err

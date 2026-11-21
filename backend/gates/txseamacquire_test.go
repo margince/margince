@@ -16,11 +16,10 @@ package gates
 // other inside a single goroutine — a deadlock Postgres cannot detect and will
 // not break, because it sees two unrelated sessions waiting.
 //
-// The rule is not new; it is written on the acquirer that breaks it most often.
-// The custom-field catalog read documents "callers fetch BEFORE opening their
-// write/read transaction (never inside it — a nested pool acquire under load is
-// a deadlock shape)". Deriving the obligation from the tree is what makes a
-// seam written next month inherit it instead of re-deciding it.
+// The custom-field catalog's pool read (ActiveColumns) is the acquirer that
+// broke it most often; code inside a transaction reads it with ActiveColumnsIn.
+// Deriving the obligation from the tree is what makes a seam written next month
+// inherit it instead of re-deciding it.
 //
 // Two things bound what this can prove, and both are why the pool-of-one suite
 // in compose/integration exists beside it: the gate catches the class across
@@ -57,16 +56,15 @@ import (
 // function must have made before it was handed the transaction, or delegated
 // to a caller that did.
 var connectionAcquirers = map[string]string{
-	"Acquire":          "takes a connection straight from the pool",
-	"Begin":            "opens a transaction on a pool, which takes a connection to hold it",
-	"BeginTx":          "opens a transaction on a pool, which takes a connection to hold it",
-	"Tx":               "opens a transaction on the bound handle (database.DB.Tx)",
-	"tx":               "opens a transaction through the store's own helper over database.DB.Tx",
-	"WithWorkspaceTx":  "opens a workspace-bound transaction",
-	"WithInfraTx":      "opens an unbound infrastructure transaction",
-	"activeColumns":    "reads the custom-field catalog, which opens a transaction of its own",
-	"activeColumnsFor": "reads the custom-field catalog, which opens a transaction of its own",
-	"ActiveColumns":    "reads the custom-field catalog through the fieldcatalog seam, which opens a transaction of its own",
+	"Acquire":         "takes a connection straight from the pool",
+	"Begin":           "opens a transaction on a pool, which takes a connection to hold it",
+	"BeginTx":         "opens a transaction on a pool, which takes a connection to hold it",
+	"Tx":              "opens a transaction on the bound handle (database.DB.Tx)",
+	"tx":              "opens a transaction through the store's own helper over database.DB.Tx",
+	"WithWorkspaceTx": "opens a workspace-bound transaction",
+	"WithInfraTx":     "opens an unbound infrastructure transaction",
+	"activeColumns":   "reads the custom-field catalog, which opens a transaction of its own",
+	"ActiveColumns":   "reads the custom-field catalog through the fieldcatalog seam, which opens a transaction of its own",
 	// The stores' own catalog reads, which a composite calls by name. They
 	// exist precisely so the answer can be fetched above a transaction, so
 	// calling one from inside a borrowed transaction reinstates the defect

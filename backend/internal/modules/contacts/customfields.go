@@ -14,21 +14,29 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// activeColumns answers the workspace's active custom columns for one
-// object. It runs its own catalog transaction, so callers fetch BEFORE
-// opening their write/read transaction (never inside it — a nested pool
-// acquire under load is a deadlock shape). A store without a wired
-// catalog answers empty: core columns only.
+// activeColumns answers the workspace's active custom columns for one object
+// through a catalog transaction of its own. Only the exported reads for a
+// caller-opened transaction use it, and they run before that transaction opens.
 func (s *Store) activeColumns(ctx context.Context, object string) ([]fieldcatalog.Column, error) {
 	if s.catalog == nil {
 		return nil, nil
 	}
 	return s.catalog.ActiveColumns(ctx, object)
+}
+
+// activeColumnsIn is activeColumns on the transaction the store's entry point
+// opened, so no second connection is taken.
+func (s *Store) activeColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]fieldcatalog.Column, error) {
+	if s.catalog == nil {
+		return nil, nil
+	}
+	return s.catalog.ActiveColumnsIn(ctx, tx, object)
 }
 
 // CustomColumns is the catalog's answer, carried from a caller that had to
@@ -47,11 +55,9 @@ type CustomColumns struct {
 	cols []fieldcatalog.Column
 }
 
-// ActiveContactColumns is the caller-side half of GetContactTx: a caller that
-// opens the transaction itself does this read BEFORE opening it, then threads
-// the answer in. That is the same order every store-opened entry point uses;
-// it is exported only because the caller of a tx-accepting seam is outside
-// this package.
+// ActiveContactColumns is the caller-side half of GetContactTx. A caller that
+// opens the transaction itself reads this first and threads the answer in.
+// The read takes a connection of its own.
 //
 // It takes contact:read, the grant the read it feeds takes, so the refusal
 // still comes before any work — a composite page has no gate of its own above

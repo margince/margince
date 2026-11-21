@@ -81,13 +81,12 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	active, err := s.activeColumns(ctx, "contact")
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
 	var out crmcontracts.Contact
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "contact")
+		if err != nil {
+			return err
+		}
 		out, err = s.updateContactInTx(ctx, tx, id, in, active)
 		return err
 	})

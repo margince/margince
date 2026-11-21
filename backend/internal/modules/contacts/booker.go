@@ -54,10 +54,6 @@ func (s *Store) FillBookerGaps(ctx context.Context, contact ids.UUID, host ids.U
 	if refusedChange(auth.Require(ctx, entityContact, principal.ActionUpdate)) {
 		return nil
 	}
-	cols, err := s.activeCustomColumns(ctx, entityContact, principal.ActionUpdate)
-	if err != nil {
-		return err
-	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -80,7 +76,11 @@ func (s *Store) FillBookerGaps(ctx context.Context, contact ids.UUID, host ids.U
 			return fmt.Errorf("contacts: reading a booker's owner: %w", err)
 		}
 		if owner == nil {
-			if _, err := s.UpdateContactTx(ctx, tx, id, UpdateContactInput{OwnerID: &host, Source: source}, cols); err != nil {
+			cols, err := s.activeColumnsIn(ctx, tx, entityContact)
+			if err != nil {
+				return err
+			}
+			if _, err := s.UpdateContactTx(ctx, tx, id, UpdateContactInput{OwnerID: &host, Source: source}, CustomColumns{cols: cols}); err != nil {
 				return err
 			}
 			owner = &host.UUID

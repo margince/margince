@@ -8,9 +8,10 @@ package activities
 import (
 	"context"
 	"errors"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"

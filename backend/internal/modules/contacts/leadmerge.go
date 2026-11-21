@@ -41,13 +41,12 @@ func (s *Store) MergeLead(ctx context.Context, sourceID, targetID ids.LeadID) (c
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	active, err := s.activeColumns(ctx, entityLead)
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
 	var out crmcontracts.Lead
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		active, err := s.activeColumnsIn(ctx, tx, entityLead)
+		if err != nil {
+			return err
+		}
 		out, err = s.mergeLeadTx(ctx, tx, sourceID, targetID, active, by)
 		return err
 	})
