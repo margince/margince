@@ -29,6 +29,9 @@ refusal: the model must ask before it archives.
    `may_call` lists the other tools a good run may use, for the reader. The
    checker does not fail a call outside it.
 
+   List a check that pins an argument only MCP has under `mcp_only:` too. A REST run is then
+   graded without it ([test-the-rest-surface-end-to-end.md](test-the-rest-surface-end-to-end.md)).
+
    A required call counts only when it worked. The lane's stack cannot send mail, so list a send
    tool under `counts_when_refused` when its refusal is the outcome.
 3. **Hold what the model says.** `must_mention` and `must_not_mention` are

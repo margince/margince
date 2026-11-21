@@ -134,7 +134,12 @@ _SCHEMA = {
     "criteria": "list", "must_call": "list", "may_call": "list", "must_call_with": "list",
     "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
     "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
+    "mcp_only": "list",
 }
+# The checks an mcp_only entry may name: the ones that pin an MCP call's name or
+# argument, which a REST door spells by route. Every other check reads the
+# answer or the records and holds on both doors.
+_DOOR_SCOPED = ("must_call", "must_call_with", "must_call_matching")
 _REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
 # The credentials scripts/e2e-llm.sh mints, by the `passport:` value that picks
 # one; absent is the narrow one.
@@ -236,7 +241,31 @@ def lint(path):
 
         if data["setup"] not in casesetup.STEPS:
             problems.append(f"setup {data['setup']!r} is no step in casesetup.py")
-    return problems + _entry_problems(data)
+    return problems + _entry_problems(data) + _door_problems(data)
+
+
+def _door_problems(data):
+    """An mcp_only entry must repeat a door-scoped check of the same file exactly,
+    or a typo in it would switch nothing off and read as if it had."""
+    carried = {entry for key in _DOOR_SCOPED for entry in data.get(key, [])}
+    return [f"mcp_only names {entry!r}, which no {', '.join(_DOOR_SCOPED)} entry of this scenario carries"
+            for entry in data.get("mcp_only", []) if entry not in carried]
+
+
+def for_door(scenario, path):
+    """The scenario as the run's door grades it. A REST run is not held to the
+    checks mcp_only names: they pin an MCP argument that no REST route takes."""
+    if run_door(path) != "rest":
+        return scenario
+    skipped = set(scenario.get("mcp_only", []))
+    return {key: [entry for entry in value if entry not in skipped] if key in _DOOR_SCOPED else value
+            for key, value in scenario.items()}
+
+
+def run_door(path):
+    """The door the transcript's system line names; a run made over MCP names none."""
+    init = _events(path, "init")
+    return (init[0].get("door") if init else None) or "mcp"
 
 
 def _entry_problems(data):
@@ -795,6 +824,7 @@ def offered_problem(scenario, path):
     that attached nothing — so the lane stops rather than scoring it. The
     tools are the ones the transcript's system line says were offered.
     """
+    scenario = for_door(scenario, path)
     init = _events(path, "init")
     if not init:
         return "the transcript carries no system line, so what was offered is unknown"
@@ -915,6 +945,7 @@ def check(scenario, transcript_path):
     """The problem lines of one run. The positive checks read the final answer
     and the calls that worked; the forbidding checks read every word and every
     attempt, because a wrong claim or a forbidden call counts wherever it is."""
+    scenario = for_door(scenario, transcript_path)
     run = read_run(transcript_path)
     # A send the lane's stack cannot deliver is refused by design, and the
     # scenario grades what the answer says about it: there the call is the

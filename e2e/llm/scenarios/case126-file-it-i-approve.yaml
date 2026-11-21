@@ -24,6 +24,12 @@ must_call:
 must_call_with:
   - decide_approvals.decision=approve
 
+# Held on the MCP door only: the REST door decides an approval by its route (approve or
+# reject), not by a decision argument. A REST run is graded on everything else: the answer,
+# and the records it leaves.
+mcp_only:
+  - decide_approvals.decision=approve
+
 may_call:
   - find_records
   - read_record

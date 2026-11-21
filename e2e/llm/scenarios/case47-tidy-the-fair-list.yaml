@@ -44,6 +44,15 @@ must_call:
   - demote_lead
   - change_lists
   - bulk_update_records
+
+# Held on the MCP door only: the REST door adds a member and previews or executes a bulk
+# change by route, not by a mode argument. A REST run is graded on everything else: the
+# answer, and the records it leaves.
+mcp_only:
+  - change_lists.mode=add_member
+  - bulk_update_records.mode=preview
+  - bulk_update_records.mode=execute
+
 may_call:
   - search_records
   - read_record

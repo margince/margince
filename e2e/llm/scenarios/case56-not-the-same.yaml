@@ -43,6 +43,12 @@ must_call_matching:
 must_not_call_with:
   - change_capture~import_vcards
 
+# Held on the MCP door only: the REST door names the decision on the pair's disposition
+# route, not as a decision argument. A REST run is graded on everything else: the answer,
+# and the records it leaves.
+mcp_only:
+  - resolve_duplicates.decision=not_the_same
+
 may_call:
   - read_tags
   - change_tags

@@ -118,7 +118,7 @@ class ScoredAsOverMcpTest(unittest.TestCase):
     def scored(self, scenario, offered, *blocks):
         import tempfile
 
-        lines = restmap.rewrite(run(*blocks), OPERATIONS, FRONTED, offered, restmap.fields_verbs())
+        lines = restmap.rewrite(run(*blocks), OPERATIONS, FRONTED, offered, restmap.fields_verbs(), restmap.verb_arguments())
         fd, path = tempfile.mkstemp(suffix=".jsonl")
         with os.fdopen(fd, "w") as handle:
             handle.write("\n".join(lines) + "\n")
@@ -149,3 +149,18 @@ class TypedRouteScoredTest(ScoredAsOverMcpTest):
     def test_a_typed_update_holds_the_record_type_and_fields_a_scenario_pins(self):
         scenario = {"must_call_with": ["update_record.record_type=company", 'update_record.fields={"lifecycle":"prospect"}']}
         self.assertEqual(self.scored(scenario, ["update_record"], call("PATCH", "/v1/companies/c1", {"lifecycle": "prospect"})), ("", []))
+
+
+class SpelledAsTheVerbTest(unittest.TestCase):
+    def test_a_verb_that_takes_entity_type_keeps_the_name(self):
+        lines = restmap.rewrite(run(call("POST", "/v1/activities/relink-bulk", {"activity_ids": ["a1"], "entity_type": "company", "entity_id": "c1"})),
+                                OPERATIONS, FRONTED, [], restmap.fields_verbs(), restmap.verb_arguments())
+        arguments = json.loads(lines[1])["message"]["content"][0]["input"]
+        self.assertEqual((arguments.get("entity_type"), arguments.get("entity_id")), ("company", "c1"))
+        self.assertNotIn("record_type", arguments)
+
+    def test_a_verb_that_takes_record_type_still_gets_it(self):
+        lines = restmap.rewrite(run(call("DELETE", "/v1/tags/t1/apply", {"entity_type": "company", "entity_id": "c1"})),
+                                OPERATIONS, FRONTED, [], restmap.fields_verbs(), restmap.verb_arguments())
+        arguments = json.loads(lines[1])["message"]["content"][0]["input"]
+        self.assertEqual((arguments["record_type"], arguments["record_id"]), ("company", "c1"))

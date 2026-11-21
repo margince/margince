@@ -50,6 +50,13 @@ must_call_with:
   - attach_document.entity_type=activity
   - attach_document.contract_id=*
 
+# Held on the MCP door only: the REST upload carries the record and the contract as form
+# fields of its own names. A REST run is graded on everything else: the answer, and the
+# records it leaves.
+mcp_only:
+  - attach_document.entity_type=activity
+  - attach_document.contract_id=*
+
 may_call:
   - read_project
   - list_documents

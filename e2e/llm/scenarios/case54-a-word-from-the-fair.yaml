@@ -34,6 +34,12 @@ must_call:
 must_call_with:
   - create_record.offer_tag=K5 Conference 2026
 
+# Held on the MCP door only: offer_tag is an argument of the MCP create_record alone; the
+# REST create has no offer. A REST run is graded on everything else: the answer, and the
+# records it leaves.
+mcp_only:
+  - create_record.offer_tag=K5 Conference 2026
+
 may_call:
   - read_tags
   - search_records

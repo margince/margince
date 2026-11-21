@@ -50,6 +50,13 @@ must_call:
   - read_relationships
   - at_risk_relationships
   - read_reporting
+
+# Held on the MCP door only: the REST door names the company in the path
+# (/companies/{id}/intro-paths), not as company_id. A REST run is graded on everything else:
+# the answer, and the records it leaves.
+mcp_only:
+  - read_relationships.company_id=*
+
 may_call:
   - search_report_evidence
   - search_records
