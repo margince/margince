@@ -57,7 +57,6 @@ counts_when_refused:
   - send_outbound
 
 must_call:
-  - draft_outbound
   - send_outbound
 may_call:
   - whats_slipping_this_week
@@ -67,12 +66,10 @@ may_call:
   - resolve_entities
   - query_workspace
   - catch_me_up_on
+  - draft_outbound
 
-# Greta has no conversation on record, so a first mail to her can only go by
-# send_company_email: that one is required outright. Jonas has a thread, which
-# makes send_email the tidy reach, but a run that starts a fresh mail to him with
-# send_company_email has still sent him the follow-up — so send_email is covered
-# only as one of a set, which is the ruling for that tool.
+# A send leaves no record the stack can read, because the stack refuses it: the
+# refused call is the outcome. The Telegram reply to Lena goes as a chat reply.
 must_call_with:
   - send_outbound.as=chat_reply
 

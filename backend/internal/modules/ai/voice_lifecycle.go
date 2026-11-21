@@ -42,7 +42,7 @@ type VoiceBuild struct {
 	CreatedAt       time.Time
 	StartedAt       *time.Time
 	CompletedAt     *time.Time
-	UpdatedAt       *time.Time
+	UpdatedAt       time.Time
 	ArchivedAt      *time.Time
 	// Attempt is which claim of this build is current, and AttemptAt when it
 	// became current. A build deferred for a budget window and re-claimed, or

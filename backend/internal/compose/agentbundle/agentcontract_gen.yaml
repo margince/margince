@@ -2440,12 +2440,12 @@ paths:
                   type: [string, 'null']
                   format: uuid
                   description: >-
-                    The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the account instead.
+                    The contact to be introduced TO. Must be somebody the caller can see at this company; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the company instead.
                 via_user_id:
                   type: string
                   format: uuid
                   description: >-
-                    The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this account, or it is `404`.
+                    The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the company's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this company, or it is `404`.
                 function:
                   allOf: [{$ref: '#/components/schemas/LinkedInReachFunction'}]
                   description: >-
@@ -2454,7 +2454,7 @@ paths:
                   type: [string, 'null']
                   format: uuid
                   description: >-
-                    Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
+                    Which open deal the introduction is for. Absent draws on the company as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
       responses:
         '200':
           description: The draft, and what it was written from.
@@ -2904,7 +2904,7 @@ paths:
                   format: uuid
                   description: |-
                     The project the page was scoped to when the suggestion was rendered,
-                    absent on the whole-account page.
+                    absent on the whole-company page.
       responses:
         '204': {description: "Dismissed, or nothing matched and nothing was stored."}
         '401': {$ref: '#/components/responses/Unauthorized'}
@@ -5344,7 +5344,7 @@ paths:
       tags: [Reports]
       operationId: getAccountCoverage
       security: [{bearerAuth: []}]
-      summary: 'The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework''s, and the answer prints them.'
+      summary: 'The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework''s, and the answer prints them.'
       parameters:
         - name: scope_kind
           in: query
@@ -5370,7 +5370,7 @@ paths:
               schema: {$ref: '#/components/schemas/AccountCoverage'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: 'The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework''s, and the answer prints them.'
+      description: 'The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework''s, and the answer prints them.'
   /projects:
     get:
       tags: [Projects]
@@ -7565,7 +7565,72 @@ paths:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/PreviewSendRequest'}
+            schema:
+              description: |-
+                What a composer is about to write, in the shape the engine judges. A `subject` and
+                `body` are read as the send reads them: words that make an offer (a discount, a quote,
+                a price) are judged as marketing even inside a reply. They are also checked against the
+                advertising content rules of each recipient's jurisdiction pack and answered as
+                `content_findings`.
+              properties:
+                attachment_ids:
+                  description: |-
+                    The files the message will carry, by the ids `/attachments` gave them. Their names are
+                    read for an offer as the send reads them. A file the send would refuse is refused here.
+                  items:
+                    format: uuid
+                    type: string
+                  maxItems: 10
+                  type: array
+                body:
+                  description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+                  maxLength: 200000
+                  type: string
+                communication_context:
+                  allOf:
+                    - $ref: '#/components/schemas/CommunicationContext'
+                  description: |-
+                    What the sender says this message is. Checked against the record, never believed:
+                    a claim the record does not bear out comes back as `review` naming what is
+                    missing, rather than a quiet downgrade to something weaker that happens to be
+                    allowed.
+                consent_purpose:
+                  description: |-
+                    The deprecated purpose key, when the composer still has one. It authorizes
+                    nothing on its own, and it is accepted here for one reason: the SEND still
+                    consults it where the record supports no category, so a preview that could not
+                    pass it would answer a different question than the send and disagree with it.
+                    Omit it and the answer is about the record alone.
+                  maxLength: 200
+                  type: string
+                evidence:
+                  allOf:
+                    - $ref: '#/components/schemas/CommunicationEvidence'
+                  description: Records the caller names in support of this message. Checked, never trusted.
+                html_body:
+                  description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+                  type: string
+                marketing_purpose:
+                  description: Which marketing purpose, when the context is `marketing`.
+                  maxLength: 200
+                  type: string
+                subject:
+                  description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
+                  maxLength: 998
+                  type: string
+                to:
+                  description: |-
+                    The addressees. Cc and Bcc join this list at send, and both are asked about
+                    exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
+                    engine — so a composer previewing a message with copies passes them all here.
+                  items:
+                    format: email
+                    type: string
+                  minItems: 1
+                  type: array
+              required:
+                - to
+              type: object
       responses:
         '200':
           description: What the engine would decide, per recipient.
@@ -7594,7 +7659,69 @@ paths:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/PreviewAccountSendRequest'}
+            schema:
+              description: |-
+                PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
+                records this new conversation would belong to.
+              properties:
+                attachment_ids:
+                  description: |-
+                    The files the message will carry, by the ids `/attachments` gave them. Their names are
+                    read for an offer as the send reads them. A file the send would refuse is refused here.
+                  items:
+                    format: uuid
+                    type: string
+                  maxItems: 10
+                  type: array
+                body:
+                  description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+                  maxLength: 200000
+                  type: string
+                communication_context:
+                  allOf:
+                    - $ref: '#/components/schemas/CommunicationContext'
+                consent_purpose:
+                  description: |-
+                    The deprecated purpose key, when the composer still has one. It authorizes
+                    nothing on its own, and it is accepted here for one reason: the SEND still
+                    consults it where the record supports no category, so a preview that could not
+                    pass it would answer a different question than the send and disagree with it.
+                    Omit it and the answer is about the record alone.
+                  maxLength: 200
+                  type: string
+                evidence:
+                  allOf:
+                    - $ref: '#/components/schemas/CommunicationEvidence'
+                html_body:
+                  description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+                  type: string
+                links:
+                  description: |-
+                    The records the message would be filed under. They are read through the caller's
+                    own row scope before the engine sees them, so naming a record the caller cannot
+                    open is refused here rather than answered about.
+                  items:
+                    $ref: '#/components/schemas/ActivityLinkInput'
+                  maxItems: 25
+                  minItems: 1
+                  type: array
+                marketing_purpose:
+                  maxLength: 200
+                  type: string
+                subject:
+                  description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
+                  maxLength: 998
+                  type: string
+                to:
+                  items:
+                    format: email
+                    type: string
+                  minItems: 1
+                  type: array
+              required:
+                - to
+                - links
+              type: object
       responses:
         '200':
           description: What the engine would decide, per recipient.
@@ -8759,7 +8886,19 @@ paths:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/FollowUpSettings'}
+            schema:
+              properties:
+                follow_up_after_days:
+                  description: Days a sent message may stay unanswered before its sender is reminded to follow up.
+                  maximum: 30
+                  minimum: 1
+                  type: integer
+                locks:
+                  $ref: '#/components/schemas/SettingLocks'
+                  readOnly: true
+              required:
+                - follow_up_after_days
+              type: object
       responses:
         '200':
           description: The updated follow-up settings.
@@ -22535,7 +22674,30 @@ paths:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/UpdateSignalRequest'}
+            schema:
+              description: |-
+                Triage and correction. `resolution_state` and the
+                resolved ids are resolver-owned and not writable here.
+              properties:
+                note:
+                  description: Optional outcome note recorded with a status change.
+                  type:
+                    - string
+                    - "null"
+                severity:
+                  enum:
+                    - info
+                    - warn
+                    - urgent
+                  type: string
+                status:
+                  enum:
+                    - open
+                    - acknowledged
+                    - resolved
+                    - dismissed
+                  type: string
+              type: object
       responses:
         '200':
           description: Updated signal.
@@ -24971,7 +25133,26 @@ paths:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/SaveMyTimezoneRequest'}
+            schema:
+              additionalProperties: false
+              properties:
+                source:
+                  description: |-
+                    `browser` is the app's guess from the browser, stored only while no
+                    zone is stored. `chosen` is the user's own pick, always stored. `agent`
+                    is the agent carrying out what its user asked, always stored and held
+                    against a browser's guess as a chosen zone is. Only an agent sends it,
+                    and an agent never sends `chosen`.
+                  enum:
+                    - agent
+                  type: string
+                timezone:
+                  description: An IANA zone name, such as `Europe/Berlin`.
+                  type: string
+              required:
+                - timezone
+                - source
+              type: object
       responses:
         '200':
           description: The caller's seat, with the zone as stored.
@@ -33047,7 +33228,7 @@ components:
           type: boolean
           default: false
           description: |-
-            Read the account again even though the stored findings' fingerprint matches or
+            Read the company again even though the stored findings' fingerprint matches or
             the rescan floor has not passed. A scan already in flight is still returned as
             it stands rather than started twice.
     CompanyScanState:
@@ -37677,23 +37858,6 @@ components:
           maxItems: 7
           items: {type: integer, minimum: 1, maximum: 7}
           description: The days worked, as ISO-8601 weekday numbers — 1 is Monday.
-    SaveMyTimezoneRequest:
-      type: object
-      additionalProperties: false
-      required: [timezone, source]
-      properties:
-        timezone:
-          type: string
-          description: An IANA zone name, such as `Europe/Berlin`.
-        source:
-          type: string
-          enum: [browser, chosen, agent]
-          description: |-
-            `browser` is the app's guess from the browser, stored only while no
-            zone is stored. `chosen` is the user's own pick, always stored. `agent`
-            is the agent carrying out what its user asked, always stored and held
-            against a browser's guess as a chosen zone is. Only an agent sends it,
-            and an agent never sends `chosen`.
     MyWorkingHoursResponse:
       type: object
       additionalProperties: false
@@ -42631,137 +42795,6 @@ components:
       description: |-
         What kind of communication a message is — the closed vocabulary the engine resolves
         to. A caller CLAIMS one and the engine checks it against the record.
-    PreviewSendRequest:
-      type: object
-      required: [to]
-      description: |-
-        What a composer is about to write, in the shape the engine judges. A `subject` and
-        `body` are read as the send reads them: words that make an offer (a discount, a quote,
-        a price) are judged as marketing even inside a reply. They are also checked against the
-        advertising content rules of each recipient's jurisdiction pack and answered as
-        `content_findings`.
-      properties:
-        to:
-          type: array
-          minItems: 1
-          items: {type: string, format: email}
-          description: |-
-            The addressees. Cc and Bcc join this list at send, and both are asked about
-            exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
-            engine — so a composer previewing a message with copies passes them all here.
-        communication_context:
-          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
-          description: |-
-            What the sender says this message is. Checked against the record, never believed:
-            a claim the record does not bear out comes back as `review` naming what is
-            missing, rather than a quiet downgrade to something weaker that happens to be
-            allowed.
-        marketing_purpose:
-          type: string
-          maxLength: 200
-          description: Which marketing purpose, when the context is `marketing`.
-        consent_purpose:
-          type: string
-          maxLength: 200
-          description: |-
-            The deprecated purpose key, when the composer still has one. It authorizes
-            nothing on its own, and it is accepted here for one reason: the SEND still
-            consults it where the record supports no category, so a preview that could not
-            pass it would answer a different question than the send and disagree with it.
-            Omit it and the answer is about the record alone.
-        evidence:
-          allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
-          description: Records the caller names in support of this message. Checked, never trusted.
-        recipient_countries:
-          type: array
-          maxItems: 300
-          items: {$ref: '#/components/schemas/RecipientCountry'}
-          description: |-
-            The countries the sender states for this message's recipients, read as the send reads them:
-            `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
-            Each address may appear once; a second entry is refused with 422 `invalid`.
-        subject:
-          type: string
-          maxLength: 998
-          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
-        body:
-          type: string
-          maxLength: 200000
-          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
-        html_body:
-          type: string
-          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
-        attachment_ids:
-          type: array
-          maxItems: 10
-          items: {type: string, format: uuid}
-          description: |-
-            The files the message will carry, by the ids `/attachments` gave them. Their names are
-            read for an offer as the send reads them. A file the send would refuse is refused here.
-    PreviewAccountSendRequest:
-      type: object
-      required: [to, links]
-      description: |-
-        PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
-        records this new conversation would belong to.
-      properties:
-        to:
-          type: array
-          minItems: 1
-          items: {type: string, format: email}
-        links:
-          type: array
-          minItems: 1
-          maxItems: 25
-          items: {$ref: '#/components/schemas/ActivityLinkInput'}
-          description: |-
-            The records the message would be filed under. They are read through the caller's
-            own row scope before the engine sees them, so naming a record the caller cannot
-            open is refused here rather than answered about.
-        communication_context:
-          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
-        marketing_purpose:
-          type: string
-          maxLength: 200
-        consent_purpose:
-          type: string
-          maxLength: 200
-          description: |-
-            The deprecated purpose key, when the composer still has one. It authorizes
-            nothing on its own, and it is accepted here for one reason: the SEND still
-            consults it where the record supports no category, so a preview that could not
-            pass it would answer a different question than the send and disagree with it.
-            Omit it and the answer is about the record alone.
-        evidence:
-          allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
-        recipient_countries:
-          type: array
-          maxItems: 300
-          items: {$ref: '#/components/schemas/RecipientCountry'}
-          description: |-
-            The countries the sender states for this message's recipients, read as the send reads them:
-            `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
-            Each address may appear once; a second entry is refused with 422 `invalid`.
-        subject:
-          type: string
-          maxLength: 998
-          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
-        body:
-          type: string
-          maxLength: 200000
-          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
-        html_body:
-          type: string
-          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
-        attachment_ids:
-          type: array
-          maxItems: 10
-          items: {type: string, format: uuid}
-          description: |-
-            The files the message will carry, by the ids `/attachments` gave them. Their names are
-            read for an offer as the send reads them. A file the send would refuse is refused here.
     SendAuthorizationPreview:
       type: object
       required: [allowed, recipients]
@@ -44342,7 +44375,7 @@ components:
         lifecycle_scope:
           type: string
           enum: [company, workstream, unknown]
-          description: Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+          description: Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
         workstream:
           type: string
           description: The engagement named in the cited words, when present. Never inferred from the company name.
@@ -44461,23 +44494,6 @@ components:
           items: {$ref: '#/components/schemas/SignalEvidence'}
         detected_at: {type: [string, 'null'], format: date-time, description: When the underlying observation happened (defaults to now).}
         source: {type: string}
-    UpdateSignalRequest:
-      type: object
-      description: |-
-        Triage and correction. `resolution_state` and the
-        resolved ids are resolver-owned and not writable here.
-      properties:
-        status: {type: string, enum: [open, acknowledged, resolved, dismissed]}
-        note: {type: [string, 'null'], description: Optional outcome note recorded with a status change.}
-        severity: {type: string, enum: [info, warn, urgent]}
-        kind:
-          type: string
-          enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other]
-          description: Corrects the signal's type. Only a human may, and only to the kinds a human files by hand. The audit row keeps the old kind.
-        evidence:
-          type: array
-          items: {$ref: '#/components/schemas/SignalEvidence'}
-          description: Replaces the signal's evidence. Only a human may. The audit row keeps the old evidence.
     SignalListResponse:
       type: object
       required: [data, page]
@@ -46988,12 +47004,12 @@ components:
     AccountCoverageThresholds:
       type: object
       additionalProperties: false
-      description: "What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints."
+      description: "What the coverage section counts as at risk. Absent fields take the defaults the answer prints."
       properties:
         max_engaged_seats: {type: integer, minimum: 0, maximum: 10, description: "A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1."}
-        untouched_days: {type: integer, minimum: 1, maximum: 365, description: "An account with an open deal and no exchange within this many days is untouched. Default 21."}
-        silent_days: {type: integer, minimum: 1, maximum: 365, description: "A won account with no exchange within this many days is silent. Default 30."}
-        won_within_days: {type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes an account a won account. Default 180."}
+        untouched_days: {type: integer, minimum: 1, maximum: 365, description: "A company with an open deal and no exchange within this many days is untouched. Default 21."}
+        silent_days: {type: integer, minimum: 1, maximum: 365, description: "A won company with no exchange within this many days is silent. Default 30."}
+        won_within_days: {type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes a company a won one. Default 180."}
     ReportingFramework:
       type: object
       additionalProperties: false

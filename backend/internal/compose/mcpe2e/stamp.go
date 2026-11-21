@@ -21,7 +21,8 @@ type Stamp struct {
 	// Scenario is the scenario file whole: prompt, checks and bar.
 	Scenario string `json:"scenario"`
 	// Tools is the published entry of every tool the scenario's checks name, a
-	// verb by the router that fronts it.
+	// verb by the router that fronts it. It also holds each such router's action
+	// catalog: the bodies a model reads before it calls an action.
 	Tools string `json:"tools"`
 	// Instructions are the server instructions every client's model reads.
 	Instructions string `json:"instructions"`
@@ -75,6 +76,7 @@ var harnessFiles = []string{
 type inputs struct {
 	door         Door
 	tools        map[string]json.RawMessage
+	catalog      map[string]json.RawMessage
 	routers      map[string]string
 	restTools    string
 	instructions string
@@ -83,7 +85,7 @@ type inputs struct {
 }
 
 func loadInputs(root string, door Door) (inputs, error) {
-	in := inputs{door: door, tools: map[string]json.RawMessage{}, routers: map[string]string{}}
+	in := inputs{door: door, tools: map[string]json.RawMessage{}, catalog: map[string]json.RawMessage{}, routers: map[string]string{}}
 	var err error
 	if in.judge, err = canonicalJudge(root); err != nil {
 		return inputs{}, err
@@ -117,6 +119,7 @@ func (in *inputs) loadMCP(root string) error {
 		Tools        struct {
 			Tools []json.RawMessage `json:"tools"`
 		} `json:"tools"`
+		ActionCatalog map[string]json.RawMessage `json:"action_catalog"`
 	}
 	if err := readJSON(filepath.Join(root, mcpInfoFile), &info); err != nil {
 		return err
@@ -126,24 +129,31 @@ func (in *inputs) loadMCP(root string) error {
 	}
 	in.instructions = digest([]byte(info.Instructions))
 	for _, entry := range info.Tools.Tools {
-		// Re-encoded, so the digest reads the entry and not how the file was
-		// laid out: the generator's indentation is not tool copy.
-		var parsed map[string]any
-		if err := json.Unmarshal(entry, &parsed); err != nil {
-			return fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
-		}
-		canonical, err := json.Marshal(parsed)
+		// The generator's indentation is not tool copy.
+		canonical, err := CanonicalJSON(entry)
 		if err != nil {
 			return fmt.Errorf("%s: a tool entry: %w", mcpInfoFile, err)
 		}
-		name, named := parsed["name"].(string)
-		if !named {
-			return fmt.Errorf("%s: a tool entry has no name", mcpInfoFile)
+		var named struct {
+			Name string `json:"name"`
 		}
-		in.tools[name] = canonical
+		if err := json.Unmarshal(entry, &named); err != nil || named.Name == "" {
+			return fmt.Errorf("%s: a tool entry has no name (%v)", mcpInfoFile, err)
+		}
+		in.tools[named.Name] = canonical
 	}
 	if len(in.tools) == 0 {
 		return fmt.Errorf("%s lists no tools", mcpInfoFile)
+	}
+	if len(info.ActionCatalog) == 0 {
+		return fmt.Errorf("%s publishes no action catalog to stamp", mcpInfoFile)
+	}
+	for router, answer := range info.ActionCatalog {
+		canonical, err := CanonicalJSON(answer)
+		if err != nil {
+			return fmt.Errorf("%s: the %s action catalog: %w", mcpInfoFile, router, err)
+		}
+		in.catalog[router] = canonical
 	}
 	var routes struct {
 		Routers map[string]struct {
@@ -159,6 +169,20 @@ func (in *inputs) loadMCP(root string) error {
 		}
 	}
 	return nil
+}
+
+// catalogEntry keys a router's action catalog beside its tool entry, under a
+// name no tool can take.
+const catalogEntry = "actions of "
+
+// CanonicalJSON re-encodes a document in JSON's own key order and layout. A
+// digest or a byte comparison then reads the content, not how it was written.
+func CanonicalJSON(raw json.RawMessage) (json.RawMessage, error) {
+	var parsed any
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		return nil, err
+	}
+	return json.Marshal(parsed)
 }
 
 // canonicalJudge is the judge a run uses unless E2E_LLM_JUDGE_MODEL names
@@ -207,6 +231,9 @@ func (in inputs) stampOf(sc scenario) (Stamp, error) {
 			}
 		}
 		entries[served] = in.tools[served]
+		if body, routes := in.catalog[served]; routes {
+			entries[catalogEntry+served] = body
+		}
 	}
 	tools, err := json.Marshal(entries)
 	if err != nil {

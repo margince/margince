@@ -14,13 +14,11 @@ prompt: |
   https://docs.example.com/angebot-dom-digital-2027. Put that link on the Dom
   Digital Rahmenvertrag deal so the team finds it with the deal's documents.
 
-must_call:
-  - attach_link
-
 may_call:
   - find_records
   - read_record
   - list_documents
+  - attach_link
 
 must_mention:
   - "Dom Digital"

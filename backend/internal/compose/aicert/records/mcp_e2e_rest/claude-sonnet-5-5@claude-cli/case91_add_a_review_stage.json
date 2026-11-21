@@ -1,0 +1,93 @@
+{
+  "scenario": "case91_add_a_review_stage",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "a43e55134318e996",
+    "tools": "8b653e7a3d01b493",
+    "instructions": "933a67b45ed0a6ae",
+    "judge": "",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T15:19:58Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T15:19:58Z"
+  },
+  "usage": {
+    "input_tokens": 38,
+    "output_tokens": 3914,
+    "cache_creation_input_tokens": 22594,
+    "cache_read_input_tokens": 147445,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.1443
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "create_stage",
+        "list_approvals",
+        "list_pipelines",
+        "read_workspace",
+        "reorder_stages",
+        "skill_file"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "create_stage",
+        "list_pipelines",
+        "read_workspace",
+        "reorder_stages",
+        "skill_file"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 12.5,
+      "min": 12,
+      "max": 13
+    },
+    "turns": {
+      "median": 13.5,
+      "min": 13,
+      "max": 14
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 85038.5,
+      "min": 84519,
+      "max": 85558
+    },
+    "output_tokens": {
+      "median": 1957,
+      "min": 1894,
+      "max": 2020
+    },
+    "duration_ms": {
+      "median": 20243,
+      "min": 19986,
+      "max": 20500
+    }
+  }
+}

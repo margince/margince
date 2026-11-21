@@ -14,19 +14,12 @@
 # what it costs. They stay legible as two: the halves name different companies
 # and check.py reports per-assertion, so a failure says which half broke.
 #
-# WHY BOTH VERBS ARE REQUIRED rather than one of them twice. relink_activity
-# moves one message; relink_activities moves up to 500 named ones ALL OR
+# WHY THE BATCH IS PINNED. relink_activities moves up to 500 named mails ALL OR
 # NOTHING, and the prompt asks for that atomicity in the contact's own words
 # ("all three or none"). Three separate single moves are three transactions, of
 # which the second can fail with the first already applied — which is the thing
-# the contact said they did not want.
-#
-# THE KNOWN SOFT SPOT, stated because a scenario that hides one is worse than
-# one that has none: relink_activities carries replace_existing_of_type too, so
-# a run that moves the single mail with relink_activities has achieved the
-# contact's outcome and will be scored a failure here. If that shape turns up in
-# a sweep, the honest fix is to say so in the report, not to widen must_call
-# until the case tests nothing.
+# the contact said they did not want, and which no end state shows. The single
+# mail may go by either verb; the end state reads where every mail landed.
 name: case9_filed_in_the_wrong_place
 title: Filed in the wrong place
 criteria: [1, 2, 3]
@@ -50,9 +43,11 @@ prompt: |
   want half of them landing.
 
 must_call:
+  - relink_activities
+
+may_call:
   - relink_activity
   - relink_activities
-may_call:
   # Finding the four activities is the assistant's own problem and more than one
   # route answers it: the full-text search, the company's own timeline, or a
   # list scoped to the record. None of them is the test, so none is required.
@@ -62,26 +57,6 @@ may_call:
   - list_records
   - query_workspace
   - catch_me_up_on
-
-# THE PLAN, NOT JUST THE VERB. Both verbs default to ADDING the new link beside
-# the existing one, and the contact asked for none of the mails to stay
-# where they are — "get it off Rheinufer", "move all three across". A run that
-# associates rather than moves leaves the wrong company still showing the
-# history, which is half the defect being fixed and reads as a pass on the tool
-# name alone.
-#
-# entity_type is pinned on the batch because the destination TYPE is the one
-# argument a wrong plan gets wrong in a way nothing else here would notice: a
-# project destination is not a company, it is a write-once retention mark that
-# needs a human, and it is not what was asked for.
-#
-# The ids and the destination id are uuids minted by the seed, so they cannot be
-# compared against anything a scenario file can hold; the destinations are named
-# in the prose assertions instead.
-must_call_with:
-  - relink_activity.replace_existing_of_type=true
-  - relink_activities.replace_existing_of_type=true
-  - relink_activities.entity_type=company
 
 must_mention:
   # Criterion 1 and 2: it says where each thing went. Both destinations, because

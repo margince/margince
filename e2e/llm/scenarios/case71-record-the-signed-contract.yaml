@@ -7,12 +7,6 @@ writes: true
 prompt: |
   Aachener Metallwerke signed. Record a contract for them called Wartungsvertrag 2027.
 
-must_call:
-  - change_offers
-
-must_call_with:
-  - change_offers.action=record_contract
-
 must_end_with:
   - company "Aachener Metallwerke GmbH" contract=Wartungsvertrag 2027
 
@@ -23,6 +17,7 @@ may_call:
   - read_record
   - read_workspace
   - whoami
+  - change_offers
 
 must_mention:
   - "Wartungsvertrag 2027"

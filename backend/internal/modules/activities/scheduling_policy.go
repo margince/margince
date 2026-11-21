@@ -90,6 +90,10 @@ func (s *Store) reliableBusy(ctx context.Context, host ids.UserID, p crmcontract
 	return busy, err
 }
 
+// errNoCalendarToRead marks a host who has no calendar connected. The host and
+// their agent are asked to connect one; a guest's door answers as a paused page.
+var errNoCalendarToRead = errors.New("the host has no calendar connected")
+
 // ReliableAvailability combines provider occupancy with pending local reservations.
 func (s *Store) ReliableAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration) ([]slot, bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
@@ -107,8 +111,9 @@ func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, f
 	if err != nil {
 		return nil, false, err
 	}
+	// No calendar to read is a step the host can take, never a missing grant.
 	if profile.Provider == "" || s.calendar == nil {
-		return nil, false, apperrors.ErrPermissionDenied
+		return nil, false, fmt.Errorf("%w: %w", errNoCalendarToRead, errCalendarNotConnected())
 	}
 	if err := s.calendar.Check(ctx, host, string(profile.Provider)); err != nil {
 		return nil, false, err

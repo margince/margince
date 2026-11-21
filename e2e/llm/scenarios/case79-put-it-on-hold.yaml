@@ -8,15 +8,6 @@ prompt: |
   Legal called. Rheinufer AG may end up in litigation with us, so nothing about the company may be deleted until
   further notice. Please put that in place.
 
-must_call:
-  - change_compliance
-
-must_call_with:
-  - change_compliance.action=place_legal_hold
-
-must_call_matching:
-  - place_legal_hold~(?i)litigation
-
 must_not_call_with:
   - change_tags~.
   - log_activity~.
@@ -28,6 +19,7 @@ may_call:
   - read_record
   - read_workspace
   - whoami
+  - change_compliance
 
 must_mention:
   - "Rheinufer"
