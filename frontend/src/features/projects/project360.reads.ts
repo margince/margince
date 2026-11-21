@@ -3,6 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import { projectRowKey } from "../../lib/activitykeys";
 import { unwrap } from "../../lib/problem";
 import { project360Key } from "./project360.key";
 
@@ -23,11 +24,11 @@ export function useProject360(id: string, enabled = true) {
   });
 }
 
-// The row, archived or not. Under the ["project", id] prefix, so a restore
-// from the archived page re-reads it.
+// A restore from the archived page re-reads the row through its key's prefix,
+// and a restore elsewhere reaches it because the row is a live read.
 function useProjectRow(id: string, enabled: boolean) {
   return useQuery({
-    queryKey: ["project", id, "row"],
+    queryKey: projectRowKey(id),
     enabled,
     queryFn: async ({ signal }) => {
       return unwrap(
