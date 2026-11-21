@@ -4,50 +4,36 @@
 package attention
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-type changedTaskBacklog struct {
-	windowRecorder
-	rows []Positioned[Task]
-}
-
-func (b *changedTaskBacklog) CountTasks(context.Context, TaskWindow) (int, error) {
-	return len(b.rows), nil
-}
-
-func (b *changedTaskBacklog) TasksAfter(_ context.Context, _ TaskWindow, after string, _ int) ([]Positioned[Task], bool, error) {
-	if after != "" {
-		return nil, false, nil
-	}
-	return b.rows, false, nil
-}
-
-func TestTheChangedBadgeOpensExactlyItsRankedSnapshotAcrossPages(t *testing.T) {
-	var tasks []Task
-	backlog := &changedTaskBacklog{}
-	for i := range plannedCap + 1 {
-		task := Task{ID: ids.NewV7(), Subject: fmt.Sprintf("Task %d", i), DueAt: new(readInstant.Add(time.Hour))}
-		tasks = append(tasks, task)
-		after, err := storekit.EncodeOpaque(map[string]string{"id": task.ID.String()})
-		if err != nil {
-			t.Fatal(err)
+// The badge counts the news its door serves. Walked page by page, the changed
+// filter opens every row that moved after the brief, and no other row.
+func TestTheChangedBadgeAndItsDoorAgreeAcrossPages(t *testing.T) {
+	cutoff := readInstant.Add(-6 * time.Hour)
+	const fresh, stale = 7, 4
+	var runs []TroubledAutomationRun
+	for i := range fresh + stale {
+		at := cutoff.Add(time.Hour)
+		if i >= fresh {
+			at = cutoff.Add(-time.Hour)
 		}
-		backlog.rows = append(backlog.rows, Positioned[Task]{Row: task, After: after})
+		runs = append(runs, TroubledAutomationRun{
+			ID: ids.NewV7(), AutomationID: ids.New[ids.AutomationKind](),
+			Name: fmt.Sprintf("Rule %d", i), Outcome: "failed", Reason: "the assignee seat is gone", OccurredAt: at,
+		})
 	}
-	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{rows: tasks[:plannedCap], total: len(tasks)}, stubReceipts{},
-		stubBriefing{ran: true, asOf: readInstant.Add(-time.Hour)},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).WithTaskBacklog(backlog)
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
+		stubBriefing{ran: true, asOf: cutoff}, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		&stubAutomations{rows: runs}, nil, nil, fixedClock)
 	walk := func(filter string) (int, int) {
 		count, badge, cursor := 0, -1, ""
 		for range 20 {
-			page, err := svc.Worklist(pageReader(), scopeMine, filter, ids.Nil, 3, cursor)
+			page, err := svc.Worklist(pageReader(), scopeUnassigned, filter, ids.Nil, 3, cursor)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -72,8 +58,8 @@ func TestTheChangedBadgeOpensExactlyItsRankedSnapshotAcrossPages(t *testing.T) {
 	}
 	all, _ := walk("")
 	changed, badge := walk(string(filterChangedSinceBrief))
-	if all != len(tasks) || changed != badge || changed != plannedCap {
-		t.Fatalf("all=%d changed=%d badge=%d; want %d total and %d ranked changes", all, changed, badge, len(tasks), plannedCap)
+	if all != fresh+stale || changed != badge || changed != fresh {
+		t.Fatalf("all=%d changed=%d badge=%d; want %d total and %d changed", all, changed, badge, fresh+stale, fresh)
 	}
 }
 

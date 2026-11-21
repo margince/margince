@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { GoneNotice } from "../../components/gonenotice";
 import { Calendar, type ISODay } from "../../design-system/calendar";
 import { CompanyLogo } from "../../design-system/companylogo";
 import { Heading } from "../../design-system/heading";
@@ -262,7 +263,7 @@ export function BookingGuestScreen({
         <QueryGate
           pendingLabel={t("common.loading")}
           query={profile}
-          goneKey="book.linkGone"
+          gone={<GoneNotice messageKey="book.linkGone" />}
         >
           {(host) =>
             publicUnavailable ? (

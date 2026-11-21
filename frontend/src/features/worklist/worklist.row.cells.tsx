@@ -38,6 +38,7 @@ export function RowText({
   emailOpener,
   badged,
   titleEnd,
+  underTitle,
 }: Readonly<{
   readings: RowReadings;
   /** Opens a waiting message. Its presence is what names the row. */
@@ -47,6 +48,8 @@ export function RowText({
   badged: boolean;
   /** Drawn at the end of the title line, such as the card's way on. */
   titleEnd?: ReactNode;
+  /** Drawn under the title's own lines, such as the card's chips. */
+  underTitle?: ReactNode;
 }>) {
   const {
     item,
@@ -124,6 +127,7 @@ export function RowText({
             a reading and they are facts. A reader who cannot tell those apart
             cannot tell what to trust; worklist.verdict.tsx says more. */}
       <VerdictLine verdict={item.verdict} zone={zone} />
+      {underTitle}
       <RowCaptions
         about={readings.about}
         host={readings.host}

@@ -44,5 +44,9 @@ may_call:
 must_mention:
   - "Rheinufer"
 
+must_end_with:
+  - deal "Rheinufer Netzmodernisierung" decision=*cfo*
+  - me "admin@demo.test" forecast_call=45000000 EUR
+
 runs: 3
 pass_at: 2

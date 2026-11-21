@@ -11,7 +11,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // releaseTarget is one tool verb aimed at one record type — the pair an agent
@@ -35,7 +34,7 @@ var agentStraightThrough = func() map[releaseTarget]bool {
 		}
 		key := releaseTarget{pol.Tool, pol.RecordType}
 		allSoFar, seen := straight[key]
-		route := pol.Tier == tierAutoExecute && !principal.Scope(pol.Scope).Egresses()
+		route := pol.Tier == tierAutoExecute && !pol.egresses()
 		straight[key] = route && (allSoFar || !seen)
 	}
 	return straight

@@ -41,6 +41,7 @@ import {
   ShareRoute,
   safeDecode,
   TagResultScreen,
+  UnknownAddress,
   UnsubscribeScreen,
   WorklistRedirect,
 } from "./App.screens";
@@ -180,7 +181,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // A hash naming no address this app answers. The shell's heading says the
     // same word (shell.unknownPage). The reader is told once by the page and
     // once by the column, and neither claims a page by that name exists.
-    "not-found": () => <ScreenNotice messageKey="shell.unknownPage" />,
+    "not-found": () => <UnknownAddress />,
   };
 
 // Through history, so the entries around the held one are kept. Never a replace
@@ -274,14 +275,10 @@ export function ScreenView({
               <Fragment key={identityOfAddress(held)}>
                 {screenEnabled(parseHash(held).screen, hidden) ? (
                   screenWithLocale(held)
+                ) : screenEnabled(parseHash(held).screen, disabled) ? (
+                  <ScreenNotice messageKey="shell.unavailableForRole" />
                 ) : (
-                  <ScreenNotice
-                    messageKey={
-                      screenEnabled(parseHash(held).screen, disabled)
-                        ? "shell.unavailableForRole"
-                        : "shell.unknownPage"
-                    }
-                  />
+                  <UnknownAddress />
                 )}
               </Fragment>
             </DrawnFor>

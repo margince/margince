@@ -111,9 +111,10 @@ the same in either era. A missing or empty `uri` is `-32602`, and a read that fa
 later. That is also why the server reports `tools.listChanged: false`: the notice would go on a stream this transport
 does not open. The surface does change per caller, but this server cannot say so.
 
-**A tool result carries the answer twice.** Every registered tool declares an `outputSchema`. So a `tools/call` that
-works returns the JSON both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second
-copy built again.
+**A tool result carries the answer twice.** A tool that declares an `outputSchema` returns the JSON of a `tools/call`
+that works both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second copy built
+again. A router lists no `outputSchema`, because its actions answer different shapes, and a routed call is checked
+against the schema of the action it ran. Only a router bound to an app view lists one, built from its actions' shapes.
 
 So a client that compares the two never finds a number changed or a key moved. Each tool lists the shape its handler
 writes. A result that misses its **declared schema** is kept out of `structuredContent`, and logged as a bug in this

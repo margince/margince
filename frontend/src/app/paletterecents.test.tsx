@@ -159,6 +159,18 @@ it("never paints a stored name and shows the current name before the screens", a
     "Deals",
   ]);
 });
+// A saved search and a record it found are two kinds of entry, and each row
+// says which it is.
+it("marks a saved search with the magnifier and Search, and a record with its kind", async () => {
+  writeRecents(me.user.id, [record, query]);
+  mount();
+  const named = await screen.findByText("Fresh name");
+  const recordRow = named.closest("button");
+  const searchRow = screen.getByText("Acme").closest("button");
+  expect(recordRow?.querySelector(".sub")?.textContent).toBe("Contact");
+  expect(searchRow?.querySelector(".sub")?.textContent).toBe("Search");
+  expect(searchRow?.querySelector("svg.lucide-search")).not.toBeNull();
+});
 it.each([403, 404])("prunes a definitive %s refusal", async (status) => {
   writeRecents(me.user.id, [record, query]);
   mount(() =>
@@ -316,7 +328,7 @@ it("updates an open palette when another tab clears storage", () => {
 });
 
 it.each(["contact", "company", "lead", "deal", "project"] as const)(
-  "remembers an executed %s hit with its query",
+  "remembers an executed %s hit as the record alone",
   async (kind) => {
     const user = steppedClock();
     const view = mount();
@@ -335,7 +347,6 @@ it.each(["contact", "company", "lead", "deal", "project"] as const)(
     await user.click(await screen.findByText("Chosen record"));
     expect(readRecents(me.user.id).entries).toEqual([
       { kind: "record", entity_type: kind, id, label: "Chosen record" },
-      query,
     ]);
     expect(view.close).toHaveBeenCalledOnce();
   },
@@ -460,7 +471,7 @@ it("returns focus to the query after clicking a saved search", async () => {
   const user = steppedClock();
   writeRecents(me.user.id, [query]);
   mount();
-  await user.click(screen.getByRole("button", { name: "Acme" }));
+  await user.click(screen.getByRole("button", { name: "Acme Search" }));
   expect(document.activeElement).toBe(screen.getByRole("searchbox"));
 });
 it("keeps Clear reachable with only unnamed saved records and returns focus", async () => {

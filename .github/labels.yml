@@ -128,6 +128,14 @@
   description: "The next release cannot be tagged until this closes"
 
 # ---------------------------------------------------------------------------
+# Records — a measurement the weekly scheduled run proposes. It goes on the
+# pull request the run opens, so one maintainer owns each week's proposal.
+# ---------------------------------------------------------------------------
+- name: "records: weekly"
+  color: "0E8A16"
+  description: "A weekly measurement the scheduled run proposes; its owner reviews and merges it"
+
+# ---------------------------------------------------------------------------
 # Provenance — why the issue exists, which is the one thing nobody can
 # reconstruct later. Additive and independent of the three axes above.
 # ---------------------------------------------------------------------------

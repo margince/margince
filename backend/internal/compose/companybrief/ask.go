@@ -145,7 +145,7 @@ func Answer(
 		// unavailable, over budget, or answering unparseable JSON must not take
 		// the answer down with it, and generated_by reports which the reader
 		// got.
-		//nolint:nilerr // on_budget_exhausted: degrade — the fallback IS the answer, and generated_by reports it
+		//nolint:nilerr // an interactive task degrades — the fallback IS the answer, and generated_by reports it
 		return deterministic, crmcontracts.WrittenByDeterministic, nil
 	}
 	return written, crmcontracts.WrittenByModel, nil

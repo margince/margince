@@ -33,5 +33,10 @@ may_call:
   - whoami
   - list_documents
 
+# The logo is left out: no tool an agent is offered reads the workspace's own
+# logo back.
+must_end_with:
+  - fx_rate "USD" rate=0.92
+
 runs: 3
 pass_at: 2

@@ -2132,8 +2132,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
   "aiAdmin.decisionSkip.unbound":
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
-  "aiAdmin.decisionSkip.uncertified":
-    "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -2964,6 +2962,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
+  "shell.unknownAddress": "Diese Adresse führt in Margince nirgendwohin.",
+  "shell.unknownAddress.goTo": "Zu {name}",
   "shell.closeMenu": "Schließen",
   "shell.agent.scope": "Margince liest nur, was du sehen kannst.",
   "shell.capture.importing": "Postfachverlauf wird importiert",
@@ -3030,6 +3030,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.placeholder": "Suchen oder Margince fragen",
   "palette.empty": "Keine Treffer.",
   "palette.recent": "Zuletzt verwendet",
+  "palette.recentSearch": "Suche",
   "palette.clearRecent": "Leeren",
   "palette.filter": "Nur zeigen",
   "palette.filterAll": "Alle",
@@ -3047,7 +3048,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.seeAll": "Alle Ergebnisse für „{query}“ anzeigen",
   "palette.searching": "Datensätze werden durchsucht…",
   "palette.searchFailedTitle": "Suche fehlgeschlagen",
-  "palette.searchFailed": "Die Befehle oben funktionieren weiterhin.",
+  "palette.searchFailed":
+    "Datensätze konnten nicht durchsucht werden. Ansichten und Aktionen funktionieren weiterhin.",
   "palette.askDataRow": "CRM-Daten fragen: „{query}“",
   "palette.openAnalytics": "In Analytics öffnen",
   "palette.dataUnsupportedOnly":
@@ -3122,6 +3124,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.dateInFuture": "Dieses Datum darf nicht in der Zukunft liegen.",
   "common.fieldDecimalPlaces": "Erlaubte Nachkommastellen für {field}: {max}.",
   "common.valueDecimalPlaces": "Erlaubte Nachkommastellen: {max}.",
+  "common.characterCount_one": "{count} von {max} Zeichen",
+  "common.characterCount_other": "{count} von {max} Zeichen",
   "common.valueTooLong": "Dieser Wert ist zu lang.",
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
@@ -9675,8 +9679,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Signatur ersetzt die Unternehmensvorlage. Leere das Feld, um wieder die Unternehmensvorlage zu verwenden. Bis zu {max} Zeichen. Tabellen, Layout und Bilder von https-Adressen bleiben erhalten; Skripte und Formulare werden entfernt.",
   "settings.signatureHtmlHintPlain":
     "Leere das Feld, um wieder deinen Text zu verwenden. Bis zu {max} Zeichen. Tabellen, Layout und Bilder von https-Adressen bleiben erhalten; Skripte und Formulare werden entfernt.",
-  "settings.signatureHtmlCount_one": "{count} von {max} Zeichen",
-  "settings.signatureHtmlCount_other": "{count} von {max} Zeichen",
   "settings.signatureOwnHtml": "Deine HTML-Signatur",
   "settings.signatureReviewTitle": "Gespeicherte Signatur von {name} prüfen",
   "settings.signatureReviewIntro":
@@ -15384,13 +15386,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "corpusAsk.notReady":
     "Diese Sammlung wird noch gelesen: {embedded} von {total} Textstellen sind durchsuchbar. Versuche es gleich erneut. An der Frage liegt es nicht.",
   "corpusAsk.retrievalUnavailable":
-    "Es wurde nichts durchsucht. In dieser Installation ist kein Suchindex eingerichtet.",
+    "Für die Suche ist kein Embedding-Modell gewählt, daher wurde nichts durchsucht. An der Frage liegt es nicht.",
+  "corpusAsk.retrievalUnavailableAskAdmin":
+    "Admins können eines unter KI-Modelle, Modellstufen wählen.",
   "corpusAsk.unreviewed":
     "Diese Textstellen passen am besten zu deiner Frage. Ob sie die Frage beantworten, wurde nicht geprüft.",
   "corpusAsk.failed": "Frage nicht beantwortet",
   "corpusAsk.unreviewedTitle": "Textstellen nicht geprüft",
   "corpusAsk.notReadyTitle": "Diese Sammlung wird noch gelesen",
-  "corpusAsk.retrievalUnavailableTitle": "Kein Suchindex eingerichtet",
+  "corpusAsk.retrievalUnavailableTitle":
+    "Dokumente lassen sich noch nicht durchsuchen",
   "corpusAsk.noGrantTitle":
     "Du kannst die Dokumente dieses Unternehmens nicht öffnen",
   "corpusAsk.noGrant":
@@ -16876,7 +16881,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aicalls.reason.decision_state_too_large":
     "Eingabe zu groß für das Entscheidungsmodell",
   "aicalls.reason.decision_uncertified":
-    "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
+    "Entscheidungsmodell für diese Aufgabe nicht zertifiziert (nur ältere Aufrufe)",
   "aicalls.reason.timeout":
     "Beim vorherigen Versuch wurde das Zeitlimit überschritten",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
@@ -17734,7 +17739,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Höhere lokale Modellstufe. Prüfe den konfigurierten Endpunkt.",
   "aiRouting.lane.embeddings": "Suche und Abruf über Datensätze hinweg",
   "aiRouting.lane.decisions":
-    "Typisierte Fragen, die vor den Modellstufen gestellt werden, sofern zertifiziert",
+    "Typisierte Fragen, die vor den Modellstufen gestellt werden",
   "aiRouting.decisions.add": "Entscheidungsmodell hinzufügen",
   "aiRouting.decisions.remove": "Entscheidungsmodell entfernen",
   "aiRouting.decisions.preset.openrouter": "Vorlage: OpenRouter",
@@ -20540,6 +20545,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.unavailable": "Listen sind in dieser Installation deaktiviert.",
   "lists.gone":
     "Diese Liste gibt es nicht, oder sie ist nicht mit dir geteilt.",
+  "record.gone.contact":
+    "Diesen Kontakt gibt es nicht, oder er ist nicht mit dir geteilt.",
+  "record.gone.company":
+    "Dieses Unternehmen gibt es nicht, oder es ist nicht mit dir geteilt.",
+  "record.gone.lead":
+    "Diesen Lead gibt es nicht, oder er ist nicht mit dir geteilt.",
+  "record.gone.deal":
+    "Diesen Deal gibt es nicht, oder er ist nicht mit dir geteilt.",
+  "record.gone.project":
+    "Dieses Projekt gibt es nicht, oder es ist nicht mit dir geteilt.",
+  "record.gone.offer":
+    "Dieses Angebot gibt es nicht, oder es ist nicht mit dir geteilt.",
   "lists.unnamed": "Ohne Namen",
   "lists.filterLine": "Filter: {sentence}",
   "lists.head.exported_one": "{count}-mal, zuletzt am {when}",
@@ -21937,7 +21954,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.linked.except_decisions":
     "Es werden alle Einträge außer den Freigaben angezeigt, die bereits in deinem Morgenbericht stehen.",
   "worklist.filter.linked.changed_since_brief":
-    "Es werden nur Änderungen seit dem Morgenbericht von gestern Abend angezeigt.",
+    "Es werden nur Änderungen seit deinem letzten Morgenbericht angezeigt.",
   "worklist.filter.linked.clear": "Vollständige Worklist anzeigen",
   "worklist.category.customer_waiting": "Kontakt wartet",
   "worklist.category.leads": "Lead",

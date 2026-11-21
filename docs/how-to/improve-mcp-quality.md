@@ -95,11 +95,9 @@ Work through these in order for each run that fails.
 
    An error that shows the model the right argument costs one more turn. An error that sends the model
    to another tool is a copy problem.
-6. **Read the final answer against the guard.** `check.py` matches `must_mention` against every text block.
-
-   It reads every block the assistant wrote, not only the
-   last one. A run can pass on a sentence it wrote part of the way through, so read the final
-   answer before you trust a pass. For a regex failure, write down the sentence
+6. **Read the final answer against the guard.** `check.py` matches `must_mention` and the judge
+   against the final answer only, and `must_not_mention` against every text block. A sentence the
+   model wrote part of the way through cannot pass a run, but it can fail one. For a regex failure, write down the sentence
    the model wrote, and decide whether a human grader would accept it.
 
 ## 4. Fix the layer

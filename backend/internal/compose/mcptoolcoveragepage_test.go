@@ -220,17 +220,20 @@ func writeCoverageFailing(p *strings.Builder, r mcpToolCoverage) {
 func writeCoverageUndriven(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## 4. What no use case requires\n\n")
 	p.WriteString("A tool this lane has not tried may still be graded. The `Graded by` " +
-		"column names the certification tasks whose\n")
-	p.WriteString("corpus tests the tool anyway. That lane asks which tool a goal should reach " +
-		"for, and which plausible neighbour it must\n")
-	p.WriteString("avoid, which this lane cannot express at all: it sees that a name appeared, " +
-		"never whether it was the right first reach.\n\n")
-	fmt.Fprintf(p, "So of the %d tools no use case requires, **%d are graded elsewhere** and %d are "+
-		"untried by any lane.\n\n",
-		r.Totals.NeverDriven, r.Totals.UndrivenButGraded, r.Totals.NeverDriven-r.Totals.UndrivenButGraded)
+		"column names the certification tasks that expect\n")
+	p.WriteString("the tool as the answer. That lane asks which tool a goal should reach " +
+		"for, which this lane cannot express at all:\n")
+	p.WriteString("it sees that a name appeared, never whether it was the right first reach. " +
+		"`Near miss in` names the tasks that only check\n")
+	p.WriteString("a model does not reach for the tool, which says nothing about whether one can use it.\n\n")
+	untried := r.Totals.NeverDriven - r.Totals.UndrivenButGraded
+	fmt.Fprintf(p, "So of the %d tools no use case requires, **%d are graded elsewhere** as an expected "+
+		"answer and %d are untried by any lane. Of the untried, %d appear elsewhere only as a near miss.\n\n",
+		r.Totals.NeverDriven, r.Totals.UndrivenButGraded, untried, r.Totals.UndrivenNearMissOnly)
 	p.WriteString("A tool in the `Permitted in` column is worse than one with nothing: a case is " +
 		"allowed to use it and no case checks that it can.\n\n")
-	p.WriteString("| Tool | Tokens | Graded by | Permitted in | Attached to |\n|---|---:|---|---|---|\n")
+	p.WriteString("| Tool | Tokens | Graded by | Near miss in | Permitted in | Attached to |\n" +
+		"|---|---:|---|---|---|---|\n")
 	rows := 0
 	for _, row := range r.Tools {
 		// A tool some case requires as one of a set has its own section above:
@@ -240,11 +243,11 @@ func writeCoverageUndriven(p *strings.Builder, r mcpToolCoverage) {
 			continue
 		}
 		rows++
-		fmt.Fprintf(p, "| `%s` | %d | %s | %s | %s |\n",
-			row.Name, row.Tokens, joinOrDash(row.GradedBy), joinOrDash(row.MayCall), joinOrDash(row.Agents))
+		fmt.Fprintf(p, "| `%s` | %d | %s | %s | %s | %s |\n", row.Name, row.Tokens, joinOrDash(row.GradedBy),
+			joinOrDash(row.NearMissIn), joinOrDash(row.MayCall), joinOrDash(row.Agents))
 	}
 	if rows == 0 {
-		p.WriteString("| _every tool has a case_ | - | - | - | - |\n")
+		p.WriteString("| _every tool has a case_ | - | - | - | - | - |\n")
 	}
 	p.WriteString("\n")
 }

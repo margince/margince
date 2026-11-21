@@ -1043,6 +1043,7 @@ public.agent_standing_grant.user_id uuid NOT NULL gen=- def=-
 public.agent_standing_grant_pkey CREATE UNIQUE INDEX agent_standing_grant_pkey ON public.agent_standing_grant USING btree (id)
 public.agent_task acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.agent_task.agent_task_approval_fk FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE RESTRICT
+public.agent_task.agent_task_connection_fk FOREIGN KEY (connection_id) REFERENCES oauth_grant(id) ON DELETE RESTRICT
 public.agent_task.agent_task_expires_after_creation CHECK ((expires_at > created_at))
 public.agent_task.agent_task_passport_fk FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE RESTRICT
 public.agent_task.agent_task_pkey PRIMARY KEY (id)
@@ -1051,6 +1052,7 @@ public.agent_task.agent_task_status_check CHECK ((status = ANY (ARRAY['working':
 public.agent_task.agent_task_terminal_payload CHECK ((((status = 'completed'::text) AND (result IS NOT NULL) AND (error IS NULL)) OR ((status = 'failed'::text) AND (error IS NOT NULL) AND (result IS NULL)) OR ((status = ANY (ARRAY['working'::text, 'cancelled'::text])) AND (result IS NULL) AND (error IS NULL))))
 public.agent_task.approval_id uuid NOT NULL gen=- def=-
 public.agent_task.claimed_at timestamp with time zone gen=- def=-
+public.agent_task.connection_id uuid gen=- def=-
 public.agent_task.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.agent_task.error jsonb gen=- def=-
 public.agent_task.expires_at timestamp with time zone NOT NULL gen=- def=-

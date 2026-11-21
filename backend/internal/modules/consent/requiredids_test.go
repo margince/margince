@@ -52,7 +52,7 @@ func TestAnOmittedPurposeIsNamedOnTheIssuanceRefusal(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/double-opt-in", body)
 	req.Header.Set("Content-Type", "application/json")
 
-	Handlers{}.IssueDoubleOptIn(rec, req, crmcontracts.Id(ids.New[ids.ContactKind]().UUID))
+	Handlers{}.IssueDoubleOptIn(rec, req, crmcontracts.Id(ids.New[ids.ContactKind]().UUID), crmcontracts.IssueDoubleOptInParams{})
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("an omitted purpose is a 422 naming the field, got %d: %s", rec.Code, rec.Body.String())

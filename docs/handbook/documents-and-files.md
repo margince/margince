@@ -237,8 +237,8 @@ Also called: can I upload a PDF to the knowledge base, supported formats.
 ### How do I ask my documents a question?
 To ask your documents a question in Margince, open the command palette and choose **Ask your documents**.
 1. Press ⌘K (Mac) or Ctrl+K, or click **Search or ask Margince** in the top bar.
-2. Choose **Ask your documents**, the first row.
-3. Pick the **Document set**, type **Your question**, and click **Ask**.
+2. Choose **Ask your documents**, the last row.
+3. Pick the **Document set**, type **Your question** (at most 1,000 characters), and click **Ask**.
 
 "Answers come only from one document set, questions the set does not cover are refused, and every sentence cites its passage."
 Also called: search the knowledge base, ask the handbook, FAQ.
@@ -261,8 +261,9 @@ you always know whether an AI model was used.
 
 - **This set is still being read**: "{embedded} of {total} passages are
   searchable. Retry shortly. The question is not the problem."
-- **No search index is configured**: "Nothing was searched. This installation
-  has no search index configured."
+- **Documents cannot be searched yet**: "No embedding model is chosen for search, so nothing was
+  searched." With the right to change AI settings you get **Choose an embedding model**, which opens
+  **AI models**, **Model tiers**. Without that right, it says an administrator can choose one there.
 - **No document sets**: "This company has no documents yet, so there is
   nothing to search."
 - **You cannot open this company’s documents**: "You do not have access to this

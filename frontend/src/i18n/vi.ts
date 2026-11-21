@@ -2074,8 +2074,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Mô hình theo chính sách",
   "aiAdmin.decisionSkip.unbound":
     "Không dùng mô hình quyết định: chưa gán mô hình nào.",
-  "aiAdmin.decisionSkip.uncertified":
-    "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -2871,6 +2869,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.unavailableForRole": "Không khả dụng cho vai trò của bạn.",
+  "shell.unknownAddress": "Địa chỉ này không dẫn đến đâu trong Margince.",
+  "shell.unknownAddress.goTo": "Đến {name}",
   "shell.closeMenu": "Đóng",
   "shell.agent.scope": "Margince chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử hộp thư",
@@ -2937,6 +2937,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.placeholder": "Tìm kiếm hoặc hỏi Margince",
   "palette.empty": "Không có kết quả.",
   "palette.recent": "Gần đây",
+  "palette.recentSearch": "Tìm kiếm",
   "palette.clearRecent": "Xóa",
   "palette.filter": "Chỉ hiện",
   "palette.filterAll": "Tất cả",
@@ -2954,7 +2955,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.seeAll": "Xem tất cả kết quả cho “{query}”",
   "palette.searching": "Đang tìm hồ sơ…",
   "palette.searchFailedTitle": "Tìm kiếm không thành công",
-  "palette.searchFailed": "Các lệnh ở trên vẫn hoạt động.",
+  "palette.searchFailed":
+    "Không thể tìm hồ sơ. Màn hình và hành động vẫn hoạt động.",
   "palette.askDataRow": "Hỏi dữ liệu CRM: “{query}”",
   "palette.openAnalytics": "Mở trong Phân tích",
   "palette.dataUnsupportedOnly":
@@ -3024,6 +3026,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.dateInFuture": "Không được chọn ngày trong tương lai.",
   "common.fieldDecimalPlaces": "Số chữ số thập phân tối đa cho {field}: {max}.",
   "common.valueDecimalPlaces": "Số chữ số thập phân tối đa: {max}.",
+  "common.characterCount_one": "{count}/{max} ký tự",
+  "common.characterCount_other": "{count}/{max} ký tự",
   "common.valueTooLong": "Giá trị này quá dài.",
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
@@ -9416,8 +9420,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chữ ký này thay thế mẫu của công ty. Để trống để dùng lại mẫu của công ty. Tối đa {max} ký tự. Bảng, bố cục và hình ảnh từ địa chỉ https được giữ lại; mã script và biểu mẫu sẽ bị xóa.",
   "settings.signatureHtmlHintPlain":
     "Để trống để dùng lại chữ ký văn bản thuần. Tối đa {max} ký tự. Bảng, bố cục và hình ảnh từ địa chỉ https được giữ lại; mã script và biểu mẫu sẽ bị xóa.",
-  "settings.signatureHtmlCount_one": "{count}/{max} ký tự",
-  "settings.signatureHtmlCount_other": "{count}/{max} ký tự",
   "settings.signatureOwnHtml": "Chữ ký HTML của bạn",
   "settings.signatureReviewTitle": "Kiểm tra chữ ký được giữ lại của {name}",
   "settings.signatureReviewIntro":
@@ -14967,13 +14969,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "corpusAsk.notReady":
     "Bộ tài liệu này vẫn đang được đọc: {embedded}/{total} đoạn đã có thể tìm kiếm. Thử lại sau ít phút. Câu hỏi không có vấn đề gì.",
   "corpusAsk.retrievalUnavailable":
-    "Chưa tìm kiếm gì. Bản cài đặt này chưa cấu hình chỉ mục tìm kiếm.",
+    "Chưa chọn mô hình embedding cho tìm kiếm, nên chưa tìm kiếm gì. Câu hỏi không có vấn đề gì.",
+  "corpusAsk.retrievalUnavailableAskAdmin":
+    "Quản trị viên có thể chọn một mô hình trong Mô hình AI, Cấp mô hình.",
   "corpusAsk.unreviewed":
     "Các đoạn này gần nhất với câu hỏi. Chưa có đánh giá xem các đoạn này có trả lời câu hỏi hay không.",
   "corpusAsk.failed": "Không thể trả lời câu hỏi",
   "corpusAsk.unreviewedTitle": "Đoạn trích chưa được đánh giá",
   "corpusAsk.notReadyTitle": "Vẫn đang đọc bộ tài liệu này",
-  "corpusAsk.retrievalUnavailableTitle": "Chưa cấu hình chỉ mục tìm kiếm",
+  "corpusAsk.retrievalUnavailableTitle": "Chưa thể tìm kiếm tài liệu",
   "corpusAsk.noGrantTitle": "Bạn không thể mở tài liệu của công ty này",
   "corpusAsk.noGrant":
     "Bạn không có quyền truy cập bộ tài liệu này. Quản trị viên có thể cấp quyền.",
@@ -16424,7 +16428,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aicalls.reason.decision_state_too_large":
     "Dữ liệu đầu vào quá lớn với mô hình quyết định",
   "aicalls.reason.decision_uncertified":
-    "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
+    "Mô hình quyết định chưa được chứng nhận cho tác vụ này (chỉ các lần gọi cũ)",
   "aicalls.reason.timeout": "Lần thử trước đã hết thời gian",
   "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Lượt gọi gần đây",
@@ -17261,8 +17265,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiRouting.lane.local_large":
     "Cấp cục bộ cao hơn; kiểm tra endpoint đã cấu hình",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy xuất trên các hồ sơ",
-  "aiRouting.lane.decisions":
-    "Câu hỏi có kiểu, hỏi trước các cấp khi đã được chứng nhận",
+  "aiRouting.lane.decisions": "Câu hỏi có kiểu, hỏi trước các cấp",
   "aiRouting.decisions.add": "Thêm mô hình quyết định",
   "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
   "aiRouting.decisions.preset.openrouter": "Cấu hình sẵn: OpenRouter",
@@ -19999,6 +20002,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.restore": "Kh\u00f4i ph\u1ee5c",
   "lists.unavailable": "Danh sách đang tắt trên bản cài đặt này.",
   "lists.gone": "Danh sách này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.contact":
+    "Liên hệ này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.company":
+    "Công ty này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.lead":
+    "Lead này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.deal":
+    "Deal này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.project":
+    "Dự án này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.offer":
+    "Báo giá này không tồn tại, hoặc không được chia sẻ với bạn.",
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
   "lists.filterLine": "Bộ lọc: {sentence}",
   "lists.head.exported_one": "{count} lần, lần gần nhất vào {when}",
@@ -21367,7 +21382,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.linked.except_decisions":
     "Hiển thị mọi việc trừ các phê duyệt đã có trong Bản tin sáng.",
   "worklist.filter.linked.changed_since_brief":
-    "Chỉ hiển thị thay đổi kể từ Bản tin sáng đêm qua.",
+    "Chỉ hiển thị thay đổi kể từ Bản tin sáng gần nhất.",
   "worklist.filter.linked.clear": "Hiển thị toàn bộ Danh sách công việc",
   "worklist.category.customer_waiting": "Khách hàng đang chờ",
   "worklist.category.leads": "Lead",

@@ -45,6 +45,10 @@ type routeVerbShape struct {
 	HumanOnly []string
 }
 
+func (p agentPolicy) egresses() bool {
+	return principal.Scope(p.Scope).Egresses() && !p.StaysInside
+}
+
 // declaredRouteVerbs lists every verb the contract declares served_by: route.
 func declaredRouteVerbs(policies map[string]agentPolicy) []agents.RouteVerb {
 	var verbs []agents.RouteVerb
@@ -58,10 +62,20 @@ func declaredRouteVerbs(policies map[string]agentPolicy) []agents.RouteVerb {
 			Verb: pol.Tool, Router: pol.Router, Action: pol.Action, Op: pol.Op, Summary: shape.Summary,
 			Method: method, Pattern: pattern, Scope: principal.Scope(pol.Scope), PathParams: pathParamsOf(pattern),
 			Query: shape.Query, IfMatch: shape.IfMatch, IdempotencyKey: shape.IdempotencyKey, Body: shape.Body, UploadField: shape.UploadField, BodySchema: json.RawMessage(shape.BodySchema),
-			AnswerSchema: json.RawMessage(shape.AnswerSchema), AskUserFirst: pol.AskUserFirst,
+			AnswerSchema: json.RawMessage(shape.AnswerSchema), AskUserFirst: pol.AskUserFirst, Egress: pol.egresses(),
 		})
 	}
 	slices.SortFunc(verbs, func(a, b agents.RouteVerb) int { return strings.Compare(a.Verb, b.Verb) })
+	return verbs
+}
+
+func routeRetryKeyVerbs(policies map[string]agentPolicy) map[string]bool {
+	verbs := map[string]bool{}
+	for route, pol := range policies {
+		if _, replays := replayableOperations[route]; replays && pol.Access == accessTool && pol.ServedBy == servedByRoute {
+			verbs[pol.Tool] = true
+		}
+	}
 	return verbs
 }
 
@@ -77,9 +91,9 @@ func routeThrough(door *viewDoor) agents.RouteRunner {
 			return nil, fmt.Errorf("the %s verb acts for a user, and this work has none: %w", call.Verb.Verb, apperrors.ErrPermissionDenied)
 		}
 		in := inProcessCall{Method: call.Verb.Method, Pattern: call.Verb.Pattern, Path: call.Path, Query: call.Query, Version: call.Version, FileLimit: agents.MaxInlineFileBytes}
-		// One key per call. This surface refuses a caller's idempotency_key on a
-		// route verb, so a retry is a new call: the refusal says to read first.
-		if call.Verb.IdempotencyKey {
+		// The caller's key where its route claims one, else a fresh one if required.
+		in.IdempotencyKey = agents.RouteRetryKey(ctx)
+		if in.IdempotencyKey == "" && call.Verb.IdempotencyKey {
 			in.IdempotencyKey = ids.NewV7().String()
 		}
 		if call.Verb.Body {
