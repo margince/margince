@@ -44,7 +44,6 @@ type mailboxGrants interface {
 	// — so it cannot be answered by the scope lookup above, and a pre-flight
 	// that tried would report every channel send as ungranted.
 	ChannelSendCapable(ctx context.Context, provider string) (bool, error)
-	SendingMailboxes(ctx context.Context, userID ids.UserID, providers []string) ([]capture.SendingMailbox, error)
 	ChooseSendingMailbox(ctx context.Context, userID ids.UserID, from ids.UUID, anchor ids.ActivityID, providers []string,
 		canSend func(capture.SendingMailbox) (bool, error)) (capture.SendingMailbox, error)
 }
@@ -144,20 +143,10 @@ func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, an
 			configured, err := m.mailAppConfigured(ctx, mailbox.Provider)
 			return configured && slices.Contains(mailbox.ProviderScopes, scope), err
 		})
-	if err != nil {
-		return "", ids.Nil, err
-	}
-	if chosen.Provider != "" {
-		return chosen.Provider, chosen.ID, nil
-	}
-	held, err := m.grants.SendingMailboxes(ctx, ids.From[ids.UserKind](actor.UserID), comms.MailSendProviders())
-	if err != nil {
-		return "", ids.Nil, err
-	}
-	if len(held) == 0 {
+	if errors.Is(err, capture.ErrNoConnection) {
 		return "", ids.Nil, &activities.MailboxNotConnectedError{}
 	}
-	return "", ids.Nil, nil
+	return chosen.Provider, chosen.ID, err
 }
 
 func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (bool, error) {

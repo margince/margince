@@ -195,18 +195,7 @@ export function stubRoutes(
           meFixture({ allow: { activity: ["read", "create", "update"] } }),
         );
       }
-      if (key === "GET /connectors") {
-        return jsonResponse({
-          data: [
-            {
-              id: "conn-1",
-              provider: "gmail",
-              status: "connected",
-              scopes: [],
-            },
-          ],
-        });
-      }
+      if (key === "GET /connectors") return jsonResponse(CONNECTED_ROSTER);
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse(NO_VOICE_PROFILE);
       return jsonResponse({});

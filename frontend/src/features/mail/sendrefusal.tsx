@@ -42,7 +42,7 @@ function ConnectionsLink({ label }: Readonly<{ label: MessageKey }>) {
 
 /** The line for a send refused because the sender holds no mailbox. The
  *  composer draws it before a send when the roster already says so. */
-export function NoMailboxLine({ standing }: Readonly<{ standing?: boolean }>) {
+export function NoMailboxLine({ standing }: Readonly<{ standing?: true }>) {
   const t = useT();
   return (
     <ErrorLine

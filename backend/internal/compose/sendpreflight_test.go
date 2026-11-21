@@ -47,10 +47,6 @@ func (s *stubGrants) ChooseSendingMailbox(ctx context.Context, user ids.UserID, 
 	return capture.SendingMailbox{}, nil
 }
 
-func (s *stubGrants) SendingMailboxes(context.Context, ids.UserID, []string) ([]capture.SendingMailbox, error) {
-	return make([]capture.SendingMailbox, len(s.granted)+len(s.grantedFor)), s.err
-}
-
 func (s *stubGrants) GrantedScopesFor(_ context.Context, _ ids.UserID, provider string) ([]string, error) {
 	s.calls++
 	// Per provider when the case says so, which is what a choice BETWEEN
