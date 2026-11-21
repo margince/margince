@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useActivity } from "../../lib/activityread";
 import type { CommunicationContext } from "../../lib/compose-context";
 import { contact360Query } from "../../lib/contact.queries";
-import { dealChoicesOf } from "../mail/composedeal";
+import { dealChoicesOf } from "../../lib/dealchoices";
 
 export function useProposalContext(
   contactId: string,
