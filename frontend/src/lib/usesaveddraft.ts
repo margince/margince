@@ -6,13 +6,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * The draft of an input that saves when the reader leaves it.
  *
- * The cell keeps one identity through a save. The saved value replaces the
- * draft only once every save it sent has settled and nothing newer was typed,
- * so an earlier answer never erases a newer draft.
+ * The saved value replaces the draft only once every save it sent has
+ * settled and nothing newer was typed. So an earlier answer never erases a
+ * newer draft.
  *
- * MoneyInput formats the amount it is handed, and NumberSetting drops its
- * draft on any change of the value under a settings bar. Neither decides which
- * of draft and saved value wins, so this hook sits beside them, not over them.
+ * MoneyInput and NumberSetting do not decide which of draft and saved value
+ * wins, so this hook sits beside them.
  */
 export function useSavedDraft<Draft, Saved>({
   saved,

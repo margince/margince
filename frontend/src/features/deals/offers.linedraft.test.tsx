@@ -69,10 +69,9 @@ type Held = {
   answer: (status?: number) => void;
 };
 
-// A server that keeps the line as the PATCHes wrote it. Each PATCH waits until
-// the test answers it, and the most that were ever in flight together is
-// counted, because the line PATCH carries no version and the last request to
-// land wins.
+// A server that keeps the line as the PATCHes wrote it. Each PATCH waits for
+// the test to answer it. The line PATCH carries no version, so the last one
+// to land wins; the stub counts how many were ever in flight together.
 function stubServer(initial: Record<string, unknown>) {
   const held: Held[] = [];
   const state = { line: initial, inflight: 0, mostInflight: 0 };
