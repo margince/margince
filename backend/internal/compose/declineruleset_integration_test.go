@@ -88,6 +88,46 @@ func TestTheClassifyPassOffersAMessageDeclinedUnderAnotherPrompt(t *testing.T) {
 	}
 }
 
+// An unsure answer is final only for its prompt too: stamped under a retired
+// one, the message is asked again and labeled.
+func TestTheClassifyPassOffersAMessageFoundUnsureUnderAnotherPrompt(t *testing.T) {
+	e := integration.Setup(t)
+	stale := seedUnlabeledEmail(t, e, "please send the offer")
+	classifier, ctx := classifyPassFor(e, &scriptedClassifyBrain{})
+	backlog, err := classifier.store.UnlabeledCaptureMessages(ctx, capturelabel.Ruleset, 1, 1)
+	if err != nil || len(backlog) != 1 {
+		t.Fatalf("reading the seeded message: %v (%d rows)", err, len(backlog))
+	}
+	if recorded, err := classifier.store.MarkCaptureLabelUnsure(ctx, stale, retiredPrompt, backlog[0].Version); err != nil || !recorded {
+		t.Fatalf("recording the prior unsure answer: recorded=%v err=%v", recorded, err)
+	}
+	if err := classifier.RunWorkspace(ctx, 0); err != nil {
+		t.Fatalf("the pass failed: %v", err)
+	}
+	if labelOf(t, e, stale) == nil {
+		t.Error("a message found unsure under a retired prompt was not offered to the current one")
+	}
+}
+
+// The stamp is about the text the model read: a row whose version moved during
+// the call is not stamped, and is asked again.
+func TestAnUnsureStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
+	e := integration.Setup(t)
+	id := seedUnlabeledEmail(t, e, "please send the offer")
+	classifier, ctx := classifyPassFor(e, &scriptedClassifyBrain{})
+	backlog, err := classifier.store.UnlabeledCaptureMessages(ctx, capturelabel.Ruleset, 1, 1)
+	if err != nil || len(backlog) != 1 {
+		t.Fatalf("reading the seeded message: %v (%d rows)", err, len(backlog))
+	}
+	recorded, err := classifier.store.MarkCaptureLabelUnsure(ctx, id, capturelabel.Ruleset, backlog[0].Version-1)
+	if err != nil {
+		t.Fatalf("recording the unsure answer: %v", err)
+	}
+	if recorded || declinedUnder(t, e, id, "capture_label_declined_ruleset") != "" {
+		t.Error("an unsure answer about an older version of the message was stamped")
+	}
+}
+
 // Re-offering must not become the per-tick loop the stamp ended: a message the
 // current prompt declines too is asked once, re-stamped, and left alone.
 func TestTheClassifyPassRestampsAStaleDeclineOnce(t *testing.T) {

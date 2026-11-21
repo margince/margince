@@ -191,12 +191,9 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 // stops making progress. `what` names it in the log, so a pass that ends early
 // says which half ended.
 //
-// Bounded by the model calls it makes as well as by verdicts written, and the
-// second bound is the one that has to exist: a message the model will not
-// commit to stays unjudged and is read again, so a batch mixing one confident
-// row with nine abstentions makes progress by the verdict count and re-asks the
-// same nine every iteration. sweepCalls counts every call, a split batch's
-// included, so the bound holds whatever the batches do.
+// A message the models decline or stay unsure about is stamped and counts as
+// progress, so it is not read again under this prompt. sweepCalls still bounds
+// the calls, because a declined batch splits into one call per message.
 func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, next func() ([]owedCandidate, time.Time, error)) error {
 	judged := 0
 	calls := newSweepCalls(maxVerdicts, owedBatchSize)
@@ -222,8 +219,8 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 			return fmt.Errorf("owed classify: draining %s: %w", what, err)
 		}
 		if n == 0 {
-			// Every verdict stayed below the floor, so the same rows would come
-			// back forever. They wait for the next cycle.
+			// Nothing was judged or stamped, so the same rows would be read
+			// again. They wait for the next cycle.
 			c.log.InfoContext(ctx, "owed classify: batch made no progress, moving on",
 				"population", what)
 			return nil
@@ -236,13 +233,15 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 //
 // The per-call commit IS the checkpoint. A message below the floor is re-asked
 // on its own, as a different request from its batch, so the model answers it
-// afresh. One still below the floor afterwards is left unjudged rather than guessed.
-// A batch the models decline is asked message by message, so the one message
-// they will not judge is recorded declined and the rest of the batch proceeds.
+// afresh. One still below the floor afterwards is left unjudged rather than
+// guessed, and goes to unsure. A batch the models decline is asked message by
+// message. The one message they will not judge goes to decline, and the rest
+// proceed. Either callback reports whether it recorded the message.
 type owedPredictionSink struct {
 	assessed func(owedCandidate)
 	accept   func(context.Context, owedCandidate, owedResult) (bool, error)
-	decline  func(context.Context, owedCandidate, error) error
+	decline  func(context.Context, owedCandidate, error) (bool, error)
+	unsure   func(context.Context, owedCandidate) (bool, error)
 }
 
 // judgeBatch sends the model only messages with words of their own. One that is
@@ -266,13 +265,18 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			ask := owedverdict.VerbatimAsk(result.Verdict, result.Ask, msg.Body)
 			return c.store.SetOwedVerdictAsked(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt, ask)
 		},
-		decline: func(ctx context.Context, msg owedCandidate, cause error) error {
+		decline: func(ctx context.Context, msg owedCandidate, cause error) (bool, error) {
 			recorded, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
 			if err != nil {
-				return err
+				return false, err
 			}
 			c.log.WarnContext(ctx, "owed classify: the models declined one message, which stays unjudged", "activity_id", msg.ID, "recorded", recorded, "err", cause)
-			return nil
+			return recorded, nil
+		},
+		// An answer below the floor takes the decline stamp: the row stays
+		// unjudged, and this prompt would only be unsure about it again.
+		unsure: func(ctx context.Context, msg owedCandidate) (bool, error) {
+			return c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
 		},
 	})
 	return judged + len(batch) - len(worded), err
@@ -322,32 +326,16 @@ func (c *OwedClassifier) predictBatch(ctx context.Context, batch []owedCandidate
 }
 
 // predictEach asks about each message in its own call and commits a verdict
-// above the floor. A message every rung declines is that message's outcome: it
-// is recorded declined, which takes it out of both populations for this pass
-// and every later one, and the next message is asked.
+// above the floor. A message every rung declines goes to the sink, and so does
+// one whose solo answer is still below the floor. The sink stamps it out of
+// both populations until the prompt changes.
 func (c *OwedClassifier) predictEach(ctx context.Context, msgs []owedCandidate, calls *sweepCalls, sink owedPredictionSink) (int, error) {
 	judged := 0
 	for _, msg := range msgs {
 		if !calls.take() {
 			return judged, nil
 		}
-		solo, err := c.ask(ctx, []owedCandidate{msg})
-		if declinedByTheModels(err) {
-			if err := sink.decline(ctx, msg, err); err != nil {
-				return judged, err
-			}
-			continue
-		}
-		if err != nil {
-			return judged, err
-		}
-		if sink.assessed != nil {
-			sink.assessed(msg)
-		}
-		if len(solo) != 1 || solo[0].Confidence < owedConfidenceFloor {
-			continue
-		}
-		applied, err := sink.accept(ctx, msg, solo[0])
+		applied, err := c.predictOne(ctx, msg, sink)
 		if err != nil {
 			return judged, err
 		}
@@ -356,6 +344,24 @@ func (c *OwedClassifier) predictEach(ctx context.Context, msgs []owedCandidate, 
 		}
 	}
 	return judged, nil
+}
+
+// predictOne is one solo call and the one sink callback its outcome takes.
+func (c *OwedClassifier) predictOne(ctx context.Context, msg owedCandidate, sink owedPredictionSink) (bool, error) {
+	solo, err := c.ask(ctx, []owedCandidate{msg})
+	if declinedByTheModels(err) {
+		return sink.decline(ctx, msg, err)
+	}
+	if err != nil {
+		return false, err
+	}
+	if sink.assessed != nil {
+		sink.assessed(msg)
+	}
+	if len(solo) != 1 || solo[0].Confidence < owedConfidenceFloor {
+		return sink.unsure(ctx, msg)
+	}
+	return sink.accept(ctx, msg, solo[0])
 }
 
 // owedRequest builds the ONE model call that judges one batch.
