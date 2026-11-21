@@ -10,11 +10,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// WritePicklistRefusal answers a CHECK that holds a field to its options as a
-// refusal naming that field, and reports whether err was one. picklists maps a
-// module's own core picklist CHECK to its wire field; a custom picklist names
-// its own. Every other CHECK is left to Write, which tells the rest apart.
-func WritePicklistRefusal(w http.ResponseWriter, r *http.Request, err error, picklists map[string]string) bool {
+// WritePicklistRefusal answers a CHECK on table that holds a field to its
+// options as a refusal naming that field, and reports whether err was one.
+// picklists maps the table's core picklist CHECK to its wire field; a custom
+// picklist names its own. Every other CHECK is left to Write.
+func WritePicklistRefusal(w http.ResponseWriter, r *http.Request, err error, table string, picklists map[string]string) bool {
+	if violated, ok := storekit.ViolatedTable(err); !ok || violated != table {
+		return false
+	}
 	field, ok := storekit.PicklistViolation(err)
 	if !ok {
 		constraint, checked := storekit.CheckViolation(err)

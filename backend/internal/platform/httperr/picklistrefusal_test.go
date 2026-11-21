@@ -29,7 +29,7 @@ func TestAPicklistRefusalNamesTheField(t *testing.T) {
 		storekit.PicklistConstraint("cf_tier"): "cf_tier",
 	} {
 		rec := httptest.NewRecorder()
-		if !WritePicklistRefusal(rec, httptest.NewRequest(http.MethodPatch, "/v1/deals/x", nil), checkRefusal("deal", constraint), picklists) {
+		if !WritePicklistRefusal(rec, httptest.NewRequest(http.MethodPatch, "/v1/deals/x", nil), checkRefusal("deal", constraint), "deal", picklists) {
 			t.Fatalf("%s was not answered as a picklist refusal", constraint)
 		}
 		var body struct {
@@ -58,9 +58,11 @@ func TestEveryOtherCheckIsLeftToTheSharedNet(t *testing.T) {
 		{"deal", "member_work_reference_retired"},
 		{storekit.TableAudit, "audit_log_action_check"},
 		{"activity", activityRestrictedImmutable},
+		{"project", "deal_priority_check"},
+		{storekit.TableOutbox, storekit.PicklistConstraint("cf_secret")},
 	} {
 		rec := httptest.NewRecorder()
-		if WritePicklistRefusal(rec, httptest.NewRequest(http.MethodPatch, "/v1/deals/x", nil), checkRefusal(tc.table, tc.constraint), picklists) {
+		if WritePicklistRefusal(rec, httptest.NewRequest(http.MethodPatch, "/v1/deals/x", nil), checkRefusal(tc.table, tc.constraint), "deal", picklists) {
 			t.Errorf("%s was answered as a picklist refusal; httperr.Write must answer it", tc.constraint)
 		}
 	}

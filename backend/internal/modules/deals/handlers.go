@@ -114,7 +114,7 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 	if writeOfferTemplateConflict(w, r, err) {
 		return
 	}
-	if httperr.WritePicklistRefusal(w, r, err, dealPicklists) {
+	if httperr.WritePicklistRefusal(w, r, err, dealTable, dealPicklists) {
 		return
 	}
 	httperr.Write(w, r, err)

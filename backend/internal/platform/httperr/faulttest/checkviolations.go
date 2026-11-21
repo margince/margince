@@ -32,6 +32,8 @@ func AssertCheckViolationsReachTheSharedNet(t *testing.T, table string, write fu
 		{"a retention hold", "activity", "activity_restricted_immutable", http.StatusLocked, "locked", ""},
 		{"an audit row", storekit.TableAudit, "audit_log_action_check", http.StatusInternalServerError, "internal", ""},
 		{"an outbox row", storekit.TableOutbox, "event_outbox_stream_check", http.StatusInternalServerError, "internal", ""},
+		{"a custom picklist name on an outbox row", storekit.TableOutbox, storekit.PicklistConstraint("cf_secret"), http.StatusInternalServerError, "internal", ""},
+		{"a custom text bound name on an outbox row", storekit.TableOutbox, storekit.TextMaxConstraint("cf_secret", 20000), http.StatusInternalServerError, "internal", ""},
 		{"an unnamed rule", table, table + "_unnamed_rule", http.StatusUnprocessableEntity, "value_not_allowed", ""},
 	} {
 		rec := httptest.NewRecorder()

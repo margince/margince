@@ -132,7 +132,7 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 // in this package. The store answers the project's own CHECKs by name
 // (projectCheckError); a custom picklist is answered here, the rest by Write.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
-	if httperr.WritePicklistRefusal(w, r, err, nil) {
+	if httperr.WritePicklistRefusal(w, r, err, projectObject, nil) {
 		return
 	}
 	httperr.Write(w, r, err)
