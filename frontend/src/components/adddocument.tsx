@@ -162,17 +162,20 @@ export function AddDocumentDialog({
   // state: the upload succeeded, and the row exists.
   const [partial, setPartial] = useState(false);
 
-  // Read at the moment the request lands, not captured when it was sent. The
-  // mutation's callbacks close over the render that pressed the button, where
-  // the dialog was open by definition — so a plain `open` here would always be
-  // true and the guard below would never fire.
+  // One number per opening, null while shut. React Query finishes a mutation
+  // whoever left, so a result from an earlier opening leaves this draft alone.
   //
   // Written in an EFFECT, not during render: React may discard a render, and a
   // ref assigned in one publishes a value that was never committed.
-  const openNow = useRef(open);
+  const openings = useRef(0);
+  const session = useRef<number | null>(null);
   useEffect(() => {
-    openNow.current = open;
+    openings.current += open ? 1 : 0;
+    session.current = open ? openings.current : null;
   }, [open]);
+  const pressedIn = () => session.current;
+  const inSession = (pressed: number | null | undefined) =>
+    pressed != null && pressed === session.current;
 
   // What this installation accepts, so an oversize file is refused here rather
   // than after every byte of it has crossed the wire.
@@ -285,22 +288,17 @@ export function AddDocumentDialog({
         return { filed: false, home };
       }
     },
-    onSuccess: async (result) => {
+    onMutate: pressedIn,
+    onSuccess: async (result, _submitted, pressed) => {
+      const here = inSession(pressed);
       // Closed before the refetch, so a dialog reopened meanwhile keeps its draft.
-      if (result.filed) {
+      if (result.filed && here) {
         closeAndClear();
       }
       for (const queryKey of fileListKeys(result.home)) {
         await queryClient.invalidateQueries({ queryKey });
       }
-      if (result.filed) {
-        return;
-      }
-      // Guarded on the dialog still being open. React Query runs a mutation to
-      // completion whoever started it, so a reader who closed mid-flight would
-      // otherwise be met on their NEXT visit by a warning about an upload from
-      // the previous one, with nothing on screen it refers to.
-      if (!openNow.current) {
+      if (result.filed || !here) {
         return;
       }
       // Kept open, with the draft cleared: the document is on the record, so
@@ -315,8 +313,11 @@ export function AddDocumentDialog({
       const row = await addLink(submitted);
       return { ...submitted.parent, companyId: row.company_id };
     },
-    onSuccess: async (home) => {
-      closeAndClear();
+    onMutate: pressedIn,
+    onSuccess: async (home, _submitted, pressed) => {
+      if (inSession(pressed)) {
+        closeAndClear();
+      }
       for (const queryKey of fileListKeys(home)) {
         await queryClient.invalidateQueries({ queryKey });
       }

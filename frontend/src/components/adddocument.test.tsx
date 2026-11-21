@@ -715,6 +715,36 @@ describe("adding a document from the account", () => {
     expect(screen.queryByText(/Uploaded, but not filed/)).toBeNull();
   });
 
+  it("leaves a draft begun after reopening alone when the earlier upload lands", async () => {
+    const user = userEvent.setup();
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    stubApi(FULL_SEAT, { holdUpload: held, stampedCompany: "o-1" });
+    renderHosted();
+    const lists = shared ?? client();
+    lists.setQueryData(companyDocumentsKey("o-1"), { data: [] });
+
+    await user.upload(screen.getByLabelText(/File/), orderForm());
+    await pressUpload(user);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "reopen" }));
+    await user.type(await screen.findByLabelText(/Title/), "Second draft");
+
+    release?.();
+    // The list refresh comes after any change the result makes to the dialog.
+    await waitFor(() =>
+      expect(
+        lists.getQueryState(companyDocumentsKey("o-1"))?.isInvalidated,
+      ).toBe(true),
+    );
+    expect(screen.getByText("Add document")).toBeTruthy();
+    expect(screen.getByLabelText<HTMLInputElement>(/Title/).value).toBe(
+      "Second draft",
+    );
+  });
+
   it("calls a thrown metadata request a partial success, because the bytes are already stored", async () => {
     const user = userEvent.setup();
     stubApi(FULL_SEAT, { metadataThrows: true });
