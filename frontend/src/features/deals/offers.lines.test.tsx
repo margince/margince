@@ -187,6 +187,39 @@ describe("a line row", () => {
   });
 });
 
+describe("a saved line edit", () => {
+  // A save answers with a new line version; the row must not remount around a
+  // neighbouring cell the reader is still typing in.
+  it("keeps what is being typed in the same row when another cell saves", async () => {
+    const saved = { ...line1, quantity: 2, line_total_minor: 2999, version: 2 };
+    let answer: ((response: Response) => void) | undefined;
+    installFetchStub({
+      "GET /me": meRoute({ offer: ["read", "update"] }),
+      "GET /offers/o-1": () => jsonResponse(draft([line1])),
+      "PATCH /offers/o-1/line-items/li-1": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+    const quantity = screen.getByTestId("line-quantity-li-1");
+    await user.clear(quantity);
+    await user.type(quantity, "2");
+    await user.click(screen.getByTestId("line-description-li-1"));
+    await user.keyboard(" and travel");
+
+    await waitFor(() => expect(answer).toBeDefined());
+    answer?.(jsonResponse(draft([saved])));
+    // The saved line's own total shows once the answer is drawn.
+    expect(await screen.findByText("€29.99")).toBeTruthy();
+    const description = screen.getByTestId("line-description-li-1");
+    expect(description).toHaveProperty("value", "Consulting hours and travel");
+    expect(document.activeElement).toBe(description);
+  });
+});
+
 describe("a refused line edit", () => {
   const reason = "quantity must be greater than 0";
   const refusal = {

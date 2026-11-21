@@ -28,11 +28,20 @@ type LineField = keyof UpdateOfferLineItemRequest;
 
 export type LineRefusals = ReturnType<typeof useLineRefusals>;
 
+// What a cell was drawn from; billing's three controls redraw together.
+function savedOf(line: OfferLineItem, field: LineField): string {
+  if (field === "billing_model") {
+    return `${line.billing_model}/${line.billing_interval_months}/${line.interval_count}`;
+  }
+  return String(line[field]);
+}
+
 /**
  * The server's last refusal per line, shown in that line's row until the line
  * next saves. A cell keeps what was typed in its own buffer. Each refused
  * cell takes a new key, to mount again on the value the server still holds.
  * The counts only grow, so a refusal elsewhere never remounts a cell in use.
+ * A cell also mounts again when its own saved value changes, and only then.
  */
 export function useLineRefusals() {
   const [errors, setErrors] = useState<ReadonlyMap<string, string>>(new Map());
@@ -60,8 +69,8 @@ export function useLineRefusals() {
       });
     },
     errorOf: (lineItemId: string) => errors.get(lineItemId),
-    cellKey: (lineItemId: string, field: LineField) =>
-      `${field}:${resets.get(`${lineItemId}:${field}`) ?? 0}`,
+    cellKey: (line: OfferLineItem, field: LineField) =>
+      `${field}:${resets.get(`${line.id}:${field}`) ?? 0}:${savedOf(line, field)}`,
   };
 }
 
@@ -100,7 +109,7 @@ export function EditableLineTable({
     check?: (text: string) => string | undefined,
   ) => (
     <NumericCell
-      key={refusals.cellKey(line.id, field)}
+      key={refusals.cellKey(line, field)}
       value={line[field]}
       width={shape.width}
       testId={`${shape.testId}-${line.id}`}
@@ -133,7 +142,7 @@ export function EditableLineTable({
       header: t("offer.description"),
       render: (line: OfferLineItem) => (
         <DescriptionCell
-          key={refusals.cellKey(line.id, "description")}
+          key={refusals.cellKey(line, "description")}
           line={line}
           label={cellLabel(t("offer.description"), line)}
           onSave={save(line)}
@@ -145,7 +154,7 @@ export function EditableLineTable({
       header: t("offer.unit"),
       render: (line: OfferLineItem) => (
         <UnitCell
-          key={refusals.cellKey(line.id, "unit")}
+          key={refusals.cellKey(line, "unit")}
           line={line}
           label={cellLabel(t("offer.unit"), line)}
           onSave={save(line)}
@@ -171,7 +180,7 @@ export function EditableLineTable({
           <UnpricedCaption label={t("offer.unpriced")} />
         ) : (
           <UnitPriceCell
-            key={refusals.cellKey(line.id, "unit_price_minor")}
+            key={refusals.cellKey(line, "unit_price_minor")}
             line={line}
             currency={offer.currency}
             label={cellLabel(t("offer.unitPrice"), line)}
@@ -231,7 +240,7 @@ export function EditableLineTable({
       header: t("product.billingModel"),
       render: (line: OfferLineItem) => (
         <BillingCell
-          key={refusals.cellKey(line.id, "billing_model")}
+          key={refusals.cellKey(line, "billing_model")}
           line={line}
           label={(column) => cellLabel(column, line)}
           onSave={save(line)}
@@ -265,7 +274,7 @@ export function EditableLineTable({
       label={t("offer.lines")}
       columns={columns}
       rows={offer.line_items}
-      rowKey={(line) => `${line.id}:${line.version ?? 0}`}
+      rowKey={(line) => line.id}
       rowTestId={(line) => `line-row-${line.id}`}
     />
   );
