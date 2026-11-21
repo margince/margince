@@ -9,9 +9,9 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { MultiSelect } from "../../design-system/select";
+import { ACTIVITY_KIND_LABEL } from "../../design-system/timelineentry";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { customFieldsQuery } from "../../lib/customfields.query";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -21,19 +21,8 @@ type ActivityKind = NonNullable<
   components["schemas"]["RenameCustomFieldRequest"]["activity_kinds"]
 >[number];
 
-// Every kind the contract takes, by its label. Keyed by the generated kind
-// union, so a kind the contract adds fails the build until it has a label.
-const KIND_LABEL = {
-  note: "timeline.kind.note",
-  task: "timeline.kind.task",
-  call: "timeline.kind.call",
-  meeting: "timeline.kind.meeting",
-  email: "timeline.kind.email",
-  message: "timeline.kind.message",
-} as const satisfies Record<ActivityKind, MessageKey>;
-
 function isActivityKind(value: string): value is ActivityKind {
-  return Object.hasOwn(KIND_LABEL, value);
+  return Object.hasOwn(ACTIVITY_KIND_LABEL, value);
 }
 
 /** The chosen values as the wire's kind list, without a word it does not take. */
@@ -59,9 +48,12 @@ export function ActivityKindsSelect({
   return (
     <MultiSelect
       {...aria}
-      options={Object.keys(KIND_LABEL)
+      options={Object.keys(ACTIVITY_KIND_LABEL)
         .filter(isActivityKind)
-        .map((kind) => ({ value: kind, label: t(labelFor(KIND_LABEL, kind)) }))}
+        .map((kind) => ({
+          value: kind,
+          label: t(labelFor(ACTIVITY_KIND_LABEL, kind)),
+        }))}
       values={values}
       onChange={onChange}
       disabled={disabled}

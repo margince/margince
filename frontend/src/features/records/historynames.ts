@@ -7,7 +7,9 @@ import type { components } from "../../api/schema";
 import { entityNameObserverQuery } from "../../components/entityref.queries";
 import { useLocale } from "../../i18n";
 import { translatedPipeline } from "../../lib/labeltranslation";
+import { useLeadDisqualifyReasons } from "../../lib/leaddisqualifyreasons";
 import { useMemberNames } from "../../lib/membernames";
+import { usePartnerStages } from "../../lib/partnerstages.queries";
 import {
   pipelinesOptions,
   pipelinesWithArchivedOptions,
@@ -21,7 +23,7 @@ type Pipeline = components["schemas"]["Pipeline"];
 // rest of the page names that kind of record with.
 const ID_FIELD_KINDS = new Map<
   string,
-  "member" | "stage" | "company" | "project"
+  "member" | "stage" | "company" | "project" | "leadReason" | "partnerStage"
 >([
   ["owner_id", "member"],
   ["assignee_id", "member"],
@@ -30,6 +32,8 @@ const ID_FIELD_KINDS = new Map<
   ["parent_company_id", "company"],
   ["partner_company_id", "company"],
   ["project_id", "project"],
+  ["disqualify_reason_id", "leadReason"],
+  ["relationship_stage", "partnerStage"],
 ]);
 
 /**
@@ -43,7 +47,10 @@ export function useHistoryNameOf(
   const { locale } = useLocale();
   const kind = ID_FIELD_KINDS.get(field);
   const ids = kind
-    ? values.filter((value): value is string => !!value && isUuid(value))
+    ? values.filter(
+        (value): value is string =>
+          !!value && (kind === "partnerStage" || isUuid(value)),
+      )
     : [];
   const members = useMemberNames(kind === "member" ? ids : []);
   const records = useQueries({
@@ -52,6 +59,8 @@ export function useHistoryNameOf(
         ? ids.map((id) => entityNameObserverQuery(kind, id))
         : [],
   });
+  const reasons = useLeadDisqualifyReasons(kind === "leadReason");
+  const partnerStages = usePartnerStages(kind === "partnerStage");
   const nameStages = useCallback(
     (pipelines: readonly Pipeline[]) =>
       stageNames(
@@ -82,5 +91,11 @@ export function useHistoryNameOf(
     named.get(id) ??
     (kind === "stage"
       ? (live.data?.get(id) ?? archived.data?.get(id))
+      : undefined) ??
+    (kind === "partnerStage"
+      ? partnerStages.data?.find((stage) => stage.key === id)?.label
+      : undefined) ??
+    (kind === "leadReason"
+      ? reasons.data?.find((reason) => reason.id === id)?.label
       : undefined);
 }
