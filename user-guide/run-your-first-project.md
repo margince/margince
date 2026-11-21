@@ -209,7 +209,7 @@ Margince can show that.
    Under **Companies**, press **Attach company**.
 2. Search for *DACHPartner GmbH* and select it in the results. Selecting does
    not attach it, and the dialog stays open.
-3. Under **As**, leave **Partner**.
+3. Under **As**, select **Partner**.
 4. Press **Attach company**. The dialog closes and the company is on the
    project.
 
