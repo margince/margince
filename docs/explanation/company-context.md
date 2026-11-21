@@ -95,8 +95,9 @@ For a described installation, the app's onboarding gate sends a human here while
 missing or not finished. It asks only where the `onboarding` rollout stage is on, and only for a seat
 that may create a voice profile or an activity. So a read seat is never sent here, since it cannot write
 the checkpoint the journey ends on. A failed read of the wizard state holds nobody: the shell renders,
-and the next load asks again. A member invited later whose seat may create a voice profile sets up their
-voice and connects their mailbox, as the creator did. Any other member starts at Connect.
+and the next load asks again. A member invited later whose seat may create a voice profile is offered the
+same voice setup and mailbox connection as the creator, and may skip either. Any other member starts at
+Connect.
 
 When a user finishes, the browser keeps that fact for them until sign-out. On the next load the app
 then shows without waiting for the wizard state. The read still runs, and a state that is not
