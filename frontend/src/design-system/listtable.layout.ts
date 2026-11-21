@@ -221,11 +221,13 @@ export function columnLayout(
   const shared = shown.filter((column) => fixedWidth(column) === undefined);
   const growsFirst = (column: SizedColumn) =>
     fixedWidth(column) === undefined && boundsAt(column).first !== undefined;
-  const othersNeed = (column: SizedColumn) =>
-    growsFirst(column) ? 0 : (fixedWidth(column) ?? boundsAt(column).min);
+  const takenFromRoom = (column: SizedColumn) =>
+    growsFirst(column)
+      ? boundsAt(column).min - sizeOf(column).min
+      : (fixedWidth(column) ?? boundsAt(column).min);
   const roomFirst =
     (available -
-      shown.reduce((total, column) => total + othersNeed(column), 0)) /
+      shown.reduce((total, column) => total + takenFromRoom(column), 0)) /
     Math.max(1, shown.filter(growsFirst).length);
   const limitsOf = (column: SizedColumn): ColumnSize => {
     const size = boundsAt(column);

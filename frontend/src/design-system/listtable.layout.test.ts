@@ -75,6 +75,18 @@ describe("columnLayout", () => {
     ]);
   });
 
+  it("splits only the room a measured figure leaves between two identity columns", () => {
+    const pair: SizedColumn[] = [
+      { key: "name", fixed: true, numeric: true },
+      { key: "alias", fixed: true },
+      { key: "status" },
+    ];
+    const floors = { held: { name: 350 }, onScreen: { name: 350 } };
+    const layout = columnLayout(pair, {}, 730, floors);
+    expect(px(layout.widthOf(pair[0]))).toBeGreaterThanOrEqual(350);
+    expect(layout.floor).toBeCloseTo(730);
+  });
+
   it("gives a dragged identity column no room ahead of the others", () => {
     const layout = columnLayout(catalogue, { name: 300 }, 806);
     expect(layout.widthOf(catalogue[0])).toBe("300px");
