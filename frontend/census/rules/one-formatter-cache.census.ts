@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// An Intl formatter is built in `src/format/formatters.ts` and nowhere else.
-// Building one costs far more than a format() call, and a list page renders
-// the same question per row; the cache there builds each formatter once.
-//
-// The formatter names come from `intlFormatters()`, so a new Intl kind is
-// covered without a list here. The `toLocale*String` methods build a formatter
-// on every call, so they count as one. Tests and stories may build their own: they
-// render nothing a reader sees, and some build one to compare against.
+// An Intl formatter is built only in `src/format/formatters.ts`, which keeps
+// each one. A list page asks the same question per row.
+// Formatter names come from `intlFormatters()`. Each `toLocale*String` call
+// builds a formatter, so it counts as one.
+// Tests and stories may build their own. They show nothing to a reader.
 
 import ts from "typescript";
 import { stable } from "../../src/format/collate";

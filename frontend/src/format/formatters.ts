@@ -76,8 +76,8 @@ export function dateTimeFormat(
 }
 
 /**
- * A date formatter in a fixed tag, for output read back as numbers and never
- * shown: en-CA writes YYYY-MM-DD, en-US with h23 a wall clock to parse.
+ * A date formatter in a fixed tag, for output read back as numbers. It is
+ * never shown. en-CA writes YYYY-MM-DD; en-US with h23 writes a wall clock.
  */
 export function pinnedDateTimeFormat(
   tag: "en-CA" | "en-US",
