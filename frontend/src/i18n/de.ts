@@ -14396,6 +14396,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ihre Antwort wurde erfasst. Das zuständige Team bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
     "Dieser Link ist nicht mehr gültig. Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
+  "confirm.deadLinkBody":
+    "Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
   "confirm.questionChanged":
     "Die Frage auf dieser Seite hat sich geändert, nachdem Sie sie geöffnet haben. Laden Sie die Seite neu und antworten Sie noch einmal.",
   "prefs.lockedWhy":
