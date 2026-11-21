@@ -19,7 +19,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -149,23 +148,8 @@ func (s *Store) writeCompanyInTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, active []fieldcatalog.Column,
 ) (recordEdit[crmcontracts.Company], error) {
 	var none recordEdit[crmcontracts.Company]
-	if err := auth.EnsureChangeable(ctx, tx, "company", id.UUID); err != nil {
-		return none, err
-	}
-	if err := lockCompanyNameWritesForEdit(ctx, tx, in); err != nil {
-		return none, err
-	}
-	current, err := readCompanyRow(ctx, tx, id, storekit.LiveOnly, active)
+	current, err := readCompanyToEdit(ctx, tx, id, in, active)
 	if err != nil {
-		return none, fmt.Errorf("read company before update: %w", err)
-	}
-	if err := refuseUnreadableCompany(current, in); err != nil {
-		return none, err
-	}
-	if err := checkCompanyEditText(ctx, current, in); err != nil {
-		return none, err
-	}
-	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 		return none, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
@@ -207,35 +191,12 @@ func (s *Store) writeCompanyInTx(
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 		return none, companyPatchRefusal(err, in)
 	}
-	if err := s.relocateIfAddressMoved(ctx, tx, id, p); err != nil {
+	if err := s.followCompanyWrite(ctx, tx, id, p, in, by); err != nil {
 		return none, err
-	}
-	if err := recordCompanyUpdate(ctx, tx, id, p, in, by); err != nil {
-		return none, err
-	}
-	if _, renamed := p.Moved()[fieldDisplayName]; renamed {
-		if err := s.followAnchorNameTx(ctx, tx, id); err != nil {
-			return none, err
-		}
 	}
 	owner := ownerAfterEdit(p, (*ids.UUID)(current.OwnerId), in.OwnerID)
 	return recordEdit[crmcontracts.Company]{current: current, changed: true},
 		s.followShareOwnerTx(ctx, tx, entityCompany, id.UUID, (*ids.UUID)(current.OwnerId), owner)
-}
-
-// companyPatchRefusal names the constraint a company write broke, or wraps the
-// error when it broke none this edit knows.
-func companyPatchRefusal(err error, in UpdateCompanyInput) error {
-	if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
-		return &RequiredFieldError{Field: filterOwnerID}
-	}
-	if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
-		return &DuplicateCompanyLinkedInError{URL: deref(in.LinkedInURL)}
-	}
-	if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companySourceKey {
-		return fmt.Errorf("a company with this source_system and source_id already exists: %w", apperrors.ErrConflict)
-	}
-	return fmt.Errorf("apply company patch: %w", err)
 }
 
 // recordCompanyUpdate is everything the write OWES once it has landed: the

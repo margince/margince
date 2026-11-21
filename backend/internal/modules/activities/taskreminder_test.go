@@ -7,7 +7,6 @@ import (
 	"slices"
 	"testing"
 	"time"
-
 	// The zone database, so the Berlin cases read the same on every machine.
 	_ "time/tzdata"
 
