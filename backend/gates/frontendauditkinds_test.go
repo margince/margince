@@ -14,6 +14,7 @@ package gates
 
 import (
 	"cmp"
+	"fmt"
 	"go/ast"
 	"go/constant"
 	"path/filepath"
@@ -43,10 +44,11 @@ var runtimeTypedAuditWriters = map[string]func(t *testing.T) []string{
 	"backend/internal/modules/identity/grantmerge.go:foldGrant":           recordTypeNames,
 	"backend/internal/modules/identity/grantmerge.go:auditUnshareByMerge": recordTypeNames,
 	"backend/internal/modules/recordlinks/write.go:recordLinkChange":      recordTypeNames,
-	// A restore names the record it brings back.
-	"backend/internal/platform/database/storekit/unarchive.go:Unarchive": recordTypeNames,
+	// The claim route's record type comes off the URL; the store refuses any
+	// but a contact, company or lead.
+	"backend/internal/contracts/api_gen.go:ClaimRecord": recordTypeNames,
 	// A confirmation is about the contact or lead a send is addressed to.
-	"backend/internal/modules/consent/lawfulbasiswarning.go:confirmOneTx":       recordTypeNames,
+	"backend/internal/modules/consent/lawfulbasiswarning.go:confirmOneTx":       confirmedSubjectKinds,
 	"backend/internal/modules/contacts/mergekindid.go:auditDeclaredMoves":       declaredRelinkedEntities,
 	"backend/internal/modules/privacy/erasure_declared.go:redactDeclaredTables": declaredErasedEntities,
 	"backend/internal/modules/privacy/retentionactions.go:apply":                retentionDispatchObjects,
@@ -109,6 +111,40 @@ func retentionDispatchObjects(t *testing.T) []string {
 }
 
 func noCoreTypes(*testing.T) []string { return nil }
+
+// confirmedSubjectKinds reads the kinds requireSubjectVisible admits, from the
+// cases of its switch. A confirmation of any other kind is refused there.
+func confirmedSubjectKinds(t *testing.T) []string {
+	t.Helper()
+	var kinds []string
+	for _, pkg := range typedModule(t) {
+		if pkg.path != modulePath+"/internal/modules/consent" {
+			continue
+		}
+		for _, file := range pkg.files {
+			for _, decl := range file.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok || fn.Name.Name != "requireSubjectVisible" {
+					continue
+				}
+				ast.Inspect(fn.Body, func(n ast.Node) bool {
+					if clause, isCase := n.(*ast.CaseClause); isCase {
+						for _, expr := range clause.List {
+							if value, isConst := auditConstString(pkg.info, expr); isConst {
+								kinds = append(kinds, value)
+							}
+						}
+					}
+					return true
+				})
+			}
+		}
+	}
+	if len(kinds) == 0 {
+		t.Fatal("consent's requireSubjectVisible admits no constant kind, the vocabulary this gate reads for confirmOneTx")
+	}
+	return kinds
+}
 
 // auditPackageMapKeys reads the constant keys of a package-level map literal.
 func auditPackageMapKeys(t *testing.T, pkgPath, name string) []string {
@@ -192,6 +228,10 @@ func TestEveryAuditedRecordTypeHasWordsInTheAuditLog(t *testing.T) {
 	for _, at := range census.asValue {
 		t.Errorf("%s hands an audit writer on as a value, so the calls made through it are not read: call it directly", at)
 	}
+	for _, key := range census.unreadInterfaces {
+		t.Errorf("%s shares a writer's name and signature, and no module type is read to reach the writer through it: "+
+			"implement it with a module type, or rename the method", key)
+	}
 	for _, at := range census.directInserts {
 		t.Errorf("%s sends its own INSERT into audit_log, which this gate does not follow: call a storekit writer", at)
 	}
@@ -211,7 +251,10 @@ func TestEveryAuditedRecordTypeHasWordsInTheAuditLog(t *testing.T) {
 			delete(written, value)
 		}
 	}
-	worded, owned := auditKindLabels(t)
+	worded, owned, problems := auditKindLabels(t, frontendAuditPage, frontendAuditKinds, frontendSearchKinds)
+	for _, problem := range problems {
+		t.Error(problem)
+	}
 	if len(written) == 0 || len(owned) == 0 {
 		t.Fatalf("read %d audited types and %d owned labels, and an empty side agrees with everything", len(written), len(owned))
 	}
@@ -230,11 +273,11 @@ func TestEveryAuditedRecordTypeHasWordsInTheAuditLog(t *testing.T) {
 // auditKindLabels reads KIND_LABELS in audit.tsx: the types it has words for,
 // and the ones whose words it owns. It spreads the search kinds, which search
 // owns, so those count as words but never as stale.
-func auditKindLabels(t *testing.T) (worded, owned map[string]bool) {
+func auditKindLabels(t *testing.T, page, kinds, search string) (worded, owned map[string]bool, problems []string) {
 	t.Helper()
-	source, err := gatekit.ReadFile(frontendAuditPage)
+	source, err := gatekit.ReadFile(page)
 	if err != nil {
-		t.Fatalf("reading %s: %v", frontendAuditPage, err)
+		t.Fatalf("reading %s: %v", page, err)
 	}
 	text := tsWithoutComments(string(source))
 	at := indexAfter(text, "const KIND_LABELS")
@@ -243,11 +286,11 @@ func auditKindLabels(t *testing.T) (worded, owned map[string]bool) {
 		open = strings.Index(text[at:], "([")
 	}
 	if open < 0 {
-		t.Fatalf("%s no longer builds KIND_LABELS as new Map([...]), the shape this gate reads", frontendAuditPage)
+		t.Fatalf("%s no longer builds KIND_LABELS as new Map([...]), the shape this gate reads", page)
 	}
 	body, ok := tsBalanced(text[at+open+1:])
 	if !ok {
-		t.Fatalf("%s: KIND_LABELS is unterminated", frontendAuditPage)
+		t.Fatalf("%s: KIND_LABELS is unterminated", page)
 	}
 	worded, owned = map[string]bool{}, map[string]bool{}
 	for _, item := range tsTopLevel(body) {
@@ -255,11 +298,11 @@ func auditKindLabels(t *testing.T) (worded, owned map[string]bool) {
 		switch {
 		case item == "":
 		case item == "...Object.entries(AUDIT_KIND_LABEL)":
-			for key := range tsKeySet(t, tsObjectEntries(t, frontendAuditKinds, "export const AUDIT_KIND_LABEL")) {
+			for key := range tsKeySet(t, tsObjectEntries(t, kinds, "export const AUDIT_KIND_LABEL")) {
 				worded[key], owned[key] = true, true
 			}
 		case item == "...Object.entries(SEARCH_HIT_KIND_KEY)":
-			for key := range tsKeySet(t, tsObjectEntries(t, frontendSearchKinds, "export const SEARCH_HIT_KIND_KEY")) {
+			for key := range tsKeySet(t, tsObjectEntries(t, search, "export const SEARCH_HIT_KIND_KEY")) {
 				worded[key] = true
 			}
 		case strings.HasPrefix(item, "["):
@@ -267,8 +310,8 @@ func auditKindLabels(t *testing.T) (worded, owned map[string]bool) {
 			key := strings.Trim(strings.TrimSpace(pair[0]), `"'`)
 			worded[key], owned[key] = true, true
 		default:
-			t.Errorf("KIND_LABELS in %s holds %q, which this gate does not read", frontendAuditPage, item)
+			problems = append(problems, fmt.Sprintf("KIND_LABELS in %s holds %q, which this gate does not read", page, item))
 		}
 	}
-	return worded, owned
+	return worded, owned, problems
 }

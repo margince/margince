@@ -280,6 +280,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `audienceretractioncallers_test.go` | H3 | activities.RetractDerivedForActivityTx documents that it is not atomic with the narrowing it follows, and the sentence is only true while every caller is an async consumer reacting to a committed audience change. |
 | `auditbeforeimage_test.go` | H2 | An audited update says what it changed from. |
 | `auditentitycensus_fixture_test.go` | H2 | The audit census reads, refuses or reports each Go shape it has met, on planted packages type-checked the way the module is. |
+| `auditkindsplanted_test.go` | H2 | The two readers behind the audit kinds gate, on planted migrations and planted TypeScript: each shape is read, or refused rather than guessed. |
 | `audittraildoor_test.go` | H2 | The audit trail is a second door onto an activity's content, and every reader of it says what it does about a held one. |
 | `automatictaskwriters_test.go` | H2 | Every native writer of an activity row, and every reader of open tasks, found in the code of the whole backend tree. |
 | `basecurrencyguard_test.go` | H2 | Every table with an fx\_rate\_to\_base column is on the base-currency lock's list. |

@@ -75,8 +75,7 @@ func (r *auditResolver) resolve(expr ast.Expr) (auditResolved, bool) {
 		return r.resolveLocal(v)
 	case *ast.SelectorExpr:
 		field, ok := info.Uses[node.Sel].(*types.Var)
-		if !ok || !field.IsField() || field.Exported() || r.visiting[field.Origin()] {
-			// An exported field may be filled by a decoder, which no syntax shows.
+		if !ok || !field.IsField() || r.visiting[field.Origin()] {
 			return auditResolved{}, false
 		}
 		r.visiting[field.Origin()] = true
@@ -220,7 +219,7 @@ func (r *auditResolver) resolveResult(call *ast.CallExpr, i int) (auditResolved,
 	keys := []string{callee.Origin().FullName()}
 	if recv := callee.Signature().Recv(); recv != nil && types.IsInterface(recv.Type()) {
 		iface, _ := recv.Type().Underlying().(*types.Interface)
-		keys = r.index.implementations(callee.Name(), iface)
+		keys = r.index.implementations(callee, iface)
 	}
 	var out auditResolved
 	for _, key := range keys {
@@ -292,122 +291,12 @@ func auditCallee(info *types.Info, call *ast.CallExpr) *types.Func {
 	return fn
 }
 
-// resolveField reads an unexported field by every value its package gives it.
-// No decoder or scanner can set an unexported field without taking its
-// address, so the package's own syntax holds every write.
-func (r *auditResolver) resolveField(field *types.Var) (auditResolved, bool) {
-	var pkg *typedPackage
-	for i := range r.index.pkgs {
-		if r.index.pkgs[i].path == field.Pkg().Path() {
-			pkg = &r.index.pkgs[i]
-		}
-	}
-	if pkg == nil {
-		return auditResolved{}, false
-	}
-	var out auditResolved
-	ok := true
-	for _, file := range pkg.files {
-		for _, decl := range file.Decls {
-			fn, _ := decl.(*ast.FuncDecl)
-			inner := &auditResolver{index: r.index, pkg: pkg, decl: fn, forwards: true, visiting: r.visiting}
-			ast.Inspect(decl, func(n ast.Node) bool {
-				read, readable, found := inner.fieldWrite(field, n)
-				if found {
-					ok = ok && readable
-					out = out.and(read)
-				}
-				return ok
-			})
-		}
-	}
-	return out, ok
-}
-
-// fieldWrite reads the value node gives field, when node writes it.
-func (r *auditResolver) fieldWrite(field *types.Var, n ast.Node) (read auditResolved, readable, found bool) {
-	info := r.pkg.info
-	is := func(e ast.Expr) bool {
-		sel, ok := ast.Unparen(e).(*ast.SelectorExpr)
-		if !ok {
-			return false
-		}
-		used, ok := info.Uses[sel.Sel].(*types.Var)
-		return ok && used.Origin() == field
-	}
-	switch node := n.(type) {
-	case *ast.CompositeLit:
-		value, has := compositeField(info, node, field)
-		if !has {
-			return auditResolved{}, false, false
-		}
-		if r.decl == nil {
-			read, readable = r.packageLevel(value)
-		} else {
-			read, readable = r.resolve(value)
-		}
-		return read, readable, true
-	case *ast.AssignStmt:
-		for i, lhs := range node.Lhs {
-			if !is(lhs) {
-				continue
-			}
-			if len(node.Rhs) != len(node.Lhs) || node.Tok != token.ASSIGN || r.decl == nil {
-				return auditResolved{}, false, true
-			}
-			read, readable = r.resolve(node.Rhs[i])
-			return read, readable, true
-		}
-	case *ast.UnaryExpr:
-		return auditResolved{}, false, node.Op == token.AND && is(node.X)
-	case *ast.IncDecStmt:
-		return auditResolved{}, false, is(node.X)
-	case *ast.RangeStmt:
-		return auditResolved{}, false, is(node.Key) || node.Value != nil && is(node.Value)
-	}
-	return auditResolved{}, false, false
-}
-
 // packageLevel reads a value written outside every function: a constant only.
 func (r *auditResolver) packageLevel(value ast.Expr) (auditResolved, bool) {
 	if s, ok := auditConstString(r.pkg.info, value); ok {
 		return auditResolved{values: []string{s}}, true
 	}
 	return auditResolved{}, false
-}
-
-// compositeField is the value a composite literal gives field, keyed or by
-// position.
-func compositeField(info *types.Info, lit *ast.CompositeLit, field *types.Var) (ast.Expr, bool) {
-	tv, ok := info.Types[lit]
-	if !ok {
-		return nil, false
-	}
-	st, ok := tv.Type.Underlying().(*types.Struct)
-	if !ok {
-		return nil, false
-	}
-	at := -1
-	for i := range st.NumFields() {
-		if st.Field(i).Origin() == field {
-			at = i
-		}
-	}
-	if at < 0 {
-		return nil, false
-	}
-	for i, elt := range lit.Elts {
-		if kv, keyed := elt.(*ast.KeyValueExpr); keyed {
-			if key, isIdent := kv.Key.(*ast.Ident); isIdent && key.Name == field.Name() {
-				return kv.Value, true
-			}
-			continue
-		}
-		if i == at {
-			return elt, true
-		}
-	}
-	return nil, false
 }
 
 // rangedOver reads a range statement's value variable over a package-level
@@ -430,24 +319,31 @@ func (r *auditResolver) rangedOver(ident *ast.Ident, node *ast.RangeStmt) (audit
 	return r.packageList(list)
 }
 
-// packageList reads a package-level variable's elements, refusing one its
-// package assigns or hands out by address.
+// packageList reads a package-level variable's elements. The list must be
+// unexported, so only its package can name it. Every use there must range
+// over it or read one element; any other use could change it.
 func (r *auditResolver) packageList(list *types.Var) (auditResolved, bool) {
+	if list.Exported() {
+		return auditResolved{}, false
+	}
 	var init *ast.CompositeLit
 	changed := false
 	for _, file := range r.pkg.files {
+		var stack []ast.Node
 		ast.Inspect(file, func(n ast.Node) bool {
-			switch node := n.(type) {
-			case *ast.ValueSpec:
-				for i, name := range node.Names {
-					if r.pkg.info.Defs[name] == list && i < len(node.Values) {
-						init, _ = ast.Unparen(node.Values[i]).(*ast.CompositeLit)
-					}
-				}
-			case *ast.AssignStmt:
-				changed = changed || slices.ContainsFunc(node.Lhs, func(e ast.Expr) bool { return auditNames(r.pkg.info, e, list) })
-			case *ast.UnaryExpr:
-				changed = changed || node.Op == token.AND && auditNames(r.pkg.info, node.X, list)
+			if n == nil {
+				stack = stack[:len(stack)-1]
+				return true
+			}
+			stack = append(stack, n)
+			ident, ok := n.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			if r.pkg.info.Defs[ident] == list {
+				init = packageListInit(stack, ident)
+			} else if r.pkg.info.Uses[ident] == list && !readsOnly(stack) {
+				changed = true
 			}
 			return true
 		})
@@ -469,16 +365,42 @@ func (r *auditResolver) packageList(list *types.Var) (auditResolved, bool) {
 	return out, true
 }
 
-// auditNames reports whether e names v, alone or indexed.
-func auditNames(info *types.Info, e ast.Expr, v *types.Var) bool {
-	for {
-		switch node := ast.Unparen(e).(type) {
-		case *ast.Ident:
-			return info.Uses[node] == v
-		case *ast.IndexExpr:
-			e = node.X
-		default:
-			return false
+// packageListInit is the composite literal a package-level declaration gives
+// ident, or nil.
+func packageListInit(stack []ast.Node, ident *ast.Ident) *ast.CompositeLit {
+	spec, ok := stack[len(stack)-2].(*ast.ValueSpec)
+	if !ok {
+		return nil
+	}
+	for i, name := range spec.Names {
+		if name == ident && i < len(spec.Values) {
+			lit, _ := ast.Unparen(spec.Values[i]).(*ast.CompositeLit)
+			return lit
 		}
 	}
+	return nil
+}
+
+// readsOnly reports whether the name on top of stack is ranged over, or read
+// at one index that nothing assigns or takes the address of.
+func readsOnly(stack []ast.Node) bool {
+	name := stack[len(stack)-1]
+	switch parent := stack[len(stack)-2].(type) {
+	case *ast.RangeStmt:
+		return parent.X == name
+	case *ast.IndexExpr:
+		if parent.X != name {
+			return false
+		}
+		switch holder := stack[len(stack)-3].(type) {
+		case *ast.AssignStmt:
+			return !slices.Contains(holder.Lhs, ast.Expr(parent))
+		case *ast.UnaryExpr:
+			return holder.Op != token.AND
+		case *ast.IncDecStmt:
+			return false
+		}
+		return true
+	}
+	return false
 }

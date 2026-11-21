@@ -40,9 +40,10 @@ func auditMigrationTypes(t *testing.T, root string) (types map[string]string, op
 		sql := sqlLineComment.ReplaceAllString(string(source), " ")
 		for _, at := range auditInsertAnywhere.FindAllStringIndex(sql, -1) {
 			rest := sql[at[1]:]
-			if end := strings.Index(rest, ";"); end >= 0 {
+			if end := topLevelWord(rest, ""); end >= 0 {
 				rest = rest[:end]
 			}
+			rest = withoutTrailingClauses(rest)
 			// No column list means the entity type's position cannot be read.
 			column := -1
 			if list := auditColumnList.FindStringSubmatchIndex(rest); list != nil {
@@ -149,22 +150,44 @@ func entityLiterals(item string) ([]string, bool) {
 
 // topLevelFrom is where a select list's `FROM` starts, outside parentheses.
 func topLevelFrom(list string) int {
+	return topLevelWord(list, "FROM")
+}
+
+// topLevelWord is where word starts in sql, outside parentheses and quotes,
+// or -1. A word of "" finds the first semicolon there instead.
+func topLevelWord(sql, word string) int {
 	depth := 0
-	upper := strings.ToUpper(list)
+	upper := strings.ToUpper(sql)
 	quoted := false
-	for i := 0; i < len(list); i++ {
-		switch list[i] {
-		case '\'':
+	for i := 0; i < len(sql); i++ {
+		switch {
+		case sql[i] == '\'':
 			quoted = !quoted
-		case '(':
+		case quoted:
+		case sql[i] == '(':
 			depth++
-		case ')':
+		case sql[i] == ')':
 			depth--
-		}
-		if !quoted && depth == 0 && strings.HasPrefix(upper[i:], "FROM") && (i == 0 || !isWordByte(list[i-1])) &&
-			(i+4 == len(list) || !isWordByte(list[i+4])) {
+		case depth != 0:
+		case word == "":
+			if sql[i] == ';' {
+				return i
+			}
+		case strings.HasPrefix(upper[i:], word) && (i == 0 || !isWordByte(sql[i-1])) &&
+			(i+len(word) == len(sql) || !isWordByte(sql[i+len(word)])):
 			return i
 		}
 	}
 	return -1
+}
+
+// withoutTrailingClauses cuts an INSERT body at its ON CONFLICT or RETURNING
+// clause, which names no row.
+func withoutTrailingClauses(body string) string {
+	for _, word := range []string{"ON CONFLICT", "RETURNING"} {
+		if at := topLevelWord(body, word); at >= 0 {
+			body = body[:at]
+		}
+	}
+	return body
 }

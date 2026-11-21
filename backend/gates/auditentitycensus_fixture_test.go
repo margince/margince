@@ -78,13 +78,13 @@ func fixtureCensus(t *testing.T, seed string, app map[string]string) *auditEntit
 			}
 			files = append(files, file)
 		}
-		info := &types.Info{Types: map[ast.Expr]types.TypeAndValue{}, Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{}}
+		info := newTypedInfo()
 		checkedPkg, err := (&types.Config{Importer: imports}).Check(pkg.path, gatekit.SourceFileSet(), files, info)
 		if err != nil {
 			t.Fatalf("type-checking the planted %s: %v", pkg.path, err)
 		}
 		checked[pkg.path] = checkedPkg
-		pkgs = append(pkgs, typedPackage{path: pkg.path, files: files, info: info})
+		pkgs = append(pkgs, typedPackage{path: pkg.path, files: files, info: info, types: checkedPkg})
 	}
 	return readAuditEntityCensus(pkgs, seed)
 }
@@ -106,8 +106,8 @@ func mapKeysOf(m map[string]string) func(func(string) bool) {
 // fixtureRead is what a census read from the planted app, in a form a case
 // can compare.
 type fixtureRead struct {
-	values, opaque         []string
-	asValue, directInserts int
+	values, opaque                 []string
+	asValue, directInserts, unread int
 }
 
 func readFixture(census *auditEntityCensus) fixtureRead {
@@ -125,6 +125,7 @@ func readFixture(census *auditEntityCensus) fixtureRead {
 	sort.Strings(read.values)
 	sort.Strings(read.opaque)
 	read.asValue, read.directInserts = len(census.asValue), len(census.directInserts)
+	read.unread = len(census.unreadInterfaces)
 	return read
 }
 
@@ -185,10 +186,44 @@ func TestTheAuditCensusReadsEachShape(t *testing.T) {
 			want: fixtureRead{opaque: []string{"t"}},
 		},
 		{
-			name: "an unexported field is read by its writes, an exported one is not",
-			body: "type sub struct{ kind string }\ntype Pub struct{ Kind string }\n" +
-				"func g(p Pub) { s := sub{kind: \"kappa\"}; _ = k.Audit(ctx, tx, \"u\", s.kind); _ = k.Audit(ctx, tx, \"u\", p.Kind) }\n",
-			want: fixtureRead{values: []string{"kappa"}, opaque: []string{"p.Kind"}},
+			name: "a field is read by its writes across the module, unless a decoder or a scanner can fill it",
+			body: "type sub struct{ kind string }\ntype Pub struct{ Kind string }\ntype Decoded struct{ Kind string }\ntype Scanned struct{ Kind string }\ntype Inst struct{ Kind string }\n" +
+				"func decode[T any]() T { var zero T; return zero }\n" +
+				"func fill(d *Decoded) { _, _ = fmt.Sscan(\"x\", d) }\nfunc scan(s *Scanned) { _, _ = fmt.Sscan(\"x\", &s.Kind) }\n" +
+				"func g(p Pub, d Decoded, sc Scanned) { s := sub{kind: \"kappa\"}; _, _, _, _ = Pub{Kind: \"rho\"}, Decoded{Kind: \"no\"}, Scanned{Kind: \"no\"}, Inst{Kind: \"no\"}\n" +
+				"in := decode[Inst]()\n" +
+				"_ = k.Audit(ctx, tx, \"u\", s.kind); _ = k.Audit(ctx, tx, \"u\", p.Kind); _ = k.Audit(ctx, tx, \"u\", d.Kind); _ = k.Audit(ctx, tx, \"u\", sc.Kind); _ = k.Audit(ctx, tx, \"u\", in.Kind) }\n",
+			want: fixtureRead{values: []string{"kappa", "rho"}, opaque: []string{"d.Kind", "in.Kind", "sc.Kind"}},
+		},
+		{
+			name: "a writer reached through a promoted method of an interface is read",
+			body: "type base struct{}\nfunc (base) Write(t string) error { return k.Audit(ctx, tx, \"u\", t) }\n" +
+				"type store struct{ base }\nfunc (store) Other() {}\ntype w interface{ Write(t string) error; Other() }\nfunc f(a w) { _ = a.Write(\"pi\") }\n",
+			want: fixtureRead{values: []string{"pi"}},
+		},
+		{
+			name: "a result read through a promoted method of an interface is read from each implementation",
+			body: "type nb struct{}\nfunc (nb) Name() string { return \"sigma\" }\ntype outer struct{ nb }\nfunc (outer) Other() {}\n" +
+				"type full struct{}\nfunc (full) Name() string { return \"tau\" }\nfunc (full) Other() {}\n" +
+				"type namer interface{ Name() string; Other() }\nfunc m(x namer) { _ = k.Audit(ctx, tx, \"u\", x.Name()) }\n",
+			want: fixtureRead{values: []string{"sigma", "tau"}},
+		},
+		{
+			name: "an interface whose signature spells an alias reaches its implementation",
+			body: "type Str = string\ntype w interface{ Write(t Str) error }\ntype st struct{}\n" +
+				"func (st) Write(t string) error { return k.Audit(ctx, tx, \"u\", t) }\nfunc f(a w) { _ = a.Write(\"upsilon\") }\n",
+			want: fixtureRead{values: []string{"upsilon"}},
+		},
+		{
+			name: "an interface sharing a writer's name and signature that nothing implements is reported",
+			body: "type st struct{}\nfunc (st) Write(t string) error { return k.Audit(ctx, tx, \"u\", t) }\nfunc (st) Extra() {}\n" +
+				"type lone interface{ Write(t string) error; Missing() }\nfunc f(a lone) { _ = a.Write(\"never\") }\nfunc g() { _ = st{}.Write(\"phi\") }\n",
+			want: fixtureRead{values: []string{"phi"}, unread: 1},
+		},
+		{
+			name: "a method expression's receiver is not read as its first argument",
+			body: "type s struct{}\nfunc (s) Write(a, t string) error { return k.Audit(ctx, tx, a, t) }\nfunc f() { _ = s.Write(s{}, \"action\", \"chi\") }\n",
+			want: fixtureRead{values: []string{"chi"}},
 		},
 		{
 			name: "a closure's own parameter is not read",
@@ -196,10 +231,23 @@ func TestTheAuditCensusReadsEachShape(t *testing.T) {
 			want: fixtureRead{opaque: []string{"t"}},
 		},
 		{
-			name: "a range over a package list is read, and one the package changes is not",
-			body: "var fixed = []string{\"lambda\", \"mu\"}\nvar grown = []string{\"nu\"}\nfunc init() { grown = append(grown, strings.ToLower(\"XI\")) }\n" +
-				"func i() { for _, t := range fixed { _ = k.Audit(ctx, tx, \"u\", t) }; for _, t := range grown { _ = k.Audit(ctx, tx, \"u\", t) } }\n",
-			want: fixtureRead{values: []string{"lambda", "mu"}, opaque: []string{"t"}},
+			name: "a range over a package list is read, and one that is exported or used any other way is not",
+			body: "var fixed = []string{\"lambda\", \"mu\"}\nvar grown = []string{\"nu\"}\nvar copied = []string{\"psi\"}\nvar Shared = []string{\"omega\"}\n" +
+				"func init() { grown = append(grown, strings.ToLower(\"XI\")); copy(copied, []string{\"y\"}) }\n" +
+				"func i() { _ = fixed[0]; for _, t := range fixed { _ = k.Audit(ctx, tx, \"u\", t) }; for _, t := range grown { _ = k.Audit(ctx, tx, \"u\", t) }\n" +
+				"for _, t := range copied { _ = k.Audit(ctx, tx, \"u\", t) }; for _, t := range Shared { _ = k.Audit(ctx, tx, \"u\", t) } }\n",
+			want: fixtureRead{values: []string{"lambda", "mu"}, opaque: []string{"t", "t", "t"}},
+		},
+		{
+			name: "a write to audit_log built by fmt.Sprintf or strings.Join from constants is reported",
+			body: "func j() { _ = tx.Exec(ctx, fmt.Sprintf(\"INSERT INTO %s_log (a) VALUES (1)\", \"audit\")); _ = tx.Exec(ctx, strings.Join([]string{\"COPY\", \"audit_log\", \"FROM STDIN\"}, \" \")) }\n",
+			want: fixtureRead{directInserts: 2},
+		},
+		{
+			name: "an UPDATE of audit_log is reported when it sets entity_type, and a MERGE always",
+			body: "const fix = \"UPDATE audit_log SET entity_type = 'x' WHERE id = $1\"\nconst mask = \"UPDATE audit_log SET before = $2 WHERE entity_type = 'x'\"\n" +
+				"const merge = \"MERGE INTO audit_log USING src ON false WHEN NOT MATCHED THEN INSERT VALUES (1)\"\n",
+			want: fixtureRead{directInserts: 2},
 		},
 		{
 			name: "an INSERT into audit_log outside the seed is reported once each",
@@ -219,7 +267,7 @@ func TestTheAuditCensusReadsEachShape(t *testing.T) {
 			}
 			got := readFixture(census)
 			if !slices.Equal(got.values, tc.want.values) || !slices.Equal(got.opaque, tc.want.opaque) ||
-				got.asValue != tc.want.asValue || got.directInserts != tc.want.directInserts {
+				got.asValue != tc.want.asValue || got.directInserts != tc.want.directInserts || got.unread != tc.want.unread {
 				t.Errorf("read %+v, want %+v (direct inserts at %v)", got, tc.want, census.directInserts)
 			}
 		})
