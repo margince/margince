@@ -64,7 +64,9 @@ func writeCoverageHowToRead(p *strings.Builder) {
 	p.WriteString("| Reliability | Of the runs on the cases that require this tool, the share that " +
 		"passed. Each case is run several times because the lane is not deterministic. |\n")
 	p.WriteString("| Bar | Each case carries its own `pass_at`: how many of its runs must pass. " +
-		"Cases are not equally hard, so one shared number would flatter the easy ones. |\n\n")
+		"Cases are not equally hard, so one shared number would flatter the easy ones. |\n")
+	p.WriteString("| Calls, turns | How directly the runs finished: the median tool calls and model turns, " +
+		"with their range. `slow` marks a case past its `expected_calls`. A score, never a fail. |\n\n")
 }
 
 func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
@@ -89,12 +91,12 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("Which model drove the lane, and how it went. The tool columns further down are " +
 		"the same for every model, because what a case requires belongs to the scenario. " +
 		"What changes here is whether the driving succeeded.\n\n")
-	p.WriteString("| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |\n" +
-		"|---|---:|---:|---:|---:|---:|\n")
+	p.WriteString("| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability | " +
+		"Calls per case (median) | Slow |\n|---|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, m := range r.Models {
-		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% |\n",
+		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% | %s | %d |\n",
 			m.Model, m.CasesRecorded, r.Totals.Cases, m.CasesHeld, m.CasesBelowBar,
-			m.Passed, m.Runs, 100*m.Reliability)
+			m.Passed, m.Runs, 100*m.Reliability, m.CallsPerCase, len(m.Slow))
 	}
 	p.WriteString("\n")
 	for _, m := range r.Models {
@@ -104,6 +106,9 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 		}
 		if len(m.BelowBar) > 0 {
 			fmt.Fprintf(p, "> `%s` below its bar on: %s\n\n", m.Model, strings.Join(m.BelowBar, ", "))
+		}
+		if len(m.Slow) > 0 {
+			fmt.Fprintf(p, "> `%s` slow on: %s\n\n", m.Model, strings.Join(m.Slow, ", "))
 		}
 	}
 }
@@ -115,13 +120,13 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("One row per case per model that ran it. A case nobody has run appears once, " +
 		"marked `not run`, rather than being dropped: a case missing from this table would read " +
 		"as a case that does not exist.\n\n")
-	p.WriteString("| Case | Model | Result | Passed | Bar | Criteria | Requires |\n" +
-		"|---|---|---|---:|---:|---|---|\n")
+	p.WriteString("| Case | Model | Result | Passed | Bar | Calls (median) | Turns (median) | Criteria | Requires |\n" +
+		"|---|---|---|---:|---:|---:|---:|---|---|\n")
 	for _, c := range r.Cases {
 		criteria := criteriaNames(c.Name, c.Criteria, r.Criteria)
 		link := fmt.Sprintf("[%s](../../e2e/llm/scenarios/%s)", c.Name, c.File)
 		if len(c.ByModel) == 0 {
-			fmt.Fprintf(p, "| %s | - | not run | - | - | %s | %s |\n",
+			fmt.Fprintf(p, "| %s | - | not run | - | - | - | - | %s | %s |\n",
 				link, criteria, requiresColumn(c))
 			continue
 		}
@@ -130,9 +135,12 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 			if run.Held {
 				result = "pass"
 			}
-			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s |\n",
+			if run.Slow {
+				result += ", slow"
+			}
+			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s | %s | %s |\n",
 				link, run.Model, result, run.Passed, run.Runs, run.PassAt,
-				criteria, requiresColumn(c))
+				run.Efficiency.CallsCell(), run.Efficiency.TurnsCell(), criteria, requiresColumn(c))
 		}
 	}
 	p.WriteString("\n")
