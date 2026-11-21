@@ -17,35 +17,35 @@ import (
 
 // linkExistingCounterparty files a captured activity under the contact or lead
 // an address already names, and writes no record of its own. A mailbox no
-// seat owns takes this path: it may file mail, never mint a contact, an
-// employer or a task.
-func (s *Store) linkExistingCounterparty(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
+// seat owns takes this path. named reports that a record holds the address, so
+// a backup owner's mint must not make a second one.
+func (s *Store) linkExistingCounterparty(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (res EnsureCounterpartyResult, named bool, err error) {
 	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
-		return EnsureCounterpartyResult{}, err
+		return EnsureCounterpartyResult{}, false, err
 	}
 	match, lead, err := resolveCapturedContact(ctx, tx, ContactCandidate{Emails: []string{in.Email}}, in.Email)
 	if err != nil {
-		return EnsureCounterpartyResult{}, err
+		return EnsureCounterpartyResult{}, false, err
 	}
 	if !lead.IsZero() {
 		// Filed on the lead, without the qualify task a personal reply files.
 		allowed, err := mayReadLead(ctx)
 		if err != nil || !allowed {
-			return EnsureCounterpartyResult{}, err
+			return EnsureCounterpartyResult{}, true, err
 		}
-		return EnsureCounterpartyResult{LeadID: lead}, linkActivityToLead(ctx, tx, in.ActivityID, lead)
+		return EnsureCounterpartyResult{LeadID: lead}, true, linkActivityToLead(ctx, tx, in.ActivityID, lead)
 	}
 	if match.Decision != DecisionExactCollision {
-		return EnsureCounterpartyResult{}, nil
+		return EnsureCounterpartyResult{}, false, nil
 	}
 	// The mailbox's own principal reads every row, so the link asks the
 	// readers instead: a contact none of them may read gets no shared mail.
 	readable, err := readableByATeamMemberTx(ctx, tx, in.ReaderTeam, match.ContactID)
 	if err != nil || !readable {
-		return EnsureCounterpartyResult{}, err
+		return EnsureCounterpartyResult{}, true, err
 	}
-	res := EnsureCounterpartyResult{ContactID: match.ContactID}
-	return res, s.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID)
+	res = EnsureCounterpartyResult{ContactID: match.ContactID}
+	return res, true, s.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID)
 }
 
 // readableByATeamMemberTx answers whether a live member of team may read the

@@ -194,6 +194,10 @@ func (s *Sink) mailboxRunAllowedTx(ctx context.Context, tx pgx.Tx) (context.Cont
 		if err := sharedMailboxAllowedTx(ctx, tx, shared); err != nil {
 			return ctx, err
 		}
+		ctx, err := s.backupOwnerActingTx(ctx, tx, shared)
+		if err != nil {
+			return ctx, err
+		}
 		return ctx, storekit.HoldCaptureFactsTx(ctx, tx)
 	}
 	_, owner := capturePrincipal(ctx)

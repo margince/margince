@@ -13,7 +13,56 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+type backupActingKey struct{}
+
+// backupOwnerActingTx binds the backup owner's authority as of tx, so mail from
+// an unknown sender may become their contact. A mailbox with no backup owner,
+// or one who left the reader team or may no longer capture, binds nothing and
+// stays link-only. Call it before tx locks a row.
+func (s *Sink) backupOwnerActingTx(ctx context.Context, tx pgx.Tx, box ids.UUID) (context.Context, error) {
+	if s.partyAuthority == nil {
+		return ctx, nil
+	}
+	var team ids.UUID
+	var backup *ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT reader_team_id, backup_owner_id FROM capture_connection WHERE id = $1`,
+		box).Scan(&team, &backup); err != nil {
+		return ctx, fmt.Errorf("capture: reading the shared mailbox's backup owner: %w", err)
+	}
+	if backup == nil {
+		return ctx, nil
+	}
+	// The authorization lock comes first, so a team or role change waits for
+	// this write instead of passing between the check and the mint.
+	rbac, seat, err := s.partyAuthority.HeldAuthorityTx(ctx, tx, *backup)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return ctx, nil
+	}
+	if err != nil {
+		return ctx, err
+	}
+	err = refuseBackupOutsideTeamTx(ctx, tx, team, backup)
+	if _, outside := errors.AsType[*BackupOwnerError](err); outside || CaptureRefusal(rbac.Permissions, seat) != nil {
+		return ctx, nil
+	}
+	if err != nil {
+		return ctx, err
+	}
+	run, _ := principal.Actor(ctx)
+	return context.WithValue(ctx, backupActingKey{}, principal.Principal{
+		Type: principal.PrincipalConnector, ID: run.ID, UserID: *backup, OnBehalfOf: *backup,
+		TeamIDs: rbac.TeamIDs, SeatType: seat, Permissions: rbac.Permissions,
+	}), nil
+}
+
+// backupActingOf answers the backup owner a shared mailbox run may mint for.
+func backupActingOf(ctx context.Context) (principal.Principal, bool) {
+	acting, ok := ctx.Value(backupActingKey{}).(principal.Principal)
+	return acting, ok
+}
 
 // BackupOwnerError refuses a backup owner who could not hold the mailbox's
 // work. They must be an active seat that can hold work, in its reader team.
