@@ -231,14 +231,23 @@ func asSet(expr string) string {
 		FROM jsonb_array_elements(` + expr + `) e) ELSE ` + expr + ` END)`
 }
 
-// childFieldsThatMoved names the image keys the record holds in tables of
-// their own (a contact's social profiles, emails and phones; a company's
-// domains and relationship types), which are not in the row's jsonb. Their
-// current value is the one the latest later entry that wrote the key left, so
-// a colleague's edit refuses the restore, and a walk back through the history
-// still works because each reversal writes the value it restores. A write that
-// reaches those tables without auditing the key is not seen.
+// childFieldsThatMoved names the image keys the record holds in tables of their
+// own, which are not in the row's jsonb. Those are a contact's social profiles,
+// emails and phones, and a company's domains and relationship types. Emails,
+// phones and domains are judged against the live rows. The rest hold the value
+// the latest later entry that wrote the key left, so a colleague's edit refuses
+// the restore. A walk back through the history still works, because each
+// reversal writes the value it restores.
 func childFieldsThatMoved(ctx context.Context, tx pgx.Tx, row AuditRow, asked []byte) ([]string, error) {
+	moved, trailKeys, err := contacts.ChildSetsThatMoved(ctx, tx, row.EntityID, asked)
+	if err != nil {
+		return nil, err
+	}
+	trailMoved, err := childFieldsThatMovedOnTrail(ctx, tx, row, trailKeys)
+	return append(moved, trailMoved...), err
+}
+
+func childFieldsThatMovedOnTrail(ctx context.Context, tx pgx.Tx, row AuditRow, asked []byte) ([]string, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT k.key
 		FROM (

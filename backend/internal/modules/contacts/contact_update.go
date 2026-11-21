@@ -117,6 +117,7 @@ func (s *Store) updateContactInTx(
 // It reads nothing back for a caller.
 //
 //nolint:cyclop // one edit applies each optional field in turn; splitting it would scatter the single write it records.
+//gate:parent-version-door
 func (s *Store) writeContactInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
 ) (recordEdit[crmcontracts.Contact], error) {
@@ -236,10 +237,10 @@ func contactChangeImages(
 		}
 	}
 	if sets.emails {
-		before["emails"], after["emails"] = current.Emails, sets.emailRows
+		recordEmails(before, after, current.Emails, sets.emailRows)
 	}
 	if sets.phones {
-		before["phones"], after["phones"] = current.Phones, sets.phoneRows
+		recordPhones(before, after, current.Phones, sets.phoneRows)
 	}
 	return before, after
 }

@@ -99,7 +99,10 @@ func (s *Store) setCompanyDomain(ctx context.Context, tx pgx.Tx, companyID ids.C
 	if err != nil {
 		return fmt.Errorf("set company domain: %w", err)
 	}
-	return storekit.OwnCompanyDomainsChanged(ctx, tx, companyID.UUID)
+	if err := storekit.OwnCompanyDomainsChanged(ctx, tx, companyID.UUID); err != nil {
+		return err
+	}
+	return touchChildSetParent(ctx, tx, entityCompany, companyID.UUID)
 }
 
 // companyHost reduces a website to the bare domain the company_domain

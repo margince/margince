@@ -118,6 +118,8 @@ func (s *Store) ArchiveCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 //
 // The authority gate is NOT here: it is the caller's, because a composite verb
 // asks for more than this one does.
+//
+//gate:parent-version-door
 func archiveCompanyTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {

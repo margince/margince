@@ -182,6 +182,8 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 // A merged-away partner would otherwise leave the survivor holding the
 // extension row with nothing saying it is a partner, which is exactly the
 // half-state the enforced invariant exists to make impossible.
+//
+//gate:parent-version-door
 func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontracts.Company, targetIsPartner bool, tgtLock storekit.RowLock) (map[string]any, error) {
 	p := buildCompanySurvivorshipPatch(tgt, src)
 	if targetIsPartner {
