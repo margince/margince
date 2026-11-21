@@ -35,7 +35,7 @@ test("the passport reaches claude in a private config file, never its argv or en
   const seen = join(dir, "seen.json");
   const runner = new URL("./run.ts", import.meta.url).pathname;
   const done = spawnSync(
-    "node",
+    process.execPath,
     [
       runner, "--model", "claude-sonnet-5-5", "--mcp-url", "http://127.0.0.1:9/mcp",
       "--token-env", "MARGINCE_E2E_TOKEN", "--server", "margince_e2e_llm",
