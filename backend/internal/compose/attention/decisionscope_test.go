@@ -124,9 +124,8 @@ func TestPersonalDecisionsDoNotDependOnUnassignedProducerReads(t *testing.T) {
 	}
 }
 
-// A duplicate pair is its owners' decision: each scope reads the pairs
-// narrowed to the owners it is for, list and count alike, and the team view
-// reads them all.
+// Each scope reads the duplicate pairs narrowed to the owners it is for, list
+// and count alike. The team view reads them all.
 func TestPairReadsReceiveTheScopeOwners(t *testing.T) {
 	named := ids.NewV7()
 	reader := pageReader()

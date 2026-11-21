@@ -96,6 +96,9 @@ type Duplicates interface {
 	SettleablePairs(ctx context.Context, pairs []DuplicatePair) (map[ids.UUID]bool, error)
 }
 
+// PairOwners narrows the duplicate pairs to those the owners decide; nil is every pair.
+type PairOwners = storekit.OwnerSet
+
 // DuplicatePair is one open candidate: the pair, and what the detector saw.
 type DuplicatePair struct {
 	ID         ids.UUID

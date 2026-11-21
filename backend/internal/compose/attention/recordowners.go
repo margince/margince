@@ -45,8 +45,8 @@ func (s *Service) unassignedDecisions() bool {
 }
 
 // pairOwners narrows the duplicate pairs to the ones a personal or Unassigned
-// page is for: a pair is its owners' work, and unassigned only when neither
-// record has an owner. The team view stays unrestricted.
+// page is for. A pair is unassigned only when neither record has an owner.
+// The team view stays unrestricted.
 func (s *Service) pairOwners(ctx context.Context) (*storekit.OwnerSet, error) {
 	if s.taskScope == TasksMine || s.taskScope == TasksOwnedBy || s.taskScope == TasksUnassigned {
 		return s.recordOwners(ctx)

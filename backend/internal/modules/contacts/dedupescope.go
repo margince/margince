@@ -194,9 +194,8 @@ func andClauses(a, b string) string {
 }
 
 // dedupePairOwnerClause narrows the queue to the pairs an owner set decides. A
-// pair belongs to every owner of either end, and it is unassigned only when
-// neither end has an owner, so a pair of one owned and one ownerless record is
-// the owner's and never the unassigned lane's. Nil is unrestricted.
+// pair belongs to every owner of either end. It is unassigned only when
+// neither end has an owner. Nil is unrestricted.
 func dedupePairOwnerClause(owners *storekit.OwnerSet, arg func(any) int) string {
 	if owners == nil {
 		return ""
@@ -230,4 +229,23 @@ func dedupeRecordClause(entityType string, id ids.UUID, arg func(any) int) (stri
 	}
 	n := arg(id)
 	return fmt.Sprintf("(entity_type = '%s' AND (%s = $%d OR %s = $%d))", entityType, side.left, n, side.right, n), nil
+}
+
+// dedupeNarrowing appends the list's own filters to the query: record types,
+// owners and one named record.
+func dedupeNarrowing(out string, in DedupeQueueInput, arg func(any) int) (string, error) {
+	if len(in.EntityTypes) > 0 {
+		out += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(in.EntityTypes))
+	}
+	if clause := dedupePairOwnerClause(in.Owners, arg); clause != "" {
+		out += " AND " + clause
+	}
+	if in.RecordID != nil {
+		clause, err := dedupeRecordClause(in.EntityType, *in.RecordID, arg)
+		if err != nil {
+			return out, err
+		}
+		out += " AND " + clause
+	}
+	return out, nil
 }

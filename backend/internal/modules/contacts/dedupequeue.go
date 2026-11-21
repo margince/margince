@@ -261,18 +261,8 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	if visClause != "" {
 		query += " AND " + visClause
 	}
-	if len(in.EntityTypes) > 0 {
-		query += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(in.EntityTypes))
-	}
-	if clause := dedupePairOwnerClause(in.Owners, arg); clause != "" {
-		query += " AND " + clause
-	}
-	if in.RecordID != nil {
-		clause, err := dedupeRecordClause(in.EntityType, *in.RecordID, arg)
-		if err != nil {
-			return nil, "", err
-		}
-		query += " AND " + clause
+	if query, err = dedupeNarrowing(query, in, arg); err != nil {
+		return nil, "", err
 	}
 	if in.Cursor != "" {
 		cur, err := decodeDedupeCursor(in.Cursor)
@@ -315,53 +305,6 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 		next = encodeDedupeCursor(dedupeCursor{Confidence: last.Confidence, ID: last.ID})
 	}
 	return rows, next, nil
-}
-
-// CountOpenDedupeCandidates is how many open pairs THIS caller can see.
-//
-// It exists because a count is a read. The digest reported one workspace-wide
-// number to every reader, which tells an own-scope rep how many duplicate
-// pairs exist among records they may not open — the existence-hiding rule the
-// queue itself keeps by requiring both sides visible. Sharing
-// dedupeVisibilityClause rather than restating the predicate is what keeps the
-// badge and the list answering the same question: a count that disagreed with
-// the page under it would send a reader looking for rows that were never
-// theirs.
-//
-// Entity types narrow it as they narrow the list; none counts every type.
-func (s *Store) CountOpenDedupeCandidates(ctx context.Context, entityTypes ...string) (int, error) {
-	return s.CountOpenDedupePairsOf(ctx, nil, entityTypes...)
-}
-
-// CountOpenDedupePairsOf is CountOpenDedupeCandidates for the pairs an owner
-// set decides, or every visible pair when owners is nil.
-func (s *Store) CountOpenDedupePairsOf(ctx context.Context, owners *storekit.OwnerSet, entityTypes ...string) (int, error) {
-	if err := requireDedupeReadOf(ctx, entityTypes); err != nil {
-		return 0, err
-	}
-	query := `SELECT count(*) FROM dedupe_candidate WHERE disposition = $1 AND archived_at IS NULL`
-	args := []any{dispositionOpen}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	visClause, err := dedupeVisibilityClause(ctx, arg, true)
-	if err != nil {
-		return 0, err
-	}
-	if visClause != "" {
-		query += " AND " + visClause
-	}
-	if len(entityTypes) > 0 {
-		query += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(entityTypes))
-	}
-	if clause := dedupePairOwnerClause(owners, arg); clause != "" {
-		query += " AND " + clause
-	}
-	var open int
-	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, query, args...).Scan(&open)
-	}); err != nil {
-		return 0, fmt.Errorf("contacts: counting open dedupe candidates: %w", err)
-	}
-	return open, nil
 }
 
 // GetDedupeCandidate reads one row with its full evidence. Both sides of
