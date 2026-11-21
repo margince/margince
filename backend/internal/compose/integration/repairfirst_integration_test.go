@@ -94,7 +94,7 @@ func TestTheRepairComesBeforeThePolicyDecision(t *testing.T) {
 	if status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": "Our offer", "body": "The terms for next year.",
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "marketing_email",
-	}, nil, &broken); status != http.StatusUnprocessableEntity || broken.Code != "mailbox_not_send_capable" {
+	}, nil, &broken); status != http.StatusUnprocessableEntity || broken.Code != "mailbox_not_connected" {
 		t.Fatalf("an offer through no mailbox → %d %q, want the mailbox repair", status, broken.Code)
 	}
 	if n := c.count(t, `SELECT count(*) FROM communication_review`); n != 0 {

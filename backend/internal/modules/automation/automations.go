@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -407,14 +408,14 @@ func (s *AutomationStore) archiveRule(ctx context.Context, id ids.AutomationID) 
 }
 
 // SeedStarterAutomationsTx enables the system-owned starters at bootstrap.
-// A draft needs a contact's authority, so its template stays paused until an
-// authorized contact enables it and takes ownership.
+// A starter whose setup state is not "on" with empty params (missing required
+// settings, or a draft that needs a contact's authority) stays paused.
 func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 	for _, entry := range Catalog() {
 		if !entry.Seeded {
 			continue
 		}
-		ready := entry.Validate(nil) == nil
+		ready := seededEnabled(entry)
 		paramsJSON, err := json.Marshal(nonNilParams(nil))
 		if err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
@@ -430,12 +431,19 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 			pgx.NamedArgs{
 				keyCatalogKey: entry.Key, keyName: entry.Name, "trigger": triggerJSON,
 				"action": actionJSON, keyParams: paramsJSON, "tier": RuleTier(entry.Action),
-				auditEnabled: ready && entry.Action != string(ActionTypeDraftEmail),
+				auditEnabled: ready,
 			}); err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
 		}
 	}
 	return nil
+}
+
+// seededEnabled is true when a starter with empty params is already "on" by
+// the same setup check the Automations page uses.
+func seededEnabled(entry CatalogEntry) bool {
+	seeded := Automation{Key: entry.Key, Params: json.RawMessage(`{}`), Enabled: true}
+	return configurationOf(seeded, false).State == crmcontracts.AutomationSetupStateOn
 }
 
 // entrySnapshots renders the catalog entry's trigger/action jsonb

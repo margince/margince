@@ -62,6 +62,9 @@ type LegalReviewRecords interface {
 	// ReviewContracts lists the deal's agreements the caller can open, with
 	// their titles.
 	ReviewContracts(ctx context.Context, dealID ids.UUID) ([]PacketContract, error)
+	// OpenableContracts answers which of these agreements the caller can
+	// open now, with their titles, however many newer ones the deal holds.
+	OpenableContracts(ctx context.Context, dealID ids.UUID, contractIDs []ids.UUID) (map[ids.UUID]string, error)
 	// ReviewActivity lists the deal's latest touches and open tasks the
 	// caller can read.
 	ReviewActivity(ctx context.Context, dealID ids.UUID) ([]PacketTouch, []PacketTask, error)
@@ -132,16 +135,19 @@ func (s *Store) readRecordSight(ctx context.Context, p reviewPacket) (recordSigh
 	if out.documents, err = s.reviewDocs.OpenableDocuments(ctx, packetDocumentIDs(p)); err != nil {
 		return out, err
 	}
-	current, err := s.reviewRecords.ReviewContracts(ctx, p.Deal.ID)
-	if err != nil {
+	if out.contracts, err = s.reviewRecords.OpenableContracts(ctx, p.Deal.ID, packetContractIDs(p)); err != nil {
 		return out, err
-	}
-	out.contracts = make(map[ids.UUID]string, len(current))
-	for _, c := range current {
-		out.contracts[c.ContractID] = c.Title
 	}
 	out.activity, err = s.reviewRecords.OpenableActivity(ctx, p.Deal.ID, packetActivityIDs(p))
 	return out, err
+}
+
+func packetContractIDs(p reviewPacket) []ids.UUID {
+	out := make([]ids.UUID, 0, len(p.Contracts))
+	for _, c := range p.Contracts {
+		out = append(out, c.ContractID)
+	}
+	return out
 }
 
 func packetActivityIDs(p reviewPacket) []ids.UUID {

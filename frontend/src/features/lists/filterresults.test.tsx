@@ -243,10 +243,17 @@ describe("a cell read by its field's type", () => {
   });
 
   it("keeps a calendar day on its day in any zone", () => {
-    renderTyped({ cf_renewal: "2026-12-01T00:00:00Z" });
+    renderTyped({ cf_renewal: "2026-12-01" });
 
     expect(screen.getByText("1 Dec 2026")).toBeTruthy();
     expect(screen.queryByText("30 Nov 2026")).toBeNull();
+  });
+
+  it("shows a timestamp at midnight UTC on the reader's day, as the record lists do", () => {
+    renderTyped({ created_at: "2026-03-01T00:00:00Z" });
+
+    expect(screen.getByText("28 Feb 2026")).toBeTruthy();
+    expect(screen.queryByText("1 Mar 2026")).toBeNull();
   });
 
   it("writes a figure, an amount and a yes in the reader's words", () => {

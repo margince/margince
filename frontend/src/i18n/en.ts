@@ -8760,6 +8760,9 @@ export const en = {
   "compose.mailboxNotSendCapable":
     "Your mailbox is connected for capture only, without permission to send. Reconnect it and approve sending; a mailbox connected before sending existed cannot be upgraded in place.",
   "compose.mailboxNotSendCapableGoto": "Reconnect your mailbox",
+  "compose.mailboxNotConnected":
+    "No mailbox is connected. Connect one to send from Margince.",
+  "compose.mailboxNotConnectedGoto": "Connect a mailbox",
   "compose.sharedUnsubscribeToken":
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
@@ -9410,7 +9413,7 @@ export const en = {
   "analytics.share.linkWarning":
     "The link is shown only once. Copy it now; it cannot be retrieved later.",
   "analytics.share.leaveWarning":
-    "Leaving without copying discards the link, and a new one must be created.",
+    "If you leave without copying, the link cannot be shown again. It stays open until it expires, you close it under Shared links, or you lose forecast access.",
   "analytics.share.copy": "Copy link",
   "analytics.share.copied": "Copied",
   "analytics.share.copyFailed": "Select the link above and copy it manually.",
@@ -14377,6 +14380,8 @@ export const en = {
     "Your answer is recorded. Staff here will handle your request and give you the reason if they need more time. This link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
+  "confirm.deadLinkBody":
+    "It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
   "confirm.questionChanged":
     "The question on this page changed after you opened it. Reload the page and answer again.",
   "prefs.lockedWhy": "Needed for something you requested, so it stays on.",
@@ -23265,6 +23270,12 @@ export const en = {
   "legalReview.docState.final": "Final",
   "legalReview.advanceRefused":
     "This stage needs legal’s approval first. Request a legal review, then move the deal.",
+  "legalReview.advanceRefused.pending":
+    "This stage needs legal’s approval first. The review is still waiting for an answer from legal.",
+  "legalReview.advanceRefused.changesNeeded":
+    "This stage needs legal’s approval first. Legal asked for changes: make them, then request the review again.",
+  "legalReview.advanceRefused.termsChanged":
+    "The amount or offer changed since legal approved it. Request the review again, then move the deal.",
   "legalReview.packHistory": "Stage history",
   "legalReview.enteredStage": "{stage}, entered {date}",
   "legalReview.settingsTitle": "Legal review",

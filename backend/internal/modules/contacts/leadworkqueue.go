@@ -72,10 +72,6 @@ func (s *Store) listLeadWorkQueue(ctx context.Context, in ListLeadsInput) ([]crm
 	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	active, err := s.activeColumns(ctx, leadEntity)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
 	limit := storekit.ClampLimit(in.Limit)
 	policy, err := s.slaPolicy(ctx)
 	if err != nil {
@@ -84,6 +80,10 @@ func (s *Store) listLeadWorkQueue(ctx context.Context, in ListLeadsInput) ([]crm
 	var leads []crmcontracts.Lead
 	var page storekit.Page
 	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, leadEntity)
+		if err != nil {
+			return err
+		}
 		prepared, err := withLeadTaskIdentities(ctx, tx)
 		if err != nil {
 			return err

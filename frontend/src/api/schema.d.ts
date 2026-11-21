@@ -4634,6 +4634,10 @@ export interface paths {
          *     deal as it stands: a retried call must not close a closed deal again and move its
          *     close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
          *     A `to_stage_id` that names a stage nobody has answers 422 naming `to_stage_id`.
+         *     A move past a stage that waits for legal answers 422 `legal_review_required` on
+         *     `to_stage_id`. Its `params.review_state` names the next step: `none` (request a review),
+         *     `pending` (legal has not answered yet), `changes_needed` (make the changes and request
+         *     again) or `terms_changed` (the amount or offer changed since the approval).
          */
         post: operations["advanceDeal"];
         delete?: never;
@@ -48276,7 +48280,8 @@ export interface components {
             columns: string[];
             /**
              * @description Up to `limit` matching rows as column→value maps, ordered by id,
-             *     after the request's `cursor` when it names one.
+             *     after the request's `cursor` when it names one. A date column is
+             *     its calendar day (`2026-12-01`); a timestamp is an RFC 3339 instant.
              *     Deliberately the export's projection rather than a shape invented for
              *     this screen: a preview that showed different columns than the export
              *     of the same filter would be a preview of something else.
@@ -50521,7 +50526,7 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
-            /** @description Active memberships; populated by listTeams. */
+            /** @description Active and invited memberships; populated by listTeams. */
             member_count?: number;
         };
         AssistantProfile: {
@@ -64483,10 +64488,12 @@ export interface components {
             };
         };
         /**
-         * @description The send failed validation, or no mailbox can carry it. The second answers with the top-level
-         *     `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
-         *     fix it: the sender must connect a mailbox that can send, or an administrator must set up
-         *     sending for the installation. A scheduled send is checked the same way when it is created.
+         * @description The send failed validation, or no mailbox can carry it. The second answers with a top-level
+         *     `code` and no `details.errors`, because no field of the request can fix it. `mailbox_not_connected`
+         *     means the sender holds no mailbox at all and must connect one. `mailbox_not_send_capable` means
+         *     they hold mailboxes that cannot send, so they must reconnect one with permission to send, or an
+         *     administrator must set up sending for the installation. A scheduled send is checked the same way
+         *     when it is created.
          */
         SendValidationError: {
             headers: {

@@ -62,13 +62,13 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 	if err := auth.Require(ctx, spec.entity, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	active, err := s.activeColumns(ctx, spec.entity)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
 	var recs []T
 	var page storekit.Page
-	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, spec.entity)
+		if err != nil {
+			return err
+		}
 		prepared := ctx
 		if spec.prepare != nil {
 			var err error
@@ -77,7 +77,6 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 				return err
 			}
 		}
-		var err error
 		recs, page, err = listPageTx(prepared, tx, sortSpec, storekit.ClampLimit(limitIn), active, spec)
 		return err
 	})

@@ -327,7 +327,7 @@ func TestTestMailboxFullLoop(t *testing.T) {
 		t.Fatalf("disconnect status = %d, want 204", status)
 	}
 	status2, code, _ := p.send(t)
-	if status2 != http.StatusUnprocessableEntity || code != "mailbox_not_send_capable" {
-		t.Fatalf("send after disconnect → %d %q, want 422 mailbox_not_send_capable", status2, code)
+	if status2 != http.StatusUnprocessableEntity || code != "mailbox_not_connected" {
+		t.Fatalf("send after disconnect → %d %q, want 422 mailbox_not_connected", status2, code)
 	}
 }

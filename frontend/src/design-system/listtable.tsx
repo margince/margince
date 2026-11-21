@@ -97,6 +97,7 @@ export function ListTable<Row>({
   onPerPage,
   page: controlledPage,
   onPage,
+  keepsPage,
   bodyRef,
   pending = false,
   problem,
@@ -260,18 +261,15 @@ export function ListTable<Row>({
    */
   onPerPage?: (next: number) => void;
   /**
-   * Which RENDERED page is on screen, for a caller that keeps it somewhere the
-   * table cannot — the address, so a reader who paged through a list and
-   * opened a record comes back to the page they left.
-   *
-   * Omit it and the table holds the number itself, which is what every caller
-   * did before this existed. Pass it and the table still tells you when it
-   * moves, through `onPage`: the pager, the reset on a new narrowing, and
-   * stepping past what is loaded all go through one place.
+   * Which RENDERED page is on screen, for a caller that keeps it in the address.
+   * A reader who opened a record then comes back to the page they left. Omit it
+   * and the table holds the number itself. Every move still goes to `onPage`.
    */
   page?: number;
   /** The rendered page changed, whether by the pager or by a reset. */
   onPage?: (next: number) => void;
+  /** True when `page` arrived with the narrowing, as a link names both. */
+  keepsPage?: () => boolean;
   /**
    * The element the ROWS scroll in, handed back to a caller that has something
    * to do with it — remembering where the reader was, which only the caller
@@ -346,6 +344,7 @@ export function ListTable<Row>({
       hasMore,
       onLoadMore,
       reachAsked: !bodyOwnsPaging,
+      keepsPage,
     },
     {
       search: search?.value,

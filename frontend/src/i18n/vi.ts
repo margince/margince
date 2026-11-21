@@ -8550,6 +8550,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapable":
     "Hộp thư chỉ được kết nối để thu thập, không có quyền gửi. Kết nối lại và cho phép gửi; hộp thư kết nối từ trước khi có tính năng gửi không thể nâng cấp trực tiếp.",
   "compose.mailboxNotSendCapableGoto": "Kết nối lại hộp thư",
+  "compose.mailboxNotConnected":
+    "Chưa kết nối hộp thư nào. Hãy kết nối một hộp thư để gửi từ Margince.",
+  "compose.mailboxNotConnectedGoto": "Kết nối hộp thư",
   "compose.sharedUnsubscribeToken":
     "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",
@@ -9204,7 +9207,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.share.linkWarning":
     "Liên kết chỉ hiển thị một lần. Sao chép ngay; sau này không thể lấy lại.",
   "analytics.share.leaveWarning":
-    "Rời đi mà không sao chép sẽ hủy liên kết, và phải tạo liên kết mới.",
+    "Nếu rời đi mà không sao chép, liên kết sẽ không thể hiển thị lại. Liên kết vẫn mở cho đến khi hết hạn, bạn đóng nó trong Liên kết đã chia sẻ, hoặc bạn mất quyền truy cập dự báo.",
   "analytics.share.copy": "Sao chép liên kết",
   "analytics.share.copied": "Đã sao chép",
   "analytics.share.copyFailed": "Chọn liên kết ở trên và sao chép thủ công.",
@@ -14045,6 +14048,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã ghi nhận câu trả lời. Nhân viên phụ trách sẽ xử lý yêu cầu của quý khách: chỉnh sửa thông tin trong 10 ngày và xóa thông tin trong 20 ngày. Nếu cần thêm thời gian, quý khách sẽ được báo lý do. Liên kết này đã hết lượt dùng.",
   "confirm.invalidLink":
     "Liên kết này không còn hiệu lực. Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
+  "confirm.deadLinkBody":
+    "Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
   "confirm.questionChanged":
     "Câu hỏi trên trang này đã thay đổi sau khi quý khách mở trang. Vui lòng tải lại trang và trả lời lại.",
   "prefs.lockedWhy": "Cần thiết cho việc quý khách đã yêu cầu, nên vẫn bật.",
@@ -22974,6 +22979,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalReview.docState.final": "Bản cuối",
   "legalReview.advanceRefused":
     "Giai đoạn này cần pháp lý phê duyệt trước. Hãy yêu cầu rà soát pháp lý, rồi chuyển deal.",
+  "legalReview.advanceRefused.pending":
+    "Giai đoạn này cần pháp lý phê duyệt trước. Yêu cầu rà soát vẫn đang chờ pháp lý trả lời.",
+  "legalReview.advanceRefused.changesNeeded":
+    "Giai đoạn này cần pháp lý phê duyệt trước. Pháp lý đã yêu cầu thay đổi: hãy thực hiện, rồi yêu cầu rà soát lại.",
+  "legalReview.advanceRefused.termsChanged":
+    "Số tiền hoặc báo giá đã thay đổi kể từ khi pháp lý phê duyệt. Hãy yêu cầu rà soát lại, rồi chuyển deal.",
   "legalReview.packHistory": "Lịch sử giai đoạn",
   "legalReview.enteredStage": "{stage}, vào lúc {date}",
   "legalReview.settingsTitle": "Rà soát pháp lý",

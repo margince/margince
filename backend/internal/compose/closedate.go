@@ -221,8 +221,7 @@ func closeDateConfirmEffect(svc *approvals.Service, store *deals.Store) approval
 				if pinned {
 					update.IfVersion = &version
 				}
-				_, err := store.UpdateDealTx(ctx, tx, correction.DealID, update, active)
-				return err
+				return store.ApplyDealUpdateTx(ctx, tx, correction.DealID, update, active)
 			})
 	}
 }

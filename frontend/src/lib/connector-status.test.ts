@@ -11,6 +11,7 @@ import {
   healthBadge,
   holdsSendGrant,
   isConnectedAtAll,
+  isLiveConnection,
   isUnhealthy,
   missingSendGrant,
   needsReconnect,
@@ -373,5 +374,14 @@ describe("a service's one badge and one reason", () => {
   it("has nothing to explain on a healthy service", () => {
     expect(serviceReason(service("gmail"))).toBeNull();
     expect(needsReconnect(service("gmail"))).toBe(false);
+  });
+});
+
+describe("isLiveConnection", () => {
+  it("counts a degraded mailbox as live, as the server does", () => {
+    expect(isLiveConnection({ status: "connected" })).toBe(true);
+    expect(isLiveConnection({ status: "error" })).toBe(true);
+    expect(isLiveConnection({ status: "disconnected" })).toBe(false);
+    expect(isLiveConnection({ status: "reauth_required" })).toBe(false);
   });
 });

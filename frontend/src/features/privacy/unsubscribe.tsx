@@ -14,7 +14,7 @@ import {
   LinkInvalidError,
   RateLimitedError,
 } from "../settings/preferences";
-import { PublicPage } from "./publicpage";
+import { DeadLinkPage, PublicPage } from "./publicpage";
 import "../settings/preferences.css";
 
 // The human unsubscribe page: where the VISIBLE "Unsubscribe" link in an
@@ -35,19 +35,7 @@ export function UnsubscribeScreen({
 }: Readonly<{ token?: string; purpose?: string }>) {
   const t = useT();
   if (!token) {
-    // A dead end IS the page rather than a notice on it, so it takes the shape
-    // the locked purpose below takes: the answer as the heading, the reason
-    // under it.
-    return (
-      <PublicPage>
-        <Heading size="xlarge" className="t-display">
-          {t("prefs.unsub.deadLinkTitle")}
-        </Heading>
-        <Card>
-          <p>{t("prefs.unsub.deadLinkBody")}</p>
-        </Card>
-      </PublicPage>
-    );
+    return <DeadLinkPage>{t("prefs.unsub.deadLinkBody")}</DeadLinkPage>;
   }
   return <UnsubscribeBody token={token} purpose={purpose || undefined} />;
 }
@@ -279,13 +267,15 @@ function PressError({ error }: Readonly<{ error: unknown }>) {
     return null;
   }
   return (
-    <Callout
-      tone={error instanceof RateLimitedError ? "warning" : "danger"}
-      kind="outcome"
-      title={t("prefs.unsub.failedTitle")}
-    >
-      {explainPublicError(error, t)}
-    </Callout>
+    <div className="unsub-error">
+      <Callout
+        tone={error instanceof RateLimitedError ? "warning" : "danger"}
+        kind="outcome"
+        title={t("prefs.unsub.failedTitle")}
+      >
+        {explainPublicError(error, t)}
+      </Callout>
+    </div>
   );
 }
 

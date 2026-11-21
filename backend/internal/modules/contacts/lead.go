@@ -75,15 +75,14 @@ func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontract
 	if err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
 
 	var out crmcontracts.Lead
 	created := true
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		active, err := s.activeColumnsIn(ctx, tx, "lead")
+		if err != nil {
+			return err
+		}
 		out, created, err = createLeadInTx(ctx, tx, in, by, active)
 		if err != nil || !created {
 			return err
@@ -412,12 +411,12 @@ func (s *Store) GetLead(ctx context.Context, id ids.LeadID, archived storekit.Ar
 	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
 	var out crmcontracts.Lead
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		active, err := s.activeColumnsIn(ctx, tx, "lead")
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureVisible(ctx, tx, "lead", id.UUID); err != nil {
 			return err
 		}

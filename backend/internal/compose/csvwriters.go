@@ -414,8 +414,7 @@ func (w *csvWriters) apply(
 	case migration.ObjectLead:
 		in := leadUpdateFrom(changed, typed)
 		in.IfVersion = w.reviewedVersion(id)
-		_, err := w.contacts.UpdateLead(ctx, ids.From[ids.LeadKind](id), in)
-		return err
+		return w.contacts.ApplyLeadUpdate(ctx, ids.From[ids.LeadKind](id), in)
 	case migration.ObjectCompany:
 		in := companyUpdateFrom(changed, typed)
 		in.IfVersion = w.reviewedVersion(id)
@@ -435,8 +434,7 @@ func (w *csvWriters) apply(
 		if hasDomain {
 			in.Domains = &mergedDomains
 		}
-		_, err = w.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
-		return err
+		return w.contacts.ApplyCompanyUpdate(ctx, ids.From[ids.CompanyKind](id), in)
 	case migration.ObjectContact:
 		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), changed, current, source)
 	default:

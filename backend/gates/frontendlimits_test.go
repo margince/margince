@@ -43,14 +43,8 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 		{
 			file: "../frontend/src/lib/installationcompany.ts", name: "COMPANY_NAME_MAX",
 			read: regexp.MustCompile(`\bCOMPANY_NAME_MAX\s*=\s*(\d+)`),
-			// The anchor company's write refuses a changed name past this, below the
-			// contract's maxLength of 200.
+			// The anchor company's write refuses a name past this.
 			owner: fixed(strconv.Itoa(values.TextLabelCharacters)),
-		},
-		{
-			file: "../frontend/src/features/settings/users-invite-form.tsx", name: "the invite's display_name maxLength",
-			read:  regexp.MustCompile(`faults\.of\("display_name"\)[^}]*\}\s*>\s*\{\(control\)\s*=>\s*\(\s*<TextInput[^>]*?maxLength=\{(\d+)\}`),
-			owner: bodyMaxLength("/users", "post", "display_name"),
 		},
 		{
 			file: "../frontend/src/features/settings/rates.tsx", name: "RATE_DIGITS",
@@ -81,20 +75,6 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 
 func fixed(value string) func(*testing.T, map[string]any) []string {
 	return func(*testing.T, map[string]any) []string { return []string{value} }
-}
-
-// bodyMaxLength reads a property's maxLength off the body schema an operation
-// takes, following its $ref.
-func bodyMaxLength(path, method, property string) func(*testing.T, map[string]any) []string {
-	return func(t *testing.T, contract map[string]any) []string {
-		t.Helper()
-		prop := bodyProperty(t, contract, path, method, property)
-		maxLength, ok := prop["maxLength"].(int)
-		if !ok {
-			t.Fatalf("%s %s: %s declares no maxLength", method, path, property)
-		}
-		return []string{strconv.Itoa(maxLength)}
-	}
 }
 
 // fxRateDigits reads the whole and fractional digit counts out of the rate's

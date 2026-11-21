@@ -50,8 +50,8 @@ func seatIdentity(
 		return values.Email{}, "", false
 	}
 	name := displayNameLine(rawName)
-	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > 255 {
-		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+	if err := validateDisplayName(name); err != nil {
+		httperr.Write(w, r, err)
 		return values.Email{}, "", false
 	}
 	return email, name, true

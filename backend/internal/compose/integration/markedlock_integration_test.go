@@ -61,9 +61,11 @@ func markedRequestCopies(t *testing.T, e *Env) ids.UUID {
 	if err != nil {
 		t.Fatal(err)
 	}
-	request := ids.NewV7()
+	request, received := ids.NewV7(), clocktest.Now(t)
 	e.WsExec(t, `INSERT INTO data_subject_request(id,kind,subject_ref,status,resolution,received_at,due_at,channel,receipt_reference)
- VALUES(@id,'access','erased+'||@id::uuid::text,'fulfilled','erased',now(),now()+interval '30 days','phone',@receipt)`, pgx.StrictNamedArgs{"id": request, "receipt": "RCPT-" + request.String()})
+ VALUES(@id,'access','erased+'||@id::uuid::text,'fulfilled','erased',@received,@due,'phone',@receipt)`, pgx.StrictNamedArgs{
+		"id": request, "receipt": "RCPT-" + request.String(), "received": received, "due": received.AddDate(0, 0, 30),
+	})
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		image := map[string]any{"subject_ref": subject.Id.String(), "email": "private@example.test", "status": "fulfilled"}
 		_, err := storekit.AuditWithEvidence(e.Admin(), tx, "create", "data_subject_request", request, nil, image, nil)
@@ -158,8 +160,9 @@ func TestRetentionGoesOnWhenAMarkedCorrectionLockIsBusyAndCorrectsOnTheNextRun(t
 		t.Fatal(err)
 	}
 	var aged ids.UUID
-	if err := owner.QueryRow(context.Background(), `UPDATE event_outbox SET published_at=now()-interval '31 days', created_at=now()-interval '31 days'
- WHERE id=(SELECT id FROM event_outbox WHERE envelope->'entity'->>'id'=$1::text ORDER BY id DESC LIMIT 1) RETURNING id`, old.Id.String()).Scan(&aged); err != nil {
+	monthAgo := clocktest.Now(t).AddDate(0, 0, -31)
+	if err := owner.QueryRow(context.Background(), `UPDATE event_outbox SET published_at=$2, created_at=$2
+ WHERE id=(SELECT id FROM event_outbox WHERE envelope->'entity'->>'id'=$1::text ORDER BY id DESC LIMIT 1) RETURNING id`, old.Id.String(), monthAgo).Scan(&aged); err != nil {
 		t.Fatal(err)
 	}
 	busy := e.SeedContact(t, "Busy Contact", nil)

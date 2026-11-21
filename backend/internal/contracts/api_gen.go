@@ -51703,7 +51703,8 @@ type FilterPreview struct {
 	Resource FilterResource `json:"resource"`
 
 	// Rows Up to `limit` matching rows as column→value maps, ordered by id,
-	// after the request's `cursor` when it names one.
+	// after the request's `cursor` when it names one. A date column is
+	// its calendar day (`2026-12-01`); a timestamp is an RFC 3339 instant.
 	// Deliberately the export's projection rather than a shape invented for
 	// this screen: a preview that showed different columns than the export
 	// of the same filter would be a preview of something else.
@@ -69076,7 +69077,7 @@ type Team struct {
 	CreatedAt  *time.Time         `json:"created_at,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 
-	// MemberCount Active memberships; populated by listTeams.
+	// MemberCount Active and invited memberships; populated by listTeams.
 	MemberCount  *int                `json:"member_count,omitempty"`
 	Name         string              `json:"name"`
 	ParentTeamId *openapi_types.UUID `json:"parent_team_id,omitempty"`

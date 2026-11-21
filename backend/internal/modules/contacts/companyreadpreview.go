@@ -54,11 +54,11 @@ func (s *Store) PreviewCompanyRead(ctx context.Context, in DeepReadProposal) (Co
 	if len(fields)+len(in.Facts) > 500 {
 		return out, apperrors.ErrInvalidArgument
 	}
-	active, err := s.activeColumns(ctx, companyEntity)
-	if err != nil {
-		return out, err
-	}
 	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, companyEntity)
+		if err != nil {
+			return err
+		}
 		var readErr error
 		out, readErr = previewCompanyReadTx(ctx, tx, in, fields, active)
 		return readErr

@@ -26,12 +26,12 @@ func (s *Store) GetDeal(ctx context.Context, id ids.DealID, archived storekit.Ar
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return crmcontracts.Deal{}, err
-	}
 	var out crmcontracts.Deal
-	err = s.Tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = getDealInTx(ctx, tx, id, archived, active)
 		return err
 	})
@@ -222,13 +222,13 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
 	var out []crmcontracts.Deal
 	var page storekit.Page
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		pre, where, err := s.dealListQuery(ctx, tx, in, active)
 		if err != nil {
 			return err
