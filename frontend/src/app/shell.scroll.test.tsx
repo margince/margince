@@ -482,6 +482,26 @@ describe("the chrome while the next page loads", () => {
     expect(window.location.hash).toBe("#/contacts");
   });
 
+  it("leaves the record for its list while another of its tabs loads", async () => {
+    window.history.replaceState(null, "", "#/companies");
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <Loading from="#/companies/o-1/contacts" />
+      </Shell>,
+    );
+    await moveTo("#/companies/o-1");
+    await moveTo("#/companies/o-1/contacts");
+    fireEvent.click(screen.getByRole("button", { name: "Land" }));
+    await act(async () => window.history.back());
+    await waitFor(() => expect(window.location.hash).toBe("#/companies/o-1"));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: en["shell.back"] }));
+    });
+
+    await waitFor(() => expect(window.location.hash).toBe("#/companies"));
+  });
+
   it("shows no wait for a move that lands inside 200 ms", async () => {
     vi.useFakeTimers();
     window.history.replaceState(null, "", "#/analytics");

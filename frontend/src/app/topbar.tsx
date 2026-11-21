@@ -26,6 +26,7 @@ import {
   shortcutTip,
 } from "../lib/keymap";
 import {
+  isOnRecord,
   leaveRecord,
   leftRecord,
   listAddress,
@@ -82,10 +83,10 @@ function belowList(route: Route): boolean {
   return Boolean(recordKindOf(route) && route.id) || !!reservedPageTitle(route);
 }
 
-// While the next page loads, the bar has already left the record on screen. A
-// move that leaves it as Back would is let finish; any other, Back undoes.
+// A bar still on the record leaves it. A bar that already left it as Back
+// would is let finish; a pending move anywhere else, Back undoes.
 function goBack(onScreen: Route, bar: string): void {
-  if (samePage(bar, routeHash(onScreen))) {
+  if (isOnRecord(onScreen, bar)) {
     leaveRecord(onScreen);
     return;
   }

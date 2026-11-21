@@ -95,7 +95,9 @@ async function holdDraftOn(
   leaveFor: string,
   framed = false,
 ) {
-  const user = userEvent.setup();
+  const user = userEvent.setup(
+    framed ? { advanceTimers: vi.advanceTimersByTime } : undefined,
+  );
   renderRouted(at, framed);
   const page = await screen.findByRole("region", { name });
   await user.type(page.querySelector("input") ?? document.body, "Unsaved");
@@ -173,7 +175,9 @@ describe("the frame over a held draft", () => {
     expect(
       document.querySelector("nav.rail a.navitem.active")?.textContent,
     ).toBe("Contacts");
-    expect(document.querySelector("main")).not.toHaveAttribute("aria-busy");
+    const column = document.querySelector("main > .scroll");
+    expect(column).not.toBeNull();
+    expect(column).not.toHaveAttribute("aria-busy");
     expect(document.querySelector(".pagewait-line")).toBeNull();
   });
 });

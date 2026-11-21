@@ -52,11 +52,13 @@ export function listAddress(screen: Screen): string {
   return lastListAddress.get(screen) ?? routeHash({ screen });
 }
 
-// An address on `record`, whichever tab and dials it has open.
-const onRecord = (record: Route) => (hash: string) => {
+/** Whether `hash` is on `record`, whichever tab and dials it has open. */
+export function isOnRecord(record: Route, hash: string): boolean {
   const route = parseHash(hash);
   return route.screen === record.screen && route.id === record.id;
-};
+}
+
+const onRecord = (record: Route) => (hash: string) => isOnRecord(record, hash);
 
 /**
  * Leave a record for the screen before it, which history restores with its
@@ -68,11 +70,15 @@ export function leaveRecord(record: Route): void {
   });
 }
 
-/** Whether the bar already stands where leaving `record` leads: just behind it, or on its list. */
+/**
+ * Whether the bar has already left `record` the way `leaveRecord` would: just
+ * behind it, or on its list. A bar still on the record has left nothing.
+ */
 export function leftRecord(record: Route, bar: string): boolean {
   return (
-    steppedBackOutOf(onRecord(record)) ||
-    samePage(bar, listAddress(record.screen))
+    !isOnRecord(record, bar) &&
+    (steppedBackOutOf(onRecord(record)) ||
+      samePage(bar, listAddress(record.screen)))
   );
 }
 
