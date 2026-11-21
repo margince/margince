@@ -1635,6 +1635,7 @@
   "nav.tags": "Tag",
   "shell.railAria": "Primary navigation",
   "shell.skipToContent": "Skip to content",
+  "shell.pageLoading": "Loading {page}…",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",

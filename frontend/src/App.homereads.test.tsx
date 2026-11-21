@@ -1,19 +1,24 @@
 /** @vitest-environment happy-dom */
 import { focusManager } from "@tanstack/react-query";
 import { cleanup, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   readStored,
   removeStored,
   STORAGE_KEYS,
   writeStored,
 } from "./lib/storage";
-import { memoryStorage, renderApp, teardownApp } from "./testing/appharness";
+import {
+  memoryStorage,
+  renderApp,
+  teardownApp,
+  wizardRow,
+} from "./testing/appharness";
 import { meFixture } from "./testing/mefixture";
 
-// Home's day and receipt are its slowest reads. On a browser that had a
-// session they start with the session probe, not after the gates it opens. An
-// answer that sends the reader elsewhere stops them.
+// Home's day and receipt are its slowest reads. On a browser that saw its
+// reader finish onboarding they start with the session probe, not after the
+// gates it opens. An answer that sends the reader elsewhere stops them.
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -48,6 +53,15 @@ function server(answers: Record<string, () => Response>, held: string[]) {
 
 const asked = (seen: Seen[], path: string) => seen.find((s) => s.path === path);
 
+// A browser that had a session, and saw its reader finish onboarding.
+function returningFinished() {
+  writeStored(STORAGE_KEYS.sessionSeen, "1");
+  writeStored(
+    { family: STORAGE_KEYS.onboardingComplete, member: meFixture().user.id },
+    "1",
+  );
+}
+
 beforeEach(() => {
   vi.stubGlobal("localStorage", memoryStorage());
   vi.stubGlobal("scrollTo", vi.fn());
@@ -63,7 +77,7 @@ afterEach(async () => {
 });
 
 it("asks for Home's day while the session probe is out, and the deal reads once the grant is known", async () => {
-  writeStored(STORAGE_KEYS.sessionSeen, "1");
+  returningFinished();
   const { seen, release } = server(
     {
       "/me": () =>
@@ -81,7 +95,7 @@ it("asks for Home's day while the session probe is out, and the deal reads once 
 // The day is the slow read, so it is still out when the probe answers. The
 // grant in that answer starts the deal reads and must leave the day alone.
 it("keeps the day's read in flight when the probe answers with the deal grant", async () => {
-  writeStored(STORAGE_KEYS.sessionSeen, "1");
+  returningFinished();
   const { seen } = server(
     {
       "/me": () =>
@@ -112,7 +126,7 @@ it("sends no deal read for a reader the probe answers without the deal grant", a
 });
 
 it("stops Home's reads once the gate sends the reader to describe the company", async () => {
-  writeStored(STORAGE_KEYS.sessionSeen, "1");
+  returningFinished();
   const { seen } = server(
     {
       "/me": () => json(meFixture({ roles: ["admin"] })),
@@ -169,7 +183,7 @@ it("forgets the session when a later probe is refused", async () => {
 });
 
 it("stops Home's reads when the session mark is erased, as a sign-out does", async () => {
-  writeStored(STORAGE_KEYS.sessionSeen, "1");
+  returningFinished();
   const { seen } = server({}, ["/me", "/worklist"]);
   renderApp();
   await waitFor(() => expect(asked(seen, "/worklist")).toBeDefined());
@@ -177,4 +191,45 @@ it("stops Home's reads when the session mark is erased, as a sign-out does", asy
   await waitFor(() =>
     expect(asked(seen, "/worklist")?.signal?.aborted).toBe(true),
   );
+});
+
+describe("a returning browser that never saw its reader finish onboarding", () => {
+  const HOME_READS = ["/worklist", "/worklist/handled", "/brief", "/magic"];
+  const journey = (row: ReturnType<typeof wizardRow>) => ({
+    "/me": () => json(meFixture({ roles: ["rep"], allow: { deal: ["read"] } })),
+    "/company/context/capabilities": () =>
+      json({ onboarding_enabled: true, read_enabled: true }),
+    "/onboarding/state": () => json(row),
+  });
+
+  it("asks nothing of Home for an unfinished member, before or after the gate answers", async () => {
+    writeStored(STORAGE_KEYS.sessionSeen, "1");
+    const { seen, release } = server(journey(wizardRow("voice")), [
+      "/onboarding/state",
+    ]);
+    renderApp();
+    await waitFor(() => expect(asked(seen, "/onboarding/state")).toBeDefined());
+    expect(HOME_READS.filter((path) => asked(seen, path))).toEqual([]);
+    release("/onboarding/state");
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+    expect(HOME_READS.filter((path) => asked(seen, path))).toEqual([]);
+  });
+
+  it("asks Home's reads once the gate admits a finished member", async () => {
+    writeStored(STORAGE_KEYS.sessionSeen, "1");
+    const { seen, release } = server(journey(wizardRow("complete")), [
+      "/onboarding/state",
+    ]);
+    renderApp();
+    await waitFor(() => expect(asked(seen, "/onboarding/state")).toBeDefined());
+    expect(asked(seen, "/worklist")).toBeUndefined();
+    release("/onboarding/state");
+    await waitFor(() =>
+      expect(HOME_READS.filter((path) => asked(seen, path))).toEqual(
+        HOME_READS,
+      ),
+    );
+  });
 });

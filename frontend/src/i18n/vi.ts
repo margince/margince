@@ -2816,6 +2816,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "shell.railAria": "Điều hướng chính",
   "shell.skipToContent": "Chuyển đến nội dung",
+  "shell.pageLoading": "Đang tải {page}…",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
@@ -14719,7 +14720,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.scopeAriaMixed":
     "Các cài đặt trên trang này ảnh hưởng đến những đối tượng khác nhau; mỗi cài đặt ghi rõ đối tượng.",
   "settings.readOnlyPageTitle": "Cài đặt chỉ đọc",
-  "settings.pageLoading": "Đang tải {page}…",
   "settings.readOnlyPage":
     "Vai trò hiện tại không có quyền thay đổi các cài đặt này.",
   "settings.seatRefused":

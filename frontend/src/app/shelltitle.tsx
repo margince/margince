@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { Badge } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { useSettingsSection } from "../features/settings/settingsnav";
@@ -29,27 +30,11 @@ import { TopBar } from "./topbar";
  * the capability cache the rail already warmed. So the trail, the heading and
  * the sidebar cannot disagree about which tab is current.
  */
-export function SettingsTopBar({
-  route,
-  collapsed,
-  onToggle,
-  onOpenSearch,
-}: Readonly<{
-  route: Route;
-  collapsed: boolean;
-  onToggle: () => void;
-  onOpenSearch: () => void;
-}>) {
-  const section = useSettingsSection(route);
-  return (
-    <TopBar
-      route={route}
-      section={section}
-      collapsed={collapsed}
-      onToggle={onToggle}
-      onOpenSearch={onOpenSearch}
-    />
-  );
+export function SettingsTopBar(
+  props: Readonly<Omit<ComponentProps<typeof TopBar>, "section">>,
+) {
+  const section = useSettingsSection(props.route);
+  return <TopBar {...props} section={section} />;
 }
 
 export function SettingsPageTitle(

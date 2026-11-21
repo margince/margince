@@ -337,6 +337,10 @@ const mintPassport = async ({
   // The Modal portals into the document body, outside the canvas.
   const body = within(canvasElement.ownerDocument.body);
   const dialog = within(await body.findByRole("dialog"));
+  await userEvent.type(
+    dialog.getByRole("textbox", { name: /Agent name/ }),
+    "Claude Code on my laptop",
+  );
   await userEvent.click(dialog.getByRole("button", { name: "Mint passport" }));
   await dialog.findByText("Next, use it");
 };
