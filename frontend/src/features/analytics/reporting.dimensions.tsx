@@ -14,6 +14,7 @@ import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useHealthScope } from "../../lib/healthscope";
+import { valueFor } from "../../lib/labelfor";
 import { useSalesInitiatives } from "./reporting.initiatives.queries";
 import type { ReportingSelection } from "./reporting.model";
 import { VALUE_BASES, valueBasisOf } from "./reporting.selection";
@@ -266,6 +267,8 @@ const SCOPE_PROFILE: Readonly<
   team: "analytics.overview.profileTeam",
   owner: "analytics.overview.profileSeller",
 };
+// A scope this build does not know claims no one's sales, company or team.
+const UNNAMED_PROFILE: MessageKey = "reporting.sales";
 
 function industryName(code: string, t: Translator): string {
   const key = industryLabelKey(code);
@@ -350,7 +353,7 @@ export function DimensionChips({
           ? t("analytics.overview.profileInitiative")
           : selection.product_id
             ? t("analytics.overview.profileProduct")
-            : t(SCOPE_PROFILE[selection.scope.kind])}
+            : t(valueFor(SCOPE_PROFILE, selection.scope.kind, UNNAMED_PROFILE))}
       </Badge>
       {items.length > 0 && (
         <TokenList

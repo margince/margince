@@ -137,6 +137,26 @@ describe("ForecastDeals", () => {
     expect(row("Masked")).not.toMatch(/No amount|Exchange rate missing/);
   });
 
+  it("keeps the absent figure for a reason this build does not know", async () => {
+    serve({
+      self_correcting: true,
+      contributions: [
+        contribution({
+          deal_name: "Newer reason",
+          base_minor: undefined,
+          weighted_minor: 0,
+          exclusion_reason: "written_off",
+        }),
+      ],
+    });
+    await openDeals();
+    await screen.findByText("Newer reason");
+    const row = screen.getByText("Newer reason").closest("tr")?.textContent;
+    expect(row).toContain("Amount —");
+    expect(row).toContain("— weighted");
+    expect(row).not.toMatch(/€0|No amount|Exchange rate missing/);
+  });
+
   it("says how each open deal's weight was made", async () => {
     const fetchMock = serve({
       self_correcting: true,

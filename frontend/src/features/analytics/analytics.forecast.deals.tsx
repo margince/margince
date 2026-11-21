@@ -25,6 +25,7 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { signalSentence } from "../../lib/forecastsignals";
+import { valueFor } from "../../lib/labelfor";
 import { stageNames, usePipelines } from "../../lib/pipelines.queries";
 import type { AnalyticsScope } from "./analytics.context";
 import {
@@ -83,13 +84,20 @@ const EXCLUSION_WORD: Readonly<
   fx_missing: "forecast.fxMissing",
 };
 
-// A masked deal has no amount and no reason, and keeps the absent figure.
+// A masked deal, or a reason this build does not know, keeps the absent figure.
+function exclusionWord(row: ForecastContribution): MessageKey | undefined {
+  return row.exclusion_reason
+    ? valueFor(EXCLUSION_WORD, row.exclusion_reason, undefined)
+    : undefined;
+}
+
 function amountCell(
   row: ForecastContribution,
   currency: string,
   { t, locale }: Words,
 ): string {
-  if (row.exclusion_reason) return t(EXCLUSION_WORD[row.exclusion_reason]);
+  const word = exclusionWord(row);
+  if (word) return t(word);
   return formatAnalyticsMoneyOrAbsent(row.base_minor ?? null, currency, locale);
 }
 
@@ -152,7 +160,7 @@ function dealColumns(
       render: (row) => amountCell(row, currency, words),
       // The reason reads on its own, without the column name before it.
       folded: (row) =>
-        row.exclusion_reason
+        exclusionWord(row)
           ? undefined
           : t("forecast.deals.foldedAmount", {
               amount: amountCell(row, currency, words),
