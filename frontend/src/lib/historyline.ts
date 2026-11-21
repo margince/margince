@@ -2,10 +2,12 @@ import type { components } from "../api/schema";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { actorAttribution, isAuditActorType } from "./auditactor";
+import { historyFieldLabel } from "./historyfieldlabels";
 import { HISTORY_VERB } from "./historyverbs";
 
-// One history entry as a sentence in the reader's language. A link change, or a
-// verb or actor kind newer than this client, keeps the server's English summary.
+// One history entry as a sentence in the reader's language. A verb or actor kind
+// newer than this client, or a link change the server sent without its parts,
+// keeps the server's English summary.
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 
@@ -76,11 +78,49 @@ export function historySubject(
   return null;
 }
 
+type Edge = NonNullable<AuditHistoryEntry["edge"]>;
+
+// A link line from the parts on the wire, or null when they are absent (an
+// older server) so the caller keeps `summary`. The other end falls back to its
+// id, as the server's sentence does.
+function edgeLine(
+  action: string,
+  edge: Edge,
+  subject: string,
+  t: Translator,
+): string | null {
+  const name = edge.other_label || edge.other_entity_id;
+  const params = { subject, name };
+  if (action === "archive") return t("history.edge.unlinked", params);
+  if (action === "create" && edge.role) {
+    return t("history.edge.linked", { ...params, role: edge.role });
+  }
+  if (action !== "update") return null;
+  if (edge.role && edge.previous_role) {
+    return t("history.edge.roleChanged", {
+      ...params,
+      role: edge.role,
+      previous: edge.previous_role,
+    });
+  }
+  if (edge.role && edge.changed_fields?.length === 1) {
+    return t("history.edge.roleSet", { ...params, role: edge.role });
+  }
+  if (!edge.changed_fields?.length) return null;
+  const fields = edge.changed_fields
+    .map((field) => historyFieldLabel(field, t))
+    .join(", ");
+  return t("history.edge.changed", { ...params, fields });
+}
+
 /** The history line for one entry, in the reader's language. */
 export function historyLine(entry: HistoryLineFacts, t: Translator): string {
-  // An edge line names the other record and the role it was linked as, and
-  // the role travels only inside `summary`.
-  if (entry.edge) return entry.summary;
+  if (entry.edge) {
+    const subject = historySubject(entry, t);
+    const line =
+      subject === null ? null : edgeLine(entry.action, entry.edge, subject, t);
+    return line ?? entry.summary;
+  }
   const verb = VERB_KEYS.get(entry.action);
   const subject = historySubject(entry, t);
   if (!verb || subject === null) return entry.summary;

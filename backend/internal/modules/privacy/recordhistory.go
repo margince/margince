@@ -166,7 +166,7 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 		if line, phrased := edgeSummary(subject, row.action, *row.edge, after); phrased {
 			summary = line
 		}
-		rendered := historyEdgeOf(*row.edge)
+		rendered := historyEdgeOf(*row.edge, row.action, before, after)
 		edge = &rendered
 		// The images belong to the LINK — role, the dates, the primary flag — and
 		// the line above is where they are named as such. Carried onto the entry

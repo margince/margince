@@ -323,24 +323,40 @@ func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCT
 // kind, and the OTHER end named and identified so a reader can go and look at
 // it. Nil on every row that changed a field of the record itself.
 //
-// It carries no field diff and never will. role, the dates and the
-// primary-employer flag belong to the LINK rather than to either record it
-// joins, so projecting them as the record's own fields would invent fields the
-// record does not have — which is the same reason edge rows never enter field
-// history.
+// It carries no field diff: the link's columns are not the record's fields, so
+// edge rows never enter field history. Only the role and the changed field
+// names travel.
 type HistoryEdge struct {
 	Kind            string
 	OtherEntityType string
 	OtherEntityID   ids.UUID
 	OtherLabel      *string
+	// Role is the role the link was made or changed to, and PreviousRole the one
+	// it replaced. Both come from the entity-masked images the line's sentence is
+	// phrased from, so a reader who cannot see a field is not told it here.
+	Role         *string
+	PreviousRole *string
+	// ChangedFields names the link fields an update moved, sorted.
+	ChangedFields []string
 }
 
 // historyEdgeOf renders the scanned subject for a caller outside this package.
-func historyEdgeOf(edge edgeSubject) HistoryEdge {
-	return HistoryEdge{
+// before and after are the MASKED images, the same ones edgeSummary reads.
+func historyEdgeOf(edge edgeSubject, action string, before, after map[string]any) HistoryEdge {
+	out := HistoryEdge{
 		Kind:            edge.kind,
 		OtherEntityType: edge.otherType,
 		OtherEntityID:   edge.otherID,
 		OtherLabel:      edge.otherLabel,
 	}
+	if role := edgeRoleOf(after); role != "" {
+		out.Role = &role
+	}
+	if action == actionUpdate {
+		out.ChangedFields = edgeChangedFieldNames(after)
+		if prev := edgeRoleOf(before); prev != "" && out.Role != nil {
+			out.PreviousRole = &prev
+		}
+	}
+	return out
 }

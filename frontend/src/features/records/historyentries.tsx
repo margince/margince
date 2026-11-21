@@ -37,8 +37,8 @@ import { actorName, ReversalPairRow } from "./historyreversalrow";
 import "./history.css";
 
 // The per-record change list: one sentence per audit_log row, from its verb
-// and actor, never from its before/after diffs. A link change keeps the
-// server's English sentence (historyline.ts).
+// and actor, never from its before/after diffs. A link change is worded from the
+// role and field names on its edge (historyline.ts).
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 

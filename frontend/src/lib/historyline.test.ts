@@ -15,6 +15,7 @@ import {
 import { HISTORY_VERB } from "./historyverbs";
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
+type Edge = NonNullable<AuditHistoryEntry["edge"]>;
 
 const CATALOGS: Record<Locale, Record<MessageKey, string>> = { en, de, vi };
 const LOCALES: readonly Locale[] = ["en", "de", "vi"];
@@ -258,21 +259,71 @@ describe("historyLine", () => {
     }
   });
 
-  it("keeps the server's sentence for a link change", () => {
-    const row: AuditHistoryEntry = {
-      ...base,
-      action: "create",
-      summary: "Ada Admin linked Employer GmbH as cto",
-      edge: {
-        kind: "employment",
-        other_entity_type: "company",
-        other_entity_id: "c1",
-        other_label: "Employer GmbH",
-      },
+  describe("a link change", () => {
+    const edge = {
+      kind: "employment",
+      other_entity_type: "company" as const,
+      other_entity_id: "c1",
+      other_label: "Employer GmbH",
     };
-    expect(
-      historyLine(row, (key, params) => translate("de", key, params)),
-    ).toBe(row.summary);
+    const de_t = (key: MessageKey, params?: Record<string, string>) =>
+      translate("de", key, params);
+    const linkRow = (
+      action: string,
+      parts: Partial<Edge>,
+    ): AuditHistoryEntry => ({
+      ...base,
+      actor_name: "Uma",
+      action: action as AuditHistoryEntry["action"],
+      summary: "the server's English link sentence",
+      edge: { ...edge, ...parts },
+    });
+
+    it("reads a link made with a role in the reader's language", () => {
+      expect(historyLine(linkRow("create", { role: "cto" }), de_t)).toBe(
+        "Uma hat Employer GmbH als cto verknüpft",
+      );
+    });
+
+    it("reads a role change and a field change from the parts", () => {
+      expect(
+        historyLine(
+          linkRow("update", {
+            role: "ceo",
+            previous_role: "cto",
+            changed_fields: ["role"],
+          }),
+          de_t,
+        ),
+      ).toBe("Uma hat die Rolle bei Employer GmbH von cto zu ceo geändert");
+      expect(
+        historyLine(
+          linkRow("update", { changed_fields: ["ended_at", "role"] }),
+          de_t,
+        ),
+      ).toBe(
+        "Uma hat die Verknüpfung mit Employer GmbH geändert: Beendet, Rolle",
+      );
+    });
+
+    it("reads an unlink and words every locale", () => {
+      for (const locale of LOCALES) {
+        const line = historyLine(linkRow("archive", {}), (key, params) =>
+          translate(locale, key, params),
+        );
+        expect(line).toContain("Employer GmbH");
+        expect(line).not.toContain("server");
+      }
+    });
+
+    it("keeps the server's sentence when an older server sends no parts", () => {
+      expect(historyLine(linkRow("create", {}), de_t)).toBe(
+        "the server's English link sentence",
+      );
+      expect(historyLine(linkRow("update", {}), de_t)).toBe(
+        "the server's English link sentence",
+      );
+    });
   });
 
   it("keeps the server's sentence for a verb or actor kind it does not know", () => {

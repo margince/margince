@@ -472,3 +472,56 @@ func TestTheHistoryMaskRefusesWhenNobodyIsAsking(t *testing.T) {
 			"\"withhold nothing\" and both audit images go out whole")
 	}
 }
+
+// The edge object carries what the sentence is phrased from. A client words the
+// link line in its own language from it.
+func TestAnEdgeEntryCarriesTheRoleAndTheChangedFields(t *testing.T) {
+	subject := &edgeSubject{
+		kind: "employment", otherType: "company",
+		otherID: ids.NewV7(), otherLabel: new("Employer GmbH"),
+	}
+
+	created := recordHistoryEntry(recordAuditRow{
+		actorType: actorTypeHuman, actorID: "human:x", action: actionCreate,
+		after: map[string]any{"kind": "employment", "role": "cto"}, edge: subject,
+	}, nil)
+	if created.Edge.Role == nil || *created.Edge.Role != "cto" || len(created.Edge.ChangedFields) != 0 {
+		t.Errorf("a link create reports role=%v fields=%v, want cto and none", created.Edge.Role, created.Edge.ChangedFields)
+	}
+
+	updated := recordHistoryEntry(recordAuditRow{
+		actorType: actorTypeHuman, actorID: "human:x", action: actionUpdate,
+		before: map[string]any{"role": "cto", "ended_at": nil},
+		after:  map[string]any{"kind": "employment", "role": "ceo", "ended_at": "2026-01-01"}, edge: subject,
+	}, nil)
+	if updated.Edge.Role == nil || *updated.Edge.Role != "ceo" ||
+		updated.Edge.PreviousRole == nil || *updated.Edge.PreviousRole != "cto" {
+		t.Errorf("a role change reports role=%v previous=%v, want ceo from cto", updated.Edge.Role, updated.Edge.PreviousRole)
+	}
+	if got := strings.Join(updated.Edge.ChangedFields, ","); got != "ended_at,role" {
+		t.Errorf("changed fields = %q, want the sorted names without kind", got)
+	}
+
+	unlinked := recordHistoryEntry(recordAuditRow{
+		actorType: actorTypeHuman, actorID: "human:x", action: actionArchive, edge: subject,
+	}, nil)
+	if unlinked.Edge.Role != nil || len(unlinked.Edge.ChangedFields) != 0 {
+		t.Errorf("an unlink reports role=%v fields=%v, want neither", unlinked.Edge.Role, unlinked.Edge.ChangedFields)
+	}
+}
+
+// A role the reader's mask withholds is withheld from the edge object too.
+func TestAnEdgeEntryWithholdsAMaskedRole(t *testing.T) {
+	row := recordAuditRow{
+		actorType: actorTypeHuman, actorID: "human:x", action: actionUpdate,
+		before: map[string]any{"role": "cto"}, after: map[string]any{"role": "ceo", "ended_at": "2026-01-01"},
+		edge: &edgeSubject{kind: "employment", otherType: "company", otherID: ids.NewV7()},
+	}
+	entry := recordHistoryEntry(row, entityFieldMask{"role": {}})
+	if entry.Edge.Role != nil || entry.Edge.PreviousRole != nil {
+		t.Errorf("masked role leaked: role=%v previous=%v", entry.Edge.Role, entry.Edge.PreviousRole)
+	}
+	if got := strings.Join(entry.Edge.ChangedFields, ","); got != "ended_at" {
+		t.Errorf("changed fields = %q, want the masked field left out", got)
+	}
+}
