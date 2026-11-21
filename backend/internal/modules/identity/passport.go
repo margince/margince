@@ -106,6 +106,9 @@ type InvalidPassportFieldError struct{ Field, Code, Message string }
 
 func (e *InvalidPassportFieldError) Error() string { return e.Field + ": " + e.Message }
 
+// requiredFieldCode is the field code of a value that must be present.
+const requiredFieldCode = "required"
+
 // maxPassportLabelRunes is the label bound crm.yaml declares as maxLength,
 // which counts characters rather than bytes.
 const maxPassportLabelRunes = 120
@@ -193,6 +196,15 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	}
 	if err := admitAreas(in.Areas); err != nil {
 		return IssuedPassport{}, err
+	}
+	// A name that is given must say something, or two rows cannot be told
+	// apart. An absent name stays accepted for older API clients.
+	if in.Label != nil {
+		label := strings.TrimSpace(*in.Label)
+		if label == "" {
+			return IssuedPassport{}, &InvalidPassportFieldError{Field: "label", Code: requiredFieldCode, Message: "label must not be blank"}
+		}
+		in.Label = &label
 	}
 	if grantID == nil {
 		if err := admitCallerChosenFields(in); err != nil {

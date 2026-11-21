@@ -26,12 +26,17 @@ export function usePassportRevoke({
   question: MessageKey;
   focusAfter: (id: string) => HTMLElement | null;
   onRevoked?: (id: string) => void;
-}>): Readonly<{ ask: (id: string) => void; confirm: ReactNode }> {
+}>): Readonly<{
+  ask: (id: string, name?: string) => void;
+  confirm: ReactNode;
+}> {
   const t = useT();
   const list = usePassports();
   const [pendingId, setPendingId] = useState<string | null>(null);
   // Read as the dialog closes, when `pendingId` is already back to null.
   const askedId = useRef("");
+  // What the dialog names, so two passports are told apart before one is ended.
+  const [askedName, setAskedName] = useState<string | undefined>();
   const revoke = useMutation({
     mutationFn: async (id: string) => {
       unwrap(await api.DELETE("/passports/{id}", { params: { path: { id } } }));
@@ -57,12 +62,14 @@ export function usePassportRevoke({
       error={revoke.error ? problemMessageOf(revoke.error, t) : null}
       returnFocusTo={() => focusAfter(askedId.current)}
     >
+      {askedName && <p className="t-name">{askedName}</p>}
       <p>{t(question)}</p>
     </ConfirmModal>
   );
   return {
-    ask: (id) => {
+    ask: (id, name) => {
       askedId.current = id;
+      setAskedName(name);
       setPendingId(id);
     },
     confirm,

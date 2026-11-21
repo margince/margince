@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
-import type { MessageKey } from "../../i18n/en";
+
+export { CERT_LABELS, MARGIN_TIER_LABELS } from "../../format/partnervocab";
 
 export type Partner = components["schemas"]["Partner"];
 
@@ -21,15 +22,3 @@ export const MARGIN_TIERS: readonly MarginTier[] = [
   "tier2_20",
   "tier3_25",
 ];
-
-export const CERT_LABELS: Record<CertStatus, MessageKey> = {
-  applied: "partner.cert.applied",
-  certified: "partner.cert.certified",
-  suspended: "partner.cert.suspended",
-};
-
-export const MARGIN_TIER_LABELS: Record<MarginTier, MessageKey> = {
-  tier1_15: "partner.marginTier.tier1",
-  tier2_20: "partner.marginTier.tier2",
-  tier3_25: "partner.marginTier.tier3",
-};

@@ -29,7 +29,7 @@ func (e *revocationEnv) lastUsed(t *testing.T, passport ids.PassportID) *time.Ti
 
 func TestAuthenticatingStampsThePassportOnceAMinute(t *testing.T) {
 	e := setupRevocationEnv(t, "passport-last-used-debounce")
-	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("minting a passport: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestAuthenticatingStampsThePassportOnceAMinute(t *testing.T) {
 
 func TestTheSchedulerResolvingAPassportDoesNotCountAsUse(t *testing.T) {
 	e := setupRevocationEnv(t, "passport-last-used-scheduler")
-	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("minting a passport: %v", err)
 	}
