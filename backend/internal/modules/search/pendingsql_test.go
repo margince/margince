@@ -15,8 +15,9 @@ import (
 func TestThePendingStatementsNarrowFirstAndReadTextAfterTheAntiJoin(t *testing.T) {
 	for entityType, src := range pendingSources {
 		for name, sql := range map[string]string{
-			"pendingIDsSQL":   src.pendingIDsSQL(entityType),
-			"pendingStatsSQL": src.pendingStatsSQL(entityType),
+			"pendingIDsSQL":        src.pendingIDsSQL(entityType, DriftFull),
+			"pendingIDsSQL recent": src.pendingIDsSQL(entityType, DriftRecent),
+			"pendingStatsSQL":      src.pendingStatsSQL(entityType),
 		} {
 			if !strings.Contains(sql, src.embeddablePredicate()) {
 				t.Errorf("%s(%s) does not narrow by the source's embeddable predicate %q", name, entityType, src.embeddablePredicate())
@@ -36,8 +37,37 @@ func TestThePendingStatementsNarrowFirstAndReadTextAfterTheAntiJoin(t *testing.T
 // The activity source is the one whose predicate matters: without it the sweep
 // enumerates participants/selected mail on every pass.
 func TestTheSweepIDScanAdmitsOnlyWorkspaceActivity(t *testing.T) {
-	sql := pendingSources[entityActivity].pendingIDsSQL(entityActivity)
+	sql := pendingSources[entityActivity].pendingIDsSQL(entityActivity, DriftFull)
 	if !strings.Contains(sql, "t.audience = 'workspace'") {
 		t.Fatalf("the sweep's activity id scan does not narrow to audience = 'workspace':\n%s", sql)
+	}
+}
+
+// The recent pass bounds the outer table by its indexed column, inside the
+// anti-join's CTE, so the bound narrows the rows the anti-join visits. The
+// full pass and the backlog count carry no bound.
+func TestTheRecentPassBoundsTheOuterTableAndTheFullPassDoesNot(t *testing.T) {
+	for entityType, src := range pendingSources {
+		recent := src.pendingIDsSQL(entityType, DriftRecent)
+		bound := "t." + src.recentColumn + " >= now() - interval '" + recentDriftWindow + "'"
+		if src.recentColumn != "" {
+			unembedded := recent[:strings.Index(recent, "pending_text AS")]
+			if !strings.Contains(unembedded, bound) {
+				t.Errorf("the recent pass over %s does not bound the outer table by %s:\n%s", entityType, src.recentColumn, recent)
+			}
+		}
+		for name, sql := range map[string]string{
+			"full pass":     src.pendingIDsSQL(entityType, DriftFull),
+			"backlog count": src.pendingStatsSQL(entityType),
+		} {
+			if strings.Contains(sql, "interval") {
+				t.Errorf("the %s over %s carries a recency bound, so it misses older rows:\n%s", name, entityType, sql)
+			}
+		}
+	}
+	for _, entityType := range []string{entityActivity, entityContact, entityCompany} {
+		if pendingSources[entityType].recentColumn == "" {
+			t.Errorf("%s has no recent column, so every recent pass reads the whole table", entityType)
+		}
 	}
 }

@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -58,6 +60,34 @@ type embedDriftSweepWorker struct {
 	corpora  *knowledge.Store
 	embedder search.Embedder
 	log      *slog.Logger
+	// fullPass decides which tick reads every row. The others read only the
+	// rows written in the last hour.
+	fullPass dailyFullPass
+}
+
+// dailyFullPass remembers the UTC day this process last finished a full pass.
+// It is not stored: a restart or a second worker costs one extra full pass,
+// never a missed one.
+type dailyFullPass struct {
+	mu   sync.Mutex
+	done string
+}
+
+// scope is the drift scope of a pass starting at now.
+func (d *dailyFullPass) scope(now time.Time) search.DriftScope {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.done == now.UTC().Format(time.DateOnly) {
+		return search.DriftRecent
+	}
+	return search.DriftFull
+}
+
+// finished records a full pass that started at now and completed.
+func (d *dailyFullPass) finished(now time.Time) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.done = now.UTC().Format(time.DateOnly)
 }
 
 func (w *embedDriftSweepWorker) Work(ctx context.Context, job *river.Job[EmbedDriftSweepArgs]) error {
@@ -79,8 +109,15 @@ func (w *embedDriftSweepWorker) Work(ctx context.Context, job *river.Job[EmbedDr
 	if orphaned > 0 {
 		w.log.InfoContext(ctx, "closed embed drift sweep rows left running by a dead worker", "closed", orphaned)
 	}
-	if err := runPerWorkspace(ctx, w.pool, w.sweepWorkspace); err != nil {
+	started := time.Now()
+	scope := w.fullPass.scope(started)
+	if err := runPerWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+		return w.sweepWorkspace(ctx, workspace, scope)
+	}); err != nil {
 		return jobs.FaultContext(ctx, err)
+	}
+	if scope == search.DriftFull {
+		w.fullPass.finished(started)
 	}
 	// Under the lock, so the next sweep cannot read this finished row as a dead
 	// worker's. A failed write fails the pass, and River retries it.
@@ -90,9 +127,9 @@ func (w *embedDriftSweepWorker) Work(ctx context.Context, job *river.Job[EmbedDr
 // sweepWorkspace heals ONE workspace. It was the child job's Work, and binds
 // the workspace itself: the pass walks tenants, so the binding belongs to the
 // tenant's turn rather than to the row.
-func (w *embedDriftSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID) error {
+func (w *embedDriftSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID, scope search.DriftScope) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	healed, err := w.store.SweepWorkspaceEmbeddingDrift(wsCtx, ids.From[ids.WorkspaceKind](workspace), w.embedder)
+	healed, err := w.store.SweepWorkspaceEmbeddingDrift(wsCtx, ids.From[ids.WorkspaceKind](workspace), w.embedder, scope)
 	if healed > 0 {
 		w.log.InfoContext(wsCtx, "embed drift sweep healed entities", "healed", healed)
 	}
