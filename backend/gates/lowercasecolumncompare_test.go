@@ -24,9 +24,17 @@ import (
 // compares the two column names, which a Go regexp cannot.
 var lowerCaseCheck = regexp.MustCompile(`^public\.([a-z_]\w*)\.\w+ CHECK \(.*\b([a-z_]\w*) = lower\(([a-z_]\w*)\)`)
 
-// lowerCaseColumnsFloor is the number of such columns the catalog holds today:
-// contact_email, lead and deal_room_participant. Fewer means the reader broke.
-const lowerCaseColumnsFloor = 3
+// addressColumnsHeldLowerCase are the email columns the address lookups read.
+// The census must find each by name: a reader that lost them could still count
+// the many `key = lower(key)` CHECKs and look whole.
+var addressColumnsHeldLowerCase = []string{"contact_email.email", "deal_room_participant.email", "lead.email"}
+
+var (
+	// lowerCaseComparedAfter and lowerCaseComparedBefore widen the seat census's
+	// operators by LIKE and ILIKE, which a bare column answers the same way.
+	lowerCaseComparedAfter  = regexp.MustCompile(`(?i)^\s*(=|<>|!=|\bIN\b|\bNOT\s+IN\b|\b(?:NOT\s+)?I?LIKE\b)`)
+	lowerCaseComparedBefore = regexp.MustCompile(`(?i)(=|<>|!=|\bI?LIKE)\s*$`)
+)
 
 // lowerCaseColumns maps each column name to the tables whose CHECK holds it in
 // lower case. It reads the committed schema, so a new one enrols itself.
@@ -37,7 +45,6 @@ func lowerCaseColumns(t *testing.T) map[string]map[string]bool {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
 	columns := map[string]map[string]bool{}
-	found := 0
 	for line := range strings.SplitSeq(string(raw), "\n") {
 		m := lowerCaseCheck.FindStringSubmatch(line)
 		if m == nil || m[2] != m[3] {
@@ -47,11 +54,12 @@ func lowerCaseColumns(t *testing.T) map[string]map[string]bool {
 			columns[m[2]] = map[string]bool{}
 		}
 		columns[m[2]][m[1]] = true
-		found++
 	}
-	if found < lowerCaseColumnsFloor {
-		t.Fatalf("the catalog read %d lower-case CHECK column(s), want at least %d: the reader stopped recognising them",
-			found, lowerCaseColumnsFloor)
+	for _, want := range addressColumnsHeldLowerCase {
+		table, column, _ := strings.Cut(want, ".")
+		if !columns[column][table] {
+			t.Fatalf("the catalog reader found no lower-case CHECK on %s: it stopped recognising them", want)
+		}
 	}
 	return columns
 }
@@ -98,11 +106,13 @@ func wrappedLowerCaseCompares(path, source string, columns map[string]map[string
 		names = append(names, regexp.QuoteMeta(name))
 	}
 	sort.Strings(names)
-	operand := regexp.MustCompile(`(?i)lower\s*\(\s*(?:([a-z_]\w*)\.)?(` + strings.Join(names, "|") + `)\s*\)`)
+	// A schema qualifier (`public.contact_email.email`) is read past; the alias
+	// is the name right before the column.
+	operand := regexp.MustCompile(`(?i)lower\s*\(\s*(?:(?:[a-z_]\w*\.)?([a-z_]\w*)\.)?(` + strings.Join(names, "|") + `)\s*\)`)
 	aliases := boundTables(source)
 	var sites []string
 	for _, at := range operand.FindAllStringSubmatchIndex(source, -1) {
-		if !comparedAfter.MatchString(source[at[1]:]) && !comparedBefore.MatchString(source[:at[0]]) {
+		if !lowerCaseComparedAfter.MatchString(source[at[1]:]) && !lowerCaseComparedBefore.MatchString(source[:at[0]]) {
 			continue
 		}
 		alias := ""
@@ -110,7 +120,7 @@ func wrappedLowerCaseCompares(path, source string, columns map[string]map[string
 			alias = strings.ToLower(source[at[2]:at[3]])
 		}
 		tables := columns[strings.ToLower(source[at[4]:at[5]])]
-		if !operandReads(source[:at[0]], alias, aliases, tables) {
+		if !tables[alias] && !operandReads(source[:at[0]], alias, aliases, tables) {
 			continue
 		}
 		sites = append(sites, path+":"+strconv.Itoa(strings.Count(source[:at[0]], "\n")+1)+" "+source[at[0]:at[1]])
@@ -131,6 +141,10 @@ func TestTheLowerCaseColumnCensusReadsEverySpelling(t *testing.T) {
 		"SELECT 1 FROM lead l WHERE $1 = lower(l.email)",
 		"SELECT 1 FROM activity_participant ap JOIN contact_email ce ON lower(ap.address) = lower(ce.email)",
 		"SELECT 1 FROM deal_room_participant p WHERE lower(p.email) IN ('a')",
+		"SELECT 1 FROM public.contact_email WHERE lower(public.contact_email.email) = lower($1)",
+		"SELECT 1 FROM contact_email ce WHERE lower(ce.email) ILIKE $1",
+		"SELECT 1 FROM lead l WHERE lower(l.email) NOT LIKE $1",
+		"SELECT 1 FROM lead l WHERE $1 LIKE lower(l.email)",
 	} {
 		if sites := wrappedLowerCaseCompares("planted.go", "`"+statement+"`", columns); len(sites) != 1 {
 			t.Errorf("the census reads %d wrapped comparison(s) in %q, want 1", len(sites), statement)
@@ -139,6 +153,7 @@ func TestTheLowerCaseColumnCensusReadsEverySpelling(t *testing.T) {
 	for _, statement := range []string{
 		"SELECT 1 FROM contact_email pe WHERE pe.email = lower($1)",
 		"SELECT 1 FROM app_user u WHERE lower(u.email) = lower($1)",
+		"SELECT 1 FROM contact_email ce JOIN app_user u ON ce.email = lower(u.email)",
 		"SELECT lower(pe.email) FROM contact_email pe",
 		"SELECT 1 FROM lead l WHERE f_fold_apostrophes(lower(l.email)) % $1",
 	} {
