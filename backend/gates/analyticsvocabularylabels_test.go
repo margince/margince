@@ -22,19 +22,14 @@ package gates
 
 import (
 	"context"
-	"go/ast"
-	"go/parser"
 	"maps"
-	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -167,9 +162,13 @@ func deriveAnalyticsServer(t *testing.T) analyticsServer {
 		analyticsquery.ShapeNumber: {}, analyticsquery.ShapeBoolean: {},
 	}
 	dimensionShape := map[string]analyticsquery.ColumnShape{}
+	native := map[string]bool{}
 	for _, entity := range schema.Entities {
 		for name, field := range entity.Fields {
 			fields[name] = true
+			if field.Currency != nil {
+				native[name] = true
+			}
 			if field.Kind != analyticsquery.KindDimension {
 				continue
 			}
@@ -187,7 +186,7 @@ func deriveAnalyticsServer(t *testing.T) analyticsServer {
 	}
 	server := analyticsServer{
 		fields: slices.Sorted(maps.Keys(fields)), entities: schema.EntityNames(),
-		native:      nativeMoneyMeasures(t),
+		native:      slices.Sorted(maps.Keys(native)),
 		numberDims:  slices.Sorted(maps.Keys(shapes[analyticsquery.ShapeNumber])),
 		booleanDims: slices.Sorted(maps.Keys(shapes[analyticsquery.ShapeBoolean])),
 	}
@@ -196,59 +195,6 @@ func deriveAnalyticsServer(t *testing.T) analyticsServer {
 		t.Fatalf("a server set derived empty (%+v) — this gate would hold the browser to nothing", server)
 	}
 	return server
-}
-
-// nativeMoneyMeasures reads every nativeMoney declaration in compose, the one
-// place a spec names a measure denominated in its row's own currency.
-func nativeMoneyMeasures(t *testing.T) []string {
-	t.Helper()
-	consts := gatekit.PackageStringConstants(t, "internal/compose")
-	sources, err := filepath.Glob("internal/compose/*.go")
-	if err != nil {
-		t.Fatalf("listing compose: %v", err)
-	}
-	measures := map[string]bool{}
-	for _, source := range sources {
-		if strings.HasSuffix(source, "_test.go") {
-			continue
-		}
-		file, err := gatekit.ParseFile(source, parser.SkipObjectResolution)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", source, err)
-		}
-		ast.Inspect(file, func(n ast.Node) bool {
-			call, isCall := n.(*ast.CallExpr)
-			if !isCall {
-				return true
-			}
-			if fn, named := call.Fun.(*ast.Ident); named && fn.Name == "nativeMoney" {
-				for _, arg := range call.Args {
-					measures[nativeMoneyArg(t, source, arg, consts)] = true
-				}
-			}
-			return true
-		})
-	}
-	return slices.Sorted(maps.Keys(measures))
-}
-
-// nativeMoneyArg resolves one argument to its measure name, failing on a shape
-// it cannot read rather than skipping it, or the census would come up short.
-func nativeMoneyArg(t *testing.T, source string, arg ast.Expr, consts map[string]string) string {
-	t.Helper()
-	switch value := arg.(type) {
-	case *ast.Ident:
-		if name, ok := consts[value.Name]; ok {
-			return name
-		}
-	case *ast.BasicLit:
-		if name, err := strconv.Unquote(value.Value); err == nil {
-			return name
-		}
-	}
-	t.Fatalf("%s: a nativeMoney argument this gate cannot resolve to a measure name — "+
-		"pass a string constant of package compose", source)
-	return ""
 }
 
 func analyticsMirrors(t *testing.T, server analyticsServer, catalog, vocab string) []analyticsMirror {
