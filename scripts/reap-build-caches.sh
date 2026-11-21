@@ -4,7 +4,8 @@
 # `.github/actions/go-build-cache` keys every entry
 # `go-build-<flavor>-<os>-<arch>-<deps-hash>-<commit-sha>` and falls back through
 # `restore-keys` to the newest entry sharing the deps hash.
-# `.github/actions/frontend-cache-key` keys `frontend-incremental-…` the same way. A lookup searches the
+# `.github/actions/frontend-cache-key` keys `frontend-incremental-…` and
+# `.github/actions/golangci-cache-key` keys `golangci-analysis-…` the same way. A lookup searches the
 # reader's own ref, then its base branch, then the default branch, so `main` and
 # `develop` each serve readers of their own. Within one ref and one deps hash only
 # the NEWEST entry is ever read: every older one is unreachable by construction,
@@ -19,13 +20,14 @@
 # expensive ones, and the lanes that depended on them quietly get slower.
 #
 # So this deletes the superseded generations rather than waiting for eviction to
-# choose worse victims. It is deliberately narrow: only those two key kinds, only
+# choose worse victims. It is deliberately narrow: only those three key kinds, only
 # entries that are not the newest of their ref and deps hash. Everything else — including
 # an older deps hash, which restore-keys CAN still fall back to after a go.sum
 # bump — is left alone.
 #
 # DRY_RUN=1 prints the plan and deletes nothing. REF=refs/heads/<branch> limits
-# the sweep to that ref, which is how cache-warm.yml prunes after it saves.
+# the sweep to that ref, which is how cache-warm.yml and lint-cache.yml prune
+# after they save.
 set -euo pipefail
 
 repo="${REPO:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
@@ -58,7 +60,7 @@ kept_go_build=0
 while IFS=$'\t' read -r created id ref key size; do
 	[[ -n "$id" ]] || continue
 	case "$key" in
-	go-build-* | frontend-incremental-*) ;;
+	go-build-* | frontend-incremental-* | golangci-analysis-*) ;;
 	*) continue ;;
 	esac
 

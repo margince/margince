@@ -50,9 +50,10 @@ It writes on `main` and on `develop`, so a pull request reads the entry of the b
 Its `prune` job then deletes the older entries of its own ref (`REF=<ref> scripts/reap-build-caches.sh`).
 
 GitHub runs a cron only on the default branch, and drops some of those runs. So `pace.yml` starts it
-from a push to `main` or `develop` once that branch's newest run is three hours old, as it does on
-`main` for `main-health.yml`. Why `ci.yml` saves neither lint cache: [The lint caches are saved on
+from a push to `main` or `develop` once that branch's newest run is three hours old. It does the same
+for `main-health.yml` on `main`. Why `ci.yml` saves neither lint cache: [The lint caches are saved on
 `main` and `develop`](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-and-develop).
+
 Its `ci-image` job builds the [CI image](../explanation/ci-image.md), and `plain` warms the caches of
 the runner and, if the image can be pulled, of the image. `lint-cache.yml` lints in it, or else on the runner.
 `integration-timing` saves the test times the integration shards split by (cache `integration-test-timing-<run>`), each test's mean over the five newest `test-timing-integration` artifacts.

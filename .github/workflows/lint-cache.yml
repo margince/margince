@@ -144,9 +144,9 @@ jobs:
           key: ${{ steps.go-cache.outputs.key }}
 
   # A restore takes the newest entry, so the older ones on this branch only
-  # take room under the repository's cache limit. Only entries saved before
-  # the new one go, so a newer entry from cache-warm stays. On the runner,
-  # because it needs `gh`, which the CI image does not hold.
+  # take room under the repository's cache limit. The reaper keeps the newest
+  # entry per key prefix, so a newer entry from cache-warm stays. On the
+  # runner, because it needs `gh`, which the CI image does not hold.
   prune:
     name: prune older lint cache entries
     timeout-minutes: 10
@@ -154,26 +154,17 @@ jobs:
     if: ${{ !cancelled() && needs.warm.outputs.saved-keys != '' }}
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       # To delete this branch's older entries once the new one is saved.
       actions: write
     steps:
-      # Each key ends in the commit sha, so the prefix is the key without it.
-      - name: Delete this branch's older entries
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Delete this branch's superseded entries
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          SAVED_KEYS: ${{ needs.warm.outputs.saved-keys }}
-        run: |
-          for keep in $SAVED_KEYS; do
-            entries="$(gh cache list --ref "$GITHUB_REF" --key "${keep%-*}-" --limit 1000 --json key,createdAt)"
-            saved="$(jq -r --arg keep "$keep" '.[] | select(.key == $keep) | .createdAt' <<<"$entries")"
-            if [[ -z "$saved" ]]; then
-              echo "$keep is not listed yet, so nothing older is deleted"
-              continue
-            fi
-            jq -r --arg saved "$saved" '.[] | select(.createdAt < $saved) | .key' <<<"$entries" |
-              while read -r key; do
-                gh cache delete "$key" --ref "$GITHUB_REF"
-              done
-          done
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+        run: ./scripts/reap-build-caches.sh

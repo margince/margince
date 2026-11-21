@@ -583,7 +583,7 @@ jobs:
         run: |
           printf 'require example.margince.dev/ext/crm-hello v0.0.0\nreplace example.margince.dev/ext/crm-hello => ../fixtures/extensions/crm-hello\n' >> instance/go.mod
           make -C backend build check-composition
-          (cd backend && GOWORK="$PWD/../build/composition/go.work" go test ./cmd/...)
+          (cd backend && GOWORK="$PWD/../build/composition/go.work" go test -shuffle="$TEST_SHUFFLE_SEED" ./cmd/...)
           make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
       # Extension units are their own Go modules, so the shards' profile never
       # reaches them.

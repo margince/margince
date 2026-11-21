@@ -68,6 +68,9 @@ unrelated=$'2026-08-12T03:00:00Z\t401\t'"$main"$'\tnode-cache-Linux-x64-pnpm-abc
 develop_new=$'2026-08-12T05:00:00Z\t501\t'"$develop"$'\tgo-build-plain-Linux-X64-deadbeef-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\t3000000000'
 frontend_new=$'2026-08-12T04:00:00Z\t601\t'"$main"$'\tfrontend-incremental-Linux-X64-abc123-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\t90000000'
 frontend_old=$'2026-08-12T01:00:00Z\t602\t'"$main"$'\tfrontend-incremental-Linux-X64-abc123-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\t90000000'
+golangci_new=$'2026-08-12T04:00:00Z\t701\t'"$develop"$'\tgolangci-analysis-in-image-Linux-X64-abc123-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\t400000000'
+golangci_old=$'2026-08-12T02:00:00Z\t702\t'"$develop"$'\tgolangci-analysis-in-image-Linux-X64-abc123-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\t400000000'
+golangci_main=$'2026-08-12T01:00:00Z\t703\t'"$main"$'\tgolangci-analysis-in-image-Linux-X64-abc123-cccccccccccccccccccccccccccccccccccccccc\t400000000'
 develop_old=$'2026-08-12T03:45:00Z\t502\t'"$develop"$'\tgo-build-plain-Linux-X64-deadbeef-ffffffffffffffffffffffffffffffffffffffff\t3000000000'
 
 # The newest of a deps-hash group survives; the rest go. Fed oldest-first on
@@ -93,6 +96,11 @@ expect "keeps the newest of each ref" 0 "502,102" \
 # The frontend's incremental state is keyed the same way and reaped the same way.
 expect "keeps the newest frontend entry" 0 "602" \
 	"$frontend_old"$'\n'"$frontend_new"$'\n'"$plain_new"
+
+# The golangci analysis cache is keyed the same way, per ref: lint-cache.yml prunes
+# develop's with REF and leaves main's, which is older, alone.
+REF="$develop" expect "keeps the newest golangci entry of the ref" 0 "702" \
+	"$golangci_main"$'\n'"$golangci_old"$'\n'"$golangci_new"$'\n'"$develop_new"
 
 # REF limits the sweep to one ref: main's superseded entry is not this run's to delete.
 REF="$develop" expect "REF leaves other refs alone" 0 "502" \

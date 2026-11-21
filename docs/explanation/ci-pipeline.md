@@ -408,9 +408,10 @@ Three limits shaped that, and each rules out a choice that looks less hard:
 
 There is one writer per kind and branch, because a second writer on the same key would push out the entry
 it meant to seed. `cache-warm.yml` and `lint-cache.yml` take `concurrency: cancel-in-progress: false`,
-because a cancelled run saves nothing. `scripts/reap-build-caches.sh` keeps the newest entry per ref and
-key prefix. A `develop` entry hides every `main` entry from a pull request into `develop`, so a stopped
-`develop` writer leaves those pull requests on an ageing entry.
+because a cancelled run saves nothing.
+
+`scripts/reap-build-caches.sh` keeps the newest entry per ref and key prefix. A `develop` entry hides
+every `main` entry from a pull request into `develop`, which reads an old entry if that writer stops.
 
 The refresh steps use `!cancelled()`, not `success()`. A red gate still compiled the tree, and that build
 output can be used again as well as a green run's.
@@ -437,7 +438,6 @@ and there it pushes out the `main` entries that every PR loads.
   from the entry of the push before. It also saves the `lint` build cache of that branch, compiled from empty. Lint
   compiles each package it loads before it reads its own cache. So a build cache hours behind cost minutes,
   even when every analysis was cached. The job then deletes the older entries.
-- **A new dependency or lint config lints cold** until `cache-warm` runs after the merge.
 - **An old frontend entry is never wrong.** tsc checks the hash of each input against what it stored.
   The compiler lint checks the hash of each file and its own version, so the lockfile is in the key.
 
@@ -445,12 +445,13 @@ and there it pushes out the `main` entries that every PR loads.
 
 The build cache holds test results as well as compiled packages. **No job in `ci.yml` replays one.**
 `ci.yml` sets `TEST_SHUFFLE_SEED` for the whole workflow, `backend/Makefile` turns it into
-`-shuffle=<n>`, and Go caches no result of a run with `-shuffle`. So in `ci.yml` the cache saves compile
-time only. `main-health.yml` and a local run pass no seed, and replay. Go checks a cached result against every file the test opened at runtime: a migration, a fixture, its
-own source. It checks by size, mode and
-**mtime**, never content. A new checkout stamps every file with the time of checkout. So without stable `mtime` values,
-every package whose tests read the tree would run again on every job, `internal/compose` and `identity`
-among them.
+`-shuffle=<n>`, and Go caches no result of a run with `-shuffle`. `main-health.yml` and a local run
+pass no seed, and replay.
+
+Go checks a cached result against every file the test opened at runtime: a migration, a fixture, its
+own source. It checks by size, mode and **mtime**, never content. A new checkout stamps every file with
+the time of checkout. So without stable `mtime` values, every package whose tests read the tree would
+run again on every job, `internal/compose` and `identity` among them.
 
 [`scripts/ci-stable-mtimes.sh`](../../scripts/ci-stable-mtimes.sh) runs first in the action, in the writer
 and in every reader. It sets each tracked file's `mtime` from a hash of its bytes, and each directory's
