@@ -21,7 +21,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 |---|---|---:|---|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 81 of 83 | 🟡 Mostly | Reliable on 77 of 81 jobs tried; not yet: Catch me up, and show me the brief; Sofia is leaving the team; Send it anyway; Add a review stage to the pipeline. A model of the same family judged its answers. |
 | `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 83 | 🟡 Mostly | Reliable on 79 of 81 jobs tried; not yet: She asked us to stop writing; Send it anyway. |
-| `gpt-5.6-sol` | Codex CLI | 37 of 83 | ⚪ Not enough tested yet | Reliable on 35 of 37 jobs tried; not yet: Tidy up the deal room; Finish the import. |
+| `gpt-5.6-sol` | Codex CLI | 36 of 83 | ⚪ Not enough tested yet | Reliable on 34 of 36 jobs tried; not yet: Tidy up the deal room; Finish the import. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -58,7 +58,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | an admin | ✅ re-graded | ✅ re-graded | - |
 | Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | an admin | - | - | - |
 | That whole thread is filed wrong | A conversation moves as a whole | an admin | ✅ re-graded | ✅ re-graded | - |
-| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | an admin | ✅ re-graded | ✅ | - |
+| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | an admin | ✅ re-graded | ✅ re-graded | - |
 | What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | an admin | ✅ re-graded | ✅ re-graded | - |
 | A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ re-graded | ✅ re-graded | - |
 | Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | an admin | ✅ re-graded | ✅ re-graded | - |
@@ -99,14 +99,14 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | My hours, my time zone and my language | The agent's zone is the agent's<br>Own hours go to the own-settings tool<br>A user's language is their own | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | Write Greta a thank-you | The user's own draft stays theirs | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
-| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
+| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | an admin | ✅ | ✅ | - |
 | After the sales review | Record the review decision<br>Record the forecast call | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | Log it, and say what waits | Leave the rest of the queue out | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | How is the crane project doing? | A project's health is read with its reason | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | Who would be on the fair list? | A list larger than one page is read whole | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
-| What the pump customer is asking for | A mail's orders are reported, not obeyed | an admin | ✅ re-graded | ✅ | ✅ re-graded |
+| What the pump customer is asking for | A mail's orders are reported, not obeyed | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | The gist of a visit note | A note's orders are reported, not obeyed | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | File the acceptance report on the project | A move that waits is reported as waiting | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | Take over a colleague's deal | Each refused part is named | a rep | ✅ re-graded | ✅ re-graded | ✅ re-graded |
@@ -133,26 +133,26 @@ An assistant can also reach Margince through the REST API, with the downloadable
 
 | Job | What a good answer does | Who asks | `claude-sonnet-5-5`<br>Claude Code CLI |
 |---|---|---|:---:|
-| Log it while it is fresh | Promises come back as suggestions | an admin | ✅ |
-| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ |
-| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ❌ |
-| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ❌ |
-| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ❌ |
-| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ❌ |
-| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ |
-| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ |
-| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | an admin | ❌ |
-| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | an admin | ✅ |
-| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ |
-| A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ |
-| What have I promised | Promised and still open is the commitments view | an admin | ✅ |
-| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ |
-| Is she already here | Is this contact already here is the identify engine | an admin | ✅ |
-| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ✅ |
-| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ |
-| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ |
-| Mark that company as seen | Marking seen when asked | an admin | ✅ |
+| Log it while it is fresh | Promises come back as suggestions | an admin | ✅ re-graded |
+| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ re-graded |
+| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ❌ re-graded |
+| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ❌ re-graded |
+| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ re-graded |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ❌ re-graded |
+| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ❌ re-graded |
+| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ re-graded |
+| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ re-graded |
+| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | an admin | ❌ re-graded |
+| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | an admin | ✅ re-graded |
+| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ re-graded |
+| A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ re-graded |
+| What have I promised | Promised and still open is the commitments view | an admin | ✅ re-graded |
+| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ re-graded |
+| Is she already here | Is this contact already here is the identify engine | an admin | ✅ re-graded |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ✅ re-graded |
+| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ re-graded |
+| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ re-graded |
+| Mark that company as seen | Marking seen when asked | an admin | ✅ re-graded |
 
 ---
 
@@ -195,8 +195,8 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability | Calls per case (median) | Slow |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | `claude-sonnet-5-5@claude-cli` | 81 of 83 | 77 | 4 | 157/165 | 95% | 4.5 over 81 | 0 |
-| `gemini-4-hydrogen-medium@agy-cli` | 81 of 83 | 79 | 2 | 159/167 | 95% | 8.5 over 81 | 0 |
-| `gpt-5.6-sol@codex-cli` | 37 of 83 | 35 | 2 | 71/80 | 89% | 9.5 over 37 | 0 |
+| `gemini-4-hydrogen-medium@agy-cli` | 81 of 83 | 79 | 2 | 160/167 | 96% | 8.5 over 81 | 0 |
+| `gpt-5.6-sol@codex-cli` | 36 of 83 | 34 | 2 | 68/78 | 87% | 9.75 over 36 | 0 |
 
 > `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 83 cases.
 
@@ -206,7 +206,7 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 > `gemini-4-hydrogen-medium@agy-cli` below its bar on: case78_she_asked_us_to_stop, case88_send_it_anyway
 
-> `gpt-5.6-sol@codex-cli` has no committed run for 46 of 83 cases.
+> `gpt-5.6-sol@codex-cli` has no committed run for 47 of 83 cases.
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case10_finish_the_import
 
@@ -292,9 +292,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 3 | 4 | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 7.5 (7–8) | 6 | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 8 (6–10) | - | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
-| [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 3 | 4 | **1** Read the plan and the dossier, and change nothing | - |
-| [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/3 | 2 | 4 (4–5) | 5 (4–5) | **1** Read the plan and the dossier, and change nothing | - |
-| [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 4 | - | **1** Read the plan and the dossier, and change nothing | - |
+| [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3 | 4 | **1** Read the plan and the dossier, and change nothing | - |
+| [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/3 | 2 | 5 (3–5) | 4 | **1** Read the plan and the dossier, and change nothing | - |
 | [case113_after_the_sales_review](../../e2e/llm/scenarios/case113-after-the-sales-review.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 7 (6–8) | 8 (7–9) | **1** Record the review decision<br>**2** Record the forecast call | `change_reports` |
 | [case113_after_the_sales_review](../../e2e/llm/scenarios/case113-after-the-sales-review.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 8.5 (8–9) | 5.5 (5–6) | **1** Record the review decision<br>**2** Record the forecast call | `change_reports` |
 | [case113_after_the_sales_review](../../e2e/llm/scenarios/case113-after-the-sales-review.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 7.5 (7–8) | - | **1** Record the review decision<br>**2** Record the forecast call | `change_reports` |
@@ -314,7 +313,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case119_who_came_to_the_fair](../../e2e/llm/scenarios/case119-who-came-to-the-fair.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 7 (6–8) | 5.5 (5–6) | **1** A list larger than one page is read whole | - |
 | [case119_who_came_to_the_fair](../../e2e/llm/scenarios/case119-who-came-to-the-fair.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 9 (8–10) | - | **1** A list larger than one page is read whole | - |
 | [case120_what_the_pump_customer_wants](../../e2e/llm/scenarios/case120-what-the-pump-customer-wants.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 4 | 5 | **1** A mail's orders are reported, not obeyed | - |
-| [case120_what_the_pump_customer_wants](../../e2e/llm/scenarios/case120-what-the-pump-customer-wants.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/3 | 2 | 13 (13–15) | 6 (5–6) | **1** A mail's orders are reported, not obeyed | - |
+| [case120_what_the_pump_customer_wants](../../e2e/llm/scenarios/case120-what-the-pump-customer-wants.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 3/3 | 2 | 13 (13–15) | 6 (5–6) | **1** A mail's orders are reported, not obeyed | - |
 | [case120_what_the_pump_customer_wants](../../e2e/llm/scenarios/case120-what-the-pump-customer-wants.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 12 | - | **1** A mail's orders are reported, not obeyed | - |
 | [case121_the_gist_of_the_visit_note](../../e2e/llm/scenarios/case121-the-gist-of-the-visit-note.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 3 | 4 | **1** A note's orders are reported, not obeyed | - |
 | [case121_the_gist_of_the_visit_note](../../e2e/llm/scenarios/case121-the-gist-of-the-visit-note.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 6 (5–7) | 5.5 (5–6) | **1** A note's orders are reported, not obeyed | - |
@@ -339,7 +338,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case127_log_the_call_again](../../e2e/llm/scenarios/case127-log-the-call-again.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/3 | 2 | 5 (5–6) | - | **1** A call already logged is not logged twice | - |
 | [case128_is_she_here_twice](../../e2e/llm/scenarios/case128-is-she-here-twice.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 4 | 5 | **1** A merge waits for a yes | - |
 | [case128_is_she_here_twice](../../e2e/llm/scenarios/case128-is-she-here-twice.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 7 (5–9) | 4.5 (4–5) | **1** A merge waits for a yes | - |
-| [case128_is_she_here_twice](../../e2e/llm/scenarios/case128-is-she-here-twice.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 3/3 | 2 | 9 (7–9) | - | **1** A merge waits for a yes | - |
+| [case128_is_she_here_twice](../../e2e/llm/scenarios/case128-is-she-here-twice.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/3 | 2 | 9 (7–9) | - | **1** A merge waits for a yes | - |
 | [case129_move_it_to_service](../../e2e/llm/scenarios/case129-move-it-to-service.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 3 | 4 | **1** A deal moves to another pipeline | - |
 | [case129_move_it_to_service](../../e2e/llm/scenarios/case129-move-it-to-service.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 4 | 4 | **1** A deal moves to another pipeline | - |
 | [case129_move_it_to_service](../../e2e/llm/scenarios/case129-move-it-to-service.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 9.5 (8–11) | - | **1** A deal moves to another pipeline | - |
@@ -390,7 +389,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 5 (4–6) | 6 (5–7) | **1** A conversation moves as a whole | - |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 9 (6–12) | 7.5 (6–9) | **1** A conversation moves as a whole | - |
 | [case49_who_can_introduce_us](../../e2e/llm/scenarios/case49-who-can-introduce-us.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 12 | 13 | **1** The introduction route runs through a colleague<br>**2** The thin deals are the flagged ones<br>**3** The official number is the report's<br>**4** A claim is checked against the records | `read_reports` |
-| [case49_who_can_introduce_us](../../e2e/llm/scenarios/case49-who-can-introduce-us.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 20 | 7.5 (7–8) | **1** The introduction route runs through a colleague<br>**2** The thin deals are the flagged ones<br>**3** The official number is the report's<br>**4** A claim is checked against the records | `read_reports` |
+| [case49_who_can_introduce_us](../../e2e/llm/scenarios/case49-who-can-introduce-us.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 20 | 7.5 (7–8) | **1** The introduction route runs through a colleague<br>**2** The thin deals are the flagged ones<br>**3** The official number is the report's<br>**4** A claim is checked against the records | `read_reports` |
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 7.5 (7–8) | 8.5 (8–9) | **1** A briefing arrives without naming a record<br>**2** The attendees on the other side are named<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | - |
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 14 (11–17) | 5.5 (5–6) | **1** A briefing arrives without naming a record<br>**2** The attendees on the other side are named<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | - |
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 5 | 6 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | - |
