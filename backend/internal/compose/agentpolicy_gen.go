@@ -1312,7 +1312,7 @@ var readViewQueries = map[string][]viewQuery{
 	"GET /v1/deals/{id}/stage-evidence":                     {},
 	"GET /v1/deals/{id}/stakeholders":                       {},
 	"GET /v1/deals/{id}/status":                             {{Name: "facts_only", Type: "boolean"}, {Name: "if_recommendation", Type: "string"}, {Name: "if_rule", Type: "string"}, {Name: "refresh", Type: "boolean"}},
-	"GET /v1/dedupe/candidates":                             {{Name: "cursor", Type: "string"}, {Name: "entity_type", Type: "string", Enum: []string{"contact", "company", "lead"}}, {Name: "limit", Type: "integer"}, {Name: "status", Type: "string", Enum: []string{"open", "merged", "not_a_duplicate"}}},
+	"GET /v1/dedupe/candidates":                             {{Name: "cursor", Type: "string"}, {Name: "entity_type", Type: "string", Enum: []string{"contact", "company", "lead"}}, {Name: "limit", Type: "integer"}, {Name: "record_id", Type: "string", Format: "uuid"}, {Name: "status", Type: "string", Enum: []string{"open", "merged", "not_a_duplicate"}}},
 	"GET /v1/dedupe/candidates/{id}":                        {},
 	"GET /v1/dedupe/contact-cases":                          {{Name: "cursor", Type: "string"}, {Name: "limit", Type: "integer"}, {Name: "scope", Type: "string", Enum: []string{"mine", "unassigned", "all"}}},
 	"GET /v1/dedupe/contact-cases/{contact_id}":             {},

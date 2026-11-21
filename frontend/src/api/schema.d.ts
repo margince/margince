@@ -31755,7 +31755,7 @@ export interface components {
                 companies_created?: number;
             };
             review: {
-                /** @description Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own. */
+                /** @description Every open duplicate review item on the reader's own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own. */
                 dedupe_open?: number;
                 /** @description Pending 🟡 items (enrich, quarantine, merge). */
                 approvals_pending?: number;
@@ -91455,6 +91455,8 @@ export interface operations {
             query?: {
                 status?: "open" | "merged" | "not_a_duplicate";
                 entity_type?: "contact" | "company" | "lead";
+                /** @description Only the pairs naming this record on either end. Needs `entity_type`, the record's type; without it the answer is 422. */
+                record_id?: string;
                 /** @description Opaque keyset cursor. */
                 cursor?: string;
                 limit?: number;

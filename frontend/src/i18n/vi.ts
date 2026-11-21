@@ -5392,6 +5392,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.domainContacts.changed":
     "Danh sách đã thay đổi khi đang mở. Kiểm tra lại lựa chọn rồi gắn lại.",
   "co.domainContacts.dismiss": "Để sau",
+  "company.duplicates.entry_one": "Có thể trùng ({count})",
+  "company.duplicates.entry_other": "Có thể trùng ({count})",
+  "company.duplicates.title": "Công ty có thể trùng",
+  "company.duplicates.lead":
+    "Các công ty này giống công ty này. Mở một công ty để so sánh.",
+  "company.duplicates.created": "Đã có một công ty trùng tên này.",
   "co.domainContacts.link_one": "Gắn {count} liên hệ",
   "co.domainContacts.link_other": "Gắn {count} liên hệ",
   "co.domainContacts.linkNone": "Gắn liên hệ",

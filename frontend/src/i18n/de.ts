@@ -5543,6 +5543,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.domainContacts.changed":
     "Die Liste hat sich geändert, während sie offen war. Prüfe die Auswahl und verknüpfe erneut.",
   "co.domainContacts.dismiss": "Nicht jetzt",
+  "company.duplicates.entry_one": "Mögliches Duplikat ({count})",
+  "company.duplicates.entry_other": "Mögliche Duplikate ({count})",
+  "company.duplicates.title": "Mögliche Duplikate",
+  "company.duplicates.lead":
+    "Diese Unternehmen ähneln diesem. Öffne eines, um sie zu vergleichen.",
+  "company.duplicates.created":
+    "Ein Unternehmen mit diesem Namen gibt es schon.",
   "co.domainContacts.link_one": "{count} Kontakt verknüpfen",
   "co.domainContacts.link_other": "{count} Kontakte verknüpfen",
   "co.domainContacts.linkNone": "Kontakte verknüpfen",

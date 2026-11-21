@@ -181,6 +181,7 @@ func TestTheDigestCountsOnlyTheDuplicatesItsReaderCouldOpen(t *testing.T) {
 	// side is unreadable without giving the reader a narrower row scope than
 	// the first pair needs.
 	hidden := b.seedDuplicatePair(t, "Bea Lund", "bea@wire.test", "Bea Lundt", "bea.l@wire.test")
+	b.env.WsExec(t, `UPDATE contact SET owner_id = $1`, b.env.Rep1)
 	b.env.MakeCapturePrivate(t, "contact", hidden, b.env.Rep3)
 
 	_, open := b.buildCounts(t, readsContacts{}, now)
@@ -305,6 +306,7 @@ func TestTheDigestCountsAGroupOfDuplicateContactsOnce(t *testing.T) {
 			t.Fatalf("seeding a duplicate: %v", err)
 		}
 	}
+	b.env.WsExec(t, `UPDATE contact SET owner_id = $1`, b.env.Rep1)
 	if pairs := b.env.WsCount(t, `SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'contact' AND disposition = 'open'`); pairs < 2 {
 		t.Fatalf("the three contacts are joined by %d pairs, want a group of at least two", pairs)
 	}

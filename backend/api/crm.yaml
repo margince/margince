@@ -25314,6 +25314,7 @@ paths:
       parameters:
         - { name: status, in: query, schema: { type: string, enum: [open, merged, not_a_duplicate], default: open } }
         - { name: entity_type, in: query, schema: { type: string, enum: [contact, company, lead] } }
+        - { name: record_id, in: query, schema: { type: string, format: uuid }, description: 'Only the pairs naming this record on either end. Needs `entity_type`, the record''s type; without it the answer is 422.' }
         - { name: cursor, in: query, schema: { type: string }, description: Opaque keyset cursor. }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
       responses:
@@ -45825,7 +45826,7 @@ components:
         review:
           type: object
           properties:
-            dedupe_open: { type: integer, description: 'Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.' }
+            dedupe_open: { type: integer, description: 'Every open duplicate review item on the reader''s own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.' }
             approvals_pending: { type: integer, description: 'Pending 🟡 items (enrich, quarantine, merge).' }
             classify:
               type: object

@@ -58958,7 +58958,7 @@ type MorningDigest struct {
 			Other *int `json:"other,omitempty"`
 		} `json:"classify,omitempty"`
 
-		// DedupeOpen Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
+		// DedupeOpen Every open duplicate review item on the reader's own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
 		DedupeOpen *int `json:"dedupe_open,omitempty"`
 	} `json:"review"`
 }
@@ -80123,6 +80123,9 @@ type GetDealStatusParams struct {
 type ListDedupeCandidatesParams struct {
 	Status     *ListDedupeCandidatesParamsStatus     `form:"status,omitempty" json:"status,omitempty"`
 	EntityType *ListDedupeCandidatesParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
+
+	// RecordId Only the pairs naming this record on either end. Needs `entity_type`, the record's type; without it the answer is 422.
+	RecordId *openapi_types.UUID `form:"record_id,omitempty" json:"record_id,omitempty"`
 
 	// Cursor Opaque keyset cursor.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
@@ -135553,6 +135556,19 @@ func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
 		}
 		return
 	}
