@@ -218,9 +218,8 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 	return s.authority.Refused(ctx, review, pending.set, pending.cause, actionsForRefusal(ctx, review))
 }
 
-// RecordReviewForHoldTx opens the same review RecordPendingReview does, on the
-// transaction that holds a scheduled row, or replaces a stale approval's review.
-// A failure rolls the hold back, so no held row lacks its review.
+// RecordReviewForHoldTx opens RecordPendingReview's review on the hold's
+// transaction, or replaces a stale approval's; a failure rolls the hold back.
 func (s commsStager) RecordReviewForHoldTx(ctx context.Context, tx pgx.Tx, refusal error, intentID ids.UUID) error {
 	if _, stale := errors.AsType[*consent.InstructionStaleError](refusal); stale {
 		return consent.SupersedeStaleDecisionTx(ctx, tx, intentID)

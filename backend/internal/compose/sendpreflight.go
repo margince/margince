@@ -125,10 +125,9 @@ func installSendPreflight(s *Server, pool *pgxpool.Pool) {
 	})(s, pool)
 }
 
-// SendableMailbox names the mailbox this user's send goes out through, asked
-// of every live mailbox they hold (capture.Registry.ChooseSendingMailbox). Each
-// needs what SendCapable needs: a configured app and a grant with comms' send
-// scope. Empty means none can transmit, which the caller refuses by name.
+// SendableMailbox names the live mailbox this user sends through
+// (capture.Registry.ChooseSendingMailbox). Each needs a configured app and a
+// grant with comms' send scope, as SendCapable does; none is refused by name.
 func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, anchor ids.ActivityID) (string, ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
