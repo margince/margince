@@ -8,6 +8,7 @@ package colleaguework
 import (
 	"context"
 	"fmt"
+	"maps"
 	"testing"
 	"time"
 
@@ -60,9 +61,11 @@ func (w workEnv) seat(user ids.UUID) context.Context {
 	return w.e.As(user, teams, workPerms)
 }
 
-// read runs figure for reader over [from, until), crediting every seat, and
-// answers what each seat was credited with.
-func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from, until time.Time) map[ids.UUID]int {
+// credit is one row a figure selected: the seat credited and its source.
+type credit struct{ seat, source ids.UUID }
+
+// credits runs figure for reader over [from, until), crediting every seat.
+func (w workEnv) credits(reader context.Context, t *testing.T, figure Figure, from, until time.Time) []credit {
 	t.Helper()
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -71,7 +74,7 @@ func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from,
 	if err != nil {
 		t.Fatal(err)
 	}
-	credited := map[ids.UUID]int{}
+	var credited []credit
 	err = w.e.DB().Tx(reader, func(tx pgx.Tx) error {
 		rows, err := tx.Query(reader, query, args...)
 		if err != nil {
@@ -80,14 +83,14 @@ func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from,
 		defer rows.Close()
 		for rows.Next() {
 			var key, label, name, provenance string
-			var source, seat ids.UUID
+			var row credit
 			var at time.Time
 			var precision *string
 			var placed *time.Time
-			if err := rows.Scan(&key, &source, &label, &seat, &name, &at, &precision, &placed, &provenance); err != nil {
+			if err := rows.Scan(&key, &row.source, &label, &row.seat, &name, &at, &precision, &placed, &provenance); err != nil {
 				return err
 			}
-			credited[seat]++
+			credited = append(credited, row)
 		}
 		return rows.Err()
 	})
@@ -95,6 +98,16 @@ func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from,
 		t.Fatalf("reading the figure: %v", err)
 	}
 	return credited
+}
+
+// read answers what each seat was credited with (credits).
+func (w workEnv) read(reader context.Context, t *testing.T, figure Figure, from, until time.Time) map[ids.UUID]int {
+	t.Helper()
+	counts := map[ids.UUID]int{}
+	for _, row := range w.credits(reader, t, figure, from, until) {
+		counts[row.seat]++
+	}
+	return counts
 }
 
 // record writes a recorded introduction dated on, and dates its recording at.
@@ -265,9 +278,10 @@ func TestABookingTheReaderMayNotOpenIsNotCounted(t *testing.T) {
 	}
 }
 
-// A meeting is judged booked by the start it was created with. Moving one
-// logged after its start into the future makes no booking, and moving a
-// booking into the past unmakes none. A date is ahead until it is over.
+// A meeting is judged booked by the start it was created with, with or
+// without a status. Moving one logged after its start into the future makes
+// no booking, and moving a booking into the past unmakes none. A date is
+// ahead until it is over.
 func TestARescheduleNeitherMakesNorUnmakesABooking(t *testing.T) {
 	w := setupWork(t)
 	rep1 := w.seat(w.e.Rep1)
@@ -278,15 +292,31 @@ func TestARescheduleNeitherMakesNorUnmakesABooking(t *testing.T) {
 			t.Fatalf("rescheduling the meeting: %v", err)
 		}
 	}
-	logged := w.meeting(rep1, t, w.e.Rep2, ninth, func(in *activities.LogActivityInput) { in.OccurredAt = new(ninth.Add(-24 * time.Hour)) })
-	reschedule(logged, ninth.Add(14*24*time.Hour))
-	reschedule(w.meeting(rep1, t, w.e.Rep2, ninth, nil), june)
+	loggedAfterStart := func(in *activities.LogActivityInput) { in.OccurredAt = new(ninth.Add(-24 * time.Hour)) }
+	noStatus := func(in *activities.LogActivityInput) { in.MeetingStatus = nil }
+	reschedule(w.meeting(rep1, t, w.e.Rep2, ninth, loggedAfterStart), ninth.Add(14*24*time.Hour))
+	reschedule(w.meeting(rep1, t, w.e.Rep2, ninth, func(in *activities.LogActivityInput) {
+		loggedAfterStart(in)
+		noStatus(in)
+	}), ninth.Add(14*24*time.Hour))
+	booked := w.meeting(rep1, t, w.e.Rep2, ninth, nil)
+	reschedule(booked, june)
+	bookedNoStatus := w.meeting(rep1, t, w.e.Rep2, ninth, noStatus)
+	reschedule(bookedNoStatus, june)
 	eighth := time.Date(2026, 7, 8, 0, 0, 0, 0, time.UTC)
 	sameDay := w.meeting(rep1, t, w.e.Rep2, eighth.Add(18*time.Hour), func(in *activities.LogActivityInput) {
 		in.OccurredAt, in.OccurredPrecision = new(eighth.Add(12*time.Hour)), activities.PrecisionDay
 	})
 	reschedule(sameDay, june)
-	if credited := w.read(rep1, t, MeetingsBookedForColleagues, july, aug); credited[w.e.Rep1] != 2 || len(credited) != 1 {
-		t.Errorf("credits %v, want the booking moved into June and the day booking made on its own date", credited)
+	want := map[ids.UUID]bool{booked: true, bookedNoStatus: true, sameDay: true}
+	got := map[ids.UUID]bool{}
+	for _, row := range w.credits(rep1, t, MeetingsBookedForColleagues, july, aug) {
+		if row.seat != w.e.Rep1 {
+			t.Errorf("meeting %s credits seat %s, want Rep1", row.source, row.seat)
+		}
+		got[row.source] = true
+	}
+	if !maps.Equal(got, want) {
+		t.Errorf("credited meetings %v, want the two bookings moved into June and the day booking made on its own date %v", got, want)
 	}
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -86,7 +87,7 @@ func meetingsBookedForColleaguesSQL(ctx context.Context, r Reading, arg func(any
 	if err != nil {
 		return "", err
 	}
-	start, precision := storekit.TransitionStartSQL("opened", "a")
+	created := activities.StartAtCreationSQL("a")
 	return `SELECT a.id::text,a.id,COALESCE(NULLIF(a.subject,''),` + r.Label + `),booked.seat,COALESCE(u.display_name,''),
  a.created_at,NULL::text,NULL::timestamptz,'booked_for_colleague'
  FROM activity a
@@ -95,11 +96,12 @@ func meetingsBookedForColleaguesSQL(ctx context.Context, r Reading, arg func(any
    NULLIF(made.evidence->>'` + storekit.ExplicitMeetingHostEvidence + `','')::uuid AS host
    FROM audit_log made WHERE made.entity_type='activity' AND made.entity_id=a.id AND made.action='create'
    ORDER BY made.occurred_at,made.id LIMIT 1) booked ON ` + storekit.AuditForAUser("booked") + `
- LEFT JOIN LATERAL (SELECT h.status,h.scheduled_start,h.scheduled_precision FROM activity_meeting_history h
+ LEFT JOIN LATERAL (SELECT h.status FROM activity_meeting_history h
    WHERE h.activity_id=a.id ORDER BY h.effective_at,h.id LIMIT 1) opened ON true
+ ` + created.Join + `
  LEFT JOIN app_user u ON u.id=booked.seat
  WHERE a.kind='meeting' AND a.archived_at IS NULL AND a.source_system IS NULL AND booked.host<>booked.seat
- AND COALESCE(opened.status,'booked')='booked' AND ` + occurredday.AheadAtSQL(start, precision, "a.created_at") + `
+ AND COALESCE(opened.status,'booked')='booked' AND ` + occurredday.AheadAtSQL(created.Start, created.Precision, "a.created_at") + `
  AND ` + readable + ` AND ` + r.Fields + `
  AND a.created_at>=` + r.From + ` AND a.created_at<` + r.Until + ` AND ` + r.Credited + `
  ORDER BY a.id LIMIT ` + r.Limit, nil
