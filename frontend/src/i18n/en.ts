@@ -15028,6 +15028,7 @@ export const en = {
   "settings.scopeAriaMixed":
     "Settings on this page affect different people; each one states which.",
   "settings.readOnlyPageTitle": "Read-only settings",
+  "settings.pageLoading": "Loading {page}…",
   "settings.readOnlyPage": "Your role cannot change these settings.",
   "settings.seatRefused":
     "Your seat is read-only. Ask an admin for a full seat.",

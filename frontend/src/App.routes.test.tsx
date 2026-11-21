@@ -1,21 +1,62 @@
 /** @vitest-environment happy-dom */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { isValidElement, type ReactElement } from "react";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../scripts/lib/source-tree";
+import { addressedScreenCode, SCREEN_CODE } from "./App.screencode";
 import * as screens from "./App.screens";
-import { screenOfAddress } from "./App.views";
+import { screenOfAddress, screenWithLocale } from "./App.views";
+import { CompleteLocale } from "./i18n";
+import { parseHash, routeHash, SCREENS } from "./lib/router";
 
-// Every routed screen is a lazy chunk, and a renamed export only fails when a
-// reader first opens that page. Loading each chunk here fails the build first.
-describe("the routed chunks", () => {
-  it("each resolves to a component", async () => {
-    expect(screens.ROUTE_CHUNKS.length).toBeGreaterThan(20);
-    const modules = await Promise.all(
-      screens.ROUTE_CHUNKS.map((load) => load()),
-    );
-    for (const module of modules) {
-      const { default: component } = module as { default?: unknown };
-      expect(component).toBeTruthy();
+// React's own lazy shape: `_init` throws the pending load, then returns the
+// module's `default`. Read so a renamed export fails here, not on a first visit.
+type LazyScreen = { _init: (payload: unknown) => unknown; _payload: unknown };
+
+function isLazyScreen(value: unknown): value is LazyScreen {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "$$typeof" in value &&
+    value.$$typeof === Symbol.for("react.lazy") &&
+    "_init" in value &&
+    typeof value._init === "function" &&
+    "_payload" in value
+  );
+}
+
+async function loadedComponent(screen: LazyScreen): Promise<unknown> {
+  for (;;) {
+    try {
+      return screen._init(screen._payload);
+    } catch (pending) {
+      if (!(pending instanceof Promise)) throw pending;
+      await pending;
     }
+  }
+}
+
+describe("the routed screens", () => {
+  it("each loads its module and finds the component it names", async () => {
+    const routeParts = [
+      screens.DealsRoute({}),
+      screens.DealsRoute({ id: "d1" }),
+      screens.DealsRoute({ id: "d1", id2: "room" }),
+      screens.ShareRoute({ id: "deal", id2: "d1" }),
+    ].map((element) => (isValidElement(element) ? element.type : undefined));
+    const lazies = [...Object.values(screens), ...routeParts].flatMap(
+      (value) => (isLazyScreen(value) ? [value] : []),
+    );
+    expect(lazies.length).toBeGreaterThan(30);
+    for (const screen of lazies)
+      expect(await loadedComponent(screen)).toBeTruthy();
+  }, 60_000);
+
+  it("names a module that loads under every entry of the code map", async () => {
+    for (const load of Object.values(SCREEN_CODE))
+      expect(await load()).toBeTruthy();
   }, 60_000);
 });
 
@@ -128,5 +169,71 @@ describe("the route parts", () => {
     expect(screens.CustomRoute({ name: "fork" })?.type).toBe(
       screens.UnknownAddress,
     );
+  });
+});
+
+// The shell paints from the essential catalog; a screen's column waits for the
+// complete one unless the screen draws from the essential catalog alone.
+describe("the catalog each screen waits for", () => {
+  const addresses = SCREENS.flatMap((screen) =>
+    [undefined, "r1"].map((id) => routeHash({ screen, id })),
+  );
+
+  it.each(addresses)("%s", (address) => {
+    const drawn = screenWithLocale(address);
+    const essential = ["home", "analytics"].includes(parseHash(address).screen);
+    expect(isValidElement(drawn) && drawn.type === CompleteLocale).toBe(
+      !essential,
+    );
+  });
+});
+
+// A call whose callee is the `import` keyword, however spaced; an `import()` type is no call.
+function dynamicImports(node: ts.Node): number {
+  const own =
+    ts.isCallExpression(node) &&
+    node.expression.kind === ts.SyntaxKind.ImportKeyword
+      ? 1
+      : 0;
+  let total = own;
+  ts.forEachChild(node, (child) => {
+    total += dynamicImports(child);
+  });
+  return total;
+}
+
+describe("the screen code bootstrap starts", () => {
+  it("is named by the screen-code map alone, never by a second import", () => {
+    const path = join(__dirname, "App.screens.tsx");
+    expect(dynamicImports(parseSource(path, readFileSync(path, "utf8")))).toBe(
+      0,
+    );
+  });
+
+  it.each([
+    ['const x = import ("./x");', 1],
+    ["const x = import(name);", 1],
+    ['type X = typeof import("./x");', 0],
+  ])("counts the dynamic imports in %s", (text, count) => {
+    expect(dynamicImports(parseSource("planted.ts", text))).toBe(count);
+  });
+
+  it.each([
+    ["#/home", SCREEN_CODE.brief],
+    ["#/contacts/c1/notes", SCREEN_CODE.contactPage],
+    ["#/contacts/import", SCREEN_CODE.contacts],
+    ["#/contacts/new", SCREEN_CODE.contacts],
+    ["#/projects/new", SCREEN_CODE.projects],
+    ["#/projects/import", SCREEN_CODE.project],
+    ["#/deals/d1/room", SCREEN_CODE.dealRoom],
+    ["#/deals/new", SCREEN_CODE.deals],
+    ["#/deals/new/room", SCREEN_CODE.deals],
+    ["#/companies/c1", SCREEN_CODE.companies],
+    ["#/settings/account", SCREEN_CODE.settings],
+    ["#/offers/o1", SCREEN_CODE.offers],
+    ["#/offers", undefined],
+    ["#/no-such-page", undefined],
+  ])("starts %s's code", (address, code) => {
+    expect(addressedScreenCode(parseHash(address))).toBe(code);
   });
 });

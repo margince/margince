@@ -1,23 +1,31 @@
-import { loadHome } from "./app/homecode";
+import { addressedScreenCode } from "./App.screencode";
 import { registerStartupSession } from "./app/startup-session";
 import { loadEssentialLocale, loadLocale } from "./i18n/catalogs";
-import { preferredLocale } from "./i18n/locale";
-import { bootsOnEssentialCopy } from "./lib/essentialscreens";
+import { effectiveDisplayLocale, preferredLocale } from "./i18n/locale";
+import { paintsFromEssentialCopy } from "./lib/essentialscreens";
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
+import { restoreRecordAddress } from "./lib/recordaddress";
 import { restoreReturnRoute } from "./lib/returnroute";
 import { parseHash } from "./lib/router";
-import { readPreparedAnalyticsSession } from "./lib/session.read";
+import {
+  readPreparedAnalyticsSession,
+  sessionSeenNow,
+} from "./lib/session.read";
 import { reloadOnStaleBuild } from "./lib/stalebuild";
 
 reloadOnStaleBuild();
 restoreReturnRoute();
+// A record link that came as a path names its screen once the hash is back.
+restoreRecordAddress();
 // main.tsx can run after the window's load event and Chrome's install offer, so this script catches both.
 listenForInstall();
 registerServiceWorker();
-if (parseHash(location.hash).screen === "analytics") {
-  void import("./App.analytics").catch((error: unknown) =>
-    console.error("Analytics code could not be loaded", error),
-  );
+const route = parseHash(location.hash);
+// Fetched beside the startup code rather than after the shell's gates.
+addressedScreenCode(route)?.().catch((error: unknown) =>
+  console.error("The screen's code could not be loaded", error),
+);
+if (route.screen === "analytics") {
   const controller = new AbortController();
   const prepared = readPreparedAnalyticsSession(controller.signal).then(
     (snapshot) => () => snapshot,
@@ -43,26 +51,35 @@ if (parseHash(location.hash).screen === "analytics") {
     }).catch(fail);
   });
   registerStartupSession(preparation.catch(fail));
+} else if (sessionSeenNow()) {
+  // Without a past session these reads would only answer 401 before sign-in.
+  const preparation = Promise.all([
+    import("./app/startup-reads"),
+    import("./app/queryclient.instance"),
+  ]).then(([{ prefetchStartupReads }, { queryClient }]) =>
+    prefetchStartupReads(queryClient),
+  );
+  registerStartupSession(
+    preparation.catch((error: unknown) =>
+      console.error("The startup reads could not be prepared", error),
+    ),
+  );
 }
 const locale = preferredLocale();
 const languageFailed = (error: unknown) =>
   console.error("The selected language could not be loaded", error);
-if (parseHash(location.hash).screen === "home") {
-  // Fetched beside the startup code rather than after the shell's gates.
-  loadHome().catch((error: unknown) =>
-    console.error("Home code could not be loaded", error),
-  );
-}
-if (bootsOnEssentialCopy(location.hash)) {
-  loadEssentialLocale(locale).catch(languageFailed);
-  // The rest of the app reads the complete catalog; it loads once the first
-  // screen has had the main thread.
+loadEssentialLocale(locale).catch(languageFailed);
+if (paintsFromEssentialCopy(location.hash)) {
+  // The screen draws from the essential catalog alone; the rest of the app's
+  // copy waits until the first screen has had the main thread.
   addEventListener("load", () => {
     const later = (complete: () => void) =>
       typeof requestIdleCallback === "function"
         ? requestIdleCallback(complete, { timeout: 5_000 })
         : setTimeout(complete, 0);
-    later(() => void loadLocale(locale).catch(languageFailed));
+    later(
+      () => void loadLocale(effectiveDisplayLocale()).catch(languageFailed),
+    );
   });
 } else {
   loadLocale(locale).catch(languageFailed);

@@ -175,6 +175,12 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // A user whose journey read "complete", per user id, so the splash skips it.
+  onboardingComplete: {
+    prefix: "margince.onboarding.complete:",
+    area: "local",
+    lifetime: "seat",
+  },
   trialNoticeHiddenOn: {
     name: "margince.trial.noticeHiddenOn",
     area: "local",

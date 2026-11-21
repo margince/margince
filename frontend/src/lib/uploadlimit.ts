@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import { INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { throwProblem } from "./problem";
+import { signInShowsRefusal } from "./session.read";
 
 // The installation's own settings, and the one field on them a form has to act
 // on: how large a file this deployment accepts.
@@ -34,6 +35,7 @@ export const INSTALLATION_SETTINGS_KEY = ["installation-settings"] as const;
  */
 export const installationSettingsOptions = queryOptions({
   queryKey: INSTALLATION_SETTINGS_KEY,
+  meta: signInShowsRefusal,
   queryFn: async () => {
     const { data, error, response } = await api.GET("/installation/settings");
     if (error || !response.ok) throwProblem(error);
