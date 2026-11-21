@@ -30286,11 +30286,15 @@ components:
           description: 'Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.'
     ContactCaseOwner:
       type: object
-      required: [user_id, name, seat, member_ids]
+      required: [user_id, name, seat, status, member_ids]
       properties:
         user_id: {type: string, format: uuid}
         name: {type: string}
         seat: {type: string, enum: [full, read]}
+        status:
+          type: string
+          enum: [active, invited]
+          description: '`invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.'
         member_ids: {type: array, items: {type: string, format: uuid}}
     ContactCaseResolution:
       type: object

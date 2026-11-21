@@ -12,10 +12,14 @@ package integration_test
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -56,6 +60,7 @@ func seedOwnerCase(t *testing.T, size int, number string) ownerCase {
 		}
 		created, err := store.CreateContact(e.Admin(), contacts.CreateContactInput{
 			FullName: "Ada Lovelace", Source: "manual", OwnerID: &owner,
+			Emails: []contacts.ContactEmailInput{{Email: "ada" + strconv.Itoa(i) + "." + number[len(number)-3:] + "@example.com", EmailType: "work", IsPrimary: true}},
 			Phones: []contacts.ContactPhoneInput{{Phone: number, PhoneType: "work", IsPrimary: true, Position: 1}},
 		})
 		if err != nil {
@@ -113,10 +118,12 @@ func TestACaseMergeAcceptsAnInvitedColleagueAsOwnerLikeThePairMerge(t *testing.T
 	}
 }
 
-func TestACaseMergeRefusesADeactivatedOrAgentOwner(t *testing.T) {
+func TestACaseMergeRefusesAnOwnerWhoIsNotAColleague(t *testing.T) {
 	for name, set := range map[string]string{
 		"a deactivated seat": "status = 'deactivated'",
 		"an agent seat":      "is_agent = true",
+		"an archived seat":   "archived_at = now()",
+		"a removed seat":     "status = 'deactivated', removed_at = now()",
 	} {
 		t.Run(name, func(t *testing.T) {
 			c := seedOwnerCase(t, 3, "+493055509103")
@@ -127,5 +134,63 @@ func TestACaseMergeRefusesADeactivatedOrAgentOwner(t *testing.T) {
 				t.Errorf("a case merge owned by %s = %v, want owner_not_eligible", name, err)
 			}
 		})
+	}
+}
+
+func TestAnInvitedOwnerOnTheLosingSideKeepsAccessAndPreviewAgrees(t *testing.T) {
+	c := seedOwnerCase(t, 3, "+493055509104")
+	c.seat(t, "status = 'invited'")
+	read, err := c.store.GetContactCase(c.rep, c.members[1])
+	if err != nil {
+		t.Fatalf("reading the case: %v", err)
+	}
+	decision := contacts.ContactCaseDecision{
+		Revision: read.Revision, MemberIDs: c.members, SurvivorID: c.members[1], OwnerID: c.e.Rep1,
+	}
+	preview, err := c.store.PreviewContactCaseMerge(c.rep, c.members[1], decision)
+	if err != nil {
+		t.Fatalf("previewing: %v", err)
+	}
+	merged, err := c.store.MergeContactCase(c.rep, c.members[1], decision)
+	if err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	for name, out := range map[string]crmcontracts.ContactCaseOutcome{"preview": preview, "merge": merged} {
+		if len(out.Skipped) != 0 || len(out.Shares) != 1 || ids.UUID(out.Shares[0].UserId) != c.e.Rep2 {
+			t.Errorf("%s: skipped %+v shares %+v, want one share for the invited former owner", name, out.Skipped, out.Shares)
+		}
+	}
+	if got := c.e.WsCount(t, `SELECT count(*) FROM record_grant WHERE record_id = $1 AND subject_id = $2`, c.members[1], c.e.Rep2); got != 1 {
+		t.Errorf("the invited former owner holds %d grants on the survivor, want 1", got)
+	}
+}
+
+func TestAMergeThatOnlyMovesAnEmailMovesTheSurvivorsVersion(t *testing.T) {
+	c := seedOwnerCase(t, 2, "+493055509105")
+	target := ids.From[ids.ContactKind](c.members[1])
+	before, err := c.store.GetContact(c.e.Admin(), target, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the survivor: %v", err)
+	}
+	if _, err := c.store.MergeContact(c.e.Admin(), ids.From[ids.ContactKind](c.members[0]), target, nil); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	after, err := c.store.GetContact(c.e.Admin(), target, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the survivor: %v", err)
+	}
+	if after.Emails == nil || len(*after.Emails) != 2 {
+		t.Fatalf("the survivor holds %v emails, want both", after.Emails)
+	}
+	if after.Version == nil || before.Version == nil || *after.Version <= *before.Version || !after.UpdatedAt.After(before.UpdatedAt) {
+		t.Errorf("the survivor kept version %v at %s after gaining an email, was %v at %s",
+			after.Version, after.UpdatedAt, before.Version, before.UpdatedAt)
+	}
+	old := int64(*before.Version)
+	_, err = c.store.UpdateContact(c.e.Admin(), target, contacts.UpdateContactInput{
+		Title: new("Countess"), IfVersion: &old,
+	})
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("an edit on the pre-merge version = %v, want a version conflict", err)
 	}
 }
