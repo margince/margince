@@ -14,9 +14,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 type backupActingKey struct{}
+
+// HeldAuthority reads a member's authority inside tx and holds it to commit
+// (identity.HeldAuthorityTx).
+type HeldAuthority func(context.Context, pgx.Tx, ids.UUID) (authz.RBAC, principal.SeatType, error)
 
 // backupOwnerActingTx binds the backup owner's authority as of tx, so mail from
 // an unknown sender may become their contact. A mailbox with no backup owner,
@@ -35,30 +41,50 @@ func (s *Sink) backupOwnerActingTx(ctx context.Context, tx pgx.Tx, box ids.UUID)
 	if backup == nil {
 		return ctx, nil
 	}
-	// The authorization lock comes first, so a team or role change waits for
-	// this write instead of passing between the check and the mint.
-	rbac, seat, err := s.partyAuthority.HeldAuthorityTx(ctx, tx, *backup)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return ctx, nil
-	}
-	if err != nil {
+	acting, holds, err := backupMayHoldTx(ctx, tx, s.partyAuthority.HeldAuthorityTx, team, *backup)
+	if err != nil || !holds {
 		return ctx, err
-	}
-	err = refuseBackupOutsideTeamTx(ctx, tx, team, backup)
-	if _, outside := errors.AsType[*BackupOwnerError](err); outside {
-		return ctx, nil
-	}
-	if err != nil {
-		return ctx, err
-	}
-	if mayCapture := CaptureRefusal(rbac.Permissions, seat) == nil; !mayCapture {
-		return ctx, nil
 	}
 	run, _ := principal.Actor(ctx)
-	return context.WithValue(ctx, backupActingKey{}, principal.Principal{
-		Type: principal.PrincipalConnector, ID: run.ID, UserID: *backup, OnBehalfOf: *backup,
+	acting.ID = run.ID
+	return context.WithValue(ctx, backupActingKey{}, acting), nil
+}
+
+// backupMayHoldTx answers whether backup may still hold a shared mailbox's
+// work: a live seat in the reader team whose authority may capture. It takes
+// the authorization lock first, so a team or role change waits for this write.
+func backupMayHoldTx(ctx context.Context, tx pgx.Tx, authority HeldAuthority, team, backup ids.UUID) (principal.Principal, bool, error) {
+	rbac, seat, err := authority(ctx, tx, backup)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return principal.Principal{}, false, nil
+	}
+	if err != nil {
+		return principal.Principal{}, false, err
+	}
+	err = refuseBackupOutsideTeamTx(ctx, tx, team, &backup)
+	if _, outside := errors.AsType[*BackupOwnerError](err); outside {
+		return principal.Principal{}, false, nil
+	}
+	if err != nil {
+		return principal.Principal{}, false, err
+	}
+	if mayCapture := CaptureRefusal(rbac.Permissions, seat) == nil; !mayCapture {
+		return principal.Principal{}, false, nil
+	}
+	return principal.Principal{
+		Type: principal.PrincipalConnector, UserID: backup, OnBehalfOf: backup,
 		TeamIDs: rbac.TeamIDs, SeatType: seat, Permissions: rbac.Permissions,
-	}), nil
+	}, true, nil
+}
+
+// backupKeepsOutTx reports whether the backup owner's own rules keep this mail
+// from them: an exclusion they set, or a thread they judged private.
+func backupKeepsOutTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, activity, backup ids.UUID) (bool, error) {
+	excluded, err := excludedForTx(ctx, tx, rec, backup)
+	if err != nil || excluded != "" {
+		return excluded != "", err
+	}
+	return storedMessageIsPrivateTx(ctx, tx, ids.From[ids.ActivityKind](activity), backup)
 }
 
 // backupActingOf answers the backup owner a shared mailbox run may mint for.

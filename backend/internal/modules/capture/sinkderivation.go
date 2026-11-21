@@ -41,6 +41,13 @@ func (s *Sink) derivationStart(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		}
 		decision = counterpartyDecision{linkOnly: true, readerTeam: readers, capturedBy: actor.ID, subject: cp}
 		backup, minting := backupActingOf(ctx)
+		if minting {
+			keptOut, err := backupKeepsOutTx(ctx, tx, rec, activityID, backup.UserID)
+			if err != nil {
+				return dispositionRow{}, counterpartyDecision{}, false, err
+			}
+			minting = !keptOut
+		}
 		if !minting {
 			return dispositionRow{}, decision, false, nil
 		}

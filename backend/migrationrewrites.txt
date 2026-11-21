@@ -197,3 +197,5 @@
 1795269930_a_contact_stores_its_strength_dates.up.sql | * | the bodies are two read functions and the trigger functions that keep the new columns; the migration adds columns with a constant default and changes no existing row, and the contact_strength_dates data task fills them
 1795291713_a_signature_may_state_a_second_email.down.sql | contact_profile_field | runs only on a rollback and deletes only email evidence rows, one per further address a signature stated, a handful per contact at most
 1795291714_a_second_email_evidence_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795291715_a_shared_mailbox_contact_stays_its_backup_owners.down.sql | contact | runs only on a rollback and touches only contacts a verdict kept for a shared mailbox's backup owner, a small share of one mailbox's senders
+1795291716_the_shared_mailbox_narrowing_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -103,8 +104,69 @@ func TestAStrangerToASharedMailboxBecomesTheBackupOwnersContact(t *testing.T) {
 	}
 	s.judgeEveryone(t)
 
-	if got := s.contactsOf(t, strangerAddress, "workspace"); got != 1 {
-		t.Fatalf("the judged sender has %d contacts owned by the backup owner, want 1", got)
+	if got := s.contactsOf(t, strangerAddress, "owner"); got != 1 {
+		t.Fatalf("the judged sender has %d contacts owned by and private to the backup owner, want 1", got)
+	}
+}
+
+func TestAVerdictMintsNothingForASeatNoLongerTheBackupOwner(t *testing.T) {
+	for name, lose := range map[string]func(s *sharedMailboxSuite, t *testing.T, box ids.UUID){
+		"another seat became the backup owner": func(s *sharedMailboxSuite, t *testing.T, box ids.UUID) {
+			s.ownerExec(t, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, s.e.Team1, s.e.AdminUser)
+			if code := s.setBackup(t, box, &s.e.AdminUser); code != http.StatusOK {
+				t.Fatalf("naming another backup owner answered %d", code)
+			}
+		},
+		"the backup owner left the reader team": func(s *sharedMailboxSuite, t *testing.T, _ ids.UUID) {
+			s.ownerExec(t, `DELETE FROM team_membership WHERE team_id = $1 AND user_id = $2`, s.e.Team1, s.e.Rep2)
+		},
+		"the backup owner excluded the sender": func(s *sharedMailboxSuite, t *testing.T, _ ids.UUID) {
+			s.excludeForBackup(t, strangerAddress)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := newSharedMailboxSuite(t)
+			box := s.backedMailbox(t)
+			s.syncOne(t, box, strangerMail("first@stranger.example"), "a question")
+			lose(s, t, box)
+			s.judgeEveryone(t)
+
+			if got := s.anyContactFor(t, strangerAddress); got != 0 {
+				t.Fatalf("a verdict minted %d contacts for a seat no longer the backup owner who may hold them", got)
+			}
+		})
+	}
+}
+
+func TestASenderTheBackupOwnerExcludedNeverBecomesTheirContact(t *testing.T) {
+	s := newSharedMailboxSuite(t)
+	box := s.backedMailbox(t)
+	s.excludeForBackup(t, strangerAddress)
+	s.syncOne(t, box, strangerMail("first@stranger.example"), "a question")
+	s.judgeEveryone(t)
+
+	if _, all := s.questionsFor(t, strangerAddress); all != 0 {
+		t.Fatalf("an excluded sender opened %d questions for the backup owner, want none", all)
+	}
+	if got := s.anyContactFor(t, strangerAddress); got != 0 {
+		t.Fatal("a sender the backup owner excluded became their contact")
+	}
+}
+
+// excludeForBackup is the backup owner keeping an address out of their capture.
+func (s *sharedMailboxSuite) excludeForBackup(t *testing.T, address string) {
+	t.Helper()
+	asBackup := s.e.As(s.e.Rep2, []ids.UUID{s.e.Team1}, integration.RepPerms)
+	if _, err := capture.NewExclusionStore(compose.InstallationDB(s.e.Pool)).Add(asBackup,
+		capture.ExclusionScopeUser, capture.ExclusionKindAddress, address, ids.Nil); err != nil {
+		t.Fatalf("excluding %s for the backup owner: %v", address, err)
+	}
+}
+
+func (s *sharedMailboxSuite) ownerExec(t *testing.T, sql string, args ...any) {
+	t.Helper()
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), sql, args...); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -206,5 +268,9 @@ func TestASenderWhoseContactNoReaderMayReadGetsNoSecondContact(t *testing.T) {
 	}
 	if got := s.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE contact_id = $1`, pat); got != 0 {
 		t.Fatal("shared mail was filed under a contact private to a seat outside the reader team")
+	}
+	s.judgeEveryone(t)
+	if got := s.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE contact_id = $1`, pat); got != 0 {
+		t.Fatal("a verdict filed shared mail under a contact private to a seat outside the reader team")
 	}
 }

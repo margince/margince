@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -155,11 +156,18 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 	if err != nil {
 		return counterpartyCreated{}, err
 	}
+	// Shared mail files only where its reader team reads, as at capture.
+	filing, err := capture.SharedMailboxFilingTx(ctx, tx, identity.HeldAuthorityTx, in.ActivityID, in.OwnerID)
+	if err != nil {
+		return counterpartyCreated{}, err
+	}
 	res, err := store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
+		LinkOnly:         filing.Shared,
+		ReaderTeam:       filing.ReaderTeam,
 		Email:            in.Email,
 		DisplayName:      in.DisplayName,
 		Domain:           in.Domain,
-		OwnerID:          in.OwnerID,
+		OwnerID:          filing.OwnerFor(in.OwnerID),
 		ActivityID:       ids.From[ids.ActivityKind](in.ActivityID),
 		Source:           in.Source,
 		CapturedBy:       in.CapturedBy,
@@ -176,9 +184,9 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 	if err != nil {
 		return counterpartyCreated{}, err
 	}
-	// A live lead holds the address. The mail is already filed on the lead, and
-	// no contact exists for a cohort, a tag or a backfill credit to name.
-	if !res.LeadID.IsZero() {
+	// A live lead holds the address, or shared mail had no record to file on.
+	// No contact exists for a cohort, a tag or a backfill credit to name.
+	if !res.LeadID.IsZero() || res.ContactID.IsZero() {
 		return counterpartyCreated{}, nil
 	}
 	// The ensure links the message that raised the question; the sender may have
@@ -286,6 +294,14 @@ func (e *CounterpartyVerdictEngine) contactStaysTheOwners(
 	}
 	if held {
 		return contacts.NarrowedConfidentialityHold, nil
+	}
+	// Mail only a shared mailbox captured mints its backup owner's contact.
+	_, _, shared, err := capture.SharedMailboxOnlyTx(ctx, tx, row.ActivityID, row.OwnerID)
+	if err != nil {
+		return "", err
+	}
+	if shared {
+		return contacts.NarrowedSharedMailbox, nil
 	}
 	// An address WE reached that has never answered. Judged on the recorded
 	// direction rather than inferred: a row written before the direction was

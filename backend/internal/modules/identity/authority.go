@@ -243,6 +243,12 @@ func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids
 // authorization lock alone still holds the authority until commit: every
 // authorization change takes it exclusively.
 func (*Service) HeldAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return HeldAuthorityTx(ctx, tx, humanID)
+}
+
+// HeldAuthorityTx is the method of the same name for a caller that holds no
+// Service, such as a verdict deciding inside another module's transaction.
+func HeldAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	if err := HoldAuthorizationTx(ctx, tx); err != nil {
 		return authz.RBAC{}, "", err
 	}
