@@ -295,9 +295,11 @@ harness, and commit the verdicts there. The surface changes often, and a verdict
 is stale as soon as it lands.
 
 A maintainer can also start the sweep in CI: run `scheduled.yml` by hand with the `llm` input. It
-sweeps every case in parts, side by side. It opens a pull request with its verdicts only when every
-case has a new one from a stack whose search ranks by meaning. The `RECORDS_OWNER` repository
-variable names who owns that pull request.
+sweeps every case in parts, side by side. Started on `main`, it opens a pull request with its
+verdicts only when every case has a new one from a stack whose search ranks by meaning. The
+`RECORDS_OWNER` repository variable names who owns that pull request. Started on any other branch,
+it opens none: download the `e2e-llm-verdicts` artifact of the run and commit those verdicts to the
+pull request of that branch.
 
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a run to try something.
