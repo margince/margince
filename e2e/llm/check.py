@@ -505,6 +505,17 @@ WORKED_OUT = (
 WORKED_OUT_AMOUNTS = 200
 
 
+def tools_called(paths):
+    """Every tool a call worked on in any of the runs, by its bare name. The
+    coverage page counts a tool a held run used as driven, whichever case
+    names it, since a case pins the outcome and not the tool."""
+    called = set()
+    for path in paths:
+        if os.path.exists(path):
+            called |= {name.rsplit("__", 1)[-1] for name, _ in read_run(path).worked}
+    return sorted(called)
+
+
 def worked_out_criterion(said, results):
     """The question the judge is asked about the figures no result holds, and
     those figures' problems; no question when every figure is a result's own."""
@@ -1219,6 +1230,8 @@ def main():
             # sweep from one whose transcripts it could not read, which the
             # totals alone cannot say.
             record["usage"] = usage
+        if len(sys.argv) > 5:
+            record["tools_called"] = tools_called(sys.argv[5:])
         measured = efficiency(sys.argv[5:], scenario.get("expected_calls")) if len(sys.argv) > 5 else None
         if measured is not None:
             if "slow" in measured:

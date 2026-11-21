@@ -46,6 +46,8 @@ type Verdict struct {
 	// Slow is its median calls past the case's `expected_calls`.
 	Efficiency *Efficiency `json:"efficiency"`
 	Slow       bool        `json:"slow"`
+	// ToolsCalled is every tool a call worked on in the runs, by bare name.
+	ToolsCalled []string `json:"tools_called"`
 }
 
 // Unstamped is the reason a verdict made before the stamp existed gives.

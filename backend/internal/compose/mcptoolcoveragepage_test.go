@@ -13,6 +13,7 @@ package compose
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -59,8 +60,8 @@ func writeCoverageHowToRead(p *strings.Builder) {
 	p.WriteString("| Required as one of a set | Some questions can be answered by more than one tool, so " +
 		"a case can require `A` or `B` and fails if neither is called. Every run reaches for one " +
 		"of the set, and any one member can go uncalled, so this is neither of the two words above. |\n")
-	p.WriteString("| Driven | At least one case requires this tool. A tool no case requires is " +
-		"untried: nothing has ever asked an assistant to reach for it, so nothing says it is broken. |\n")
+	p.WriteString("| Driven | At least one case requires this tool, or a run that reached its bar called it. " +
+		"A tool neither is untried: nothing says it is broken. |\n")
 	p.WriteString("| Reliability | Of the runs on the cases that require this tool, the share that " +
 		"passed. Each case is run several times because the lane is not deterministic. |\n")
 	p.WriteString("| Bar | Each case carries its own `pass_at`: how many of its runs must pass. " +
@@ -496,4 +497,15 @@ func writeCoverageREST(p *strings.Builder, r mcpToolCoverage) {
 	}
 	p.WriteString("\n")
 	writeJobTable(p, r.REST.Cases, r.REST.Models, r.Criteria)
+}
+
+// calledInHeldRuns names the cases where a run that reached its bar used tool.
+func calledInHeldRuns(cases []caseRow, tool string) []string {
+	var named []string
+	for _, c := range cases {
+		if slices.ContainsFunc(c.ByModel, func(run caseModelRun) bool { return run.Held && slices.Contains(run.ToolsCalled, tool) }) {
+			named = append(named, c.Name)
+		}
+	}
+	return named
 }

@@ -125,3 +125,18 @@ func TestTheRESTDoorIsReadFromItsOwnTree(t *testing.T) {
 		}
 	}
 }
+
+// A case pins the outcome, so a tool a held run used counts as driven, and one
+// only a failed run used does not.
+func TestAToolAHeldRunCalledIsDriven(t *testing.T) {
+	cases := []caseRow{
+		{Name: "a", ByModel: []caseModelRun{{Model: "m", Held: true, ToolsCalled: []string{"find_records"}}}},
+		{Name: "b", ByModel: []caseModelRun{{Model: "m", Held: false, ToolsCalled: []string{"read_tags"}}}},
+	}
+	if got := calledInHeldRuns(cases, "find_records"); len(got) != 1 || got[0] != "a" {
+		t.Errorf("find_records called in %v, want [a]", got)
+	}
+	if got := calledInHeldRuns(cases, "read_tags"); len(got) != 0 {
+		t.Errorf("read_tags counted from a failed run: %v", got)
+	}
+}

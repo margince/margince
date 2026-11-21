@@ -147,8 +147,8 @@ These numbers come from a full sweep of the test data on one machine, with no ca
 Most of the time of a case goes to the start and seed of its stack, not to the model. `usage:` under each scenario, and `sweep total:` at the end, print what a run used. The committed verdict keeps the same totals.
 
 1. **Run a few scenarios first** (section 3), and read their transcripts. A harness error then costs a few cases.
-2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case that names a tool in `must_call`.
-   Generate the coverage page again (section 8): its count of tools that no case requires must not grow.
+2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case whose runs use a tool.
+   Generate the coverage page again (section 8): its count of tools no case drives must not grow. A case drives a tool when it requires it, or when a run that reached its bar called it.
 3. **Run a discovery pass.** Fix all that it finds ([improve-mcp-quality.md](improve-mcp-quality.md)).
 4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on every target ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
 5. **Read the stamps.** Each verdict carries a `stamp` of what it measured (section 8).
@@ -199,17 +199,19 @@ reason of the judge in one sentence. It can also be a record that the run put in
 
 ### How directly a run finished
 
-A stronger model should need fewer rounds. After each scenario the lane prints an `efficiency:` line,
-and the verdict keeps an `efficiency` object. For each metric it holds the median, the lowest and the
-highest value over the runs that finished: tool calls, model turns, refused calls, prompt and output
-tokens, and the wall time when the transcript carries `duration_ms`. A refused call includes a bare
-tool name that the CLI turned away. A run with no terminal result is left out, and `runs` says how
-many runs are behind the numbers.
+A good model needs fewer rounds, so the lane counts them. After each scenario it prints an
+`efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle
+value of the runs, with the least and the most.
 
-These numbers never fail a case and never change the exit code. A scenario can set a soft budget,
-`expected_calls: 4`. When the median calls go past it, the verdict says `"slow": true` and the
-`efficiency:` line ends with `slow`. The page shows the median calls and turns for each case and
-model, and the median calls per case for each model. A verdict from before this measure shows `-`.
+The counts are tool calls, model turns, refused calls, prompt tokens and output tokens. How long a
+run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool
+name that the CLI turned away. A run with no last result is left out, and `runs` says how many runs
+are behind the numbers.
+
+These numbers never fail a case and never change the exit code. A scenario can set
+`expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true`
+and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and
+model, and the calls per case for each model. A verdict from before this measure shows `-`.
 
 ### The end state
 

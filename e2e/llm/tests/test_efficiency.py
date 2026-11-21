@@ -9,6 +9,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
 
 import check  # noqa: E402
+import transcript  # noqa: E402
 
 USAGE = {"input_tokens": 10, "output_tokens": 5, "cache_creation_input_tokens": 3, "cache_read_input_tokens": 2}
 
@@ -123,3 +124,14 @@ class EfficiencyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ToolsCalledTest(unittest.TestCase):
+    def test_only_calls_that_worked_count_by_their_bare_name(self):
+        path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        with transcript.Transcript(path) as out:
+            out.init("m", "claude:cli", "cli-default", "connected", ["find_records", "update_record"])
+            out.assistant("", [("c0", "find_records", {}), ("c1", "update_record", {})])
+            out.tool_results([("c0", "{}", False), ("c1", "refused", True)])
+            out.finish(False, "Done.", 2)
+        self.assertEqual(check.tools_called([path, "/nonexistent.jsonl"]), ["find_records"])
