@@ -410,6 +410,57 @@ describe("a line's billing", () => {
     expect(calls).toEqual([]);
   });
 
+  it("keeps a term being typed when an earlier billing pick is answered", async () => {
+    const quarterly: OfferLineItem = {
+      ...line1,
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: 4,
+    };
+    const sent: unknown[] = [];
+    const answers: ((response: Response) => void)[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ offer: ["read", "update"] }),
+      "GET /offers/o-1": () => jsonResponse(draft([quarterly])),
+      "PATCH /offers/o-1/line-items/li-1": (body) => {
+        sent.push(body);
+        return new Promise<Response>((resolve) => answers.push(resolve));
+      },
+    });
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+    const periods = () =>
+      screen.getByRole("spinbutton", { name: "Periods, line 1" });
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Billing period, line 1" }),
+      "Monthly",
+    );
+    await waitFor(() => expect(sent).toHaveLength(1));
+    await user.clear(periods());
+    await user.type(periods(), "12");
+    const monthly: OfferLineItem = {
+      ...quarterly,
+      billing_interval_months: 1,
+      line_total_minor: 4321,
+      version: 2,
+    };
+    answers[0](jsonResponse(draft([monthly])));
+
+    // The answer is drawn once the line shows its saved total.
+    expect(await screen.findByText("€43.21")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Billing period, line 1" })
+        .textContent,
+    ).toBe("Monthly");
+    expect(periods()).toHaveProperty("value", "12");
+    await user.tab();
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]).toMatchObject({ interval_count: 12 });
+  });
+
   it("saves a line made recurring only once it has a period", async () => {
     const calls = serve(draft([line1]), () => ({
       status: 200,

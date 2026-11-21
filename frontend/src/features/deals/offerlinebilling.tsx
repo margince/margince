@@ -232,6 +232,28 @@ export function lineBillingOf(line: LineBillingTerms): LineBilling {
   };
 }
 
+function sameBilling(a: LineBilling, b: LineBilling): boolean {
+  return (
+    a.billingModel === b.billingModel &&
+    a.billingIntervalMonths === b.billingIntervalMonths &&
+    a.intervalCount === b.intervalCount
+  );
+}
+
+function reconciled(
+  value: LineBilling,
+  base: LineBilling,
+  saved: LineBilling,
+): LineBilling {
+  const pick = (field: keyof LineBilling) =>
+    value[field] === base[field] ? saved[field] : value[field];
+  return {
+    billingModel: pick("billingModel"),
+    billingIntervalMonths: pick("billingIntervalMonths"),
+    intervalCount: pick("intervalCount"),
+  };
+}
+
 // The three controls in a line's row: a pick saves at once, the term on blur.
 export function BillingCell({
   line,
@@ -242,7 +264,15 @@ export function BillingCell({
   label: (column: string) => string;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
-  const [value, setValue] = useState(() => lineBillingOf(line));
+  const saved = lineBillingOf(line);
+  const [value, setValue] = useState(saved);
+  // The saved terms the controls last took. A newer answer moves each control
+  // the reader has not changed since, and keeps one still being edited.
+  const [base, setBase] = useState(saved);
+  if (!sameBilling(base, saved)) {
+    setBase(saved);
+    setValue(reconciled(value, base, saved));
+  }
   const commit = (next: LineBilling) => {
     const patch = lineBillingPatch(next);
     // A line just made recurring waits for its period; a saved period is put

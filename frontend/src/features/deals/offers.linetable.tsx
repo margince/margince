@@ -28,12 +28,10 @@ type LineField = keyof UpdateOfferLineItemRequest;
 
 export type LineRefusals = ReturnType<typeof useLineRefusals>;
 
-// What a cell was drawn from; billing's three controls redraw together.
+// What a cell was drawn from. Billing takes a saved change in place instead,
+// so a term still being typed survives an earlier pick's answer.
 function savedOf(line: OfferLineItem, field: LineField): string {
-  if (field === "billing_model") {
-    return `${line.billing_model}/${line.billing_interval_months}/${line.interval_count}`;
-  }
-  return String(line[field]);
+  return field === "billing_model" ? "" : String(line[field]);
 }
 
 /**
