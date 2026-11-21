@@ -42,7 +42,7 @@ export function coverageOf(row: Row): MoneyCoverage | null {
 export function hasGap(
   coverage: MoneyCoverage | null | undefined,
 ): coverage is MoneyCoverage {
-  return coverage != null && coverage.partial;
+  return coverage?.partial === true;
 }
 
 // The coverage of several groups taken together. Null as soon as one group
