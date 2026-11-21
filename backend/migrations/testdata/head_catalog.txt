@@ -6334,6 +6334,7 @@ public.home_read_cache.fence bigint NOT NULL gen=- def=-
 public.home_read_cache.home_read_cache_pkey PRIMARY KEY (reader_id, read, request_key)
 public.home_read_cache.home_read_cache_read_check CHECK ((read = ANY (ARRAY['worklist'::text, 'magic'::text])))
 public.home_read_cache.home_read_cache_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.home_read_cache.lifted_snooze_digest bytea gen=- def=-
 public.home_read_cache.payload jsonb NOT NULL gen=- def=-
 public.home_read_cache.read text NOT NULL gen=- def=-
 public.home_read_cache.reader_id uuid NOT NULL gen=- def=-
