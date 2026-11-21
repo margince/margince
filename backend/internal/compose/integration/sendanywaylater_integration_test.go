@@ -412,3 +412,46 @@ func countRows(t *testing.T, p *preflightEnv, query string) int {
 func momentIn(d time.Duration) string {
 	return time.Now().Add(d).UTC().Format(time.RFC3339)
 }
+
+// An approval the message has since outgrown does not strand the message. The
+// fire holds it with a reason the sender can read and opens a fresh review.
+// Approving that review sends, and the expired approval no longer blocks.
+func TestAStaleScheduledApprovalHoldsForAFreshReviewThatSends(t *testing.T) {
+	p, id := heldByAnObjectionAtFire(t)
+	first := p.liveReviewFor(t, id)
+	body := confirmationFor(t, p.AppEnv, first)
+	body["scheduled_at"] = momentIn(time.Hour)
+	body["scheduled_tz"] = "UTC"
+	if status := p.Call(t, "POST", "/v1/communication-reviews/"+first+"/direct-send", body, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("Send anyway later → %d, want 202", status)
+	}
+	if _, err := p.Owner.Exec(context.Background(), `
+		UPDATE scheduled_send SET payload = jsonb_set(payload, '{body}', '"The wording changed after approval."')
+		 WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+
+	p.makeDue(t, id)
+	p.fire(t, id)
+
+	if status, reason := p.scheduledStatus(t, id); status != activities.ScheduledStatusHeld || reason != activities.HeldSendRefused {
+		t.Fatalf("after the stale fire the message reads %q %q, want held send_refused", status, reason)
+	}
+	if got := p.countDeliveries(t); got != 0 {
+		t.Fatalf("%d deliveries from a stale approval, want 0", got)
+	}
+	fresh := p.liveReviewFor(t, id)
+	if fresh == first {
+		t.Fatal("the stale approval's review is still the live one, so nobody can decide again")
+	}
+	if n := countRows(t, p, `SELECT count(*) FROM communication_instruction WHERE status = 'expired'`); n != 1 {
+		t.Fatalf("%d expired approval(s), want 1", n)
+	}
+
+	if status := p.confirmReview(t, fresh); status != http.StatusCreated {
+		t.Fatalf("approving the fresh review → %d, want 201", status)
+	}
+	if deliveries, authority := p.deliveriesUnderAuthority(t); deliveries != 1 || authority != "instruction" {
+		t.Fatalf("%d deliveries under %q after the fresh approval, want 1 under instruction", deliveries, authority)
+	}
+}

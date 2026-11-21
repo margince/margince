@@ -64437,10 +64437,12 @@ export interface components {
             };
         };
         /**
-         * @description The send failed validation, or no mailbox can carry it. The second answers with the top-level
-         *     `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
-         *     fix it: the sender must connect a mailbox that can send, or an administrator must set up
-         *     sending for the installation. A scheduled send is checked the same way when it is created.
+         * @description The send failed validation, or no mailbox can carry it. The second answers with a top-level
+         *     `code` and no `details.errors`, because no field of the request can fix it. `mailbox_not_connected`
+         *     means the sender holds no mailbox at all and must connect one. `mailbox_not_send_capable` means
+         *     they hold mailboxes that cannot send, so they must reconnect one with permission to send, or an
+         *     administrator must set up sending for the installation. A scheduled send is checked the same way
+         *     when it is created.
          */
         SendValidationError: {
             headers: {

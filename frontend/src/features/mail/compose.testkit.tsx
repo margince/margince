@@ -12,6 +12,7 @@ import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { ComposeWindow } from "./composewindow";
 
@@ -194,6 +195,7 @@ export function stubRoutes(
           meFixture({ allow: { activity: ["read", "create", "update"] } }),
         );
       }
+      if (key === "GET /connectors") return jsonResponse(CONNECTED_ROSTER);
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse(NO_VOICE_PROFILE);
       return jsonResponse({});

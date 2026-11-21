@@ -12,6 +12,7 @@ import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { asksWhy, contextFor } from "../../lib/compose-context";
+import { useNoMailboxConnected } from "../../lib/connectors";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import type { ChosenFile } from "./composeattachments";
@@ -270,7 +271,12 @@ export function useComposeSend({
     request,
     undefined,
   );
-  const hold = inlineSendHold(shownRefusal === "legacyFooter");
+  const noMailbox = useNoMailboxConnected() && !isChannelReply;
+  const hold = inlineSendHold(
+    shownRefusal === "legacyFooter" ||
+      shownRefusal === "noMailbox" ||
+      noMailbox,
+  );
   const [attempted, setAttempted] = useState(false);
   useEffect(() => {
     if (!open) {
@@ -310,7 +316,9 @@ export function useComposeSend({
     missing.length > 0 ||
     carriageBlocked ||
     fields.sendUnavailable ||
+    noMailbox ||
     refusal === "mailbox" ||
+    refusal === "noMailbox" ||
     refusal === "sharedUnsubscribe" ||
     shownRefusal === "legacyFooter";
   return {

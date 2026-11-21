@@ -16,6 +16,7 @@ import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -93,6 +94,7 @@ function stubRoutes(
       sent.push({ key, body });
       const override = overrides[key];
       if (override) return override();
+      if (key === "GET /connectors") return jsonResponse(CONNECTED_ROSTER);
       if (key === "GET /activities/a-chat") return jsonResponse(ACTIVITY);
       if (isPreviewDoor(url.pathname)) {
         return jsonResponse(allowedPreview(previewedAddresses(body)));
