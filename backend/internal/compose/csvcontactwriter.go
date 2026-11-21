@@ -240,6 +240,9 @@ func leadKeyHeld(err error) (migration.Reason, bool) {
 	if _, ok := errors.AsType[*contacts.LeadHoldsIdentityError](err); ok {
 		return contactEmailClaimedWhy, true
 	}
+	if _, ok := errors.AsType[*contacts.ContactHoldsIdentityError](err); ok {
+		return contactHoldsLeadWhy, true
+	}
 	return migration.Reason{}, false
 }
 

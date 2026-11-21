@@ -87,12 +87,21 @@ func ensureCompanyLinkedInUnclaimed(ctx context.Context, tx pgx.Tx, url *string)
 	if url == nil {
 		return nil
 	}
-	var claimed bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM company WHERE archived_at IS NULL AND lower(linkedin_url)=lower(@url))`, pgx.NamedArgs{"url": *url}).Scan(&claimed); err != nil {
+	claimed, err := CompanyLinkedInRival(ctx, tx, ids.CompanyID{}, *url)
+	if err != nil {
 		return err
 	}
 	if claimed {
 		return &DuplicateCompanyLinkedInError{URL: *url}
 	}
 	return nil
+}
+
+// CompanyLinkedInRival reports whether a live company other than self holds
+// the LinkedIn page, compared without case as company_linkedin_url_key does.
+func CompanyLinkedInRival(ctx context.Context, tx pgx.Tx, self ids.CompanyID, url string) (bool, error) {
+	var claimed bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM company WHERE archived_at IS NULL AND lower(linkedin_url)=lower(@url) AND id <> @self)`,
+		pgx.NamedArgs{"url": url, "self": self}).Scan(&claimed)
+	return claimed, err
 }

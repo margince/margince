@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -93,9 +94,9 @@ func LinkedInHeld(ctx context.Context, pool *pgxpool.Pool, object, url string) (
 			_, held, err = storekit.LiveLeadByLinkedInURL(ctx, tx, url, nil)
 			return err
 		}
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company WHERE lower(linkedin_url) = lower($1) AND archived_at IS NULL)`,
-			url).Scan(&held)
+		var err error
+		held, err = contacts.CompanyLinkedInRival(ctx, tx, ids.CompanyID{}, url)
+		return err
 	})
 	return held, err
 }
@@ -108,95 +109,9 @@ func DomainHeld(ctx context.Context, pool *pgxpool.Pool, domain string) (bool, e
 	}
 	var held bool
 	err := probe(ctx, pool, fmt.Sprintf("%q", domain), func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company_domain
-			   WHERE domain = ANY($1) AND archived_at IS NULL)`,
-			owndomain.Spellings(domain)).Scan(&held)
-	})
-	return held, err
-}
-
-// EmailHeldByAnother answers which kinds of record other than self hold this
-// address. An earlier row of the run holds it, or a live record the store's own
-// lookup finds. A record keeping its own address is not its own holder.
-func EmailHeldByAnother(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, email string, self ids.UUID) (contact, lead bool, err error) {
-	if email == "" {
-		return false, false, nil
-	}
-	contact = ledger.Held(Email, email, migration.ObjectContact)
-	lead = ledger.Held(Email, email, migration.ObjectLead)
-	err = probe(ctx, pool, fmt.Sprintf("%q", email), func(tx pgx.Tx) error {
-		holders, err := storekit.IdentityHoldersOf(ctx, tx, storekit.IdentityKeys{Emails: []string{email}})
-		for _, held := range holders.Contacts {
-			contact = contact || held.UUID != self
-		}
-		for _, held := range holders.Leads {
-			lead = lead || held.UUID != self
-		}
+		var err error
+		_, held, err = contacts.CompanyDomainRival(ctx, tx, ids.CompanyID{}, domain)
 		return err
-	})
-	return contact, lead, err
-}
-
-// CompanyLinkedInHeldByAnother is LinkedInHeld for a company that moves a URL.
-// Its own URL is no holder. An earlier row of the run is one.
-func CompanyLinkedInHeldByAnother(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, url string, self ids.UUID) (bool, error) {
-	if url == "" || ledger.Held(LinkedIn, url, migration.ObjectCompany) {
-		return url != "", nil
-	}
-	var held bool
-	err := probe(ctx, pool, fmt.Sprintf("%q", url), func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company WHERE lower(linkedin_url) = lower($1) AND archived_at IS NULL AND id <> $2)`,
-			url, self).Scan(&held)
-	})
-	return held, err
-}
-
-// Holder is the record type holding a key a row moves.
-type Holder struct {
-	Kind   Kind
-	Object string
-}
-
-// MovedKeyHeld names the first holder of a key a row moves, asking the kinds in
-// the order given. A contact meets an address held by a contact or a lead. A
-// lead meets one held by a lead. A company meets its LinkedIn URL and domains.
-func MovedKeyHeld(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object string, self ids.UUID, keys map[Kind]string, moved []Kind) (Holder, bool, error) {
-	for _, kind := range moved {
-		switch {
-		case kind == Email && object != migration.ObjectCompany:
-			holder, found, err := movedEmailHolder(ctx, pool, ledger, object, self, keys[Email])
-			if err != nil || found {
-				return holder, found, err
-			}
-		case kind == LinkedIn && object == migration.ObjectCompany:
-			held, err := CompanyLinkedInHeldByAnother(ctx, pool, ledger, keys[LinkedIn], self)
-			if err != nil || held {
-				return Holder{LinkedIn, object}, held, err
-			}
-		case kind == Domain && object == migration.ObjectCompany:
-			held, err := DomainHeldByAnother(ctx, pool, ledger, keys[Domain], self)
-			if err != nil || held {
-				return Holder{Domain, object}, held, err
-			}
-		}
-	}
-	return Holder{}, false, nil
-}
-
-// DomainHeldByAnother is DomainHeld for a company that moves a domain.
-// Its own live domains are no holder. An earlier row of the run is one.
-func DomainHeldByAnother(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, domain string, self ids.UUID) (bool, error) {
-	if domain == "" || ledger.Held(Domain, domain, migration.ObjectCompany) {
-		return domain != "", nil
-	}
-	var held bool
-	err := probe(ctx, pool, fmt.Sprintf("%q", domain), func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company_domain
-			   WHERE domain = ANY($1) AND archived_at IS NULL AND company_id <> $2)`,
-			owndomain.Spellings(domain), self).Scan(&held)
 	})
 	return held, err
 }
@@ -259,18 +174,4 @@ func WritableDomainHolder(ctx context.Context, pool *pgxpool.Pool, domain string
 		return ids.UUID{}, false, fmt.Errorf("import: checking whether the company holding %q may be changed: %w", domain, err)
 	}
 	return holder, true, nil
-}
-
-// movedEmailHolder is MovedKeyHeld for the address a contact or lead moves.
-func movedEmailHolder(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object string, self ids.UUID, email string) (Holder, bool, error) {
-	contact, lead, err := EmailHeldByAnother(ctx, pool, ledger, email, self)
-	switch {
-	case err != nil:
-		return Holder{}, false, err
-	case contact && object == migration.ObjectContact:
-		return Holder{Email, migration.ObjectContact}, true, nil
-	case lead:
-		return Holder{Email, migration.ObjectLead}, true, nil
-	}
-	return Holder{}, false, nil
 }

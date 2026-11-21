@@ -66,32 +66,14 @@ var movedKeyKinds = []struct {
 	kind  importkeys.Kind
 }{{fieldEmail, importkeys.Email}, {fieldLinkedIn, importkeys.LinkedIn}, {fieldDomain, importkeys.Domain}}
 
-// movedKeyRefusal says why an update cannot move a key onto its record: an
-// earlier row of the run, or another stored record, already holds it. The test
-// run and the import both ask here before they write, so the preview promises
-// only an update the import makes. The stored lookups are the ones the store's
-// own uniqueness checks use, and they leave out the record's own values.
+// movedKeyFields are the columns whose change moves a key.
+var movedKeyFields = map[string]importkeys.Kind{fieldEmail: importkeys.Email, fieldLinkedIn: importkeys.LinkedIn, fieldDomain: importkeys.Domain}
+
+// movedKeyRefusal says why an update cannot move a key onto its record, or the
+// zero reason. The test run and the import both ask before they write, so the
+// preview promises only an update the import makes.
 func (w *csvWriters) movedKeyRefusal(ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any, changed map[string]string) (migration.Reason, error) {
-	var moved []importkeys.Kind
-	for _, key := range movedKeyKinds {
-		if _, ok := changed[key.field]; ok {
-			moved = append(moved, key.kind)
-		}
-	}
-	held, found, err := importkeys.MovedKeyHeld(ctx, w.pool, w.links.claims, w.object, id, w.keysOf(row, typed), moved)
-	switch {
-	case err != nil || !found:
-		return migration.Reason{}, err
-	case held.Kind == importkeys.LinkedIn:
-		return linkedInClaimedWhy, nil
-	case held.Kind == importkeys.Domain:
-		return domainClaimedWhy, nil
-	case held.Object == migration.ObjectContact:
-		return duplicateEmailWhy, nil
-	case w.object == migration.ObjectLead:
-		return naturalKeyTakenWhy, nil
-	}
-	return contactEmailClaimedWhy, nil
+	return importkeys.MovedKeyWhy(ctx, w.pool, w.links.claims, w.object, id, w.keysOf(row, typed), importkeys.MovedKinds(changed, movedKeyFields))
 }
 
 // keyCheck is one key the create door refuses: held by an earlier row of the

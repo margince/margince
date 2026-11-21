@@ -123,26 +123,9 @@ func claimedDomainOwner(
 	self ids.CompanyID,
 	domain string,
 ) error {
-	var existing ids.CompanyID
-	// Every spelling, because Postgres cannot fold IDNA: a punycode claim on one
-	// company and its Unicode twin on another otherwise read as two free
-	// domains. Compared against `domain`, which uq_company_domain keys, rather
-	// than the folded column no index covers.
-	spellings := owndomain.Spellings(domain)
-
-	// `self` is excluded in SQL rather than compared afterwards. Both spellings
-	// can be live at once. So this has to answer with a rival, never with
-	// whichever of the two the planner reached first.
-	err := tx.QueryRow(ctx,
-		`SELECT company_id FROM company_domain
-		  WHERE domain = ANY($1) AND company_id <> $2 AND archived_at IS NULL
-		  LIMIT 1`,
-		spellings, self).Scan(&existing)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("probe domain dedupe: %w", err)
-	}
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
+	existing, claimed, err := CompanyDomainRival(ctx, tx, self, domain)
+	if err != nil || !claimed {
+		return err
 	}
 	dup := &DuplicateDomainError{Domain: domain}
 	visible, verr := auth.VisibleTo(ctx, tx, "company", existing.UUID)
@@ -153,6 +136,30 @@ func claimedDomainOwner(
 		dup.ExistingID = existing
 	}
 	return dup
+}
+
+// CompanyDomainRival finds a live company other than self that holds the
+// domain, in every spelling the store keeps. It answers with the raw id and no
+// disclosure rule, so a caller that reports it must gate it as claimedDomainOwner does.
+func CompanyDomainRival(ctx context.Context, tx pgx.Tx, self ids.CompanyID, domain string) (ids.CompanyID, bool, error) {
+	var existing ids.CompanyID
+	// Every spelling, because Postgres cannot fold IDNA: a punycode claim on one
+	// company and its Unicode twin on another otherwise read as two free
+	// domains. Compared against `domain`, which uq_company_domain keys, rather
+	// than the folded column no index covers. `self` is excluded in SQL, so a
+	// company holding both spellings never answers with itself.
+	err := tx.QueryRow(ctx,
+		`SELECT company_id FROM company_domain
+		  WHERE domain = ANY($1) AND company_id <> $2 AND archived_at IS NULL
+		  LIMIT 1`,
+		owndomain.Spellings(domain), self).Scan(&existing)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.CompanyID{}, false, nil
+	}
+	if err != nil {
+		return ids.CompanyID{}, false, fmt.Errorf("probe domain dedupe: %w", err)
+	}
+	return existing, true, nil
 }
 
 // ensureCompanyDomainsUnclaimed answers the domain dedupe probe with the
