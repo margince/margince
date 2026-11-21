@@ -53114,9 +53114,9 @@ export interface components {
          *     masked to the viewer's readable fields — an absent key was hidden, not null.
          *     `summary` is server-composed plain language in English. A client that
          *     renders the line in its reader's language builds it from `action` and the
-         *     actor fields. It falls back to `summary` for an edge row, whose role
-         *     travels only in the sentence, and for an action or actor kind it does
-         *     not know.
+         *     actor fields. For an edge row it builds from `edge.role` and
+         *     `edge.changed_fields`, and falls back to `summary` when an older server
+         *     omits them, and for an action or actor kind it does not know.
          *     Field-level detail lives in before/after for the client to render.
          */
         AuditHistoryEntry: {
@@ -53204,6 +53204,12 @@ export interface components {
             other_entity_id: string;
             /** @description The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it. */
             other_label?: string | null;
+            /** @description The role the link was made with (create) or changed to (update), as the reader's field mask allows. Absent when the link has no role, when the reader's mask withholds it, and on an unlink; a client then falls back to `kind` or to `summary`. */
+            role?: string | null;
+            /** @description The role an update replaced, or removed when `role` is then absent. Set only when the role changed. */
+            previous_role?: string | null;
+            /** @description Names of the link fields an update moved, sorted, masked like `role`. Absent on create and unlink. An older server omits it, and the client then shows `summary`. */
+            changed_fields?: string[];
         } | null;
         /**
          * @description Whether this history entry can be put back, and if not, why. COMPUTED per read,
