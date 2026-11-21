@@ -65,10 +65,21 @@ var (
 )
 
 // harnessFiles grade a run or build the world it runs in. A driver is not
-// here: how the model was reached is the verdict's folder and `driver`.
+// here: how the model was reached is the verdict's folder and `driver`. The
+// transcript parser is, since it decides what counts as a call, a refusal and
+// the answer; TestTheHarnessHoldsEveryModuleTheGraderImports holds the list.
 var harnessFiles = []string{
 	"e2e/llm/check.py", "e2e/llm/judge.py", "e2e/llm/endstate.py",
 	"e2e/llm/casesetup.py", "e2e/llm/seed-llm-fixtures.sh",
+	"e2e/llm/transcript.py", "e2e/llm/mcpclient.py",
+}
+
+// judgeTransport are the grader's imports that only reach the judge, whose
+// model the stamp names on its own, so a change to them moves no verdict.
+var judgeTransport = map[string]string{
+	"e2e/llm/candidates.py": "resolves the judge's route; the judge model is its own stamp part",
+	"e2e/llm/clean.py":      "starts the judge's CLI with nothing of the operator's",
+	"e2e/llm/providers.py":  "the wire to the judge's API",
 }
 
 // inputs are the committed files every scenario's stamp is computed from. On

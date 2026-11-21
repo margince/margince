@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -119,6 +120,7 @@ func TestEachOtherPartNamesItself(t *testing.T) {
 		{mcpInfoFile, "Be careful.", "Be very careful.", "server instructions"},
 		{candidatesFile, "judge-1", "judge-2", "judge"},
 		{"e2e/llm/check.py", "check.py", "check.py changed", "harness"},
+		{"e2e/llm/transcript.py", "transcript.py", "transcript.py changed", "harness"},
 		{filepath.Join(ScenarioDir, "case1-log.yaml"), "Log it.", "Log it now.", "scenario"},
 	} {
 		root := tree(t)
@@ -218,6 +220,49 @@ func TestTheCommittedTreeStampsEveryScenario(t *testing.T) {
 	}
 	if len(stamps) != len(files) || len(files) == 0 {
 		t.Fatalf("stamped %d of %d scenarios", len(stamps), len(files))
+	}
+}
+
+// pythonImport is one import statement of a lane module: `import x` or
+// `from x import y`, at any indentation, since the grader imports some lazily.
+var pythonImport = regexp.MustCompile(`(?m)^\s*(?:import\s+(\w+)|from\s+(\w+)\s+import\b)`)
+
+func TestTheHarnessHoldsEveryModuleTheGraderImports(t *testing.T) {
+	if err := gatekit.DeclareInputs(os.Getenv, "../../../../e2e"); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join("..", "..", "..", "..")
+	seen := map[string]bool{}
+	queue := slices.Clone(harnessFiles)
+	for len(queue) > 0 {
+		file := queue[0]
+		queue = queue[1:]
+		if seen[file] || !strings.HasSuffix(file, ".py") {
+			continue
+		}
+		seen[file] = true
+		body, err := os.ReadFile(filepath.Join(root, file)) // #nosec G304 -- a lane file under the repository root
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range pythonImport.FindAllStringSubmatch(string(body), -1) {
+			module := "e2e/llm/" + m[1] + m[2] + ".py"
+			if _, err := os.Stat(filepath.Join(root, module)); err != nil {
+				continue
+			}
+			if _, why := judgeTransport[module]; why {
+				continue
+			}
+			if !slices.Contains(harnessFiles, module) {
+				t.Errorf("%s imports %s, which grades a run but is not in harnessFiles, so a change to it stales no verdict", file, module)
+			}
+			queue = append(queue, module)
+		}
+	}
+	for _, module := range []string{"e2e/llm/transcript.py", "e2e/llm/judge.py"} {
+		if !seen[module] {
+			t.Errorf("the walk never reached %s; it reads fewer imports than the grader makes", module)
+		}
 	}
 }
 
