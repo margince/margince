@@ -51,9 +51,9 @@ func declaredTypeGuards() map[string]typeGuard {
 }
 
 // A handler whose first test reads a literal or another set can act on a type
-// its group does not declare, and a payload-dependent nil hides that from the
-// probe in grouptypes_test.go. So each handler must open with a test of exactly
-// its group's set.
+// its group does not declare. A payload-dependent nil hides that from the probe
+// in grouptypes_test.go. So each handler must open with a test of its group's
+// own set.
 func TestEveryDeclaringHandlerStartsWithItsGroupsTypeTest(t *testing.T) {
 	guards := declaredTypeGuards()
 	for _, group := range events.Groups() {
