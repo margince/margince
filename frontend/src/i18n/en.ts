@@ -19665,6 +19665,7 @@ export const en = {
   "contact.deals.noClose": "None dated",
   "contact.deals.untitled": "Untitled deal",
   "contact.deals.noStage": "No stage yet",
+  "contact.deals.seatEnded": "No longer on this deal",
   "contact.meetings.upcoming": "Upcoming",
   "contact.meetings.past": "Held",
   "contact.meetings.noneBooked": "No upcoming meetings.",

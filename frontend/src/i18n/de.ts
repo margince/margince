@@ -19897,6 +19897,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.deals.noClose": "Kein Datum",
   "contact.deals.untitled": "Deal ohne Titel",
   "contact.deals.noStage": "Noch keine Phase",
+  "contact.deals.seatEnded": "Nicht mehr an diesem Vorgang beteiligt",
   "contact.meetings.upcoming": "Anstehend",
   "contact.meetings.past": "Vergangen",
   "contact.meetings.noneBooked": "Keine anstehenden Termine.",

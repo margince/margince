@@ -37262,7 +37262,7 @@ export interface components {
              * @enum {string}
              */
             deal_status?: "open" | "won" | "lost";
-            /** @description False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it. */
+            /** @description False once the seat's End day has arrived in the installation's time zone; an End date still ahead keeps it current. A seat that ended stays listed as history, and a follow-up cannot rest on it. */
             seat_current?: boolean;
             /** @description The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title. */
             role: string;
