@@ -17,7 +17,7 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { rowsState, SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
-import { zoneNameAndOffset } from "../../format/timezone";
+import { zoneLabelAt } from "../../format/timezone";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ReportRow, Stage } from "./analytics.cells";
@@ -211,11 +211,7 @@ export function ReportCard({
                 <span className="t-caption">
                   {t("analytics.frame", {
                     asOf: formatDateTime(run.as_of, locale, run.timezone),
-                    zone: zoneNameAndOffset(
-                      locale,
-                      new Date(run.as_of),
-                      run.timezone,
-                    ),
+                    zone: zoneLabelAt(run.as_of, run.timezone, locale),
                   })}
                 </span>
               ) : undefined

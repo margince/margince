@@ -64,7 +64,7 @@ func NormalizeCompanyLinkedInURL(raw string) (string, error) {
 	// to the first segment is also what keeps the value inside
 	// company_linkedin_url_shape, whose slug pattern admits no slash.
 	slug, _, _ = strings.Cut(slug, "/")
-	if !isCompany || slug == "" {
+	if !isCompany || slug == "" || hasDotSegment(path) {
 		return "", &values.ParseError{
 			Field:   linkedInField,
 			Code:    "linkedin_url_not_company",

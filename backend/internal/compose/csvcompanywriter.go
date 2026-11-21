@@ -11,26 +11,14 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/importkeys"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// linkedInClaimed reports whether the store refused a write because another
-// live company or lead holds its LinkedIn URL.
-func linkedInClaimed(err error) bool {
-	if _, ok := errors.AsType[*contacts.DuplicateCompanyLinkedInError](err); ok {
-		return true
-	}
-	_, ok := errors.AsType[*contacts.DuplicateLeadLinkedInError](err)
-	return ok
-}
 
 // keysOf spells the keys a row of this writer's type holds, the way the store
 // compares them. A company's LinkedIn URL and domain compare without case. A
@@ -171,7 +159,7 @@ func (w *csvWriters) landOnDomainHolder(ctx context.Context, row migration.Row, 
 // predictDomainHolder is landOnDomainHolder without writing.
 func (w *csvWriters) predictDomainHolder(ctx context.Context, row migration.Row, id ids.UUID, typed map[string]any) (predictedOutcome, migration.Reason, error) {
 	outcome, why, err := w.reconcilePrediction(ctx, id, row, typed)
-	if err != nil || outcome == predictUnwritable {
+	if err != nil || outcome == predictUnwritable || outcome == predictHeldKey {
 		return outcome, why, err
 	}
 	w.predictedWarnings = append(w.predictedWarnings, domainMatched(row))

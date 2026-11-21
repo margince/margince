@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -53,10 +52,7 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 	}
 	wsCtx = capturemetrics.WithRun(wsCtx)
 	for range backfillPagesPerTick {
-		done, completed, retryAfter, err := w.registry.RunBackfillExecution(wsCtx, bfID, job.Args.ExecutionGeneration, backfillScheduler(job.Args.Workspace))
-		if completed {
-			w.enqueueDigest(ctx, job.Args)
-		}
+		done, _, retryAfter, err := w.registry.RunBackfillExecution(wsCtx, bfID, job.Args.ExecutionGeneration, backfillScheduler(job.Args.Workspace))
 		if _, snoozed := errors.AsType[*river.JobSnoozeError](err); snoozed {
 			return jobs.FaultContext(ctx, err)
 		}
@@ -91,19 +87,4 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 func (w *captureBackfillWorker) resumedMeanwhile(ctx context.Context, bfID ids.UUID) bool {
 	reopened, err := w.registry.BackfillReopened(ctx, bfID)
 	return err == nil && reopened
-}
-
-// A running digest may predate the completed import, so this insertion must not dedupe against it.
-func (w *captureBackfillWorker) enqueueDigest(ctx context.Context, args CaptureBackfillArgs) {
-	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
-	if err != nil {
-		w.log.WarnContext(ctx, "capture backfill: no River client in context, so the same-day digest was not enqueued",
-			"backfill", args.BackfillID, "err", err)
-		return
-	}
-	child := CaptureDigestArgs{}
-	if _, err := client.Insert(ctx, child, oneOffPassOpts(child.Kind())); err != nil {
-		w.log.WarnContext(ctx, "capture backfill: digest enqueue failed",
-			"backfill", args.BackfillID, "err", err)
-	}
 }

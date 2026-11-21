@@ -64,6 +64,7 @@ function renderCell(unit: string, saved: UpdateOfferLineItemRequest[]) {
     <LocaleProvider initial="de">
       <UnitCell
         line={line(unit)}
+        label={(column) => column}
         onSave={(patch) => {
           saved.push(patch);
           return Promise.resolve();

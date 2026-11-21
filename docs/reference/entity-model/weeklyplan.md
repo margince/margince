@@ -41,7 +41,6 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 **Indexes**
 
-- `idx_weekly_plan_owner`: `btree (owner_id, local_week_start DESC)`
 - `uq_weekly_plan_owner_week`: `unique, btree (owner_id, local_week_start)`
 - `weekly_plan_pkey`: `unique, btree (id)`
 

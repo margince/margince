@@ -288,7 +288,7 @@ func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
 }
 
 // A lead stored under the punycode spelling of a domain is the same mailbox as
-// the Unicode spelling a send names, so the link speaks for that lead.
+// the Unicode spelling a send names. So the link speaks for that lead.
 func TestTheSendPathBindsALeadStoredInTheOtherDomainSpelling(t *testing.T) {
 	e := setupChannelConsent(t)
 	var leadID ids.UUID

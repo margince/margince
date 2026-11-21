@@ -3,10 +3,9 @@
 
 package privacy
 
-// The privacy half: drives retentionAppliedPayload — the exact function
-// the retention.applied emit sites call (retention.go's eraseEmbedCall,
-// eraseVoiceSignalContent and apply, erasure.go's EraseContact) — then
-// round-trips the result through JSON exactly as
+// The privacy half drives retentionAppliedPayload, which every
+// retention.applied emit site calls: eraseVoiceSignalContent, apply and
+// EraseContact. It round-trips the result through JSON the way
 // storekit.EmitEventForEntity marshals it into the outbox envelope's
 // payload column. There is no non-integration harness in this repo that
 // drives a Store/Service method against a real Postgres (every such test
@@ -16,8 +15,8 @@ package privacy
 // substitute.
 //
 // retention.applied is dynamic-entity (contract x-entity-type: dynamic):
-// its subject is ai_call (the embedding-retention sweep),
-// voice_learning_signal (the voice-learning content sweep), pol.ObjectType
+// its subject is voice_learning_signal (the voice-learning content sweep),
+// pol.ObjectType
 // (a workspace's configured retention policy — activity/deal/lead/contact/
 // ai_call_payload), or contact (Art. 17 erasure) — DIFFERENT runtime values
 // across the sites, none of which is the payload's own (unused, "dynamic")
@@ -44,8 +43,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// TestRetentionAppliedPayload_ActionOnly proves the embed-call sweep's
-// subset (retention.go's eraseEmbedCall): action only, no policy or reason.
+// TestRetentionAppliedPayload_ActionOnly proves the voice-signal sweep's
+// subset (eraseVoiceSignalContent): action only, no policy or reason.
 func TestRetentionAppliedPayload_ActionOnly(t *testing.T) {
 	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil)
 
@@ -197,14 +196,10 @@ func decodedOutboxEntityType(t *testing.T, tx *fakeTx) string {
 	return env.Entity.Type
 }
 
-// TestRetentionAppliedEmitUsesRuntimeEntityType is the dynamic-entity twist:
-// retention.applied's subject varies by site — ai_call (the embed-call
-// sweep), a policy's configured object type (the policy-driven sweep), or
-// contact (Art. 17 erasure) — none of which is the payload's own (unused,
-// "dynamic") EntityType(). Driving the exact
-// same seam each site uses against all three runtime values proves the
-// wire entity_type tracks the caller-supplied subject, not the payload's
-// static type.
+// The subject of retention.applied varies by site: voice_learning_signal, a
+// policy's object type, or contact. None is the payload's own EntityType().
+// Driving the seam each site uses proves the wire entity_type follows the
+// subject the caller supplies.
 func TestRetentionAppliedEmitUsesRuntimeEntityType(t *testing.T) {
 	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil)
 

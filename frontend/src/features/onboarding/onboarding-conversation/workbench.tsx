@@ -13,7 +13,6 @@ import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCan } from "../../../lib/capability";
 import { labelFor } from "../../../lib/labelfor";
 import { throwProblem, unwrap } from "../../../lib/problem";
-import { loadWizardState } from "../onboarding-progress";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
 
@@ -72,6 +71,11 @@ export function useConfiguredModel(): string {
   return configuredModelLabel(profile.data, t("ob.ai.runtimeUnavailable"), t);
 }
 
+// The read the restore found at mount. A read started later is shown by its
+// own act, which already holds it.
+const RestoredRead = createContext<string | null>(null);
+export const RestoredReadScope = RestoredRead.Provider;
+
 /**
  * What this cold start has spent, for every screen that is not the one holding
  * the number.
@@ -88,11 +92,7 @@ export function useConfiguredModel(): string {
  * so naming it on five screens still costs one request.
  */
 function useSetupRuntime(): AiRunSummary | undefined {
-  const wizard = useQuery({
-    queryKey: ["onboarding-conv-state"],
-    queryFn: loadWizardState,
-  });
-  const readId = wizard.data?.site_read_id ?? null;
+  const readId = useContext(RestoredRead);
   const read = useQuery({
     queryKey: ["onboarding-conv-read", readId],
     queryFn:

@@ -53,11 +53,13 @@ function historyCutOf(
  * the row open, so the list never reads as filtered by nothing.
  */
 export function useLeadHistoryDials({
+  recordId,
   filter,
   onFilter,
   filters,
   onFilters,
 }: Readonly<{
+  recordId: string;
   filter: TimelineFilter;
   onFilter: (next: TimelineFilter) => void;
   filters: TimelineFilters;
@@ -125,7 +127,11 @@ export function useLeadHistoryDials({
     ),
     narrowing: open ? (
       <div id={rowId}>
-        <TimelineFilterBar value={filters} onChange={onFilters} />
+        <TimelineFilterBar
+          key={recordId}
+          value={filters}
+          onChange={onFilters}
+        />
       </div>
     ) : null,
   };

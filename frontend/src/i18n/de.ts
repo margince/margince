@@ -959,6 +959,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.targetStatus": "Zielstatus",
   "reporting.activeTargets": "Aktive Ziele",
   "reporting.allTargets": "Alle Ziele",
+  "reporting.retiredTargets": "Stillgelegte Ziele",
   "reporting.noTargetsYet":
     "Noch ist kein Ziel festgelegt. Ziele legen die Teamleitung, die Geschäftsleitung oder ein Admin fest.",
   "reporting.periodYear": "Jahr",
@@ -1387,7 +1388,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.setup.unusedItem": "„{phrase}“: {reason}",
   "reporting.setup.fieldName": "Name",
   "reporting.setup.fieldCountry": "Land",
-  "reporting.setup.fieldMetric": "Kennzahl",
   "reporting.setup.fieldChart": "Diagramm",
   "reporting.describeInitiative": "Initiative beschreiben",
   "reporting.describeInitiativeHint":
@@ -1473,9 +1473,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Öffnet die Umsatzübersicht für ein Produkt. Es ist nichts einzurichten, und nichts wird geschrieben.",
   "reporting.noProducts":
     "Noch keine aktiven Produkte. Erstelle Produkte in den Einstellungen, um darüber zu berichten.",
-  "reporting.actualsThrough": "Ist-Werte bis {at}",
+  "reporting.actualsThrough": "Ist-Werte bis {at} · {zone}",
   "reporting.periodNotStarted":
-    "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",
+    "Der Zeitraum beginnt am {at} ({zone}); darin ist noch nichts geschehen",
   "reporting.writtenNoneWon": "Kein Umsatz gewonnen im Zeitraum {period}.",
   "reporting.writtenWon": "Gewonnen im Zeitraum {period}: {amount}.",
   "reporting.writtenTarget":
@@ -1727,6 +1727,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.blocks": "Diagramme und Reihenfolge",
   "reporting.metricUnavailable": "Kennzahl nicht mehr verfügbar",
   "reporting.metrics": "Kennzahlen",
+  "reporting.metric": "Kennzahl",
   "reporting.cancel": "Abbrechen",
   "reporting.saved": "Bericht gespeichert",
   "reporting.live": "Aktueller Bericht",
@@ -2908,6 +2909,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "shell.railAria": "Hauptnavigation",
   "shell.skipToContent": "Zum Inhalt springen",
+  "shell.pageLoading": "{page}: wird geladen…",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
@@ -3619,6 +3621,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Domain wurde hier nicht gespeichert, da ein anderes Unternehmen sie schon hat.",
   "common.duplicate.linkedinUrl":
     "Das LinkedIn-Profil wurde hier nicht gespeichert, da ein anderer Lead es schon hat.",
+  "common.linkedinProfileInvalid":
+    "Das ist keine LinkedIn-Profiladresse. Gib eine ein, etwa https://www.linkedin.com/in/dein-name.",
   "common.duplicate.slotTaken":
     "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
   "common.retry": "Erneut versuchen",
@@ -4591,10 +4595,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur, wenn jemand die Unterschrift bestätigt. Nie aus dem Abschlussdatum des Deals übernommen.",
   "contracts.form.save": "Vertrag erfassen",
   "contracts.form.errNoName": "Gib einen Vertragstitel ein.",
+  "contracts.form.errNegativeAmount":
+    "Wert und jährlich wiederkehrender Umsatz können nicht negativ sein.",
   "contracts.form.errTermOrder":
     "Eine Laufzeit kann nicht vor ihrem Beginn enden.",
   "contracts.add": "Vertrag hinzuf\u00fcgen",
-  "contracts.rowMenu": "Vertragsaktionen",
   "contracts.renew.title": "Vertrag verlängern",
   "contracts.renew.hint":
     "Erstellt einen neuen Vertrag mit eigenen Bedingungen und markiert den bisherigen Vertrag als ersetzt. Übernommen wird nur die Vertragspartei.",
@@ -4703,6 +4708,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.lines.description": "Beschreibung",
   "deal.lines.quantity": "Menge",
   "deal.lines.price": "Verkaufspreis",
+  "deal.lines.priceInOtherCurrency":
+    "Dieses Produkt hat einen Preis in {currency}. Gib seinen Preis ein.",
   "deal.lines.remove": "{name} entfernen",
   "deal.lines.editTitle": "Produkte und Leistungen",
   "deal.lines.save": "Produkte speichern",
@@ -6465,6 +6472,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.standing.figure.offer": "Angebot {number} · Version {revision}",
   "deal.standing.figure.amountByModel": "Von Margince aus der Mail gelesen",
   "deal.standing.figure.currencyGuessed": "Währung angenommen, prüfe sie",
+  "deal.standing.figure.offerInProgress":
+    "Angebot {number} · Version {revision} · {status}",
   "deal.standing.figure.next": "Nächster Schritt",
   "standing.noneYet": "Noch nichts",
   "deal.standing.figure.daysInStage": "Tage in der Phase",
@@ -7021,6 +7030,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.offersEmpty": "Noch keine Angebote",
 
   "offer.backToDeal": "Zurück zum Deal",
+  "offer.deal": "Deal",
   "offer.totals": "Summen",
   "offer.net": "Netto",
   "offer.tax": "Steuer",
@@ -7053,27 +7063,35 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.unit": "Einheit",
   "offer.unitFromProduct": "Wie im Produkt",
   "offer.quantity": "Menge",
+  "offer.unitPriceRequired":
+    "Gib einen Einzelpreis ein oder wähle ein Produkt.",
   "offer.unitPrice": "Einzelpreis",
   "offer.discountPct": "Rabatt %",
   "offer.taxRate": "Steuer %",
   "offer.committedPeriods": "Perioden",
   "offer.lineTotal": "Positionssumme",
   "offer.unpriced": "ohne Preis, nicht in der Summe enthalten",
-  "offer.removeLine": "Entfernen",
+  "offer.lineCell": "{column}, Position {position}",
+  "offer.removeLineNamed": "Position {position} entfernen",
   "offer.pickProduct": "Produkt auswählen",
   "offer.pickProductConfirm": "Produkt: {name}",
   "offer.send": "Senden",
-  "offer.sendConfirm": "Dieses Angebot an die Käuferseite senden?",
+  "offer.sendConfirm": "Dieses Angebot als gesendet markieren?",
   "offer.sendBody":
-    "Das Angebot ist schreibgeschützt, bis die Käuferseite antwortet.",
+    "Es wird keine E-Mail verschickt, und diese Version ist endgültig festgeschrieben. Erzeuge das PDF und sende es selbst an die Käuferseite.",
   "offer.accept": "Annehmen",
   "offer.acceptConfirm": "Dieses Angebot als angenommen markieren?",
   "offer.acceptBody":
     "Wert und Währung des Deals werden an dieses Angebot angepasst.",
   "offer.reject": "Ablehnen",
+  "offer.discard": "Entwurf verwerfen",
+  "offer.discardBody":
+    "Der Entwurf wird archiviert und verschwindet aus den Angeboten des Deals.",
   "offer.rejectConfirm": "Dieses Angebot als abgelehnt markieren?",
   "offer.rejectReason": "Grund (optional)",
   "offer.regenerate": "Revision neu erzeugen",
+  "offer.writeUnsure":
+    "Margince konnte nicht feststellen, ob das geklappt hat. Prüfe die Angebote am Deal, bevor du es noch einmal versuchst.",
   "offer.aiDisclosureTitle": "KI-gestütztes Angebot",
   "offer.diffAdded_one": "{count} Position hinzugefügt",
   "offer.diffAdded_other": "{count} Positionen hinzugefügt",
@@ -9425,7 +9443,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.meetingsNoShow": "Nicht erschienen",
   "analytics.meetingsCanceled": "Abgesagt",
   "analytics.outcomesOwnLensOnly":
-    "Dieser Bereich misst die Datensätze eines einzelnen Nutzerkontos. Die breiteren Bereiche decken den Rest der Sicht ab.",
+    "Dieser Bereich zählt die eigenen Datensätze eines einzelnen Mitglieds.",
   "analytics.reportWinLoss": "Gewonnen und verloren",
   "analytics.reportLossEvents": "Jeder Verlust einzeln",
   "analytics.reportStageAge": "Verweildauer je Phase",
@@ -11263,7 +11281,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.capture_confidentiality_verdict":
     "Vertraulichkeitsprüfung von E-Mails",
   "jobs.kind.capture_counterparty_verdict": "Prüfung der Absendeadressen",
-  "jobs.kind.capture_digest": "Morgendliche E-Mail-Zusammenfassung",
   "jobs.kind.capture_enrich": "Kontaktdaten aus Signaturen",
   "jobs.kind.captured_deal_refile": "Erfasste Aktivitäten zu Deals zuordnen",
   "jobs.kind.captured_deal_refile_sweep":
@@ -12620,8 +12637,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.s4.microsoftFailed": "Microsoft-Verbindung nicht abgeschlossen",
   "ob.s4.connectVerifying": "Verbindung wird bestätigt…",
   "ob.s4.connectConfirmFailed": "Die Verbindung konnte nicht bestätigt werden.",
-  "ob.s4.connectRetry":
-    "Verbinde das Postfach erneut in den Einstellungen unter Verbindungen.",
+  "ob.s4.connectRetry": "Wähle das Konto unten noch einmal aus.",
   "ob.s4.connectDenied": "Zugriff abgelehnt. Es wurde nichts verbunden.",
   "ob.s4.googleUnverified":
     "Wenn Google vor einer „nicht verifizierten App“ warnt, wähle „Erweitert“ und dann „Weiter“. Die Seite von Google zeigt genau, was erlaubt wird.",
@@ -14890,7 +14906,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.customField": "Eigenes Feld",
   "audit.kind.activity_review_template": "Vorlage für Aktivitätsbewertungen",
   "audit.kind.agent_standing_grant": "Dauerhafte Agentenberechtigung",
-  "audit.kind.ai_call": "KI-Aufruf",
   "audit.kind.ai_feedback": "KI-Feedback",
   "audit.kind.ai_model_rate": "KI-Modellpreis",
   "audit.kind.analytics_share": "Geteilter Bericht",
@@ -14918,7 +14933,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.communication_instruction": "Kommunikationsanweisung",
   "audit.kind.communication_review": "Kommunikationsprüfung",
   "audit.kind.communication_suppression": "Kommunikationssperre",
-  "audit.kind.company_domain_question_reader": "Frage zur Unternehmensdomain",
   "audit.kind.confirm_token": "Bestätigungslink",
   "audit.kind.consent_text_version": "Version des Einwilligungstexts",
   "audit.kind.contact_acquisition_evidence": "Herkunftsnachweis des Kontakts",
@@ -15134,7 +15148,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.scopeAriaMixed":
     "Einstellungen auf dieser Seite betreffen unterschiedliche Personen. Jede Einstellung nennt, wen sie betrifft.",
   "settings.readOnlyPageTitle": "Schreibgeschützte Einstellungen",
-  "settings.pageLoading": "{page} wird geladen…",
   "settings.readOnlyPage": "Deine Rolle darf diese Einstellungen nicht ändern.",
   "settings.seatRefused":
     "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",
@@ -16667,6 +16680,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "product.unitOtherRequired":
     "Gib die Einheit ein oder wähle eine aus der Liste.",
   "product.unitPrice": "Einzelpreis",
+  "product.candidatePrice": "{price} / {unit}",
   "product.currency": "Währung",
   "product.taxRate": "Standardsteuersatz %",
   "product.billingModel": "Abrechnung",
@@ -17636,6 +17650,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.caption.calendarSkipped": "Bei der Einrichtung übersprungen.",
   "setup.caption.calendarNeedsVendor": "Braucht Google oder Microsoft.",
   "setup.caption.waitsAdmin": "Wartet auf einen Admin.",
+  "setup.caption.registerApp":
+    "Braucht die Google- oder Microsoft-App deines Unternehmens.",
+  "setup.action.registerApp": "App einrichten",
   "setup.caption.mailReconnect": "Verbindung abgelaufen.",
   "setup.caption.calendarReconnect": "Abgelaufen oder kann nicht buchen.",
   "setup.caption.voice": "Braucht noch etwa {n} eigene Wörter.",
@@ -23541,6 +23558,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.closesOn": "Abschluss {date}",
   "legalReview.back": "Alle Rechtsprüfungen",
   "legalReview.packTitle": "Prüfpaket",
+  "legalReview.packDeal": "Deal",
   "legalReview.decideTitle": "Antwort",
   "legalReview.ownRequest":
     "Du hast diese Prüfung angefragt, daher beantwortet sie ein anderes Teammitglied.",
@@ -23563,7 +23581,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.packOffer": "Aktuelles Angebot",
   "legalReview.offerNumber": "Angebot",
   "legalReview.offerRevision": "{number}, Version {revision}",
-  "legalReview.offerTotal": "Gesamt",
+  "legalReview.offerTotal": "Gesamt brutto",
   "legalReview.offerValidUntil": "Gültig bis",
   "legalReview.offerTerms": "Bedingungen",
   "legalReview.packNoOffer": "Kein Angebot zu diesem Deal.",
@@ -23606,6 +23624,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst diese Datei nicht öffnen. Wende dich an das Teammitglied, das die Prüfung angefragt hat.",
   "legalReview.offerLine": "Position {number}",
   "legalReview.offerLineText": "{quantity} × {description} zu {price}",
+  "legalReview.offerLineDiscount": "Rabatt {rate} %",
+  "legalReview.offerLineTax": "Steuer {rate} %",
   "legalReview.offerLineRecurring_one": "{cadence} über {count} Periode",
   "legalReview.offerLineRecurring_other": "{cadence} über {count} Perioden",
   "legalReview.offerLineStaged": "Vorgeschlagen, noch nicht in der Summe",
@@ -23981,6 +24001,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.chipIndustry": "Branche: {name}",
   "analytics.overview.chipBasis": "Wert: {basis}",
   "analytics.overview.profileCompany": "Unternehmensumsatz",
+  "analytics.overview.profileTeam": "Teamumsatz",
+  "analytics.overview.profileSeller": "Umsatz eines Teammitglieds",
   "analytics.overview.profileProduct": "Produktumsatz",
   "analytics.overview.removeFilter": "{filter} entfernen",
   "analytics.intervention.scope":
@@ -24421,7 +24443,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.closedRevenue": "Gewonnener Umsatz",
   "progress.goal": "Ziel",
   "progress.goalLine": "Ziel für den Zeitraum: {goal}",
-  "progress.figuresUpTo": "Zahlen bis {cutoff}",
+  "progress.figuresUpTo": "Zahlen bis {cutoff} · {zone}",
   "progress.ofGoalLine": "Ziel von {goal}",
   "progress.toGo": "Noch {amount} offen",
   "progress.noGoalFor": "Für {period} ist kein Umsatzziel veröffentlicht.",
@@ -24454,8 +24476,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.readings": "Umsatzwerte",
   "progress.productSales": "Produktverkäufe",
   "progress.serviceSales": "Services und Projekte",
-  "progress.planned": "Offene Pipeline",
-  "progress.plannedAt": "Offene Deals, Stand {at}",
+  "progress.planned": "Offene Pipeline mit Abschluss im Zeitraum",
+  "progress.plannedAt": "Offene Deals, Stand {at} · {zone}",
   "progress.scenarios": "Wo der Monat enden kann",
   "progress.scenario.worst": "Schlechtester Fall",
   "progress.scenario.worstWhy": "Wenn nichts mehr abschließt",
@@ -24544,6 +24566,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.history.what": "Änderung",
   "goals.history.reason": "Grund",
   "goals.history.when": "Wann",
+  "goals.history.zone": "Zeiten in {zone}",
   "goals.event.draft": "{name} hat einen Entwurf gespeichert",
   "goals.event.published": "{name} hat die Ziele veröffentlicht",
   "goals.event.discarded": "{name} hat den Entwurf verworfen",

@@ -35,11 +35,15 @@ export function ReportingEvidenceDrawer({
   evaluation,
   reference,
   editionId,
+  title,
   onClose,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   reference: ReportingEvidenceRef;
   editionId?: string;
+  // The name of the tile that opened it, where one metric feeds several tiles.
+  // Not MetricLabels: two tiles read one metric under different names.
+  title?: string;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -62,7 +66,7 @@ export function ReportingEvidenceDrawer({
   const heading = evidenceHeading(evaluation, reference, metricName, t);
   return (
     <EvidenceFrame
-      title={heading.title}
+      title={title ?? heading.title}
       onClose={onClose}
       lines={[
         (scopeName(evaluation.context.scope, t) ?? "") +

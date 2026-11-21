@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/importtextbounds"
+	"github.com/margince/margince/backend/internal/compose/importkeys"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -360,31 +360,12 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if err := database.WithSavepoint(ctx, func(ctx context.Context) error {
 		return w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID))
 	}); err != nil {
-		// A corrected file moving an address onto a contact who is not its owner
-		// is one bad row, not a failed run: skip it with the reason and let the
-		// rest of the file land. Unhandled, this error aborts the whole
-		// migration, which is the wrong answer to a typo in a spreadsheet.
-		if contacts.IsClaimedEmail(err) {
-			return skippedFor(duplicateEmailWhy), nil
+		// One bad row is skipped with its reason and the rest of the file lands.
+		why, refused := importkeys.UpdateRefusal(err)
+		if !refused {
+			return migration.EnsureResult{}, err
 		}
-		if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
-			// The company half of the same case: a corrected file moving a domain
-			// onto a company that is not its owner.
-			return skippedFor(domainClaimedWhy), nil
-		}
-		if why, held := leadKeyHeld(err); held {
-			return skippedFor(why), nil
-		}
-		if linkedInClaimed(err) {
-			return skippedFor(linkedInClaimedWhy), nil
-		}
-		if refusedAsErased(err) {
-			return skippedFor(addressErasedWhy), nil
-		}
-		if why, over := importtextbounds.NameTooLong(err); over {
-			return skippedFor(why), nil
-		}
-		return migration.EnsureResult{}, err
+		return skippedFor(why), nil
 	}
 	if err := w.tagExisting(ctx, id, row); err != nil {
 		return migration.EnsureResult{}, err
@@ -466,7 +447,7 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 		// a failed run: the rest of the file still lands.
 		return skippedFor(domainClaimedWhy), nil
 	}
-	if linkedInClaimed(err) {
+	if importkeys.LinkedInClaimed(err) {
 		return skippedFor(linkedInClaimedWhy), nil
 	}
 	if err != nil {

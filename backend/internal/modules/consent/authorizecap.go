@@ -236,10 +236,9 @@ func advertisingMessagesReceived(ctx context.Context, tx pgx.Tx, address string,
 		 WHERE d.phase = 'transmit'
 		   AND d.resolved_category = $3
 		   -- Trimmed and lowered on BOTH sides, matching normalizeCapAddress.
-		   -- The stored key is the address as the caller supplied it (the
-		   -- dispatcher already normalizes, other callers of this public gate
-		   -- need not), so comparing raw would let a leading space or a
-		   -- capital reach a capped mailbox again.
+		   -- decisionRecipientKey stores the address folded. A row from an
+		   -- earlier release holds it as the caller supplied it, and comparing
+		   -- raw would let that mailbox past its cap.
 		   AND lower(btrim(d.recipient_address)) = $1
 		   AND (
 		         (o.status = 'sent' AND o.sent_at IS NOT NULL AND o.sent_at >= $2)

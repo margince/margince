@@ -6,7 +6,7 @@ The 1 table owned by `aiactivity`, as the migrations build them. [Back to the en
 
 ## ai_task_run
 
-25 columns · primary key `(id)` · referenced by 0 foreign keys
+22 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -18,7 +18,6 @@ The 1 table owned by `aiactivity`, as the migrations build them. [Back to the en
 | `degrade_reason` | `text` |  |  |
 | `finished_at` | `timestamp with time zone` |  |  |
 | `kind` | `text` | yes |  |
-| `last_event_id` | `uuid` | yes |  |
 | `occurrence_key` | `text` | yes |  |
 | `passport_id` | `uuid` |  | Points at `passport.id`. |
 | `quantity` | `integer` |  |  |
@@ -32,9 +31,7 @@ The 1 table owned by `aiactivity`, as the migrations build them. [Back to the en
 | `subject_label` | `text` |  | At most 120 characters. |
 | `subject_type` | `text` |  |  |
 | `summary` | `text` |  |  |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -70,4 +67,3 @@ The 1 table owned by `aiactivity`, as the migrations build them. [Back to the en
 
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "state": 20000, "source": 20000, "ai_task": 20000, "summary": 500, "actor_scope": 20000, "subject_type": 20000, "quantity_unit": 20000, "subject_label": 120, "degrade_reason": 2000, "occurrence_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor_scope":20000,"ai_task":20000,"degrade_reason":2000,"kind":20000,"occurrence_key":20000,"quantity_unit":20000,"source":20000,"state":20000,"subject_label":120,"subject_type":20000,"summary":500}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "source": 20000, "ai_task": 20000, "summary": 500, "actor_scope": 20000, "subject_type": 20000, "quantity_unit": 20000, "subject_label": 120, "degrade_reason": 2000, "occurrence_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor_scope":20000,"ai_task":20000,"degrade_reason":2000,"kind":20000,"occurrence_key":20000,"quantity_unit":20000,"source":20000,"state":20000,"subject_label":120,"subject_type":20000,"summary":500}')`
-- `trg_ai_task_run_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
