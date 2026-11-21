@@ -58256,7 +58256,7 @@ components:
         contracts: { $ref: '#/components/schemas/ContractListResponse' }
         documents:
           type: object
-          description: The files attached to the project itself, newest first.
+          description: The project's own uploads and the files of the activities filed under it, newest first.
           required: [data, page]
           properties:
             data: { type: array, items: { $ref: '#/components/schemas/Attachment' } }
@@ -73785,8 +73785,7 @@ components:
           nullable: true
           description: Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity.
         jurisdiction:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: |
             The jurisdiction pack whose law the entity follows, as its lower-case code, for example
             `de`. It is one of the packs this build offers (`available` of

@@ -263,14 +263,14 @@ func listAttachments(ctx context.Context, tx pgx.Tx, entityType string, entityID
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	var where string
-	if entityType == holderContact {
-		// A contact's Documents also holds the files of mails linked to it, each
-		// gated on its own mail.
+	if entityType == holderContact || entityType == holderProject {
+		// A contact's or project's Documents also holds the files of the
+		// activities linked to it, each gated on its own activity.
 		visible, err := visibleParentClause(ctx, arg)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
-		where = documentMembership(holderContact, arg(entityID)) + " AND " + visible
+		where = documentMembership(entityType, arg(entityID)) + " AND " + visible
 	} else {
 		where = sprintf(`at.entity_type = $%d AND at.entity_id = $%d AND at.archived_at IS NULL`,
 			arg(entityType), arg(entityID))

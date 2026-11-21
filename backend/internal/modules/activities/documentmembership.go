@@ -10,7 +10,7 @@ import (
 )
 
 // Which attachments a record's Documents list holds, spelled once for the deal,
-// contact and company readers.
+// contact, company and project readers.
 //
 // A captured mail's file hangs off the activity. Every reader answers "files
 // of the mails linked to this record" by walking the links as they are now. The
@@ -22,6 +22,7 @@ const (
 	holderDeal    = linkEntityDeal
 	holderContact = linkEntityContact
 	holderCompany = linkEntityCompany
+	holderProject = linkEntityProject
 )
 
 // mailFileIDs is the ids of the live, listed files of live mails that satisfy
@@ -48,7 +49,7 @@ func documentMembership(holder string, pos int) string {
 	case holderDeal:
 		own = fmt.Sprintf("own.entity_type = '%s' AND own.entity_id = $%d", holder, pos)
 		linked = storekit.MessageOnDealSQL("a.id", fmt.Sprintf("$%d", pos))
-	case holderContact:
+	case holderContact, holderProject:
 		own = fmt.Sprintf("own.entity_type = '%s' AND own.entity_id = $%d", holder, pos)
 		linked = fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link l
 			 WHERE l.activity_id = a.id AND l.entity_type = '%[1]s' AND l.%[1]s_id = $%[2]d)`, holder, pos)
@@ -59,7 +60,7 @@ func documentMembership(holder string, pos int) string {
 		own = fmt.Sprintf("own.company_id = $%d AND own.entity_type <> '%s'", pos, linkEntityActivity)
 		linked = CompanyFiledActivityExists(pos)
 	default:
-		//craft:ignore panic-in-domain a holder outside the three constants is a coding error, never request data
+		//craft:ignore panic-in-domain a holder outside the four constants is a coding error, never request data
 		panic("activities: no document membership for holder " + holder)
 	}
 	return fmt.Sprintf(`at.archived_at IS NULL AND (NOT at.bytes_withheld OR at.url IS NOT NULL) AND at.id IN (

@@ -368,7 +368,7 @@ func (e *ClosedReasonRequiredError) FieldFault() (field, code, message string) {
 type ProjectDateRangeError struct{ Field string }
 
 func (e *ProjectDateRangeError) Error() string {
-	return "a project's end date cannot precede its start date"
+	return "A project cannot end before its start date."
 }
 
 // FieldFault refuses a date pair whose end precedes its start, naming the date

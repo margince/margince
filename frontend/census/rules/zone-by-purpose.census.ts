@@ -570,7 +570,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Finds zones in the list by their IANA id and a former name, which needs both names spelled out.",
   },
   {
-    file: "features/voice-knowledge/adddocument.test.tsx",
+    file: "components/adddocument.test.tsx",
     why: "Installation-settings fixture: the company timezone the document form reads back.",
   },
   {

@@ -101,7 +101,7 @@ func TestTheSenderArmFoldsAnOwnDomainTypedInUnicode(t *testing.T) {
 }
 
 // The own company claims its domain in unicode, through the company writer,
-// and the colleague's login is stored punycode. A subdomain login is ours too,
+// which stores it punycode, and the colleague's login is stored punycode too. A subdomain login is ours too,
 // as owndomain.Set.Covers says.
 func TestTheSenderArmFoldsTheOwnCompanyDomain(t *testing.T) {
 	e := integration.Setup(t)
@@ -109,8 +109,8 @@ func TestTheSenderArmFoldsTheOwnCompanyDomain(t *testing.T) {
 	if _, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Bücher GmbH", Website: &website}); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.WsScalar(t, `SELECT d.domain FROM company_domain d JOIN company o ON o.id = d.company_id WHERE o.is_anchor`); got != "bücher.example" {
-		t.Fatalf("the own company's domain is stored as %q, want the unicode form typed", got)
+	if got := e.WsScalar(t, `SELECT d.domain FROM company_domain d JOIN company o ON o.id = d.company_id WHERE o.is_anchor`); got != "xn--bcher-kva.example" {
+		t.Fatalf("the own company's domain is stored as %q, want the punycode form", got)
 	}
 	for _, address := range []string{"anna@xn--bcher-kva.example", "anna@post.bücher.example"} {
 		if !owndomain.New([]string{"bücher.example"}).Covers(address) {

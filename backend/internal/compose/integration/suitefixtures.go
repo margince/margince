@@ -161,6 +161,7 @@ type entityLawPack struct{ code jurisdiction.Code }
 
 func (p entityLawPack) Code() jurisdiction.Code { return p.code }
 
+//nolint:ireturn // jurisdiction.Pack declares this method returning the interface.
 func (entityLawPack) Retention() jurisdiction.Retention { return nil }
 
 // RegisterEntityLawPack compiles in a floorless pack under code, so a suite
