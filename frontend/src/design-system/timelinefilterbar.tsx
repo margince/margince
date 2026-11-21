@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isImeCommit } from "../lib/imecommit";
 import { labelFor } from "../lib/labelfor";
 import { SearchField } from "./atoms";
 import { DateInput } from "./dateinput";
+import { useSettledValue } from "./debouncedsearch";
 import {
   ACTIVITY_KINDS,
   type ActivityKind,
@@ -25,6 +26,9 @@ const KIND_LABEL: Readonly<Record<ActivityKind, MessageKey>> = {
   task: "timeline.filters.kind.task",
 };
 
+// Long enough that a word typed at a normal pace is one request.
+const SEARCH_PAUSE_MS = 300;
+
 function isActivityKind(value: string): value is ActivityKind {
   return ACTIVITY_KINDS.some((kind) => kind === value);
 }
@@ -36,9 +40,9 @@ function isActivityKind(value: string): value is ActivityKind {
  * and filters nothing itself, which is what keeps "tasks on this contact"
  * from meaning "tasks among the twenty newest rows".
  *
- * The search commits on Enter or when the field is left, not per keystroke:
- * each commit is a request, and a reader typing a word would otherwise fire
- * one per letter on a phone link.
+ * The search commits once typing has paused, or at once on Enter or blur.
+ * Each commit is a request, so a reader typing a word must not fire one per
+ * letter on a phone link.
  *
  * A search answers from a content-gated read (a limited conversation the
  * reader may not open is simply absent from a text match), and the bar says
@@ -70,11 +74,20 @@ export function TimelineFilterBar({
     setDraftFor(value.q ?? "");
     setDraft(value.q ?? "");
   }
-  const commitSearch = () => {
-    if (draft.trim() !== (value.q ?? "")) {
-      onChange({ ...value, q: draft.trim() });
+  const [composing, setComposing] = useState(false);
+  const settled = useSettledValue(draft, SEARCH_PAUSE_MS);
+  const commitSearch = (text: string) => {
+    if (text.trim() !== (value.q ?? "")) {
+      onChange({ ...value, q: text.trim() });
     }
   };
+  // Only a pause on the text still in the box commits. A pause that ended
+  // before an outside reset must not write the old word back.
+  useEffect(() => {
+    if (!composing && settled === draft) {
+      commitSearch(settled);
+    }
+  });
   const kindOptions = [
     { value: "", label: t("timeline.filters.kind.all") },
     ...kinds.map((kind) => ({
@@ -101,11 +114,13 @@ export function TimelineFilterBar({
           aria-label={t("timeline.filters.search")}
           placeholder={t("timeline.filters.search")}
           onChange={(event) => setDraft(event.target.value)}
-          onBlur={commitSearch}
+          onBlur={() => commitSearch(draft)}
+          onCompositionStart={() => setComposing(true)}
+          onCompositionEnd={() => setComposing(false)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !isImeCommit(event)) {
               event.preventDefault();
-              commitSearch();
+              commitSearch(draft);
             }
           }}
         />

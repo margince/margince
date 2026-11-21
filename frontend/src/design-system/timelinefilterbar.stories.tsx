@@ -24,10 +24,10 @@ export default meta;
 type Story = StoryObj<typeof TimelineFilterBar>;
 
 /**
- * Live, because the bar's own state is half its behaviour: the search box holds
- * a DRAFT that commits on Enter or on blur, and a filter reset arriving from
- * outside has to clear that draft — a box still showing the previous record's
- * word would claim a search that is not running.
+ * Live, because the bar's own state is half its behaviour. The search box holds
+ * a DRAFT that commits after a 300 ms pause, or at once on Enter or blur.
+ * A filter reset from outside has to clear that draft. A box still showing the
+ * previous record's word would claim a search that is not running.
  *
  * The dates are fixed rather than relative to today, so this frame reads the
  * same whenever it is opened.
