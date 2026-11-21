@@ -24,7 +24,6 @@ func (x *auditIndex) indexInterface(info *types.Info, node *ast.InterfaceType) {
 		return
 	}
 	for method := range iface.ExplicitMethods() {
-		method := method
 		x.ifaceMethods[method.Name()] = append(x.ifaceMethods[method.Name()], auditIfaceMethod{method.FullName(), method, iface})
 	}
 }
@@ -118,7 +117,6 @@ func (x *auditIndex) implementersOf(iface *types.Interface) []*types.Named {
 // is read by lookup, since types.Implements leaves a generic type unspecified.
 func auditImplements(named *types.Named, iface *types.Interface) bool {
 	for method := range iface.Methods() {
-		method := method
 		found, ok := auditLookupMethod(named, method)
 		if !ok || !types.Identical(found.Type(), method.Type()) {
 			return false
