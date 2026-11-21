@@ -193,30 +193,17 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 	}
 	var visible bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		// The workspace's own free-mail carve-outs, not the shipped baseline:
-		// without them a company that has asserted its domain is not free mail
-		// has its contacts scored as unrelated, and the preview then disagrees
-		// with the commit — the one thing this check exists to prevent.
-		//
-		// Read through capture.MatcherTx, which is what wires the same list into
-		// the contacts store (captureensurer.go). Going through the reader rather
-		// than exporting a store accessor keeps every exported store method
-		// RBAC-gated: this list is workspace configuration, not anyone's record.
+		// The workspace's own free-mail list, read through capture.MatcherTx. On
+		// the shipped baseline alone, a domain an admin declared a company's
+		// would score as free mail, and the preview would part from the commit.
 		consumerMail, err := w.consumerMailList(ctx, tx)
 		if err != nil {
 			return err
 		}
-		var emails []string
-		if email != "" {
-			emails = []string{email}
-		}
-		match, err := contacts.DedupeContact(ctx, tx, contacts.ContactCandidate{
-			FullName: name, Emails: emails, ConsumerMail: consumerMail,
-			// The preview writes nothing and routes nothing, so it has no
-			// business filing a review pair for what it merely looked at.
-			QueueNameCollisions: false,
-		})
-		if err != nil || match.Decision == contacts.DecisionNoMatch {
+		asked := w.newContactOf(fields)
+		candidate := contacts.ContactCandidate{FullName: asked.FullName, Emails: asked.Emails, ConsumerMail: consumerMail}
+		match, err := contacts.DedupeContact(ctx, tx, candidate)
+		if match = match.Without(w.links.batch.Changes); err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
 		}
 		visible, err = contacts.AnyMatchVisible(ctx, tx, match)

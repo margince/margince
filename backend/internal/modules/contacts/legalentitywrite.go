@@ -46,9 +46,10 @@ var errNameTaken = &LegalEntityRefusal{
 	"another live legal entity already has this name; choose a different one",
 }
 
-// CreateLegalEntity describes a further entity. display_name, legal_name and
-// country are required.
+// CreateLegalEntity describes a further entity. display_name, legal_name,
+// country and jurisdiction are required; an omitted jurisdiction is the country.
 func (s *Store) CreateLegalEntity(ctx context.Context, in LegalEntityInput) (LegalEntity, error) {
+	in = in.withDefaultJurisdiction()
 	if err := auth.Require(ctx, legalEntityObject, principal.ActionCreate); err != nil {
 		return LegalEntity{}, err
 	}

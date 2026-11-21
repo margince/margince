@@ -6461,22 +6461,26 @@ export const en = {
   "legalEntities.colName": "Name",
   "legalEntities.colLegalName": "Legal name",
   "legalEntities.colCountry": "Country",
-  "legalEntities.countryMissing": "Not set: the installation’s country applies",
+  "legalEntities.colJurisdiction": "Jurisdiction",
+  "legalEntities.jurisdictionMissing":
+    "Not set: the installation’s jurisdiction applies",
   "legalEntities.defaultBadge": "Default",
   "legalEntities.defaultUnnamed": "Your company",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
-  "legalEntities.defaultCountry":
-    "Country: {country}. The default company follows the installation’s jurisdiction.",
-  "legalEntities.defaultCountryNone":
-    "No country set. The default company follows the installation’s jurisdiction.",
-  "legalEntities.defaultCountryLink": "Change it under Jurisdiction",
+  "legalEntities.countryHint": "The country of the registered address.",
+  "legalEntities.jurisdiction": "Jurisdiction",
+  "legalEntities.jurisdictionHint":
+    "Its law applies to the mail this company’s team sends and the contacts it owns.",
+  "legalEntities.defaultJurisdiction":
+    "Jurisdiction: {jurisdiction}. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultJurisdictionNone":
+    "No jurisdiction set. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultJurisdictionLink": "Change it under Jurisdiction",
   "jurisdiction.entities.title": "Legal entities",
-  "jurisdiction.entities.lead":
-    "Each company’s country sets the law for the mail its team sends and the contacts it owns.",
-  "jurisdiction.entities.default": "{country}, the selection above",
-  "jurisdiction.entities.none": "No country set",
+  "jurisdiction.entities.default": "{jurisdiction}, the selection above",
+  "jurisdiction.entities.none": "No jurisdiction set",
   "jurisdiction.entities.edit": "Change legal entities",
   "legalEntities.edit": "Edit",
   "legalEntities.archive": "Archive",

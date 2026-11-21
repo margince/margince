@@ -80,7 +80,7 @@ func ClassifyDomainTx(ctx context.Context, tx pgx.Tx, domain string) (DomainClas
 func ClassifyAddressTx(ctx context.Context, tx pgx.Tx, address string) (DomainClass, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT e.contact_id FROM contact_email e
-		 WHERE lower(e.email) = ANY($1) AND e.archived_at IS NULL LIMIT 20`,
+		 WHERE e.email = ANY($1) AND e.archived_at IS NULL LIMIT 20`,
 		mailidentity.AddressSpellings(address))
 	if err != nil {
 		return DomainClass{}, fmt.Errorf("capture: looking up a contact address: %w", err)

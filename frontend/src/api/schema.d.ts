@@ -53682,8 +53682,15 @@ export interface components {
             register_court?: string | null;
             /** @description The entity's commercial register number. */
             register_number?: string | null;
-            /** @description Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country. */
+            /** @description Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity. */
             country?: string | null;
+            /**
+             * @description The jurisdiction pack whose law the entity follows, as its lower-case code, for example
+             *     `de`. It is one of the packs this build offers (`available` of
+             *     `/installation/jurisdiction`). Null on the default entity, whose law is the
+             *     installation's jurisdiction.
+             */
+            jurisdiction?: string | null;
             /** @description The ISO 639-1 language the entity's documents default to. Null means the base text. */
             default_language?: string | null;
             /** @description The name the entity's bank account is held in. */
@@ -53742,8 +53749,14 @@ export interface components {
         CreateLegalEntityRequest: {
             display_name: string;
             legal_name: string;
-            /** @description Lower-case ISO 3166-1 alpha-2, for example `de`. */
+            /** @description The address country, lower-case ISO 3166-1 alpha-2, for example `de`. */
             country: string;
+            /**
+             * @description The jurisdiction pack whose law the entity follows, one of `available` of
+             *     `/installation/jurisdiction`. Left out, it is the `country`, and a country no pack
+             *     covers answers `invalid_jurisdiction`.
+             */
+            jurisdiction?: string;
             address?: components["schemas"]["LegalEntityAddress"];
             vat_id?: string;
             register_court?: string;
@@ -53763,6 +53776,8 @@ export interface components {
             display_name?: string;
             legal_name?: string;
             country?: string;
+            /** @description One of `available` of `/installation/jurisdiction`. The default entity refuses it. */
+            jurisdiction?: string;
             address?: components["schemas"]["LegalEntityAddress"];
             vat_id?: string;
             register_court?: string;
