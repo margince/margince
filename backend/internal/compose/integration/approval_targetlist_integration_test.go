@@ -5,9 +5,8 @@
 
 package integration
 
-// The inbox filtered to the records one task touched. An agent asks it before
-// it reports the work finished. It answers what those records left waiting,
-// and still hides what the caller cannot decide.
+// The inbox filtered to the records one task touched. It answers what those
+// records left waiting, and still hides what the caller cannot decide.
 
 import (
 	"errors"

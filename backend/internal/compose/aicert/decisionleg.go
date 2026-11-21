@@ -59,8 +59,7 @@ type decisionLeg struct {
 }
 
 // decisionRouter is the router the leg asks: the candidate's config with the
-// lane bound, and every site treated as certified — the table a production
-// router reads is built from the records this leg writes.
+// lane bound, which answers every decision site as production's does.
 func (leg decisionLeg) decisionRouter() (*ai.Router, *traceRecorder, error) {
 	cfg, err := ladderForTask("candidate (the rung MARGINCE_AICERT_ROUTING resolved)", leg.candidate,
 		candidateRole.profileFor(leg.profile), leg.task)
@@ -70,7 +69,7 @@ func (leg decisionLeg) decisionRouter() (*ai.Router, *traceRecorder, error) {
 	lane := leg.lane
 	cfg.Decisions = &lane
 	rec := newTraceRecorder()
-	opts := []ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(rec), ai.WithEveryDecisionCertified()}
+	opts := []ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(rec)}
 	if leg.hooks != nil {
 		opts = append(opts, leg.hooks.decisionOpts...)
 		if leg.hooks.trace != nil {

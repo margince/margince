@@ -44,6 +44,10 @@ const (
 	// making arbitrary rewriting possible everywhere, which is the guarantee
 	// that makes "selects nothing" safe rather than merely unhelpful.
 	FieldDomain FieldType = "domain"
+	// FieldCompanyKey is a lead's candidate company key: a domain or a slug,
+	// stored as typed before keys were folded. A domain-shaped operand matches
+	// the punycode and the Unicode spelling, and a slug matches as written.
+	FieldCompanyKey FieldType = "company_key"
 	// FieldDistance is a place on the earth rather than a column: its Expr is
 	// the table alias, and the one operator is within_radius. It is core-only,
 	// like FieldDomain, because the catalogue offers no custom field of it.

@@ -358,6 +358,12 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     await user.type(screen.getByRole("searchbox"), "acme");
 
     expect(await screen.findByText(/Search failed/)).toBeTruthy();
+    // The notice heads the list, so it names what still works, not where.
+    expect(
+      screen.getByText(
+        "Records could not be searched. Screens and actions still work.",
+      ),
+    ).toBeTruthy();
     // Not the empty state: the list is not empty, and saying so would be the
     // false claim this replaces.
     expect(screen.queryByText("No matches.")).toBeNull();
@@ -370,6 +376,44 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(
       destinationRows().some((row) => row.textContent?.includes("Deals")),
     ).toBe(true);
+  });
+
+  it("says nothing matched once the search finds no record, and offers no results page", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("searchbox"), "zzzzqqq");
+
+    expect(await screen.findByText("No matches for “zzzzqqq”.")).toBeTruthy();
+    expect(screen.queryByText(/See all results/)).toBeNull();
+    expect(screen.getByText("Ask your documents")).toBeTruthy();
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("");
+  });
+
+  it("keeps the results row while the search has not answered", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("searchbox"), "zzzzqqq");
+
+    expect(screen.getByText("See all results for “zzzzqqq”")).toBeTruthy();
+    expect(screen.queryByText(/No matches/)).toBeNull();
   });
 
   // A hit's kind is the heading of its group, in the reader's words. It used to

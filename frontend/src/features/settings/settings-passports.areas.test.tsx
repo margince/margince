@@ -294,7 +294,9 @@ describe("PassportCard: minting with areas", () => {
     await user.click(
       await screen.findByRole("button", { name: "New passport" }),
     );
-    return screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText(/^Agent name/), "Scout");
+    return dialog;
   }
 
   it("starts at all areas and sends them", async () => {

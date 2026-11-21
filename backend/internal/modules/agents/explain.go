@@ -15,7 +15,9 @@ package agents
 // rejected call.
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -180,6 +182,28 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		return s.explainClassified(tool, err)
 	}
 }
+
+// Explain is what a scheduled run's model is told about a refused call. It
+// logs a fault the taxonomy does not know against the run's context.
+func (r *Registry) Explain(ctx context.Context, tool string, err error) string {
+	if _, known := httperr.Classify(err); !known {
+		slog.ErrorContext(ctx, "runner: tool call failed", "tool", tool, "err", err)
+	}
+	return RunRefusal(err)
+}
+
+// RunRefusal is a refusal in words a run can act on. That is the taxonomy's code
+// and detail, bounded and escaped as the MCP door bounds them. A fault the
+// taxonomy does not know is one sentence. It names no MCP method and no human.
+func RunRefusal(err error) string {
+	if fault, known := httperr.Classify(err); known {
+		return faultExplanation(fault)
+	}
+	return runFaultAdvice
+}
+
+// runFaultAdvice withholds a fault's own words from a run's model.
+const runFaultAdvice = "The tool failed for an internal reason; nothing may have changed."
 
 // internalFaultAdvice is what an agent is told when nothing in the taxonomy
 // recognises the error. Named because it is the one answer on this surface that

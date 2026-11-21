@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { GoneNotice } from "../../components/gonenotice";
 import {
   Button,
   PendingBody,
@@ -321,7 +322,11 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
   });
   return (
     <div className="wrap">
-      <QueryGate query={query} pendingLabel={t("analytics.sectionForecast")}>
+      <QueryGate
+        query={query}
+        pendingLabel={t("analytics.sectionForecast")}
+        gone={<GoneNotice messageKey="reporting.sharedForecastGone" />}
+      >
         {(view) => (
           <>
             <p className="t-caption">

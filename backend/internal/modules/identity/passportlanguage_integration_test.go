@@ -22,7 +22,7 @@ func TestAnAgentReadsSystemTextInItsGrantingHumansLanguage(t *testing.T) {
 		t.Run(string(chosen), func(t *testing.T) {
 			e := setupRevocationEnv(t, "passport-language-"+string(chosen))
 			human := e.wsCtx(e.member)
-			issued, err := e.svc.IssuePassport(human, e.member, IssuePassportInput{Scopes: []string{"read"}})
+			issued, err := e.svc.IssuePassport(human, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 			if err != nil {
 				t.Fatalf("minting a passport: %v", err)
 			}
@@ -60,7 +60,7 @@ func TestAnAgentWhoseHumanNeverChoseReadsTheInstallationsBaseLanguage(t *testing
 		t.Fatalf("giving the member a role: %v", err)
 	}
 	human := e.wsCtx(e.member)
-	issued, err := e.svc.IssuePassport(human, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(human, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("minting a passport: %v", err)
 	}

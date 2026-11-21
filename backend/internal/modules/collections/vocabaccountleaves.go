@@ -71,7 +71,7 @@ var relationshipTypeField = storekit.Field{
 // unconditionally, so the leaf answers over live accounts. That is consistent
 // with every other leaf on this engine, which is the property worth keeping.
 var domainField = storekit.Field{
-	Expr:      "od.domain",
+	Expr:      "coalesce(od.domain_folded, od.domain)",
 	Type:      storekit.FieldDomain,
 	ReadsLink: true,
 	Link: "EXISTS (SELECT 1 FROM company_domain od" +

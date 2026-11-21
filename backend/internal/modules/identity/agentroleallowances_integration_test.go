@@ -146,7 +146,7 @@ func TestLosingAdminLowersARealPassportsLimitAndKeepsItsCount(t *testing.T) {
 		t.Fatalf("making the member an Admin: %v", err)
 	}
 	meter := e.roleMeter(t)
-	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.resolve(t, e.member.UserID), IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.resolve(t, e.member.UserID), IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("minting a passport: %v", err)
 	}

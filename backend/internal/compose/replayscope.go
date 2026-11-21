@@ -474,4 +474,10 @@ var replayableOperations = map[string]replayTarget{
 	// through the handler's own EnsureVisible; what a replay hands back is the
 	// receipt, which names no subject.
 	"POST /v1/contacts/{id}/enrichment-runs": {object: tableContact, rowNote: "a run receipt: state, cost and requested categories, carrying no contact values to scope"},
+
+	"POST /v1/users":                                 {object: replayMemberAdminObject, rowNote: "a member record carries no row scope; the user_admin grant that governed the invitation governs its replay"}, //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/users/{id}/resend-invite":              {object: replayMemberAdminObject, rowNote: "a member record carries no row scope; the user_admin grant that governed the invitation governs its replay"}, //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/contacts/{id}/consent/privacy-notice":  {object: tableContact, table: tableContact, pathParam: "id"},                                                                                             //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/contacts/{id}/consent/confirm-request": {object: tableContact, table: tableContact, pathParam: "id"},                                                                                             //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/contacts/{id}/consent/double-opt-in":   {object: tableContact, table: tableContact, pathParam: "id"},                                                                                             //nolint:goconst // the replay gates read this map's keys as string literals
 }

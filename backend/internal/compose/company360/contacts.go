@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -178,6 +179,11 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactsPos, companyPos := arg(contactIDs), arg(companyID)
+	spellings, err := companyDomainSpellings(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	domainsPos := arg(spellings)
 	// The ROW half, applied HERE rather than trusted to the caller.
 	//
 	// Every id reaching this function came from a scoped read on five of the
@@ -228,9 +234,7 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 		            FROM contact_provider_claim c
 		           WHERE c.contact_id = p.id AND c.claim_key = 'current_employment'
 		             AND (
-		               EXISTS (SELECT 1 FROM company_domain d
-		                        WHERE d.company_id = $%[2]d AND d.archived_at IS NULL
-		                          AND lower(d.domain) = lower(c.value_json->>'company_domain'))
+		               lower(c.value_json->>'company_domain') = ANY($%[5]d::text[])
 		               OR EXISTS (SELECT 1 FROM company o
 		                           WHERE o.id = $%[2]d
 		                             AND lower(o.display_name) = lower(c.value_json->>'company_name'))
@@ -241,7 +245,7 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 		       coalesce((%[4]s), false)
 		FROM contact p
 		 WHERE p.id = ANY($%[1]d) AND p.archived_at IS NULL AND %[3]s`,
-		contactsPos, companyPos, visible, attachable), args...)
+		contactsPos, companyPos, visible, attachable, domainsPos), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -363,4 +367,24 @@ func livePurposeKeys(ctx context.Context, tx pgx.Tx) ([]string, error) {
 		err := row.Scan(&key)
 		return key, err
 	})
+}
+
+// companyDomainSpellings returns the Unicode and punycode forms of the
+// company's live domains. A provider claim keeps its domain as typed and
+// Postgres cannot fold IDNA, so the claim is compared against both.
+func companyDomainSpellings(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT domain FROM company_domain WHERE company_id = $1 AND archived_at IS NULL`, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("read the company's domains: %w", err)
+	}
+	domains, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("read the company's domains: %w", err)
+	}
+	spellings := []string{}
+	for _, domain := range domains {
+		spellings = append(spellings, owndomain.Spellings(domain)...)
+	}
+	return spellings, nil
 }

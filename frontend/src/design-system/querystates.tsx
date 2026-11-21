@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { type FieldLabels, problemMessageOf } from "../lib/problem";
+import { type FieldLabels, isGone, problemMessageOf } from "../lib/problem";
 import { Button, EmptyState, PendingBody } from "./atoms";
 import { Callout } from "./callout";
 import "./querystates.css";
@@ -28,6 +28,7 @@ export function QueryStates({
   query,
   pendingLabel,
   pendingLines,
+  gone,
   children,
 }: Readonly<{
   query: Readonly<{
@@ -43,6 +44,9 @@ export function QueryStates({
   // the page down as it arrives.
   pendingLabel: string;
   pendingLines?: number;
+  // What a screen draws when its read finds no record or link (see `isGone`).
+  // Without it such a failure keeps Retry, as its 404 may be a scope refusal.
+  gone?: ReactNode;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -53,6 +57,9 @@ export function QueryStates({
         lines={pendingLines}
       />
     );
+  }
+  if (query.isError && gone && isGone(query.error)) {
+    return <>{gone}</>;
   }
   if (query.isError) {
     return (
@@ -155,6 +162,7 @@ export function QueryGate<Data>({
   empty,
   pendingLabel,
   pendingLines,
+  gone,
   children,
 }: Readonly<{
   query: QueryLike<Data>;
@@ -163,6 +171,7 @@ export function QueryGate<Data>({
   // pending state, so there is one place a screen names its wait.
   pendingLabel: string;
   pendingLines?: number;
+  gone?: ReactNode;
   children: (data: Data) => ReactNode;
 }>) {
   const t = useT();
@@ -184,6 +193,7 @@ export function QueryGate<Data>({
       query={query}
       pendingLabel={pendingLabel}
       pendingLines={pendingLines}
+      gone={gone}
     >
       {success}
     </QueryStates>

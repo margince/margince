@@ -86,6 +86,9 @@ type mcpInfo struct {
 	// published as the served document is the one thing this artifact must never
 	// contain.
 	Documents map[string]string `json:"documents"`
+	// Instructions are what server/discover tells every client's model before
+	// any tool's own text; the MCP end-to-end verdicts stamp them.
+	Instructions string `json:"instructions"`
 }
 
 // mcpInfoTotals is the arithmetic a reviewer would otherwise do by hand.
@@ -151,6 +154,7 @@ func TestPublishedMCPSurfaceMatchesWhatAClientIsServed(t *testing.T) {
 	resources := mcpResult(t, "resources/list", views)
 	doc := mcpInfoDocument(t, tools, resources)
 	doc.Documents = publishedDocumentBodies(t, resources, views)
+	doc.Instructions = servedInstructions(t, views)
 	rendered, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		t.Fatalf("rendering the served surface: %v", err)
@@ -209,6 +213,22 @@ func publishedDocumentBodies(t *testing.T, resources json.RawMessage, views *app
 		bodies[entry.URI] = readPublishedDocument(t, entry.URI, views)
 	}
 	return bodies
+}
+
+// servedInstructions reads the instructions over server/discover, the call a
+// modern client makes before it lists a tool.
+func servedInstructions(t *testing.T, views *apps.Provider) string {
+	t.Helper()
+	var discovered struct {
+		Instructions string `json:"instructions"`
+	}
+	if err := json.Unmarshal(mcpResult(t, "server/discover", views), &discovered); err != nil {
+		t.Fatalf("reading server/discover: %v", err)
+	}
+	if discovered.Instructions == "" {
+		t.Fatal("server/discover served no instructions")
+	}
+	return discovered.Instructions
 }
 
 // uiDocumentNotPublished stands where a view's HTML would be, and says why

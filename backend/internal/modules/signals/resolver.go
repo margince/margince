@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -91,11 +92,11 @@ func parseRawRef(raw string) rawAttribution {
 	return rawAttribution{Name: payload}
 }
 
-// registrableHost lowercases and strips the www prefix, matching the
-// company_domain storage convention ("lowercased, no scheme, no www").
+// registrableHost strips the www prefix and folds the host the way
+// company_domain.domain_folded is stored, so Unicode and punycode meet.
 func registrableHost(host string) string {
 	host = strings.ToLower(strings.TrimSuffix(host, "."))
-	return strings.TrimPrefix(host, "www.")
+	return owndomain.Fold(strings.TrimPrefix(host, "www."))
 }
 
 // candidate is one plausible company with its inspectable basis.
@@ -286,7 +287,7 @@ func matchCandidates(ctx context.Context, tx pgx.Tx, a rawAttribution) ([]candid
 		rows, err := tx.Query(ctx,
 			`SELECT d.company_id FROM company_domain d
 			   JOIN company o ON o.id = d.company_id
-			  WHERE d.domain = $1 AND d.archived_at IS NULL AND NOT o.is_anchor`, a.Domain)
+			  WHERE `+owndomain.FoldedEqualsSQL("d", "$1")+` AND d.archived_at IS NULL AND NOT o.is_anchor`, a.Domain)
 		if err != nil {
 			return nil, fmt.Errorf("domain match: %w", err)
 		}

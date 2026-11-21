@@ -4,13 +4,14 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { ScreenView } from "./App.views";
 import { CREATE_ID } from "./app/nav";
 import { LocaleProvider } from "./i18n";
 import { en } from "./i18n/en";
 import type { CoreFeature } from "./lib/corefeatures";
-import { meFixture } from "./testing/mefixture";
+import { meFixture, READS_RECORDS } from "./testing/mefixture";
 
 afterEach(() => {
   cleanup();
@@ -43,7 +44,7 @@ it.each<CoreFeature>([
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  expect(await screen.findByText(en["shell.unknownPage"])).toBeTruthy();
+  expect(await screen.findByText(en["shell.unknownAddress"])).toBeTruthy();
   expect(fetcher).not.toHaveBeenCalled();
 });
 
@@ -66,8 +67,35 @@ it.each<CoreFeature>(["contacts", "companies", "leads", "deals", "projects"])(
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    expect(await screen.findByText(en["shell.unknownPage"])).toBeTruthy();
+    expect(await screen.findByText(en["shell.unknownAddress"])).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(fetcher).not.toHaveBeenCalled();
   },
 );
+
+it("leads an address no page answers to the first page this installation keeps, not to a Home it turned off", async () => {
+  vi.stubGlobal("fetch", vi.fn());
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(
+    ["me"],
+    meFixture({
+      allow: READS_RECORDS,
+      settingsAvailability: { disabled_features: ["home"] },
+    }),
+  );
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ScreenView screen="home" />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText(en["shell.unknownAddress"])).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Go to Home" })).toBeNull();
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: `Go to ${en["nav.contacts"]}` }));
+  expect(window.location.hash).toBe("#/contacts");
+});

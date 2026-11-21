@@ -49,10 +49,14 @@ func (s *Store) CompanyForAddress(ctx context.Context, email string) (crmcontrac
 			return err
 		}
 		for _, company := range covering {
-			if !matcher.IsConsumer(company.domain) {
-				out, found = company.employer, true
+			if matcher.IsConsumer(company.domain) {
+				continue
+			}
+			if domainHeldByTwins(covering, company.domain) {
 				return nil
 			}
+			out, found = company.employer, true
+			return nil
 		}
 		return nil
 	})
@@ -60,6 +64,19 @@ func (s *Store) CompanyForAddress(ctx context.Context, email string) (crmcontrac
 		return crmcontracts.ContactEmployer{}, false, err
 	}
 	return out, found, nil
+}
+
+// domainHeldByTwins reports whether more than one company holds the folded
+// domain. Legacy rows spelt in Unicode and punycode fold alike, and ordering
+// must not pick one of them for an address.
+func domainHeldByTwins(covering []coveringCompany, domain string) bool {
+	holders := map[openapi_types.UUID]bool{}
+	for _, company := range covering {
+		if company.domain == domain {
+			holders[company.employer.CompanyId] = true
+		}
+	}
+	return len(holders) > 1
 }
 
 type coveringCompany struct {

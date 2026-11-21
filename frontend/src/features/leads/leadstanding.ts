@@ -5,10 +5,8 @@ import { formatDateAbbrev } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
-import {
-  disqualifyReasonLabel,
-  type LeadDisqualifyReason,
-} from "./leadhandling";
+import type { LeadDisqualifyReason } from "../../lib/leaddisqualifyreasons";
+import { disqualifyReasonLabel } from "./leadhandling";
 import { leadIdentityName } from "./leadname";
 
 type Lead = components["schemas"]["Lead"];

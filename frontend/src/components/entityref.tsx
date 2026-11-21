@@ -36,8 +36,6 @@ import { SeatAvatar } from "./seatavatar";
 
 export {
   ENTITY_NAME_KEY,
-  entityNameQuery,
-  fetchEntityName,
   useEntityName,
 } from "./entityref.queries";
 export type { RosterKind, RosterRead } from "./roster";

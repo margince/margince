@@ -35,11 +35,11 @@ type completer interface {
 	Complete(ctx context.Context, req model.Request) (model.Response, error)
 }
 
-// ModelPath is the wired model surface one process role hands around:
-// each lane is the same router under a task label, so ai-routing.yaml
-// decides the tier per workload, and every lane draws on the
-// seat-derived monthly budget. A lane is named for the ai.Task it rides,
-// so the wiring reads in one vocabulary — the contract's.
+// ModelPath is the wired model surface one process role hands around.
+// Each lane is the same router under a task label, so the routing setting
+// decides the tier per workload. Every lane draws on the seat-derived
+// monthly budget. A lane is named for the ai.Task it rides, so the wiring
+// reads in the contract's vocabulary.
 type ModelPath struct {
 	// router is the assembled model runtime behind every lane below. It is
 	// held so a composition can bind what only IT knows — the per-Passport

@@ -176,10 +176,7 @@ function openDeal(view: Contact360, words: StandingWords): ContactFigure {
       t("co.strip.unpriced"),
       formatMoneyCompact,
     ),
-    detail: [
-      deal.title,
-      commercial.role ? dealRoleLabel(commercial.role, t) : null,
-    ]
+    detail: [deal.title, dealRoleLabel(commercial.role ?? "", t)]
       .filter(Boolean)
       .join(" · "),
     tone: "neutral",

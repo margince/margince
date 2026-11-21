@@ -23,6 +23,9 @@ must_call_with:
 
 must_not_call_with:
   - change_settings~.
+  # The AI call traces ask for the user's yes first, and the routing question
+  # does not need them.
+  - 'read_workspace~"topic": "ai_calls?"'
 
 may_call:
   - whoami

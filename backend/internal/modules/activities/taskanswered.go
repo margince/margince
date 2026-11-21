@@ -93,6 +93,7 @@ func answeredTaskSQL(task, sent, human string) string {
 func reopenedAfterAnswerSQL(task string) string {
 	return `EXISTS (SELECT 1 FROM audit_log answered JOIN audit_log reopened ON reopened.entity_type='activity' AND reopened.entity_id=answered.entity_id
  AND (reopened.occurred_at,reopened.id)>(answered.occurred_at,answered.id) AND reopened.after->>'is_done'='false'
+ AND NOT coalesce(reopened.evidence ? '` + taskReopenedBy + `', false)
  WHERE answered.entity_type='activity' AND answered.entity_id=` + task + `.id AND answered.evidence ? '` + taskAnsweredBy + `')`
 }
 
@@ -130,7 +131,7 @@ type TaskCompletion struct {
 	Subject, Contact     string
 	At, WrittenAt        time.Time
 	Version              int64
-	Writable             bool
+	Writable, Booking    bool
 }
 
 // RecentTaskCompletions returns only the caller's still-completed tasks and their reversible evidence.
@@ -160,11 +161,22 @@ func (s *Store) RecentTaskCompletions(ctx context.Context, since time.Time, limi
 				contactScope = sqlTrue
 			}
 		}
+		leadScope := "false"
+		if auth.ReadGranted(ctx, "lead") {
+			leadScope, err = auth.ScopeClauseFor(ctx, "lead", "ld", arg)
+			if err != nil {
+				return err
+			}
+			if leadScope == "" {
+				leadScope = sqlTrue
+			}
+		}
 		query := `SELECT a.id, trail.id, (trail.evidence->>` + args.add(taskAnsweredBy) + `)::uuid,
-    coalesce(a.subject,''), coalesce(c.full_name,''), trail.occurred_at, a.version, sent.occurred_at
+    coalesce(a.subject,''), coalesce(c.full_name, lead_name.full_name, ''), trail.occurred_at, a.version, sent.occurred_at, sent.kind='meeting'
     FROM audit_log trail JOIN activity a ON a.id=trail.entity_id
  JOIN activity sent ON sent.id=(trail.evidence->>'task_answered_by')::uuid
     LEFT JOIN LATERAL (SELECT p.full_name FROM activity_link l JOIN contact p ON p.id=l.contact_id WHERE l.activity_id=a.id AND p.archived_at IS NULL AND (` + contactScope + `) ORDER BY p.id LIMIT 1) c ON true
+    LEFT JOIN LATERAL (SELECT ld.full_name FROM activity_link l JOIN lead ld ON ld.id=l.lead_id WHERE l.activity_id=a.id AND ld.archived_at IS NULL AND (` + leadScope + `) ORDER BY ld.id LIMIT 1) lead_name ON true
     WHERE trail.entity_type='activity' AND trail.evidence ? ` + args.add(taskAnsweredBy) + `
       AND trail.occurred_at >= ` + args.add(since) + ` AND a.assignee_id=` + args.add(actor.UserID) + `
       AND a.kind='task' AND a.is_done AND a.archived_at IS NULL AND (` + readable + `)
@@ -176,7 +188,7 @@ func (s *Store) RecentTaskCompletions(ctx context.Context, since time.Time, limi
 		}
 		candidates, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (TaskCompletion, error) {
 			var one TaskCompletion
-			err := row.Scan(&one.ID, &one.AuditID, &one.EmailID, &one.Subject, &one.Contact, &one.At, &one.Version, &one.WrittenAt)
+			err := row.Scan(&one.ID, &one.AuditID, &one.EmailID, &one.Subject, &one.Contact, &one.At, &one.Version, &one.WrittenAt, &one.Booking)
 			return one, err
 		})
 		if err != nil {

@@ -364,7 +364,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_grant
 
-10 columns · primary key `(id)` · referenced by 3 foreign keys
+10 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

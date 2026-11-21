@@ -63,8 +63,8 @@ func TestTheOutagePageSaysADecisionTaskFallsToItsLadder(t *testing.T) {
 // it keeps the failure sentence.
 func TestTheOutagePageSaysATaskThatDegradesDegrades(t *testing.T) {
 	declared := strings.Replace(minimalContract,
-		"execution_mode: interactive, on_budget_exhausted: degrade, status: planned",
-		"execution_mode: interactive, on_budget_exhausted: degrade, on_outage: degrades, status: shipped, sites: [ask]", 1)
+		"execution_mode: interactive, status: planned",
+		"execution_mode: interactive, on_outage: degrades, status: shipped, sites: [ask]", 1)
 	c, err := parseContract([]byte(declared))
 	if err != nil {
 		t.Fatalf("parseContract: %v", err)

@@ -19,6 +19,9 @@ must_not_call_with:
   - change_access~deactivate_member
   - change_access~remove_member
   - change_access~hand_over_work
+  # The removal preview asks for the user's yes first, and this user asked
+  # what to do, not for the preview.
+  - 'read_workspace~"topic": "member_retirement"'
 
 must_mention:
   - "(?i)deactivat|remov|hand(ing|s|ed)? (her )?(\w+ )*(over|off)|handover"

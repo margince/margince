@@ -43,7 +43,6 @@ A role that cannot record activities cannot connect a mailbox or calendar. Read-
 When you pick such a role for a member, the dialog says how many of their mailboxes will stop. A stopped mailbox shows as a role problem in System health. It starts again by itself once their role can record activities. Also called: cannot connect Gmail, cannot connect Outlook, mailbox stopped, capture paused.
 
 ### How do I find and edit a colleague?
-
 Open **Settings → Members**. The list loads every member, including invited and deactivated colleagues. Use **Search members** to find a name or email address.
 
 Open the colleague's actions menu and choose **Edit member**. Change their name, email, role or teams, then choose **Save member**. You can correct an email before the account has been used to sign in. Used sign-in addresses are protected. Team membership changes require an Admin.
@@ -51,7 +50,6 @@ Open the colleague's actions menu and choose **Edit member**. Change their name,
 If another administrator changed the account while you were editing, choose **Reload member**, review the current values and apply your changes again.
 
 ### How do I remove a user from Margince?
-
 To stop a colleague signing in while keeping their account in the list, choose **Deactivate** in their actions menu. You can bring it back, and it frees their seat.
 
 To remove the account from the member list, deactivate it first, then choose **Remove member**. Choose a colleague to receive any remaining CRM work and review the preview. Resolve the listed items before confirming. Private lists move to that colleague too. That member’s personal saved views are archived when the account is removed.
@@ -232,7 +230,9 @@ In German, the owner is **Verantwortlich** and the responsibility roles are **Zu
 ## Seeing and sharing records
 
 ### Why can't I see a record?
-When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. The full record answers all three with **not found**. A contact, company or deal link can still show its name and short context in a [public preview](sharing-record-links.md). The preview gives no access to the full record. **Share** on such a record says "This record does not exist, or it is not shared with you."
+When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. A private or missing contact, company, lead, deal, project or offer shows one page. Its sentence names the kind: "This deal is not there, or it is not shared with you." A link leads back to the list, and the top bar says **Not found** when it has no name for the record.
+
+Mail without you says "This message is not shared with you". A meeting without you shows "Content for participants only" in place of its subject. A contact, company or deal link can still show a short [public preview](sharing-record-links.md), which gives no access to the full record. **Share** on such a record says "This record does not exist, or it is not shared with you."
 
 Ask the record's owner to share it with you (**Share** on the record). Or ask them to choose **All users in the company** behind the access chip under the record's name. An admin's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.
@@ -240,7 +240,7 @@ Also called: record missing, access denied, 404, cannot open a contact.
 ### Why can't I create a contact a colleague already has?
 A contact that capture made from a colleague's mail can be private to that colleague. When you create a contact with the same email address, Margince refuses it, so the CRM does not hold the contact twice. It says "A colleague already has this contact. Margince asked them to share it with you."
 
-Your colleague then finds the request on **Home**, under **Waiting on you**: "Mira Voss asks you to share this contact. Approving gives write access, or read access to a read-only seat." They choose **Decide**, then **Approve** to share the contact with you, or **Reject** to close the request. Another try does not ask again while a request is open or after your colleague rejected it. After they reject it, Margince says only "A colleague already has this contact."
+Your colleague then finds the request on **Home**, under **Waiting on you**: "Mira Voss asks you to share this contact. Approving gives write access, or read access when their seat or role cannot edit contacts." They choose **Decide**, then **Approve** to share the contact with you, or **Reject** to close the request. Another try does not ask again while a request is open or after your colleague rejected it. After they reject it, Margince says only "A colleague already has this contact."
 
 The refusal does not name the contact or its owner.
 Also called: contact already exists, email already taken, hidden contact.
@@ -251,7 +251,7 @@ Also called: contact already exists, email already taken, hidden contact.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**. Margince confirms who now has which access, for example "Mira Voss now has Read access to Acme renewal."
-You cannot share more than you hold, and **Grant access** needs the right to change the record.
+You cannot share more than you hold, and **Grant access** needs the right to change the record. A **Write** share is saved as **Read** if the colleague's role can neither change such records nor log activities. A team share keeps **Write**.
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
 
@@ -351,7 +351,7 @@ There are no levels of shares, no sharing by rules, and no way to give someone e
 
 When two contacts merge, the owner of the merged-away contact keeps access to the contact that remains. Margince gives them a share on it:
 
-- **Write** for a full seat, **Read** for a read seat.
+- **Write** for a full seat whose role can change contacts or log activities, and **Read** for anyone else.
 - A share they already held keeps its end date. It only goes from read to write.
 - A colleague who has left gets nothing, and the owner of the remaining contact needs no share.
 

@@ -36,7 +36,6 @@ cmd/worker/boot.go#func workerModelPathSpec
 gates/aiactivitycatalogparity_test.go#func producedKinds
 gates/aitaskrailcensus_test.go#func everyRoutableTask
 gates/aitaskrailcensus_test.go#var carrierSources
-gates/arch_test.go#var modelClientConstructors
 gates/consumermailonelist_test.go#var baselineDomains
 gates/edgereaders_test.go#const edgeTable
 gates/edgereaders_test.go#var edgeReaderScope

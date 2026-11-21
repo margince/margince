@@ -100,7 +100,7 @@ export function committeeRows(
 ): Readonly<{ seats: CommitteeSeatRow[]; gaps: CommitteeGapRow[] }> {
   const contacts = committeeContacts(coverage?.stakeholders ?? []);
   const seats = contacts.map((seat) => {
-    const roles = seat.roles.filter(Boolean).map(roleLabel);
+    const roles = seat.roles.map(roleLabel).filter(Boolean);
     const words = {
       role: roles.length > 0 ? roles.join(", ") : t("deal.committee.noRole"),
       engagement: t(

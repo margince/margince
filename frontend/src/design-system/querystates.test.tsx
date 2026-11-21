@@ -55,6 +55,45 @@ describe("QueryStates", () => {
     expect(screen.getByText("no seat")).toBeTruthy();
   });
 
+  // A read that finds no record or link: a retry cannot help, so the screen's
+  // own statement stands in for the failure card.
+  for (const status of [404, 410, 422]) {
+    it(`draws the screen's gone state, with no retry, for a ${status}`, () => {
+      render(
+        <QueryStates
+          query={failing(new ProblemError({ status, detail: "not found" }))}
+          pendingLabel="Loading the deal"
+          gone={<p>The deal is gone</p>}
+        >
+          {null}
+        </QueryStates>,
+      );
+      expect(screen.getByText("The deal is gone")).toBeTruthy();
+      expect(screen.queryByText(t("common.error"))).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: t("common.retry") }),
+      ).toBeNull();
+    });
+  }
+
+  for (const status of [403, 500, 503]) {
+    it(`keeps the failure card and its retry for a ${status}, gone state or not`, () => {
+      render(
+        <QueryStates
+          query={failing(new ProblemError({ status, detail: "boom" }))}
+          pendingLabel="Loading the deal"
+          gone={<p>The deal is gone</p>}
+        >
+          {null}
+        </QueryStates>,
+      );
+      expect(screen.queryByText("The deal is gone")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: t("common.retry") }),
+      ).toBeTruthy();
+    });
+  }
+
   it("prints the shared line, not the message, when the failure is not a problem", () => {
     render(
       <QueryStates
@@ -89,6 +128,21 @@ describe("QueryStates", () => {
     expect(
       within(announced).queryByRole("button", { name: t("common.retry") }),
     ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: t("common.retry") }),
+    ).toBeTruthy();
+  });
+
+  it("keeps a 404 a failed load with Retry when the screen draws no gone state, since it may be a scope refusal", () => {
+    render(
+      <QueryStates
+        query={failing(new ProblemError({ status: 404, detail: "not found" }))}
+        pendingLabel="Loading the section"
+      >
+        {null}
+      </QueryStates>,
+    );
+    expect(screen.getByText(t("common.error"))).toBeTruthy();
     expect(
       screen.getByRole("button", { name: t("common.retry") }),
     ).toBeTruthy();
