@@ -20,13 +20,12 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAChangeIsRefusedBeforeAnySQLWhenItsShapeCannotBeStored(t *testing.T) {
 	valid := Change{
 		Source: "attachment_extraction", OccurrenceKey: "k", Kind: "document_extract",
-		Attempt: 1, ActorScope: ScopePersonal, State: "queued", EventID: ids.NewV7(),
+		Attempt: 1, ActorScope: ScopePersonal, State: "queued",
 	}
 	cases := []struct {
 		name   string

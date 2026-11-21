@@ -1239,12 +1239,10 @@ public.ai_task_run.ai_task_run_state_check CHECK ((state = ANY (ARRAY['queued'::
 public.ai_task_run.ai_task_run_subject_label_check CHECK (((subject_label IS NULL) OR (length(subject_label) <= 120)))
 public.ai_task_run.ai_task_run_workspace_scope_has_no_actor CHECK (((actor_scope = 'personal'::text) OR (actor_user_id IS NULL)))
 public.ai_task_run.attempt integer NOT NULL gen=- def=1
-public.ai_task_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.ai_task_run.degrade_reason text gen=- def=-
 public.ai_task_run.finished_at timestamp with time zone gen=- def=-
 public.ai_task_run.id uuid NOT NULL gen=- def=uuidv7()
 public.ai_task_run.kind text NOT NULL gen=- def=-
-public.ai_task_run.last_event_id uuid NOT NULL gen=- def=-
 public.ai_task_run.occurrence_key text NOT NULL gen=- def=-
 public.ai_task_run.passport_id uuid gen=- def=-
 public.ai_task_run.quantity integer gen=- def=-
@@ -1261,8 +1259,6 @@ public.ai_task_run.subject_type text gen=- def=-
 public.ai_task_run.summary text gen=- def=-
 public.ai_task_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_task_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "state": 20000, "source": 20000, "ai_task": 20000, "summary": 500, "actor_scope": 20000, "subject_type": 20000, "quantity_unit": 20000, "subject_label": 120, "degrade_reason": 2000, "occurrence_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"actor_scope":20000,"ai_task":20000,"degrade_reason":2000,"kind":20000,"occurrence_key":20000,"quantity_unit":20000,"source":20000,"state":20000,"subject_label":120,"subject_type":20000,"summary":500}')
 public.ai_task_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_task_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "source": 20000, "ai_task": 20000, "summary": 500, "actor_scope": 20000, "subject_type": 20000, "quantity_unit": 20000, "subject_label": 120, "degrade_reason": 2000, "occurrence_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"actor_scope":20000,"ai_task":20000,"degrade_reason":2000,"kind":20000,"occurrence_key":20000,"quantity_unit":20000,"source":20000,"state":20000,"subject_label":120,"subject_type":20000,"summary":500}')
-public.ai_task_run.trg_ai_task_run_updated CREATE TRIGGER trg_ai_task_run_updated BEFORE UPDATE ON public.ai_task_run FOR EACH ROW EXECUTE FUNCTION set_updated_at()
-public.ai_task_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.ai_task_run_cursor CREATE INDEX ai_task_run_cursor ON public.ai_task_run USING btree (actor_user_id, seq DESC)
 public.ai_task_run_identity CREATE UNIQUE INDEX ai_task_run_identity ON public.ai_task_run USING btree (source, occurrence_key)
 public.ai_task_run_live CREATE INDEX ai_task_run_live ON public.ai_task_run USING btree (actor_user_id, queued_at DESC, id DESC) WHERE (state = ANY (ARRAY['queued'::text, 'running'::text]))
@@ -1278,19 +1274,13 @@ public.ai_task_run_state_rank(state text) secdef=false cfg=- acl=-
     END
   
 public.ai_usage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.ai_usage.ai_usage_cache_write_tokens_js_safe CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))
-public.ai_usage.ai_usage_cached_tokens_js_safe CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))
 public.ai_usage.ai_usage_calls_js_safe CHECK (((calls >= '-9007199254740991'::bigint) AND (calls <= '9007199254740991'::bigint)))
 public.ai_usage.ai_usage_pkey PRIMARY KEY (day, task, tier)
-public.ai_usage.ai_usage_reasoning_tokens_js_safe CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))
 public.ai_usage.ai_usage_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))
 public.ai_usage.ai_usage_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))
-public.ai_usage.cache_write_tokens bigint NOT NULL gen=- def=0
 public.ai_usage.cached_hits bigint NOT NULL gen=- def=0
-public.ai_usage.cached_tokens bigint NOT NULL gen=- def=0
 public.ai_usage.calls bigint NOT NULL gen=- def=0
 public.ai_usage.day date NOT NULL gen=- def=-
-public.ai_usage.reasoning_tokens bigint NOT NULL gen=- def=0
 public.ai_usage.task text NOT NULL gen=- def=-
 public.ai_usage.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_usage FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"task": 20000, "tier": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"task":20000,"tier":20000}')
 public.ai_usage.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_usage FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"task": 20000, "tier": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"task":20000,"tier":20000}')
