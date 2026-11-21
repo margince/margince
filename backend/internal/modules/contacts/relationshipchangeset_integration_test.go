@@ -174,3 +174,37 @@ func TestAColleaguesReplyOnTheirThreadIsNotTheContactWriting(t *testing.T) {
 		t.Fatalf("the fold read %d interactions and %d inbound, want 2 and 1", in.Count90d, in.Inbound90d)
 	}
 }
+
+// The earlier fold reads what was dated before the comparison instant. A
+// message at that very instant is not yet in it. A day-entry meeting on that
+// date is, because its date began before the instant.
+func TestTheComparisonFoldStopsJustBeforeItsInstant(t *testing.T) {
+	e := setupDedupe(t)
+	now := time.Date(2026, time.March, 10, 9, 0, 0, 0, time.UTC)
+	asOf := now.AddDate(0, 0, -relstrength.ComparisonDays)
+	contact := e.seedVisibleContact(t, "Cutoff Fold Contact")
+	for range 20 {
+		e.seedInteraction(t, contact, asOf, "inbound")
+	}
+	e.seedHeldMeeting(t, contact, asOf)
+	dayEntry := time.Date(asOf.Year(), asOf.Month(), asOf.Day(), 12, 0, 0, 0, time.UTC)
+	e.execTx(e.as(), t, `UPDATE activity SET occurred_precision = 'day', occurred_at = $2
+		WHERE kind = 'meeting' AND id IN (SELECT activity_id FROM activity_link WHERE contact_id = $1)`, contact, dayEntry)
+
+	ctx := e.as()
+	var got relstrength.ChangeInputs
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		got, err = changeInputs(ctx, tx, contact, now, nil)
+		return err
+	}); err != nil {
+		t.Fatalf("folding the comparison: %v", err)
+	}
+	want := relstrength.ChangeInputs{
+		Current:  relstrength.Inputs{LastTouch: &dayEntry, LastEngaged: &dayEntry, Count90d: 21, Inbound90d: 20},
+		Previous: relstrength.Inputs{LastTouch: &dayEntry, LastEngaged: &dayEntry, Count90d: 1},
+	}
+	if !sameChangeInputs(got, want) {
+		t.Errorf("the comparison folds to %+v, want %+v", got, want)
+	}
+}

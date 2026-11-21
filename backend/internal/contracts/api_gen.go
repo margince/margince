@@ -77125,6 +77125,17 @@ type KeepDomainQuestionJSONBody struct {
 type PurgeCaptureExclusionParams struct {
 	// Preview Report what would be destroyed and change nothing.
 	Preview *bool `form:"preview,omitempty" json:"preview,omitempty"`
+
+	// ExpectDestroyed The `destroyed` count a preview showed. With the two below, it binds the purge to what the
+	// caller saw: when the current selection differs, nothing is destroyed and the answer is 409.
+	// Send all three or none; ignored on a preview.
+	ExpectDestroyed *int `form:"expect_destroyed,omitempty" json:"expect_destroyed,omitempty" minimum:"0"`
+
+	// ExpectReleased The `released` count the preview showed.
+	ExpectReleased *int `form:"expect_released,omitempty" json:"expect_released,omitempty" minimum:"0"`
+
+	// ExpectAnonymised The `anonymised` count the preview showed.
+	ExpectAnonymised *int `form:"expect_anonymised,omitempty" json:"expect_anonymised,omitempty" minimum:"0"`
 }
 
 // ListHeldThreadsParams defines parameters for ListHeldThreads.
@@ -121444,6 +121455,45 @@ func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, 
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "preview"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "preview", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "expect_destroyed" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "expect_destroyed", r.URL.Query(), &params.ExpectDestroyed, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expect_destroyed"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expect_destroyed", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "expect_released" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "expect_released", r.URL.Query(), &params.ExpectReleased, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expect_released"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expect_released", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "expect_anonymised" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "expect_anonymised", r.URL.Query(), &params.ExpectAnonymised, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expect_anonymised"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expect_anonymised", Err: err})
 		}
 		return
 	}

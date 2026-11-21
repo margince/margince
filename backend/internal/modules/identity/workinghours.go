@@ -290,7 +290,7 @@ func validWorkingHours(in WorkingHours) (WorkingHours, error) {
 	case len(in.Days) == 0:
 		return WorkingHours{}, &WorkingHoursError{
 			Field:   fieldWorkDays,
-			Message: "choose at least one day you work; nobody is bookable on none",
+			Message: "choose at least one day",
 		}
 	}
 	seen := map[int]bool{}

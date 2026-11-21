@@ -712,7 +712,7 @@ var Declared = map[string][]string{
 	"POST /v1/capture/domain-questions/{domain}/keep-vendor":                   {},
 	"POST /v1/capture/email-domains":                                           {},
 	"POST /v1/capture/exclusions":                                              {},
-	"POST /v1/capture/exclusions/{id}/purge":                                   {"preview"},
+	"POST /v1/capture/exclusions/{id}/purge":                                   {"expect_anonymised", "expect_destroyed", "expect_released", "preview"},
 	"POST /v1/capture/owner-identities":                                        {},
 	"POST /v1/capture/owner-identities/{id}/restore":                           {},
 	"POST /v1/channel-connections":                                             {},

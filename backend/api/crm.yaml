@@ -20825,6 +20825,24 @@ paths:
           required: false
           schema: { type: boolean, default: false }
           description: Report what would be destroyed and change nothing.
+        - name: expect_destroyed
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: |
+            The `destroyed` count a preview showed. With the two below, it binds the purge to what the
+            caller saw: when the current selection differs, nothing is destroyed and the answer is 409.
+            Send all three or none; ignored on a preview.
+        - name: expect_released
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: The `released` count the preview showed.
+        - name: expect_anonymised
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: The `anonymised` count the preview showed.
       responses:
         '200':
           description: What was destroyed, or what would be.
@@ -20833,6 +20851,7 @@ paths:
               schema: { $ref: '#/components/schemas/CapturePurgeOutcome' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { summaryFieldsLine } from "../../design-system/approvalsummary";
-import { INTL_LOCALE } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { summaryWords } from "../../lib/approvalpreviewfields";
@@ -134,7 +134,7 @@ export function sharedResponsibility(
   );
   if (names.length === owner.users.length) {
     return t("worklist.owner.shared", {
-      names: new Intl.ListFormat(INTL_LOCALE[locale], {
+      names: listFormat(locale, {
         style: "long",
         type: "conjunction",
       }).format(names),
