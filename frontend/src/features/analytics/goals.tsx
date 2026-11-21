@@ -17,12 +17,14 @@ import {
   formatNumber,
   identifierNumber,
 } from "../../format/format";
+import { INTL_LOCALE } from "../../format/intllocale";
+import { zoneNameAndOffset } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCompanyZone } from "../../lib/companyzone";
 import { labelFor, valueFor } from "../../lib/labelfor";
 import { navigate, routeHash } from "../../lib/router";
 import { hashWithParams, replaceDial, useUrlParams } from "../../lib/urlstate";
-import { useViewerZone } from "../../lib/viewerzone";
 import { GoalBars, GoalMonths } from "./goals.bars";
 import { GoalEditor, WithdrawConfirm } from "./goals.editor";
 import {
@@ -332,14 +334,33 @@ function eventLine(
 function PlanHistory({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useViewerZone();
+  const zone = useCompanyZone();
+  const rows = [...plan.history].reverse();
+  const newest = rows[0];
   return (
-    <Panel title={t("goals.history")}>
+    <Panel
+      title={t("goals.history")}
+      // Named once at the newest change; an older row across a daylight-saving
+      // switch reads the same zone at its other offset.
+      footer={
+        newest && (
+          <span className="t-caption">
+            {t("goals.history.zone", {
+              zone: zoneNameAndOffset(
+                INTL_LOCALE[locale],
+                new Date(newest.created_at),
+                zone,
+              ),
+            })}
+          </span>
+        )
+      }
+    >
       <PanelBody>
         <DataTable
           label={t("goals.history")}
           fold
-          rows={[...plan.history].reverse()}
+          rows={rows}
           rowKey={(event) => String(event.revision)}
           columns={[
             {

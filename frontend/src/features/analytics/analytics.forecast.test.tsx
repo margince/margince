@@ -161,12 +161,14 @@ async function openCallEditor(
 
 describe("ForecastView", () => {
   // The same two facts the Overview's caption states: the whole period, and
-  // the instant its actuals run through.
+  // the instant its actuals run through on the clock that counted them.
   it("names the whole period and the cutoff as two facts", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const period = await screen.findByText("1 April – 30 June");
-    const through = screen.getByText("Actuals through 14/05/2026, 11:00");
+    const through = screen.getByText(
+      "Actuals through 14/05/2026, 11:00 · Central European Summer Time · UTC+2",
+    );
     expect(period.parentElement).toBe(through.parentElement);
   });
 

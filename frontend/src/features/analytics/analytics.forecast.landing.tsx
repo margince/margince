@@ -221,11 +221,14 @@ export function ModelRangeCard({
       detail={
         <>
           <span>{t("forecast.model.detail")}</span>
+          {/* One line under a two-line clamp, so a second reason is not cut off.
+              What it leaves out outranks the won money, which the basis keeps. */}
           <span>
-            {left[0] ??
-              (wonMinor == null
+            {left.length > 0
+              ? left.join(" · ")
+              : wonMinor == null
                 ? undefined
-                : t("forecast.model.includes", { won: money(wonMinor) }))}
+                : t("forecast.model.includes", { won: money(wonMinor) })}
           </span>
         </>
       }

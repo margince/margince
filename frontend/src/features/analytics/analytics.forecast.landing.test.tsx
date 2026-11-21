@@ -299,9 +299,23 @@ describe("the modelled finish beside the landing", () => {
     ).toBeTruthy();
   });
 
-  it("says which deals it leaves out", () => {
+  it("says every kind of deal it leaves out, in place of the won money", () => {
     draw(model({ unpriced: 2, fxMissing: 1 }));
-    expect(screen.getByText("2 unpriced deals left out")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "2 unpriced deals left out · 1 deal without an exchange rate left out",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(`Includes ${money(400_00)} already won`),
+    ).toBeNull();
+  });
+
+  it("names the deals without an exchange rate when every deal is priced", () => {
+    draw(model({ fxMissing: 3 }));
+    expect(
+      screen.getByText("3 deals without an exchange rate left out"),
+    ).toBeTruthy();
   });
 
   it("says it assumes the chances are right, in the receipt", async () => {

@@ -909,6 +909,7 @@ export const en = {
   "reporting.targetStatus": "Target status",
   "reporting.activeTargets": "Active targets",
   "reporting.allTargets": "All targets",
+  "reporting.retiredTargets": "Retired targets",
   "reporting.noTargetsYet":
     "No target is set yet. Team leads, management and admins set targets.",
   "reporting.periodYear": "Year",
@@ -1332,7 +1333,6 @@ export const en = {
   "reporting.setup.unusedItem": "“{phrase}”: {reason}",
   "reporting.setup.fieldName": "Name",
   "reporting.setup.fieldCountry": "Country",
-  "reporting.setup.fieldMetric": "Metric",
   "reporting.setup.fieldChart": "Chart",
   "reporting.describeInitiative": "Describe the initiative",
   "reporting.describeInitiativeHint":
@@ -1418,7 +1418,7 @@ export const en = {
     "Opens Sales review for one product. No setup is needed, and nothing is written.",
   "reporting.noProducts":
     "No live products yet. Add products under Settings to report on them.",
-  "reporting.actualsThrough": "Actuals through {at}",
+  "reporting.actualsThrough": "Actuals through {at} · {zone}",
   "reporting.periodNotStarted":
     "The period starts {at}; nothing has happened in it yet",
   "reporting.writtenNoneWon": "No sales won in {period}.",
@@ -1655,6 +1655,7 @@ export const en = {
   "reporting.blocks": "Charts and order",
   "reporting.metricUnavailable": "Metric no longer available",
   "reporting.metrics": "Metrics",
+  "reporting.metric": "Metric",
   "reporting.cancel": "Cancel",
   "reporting.saved": "Report saved",
   "reporting.live": "Live report",
@@ -9357,7 +9358,7 @@ export const en = {
   "analytics.meetingsNoShow": "No-show",
   "analytics.meetingsCanceled": "Canceled",
   "analytics.outcomesOwnLensOnly":
-    "This section measures one user’s records. Wider sections cover the rest of the lens.",
+    "This section counts one person’s own records.",
   "analytics.reportWinLoss": "Won and lost",
   "analytics.reportLossEvents": "Every loss, one by one",
   "analytics.reportStageAge": "Time in stage",
@@ -23556,6 +23557,8 @@ export const en = {
   "analytics.overview.chipIndustry": "Industry: {name}",
   "analytics.overview.chipBasis": "Value: {basis}",
   "analytics.overview.profileCompany": "Company sales",
+  "analytics.overview.profileTeam": "Team sales",
+  "analytics.overview.profileSeller": "Seller sales",
   "analytics.overview.profileProduct": "Product sales",
   "analytics.overview.removeFilter": "Remove {filter}",
   "analytics.intervention.scope":
@@ -23980,7 +23983,7 @@ export const en = {
   "progress.closedRevenue": "Sales won",
   "progress.goal": "Goal",
   "progress.goalLine": "Goal for the period: {goal}",
-  "progress.figuresUpTo": "Figures up to {cutoff}",
+  "progress.figuresUpTo": "Figures up to {cutoff} · {zone}",
   "progress.ofGoalLine": "of {goal} goal",
   "progress.toGo": "{amount} to go",
   "progress.noGoalFor": "No sales goal is published for {period}.",
@@ -24013,7 +24016,7 @@ export const en = {
   "progress.readings": "Revenue readings",
   "progress.productSales": "Product sales",
   "progress.serviceSales": "Services and projects",
-  "progress.planned": "Open pipeline",
+  "progress.planned": "Open pipeline closing in period",
   "progress.plannedAt": "Open deals as of {at}",
   "progress.scenarios": "Where the month may finish",
   "progress.scenario.worst": "Worst case",
@@ -24103,6 +24106,7 @@ export const en = {
   "goals.history.what": "Change",
   "goals.history.reason": "Reason",
   "goals.history.when": "When",
+  "goals.history.zone": "Times in {zone}",
   "goals.event.draft": "{name} saved a draft",
   "goals.event.published": "{name} published the goals",
   "goals.event.discarded": "{name} discarded the draft",

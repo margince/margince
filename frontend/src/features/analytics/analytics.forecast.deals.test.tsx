@@ -99,6 +99,44 @@ describe("ForecastDeals", () => {
     expect(screen.getByText("€6,000 weighted")).toBeTruthy();
   });
 
+  it("says why an excluded deal adds no money, and keeps a masked one blank", async () => {
+    serve({
+      self_correcting: true,
+      contributions: [
+        contribution({
+          deal_name: "Unpriced",
+          base_minor: undefined,
+          weighted_minor: 0,
+          exclusion_reason: "unpriced",
+        }),
+        contribution({
+          deal_id: "018f0000-0000-7000-8000-000000000002",
+          deal_name: "Foreign",
+          base_minor: undefined,
+          weighted_minor: 0,
+          exclusion_reason: "fx_missing",
+        }),
+        contribution({
+          deal_id: "018f0000-0000-7000-8000-000000000003",
+          deal_name: "Masked",
+          base_minor: undefined,
+        }),
+      ],
+    });
+    await openDeals();
+    const row = (name: string) =>
+      screen.getByText(name).closest("tr")?.textContent ?? "";
+    await screen.findByText("Unpriced");
+    expect(row("Unpriced")).toContain("No amount");
+    expect(row("Unpriced")).toContain("— weighted");
+    expect(row("Unpriced")).not.toContain("€0");
+    expect(row("Foreign")).toContain("Exchange rate missing");
+    expect(row("Foreign")).not.toContain("€0");
+    expect(row("Masked")).toContain("Amount —");
+    expect(row("Masked")).toContain("€6,000 weighted");
+    expect(row("Masked")).not.toMatch(/No amount|Exchange rate missing/);
+  });
+
   it("says how each open deal's weight was made", async () => {
     const fetchMock = serve({
       self_correcting: true,

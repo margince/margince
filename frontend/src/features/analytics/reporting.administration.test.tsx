@@ -51,7 +51,7 @@ it("creates a monetary commitment in minor units and refuses an incomplete targe
   await user.click(await screen.findByRole("button", { name: "Set target" }));
   const dialog = within(await screen.findByRole("dialog"));
   expect(dialog.getByRole("button", { name: "Set target" })).toBeDisabled();
-  await dialog.findByRole("combobox", { name: "Metrics" });
+  await dialog.findByRole("combobox", { name: "Metric" });
   // Sales won filters by pipeline, so its target may be held to one.
   expect(dialog.getByRole("combobox", { name: "Pipeline" })).toBeEnabled();
   fireEvent.change(dialog.getByLabelText(/Year/), {
@@ -464,7 +464,7 @@ it("filters targets on the server and resets a paged result when status changes"
   await waitFor(() =>
     expect(targetQueries().at(-1)?.get("cursor")).toBe("next-page"),
   );
-  await user.click(screen.getByRole("button", { name: "Target retired" }));
+  await user.click(screen.getByRole("button", { name: "Retired targets" }));
   await waitFor(() =>
     expect(targetQueries().at(-1)?.get("retired")).toBe("true"),
   );

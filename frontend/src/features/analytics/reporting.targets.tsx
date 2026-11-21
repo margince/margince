@@ -127,7 +127,7 @@ export function ReportingTargets() {
             options={["active", "retired", "all"]}
             labels={{
               active: t("reporting.activeTargets"),
-              retired: t("reporting.retired"),
+              retired: t("reporting.retiredTargets"),
               all: t("reporting.allTargets"),
             }}
             onChange={(value) => {

@@ -73,6 +73,22 @@ describe("SalesGoalsScreen", () => {
     expect(screen.getByRole("button", { name: "Save draft" })).toBeTruthy();
   });
 
+  it("dates the history on the company's clock and names that zone once", async () => {
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
+    });
+    render(<SalesGoalsScreen />);
+    const history = await screen.findByRole("region", { name: "History" });
+    expect(
+      within(history).getByText(
+        "Times in Central European Standard Time · UTC+1",
+      ),
+    ).toBeTruthy();
+    expect(within(history).getByText("05/01/2026, 10:00")).toBeTruthy();
+  });
+
   it("opens the plan of the seller a manager picks from the list", async () => {
     window.location.hash = "#/goals?year=2026";
     installFetchStub({

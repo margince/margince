@@ -34,7 +34,7 @@ import { ForecastCallEditor } from "./analytics.forecast.calleditor";
 import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
 import { forecastFit, periodDial } from "./analytics.forecast.fit";
 import { ForecastReview } from "./analytics.forecast.review";
-import { PeriodCaption } from "./analytics.period";
+import { actualsThrough, PeriodCaption } from "./analytics.period";
 import {
   FORECAST_PERIODS,
   type ForecastPeriod,
@@ -299,9 +299,7 @@ function forecastPeriod(
             )
           : undefined
       }
-      through={t("reporting.actualsThrough", {
-        at: formatDateTime(readings.as_of, locale, zone),
-      })}
+      through={actualsThrough(readings.as_of, zone, locale, t)}
     />
   );
 }

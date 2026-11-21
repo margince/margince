@@ -16,6 +16,8 @@ import {
   identifierNumber,
   monthName,
 } from "../../format/format";
+import { INTL_LOCALE } from "../../format/intllocale";
+import { zoneNameAndOffset } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
@@ -119,6 +121,11 @@ export function ProgressScreen() {
               locale,
               progress.data.timezone,
             ),
+            zone: zoneNameAndOffset(
+              INTL_LOCALE[locale],
+              new Date(progress.data.cutoff),
+              progress.data.timezone,
+            ),
           })
         }
       >
@@ -210,8 +217,14 @@ function goalDials(ask: ProgressAsk): Map<string, string> {
 
 function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
   const t = useT();
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
-  const open = progress.evaluation ? setEvidence : undefined;
+  const [evidence, setEvidence] = useState<{
+    reference: ReportingEvidenceRef;
+    title?: string;
+  } | null>(null);
+  const open = progress.evaluation
+    ? (reference: ReportingEvidenceRef, title?: string) =>
+        setEvidence({ reference, title })
+    : undefined;
   const team = progress.scope.kind === "team";
   return (
     <div className="analytics-board">
@@ -238,7 +251,8 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
       {evidence && progress.evaluation && (
         <ReportingEvidenceDrawer
           evaluation={progress.evaluation}
-          reference={evidence}
+          reference={evidence.reference}
+          title={evidence.title}
           onClose={() => setEvidence(null)}
         />
       )}

@@ -29,6 +29,7 @@ export const companyZoneSites: { file: string; why: string }[] = [
     "analytics.overview.team.tsx",
     "analytics.questions.saved.tsx",
     "analytics.questions.answer.tsx",
+    "goals.tsx",
     "inputcheck.answer.tsx",
     "inputcheck.facts.tsx",
     "reporting.executions.tsx",

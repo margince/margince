@@ -150,9 +150,9 @@ export function ReportingTargetDialog({
             });
           }}
         >
-          <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
+          <QueryGate query={catalog} pendingLabel={t("reporting.metric")}>
             {(catalog) => (
-              <Field label={t("reporting.metrics")}>
+              <Field label={t("reporting.metric")}>
                 {(field) => (
                   <Select
                     {...field}

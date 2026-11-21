@@ -12,6 +12,7 @@ import { countryOptions } from "../../format/assignedcountries";
 import { formatAnalyticsNumber } from "../../format/format";
 import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
 import { type Translator, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useHealthScope } from "../../lib/healthscope";
 import { useSalesInitiatives } from "./reporting.initiatives.queries";
 import type { ReportingSelection } from "./reporting.model";
@@ -256,6 +257,16 @@ export function FoldedDimensions({
   );
 }
 
+// A manager's own teams read as one team's sales, never as the company's.
+const SCOPE_PROFILE: Readonly<
+  Record<ReportingSelection["scope"]["kind"], MessageKey>
+> = {
+  workspace: "analytics.overview.profileCompany",
+  managed_teams: "analytics.overview.profileTeam",
+  team: "analytics.overview.profileTeam",
+  owner: "analytics.overview.profileSeller",
+};
+
 function industryName(code: string, t: Translator): string {
   const key = industryLabelKey(code);
   return key ? t(key) : code;
@@ -339,7 +350,7 @@ export function DimensionChips({
           ? t("analytics.overview.profileInitiative")
           : selection.product_id
             ? t("analytics.overview.profileProduct")
-            : t("analytics.overview.profileCompany")}
+            : t(SCOPE_PROFILE[selection.scope.kind])}
       </Badge>
       {items.length > 0 && (
         <TokenList

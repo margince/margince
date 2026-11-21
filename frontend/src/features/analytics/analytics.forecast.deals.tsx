@@ -23,6 +23,7 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { signalSentence } from "../../lib/forecastsignals";
 import { stageNames, usePipelines } from "../../lib/pipelines.queries";
 import type { AnalyticsScope } from "./analytics.context";
@@ -75,6 +76,36 @@ export function chanceExplanation(
   return parts.join(" · ");
 }
 
+const EXCLUSION_WORD: Readonly<
+  Record<NonNullable<ForecastContribution["exclusion_reason"]>, MessageKey>
+> = {
+  unpriced: "analytics.forecastNoAmount",
+  fx_missing: "forecast.fxMissing",
+};
+
+// A masked deal has no amount and no reason, and keeps the absent figure.
+function amountCell(
+  row: ForecastContribution,
+  currency: string,
+  { t, locale }: Words,
+): string {
+  if (row.exclusion_reason) return t(EXCLUSION_WORD[row.exclusion_reason]);
+  return formatAnalyticsMoneyOrAbsent(row.base_minor ?? null, currency, locale);
+}
+
+// An excluded deal adds nothing, which is not the same as adding zero.
+function weightedCell(
+  row: ForecastContribution,
+  currency: string,
+  locale: Locale,
+): string {
+  return formatAnalyticsMoneyOrAbsent(
+    row.exclusion_reason ? null : row.weighted_minor,
+    currency,
+    locale,
+  );
+}
+
 type Words = Readonly<{
   t: T;
   plural: PluralTranslator;
@@ -118,31 +149,24 @@ function dealColumns(
       key: "amount",
       header: t("forecast.deals.colAmount"),
       align: "end",
-      render: (row) =>
-        formatAnalyticsMoneyOrAbsent(row.base_minor ?? null, currency, locale),
+      render: (row) => amountCell(row, currency, words),
+      // The reason reads on its own, without the column name before it.
       folded: (row) =>
-        t("forecast.deals.foldedAmount", {
-          amount: formatAnalyticsMoneyOrAbsent(
-            row.base_minor ?? null,
-            currency,
-            locale,
-          ),
-        }),
+        row.exclusion_reason
+          ? undefined
+          : t("forecast.deals.foldedAmount", {
+              amount: amountCell(row, currency, words),
+            }),
     },
     {
       key: "weighted",
       header: t("forecast.deals.colWeighted"),
       align: "end",
       fold: "end",
-      render: (row) =>
-        formatAnalyticsMoneyOrAbsent(row.weighted_minor, currency, locale),
+      render: (row) => weightedCell(row, currency, locale),
       folded: (row) =>
         t("forecast.deals.foldedWeighted", {
-          amount: formatAnalyticsMoneyOrAbsent(
-            row.weighted_minor,
-            currency,
-            locale,
-          ),
+          amount: weightedCell(row, currency, locale),
         }),
     },
   ];

@@ -3,6 +3,7 @@ import {
   useInfiniteQuery,
   useQuery,
 } from "@tanstack/react-query";
+import { createContext, useContext } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
@@ -13,6 +14,7 @@ import {
 } from "../../lib/reportingfigures";
 import {
   type MetricNames,
+  type ReportingMetricID,
   type ReportingSelection,
   reportingQuery,
   unpublishedDraft,
@@ -72,17 +74,26 @@ export function useReportingCatalog(enabled = true) {
   return useQuery({ ...reportingCatalogOptions, enabled });
 }
 
+// A view that asks a metric a narrower question than the catalog's label names
+// says so here, and every metric name read inside it agrees.
+export const MetricLabels = createContext<
+  Readonly<Partial<Record<ReportingMetricID, string>>>
+>({});
+
 // The catalog's name for each metric, the one the CSV export writes too. It is
 // blank until the catalog answers. A metric the catalog does not offer this
 // reader, retired or not readable, is named as unavailable and never by id.
 export function useMetricNames(): MetricNames {
   const t = useT();
   const catalog = useReportingCatalog();
+  const labels = useContext(MetricLabels);
   return (metric) => {
     if (catalog.isPending) return "";
     return (
+      labels[metric] ??
       catalog.data?.metrics.find((definition) => definition.id === metric)
-        ?.label ?? t("reporting.metricUnavailable")
+        ?.label ??
+      t("reporting.metricUnavailable")
     );
   };
 }

@@ -29,7 +29,9 @@ import {
 } from "./progress.queries";
 import type { ReportingEvidenceRef } from "./reporting.model";
 
-type OpenEvidence = ((reference: ReportingEvidenceRef) => void) | undefined;
+type OpenEvidence =
+  | ((reference: ReportingEvidenceRef, title?: string) => void)
+  | undefined;
 
 /** An amount as the reader sees it, or the word for why there is none. */
 export function amountText(
@@ -263,9 +265,9 @@ function ResultBar({
       categories.unresolved_minor > 0
         ? [product, service, unresolved]
         : [product, service];
-  const groups: Record<string, string | undefined> = {
-    product: CATEGORY_GROUP.product,
-    service: CATEGORY_GROUP.service,
+  const groups: Record<string, { key: string; title: string } | undefined> = {
+    product: { key: CATEGORY_GROUP.product, title: product.label },
+    service: { key: CATEGORY_GROUP.service, title: service.label },
   };
   // A withheld total has no length to draw; the headline already says so.
   if (closed.amount_minor == null) return null;
@@ -288,11 +290,14 @@ function ResultBar({
         onSelect={
           onEvidence && known && closed.amount_minor != null
             ? (key) =>
-                onEvidence({
-                  metric: "bookings_mix",
-                  context_id: "interval",
-                  ...(groups[key] ? { group_key: groups[key] } : {}),
-                })
+                onEvidence(
+                  {
+                    metric: "bookings_mix",
+                    context_id: "interval",
+                    ...(groups[key] ? { group_key: groups[key].key } : {}),
+                  },
+                  groups[key]?.title,
+                )
             : undefined
         }
       />
@@ -321,14 +326,19 @@ export function ProgressReadings({
     known
       ? formatAnalyticsMoney(minor, currency, locale)
       : amountText(progress.closed, currency, locale, t);
-  const mix = (group?: string) =>
+  // A tile that reads one group of the mix names the drawer after itself; the
+  // whole mix keeps the catalog's name.
+  const mix = (group?: string, title?: string) =>
     onEvidence && known
       ? () =>
-          onEvidence({
-            metric: "bookings_mix",
-            context_id: "interval",
-            ...(group ? { group_key: group } : {}),
-          })
+          onEvidence(
+            {
+              metric: "bookings_mix",
+              context_id: "interval",
+              ...(group ? { group_key: group } : {}),
+            },
+            title,
+          )
       : undefined;
   return (
     <StatStrip label={t("progress.readings")} density="plate">
@@ -337,7 +347,7 @@ export function ProgressReadings({
         source={known && <SegmentSwatch step={0} />}
         value={money(categories.product_minor)}
         detail={itemsLine(categories.product_items, plural, locale)}
-        onOpen={mix(CATEGORY_GROUP.product)}
+        onOpen={mix(CATEGORY_GROUP.product, t("progress.productSales"))}
         opens="records"
       />
       <StatCard
@@ -345,7 +355,7 @@ export function ProgressReadings({
         source={known && <SegmentSwatch step={1} />}
         value={money(categories.service_minor)}
         detail={itemsLine(categories.service_items, plural, locale)}
-        onOpen={mix(CATEGORY_GROUP.service)}
+        onOpen={mix(CATEGORY_GROUP.service, t("progress.serviceSales"))}
         opens="records"
       />
       <StatCard
@@ -364,7 +374,11 @@ export function ProgressReadings({
         })}
         onOpen={
           onEvidence && planned.amount_minor != null
-            ? () => onEvidence({ metric: "open_pipeline", context_id: "state" })
+            ? () =>
+                onEvidence(
+                  { metric: "open_pipeline", context_id: "state" },
+                  t("progress.planned"),
+                )
             : undefined
         }
         opens="records"
