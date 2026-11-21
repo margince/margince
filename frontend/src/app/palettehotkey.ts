@@ -66,6 +66,10 @@ export function useCommandPalette(route: Route, available = true) {
     [available],
   );
   const hide = useCallback(() => setOpen(false), []);
+  // Shut, not hidden, so it does not come back once setup lets the reader go.
+  if (!available && open === true) {
+    setOpen(false);
+  }
   usePaletteShortcuts(open === true, show, hide, route);
   useClosesWithPage({ open: open === true, close: hide });
   return { open, mode, show, hide };
