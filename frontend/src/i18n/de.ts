@@ -7063,6 +7063,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.rejectConfirm": "Dieses Angebot als abgelehnt markieren?",
   "offer.rejectReason": "Grund (optional)",
   "offer.regenerate": "Revision neu erzeugen",
+  "offer.writeUnsure":
+    "Margince konnte nicht feststellen, ob das geklappt hat. Prüfe die Angebote am Deal, bevor du es noch einmal versuchst.",
   "offer.aiDisclosureTitle": "KI-gestütztes Angebot",
   "offer.diffAdded_one": "{count} Position hinzugefügt",
   "offer.diffAdded_other": "{count} Positionen hinzugefügt",

@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import type { RbacAction } from "../../lib/capability";
 import { meFixture } from "../../testing/mefixture";
 import { installFetchStub } from "../../testing/story-utils";
@@ -127,5 +128,45 @@ describe("a refused lifecycle step", () => {
     );
     expect(await screen.findByText("Superseded")).toBeTruthy();
     expect(screen.queryByTestId("accept-offer")).toBeNull();
+  });
+
+  // The server cannot say whether an earlier attempt under this key made the
+  // revision. So the page reads the offer again, and the next press is new.
+  it("says so of a regenerate the server cannot vouch for, and sends the next press under a new key", async () => {
+    const keys: (string | null)[] = [];
+    let reads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init);
+        const path = new URL(request.url).pathname;
+        if (path.endsWith("/regenerate")) {
+          keys.push(request.headers.get("Idempotency-Key"));
+          const failed = { status: 409, code: "idempotency_key_failed" };
+          return jsonResponse(failed, 409);
+        }
+        if (path === "/v1/me") {
+          return jsonResponse(
+            meFixture({ allow: { offer: ["read", "create"] } }),
+          );
+        }
+        if (path.endsWith("/offers/o-1")) {
+          reads += 1;
+          return jsonResponse({ ...DRAFT, status: "sent" });
+        }
+        return jsonResponse({ data: [], page: { has_more: false } });
+      }),
+    );
+    render(<OfferScreen id="o-1" />);
+    const user = userEvent.setup();
+    const regenerate = await screen.findByTestId("regenerate-offer");
+    const readsBefore = reads;
+    await user.click(regenerate);
+
+    expect(await screen.findByText(en["offer.writeUnsure"])).toBeTruthy();
+    await waitFor(() => expect(reads).toBeGreaterThan(readsBefore));
+    await user.click(screen.getByTestId("regenerate-offer"));
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).not.toBe(keys[0]);
   });
 });

@@ -13,9 +13,14 @@ import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { useT } from "../../i18n";
+import { type Translator, useT } from "../../i18n";
 import { fromHere } from "../../lib/navigatefrom";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import {
+  problemCodeOf,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
 import { dealProductsKey } from "./deal360/dealproducts";
 import type { Offer } from "./offers";
@@ -234,6 +239,29 @@ export function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   );
 }
 
+// An earlier attempt under this key started and left no answer, so it may have
+// made the offer. The deal's offers are read again to show one that landed.
+// The next press takes a new key, as the server asks once that is checked.
+export function settleUnsureOfferWrite(
+  error: unknown,
+  queryClient: QueryClient,
+  dealId: string,
+  renew: () => void,
+): void {
+  if (problemCodeOf(error) !== UNSURE_WRITE) return;
+  void queryClient.invalidateQueries({ queryKey: ["deal-offers", dealId] });
+  renew();
+}
+
+/** Why an offer create or regenerate failed, in the reader's words. */
+export function offerWriteRefusal(error: unknown, t: Translator): string {
+  return problemCodeOf(error) === UNSURE_WRITE
+    ? t("offer.writeUnsure")
+    : problemMessageOf(error, t);
+}
+
+const UNSURE_WRITE = "idempotency_key_failed";
+
 // Regenerate a new draft revision from a sent offer. The 201 response is the
 // only place the AI provenance notice and diff summary appear. Every later
 // read of that offer returns them null. So the new draft's cache entry is
@@ -271,11 +299,14 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       });
       from.navigate({ screen: "offers", id: newDraft.id });
     },
-    onError: () => rereadOffer(queryClient, offer.id),
+    onError: (error) => {
+      settleUnsureOfferWrite(error, queryClient, offer.deal_id, renew);
+      return rereadOffer(queryClient, offer.id);
+    },
   });
 
   const errorMessage = mutation.isError
-    ? problemMessageOf(mutation.error, t)
+    ? offerWriteRefusal(mutation.error, t)
     : null;
 
   return (

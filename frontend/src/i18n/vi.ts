@@ -6883,6 +6883,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.rejectConfirm": "Đánh dấu báo giá này là đã từ chối?",
   "offer.rejectReason": "Lý do (không bắt buộc)",
   "offer.regenerate": "Tạo lại phiên bản",
+  "offer.writeUnsure":
+    "Margince không xác định được thao tác đã thành công hay chưa. Hãy kiểm tra các báo giá của deal trước khi thử lại.",
   "offer.aiDisclosureTitle": "Báo giá có AI hỗ trợ",
   "offer.diffAdded_one": "Đã thêm {count} dòng",
   "offer.diffAdded_other": "Đã thêm {count} dòng",

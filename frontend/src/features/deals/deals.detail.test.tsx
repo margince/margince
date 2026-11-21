@@ -37,6 +37,8 @@ afterEach(() => {
   localStorage.clear();
 });
 
+const offerReads = { count: 0 };
+
 function stubDealBackend(
   onRecord: Deal,
   offers: Offer[],
@@ -64,16 +66,18 @@ function stubDealBackend(
       const body = request
         ? await request.json()
         : JSON.parse(String(init?.body));
-      await onCreateOffer?.(
+      const answer = await onCreateOffer?.(
         body,
         new Headers(request ? request.headers : init?.headers),
       );
+      if (answer instanceof Response) return answer;
       return jsonResponse(
         offer({ id: "new-offer", currency: body.currency }),
         201,
       );
     }
     if (url.includes("/offers")) {
+      offerReads.count += 1;
       return jsonResponse({ data: offers, page: { next_cursor: null } });
     }
     if (url.includes("/history")) {
@@ -921,10 +925,8 @@ describe("DealScreen offers panel", () => {
   // pending. It must not make a second draft and spend a second offer number.
   it("a double click on New offer posts one draft, under an idempotency key", async () => {
     const keys: (string | null)[] = [];
-    let answer = () => {};
-    const answered = new Promise<void>((resolve) => {
-      answer = resolve;
-    });
+    const { promise: answered, resolve: answer } =
+      Promise.withResolvers<void>();
     vi.stubGlobal(
       "fetch",
       stubDealBackend(deal({ currency: "EUR" }), [], (_body, headers) => {
@@ -945,6 +947,27 @@ describe("DealScreen offers panel", () => {
     );
     expect(keys).toHaveLength(1);
     expect(keys[0]).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("says so of a create the server cannot vouch for, reads the offers again, and sends the next press under a new key", async () => {
+    const keys: (string | null)[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubDealBackend(deal({ currency: "EUR" }), [], (_body, headers) => {
+        keys.push(headers.get("Idempotency-Key"));
+        const failed = { status: 409, code: "idempotency_key_failed" };
+        return keys.length === 1 ? jsonResponse(failed, 409) : undefined;
+      }),
+    );
+    render(<DealScreen id="d1" />);
+    const newOffer = await screen.findByRole("button", { name: "New offer" });
+    const readsBefore = offerReads.count;
+    await userEvent.click(newOffer);
+    await screen.findByText(translate("en", "offer.writeUnsure"));
+    await waitFor(() => expect(offerReads.count).toBeGreaterThan(readsBefore));
+    await userEvent.click(newOffer);
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).not.toBe(keys[0]);
   });
 });
 

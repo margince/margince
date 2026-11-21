@@ -7018,6 +7018,8 @@ export const en = {
   "offer.rejectConfirm": "Mark this offer as rejected?",
   "offer.rejectReason": "Reason (optional)",
   "offer.regenerate": "Regenerate revision",
+  "offer.writeUnsure":
+    "Margince could not tell whether that went through. Check the deal’s offers before you try again.",
   "offer.aiDisclosureTitle": "AI-assisted offer",
   "offer.diffAdded_one": "{count} line added",
   "offer.diffAdded_other": "{count} lines added",

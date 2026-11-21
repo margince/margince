@@ -67,6 +67,7 @@ import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
 import { useDealStatusCard } from "./dealstatus";
+import { offerWriteRefusal, settleUnsureOfferWrite } from "./offers.actions";
 
 const DEAL_TABS = [
   "overview",
@@ -259,7 +260,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
       renewOfferKey();
       from.navigate({ screen: "offers", id: offer.id });
     },
+    onError: (error, input) =>
+      settleUnsureOfferWrite(error, queryClient, input.dealId, renewOfferKey),
   });
+  const createRefusal = createOffer.isError
+    ? offerWriteRefusal(createOffer.error, t)
+    : undefined;
   const decide = useMutation({
     mutationFn: async (input: {
       approvalId: string;
@@ -406,6 +412,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       threadQuery.isSuccess && !threadQuery.hasNextPage
                     }
                     creatingOffer={createOffer.isPending}
+                    createRefusal={createRefusal}
                     locale={locale}
                     onCreateOffer={(currency, fromRevision) =>
                       createOffer.mutate({

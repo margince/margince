@@ -2,6 +2,7 @@ import { useContext, useId } from "react";
 import type { components } from "../../api/schema";
 import { ChannelPanel } from "../../components/channelpanel";
 import { Badge, Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import {
   OverviewCard,
   OverviewList,
@@ -38,6 +39,7 @@ type Approval = components["schemas"]["Approval"];
 export function OffersPanel({
   offers,
   creating,
+  refusal,
   locale,
   dealCurrency,
   refusedReasonId,
@@ -46,6 +48,7 @@ export function OffersPanel({
 }: Readonly<{
   offers: readonly Offer[] | undefined;
   creating: boolean;
+  refusal?: string;
   locale: Locale;
   // An offer is written in the deal's currency, so a deal nobody has priced
   // has nothing to write one in. Null refuses the control and says why. It
@@ -101,6 +104,8 @@ export function OffersPanel({
               ? t("deal.offerNeedsCompleteLines")
               : t("deal.offerNeedsCurrency")}
           </span>
+        ) : refusal ? (
+          <ErrorLine>{refusal}</ErrorLine>
         ) : undefined
       }
     >
@@ -137,6 +142,7 @@ export function OffersPanel({
 export function DealOverviewPane({
   inputs,
   creatingOffer,
+  createRefusal,
   locale,
   onCreateOffer,
   readOnly,
@@ -150,6 +156,8 @@ export function DealOverviewPane({
   // What How it stands reads, and the ladder's write path.
   inputs: DealStandingInputs;
   creatingOffer: boolean;
+  // Why the last New offer failed, until the next one is pressed.
+  createRefusal?: string;
   locale: Locale;
   onCreateOffer: (currency: string, fromRevision?: number) => void;
   /** Whether the deal takes no field write at all: archived, or not this
@@ -236,6 +244,7 @@ export function DealOverviewPane({
           <OffersPanel
             offers={offers}
             creating={creatingOffer}
+            refusal={createRefusal}
             locale={locale}
             dealCurrency={deal.currency ?? null}
             refusedReasonId={refusedReasonId}
