@@ -300,17 +300,14 @@ function isDateColumn(name: string, field: VocabularyField | undefined) {
   return field?.type === "date" || /_(at|date|until)$/.test(name);
 }
 
-// A `date` column arrives as midnight UTC. Read as an instant, it would show the
-// day before to a reader west of Greenwich.
-const MIDNIGHT_UTC_DAY = /^(\d{4}-\d{2}-\d{2})(T00:00:00(\.0+)?Z)?$/;
-const INSTANT = /^\d{4}-\d{2}-\d{2}T/;
+// The preview sends a `date` column as its day and a timestamp as an instant,
+// which is read in the reader's zone.
+const DAY_OR_INSTANT = /^\d{4}-\d{2}-\d{2}(T|$)/;
 
 function dateText(text: string, locale: Locale, zone: string): string {
-  const day = MIDNIGHT_UTC_DAY.exec(text)?.[1];
-  if (day) {
-    return formatDateAbbrev(day, locale, zone);
-  }
-  return INSTANT.test(text) ? formatDateAbbrev(text, locale, zone) : text;
+  return DAY_OR_INSTANT.test(text)
+    ? formatDateAbbrev(text, locale, zone)
+    : text;
 }
 
 /**

@@ -1087,6 +1087,37 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /admin/vacuum-recommendations:
+    get:
+      tags: [Identity]
+      operationId: getVacuumRecommendations
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      x-human-only-reason: security   # names the database's tables, sizes and owner role
+      summary: Which tables would win back enough space from a full vacuum run out of band.
+      description: >
+        Admin and ops only (`job_health:read`). Estimates, from the database's own statistics, how much
+        of each table's file holds no live row. Sizes and row counts are those of the table's last
+        `VACUUM` or `ANALYZE`; indexes and TOAST are not counted, and a table that was never updated or
+        deleted from is left out. A table is listed when that share is at least
+        `min_waste_percent` and the space is at least `min_waste_bytes`, largest first. Each entry
+        carries the statement to run and the role that owns the table. Margince never runs it:
+        `VACUUM FULL` locks the table for reads and writes until it ends. A table the statistics do
+        not yet describe, and that is large enough to qualify, is counted in `unmeasured_tables`.
+      responses:
+        '200':
+          description: The tables worth a full vacuum, with the thresholds that chose them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VacuumRecommendations' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >
+            Refused: the caller holds no `job_health:read` (the admin and ops roles hold it).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /admin/automatic-work-health:
     get:
       tags: [Identity]
@@ -40131,10 +40162,12 @@ components:
                     - { field: 'emails[0].email', code: invalid_email }
     SendValidationError:
       description: |
-        The send failed validation, or no mailbox can carry it. The second answers with the top-level
-        `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
-        fix it: the sender must connect a mailbox that can send, or an administrator must set up
-        sending for the installation. A scheduled send is checked the same way when it is created.
+        The send failed validation, or no mailbox can carry it. The second answers with a top-level
+        `code` and no `details.errors`, because no field of the request can fix it. `mailbox_not_connected`
+        means the sender holds no mailbox at all and must connect one. `mailbox_not_send_capable` means
+        they hold mailboxes that cannot send, so they must reconnect one with permission to send, or an
+        administrator must set up sending for the installation. A scheduled send is checked the same way
+        when it is created.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -40151,6 +40184,8 @@ components:
                     - { field: to, code: required }
             mailboxNotSendCapable:
               value: { type: 'https://errors.gradion.com/mailbox_not_send_capable', title: Unprocessable Entity, status: 422, code: mailbox_not_send_capable, detail: reconnect your mailbox to enable sending }
+            mailboxNotConnected:
+              value: { type: 'https://errors.gradion.com/mailbox_not_connected', title: Unprocessable Entity, status: 422, code: mailbox_not_connected, detail: connect a mailbox to send }
 
   # ------------------------------- schemas ----------------------------------
   schemas:
@@ -56072,7 +56107,7 @@ components:
         display_name:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 120
           description: |
             The name colleagues see. Surrounding whitespace is trimmed and a name
             that is only whitespace is refused — the same bounds the invite form
@@ -65702,7 +65737,8 @@ components:
           type: array
           description: |
             Up to `limit` matching rows as column→value maps, ordered by id,
-            after the request's `cursor` when it names one.
+            after the request's `cursor` when it names one. A date column is
+            its calendar day (`2026-12-01`); a timestamp is an RFC 3339 instant.
             Deliberately the export's projection rather than a shape invented for
             this screen: a preview that showed different columns than the export
             of the same filter would be a preview of something else.
@@ -68445,7 +68481,7 @@ components:
       additionalProperties: false
       required: [display_name, email, expected_updated_at]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 120 }
         email: { type: string, format: email, description: May change only before the account has been used to sign in. }
         role: { type: string, description: Omit to keep the current roles. }
         team_ids:
@@ -68751,7 +68787,7 @@ components:
           description: >-
             The extension unit the member serves, by its manifest name. Only that unit may act as
             the member. A name no installed unit carries is accepted and simply never used.
-        display_name: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 120 }
     FormerMemberRequest:
       type: object
       description: >-
@@ -68765,7 +68801,7 @@ components:
           description: >-
             Their work address as the source system spelled it. It is the identity the
             seat is keyed on, so a second record for the same address is refused.
-        display_name: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 120 }
         role:
           type: string
           maxLength: 64
@@ -68790,7 +68826,7 @@ components:
       required: [email, display_name, role]
       properties:
         email: { type: string, format: email }
-        display_name: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 120 }
         greeting_name:
           type: [string, 'null']
           maxLength: 120
@@ -71884,6 +71920,52 @@ components:
           nullable: true
           description: The most recent drill, or null when none was ever recorded.
 
+    VacuumRecommendations:
+      type: object
+      additionalProperties: false
+      description: |
+        The tables a full vacuum would shrink by enough to be worth a maintenance window. Sizes are
+        estimates from the statistics the database keeps for its query planner.
+      required: [generated_at, min_waste_percent, min_waste_bytes, tables, unmeasured_tables]
+      properties:
+        generated_at: { type: string, format: date-time }
+        min_waste_percent:
+          type: integer
+          description: The smallest share of a table's file, in percent, that must be empty for it to be listed.
+        min_waste_bytes:
+          type: integer
+          description: The smallest empty space, in bytes, for a table to be listed.
+        tables:
+          type: array
+          description: The tables over both thresholds, most empty space first.
+          items: { $ref: '#/components/schemas/VacuumRecommendation' }
+        unmeasured_tables:
+          type: integer
+          description: Tables large enough to qualify that have no statistics yet, so no estimate.
+
+    VacuumRecommendation:
+      type: object
+      additionalProperties: false
+      required: [schema, table, owner, table_bytes, waste_bytes, waste_percent, statement]
+      properties:
+        schema: { type: string }
+        table: { type: string }
+        owner:
+          type: string
+          description: The database role that owns the table. Only it can run the statement.
+        table_bytes:
+          type: integer
+          description: The size of the table's file at its last `VACUUM` or `ANALYZE`, without its indexes or TOAST.
+        waste_bytes:
+          type: integer
+          description: The estimated space in that file that holds no live row.
+        waste_percent:
+          type: integer
+          description: '`waste_bytes` as a whole percent of `table_bytes`, rounded down.'
+        statement:
+          type: string
+          description: The statement to run, with the names quoted.
+
     AutomaticWorkHealth:
       type: object
       additionalProperties: false
@@ -74251,7 +74333,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
+        display_name: { type: string, minLength: 1, maxLength: 120, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }

@@ -18,6 +18,7 @@ import { useHoldsAdminRole } from "../../lib/capability";
 import { LEGAL_ENTITIES_KEY } from "../../lib/legalentities.queries";
 import { isVersionSkewOf, unwrap } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { MemberEntityField, useMemberEntityDraft } from "./users-entitycell";
 import { memberChecks, memberRefusal } from "./users-invite-form";
 import {
@@ -169,7 +170,7 @@ export function EditMember({
             <TextInput
               {...control}
               value={name}
-              maxLength={255}
+              maxLength={TEXT_LIMITS.label}
               onChange={(event) => {
                 setName(event.target.value);
                 faults.edited("display_name");

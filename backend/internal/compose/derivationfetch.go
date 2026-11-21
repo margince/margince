@@ -374,7 +374,8 @@ func predicateFields(preds []boundExpr) []string {
 // column to its wire value positionally.
 func scanDerivationRows(pgRows pgx.Rows, columns []string) ([]map[string]any, error) {
 	var out []map[string]any
-	reader := rowvalue.NewReader()
+	// Instants, as drill-through rows have always been: their screens read them so.
+	reader := rowvalue.NewInstantReader()
 	for pgRows.Next() {
 		values, err := reader.Values(pgRows)
 		if err != nil {

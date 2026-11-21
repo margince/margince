@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
+	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -76,15 +77,13 @@ type Server struct {
 	// The weekly retrospective, named because briefs.Handlers claims the name.
 	// It is its own aggregate: on brief_run it would read as the latest brief.
 	weeklyHandlers weekly.Handlers
-	// The day's one surface across approvals, dedupe and tasks. Named, as
-	// briefs.Handlers already claims the unqualified name.
+	// The day's one surface across approvals, dedupe and tasks. Named: briefs.Handlers claims the name.
 	attentionHandlers attention.Handlers
 	magicHandlers     magic.Handlers
 	// magicService binds the undo judge to the reversal route's restore seam.
 	magicService *magic.Service
 	homeCache    *homecache.Cache // Home's cached answers; forgetHomeOnWrite ends a writer's own answers
-	// The relationship-graph reads (ADR-0078): who knows this contact, and
-	// how a deal is covered.
+	// The relationship-graph reads (ADR-0078): who knows this contact, and how a deal is covered.
 	network.Reads
 	coldstartHandlers
 	companyHandlers
@@ -154,6 +153,7 @@ type Server struct {
 	captureHealthHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
+	vacuumhealth.Endpoint
 	automaticWorkHandlers
 	// Extension inventory, settings, transports: stateless, embedded as the zero value.
 	extensionsHandlers

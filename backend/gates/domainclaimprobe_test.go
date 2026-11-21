@@ -58,6 +58,20 @@ const claimProbeOwner = "internal/modules/contacts/company_domains.go"
 var readsDomainClaim = regexp.MustCompile(
 	`(?is)SELECT\s+[^;]*\bcompany_id\b[^;]*\bFROM\s+company_domain\b[^;]*\bdomain\s*=`)
 
+// readsDomainClaimAny is the same question asked without projecting an id.
+// It is an EXISTS over `domain = ANY(spellings)`. A copy of the rule that
+// answers a boolean would hide from the projection half.
+var readsDomainClaimAny = regexp.MustCompile(`(?is)\bFROM\s+company_domain\b[^;]*\bdomain\s*=\s*ANY\b`)
+
+// readsDomainOfCompany is a filter on the company, which answers what a company
+// owns and not who owns a domain.
+var readsDomainOfCompany = regexp.MustCompile(`(?is)\bcompany_id\s*=\s*\$`)
+
+func asksWhoOwnsADomain(statement string) bool {
+	return readsDomainClaim.MatchString(statement) ||
+		readsDomainClaimAny.MatchString(statement) && !readsDomainOfCompany.MatchString(statement)
+}
+
 // resolvers read the same table and project the same column while asking a
 // DIFFERENT question: "which company does this domain resolve to", answered
 // to the system so it can attach or score a record — never to a caller as a
@@ -72,6 +86,10 @@ var readsDomainClaim = regexp.MustCompile(
 var domainResolvers = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/dedupecompany.go":        "exactCompanyByDomain is dedupe tier 1: it resolves which live company a candidate's domains already belong to so the record LANDS on it. nameDomainClaimant names the company a display name's domain belongs to, as a rival for review. Both ids go to the merge or the review queue, never to a caller, so there is no 409 and nothing to gate the disclosure of.",
 	"internal/modules/contacts/companysubdomain.go":     "subdomainClaimants finds the accounts holding the registrable domain of a candidate's subdomain, to file a review pair. The ids go to the review queue, never to a caller, so there is no 409 and nothing to gate the disclosure of.",
+	"internal/compose/importkeys/held.go":               "VisibleDomainHolder finds the live company holding a domain inside the caller's row scope, so a company row is filed onto a holder the caller may change. It answers no refusal, and a holder outside the caller's scope is no answer.",
+	"internal/modules/capture/domainclass.go":           "the domain class of a sender lists the companies holding the domain and its parents, to classify a mail. The ids stay inside the capture decision and no 409 names one.",
+	"internal/modules/capture/strangerlinks.go":         "companySiblingSitesTx reads the other domains of the company holding a sender's domain, to tell a stranger's link from the company's own. It reads domains only, never who the company is.",
+	"gates/onedomainfold_test.go":                       "plants the statements the domain fold census must and must not flag. They are test text and never run.",
 	"internal/modules/contacts/providerclaimtargets.go": "companyByDomain resolves which live company a bought employer's domain belongs to, so a provider claim's employment lands on it. The id goes to the claim fill, never to a caller, so there is no 409 and nothing to gate the disclosure of. It became visible to this census when its predicate stopped hiding the comparison inside lower().",
 })
 
@@ -120,7 +138,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 			}
 			judged++
 			for _, statement := range gatekit.SQLStatementsIn(t, path, string(source)) {
-				if !readsDomainClaim.MatchString(statement) {
+				if !asksWhoOwnsADomain(statement) {
 					continue
 				}
 				if rel == claimProbeOwner {
@@ -183,6 +201,8 @@ func TestTheDomainClaimCensusSeesWhatItClaimsTo(t *testing.T) {
 		"select COMPANY_ID from Company_Domain where domain = $1",
 		// A set of candidate domains is the same question asked in bulk.
 		"SELECT company_id FROM company_domain WHERE domain = ANY($1) AND archived_at IS NULL",
+		// A boolean copy of the rule projects no id and must still be seen.
+		"SELECT EXISTS (SELECT 1 FROM company_domain WHERE domain = ANY($1) AND company_id <> $2)",
 	}
 	// Assembled with `+`, which no single fragment matches. Read from the AST
 	// rather than written out here, so the flattening itself is what is proven.
@@ -191,7 +211,7 @@ var q = "SELECT company_id " +
 	"FROM company_domain " +
 	"WHERE domain = lower($1)"`
 	joined := gatekit.SQLStatementsIn(t, "concat.go", concatenated)
-	if len(joined) != 1 || !readsDomainClaim.MatchString(joined[0]) {
+	if len(joined) != 1 || !asksWhoOwnsADomain(joined[0]) {
 		t.Errorf("a probe assembled with `+` is not read as one statement: %q", joined)
 	}
 	// The same probe in INTERPRETED quotes, where the whitespace is an escape.
@@ -199,11 +219,11 @@ var q = "SELECT company_id " +
 	// nothing unless the literal is decoded first.
 	escaped := "package p\nvar q = \"SELECT company_id\\nFROM company_domain\\nWHERE domain = lower($1)\""
 	decoded := gatekit.SQLStatementsIn(t, "escaped.go", escaped)
-	if len(decoded) != 1 || !readsDomainClaim.MatchString(decoded[0]) {
+	if len(decoded) != 1 || !asksWhoOwnsADomain(decoded[0]) {
 		t.Errorf("a probe whose whitespace is escaped is not decoded: %q", decoded)
 	}
 	for _, statement := range caught {
-		if !readsDomainClaim.MatchString(statement) {
+		if !asksWhoOwnsADomain(statement) {
 			t.Errorf("the census does not see a probe it must:\n\t%s", statement)
 		}
 	}
@@ -222,7 +242,7 @@ var q = "SELECT company_id " +
 		"SELECT company_id, id, domain, is_primary FROM company_domain WHERE company_id = ANY($1) AND archived_at IS NULL",
 	}
 	for _, statement := range missed {
-		if readsDomainClaim.MatchString(statement) {
+		if asksWhoOwnsADomain(statement) {
 			t.Errorf("the census reports something that is not this probe:\n\t%s", statement)
 		}
 	}

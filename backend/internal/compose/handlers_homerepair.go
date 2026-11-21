@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -24,14 +25,14 @@ import (
 )
 
 func (h dataTaskHandlers) PreviewHomeRepair(w http.ResponseWriter, r *http.Request) {
-	if !admitOperator(w, r, "data_task", principal.ActionRead) {
+	if !adminadmit.Operator(w, r, "data_task", principal.ActionRead) {
 		return
 	}
 	var in crmcontracts.PreviewHomeRepairJSONBody
 	if !httperr.Decode(w, r, &in) {
 		return
 	}
-	timeout := healthReadTimeout
+	timeout := adminadmit.ReadTimeout
 	if in.Source != nil && string(*in.Source) == repairSourceVerdict {
 		timeout = 2 * time.Minute
 	}
@@ -74,7 +75,7 @@ func (h dataTaskHandlers) PreviewHomeRepair(w http.ResponseWriter, r *http.Reque
 }
 
 func (h dataTaskHandlers) ActivateHomeRepair(w http.ResponseWriter, r *http.Request) {
-	if !admitOperator(w, r, "data_task", principal.ActionUpdate) {
+	if !adminadmit.Operator(w, r, "data_task", principal.ActionUpdate) {
 		return
 	}
 	var in crmcontracts.ActivateHomeRepairJSONBody
@@ -85,7 +86,7 @@ func (h dataTaskHandlers) ActivateHomeRepair(w http.ResponseWriter, r *http.Requ
 		httperr.Write(w, r, err)
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
 	review, err := homeRepairReviewInput(in.Review)
 	if err != nil {

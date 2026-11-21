@@ -357,7 +357,8 @@ func scanAnalyticsRows(pgRows pgx.Rows) ([][]any, error) {
 	// like the array it is; nil marshals to null, which a model reads as
 	// "unknown".
 	out := [][]any{}
-	reader := rowvalue.NewReader()
+	// Instants, as analytics answers have always been: its screens, shares and the model read them so.
+	reader := rowvalue.NewInstantReader()
 	for pgRows.Next() {
 		values, err := reader.Values(pgRows)
 		if err != nil {

@@ -38,6 +38,7 @@ import {
   healthSectionForSource,
   healthSourceForSection,
 } from "./systemhealthnavigation";
+import { VacuumHealthCard } from "./vacuumhealth";
 
 type Report = components["schemas"]["SystemHealth"];
 type State = "retryable" | "discarded" | "cancelled";
@@ -121,7 +122,12 @@ export default function SystemHealthDiagnostics({
         ))}
       {source === "capture" && <CaptureHealthCard />}
       {source === "intake" && <ExtensionIngestHealthCard />}
-      {source === "recovery" && <RecoveryHealthCard />}
+      {source === "recovery" && (
+        <>
+          <RecoveryHealthCard />
+          <VacuumHealthCard />
+        </>
+      )}
       {source === "automatic" && <AutomaticWorkHealthCard />}
       {source === "providers" && <ProviderHealthCard />}
       {source === "search" && <EmbedReindexCard />}
