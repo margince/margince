@@ -249,12 +249,14 @@ other task has recorded a single cached token yet. The number moves between 0%
 and 5%, by whether one of those four calls is inside the window. It
 does not show a change over time, and nothing we have changed moves it.
 
-"Caches we created: 0" is a separate fact with a separate reason: **the caching we
-would have to ask for, we did not ask for** in that window, and every task ran on
-Gemini. Gemini has a `cachedContents` API, and no code calls it. Anthropic has a
-marker per block, and its adapter sets one: it cuts the system prompt in front
-of the password, marks the rules before it, and marks the last tool. A prefix
-under 512 tokens, the smallest any model caches, goes unmarked
+"Caches we created: 0" is a separate fact with a separate reason. **The caching we
+would have to ask for, we did not ask for** in that window. Every task ran on
+Gemini. Gemini has a `cachedContents` API, and no code calls it.
+
+Anthropic has a
+marker per block, and its adapter sets one. It cuts the system prompt in front of
+the password, marks the rules before it, and marks the last tool. A prefix under
+512 tokens, the smallest any model caches, goes without a marker
 (`backend/internal/modules/ai/anthropiccache.go`).
 
 ### Where `agent_loop` puts the boundary

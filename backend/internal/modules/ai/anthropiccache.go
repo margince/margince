@@ -42,11 +42,11 @@ func anthropicSystem(system string) []anthropicSystemBlock {
 		stable, perCall = system[:start], system[start:]
 	}
 	if len(stable) < anthropicCacheMinBytes {
-		return []anthropicSystemBlock{{Type: "text", Text: system}}
+		return []anthropicSystemBlock{{Type: anthropicBlockText, Text: system}}
 	}
-	blocks := []anthropicSystemBlock{{Type: "text", Text: stable, CacheControl: anthropicCacheable}}
+	blocks := []anthropicSystemBlock{{Type: anthropicBlockText, Text: stable, CacheControl: anthropicCacheable}}
 	if perCall != "" {
-		blocks = append(blocks, anthropicSystemBlock{Type: "text", Text: perCall})
+		blocks = append(blocks, anthropicSystemBlock{Type: anthropicBlockText, Text: perCall})
 	}
 	return blocks
 }

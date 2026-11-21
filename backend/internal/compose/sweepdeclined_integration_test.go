@@ -18,13 +18,13 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -262,7 +262,7 @@ func TestTheRejudgeSweepAsksAnUnsureMessageOnce(t *testing.T) {
 	e := integration.Setup(t)
 	stale := seedWaitingMail(t, e, "Note "+unsureMarker)
 	store := activities.NewStore(InstallationDB(e.Pool))
-	if applied, err := store.SetOwedVerdict(owedSweepContext(e), stale, activities.OwedVerdictInformsUs, retiredPrompt, time.Now()); err != nil || !applied {
+	if applied, err := store.SetOwedVerdict(owedSweepContext(e), stale, activities.OwedVerdictInformsUs, retiredPrompt, clocktest.Now(t)); err != nil || !applied {
 		t.Fatalf("judging the message under the retired prompt: applied=%v err=%v", applied, err)
 	}
 	brain := &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: 0.95, doubtful: unsureMarker}
@@ -277,7 +277,7 @@ func TestTheRejudgeSweepAsksAnUnsureMessageOnce(t *testing.T) {
 	}
 }
 
-// A stamp answers for the text the model read. Once a person edits the
+// A stamp answers for the text the model read. Once a member edits the
 // subject, both sweeps ask about the message again.
 func TestAnEditedMessageIsAskedAgainAfterAnUnsureAnswer(t *testing.T) {
 	e := integration.Setup(t)
