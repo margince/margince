@@ -38994,13 +38994,19 @@ type BackfillStatus struct {
 	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
 
 	// Resumable The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.
-	Resumable *bool               `json:"resumable,omitempty"`
-	StartedAt *time.Time          `json:"started_at,omitempty"`
-	State     BackfillStatusState `json:"state"`
+	Resumable *bool `json:"resumable,omitempty"`
+
+	// RetryAttempts Pages in a row that failed and will be tried again; 0 once a page succeeds. The committed counts are kept across a retry, and only the unfinished page is read again.
+	RetryAttempts *int                `json:"retry_attempts,omitempty"`
+	StartedAt     *time.Time          `json:"started_at,omitempty"`
+	State         BackfillStatusState `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
 	Window    *BackfillStatusWindow `json:"window,omitempty"`
+
+	// WindowRestarts How many times the scan began again from the newest message because the provider no longer accepted its place. `counts.messages_scanned`, `captured` and `skipped` start again from zero each time; the contacts and companies already created stay counted. A client says so rather than showing the lower count as lost work.
+	WindowRestarts *int `json:"window_restarts,omitempty"`
 }
 
 // BackfillStatusOfferedWindows defines model for BackfillStatus.OfferedWindows.
@@ -58970,7 +58976,7 @@ type MorningDigest struct {
 			Other *int `json:"other,omitempty"`
 		} `json:"classify,omitempty"`
 
-		// DedupeOpen Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
+		// DedupeOpen Every open duplicate review item on the reader's own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
 		DedupeOpen *int `json:"dedupe_open,omitempty"`
 	} `json:"review"`
 }
@@ -63632,7 +63638,7 @@ type ReportResult struct {
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 	Report             string              `json:"report"`
 
-	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
+	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
@@ -80135,6 +80141,9 @@ type GetDealStatusParams struct {
 type ListDedupeCandidatesParams struct {
 	Status     *ListDedupeCandidatesParamsStatus     `form:"status,omitempty" json:"status,omitempty"`
 	EntityType *ListDedupeCandidatesParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
+
+	// RecordId Only the pairs naming this record on either end. Needs `entity_type`, the record's type; without it the answer is 422.
+	RecordId *openapi_types.UUID `form:"record_id,omitempty" json:"record_id,omitempty"`
 
 	// Cursor Opaque keyset cursor.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
@@ -135565,6 +135574,19 @@ func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
 		}
 		return
 	}

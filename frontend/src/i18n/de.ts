@@ -3164,14 +3164,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "board.count_other": "Deals: {count}",
   "board.weightedLabel": "gewichtet",
   "board.ratesOn": "Wechselkurse vom {date}",
-  "board.unpriced_one": "{count} ohne Preis",
-  "board.unpriced_other": "{count} ohne Preis",
+  "coverage.noRate_one": "{count} Deal hat keinen Wechselkurs{currencies}",
+  "coverage.noRate_other": "{count} Deals haben keinen Wechselkurs{currencies}",
+  "coverage.noValue_one": "{count} Deal hat keinen Wert",
+  "coverage.noValue_other": "{count} Deals haben keinen Wert",
+  "coverage.partial": "Teilsumme",
+  "coverage.partialTip": "Teilsumme: Diese Deals sind nicht enthalten.",
   "board.totalsTip":
     "{total} offen, {weighted} gewichtet mit der Abschlusschance jedes Deals.",
-  "board.unpricedTip_one":
-    "{count} Deal hat keinen Preis und zählt in keiner der beiden Summen.",
-  "board.unpricedTip_other":
-    "{count} Deals haben keinen Preis und zählen in keiner der beiden Summen.",
   "board.convertedTip": "Umgerechnet mit Wechselkursen vom {date}.",
   "board.matchesIn_one": "{count} Treffer in {columns}",
   "board.matchesIn_other": "{count} Treffer in {columns}",
@@ -5543,6 +5543,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.domainContacts.changed":
     "Die Liste hat sich geändert, während sie offen war. Prüfe die Auswahl und verknüpfe erneut.",
   "co.domainContacts.dismiss": "Nicht jetzt",
+  "company.duplicates.entry_one": "Mögliches Duplikat ({count})",
+  "company.duplicates.entry_other": "Mögliche Duplikate ({count})",
+  "company.duplicates.title": "Mögliche Duplikate",
+  "company.duplicates.lead":
+    "Diese Unternehmen ähneln diesem. Öffne eines, um sie zu vergleichen.",
+  "company.duplicates.created":
+    "Ein Unternehmen mit diesem Namen gibt es schon.",
   "co.domainContacts.link_one": "{count} Kontakt verknüpfen",
   "co.domainContacts.link_other": "{count} Kontakte verknüpfen",
   "co.domainContacts.linkNone": "Kontakte verknüpfen",
@@ -8878,7 +8885,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.count": "Offene Deals",
   "analytics.unweighted": "Deal-Wert",
   "analytics.weighted": "Wahrscheinlichkeitsbereinigter Wert",
-  "analytics.priced": "{priced} von {total} bepreist",
   "analytics.planNote":
     "Der ausgeführte Plan und die Zeilen, mit denen diese Zahl abgeglichen wird",
   "analytics.reportDeals": "Offene Deals nach Phase",
@@ -9450,7 +9456,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.forecastDeals_other": "{count} Deals",
   "analytics.forecastNoAmount": "Kein Betrag",
   "analytics.forecastWeighted": "{amount} gewichtet",
-  "analytics.forecastPriced": "{priced} von {count} bepreist",
   "analytics.readingNone": "Keine",
   "analytics.readingLoading": "Wird geladen",
   "analytics.readingUnavailable": "Nicht verfügbar",
@@ -12723,6 +12728,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "backfill.narrowingNote":
     "Für dieses Postfach wurde bereits ein längerer Zeitraum importiert. Wähle denselben oder einen längeren Zeitraum.",
   "backfill.staleUpdated": "Seit {duration} kein Fortschritt.",
+  "backfill.restartedNote":
+    "Der Import hat von vorn begonnen, weil das Postfach seine Position verloren hat. Die Zählung der E-Mails beginnt neu; gefundene Kontakte bleiben erhalten.",
+  "backfill.retryNote":
+    "Beim Import ist ein Verbindungsproblem aufgetreten. Er versucht es erneut. Die letzte Seite wird neu gelesen, ihre E-Mails werden erneut gezählt.",
   "backfill.countScanned_one": "{count} E-Mail geprüft",
   "backfill.countScanned_other": "{count} E-Mails geprüft",
   "backfill.errorResumeNote":

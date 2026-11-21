@@ -13,6 +13,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -46,6 +47,14 @@ type stubDuplicates struct {
 	pairs []DuplicatePair
 	open  int
 	err   error
+	// ownerless says the pairs have no owner on either end, so a page for an
+	// owner set that names owners has none of them.
+	ownerless bool
+	// byOwner narrows the pairs to the ones a read's owner set decides, as the
+	// store does.
+	byOwner bool
+	// owners records the owner set each read was narrowed to.
+	owners *[]*storekit.OwnerSet
 	// unreadable is a record this caller may not name. The pair still comes
 	// back from the queue, which is the case that matters: a visible pair
 	// pointing at a record the reader cannot see.
@@ -67,11 +76,45 @@ type stubDuplicates struct {
 	decideErr error
 }
 
-func (s stubDuplicates) OpenCandidates(context.Context, int) ([]DuplicatePair, error) {
-	return s.pairs, s.err
+// holds says whether the pairs belong on a page narrowed to these owners.
+func (s stubDuplicates) holds(owners *storekit.OwnerSet) bool {
+	if s.owners != nil {
+		*s.owners = append(*s.owners, owners)
+	}
+	return !s.ownerless || owners == nil || owners.Unassigned
 }
 
-func (s stubDuplicates) CountOpen(context.Context) (int, error) { return s.open, s.err }
+// within is the pairs a read narrowed to these owners returns.
+func (s stubDuplicates) within(owners *storekit.OwnerSet) []DuplicatePair {
+	if !s.byOwner || owners == nil {
+		return s.pairs
+	}
+	var kept []DuplicatePair
+	for _, pair := range s.pairs {
+		mine := slices.ContainsFunc(pair.Owners, func(o ids.UUID) bool { return slices.Contains(owners.IDs, o) })
+		if mine || (owners.Unassigned && len(pair.Owners) == 0) {
+			kept = append(kept, pair)
+		}
+	}
+	return kept
+}
+
+func (s stubDuplicates) OpenCandidates(_ context.Context, _ int, owners *storekit.OwnerSet) ([]DuplicatePair, error) {
+	if !s.holds(owners) {
+		return nil, nil
+	}
+	return s.within(owners), s.err
+}
+
+func (s stubDuplicates) CountOpen(_ context.Context, owners *storekit.OwnerSet) (int, error) {
+	if !s.holds(owners) {
+		return 0, nil
+	}
+	if s.byOwner {
+		return len(s.within(owners)), s.err
+	}
+	return s.open, s.err
+}
 
 func (s stubDuplicates) DescribeMany(
 	_ context.Context, entityType string, rowIDs []ids.UUID,

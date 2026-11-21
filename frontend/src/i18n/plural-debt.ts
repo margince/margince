@@ -23,7 +23,6 @@
 const STANDALONE: readonly string[] = [
   "aiSettings.providers.missing",
   "aiSettings.providers.value",
-  "analytics.forecastPriced",
   "brief.weekly.scorecard.regressionsDetail",
   "brief.weekly.scorecard.respondedNoCohort",
   "brief.weekly.scorecard.unanswered",

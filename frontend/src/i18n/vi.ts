@@ -3066,14 +3066,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "board.count_other": "{count} deal",
   "board.weightedLabel": "có trọng số",
   "board.ratesOn": "Tỷ giá {date}",
-  "board.unpriced_one": "{count} chưa định giá",
-  "board.unpriced_other": "{count} chưa định giá",
+  "coverage.noRate_one": "{count} deal chưa có tỷ giá{currencies}",
+  "coverage.noRate_other": "{count} deal chưa có tỷ giá{currencies}",
+  "coverage.noValue_one": "{count} deal chưa có giá trị",
+  "coverage.noValue_other": "{count} deal chưa có giá trị",
+  "coverage.partial": "Một phần",
+  "coverage.partialTip": "Tổng một phần: không gồm các deal này.",
   "board.totalsTip":
     "{total} đang mở, {weighted} có trọng số theo xác suất của từng deal.",
-  "board.unpricedTip_one":
-    "{count} deal chưa có giá và không được tính vào hai tổng.",
-  "board.unpricedTip_other":
-    "{count} deal chưa có giá và không được tính vào hai tổng.",
   "board.convertedTip": "Đã quy đổi theo tỷ giá ngày {date}.",
   "board.matchesIn_one": "{count} kết quả ở cột {columns}",
   "board.matchesIn_other": "{count} kết quả ở cột {columns}",
@@ -5392,6 +5392,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.domainContacts.changed":
     "Danh sách đã thay đổi khi đang mở. Kiểm tra lại lựa chọn rồi gắn lại.",
   "co.domainContacts.dismiss": "Để sau",
+  "company.duplicates.entry_one": "Có thể trùng ({count})",
+  "company.duplicates.entry_other": "Có thể trùng ({count})",
+  "company.duplicates.title": "Công ty có thể trùng",
+  "company.duplicates.lead":
+    "Các công ty này giống công ty này. Mở một công ty để so sánh.",
+  "company.duplicates.created": "Đã có một công ty trùng tên này.",
   "co.domainContacts.link_one": "Gắn {count} liên hệ",
   "co.domainContacts.link_other": "Gắn {count} liên hệ",
   "co.domainContacts.linkNone": "Gắn liên hệ",
@@ -8648,7 +8654,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.count": "Deal đang mở",
   "analytics.unweighted": "Giá trị deal",
   "analytics.weighted": "Giá trị điều chỉnh theo xác suất",
-  "analytics.priced": "{priced}/{total} có giá",
   "analytics.planNote":
     "Kế hoạch đã chạy và các dòng dùng để đối chiếu con số này",
   "analytics.reportDeals": "Deal đang mở theo giai đoạn",
@@ -9198,7 +9203,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.forecastDeals_other": "{count} deal",
   "analytics.forecastNoAmount": "Không có số tiền",
   "analytics.forecastWeighted": "{amount} có trọng số",
-  "analytics.forecastPriced": "{priced}/{count} có giá",
   "analytics.readingNone": "Không có",
   "analytics.readingLoading": "Đang tải",
   "analytics.readingUnavailable": "Không khả dụng",
@@ -12388,6 +12392,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "backfill.narrowingNote":
     "Hộp thư này đã lấy thư từ một mốc xa hơn. Chọn khoảng thời gian bằng hoặc dài hơn.",
   "backfill.staleUpdated": "Không có tiến triển trong {duration}.",
+  "backfill.restartedNote":
+    "Đợt nhập đã bắt đầu lại vì hộp thư mất vị trí đang đọc. Số email được đếm lại từ đầu; các liên hệ đã tìm thấy vẫn được giữ.",
+  "backfill.retryNote":
+    "Đợt nhập gặp sự cố kết nối và đang thử lại. Trang cuối được đọc lại nên email của trang đó được đếm lại.",
   "backfill.countScanned_one": "Đã kiểm tra {count} email",
   "backfill.countScanned_other": "Đã kiểm tra {count} email",
   "backfill.errorResumeNote":

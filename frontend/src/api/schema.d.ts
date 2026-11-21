@@ -31668,6 +31668,10 @@ export interface components {
             };
             /** @description The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again. */
             resumable?: boolean;
+            /** @description How many times the scan began again from the newest message because the provider no longer accepted its place. `counts.messages_scanned`, `captured` and `skipped` start again from zero each time; the contacts and companies already created stay counted. A client says so rather than showing the lower count as lost work. */
+            window_restarts?: number;
+            /** @description Pages in a row that failed and will be tried again; 0 once a page succeeds. The committed counts are kept across a retry, and only the unfinished page is read again. */
+            retry_attempts?: number;
             /** Format: date-time */
             started_at?: string | null;
             /** Format: date-time */
@@ -31751,7 +31755,7 @@ export interface components {
                 companies_created?: number;
             };
             review: {
-                /** @description Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own. */
+                /** @description Every open duplicate review item on the reader's own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own. */
                 dedupe_open?: number;
                 /** @description Pending 🟡 items (enrich, quarantine, merge). */
                 approvals_pending?: number;
@@ -53255,7 +53259,7 @@ export interface components {
                 [key: string]: unknown;
             };
             columns: string[];
-            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). */
+            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -53268,6 +53272,19 @@ export interface components {
             generated_at?: string;
             /** @description Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell. */
             derivation_url?: string | null;
+        };
+        /** @description What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one. */
+        ReportRowCoverage: {
+            /** @description The aliases of the row's partial sums, which this coverage qualifies. */
+            aggregates: string[];
+            /** @description True when at least one deal is left out of those sums. */
+            partial: boolean;
+            /** @description Deals in the group with no amount. */
+            no_value_deals: number;
+            /** @description Deals in the group with an amount whose currency has no exchange rate as of the answer's date. */
+            no_rate_deals: number;
+            /** @description The currencies with no exchange rate, from the same statement as the sums. */
+            missing_currencies: string[];
         };
         /**
          * @description The "Explain This Number" resolution (features/03 §1.3): a plain-language definition of
@@ -91453,6 +91470,8 @@ export interface operations {
             query?: {
                 status?: "open" | "merged" | "not_a_duplicate";
                 entity_type?: "contact" | "company" | "lead";
+                /** @description Only the pairs naming this record on either end. Needs `entity_type`, the record's type; without it the answer is 422. */
+                record_id?: string;
                 /** @description Opaque keyset cursor. */
                 cursor?: string;
                 limit?: number;

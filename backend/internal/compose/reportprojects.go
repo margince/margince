@@ -7,6 +7,7 @@ package compose
 // the bodies of work in flight. They share a vocabulary of their own.
 
 import (
+	"cmp"
 	"fmt"
 	"maps"
 
@@ -237,7 +238,7 @@ func projectsGoneQuietSpec() reportSpec {
 //
 // A group holding an unpriced amount has no answer, whatever the function, so a
 // function added to the vocabulary later is held to it too. A sum over an empty
-// group reads zero. Every other function folds the rows as each row reads, and
+// group reads zero, and a partialSums spec sums what converts. Every other function folds the rows as each row reads, and
 // a project with no deals reads zero because its measure does.
 func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, expression string) string {
 	rendered := aggregateOver(aggregate.Fn, expression)
@@ -245,7 +246,21 @@ func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, express
 	if !ok {
 		return rendered
 	}
+	if spec.partialSums && aggregate.Fn == aggFnSum {
+		return moneytotal.PartialSumSQL(rendered)
+	}
 	return moneytotal.CompleteAggregateSQL(rendered, "sum("+coverage+")", aggregate.Fn == aggFnSum)
+}
+
+// partialSumAliases names the sums of this plan that add only the deals that
+// convert, which the row's coverage then qualifies.
+func partialSumAliases(spec reportSpec, aggregates []reportAggregate) (names []string) {
+	for _, agg := range aggregates {
+		if _, covered := spec.sumCoverage[agg.Field]; covered && spec.partialSums && agg.Fn == aggFnSum {
+			names = append(names, cmp.Or(agg.As, agg.Fn))
+		}
+	}
+	return names
 }
 
 // aggregateOver is one function over an expression. A percentile is rendered by

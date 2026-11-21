@@ -196,6 +196,13 @@ export const CloseMonths: Story = {
           raw_minor: 743218965,
           deal_count: 1,
           priced_count: 1,
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: false,
+            no_value_deals: 0,
+            no_rate_deals: 0,
+            missing_currencies: [],
+          },
         },
       ]}
       locale="en"
@@ -250,6 +257,7 @@ export const MovementStarting: Story = {
 export const StageValues: Story = {
   render: () => (
     <StageTable
+      dealDials={{}}
       rows={[
         {
           stage_id: "proposal",
@@ -257,6 +265,13 @@ export const StageValues: Story = {
           weighted_minor: 445931379,
           deal_count: 1,
           priced_count: 1,
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: false,
+            no_value_deals: 0,
+            no_rate_deals: 0,
+            missing_currencies: [],
+          },
         },
       ]}
       stages={[

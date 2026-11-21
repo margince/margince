@@ -3067,14 +3067,14 @@ export const en = {
   "board.count_other": "{count} deals",
   "board.weightedLabel": "weighted",
   "board.ratesOn": "Exchange rates {date}",
-  "board.unpriced_one": "{count} not priced",
-  "board.unpriced_other": "{count} not priced",
+  "coverage.noRate_one": "{count} deal has no exchange rate{currencies}",
+  "coverage.noRate_other": "{count} deals have no exchange rate{currencies}",
+  "coverage.noValue_one": "{count} deal has no value",
+  "coverage.noValue_other": "{count} deals have no value",
+  "coverage.partial": "Partial",
+  "coverage.partialTip": "Partial total: it leaves out these deals.",
   "board.totalsTip":
     "{total} open, {weighted} weighted by each deal’s probability.",
-  "board.unpricedTip_one":
-    "{count} deal has no price and is left out of both totals.",
-  "board.unpricedTip_other":
-    "{count} deals have no price and are left out of both totals.",
   "board.convertedTip": "Converted at exchange rates as of {date}.",
   "board.matchesIn_one": "{count} result in {columns}",
   "board.matchesIn_other": "{count} results in {columns}",
@@ -5478,6 +5478,12 @@ export const en = {
   "co.domainContacts.changed":
     "The list changed while it was open. Check the ticks and link again.",
   "co.domainContacts.dismiss": "Not now",
+  "company.duplicates.entry_one": "Possible duplicate ({count})",
+  "company.duplicates.entry_other": "Possible duplicates ({count})",
+  "company.duplicates.title": "Possible duplicates",
+  "company.duplicates.lead":
+    "These companies look like this one. Open one to compare.",
+  "company.duplicates.created": "A company with this name already exists.",
   "co.domainContacts.link_one": "Link {count} contact",
   "co.domainContacts.link_other": "Link {count} contacts",
   "co.domainContacts.linkNone": "Link contacts",
@@ -8857,7 +8863,6 @@ export const en = {
   "analytics.count": "Open deals",
   "analytics.unweighted": "Deal value",
   "analytics.weighted": "Probability-adjusted value",
-  "analytics.priced": "{priced} of {total} priced",
   "analytics.planNote":
     "The executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Open deals by stage",
@@ -9403,7 +9408,6 @@ export const en = {
   "analytics.forecastDeals_other": "{count} deals",
   "analytics.forecastNoAmount": "No amount",
   "analytics.forecastWeighted": "{amount} weighted",
-  "analytics.forecastPriced": "{priced} of {count} priced",
   "analytics.readingNone": "None",
   "analytics.readingLoading": "Loading",
   "analytics.readingUnavailable": "Unavailable",
@@ -12654,6 +12658,10 @@ export const en = {
   "backfill.narrowingNote":
     "This mailbox already went back further. Pick the same time or longer.",
   "backfill.staleUpdated": "No progress for {duration}.",
+  "backfill.restartedNote":
+    "The import started over because the mailbox lost its place. The email count begins again; contacts already found stay.",
+  "backfill.retryNote":
+    "The import hit a connection problem and is trying again. The last page is read again, so its emails are counted again.",
   "backfill.countScanned_one": "{count} email checked",
   "backfill.countScanned_other": "{count} emails checked",
   "backfill.errorResumeNote":
