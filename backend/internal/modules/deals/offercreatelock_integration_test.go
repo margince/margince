@@ -6,6 +6,7 @@
 package deals
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -23,6 +24,9 @@ func TestTwoOfferCreatesOnOneDealBothLand(t *testing.T) {
 
 	admitted := make(chan struct{})
 	release := make(chan struct{})
+	// A check that stops the test early still lets the first create finish.
+	letGo := sync.OnceFunc(func() { close(release) })
+	t.Cleanup(letGo)
 	first := make(chan error, 1)
 	go func() {
 		first <- store.Tx(ctx, func(tx pgx.Tx) error {
@@ -54,7 +58,7 @@ func TestTwoOfferCreatesOnOneDealBothLand(t *testing.T) {
 		})
 	}()
 	waitForALockWaiter(t, e.configEnv)
-	close(release)
+	letGo()
 
 	if err := <-first; err != nil {
 		t.Errorf("the first create: %v", err)
