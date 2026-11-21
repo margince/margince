@@ -16,7 +16,7 @@ import {
   translatePlural,
 } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import { deal, stages } from "../deals.testkit";
+import { deal, offer, stages } from "../deals.testkit";
 import { DealFigures, timelineEvents } from "./dealfigures";
 import type { DealStandingInputs } from "./dealstanding";
 
@@ -90,6 +90,34 @@ function arrival(stageId: string, at: string) {
     actor_id: "u1",
   };
 }
+
+describe("the offer under the deal's value", () => {
+  it("names the accepted offer the value came from", () => {
+    show({
+      offers: [
+        offer({
+          id: "draft",
+          offer_number: "A-1002",
+          created_at: "2026-06-05T00:00:00Z",
+        }),
+        offer({
+          id: "won",
+          offer_number: "A-1001",
+          status: "accepted",
+          accepted_at: "2026-06-03T00:00:00Z",
+        }),
+      ],
+    });
+    expect(screen.getByText("Offer A-1001 · version 1")).toBeInTheDocument();
+  });
+
+  it("says when the offer it names is still in progress", () => {
+    show({ offers: [offer({ offer_number: "A-1028" })] });
+    expect(
+      screen.getByText("Offer A-1028 · version 1 · Draft"),
+    ).toBeInTheDocument();
+  });
+});
 
 describe("Days in stage", () => {
   it("counts the days since the deal arrived in its stage, and names the stage", async () => {

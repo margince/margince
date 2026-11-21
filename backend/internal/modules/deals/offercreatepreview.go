@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -136,6 +137,11 @@ func (s *Store) PreviewOfferCreation(ctx context.Context, dealID ids.DealID, in 
 
 func admitOfferCreation(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput) (CreateOfferInput, error) {
 	if err := checkCurrency(in.Currency); err != nil {
+		return CreateOfferInput{}, err
+	}
+	// The write lock comes before the link probe's shared one. Two creates
+	// that each held the shared lock would deadlock on admitOfferLines' lock.
+	if _, err := storekit.LockRow(ctx, tx, dealTable, dealID.UUID, storekit.LiveOnly); err != nil {
 		return CreateOfferInput{}, err
 	}
 	if err := auth.EnsureLinkTarget(ctx, tx, dealTable, dealID.UUID); err != nil {

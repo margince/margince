@@ -231,6 +231,8 @@ var retired = gatekit.Waive(map[string]string{
 		"licence grants rights to any person, a legal term that ships verbatim with the data",
 	"backend/internal/platform/cldrzone/data/LICENSE-cldr.txt": "the same Unicode licence, " +
 		"shipped beside the zone list this package reads",
+	"backend/internal/modules/deals/fonts/LICENSE": "the SIL Open Font License of the embedded " +
+		"offer PDF faces names any person who contributed, a legal term that ships verbatim with the fonts",
 	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
 		"docscodeofconduct_test.go; its people are human beings, never this record",
 	"LICENSING.md": "counsel's explanation of the CLA, kept verbatim beside it",

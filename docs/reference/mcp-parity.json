@@ -11,8 +11,8 @@
       "covered": 41,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 941,
-      "web_app_calls_open": 767,
+      "web_app_calls": 943,
+      "web_app_calls_open": 769,
       "web_app_calls_ask_first": 108,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 146,
@@ -20,9 +20,9 @@
       "parity_signed_in_percent": 81,
       "parity_web_app_percent": 81.5
     },
-    "open_with_no_web_app_call_found": 106,
-    "parity_web_app_counting_covered_percent": 84.3,
-    "parity_web_app_once_pending_is_open_percent": 84.3
+    "open_with_no_web_app_call_found": 104,
+    "parity_web_app_counting_covered_percent": 84.4,
+    "parity_web_app_once_pending_is_open_percent": 84.4
   },
   "web_app_scan": {
     "computed_calls_no_path_was_found_for": []
@@ -41,8 +41,8 @@
       "covered": 28,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 513,
-      "web_app_calls_open": 466,
+      "web_app_calls": 514,
+      "web_app_calls_open": 467,
       "web_app_calls_ask_first": 37,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 28,
@@ -261,8 +261,8 @@
           "covered": 0,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 14,
-          "web_app_calls_open": 14,
+          "web_app_calls": 15,
+          "web_app_calls_open": 15,
           "web_app_calls_ask_first": 2,
           "web_app_calls_pending": 0,
           "web_app_calls_security": 0,
@@ -853,14 +853,14 @@
       "covered": 8,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 74,
-      "web_app_calls_open": 61,
+      "web_app_calls": 75,
+      "web_app_calls_open": 62,
       "web_app_calls_ask_first": 5,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 10,
       "web_app_calls_covered": 3,
       "parity_signed_in_percent": 77.5,
-      "parity_web_app_percent": 82.4,
+      "parity_web_app_percent": 82.6,
       "areas": [
         {
           "key": "pipelines",
@@ -973,14 +973,14 @@
           "covered": 0,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 10,
-          "web_app_calls_open": 9,
+          "web_app_calls": 11,
+          "web_app_calls_open": 10,
           "web_app_calls_ask_first": 0,
           "web_app_calls_pending": 0,
           "web_app_calls_security": 1,
           "web_app_calls_covered": 0,
           "parity_signed_in_percent": 90.9,
-          "parity_web_app_percent": 90
+          "parity_web_app_percent": 90.9
         },
         {
           "key": "rates",
@@ -14477,6 +14477,7 @@
       "tier": "auto_execute",
       "scope": "read",
       "verb": "read_record",
+      "web_app": "direct",
       "rep_passes": true,
       "decided_by": "grant_checks"
     },
@@ -14509,7 +14510,8 @@
       "state": "open",
       "tier": "auto_execute",
       "scope": "write",
-      "verb": "archive_record"
+      "verb": "archive_record",
+      "web_app": "direct"
     },
     {
       "method": "GET",

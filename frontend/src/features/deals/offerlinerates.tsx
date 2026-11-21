@@ -48,9 +48,11 @@ export function NewLineRates<T extends LineRates>({
   onChange,
   refused = {},
   onEdited,
+  testIdPrefix = "new-line",
 }: Readonly<{
   value: T;
   onChange: (update: (prev: T) => T) => void;
+  testIdPrefix?: string;
   // What the server refused on each rate, until that rate is edited.
   refused?: Readonly<Partial<Record<keyof LineRates, string>>>;
   onEdited?: (field: keyof LineRates) => void;
@@ -68,7 +70,7 @@ export function NewLineRates<T extends LineRates>({
         {(control) => (
           <input
             {...control}
-            data-testid="new-line-discount"
+            data-testid={`${testIdPrefix}-discount`}
             inputMode="decimal"
             className="input offers-line-rate"
             value={value.discount_pct}
@@ -87,7 +89,7 @@ export function NewLineRates<T extends LineRates>({
         {(control) => (
           <input
             {...control}
-            data-testid="new-line-tax"
+            data-testid={`${testIdPrefix}-tax`}
             inputMode="decimal"
             className="input offers-line-rate"
             value={value.tax_rate}

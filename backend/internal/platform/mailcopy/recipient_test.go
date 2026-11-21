@@ -28,6 +28,21 @@ func TestMoneyFormattingPreservesExactCurrencyUnits(t *testing.T) {
 	}
 }
 
+func TestNumberUsesTheLanguagesSeparators(t *testing.T) {
+	for _, tc := range []struct{ language, plain, want string }{
+		{"de", "0", "0"},
+		{"de", "999", "999"},
+		{"de", "1000", "1.000"},
+		{"de", "-1234567.891", "-1.234.567,891"},
+		{"vi", "12.5", "12,5"},
+		{"en", "-1234567.891", "-1,234,567.891"},
+	} {
+		if got := For(tc.language).Number(tc.plain); got != tc.want {
+			t.Errorf("%s %q: %q, want %q", tc.language, tc.plain, got, tc.want)
+		}
+	}
+}
+
 func TestDeadlineRetainsTheActualLocalTimeAndOffset(t *testing.T) {
 	zone, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
