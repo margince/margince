@@ -299,8 +299,10 @@ every case in parts, side by side. Started on `main`, it opens a pull request wi
 does so only when every case has a new one from a stack whose search ranks by meaning. The
 `RECORDS_OWNER` repository variable names who owns that pull request.
 
-Started on any other branch, it opens none. Download the `e2e-llm-verdicts` artifact of the run, and commit those verdicts to the
-pull request of that branch.
+Started on any other branch, it opens none. The run still uploads the `e2e-llm-verdicts` artifact
+under the same rule: every case has a new verdict, by meaning. Download it and commit those
+verdicts to the pull request of that branch. A run that was cut off, that failed, or whose search did
+not rank by meaning uploads no artifact.
 
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a run to try something.
