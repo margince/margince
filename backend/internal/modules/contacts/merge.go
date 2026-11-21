@@ -236,6 +236,8 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 
 // settleContactMerge applies the survivorship patch, retires the merged-away
 // contact and audits the merge.
+//
+//gate:parent-version-door
 func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock, p *storekit.Patch,
 	sourceID, targetID ids.ContactID, counts relinkCounts, won []string,
 ) error {

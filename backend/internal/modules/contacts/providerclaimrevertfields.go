@@ -187,9 +187,5 @@ func archiveEmploymentEdge(ctx context.Context, tx pgx.Tx, f appliedField) (bool
 //
 // The caller already holds this row FOR UPDATE, so no second lock is taken.
 func touchRevertedContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
-	if _, err := tx.Exec(ctx,
-		`UPDATE contact SET updated_at = now() WHERE id = $1`, contactID); err != nil {
-		return fmt.Errorf("contacts: bumping the contact a revert changed: %w", err)
-	}
-	return nil
+	return touchChildSetParent(ctx, tx, contactEntity, contactID)
 }
