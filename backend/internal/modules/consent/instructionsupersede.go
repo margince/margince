@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -25,10 +26,14 @@ func SupersedeStaleDecisionTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID)
 	if err != nil || inst.ID.IsZero() {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 		UPDATE communication_instruction SET status = 'expired'
-		 WHERE id = $1 AND status = 'directed'`, inst.ID); err != nil {
+		 WHERE id = $1 AND status = 'directed'`, inst.ID)
+	if err != nil {
 		return fmt.Errorf("consent: expiring the approval that no longer fits its message: %w", err)
+	}
+	if tag.RowsAffected() != 1 {
+		return fmt.Errorf("consent: the approval was no longer live to expire: %w", apperrors.ErrConflict)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", "communication_instruction", inst.ID,
 		map[string]any{fieldStatus: InstructionDirected},
