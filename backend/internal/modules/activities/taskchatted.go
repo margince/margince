@@ -11,7 +11,9 @@ package activities
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,10 +26,11 @@ import (
 
 // The evidence keys a chat's change carries. A completion reuses
 // taskAnsweredBy, so the reopen guard and the receipt read it as they read a
-// mail's. A new date has its own key, because the task stays open.
+// mail's. A new date has its own key, because the task stays open. The line
+// is an index into the chat, so the audit row holds none of its words.
 const (
-	taskMovedBy     = "task_moved_by"
-	taskAnswerQuote = "task_answer_quote"
+	taskMovedBy    = "task_moved_by"
+	taskAnswerLine = "task_answer_line"
 )
 
 // ChatTaskReaderActor is the principal a chat's change to a task is written
@@ -37,6 +40,20 @@ const ChatTaskReaderActor = "system:chat-task-reader"
 // MaxChatTasks bounds how many open tasks one chat is read against.
 const MaxChatTasks = 10
 
+// MinChatQuoteRunes is the shortest chat line a change may rest on. A line
+// as short as "ok" or "yes" says nothing about which task it answers.
+const MinChatQuoteRunes = 8
+
+// ChatLines are the chat's lines, trimmed, in order. A change names one of
+// them by its index, and the receipt reads it back by the same index.
+func ChatLines(body string) []string {
+	lines := strings.Split(body, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimSpace(line)
+	}
+	return lines
+}
+
 // ChatTask is one open task a filed chat may change.
 type ChatTask struct {
 	ID      ids.UUID
@@ -44,76 +61,93 @@ type ChatTask struct {
 	DueAt   *time.Time
 }
 
+// ChatReading is what one filed chat is read with: the chat's stored text,
+// the open tasks it may change, and today in the record zone.
+type ChatReading struct {
+	Body  string
+	Tasks []ChatTask
+	Today time.Time
+}
+
 // ChatTaskChange is what the reading decided for one task: done, or a new due
-// day. Quote is the chat's own sentence the change rests on.
+// day. Line is the index of the chat line the change rests on.
 type ChatTaskChange struct {
 	Chat, Task ids.UUID
 	Done       bool
 	DueOn      *time.Time
-	Quote      string
+	Line       int
 }
 
-// chatTasksSQL selects the open tasks a filed chat answers for. They are the
-// caller's own, made before the chat, on a record the chat is filed on.
-// Margince's own tasks keep their own resolution. A task a user reopened
-// after an automatic answer, or one this chat already changed, stays as it is.
+// chatTasksSQL selects the open tasks a filed chat answers for: the caller's
+// own, on a record the chat is filed on. A chat is read once, when it is first
+// filed, so it never changes a task a second time.
 func chatTasksSQL(args *schedulingArgs, chat ids.UUID, holder ids.UUID) string {
-	chatPos, chatText := args.add(chat), args.add(chat.String())
+	chatPos := args.add(chat)
+	onRecord := `EXISTS (SELECT 1 FROM activity_link c WHERE c.activity_id=chat.id
+   AND (t.contact_id=c.contact_id OR t.lead_id=c.lead_id OR t.deal_id=c.deal_id))`
 	return `SELECT task.id FROM activity task JOIN activity chat ON chat.id=` + chatPos + `
  WHERE chat.kind='message' AND chat.source_system=` + args.add(ChatCaptureSourceSystem) + ` AND chat.archived_at IS NULL
- AND task.kind='task' AND NOT task.is_done AND task.archived_at IS NULL AND task.created_at < chat.created_at
- AND task.assignee_id=` + args.add(holder) + `
- AND NOT (task.source=` + args.add(systemSource) + ` AND ` + systemCapturedSQL("task", args.add(systemCapturedBy), args.add(systemCapturedByPattern)) + `)
- AND EXISTS (SELECT 1 FROM activity_link t JOIN activity_link c ON c.activity_id=chat.id
-   WHERE t.activity_id=task.id AND (t.contact_id=c.contact_id OR t.lead_id=c.lead_id OR t.deal_id=c.deal_id))
- AND NOT ` + reopenedAfterAnswerSQL("task") + `
- AND NOT EXISTS (SELECT 1 FROM audit_log seen WHERE seen.entity_type='activity' AND seen.entity_id=task.id
-   AND (seen.evidence->>'` + taskAnsweredBy + `'=` + chatText + ` OR seen.evidence->>'` + taskMovedBy + `'=` + chatText + `))`
+ AND ` + answerableTaskSQL(args, "chat", args.add(holder), onRecord)
 }
 
-// ChatTasks returns the open tasks a filed chat may change, soonest due
-// first, among those the caller may write, and today in the record zone.
-func (s *Store) ChatTasks(ctx context.Context, chat ids.UUID) ([]ChatTask, time.Time, error) {
+// ChatTasks returns the chat's stored text and the open tasks it may change,
+// soonest due first, among those the caller may write.
+func (s *Store) ChatTasks(ctx context.Context, chat ids.UUID) (ChatReading, error) {
 	holder, err := chatTaskHolder(ctx)
 	if err != nil {
-		return nil, time.Time{}, err
+		return ChatReading{}, err
 	}
-	var out []ChatTask
-	var today time.Time
+	var out ChatReading
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		zone, err := s.zoneOf(ctx, tx)
 		if err != nil {
 			return err
 		}
-		today = s.now().In(zone)
-		args := schedulingArgs{}
-		content, err := auth.ActivityContentClause(ctx, "task", func(v any) int { args = append(args, v); return len(args) })
-		if err != nil {
+		out.Today = s.now().In(zone)
+		if out.Body, err = chatBody(ctx, tx, chat); err != nil || strings.TrimSpace(out.Body) == "" {
 			return err
 		}
-		due := storekit.TaskDueSQL("task")
-		query := `SELECT task.id, coalesce(task.subject,''), ` + due + ` FROM activity task WHERE task.id IN (` +
-			chatTasksSQL(&args, chat, holder) + `) AND (` + content + `) ORDER BY ` + due + ` NULLS LAST, task.id LIMIT ` + args.add(MaxChatTasks)
-		rows, err := tx.Query(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-		found, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (ChatTask, error) {
-			var task ChatTask
-			err := row.Scan(&task.ID, &task.Subject, &task.DueAt)
-			if task.DueAt != nil {
-				due := task.DueAt.In(zone)
-				task.DueAt = &due
-			}
-			return task, err
-		})
-		if err != nil {
-			return err
-		}
-		out, err = writableChatTasks(ctx, tx, found)
+		out.Tasks, err = openChatTasks(ctx, tx, chat, holder, zone)
 		return err
 	})
-	return out, today, err
+	return out, err
+}
+
+// chatBody is the filed chat's stored text, read as the caller may read it.
+func chatBody(ctx context.Context, tx pgx.Tx, chat ids.UUID) (string, error) {
+	filed, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](chat), storekit.LiveOnly)
+	if err != nil || filed.Body == nil {
+		return "", err
+	}
+	return *filed.Body, nil
+}
+
+func openChatTasks(ctx context.Context, tx pgx.Tx, chat, holder ids.UUID, zone *time.Location) ([]ChatTask, error) {
+	args := schedulingArgs{}
+	content, err := auth.ActivityContentClause(ctx, "task", func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return nil, err
+	}
+	due := storekit.TaskDueSQL("task")
+	query := `SELECT task.id, coalesce(task.subject,''), ` + due + ` FROM activity task WHERE task.id IN (` +
+		chatTasksSQL(&args, chat, holder) + `) AND (` + content + `) ORDER BY ` + due + ` NULLS LAST, task.id LIMIT ` + args.add(MaxChatTasks)
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	found, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (ChatTask, error) {
+		var task ChatTask
+		err := row.Scan(&task.ID, &task.Subject, &task.DueAt)
+		if task.DueAt != nil {
+			due := task.DueAt.In(zone)
+			task.DueAt = &due
+		}
+		return task, err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return writableChatTasks(ctx, tx, found)
 }
 
 // zoneOf is the record zone, or UTC on a store wired without one.
@@ -155,9 +189,9 @@ func chatTaskHolder(ctx context.Context) (ids.UUID, error) {
 }
 
 // ApplyChatTaskChange writes one decided change. The task is locked and asked
-// again, under the caller, whether this chat may still change it. A task that
-// moved on since the reading answers false, and nothing is written. The write
-// runs as the chat task reader on the caller's behalf.
+// again, under the caller, whether this chat may still change it. The line
+// must still be one the stored chat holds. Otherwise nothing is written and
+// the answer is false. The write runs as the chat task reader for the caller.
 func (s *Store) ApplyChatTaskChange(ctx context.Context, change ChatTaskChange) (bool, error) {
 	holder, err := chatTaskHolder(ctx)
 	if err != nil {
@@ -177,36 +211,42 @@ func (s *Store) ApplyChatTaskChange(ctx context.Context, change ChatTaskChange) 
 		if writable, err := writableChatTasks(ctx, tx, []ChatTask{{ID: change.Task}}); err != nil || len(writable) == 0 {
 			return err
 		}
-		in, err := s.chatTaskPatch(ctx, tx, change)
-		if err != nil {
+		body, err := chatBody(ctx, tx, change.Chat)
+		if err != nil || !quotableLine(body, change.Line) {
 			return err
 		}
-		if _, err := updateActivityInTx(chatTaskReader(ctx, holder), tx, ids.From[ids.ActivityKind](change.Task), in); err != nil {
-			return err
-		}
-		applied = true
-		return nil
+		applied, err = s.writeChatTaskChange(chatTaskReader(ctx, holder), tx, change)
+		return err
 	})
 	return applied, err
 }
 
-func (s *Store) chatTaskPatch(ctx context.Context, tx pgx.Tx, change ChatTaskChange) (UpdateActivityInput, error) {
-	at := s.now()
-	in := UpdateActivityInput{recordedAt: &at, recordZone: s.recordZone}
+// quotableLine reports whether the chat holds a line at index that is long
+// enough for a change to rest on.
+func quotableLine(body string, index int) bool {
+	lines := ChatLines(body)
+	return index >= 0 && index < len(lines) && utf8.RuneCountInString(lines[index]) >= MinChatQuoteRunes
+}
+
+func (s *Store) writeChatTaskChange(ctx context.Context, tx pgx.Tx, change ChatTaskChange) (bool, error) {
+	line := map[string]any{taskAnswerLine: change.Line}
 	if change.Done {
-		in.IsDone = new(true)
-		in.Trail = storekit.AuditTrail{Evidence: map[string]any{taskAnsweredBy: change.Chat.String(), taskAnswerQuote: change.Quote}}
-		return in, nil
+		closed, err := s.closeAnsweredTasksTx(ctx, tx, ids.From[ids.ActivityKind](change.Chat), []ids.UUID{change.Task}, line)
+		return closed == 1, err
 	}
 	zone, err := s.zoneOf(ctx, tx)
 	if err != nil {
-		return in, err
+		return false, err
 	}
+	at := s.now()
 	day := change.DueOn.UTC()
 	due := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, zone)
-	in.DueAt, in.DueHasTime = &due, new(false)
-	in.Trail = storekit.AuditTrail{Evidence: map[string]any{taskMovedBy: change.Chat.String(), taskAnswerQuote: change.Quote}}
-	return in, nil
+	line[taskMovedBy] = change.Chat.String()
+	_, err = updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](change.Task), UpdateActivityInput{
+		DueAt: &due, DueHasTime: new(false), recordedAt: &at, recordZone: s.recordZone,
+		Trail: storekit.AuditTrail{Evidence: line},
+	})
+	return err == nil, err
 }
 
 // chatTaskReader is the principal the change is written under: the system,

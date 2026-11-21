@@ -119,20 +119,27 @@ func bareMediaType(contentType string) string {
 	return strings.ToLower(strings.TrimSpace(media))
 }
 
+// ChatFiled is the message a confirm filed. Refiled says a repeated confirm
+// answered the activity an earlier confirm wrote, and nothing was written now.
+type ChatFiled struct {
+	ActivityID ids.UUID
+	Refiled    bool
+}
+
 // FileChatCapture writes the message activity and moves the image onto it, in
 // one transaction. The gates run under the caller's own principal, before
 // WriteAs is applied, because the reader's principal passes every RBAC check.
-func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.UUID, error) {
+func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ChatFiled, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return ids.UUID{}, err
+		return ChatFiled{}, err
 	}
 	if utf8.RuneCountInString(in.Body) > MaxChatText {
-		return ids.UUID{}, &ChatCaptureError{
+		return ChatFiled{}, &ChatCaptureError{
 			Field: fieldBody, Code: codeTooLong, Max: MaxChatText,
 			Message: fmt.Sprintf("a chat holds at most %d characters; shorten the text", MaxChatText),
 		}
 	}
-	var filed ids.UUID
+	var filed ChatFiled
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// Locked before the parent is read, so a second confirm waits here and
 		// then sees the file already on the first confirm's activity.
@@ -144,7 +151,8 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 			return err
 		}
 		if parentType == linkEntityActivity {
-			filed, err = refiledChat(ctx, tx, in)
+			filed.Refiled = true
+			filed.ActivityID, err = refiledChat(ctx, tx, in)
 			return err
 		}
 		if !slices.Contains(chatParents, parentType) {
@@ -163,11 +171,11 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 		if err := requireRegisteredChannel(ctx, tx, in.Channel); err != nil {
 			return err
 		}
-		filed, err = s.writeChatActivity(ctx, tx, in, parentType)
+		filed.ActivityID, err = s.writeChatActivity(ctx, tx, in, parentType)
 		if err != nil {
 			return err
 		}
-		return refileAttachment(ctx, tx, in.AttachmentID, filed)
+		return refileAttachment(ctx, tx, in.AttachmentID, filed.ActivityID)
 	})
 	return filed, err
 }

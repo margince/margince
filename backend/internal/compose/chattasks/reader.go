@@ -7,8 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -16,10 +14,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// Tasks is the activities store's side: which tasks a chat may change, and
-// the write of one change.
+// Tasks is the activities store's side: the stored chat and which tasks it
+// may change, and the write of one change.
 type Tasks interface {
-	ChatTasks(ctx context.Context, chat ids.UUID) ([]activities.ChatTask, time.Time, error)
+	ChatTasks(ctx context.Context, chat ids.UUID) (activities.ChatReading, error)
 	ApplyChatTaskChange(ctx context.Context, change activities.ChatTaskChange) (bool, error)
 }
 
@@ -31,17 +29,18 @@ type Reader struct {
 	Tasks Tasks
 }
 
-// Settle reads one filed chat under the user who filed it and returns how
-// many tasks it changed.
-func (r Reader) Settle(ctx context.Context, chat ids.UUID, text string) (int, error) {
-	if r.Lane == nil || strings.TrimSpace(text) == "" {
+// Settle reads one filed chat, as stored, under the user who filed it and
+// returns how many tasks it changed.
+func (r Reader) Settle(ctx context.Context, chat ids.UUID) (int, error) {
+	if r.Lane == nil {
 		return 0, nil
 	}
-	open, today, err := r.Tasks.ChatTasks(ctx, chat)
-	if err != nil || len(open) == 0 {
+	reading, err := r.Tasks.ChatTasks(ctx, chat)
+	if err != nil || len(reading.Tasks) == 0 {
 		return 0, err
 	}
-	in := Input{Chat: text, Today: today}
+	open := reading.Tasks
+	in := Input{Chat: reading.Body, Today: reading.Today}
 	for _, task := range open {
 		in.Tasks = append(in.Tasks, Task(task))
 	}
@@ -65,7 +64,7 @@ func (r Reader) Settle(ctx context.Context, chat ids.UUID, text string) (int, er
 	changed := 0
 	for _, decision := range Decide(in, answers) {
 		applied, err := r.Tasks.ApplyChatTaskChange(ctx, activities.ChatTaskChange{
-			Chat: chat, Task: decision.Task, Done: decision.Done, DueOn: decision.DueOn, Quote: decision.Quote,
+			Chat: chat, Task: decision.Task, Done: decision.Done, DueOn: decision.DueOn, Line: decision.Line,
 		})
 		if err != nil {
 			return changed, err

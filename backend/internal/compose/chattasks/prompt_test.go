@@ -58,3 +58,19 @@ func TestTheChatIsFencedAndTheTasksNamedByRef(t *testing.T) {
 		t.Fatal("the chat reaches the prompt outside its fence")
 	}
 }
+
+func TestAQuoteMustCopyOneWholeLineLongEnoughToMeanSomething(t *testing.T) {
+	in := oneTask()
+	in.Chat = "Me: ok\nLena: thanks! Me: I booked a slot for Thursday\n" + line
+	for quote, want := range map[string]int{
+		"  " + line + " ":                  2,
+		"ping me next week":                -1,
+		"Me: I booked a slot for Thursday": -1,
+		"Me: ok":                           -1,
+	} {
+		got := Decide(in, []Answer{{ID: "task1", Action: ActionDone, Quote: quote, Confidence: 0.9}})
+		if (want < 0 && len(got) != 0) || (want >= 0 && (len(got) != 1 || got[0].Line != want)) {
+			t.Errorf("quote %q decided %+v, want line %d", quote, got, want)
+		}
+	}
+}

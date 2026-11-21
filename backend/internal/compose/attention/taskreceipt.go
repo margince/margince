@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The kinds of a receipt for a task Margince changed on evidence. Both offer
@@ -36,16 +37,37 @@ func TaskReceiptKind(changed activities.TaskCompletion) string {
 // sent, the meeting booked, or the chat line it rests on.
 func TaskReceiptReason(ctx context.Context, changed activities.TaskCompletion) string {
 	locale := systemtext.Locale(ctx)
-	if changed.Chat {
-		words := systemtext.Copy(systemtext.TaskChatKey(changed.Moved), locale)
-		if changed.Moved && changed.DueAt != nil {
-			return fmt.Sprintf(words, changed.DueAt.Format(time.DateOnly), changed.Quote)
-		}
-		return fmt.Sprintf(words, changed.Quote)
+	if changed.Evidence == activities.EvidenceChat || changed.Moved {
+		return chatReason(changed, locale)
 	}
+	booking := changed.Evidence == activities.EvidenceBooking
 	contact := changed.Contact
 	if contact == "" {
-		contact = systemtext.Copy(systemtext.TaskClosedContactKey(changed.Booking), locale)
+		contact = systemtext.Copy(systemtext.TaskClosedContactKey(booking), locale)
 	}
-	return fmt.Sprintf(systemtext.Copy(systemtext.TaskClosedKey(changed.Booking), locale), contact, changed.WrittenAt.Format(time.DateOnly))
+	return fmt.Sprintf(systemtext.Copy(systemtext.TaskClosedKey(booking), locale), contact, changed.WrittenAt.Format(time.DateOnly))
+}
+
+// chatReason names the chat line a change rests on when the reader may read
+// the chat, and the chat alone otherwise. A move always names its new day,
+// which the move itself wrote.
+func chatReason(changed activities.TaskCompletion, locale textlang.Lang) string {
+	quoted := changed.Quote != ""
+	key := systemtext.TaskChatUnquotedKey(changed.Moved)
+	if quoted {
+		key = systemtext.TaskChatKey(changed.Moved)
+	}
+	words := systemtext.Copy(key, locale)
+	var args []any
+	if changed.Moved {
+		day := ""
+		if changed.DueAt != nil {
+			day = changed.DueAt.Format(time.DateOnly)
+		}
+		args = append(args, day)
+	}
+	if quoted {
+		args = append(args, changed.Quote)
+	}
+	return fmt.Sprintf(words, args...)
 }

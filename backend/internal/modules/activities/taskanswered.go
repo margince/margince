@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -53,7 +54,7 @@ func (s *Store) CompleteContactTasksAnsweredByTx(ctx context.Context, tx pgx.Tx,
 	if err != nil {
 		return 0, err
 	}
-	return s.closeAnsweredTasksTx(ctx, tx, email, tasks)
+	return s.closeAnsweredTasksTx(ctx, tx, email, tasks, nil)
 }
 
 // answeringMailSQL is the mail side of the rule: our own attested, delivered,
@@ -111,12 +112,28 @@ func tasksAnsweredByTx(ctx context.Context, tx pgx.Tx, email ids.ActivityID, hum
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
-func (s *Store) closeAnsweredTasksTx(ctx context.Context, tx pgx.Tx, email ids.ActivityID, tasks []ids.UUID) (int, error) {
+// answerableTaskSQL is the task side the booking and chat doors share. It is
+// an open task a user made, held by holder and made before the evidence row.
+// It is linked to a record that onRecord admits over link alias t. A task a
+// user reopened after an automatic answer stays theirs.
+func answerableTaskSQL(args *schedulingArgs, evidence, holder, onRecord string) string {
+	return `task.kind='task' AND NOT task.is_done AND task.archived_at IS NULL AND task.created_at < ` + evidence + `.created_at
+ AND task.assignee_id=` + holder + `
+ AND NOT (task.source=` + args.add(systemSource) + ` AND ` + systemCapturedSQL("task", args.add(systemCapturedBy), args.add(systemCapturedByPattern)) + `)
+ AND EXISTS (SELECT 1 FROM activity_link t WHERE t.activity_id=task.id AND (` + onRecord + `))
+ AND NOT ` + reopenedAfterAnswerSQL("task")
+}
+
+// closeAnsweredTasksTx completes the tasks with the evidence row as their
+// answer. extra adds evidence keys of the door's own, such as a chat's line.
+func (s *Store) closeAnsweredTasksTx(ctx context.Context, tx pgx.Tx, email ids.ActivityID, tasks []ids.UUID, extra map[string]any) (int, error) {
 	at := s.now()
 	for _, id := range tasks {
+		evidence := map[string]any{taskAnsweredBy: email.String()}
+		maps.Copy(evidence, extra)
 		_, err := updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](id), UpdateActivityInput{
 			IsDone: new(true), recordedAt: &at, recordZone: s.recordZone,
-			Trail: storekit.AuditTrail{Evidence: map[string]any{taskAnsweredBy: email.String()}},
+			Trail: storekit.AuditTrail{Evidence: evidence},
 		})
 		if err != nil {
 			return 0, err
@@ -125,21 +142,35 @@ func (s *Store) closeAnsweredTasksTx(ctx context.Context, tx pgx.Tx, email ids.A
 	return len(tasks), nil
 }
 
+// TaskEvidence is what kind of row answered a task.
+type TaskEvidence string
+
+// The rows that answer a task: our sent mail, a booked meeting, a filed chat.
+const (
+	EvidenceMail    TaskEvidence = "mail"
+	EvidenceBooking TaskEvidence = "booking"
+	EvidenceChat    TaskEvidence = "chat"
+)
+
 // TaskCompletion ties a task Margince changed to its evidence and the
 // reversible audit entry. Moved is a new due day from a chat, not a completion.
 type TaskCompletion struct {
-	ID, AuditID, EmailID ids.UUID
-	Subject, Contact     string
-	At, WrittenAt        time.Time
-	Version              int64
-	Writable, Booking    bool
-	Chat, Moved          bool
-	// Quote is the chat's sentence the change rests on; DueAt is the new day.
+	ID, AuditID, EvidenceID ids.UUID
+	Subject, Contact        string
+	At, WrittenAt           time.Time
+	Version                 int64
+	Writable, Moved         bool
+	Evidence                TaskEvidence
+	// Quote is the chat line the change rests on, empty when the reader may
+	// not read that chat now. DueAt is the task's due day.
 	Quote string
 	DueAt *time.Time
+	// quoteLine is the index of that line in the chat, -1 when none is stored.
+	quoteLine int
 }
 
-// RecentTaskCompletions returns only the caller's still-completed tasks and their reversible evidence.
+// RecentTaskCompletions returns the caller's tasks a mail, booking or chat
+// completed or moved and nobody changed since, with their reversible evidence.
 func (s *Store) RecentTaskCompletions(ctx context.Context, since time.Time, limit int) ([]TaskCompletion, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
@@ -156,19 +187,32 @@ func (s *Store) RecentTaskCompletions(ctx context.Context, since time.Time, limi
 		if err != nil {
 			return err
 		}
-		contactScope, err := receiptNameScope(ctx, "contact", "p", arg)
-		if err != nil {
-			return err
+		contactScope := "false"
+		if auth.ReadGranted(ctx, "contact") {
+			contactScope, err = auth.ScopeClauseFor(ctx, "contact", "p", arg)
+			if err != nil {
+				return err
+			}
+			if contactScope == "" {
+				contactScope = sqlTrue
+			}
 		}
-		leadScope, err := receiptNameScope(ctx, "lead", "ld", arg)
-		if err != nil {
-			return err
+		leadScope := "false"
+		if auth.ReadGranted(ctx, "lead") {
+			leadScope, err = auth.ScopeClauseFor(ctx, "lead", "ld", arg)
+			if err != nil {
+				return err
+			}
+			if leadScope == "" {
+				leadScope = sqlTrue
+			}
 		}
 		answered, moved := args.add(taskAnsweredBy), args.add(taskMovedBy)
 		evidence := `coalesce(trail.evidence->>` + answered + `, trail.evidence->>` + moved + `)::uuid`
 		query := `SELECT a.id, trail.id, ` + evidence + `,
-    coalesce(a.subject,''), coalesce(c.full_name, lead_name.full_name, ''), trail.occurred_at, a.version, sent.occurred_at, sent.kind='meeting',
-    sent.kind='message', trail.evidence ? ` + moved + `, coalesce(trail.evidence->>` + args.add(taskAnswerQuote) + `, ''), ` + storekit.TaskDueSQL("a") + `
+    coalesce(a.subject,''), coalesce(c.full_name, lead_name.full_name, ''), trail.occurred_at, a.version, sent.occurred_at,
+    CASE sent.kind WHEN 'meeting' THEN ` + args.add(EvidenceBooking) + ` WHEN 'message' THEN ` + args.add(EvidenceChat) + ` ELSE ` + args.add(EvidenceMail) + ` END,
+    trail.evidence ? ` + moved + `, coalesce((trail.evidence->>` + args.add(taskAnswerLine) + `)::int, -1), ` + storekit.TaskDueSQL("a") + `
     FROM audit_log trail JOIN activity a ON a.id=trail.entity_id
  JOIN activity sent ON sent.id=` + evidence + `
     LEFT JOIN LATERAL (SELECT p.full_name FROM activity_link l JOIN contact p ON p.id=l.contact_id WHERE l.activity_id=a.id AND p.archived_at IS NULL AND (` + contactScope + `) ORDER BY p.id LIMIT 1) c ON true
@@ -185,8 +229,8 @@ func (s *Store) RecentTaskCompletions(ctx context.Context, since time.Time, limi
 		}
 		candidates, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (TaskCompletion, error) {
 			var one TaskCompletion
-			err := row.Scan(&one.ID, &one.AuditID, &one.EmailID, &one.Subject, &one.Contact, &one.At, &one.Version, &one.WrittenAt, &one.Booking,
-				&one.Chat, &one.Moved, &one.Quote, &one.DueAt)
+			err := row.Scan(&one.ID, &one.AuditID, &one.EvidenceID, &one.Subject, &one.Contact, &one.At, &one.Version, &one.WrittenAt,
+				&one.Evidence, &one.Moved, &one.quoteLine, &one.DueAt)
 			return one, err
 		})
 		if err != nil {
@@ -198,31 +242,44 @@ func (s *Store) RecentTaskCompletions(ctx context.Context, since time.Time, limi
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading task completion receipts: %w", err)
 	}
+	return out, s.markWritableCompletions(ctx, out)
+}
+
+// markWritableCompletions says which receipts the caller may undo.
+func (s *Store) markWritableCompletions(ctx context.Context, out []TaskCompletion) error {
 	named := make([]ids.UUID, len(out))
 	for i := range out {
 		named[i] = out[i].ID
 	}
 	writable, err := s.WritableTasks(ctx, named)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for i := range out {
 		out[i].Writable = writable[out[i].ID]
 	}
-	return out, nil
+	return nil
 }
 
-// receiptNameScope is the row scope a receipt names its contact or lead under:
-// false without the read grant, true when the scope is unbounded.
-func receiptNameScope(ctx context.Context, object, alias string, arg func(any) int) (string, error) {
-	if !auth.ReadGranted(ctx, object) {
-		return "false", nil
+// chatQuote is the chat line a receipt rests on, read from the live chat only
+// when the reader may read it. An archived, restricted or erased chat, or one
+// the reader may not see, leaves the receipt without its quote.
+func chatQuote(ctx context.Context, tx pgx.Tx, one TaskCompletion) (string, error) {
+	if one.Evidence != EvidenceChat || one.quoteLine < 0 {
+		return "", nil
 	}
-	scope, err := auth.ScopeClauseFor(ctx, object, alias, arg)
-	if err != nil || scope != "" {
-		return scope, err
+	chat, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](one.EvidenceID), storekit.LiveOnly)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return "", nil
 	}
-	return sqlTrue, nil
+	if err != nil || chat.Body == nil {
+		return "", err
+	}
+	lines := ChatLines(*chat.Body)
+	if one.quoteLine >= len(lines) {
+		return "", nil
+	}
+	return lines[one.quoteLine], nil
 }
 
 func (s *Store) readableTaskCompletions(ctx context.Context, tx pgx.Tx, candidates []TaskCompletion) ([]TaskCompletion, error) {
@@ -244,6 +301,9 @@ func (s *Store) readableTaskCompletions(ctx context.Context, tx pgx.Tx, candidat
 		if _, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](one.ID), storekit.LiveOnly); errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			continue
 		} else if err != nil {
+			return nil, err
+		}
+		if one.Quote, err = chatQuote(ctx, tx, one); err != nil {
 			return nil, err
 		}
 		out = append(out, one)

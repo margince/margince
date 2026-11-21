@@ -190,7 +190,9 @@ Yes, when an AI model is set up. After you file a chat, AI reads it against your
 - The chat shows the task waits, for example "ping me again next week". The task moves to that day.
 
 Every other task stays as it was. AI reads only tasks that are yours and that you may change. It skips tasks Margince made, and a task you opened again after Margince closed it.
-The change shows in **Done for you** with the chat line it rests on, and **Undo** puts the task back as it was. The same chat never changes that task again.
+The change shows in **Done for you** with the chat line it rests on, and **Undo** puts the task back as it was. AI reads a chat once, when you first file it, so it never changes that task again.
+
+The receipt quotes the chat only while you may read it. A deleted, archived or private chat leaves the receipt without its words.
 
 The screenshot and the text are part of the record's data. Deleting a
 contact's data on request removes both.

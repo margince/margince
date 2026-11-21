@@ -77,11 +77,13 @@ func (c *ChatCaptureFile) File(
 	if err != nil {
 		return crmcontracts.FiledChatCapture{}, err
 	}
-	// The chat is filed either way; a reading that fails leaves every task as it was.
-	if _, err := c.tasks.Settle(ctx, filed, body); err != nil {
-		slog.WarnContext(ctx, "chat task reading changed no task", "activity_id", filed, "error", err)
+	// A repeated confirm is read never again; a failed reading changes no task.
+	if !filed.Refiled {
+		if _, err := c.tasks.Settle(ctx, filed.ActivityID); err != nil {
+			slog.WarnContext(ctx, "chat task reading changed no task", "activity_id", filed.ActivityID, "error", err)
+		}
 	}
-	return crmcontracts.FiledChatCapture{ActivityId: openapi_types.UUID(filed)}, nil
+	return crmcontracts.FiledChatCapture{ActivityId: openapi_types.UUID(filed.ActivityID)}, nil
 }
 
 // bodyIsTheReading reports whether the body is the text the reading grounded,
