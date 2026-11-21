@@ -254,8 +254,11 @@ describe("the agent panel's hierarchy", () => {
     );
     cleanup();
     const german = await openPanel({}, "de");
-    expect(german.querySelector(".arpstate")?.textContent).toBe(
-      de["agent.state.idle"],
+    // The German catalog loads after the first paint, which is in English.
+    await waitFor(() =>
+      expect(german.querySelector(".arpstate")?.textContent).toBe(
+        de["agent.state.idle"],
+      ),
     );
     expect(de["agent.state.idle"]).not.toBe(en["agent.state.idle"]);
   });
