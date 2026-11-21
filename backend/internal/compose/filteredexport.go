@@ -201,7 +201,7 @@ func readRowsByID(ctx context.Context, tx pgx.Tx, table string, columns []string
 	defer pgRows.Close()
 
 	var out [][]any
-	reader := rowvalue.NewReader()
+	reader := rowvalue.NewDayReader()
 	for pgRows.Next() {
 		values, err := reader.Values(pgRows)
 		if err != nil {

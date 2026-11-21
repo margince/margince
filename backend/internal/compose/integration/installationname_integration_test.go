@@ -219,8 +219,9 @@ func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	tooLong := strings.Repeat("a", values.TextLabelCharacters+1)
+	pastTheSetting := strings.Repeat("a", values.MaxCompanyNameRunes+1)
 
-	for name, code := range map[string]string{tooLong: "too_long", "   ": "required"} {
+	for name, code := range map[string]string{tooLong: "too_long", pastTheSetting: "too_long", "   ": "required"} {
 		body := wellFormedCompany()
 		body["display_name"] = name
 		var problem companyProblem

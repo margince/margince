@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -87,6 +88,7 @@ func CompactJSON(v any) (string, error) {
 // integer above 2^53. A Reader is for one query; it is not safe to share.
 type Reader struct {
 	types *pgtype.Map
+	days  bool
 }
 
 // NewReader builds a Reader whose json codecs keep each number's stored digits.
@@ -105,6 +107,14 @@ func NewReader() *Reader {
 	types.RegisterType(&pgtype.Type{Name: "_json", OID: pgtype.JSONArrayOID, Codec: &pgtype.ArrayCodec{ElementType: jsonType}})
 	types.RegisterType(&pgtype.Type{Name: "_jsonb", OID: pgtype.JSONBArrayOID, Codec: &pgtype.ArrayCodec{ElementType: jsonbType}})
 	return &Reader{types: types}
+}
+
+// NewDayReader is a Reader that spells each SQL date as its calendar day,
+// YYYY-MM-DD. pgx decodes a date as midnight UTC, which a reader's zone moves.
+func NewDayReader() *Reader {
+	reader := NewReader()
+	reader.days = true
+	return reader
 }
 
 //craft:ignore naked-any the codec's Unmarshal signature is encoding/json's
@@ -126,6 +136,11 @@ func (r *Reader) Values(rows pgx.Rows) ([]any, error) {
 	for i, field := range rows.FieldDescriptions() {
 		switch field.DataTypeOID {
 		case pgtype.JSONOID, pgtype.JSONBOID, pgtype.JSONArrayOID, pgtype.JSONBArrayOID:
+		case pgtype.DateOID:
+			if day, ok := values[i].(time.Time); ok && r.days {
+				values[i] = day.Format(time.DateOnly)
+			}
+			continue
 		default:
 			continue
 		}

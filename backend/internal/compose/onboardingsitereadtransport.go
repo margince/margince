@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
@@ -106,8 +105,8 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if refused := values.CompanyNameFault("profile.display_name", req.Profile.DisplayName); refused != nil {
-		httperr.Write(w, r, refused)
+	if err := profileNameFault("profile.display_name", req.Profile.DisplayName); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	for _, required := range []struct {

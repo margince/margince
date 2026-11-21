@@ -27,7 +27,11 @@ import {
   watchAddress,
 } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
-import { currentParams, useUrlParams } from "../lib/urlstate";
+import {
+  currentParams,
+  useAddressMovedFromOutside,
+  useUrlParams,
+} from "../lib/urlstate";
 import type {
   FilterSpec,
   ListState,
@@ -189,9 +193,9 @@ export function ListTable<Row>({
   const { rows, query, setQuery, isPending, isError, error, refetch } = state;
   // The rendered page is a dial like the rest, so it comes from the address.
   // Read here rather than threaded through ListState: it is the only dial the
-  // table owns by default. A screen that never puts it in the URL keeps the
-  // table's own number.
+  // table owns by default.
   const [params, setParams] = useUrlParams();
+  const addressMovedFromOutside = useAddressMovedFromOutside();
   // Where the reader was in the rows, which the shell cannot remember for them.
   // A full-height list takes the overflow itself, so the page column the shell
   // watches is at zero on every one of these screens. Back then returned
@@ -479,6 +483,7 @@ export function ListTable<Row>({
       onPage={(next) =>
         setParams(withListPage(currentParams(), next, state.paramScope))
       }
+      keepsPage={addressMovedFromOutside}
       bodyRef={rowsScroller}
       widthsKey={layoutKey}
       body={body}

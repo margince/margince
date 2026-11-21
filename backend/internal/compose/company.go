@@ -139,6 +139,19 @@ func (h companyHandlers) GetAnchorCompany(w http.ResponseWriter, r *http.Request
 	httperr.WriteJSON(w, http.StatusOK, toContractCompany(company))
 }
 
+// profileNameFault refuses a company profile name the company's own record
+// would refuse. The record's limit is checked first, so a long name cites it
+// alone and never the installation name's wider one.
+func profileNameFault(field, name string) error {
+	if err := httperr.RequireWithin(field, strings.TrimSpace(name), values.TextLabelCharacters); err != nil {
+		return err
+	}
+	if refused := values.CompanyNameFault(field, name); refused != nil {
+		return refused
+	}
+	return nil
+}
+
 func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "putAnchorCompany")
@@ -154,8 +167,8 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
-	if refused := values.CompanyNameFault("display_name", req.DisplayName); refused != nil {
-		httperr.Write(w, r, refused)
+	if err := profileNameFault("display_name", req.DisplayName); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	// New onboarding requires the three semantic answers. During the pre-live

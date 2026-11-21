@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type failingRunTransparency struct{ err error }
@@ -270,29 +271,27 @@ func TestOnboardingSiteReadPollKeepsTheDossierWhenOptionalRuntimeTelemetryFails(
 	}
 }
 
-// One coherent refusal table, which is why it stays whole and stays tagged.
-// Most arms are pure 422 validation, but the missing-record 404s resolve through
-// a real store miss and the broken-queue 500 needs the real wire; splitting the
-// pure arms into the unit lane would scatter one specification across two files
-// to save milliseconds.
-func wantBlankNameRequired(t *testing.T, body []byte) {
+func wantProfileNameFault(t *testing.T, body []byte, code string) {
 	t.Helper()
 	var problem struct {
 		Details struct {
 			Errors []struct {
 				Field string `json:"field"`
 				Code  string `json:"code"`
+				Max   int    `json:"max"`
 			} `json:"errors"`
 		} `json:"details"`
 	}
 	if err := json.Unmarshal(body, &problem); err != nil {
 		t.Fatalf("decoding the refusal: %v", err)
 	}
-	errs := problem.Details.Errors
-	if len(errs) != 1 || errs[0].Field != "profile.display_name" || errs[0].Code != "required" {
-		t.Errorf("a blank name was refused as %+v, want required on profile.display_name", errs)
+	errs, wantMax := problem.Details.Errors, map[string]int{"too_long": values.TextLabelCharacters}[code]
+	if len(errs) != 1 || errs[0].Field != "profile.display_name" || errs[0].Code != code || errs[0].Max != wantMax {
+		t.Errorf("the name was refused as %+v, want %s on profile.display_name with the record's max %d", errs, code, wantMax)
 	}
 }
+
+// One refusal table: its 404s need a real store miss and its 500 the real wire.
 
 func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 	e := integration.Setup(t)
@@ -313,6 +312,7 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 		{DisplayName: "Acme", Icp: &icp},
 		{DisplayName: "Acme", OfferSummary: &offer},
 		{DisplayName: "Acme", OfferSummary: &offer, Icp: &icp, Website: &badWebsite},
+		{DisplayName: strings.Repeat("a", values.MaxCompanyNameRunes+1), OfferSummary: &offer, Icp: &icp},
 	}
 	for i, profile := range cases {
 		req := onboardingPOST(human, t, "/v1/company/site-reads/missing/confirm",
@@ -324,8 +324,8 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 		if rec.Code != http.StatusUnprocessableEntity {
 			t.Fatalf("invalid confirmation %d → %d, want 422", i, rec.Code)
 		}
-		if i == 0 {
-			wantBlankNameRequired(t, rec.Body.Bytes())
+		if code, named := map[int]string{0: "required", 4: "too_long"}[i]; named {
+			wantProfileNameFault(t, rec.Body.Bytes(), code)
 		}
 	}
 

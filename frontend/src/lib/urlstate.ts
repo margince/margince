@@ -1,4 +1,4 @@
-import { useContext, useMemo } from "react";
+import { useCallback, useContext, useMemo, useRef } from "react";
 import {
   announceAddressChanged,
   navigateReplacing,
@@ -136,10 +136,30 @@ export function replaceParams(params: UrlParams): void {
     return;
   }
   globalThis.history.replaceState(globalThis.history.state, "", next);
+  lastDialWrite = next;
   // Told directly rather than waited for: `hashchange` arrives a task later, and
   // in that gap the list would still be reading the dials the reader has just
   // changed — one fetch for the previous query before the one they asked for.
   announceAddressChanged();
+}
+
+// The address the last dial write left in the bar. Any other address came
+// from a link, a typed address or history.
+let lastDialWrite: string | undefined;
+
+/**
+ * For a list whose narrowing just changed: whether the address moved with it,
+ * by a link, history or typing rather than a dial. Such an address names its
+ * page. Typing in a search box narrows before the address moves at all.
+ */
+export function useAddressMovedFromOutside(): () => boolean {
+  const seen = useRef(globalThis.location.hash);
+  return useCallback(() => {
+    const now = globalThis.location.hash;
+    const moved = now !== seen.current;
+    seen.current = now;
+    return moved && now !== lastDialWrite;
+  }, []);
 }
 
 /**

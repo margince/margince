@@ -43508,7 +43508,7 @@ type CompanyProfileInput struct {
 	CustomerPains    *string `json:"customer_pains,omitempty"`
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
 
-	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.
+	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a name past 120 characters `422 too_long`.
 	DisplayName string  `json:"display_name"`
 	History     *string `json:"history,omitempty"`
 	Icp         *string `json:"icp,omitempty"`
@@ -51700,7 +51700,8 @@ type FilterPreview struct {
 	Resource FilterResource `json:"resource"`
 
 	// Rows Up to `limit` matching rows as column→value maps, ordered by id,
-	// after the request's `cursor` when it names one.
+	// after the request's `cursor` when it names one. A date column is
+	// its calendar day (`2026-12-01`); a timestamp is an RFC 3339 instant.
 	// Deliberately the export's projection rather than a shape invented for
 	// this screen: a preview that showed different columns than the export
 	// of the same filter would be a preview of something else.

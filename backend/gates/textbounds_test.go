@@ -288,3 +288,54 @@ func TestContentColumnsOnTheDocumentLimitSayWhatTheirWritersWereCheckedFor(t *te
 		t.Fatalf("only %d text columns look like content: the name pattern no longer matches the catalog", matched)
 	}
 }
+
+// companyNameBodies are the request bodies whose display_name a company's own
+// record holds. Each is refused past the record's label limit.
+var companyNameBodies = []string{
+	"CompanyProfileInput", "CreateCompanyRequest", "UpdateCompanyRequest",
+	"CreateLegalEntityRequest", "UpdateLegalEntityRequest",
+}
+
+// memberNameBodies name a seat, not a company; identity owns their limit.
+var memberNameBodies = []string{
+	"FormerMemberRequest", "InviteUserRequest", "SaveMyDisplayNameRequest",
+	"ServiceMemberRequest", "UpdateMemberRequest",
+}
+
+func TestEveryCompanyNameBodyPublishesTheRecordsLimit(t *testing.T) {
+	t.Parallel()
+	raw, err := gatekit.ReadFile("api/crm.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contract map[string]any
+	if err := yaml.Unmarshal(raw, &contract); err != nil {
+		t.Fatal(err)
+	}
+	schemas, ok := contract["components"].(map[string]any)["schemas"].(map[string]any)
+	if !ok {
+		t.Fatal("api/crm.yaml has no components.schemas")
+	}
+	var found []string
+	for name, schema := range schemas {
+		body, isMap := schema.(map[string]any)
+		properties, hasProperties := body["properties"].(map[string]any)
+		if !isMap || !hasProperties || properties["display_name"] == nil ||
+			!(strings.HasSuffix(name, "Request") || strings.HasSuffix(name, "Input")) {
+			continue
+		}
+		found = append(found, name)
+	}
+	listed := slices.Concat(companyNameBodies, memberNameBodies)
+	slices.Sort(found)
+	slices.Sort(listed)
+	if !slices.Equal(found, listed) {
+		t.Errorf("request bodies taking a display_name are %v, the lists name %v: list each new one as a company or a member name", found, listed)
+	}
+	for _, name := range companyNameBodies {
+		limit := publishedMaxLength(t, contract, schemaPath("components", "schemas", name, "properties", "display_name"))
+		if limit != values.TextLabelCharacters {
+			t.Errorf("%s.display_name publishes %d, and the company record refuses past %d", name, limit, values.TextLabelCharacters)
+		}
+	}
+}

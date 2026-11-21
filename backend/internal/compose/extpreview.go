@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -57,8 +58,9 @@ func extensionPreviewRows(ctx context.Context, tx pgx.Tx, engine storekit.Query,
 	}
 	defer pgRows.Close()
 	var rows [][]any
+	reader := rowvalue.NewDayReader()
 	for pgRows.Next() {
-		values, err := pgRows.Values()
+		values, err := reader.Values(pgRows)
 		if err != nil {
 			return nil, nil, err
 		}
