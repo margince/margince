@@ -159,6 +159,8 @@ export type ConversationState = {
   concludedReadId: string | null;
   /** The build run whose events are current; stale runs are ignored. */
   activeBuildId: string | null;
+  /** The profile that run builds, so an act mounted again reads its result. */
+  activeBuildProfileId: string | null;
   /** Last narrated build stage, so a repeated stage poll appends nothing. */
   lastBuildStage: BuildStage | null;
   /** How the last voice build ended: failed may be retried, deferred
@@ -252,7 +254,7 @@ export type ConversationEvent =
   | { type: "VOICE_SKIPPED" }
   | { type: "UPLOAD_ADDED"; id: string; name: string }
   | { type: "SPEAKER_NEEDED"; question: ConversationQuestion }
-  | { type: "BUILD_STARTED"; buildId: string }
+  | { type: "BUILD_STARTED"; buildId: string; profileId: string }
   | { type: "BUILD_STAGE"; buildId: string; stage: BuildStage }
   // detail is the build row's own status_detail: safe operator guidance the
   // server composed for exactly this outcome, and the only thing that tells a

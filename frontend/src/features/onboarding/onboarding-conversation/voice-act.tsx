@@ -69,7 +69,19 @@ export function VoiceAct({
     initialSources,
     initialMeterStale,
   });
-  const build = useVoiceBuild({ dispatch, machine });
+  const build = useVoiceBuild({
+    dispatch,
+    machine,
+    succeeded:
+      state.lastBuildStatus === "succeeded" &&
+      state.activeBuildId !== null &&
+      state.activeBuildProfileId !== null
+        ? {
+            profileId: state.activeBuildProfileId,
+            buildId: state.activeBuildId,
+          }
+        : null,
+  });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const collecting =

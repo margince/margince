@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useReducer } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ASYNC_UTIL_TIMEOUT_MS,
@@ -10,6 +11,7 @@ import {
 } from "../../../../vitest.budget";
 import { en } from "../../../i18n/en";
 import {
+  type ConversationState,
   conversationReducer,
   initialConversationState,
 } from "./conversation-machine";
@@ -41,6 +43,20 @@ import {
 // Stated here, not in the testkit: the budget reader follows one import hop.
 const BUILD_TEST_MS =
   POLL_WAITER_MS * 2 + ASYNC_UTIL_TIMEOUT_MS * 4 + SLOWEST_MEASURED_TEST_MS;
+
+// The shell's switch between the two acts, with connect reduced to its Back.
+function VoiceThenConnect({
+  initial,
+}: Readonly<{ initial: ConversationState }>) {
+  const [state, dispatch] = useReducer(conversationReducer, initial);
+  return state.act === "voice" ? (
+    <VoiceAct state={state} dispatch={dispatch} />
+  ) : (
+    <button type="button" onClick={() => dispatch({ type: "CONNECT_BACK" })}>
+      Back to voice
+    </button>
+  );
+}
 
 beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
@@ -597,14 +613,22 @@ describe("the conversational voice act", () => {
     // two is the active run, build one's late terminal changes nothing.
     const retried = run(
       [
-        { type: "BUILD_STARTED", buildId: BUILD_IDS[0] },
+        {
+          type: "BUILD_STARTED",
+          buildId: BUILD_IDS[0],
+          profileId: "profile-1",
+        },
         {
           type: "BUILD_TERMINAL",
           buildId: BUILD_IDS[0],
           status: "failed",
           detail: null,
         },
-        { type: "BUILD_STARTED", buildId: BUILD_IDS[1] },
+        {
+          type: "BUILD_STARTED",
+          buildId: BUILD_IDS[1],
+          profileId: "profile-1",
+        },
       ],
       collectingState(),
     );
@@ -681,6 +705,33 @@ describe("the voice act's surface/rail split", () => {
         name: "That is me",
       }),
     ).toBeTruthy();
+  });
+
+  // Continue unmounts the act, so Back mounts a new one over the same build.
+  it("shows the built voice again on Back from connect, from the read it already made", async () => {
+    const calls = stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+      builds: {
+        [BUILD_IDS[0]]: [
+          { id: BUILD_IDS[0], status: "succeeded", stage: null },
+        ],
+      },
+    });
+    render(<VoiceThenConnect initial={collectingState()} />);
+
+    await uploadFile("one.md", "Enough material.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Build my voice profile/ }),
+    );
+    await screen.findByText(/Direct, concrete/);
+    await userEvent.click(screen.getByRole("button", { name: "That is me" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Back to voice" }),
+    );
+
+    expect(await screen.findByText(/Direct, concrete/)).toBeTruthy();
+    expect(requestsTo(calls, "/versions", "GET")).toHaveLength(1);
   });
 
   it("shows the sample as a real draft and switches to another one already in hand", async () => {

@@ -48,6 +48,7 @@ export const initialConversationState: ConversationState = {
   readCompleted: false,
   concludedReadId: null,
   activeBuildId: null,
+  activeBuildProfileId: null,
   lastBuildStage: null,
   lastBuildStatus: null,
   lastBuildDetail: null,
@@ -371,6 +372,7 @@ function applyEvent(
       return withEntries(state, {
         phase: "vo.building",
         activeBuildId: event.buildId,
+        activeBuildProfileId: event.profileId,
         lastBuildStage: null,
         lastBuildStatus: null,
         lastBuildDetail: null,

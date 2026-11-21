@@ -109,7 +109,7 @@ describe("conversationReducer happy path", () => {
           questionId: "speaker",
           value: "Speaker 1",
         },
-        { type: "BUILD_STARTED", buildId: "b1" },
+        { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
         { type: "BUILD_STAGE", buildId: "b1", stage: "snapshot" },
         { type: "BUILD_STAGE", buildId: "b1", stage: "extract" },
         { type: "BUILD_STAGE", buildId: "b1", stage: "evaluate" },
@@ -220,7 +220,7 @@ describe("conversationReducer happy path", () => {
       { type: "COMPANY_CONFIRMED" },
       { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
-      { type: "BUILD_STARTED", buildId: "b1" },
+      { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
       {
         type: "BUILD_TERMINAL",
         buildId: "b1",
@@ -237,7 +237,7 @@ describe("conversationReducer happy path", () => {
     // A failed build retries and a deferred one resumes; neither is revised.
     const failed = run(
       [
-        { type: "BUILD_STARTED", buildId: "b2" },
+        { type: "BUILD_STARTED", buildId: "b2", profileId: "profile-1" },
         {
           type: "BUILD_TERMINAL",
           buildId: "b2",
@@ -447,7 +447,7 @@ describe("back from connect", () => {
   it("returns a built voice to its result, where Continue still leads on", () => {
     const state = run(
       [
-        { type: "BUILD_STARTED", buildId: "b1" },
+        { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
         {
           type: "BUILD_TERMINAL",
           buildId: "b1",
@@ -469,7 +469,7 @@ describe("back from connect", () => {
   it("returns a voice sent back for more writing to collecting, not its old result", () => {
     const state = run(
       [
-        { type: "BUILD_STARTED", buildId: "b1" },
+        { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
         {
           type: "BUILD_TERMINAL",
           buildId: "b1",
@@ -513,7 +513,7 @@ describe("member path", () => {
     expect(state).toMatchObject({ act: "voice", phase: "vo.collecting" });
     state = run(
       [
-        { type: "BUILD_STARTED", buildId: "b1" },
+        { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
         {
           type: "BUILD_TERMINAL",
           buildId: "b1",
