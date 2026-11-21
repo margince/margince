@@ -10,6 +10,7 @@ import {
 } from "../../components/projectownerfield";
 import { PHASE_LABEL } from "../../format/projectphase";
 import type { MessageKey } from "../../i18n/en";
+import { faultSentenceFor } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 // The project form's vocabulary and transport, with no React in it: what the
@@ -45,7 +46,21 @@ export function projectFields(
       key: "name",
       label: "project.name",
       required: true,
-      maxLength: TEXT_LIMITS.label,
+      // No native `maxLength`: it counts UTF-16 units, and the server counts
+      // characters. The refusal holds Save and says the limit.
+      validate: (value) =>
+        [...value].length > TEXT_LIMITS.label
+          ? faultSentenceFor(
+              {
+                field: "name",
+                code: "too_long",
+                message: "",
+                max: TEXT_LIMITS.label,
+              },
+              t,
+              { name: t("project.name") },
+            )
+          : undefined,
     },
     ...(opts.mode === "create"
       ? [

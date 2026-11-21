@@ -109,17 +109,28 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
   });
 });
 
-// The name column holds a label, so the field stops typing where the server
-// would refuse, in both dialogs.
+// The name column holds a label of 120 characters, counted as the server
+// counts them, in both dialogs.
 describe("the project name field", () => {
   const t = (key: string) => `<${key}>`;
-  it("stops at the label limit when creating and editing", () => {
+  const nameField = (mode: "create" | "edit") =>
+    projectFields(t, { owner: { owners: [], me: "u-me" }, mode }).find(
+      (field) => field.key === "name",
+    );
+
+  it("takes a name of exactly the label limit in characters, emoji included", () => {
+    const atLimit = `${"a".repeat(TEXT_LIMITS.label - 1)}🚀`;
     for (const mode of ["create", "edit"] as const) {
-      const name = projectFields(t, {
-        owner: { owners: [], me: "u-me" },
-        mode,
-      }).find((field) => field.key === "name");
-      expect(name?.maxLength).toBe(TEXT_LIMITS.label);
+      const name = nameField(mode);
+      expect(name?.maxLength).toBeUndefined();
+      expect(name?.validate?.(atLimit)).toBeUndefined();
+    }
+  });
+
+  it("refuses a name past the label limit in characters", () => {
+    const over = `${"a".repeat(TEXT_LIMITS.label)}🚀`;
+    for (const mode of ["create", "edit"] as const) {
+      expect(nameField(mode)?.validate?.(over)).toBeTruthy();
     }
   });
 });
