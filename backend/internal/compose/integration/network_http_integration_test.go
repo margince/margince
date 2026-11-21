@@ -13,10 +13,12 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -331,6 +333,49 @@ func TestAWonDealIsNotGoingCold(t *testing.T) {
 	// a rep to ignore the flag on the deals where it means something.
 	if findRisk(coverageRisks(t, e, deal), "going_cold") != nil {
 		t.Error("a won deal silent for 400 days was flagged as going cold")
+	}
+}
+
+// Going-cold and the deal's stalled flag share one rule for "gone quiet". A
+// pause or a meeting booked ahead silences both or neither.
+func TestGoingColdIsAbsentExactlyWhereTheDealIsNotStalled(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	now := clocktest.Now(t)
+	_, paused := dealAtAnAccount(t, e, "Lindqvist AB", "Paused")
+	_, booked := dealAtAnAccount(t, e, "Moreau SA", "Booked")
+	_, plain := dealAtAnAccount(t, e, "Novak sro", "Plain")
+
+	if status := e.Call(t, "PATCH", "/v1/deals/"+paused,
+		AnyMap{"wait_until": now.AddDate(0, 1, 0).Format(time.DateOnly)}, nil, nil); status != http.StatusOK {
+		t.Fatalf("pausing the deal: %d", status)
+	}
+	createdID(t, e, "/v1/activities", AnyMap{
+		"kind": "meeting", "subject": "Proposal walkthrough", "source": "manual",
+		"occurred_at": now.AddDate(0, 0, 5).UTC().Format(time.RFC3339),
+		"links":       []AnyMap{{"entity_type": "deal", "entity_id": booked}},
+	})
+	for _, deal := range []string{paused, booked, plain} {
+		ageLastTouch(t, e, deal, 70)
+	}
+
+	for name, tc := range map[string]struct {
+		deal        string
+		wantStalled bool
+	}{"paused": {paused, false}, "meeting booked": {booked, false}, "plain": {plain, true}} {
+		var read struct {
+			Stalled bool `json:"stalled"`
+		}
+		if status := e.Call(t, "GET", "/v1/deals/"+tc.deal, nil, nil, &read); status != http.StatusOK {
+			t.Fatalf("%s: reading the deal: %d", name, status)
+		}
+		if read.Stalled != tc.wantStalled {
+			t.Fatalf("%s: the deal reads stalled=%v, want %v", name, read.Stalled, tc.wantStalled)
+		}
+		cold := findRisk(coverageRisks(t, e, tc.deal), "going_cold") != nil
+		if cold != read.Stalled {
+			t.Errorf("%s: going_cold=%v while the deal reads stalled=%v; the two rules disagree", name, cold, read.Stalled)
+		}
 	}
 }
 

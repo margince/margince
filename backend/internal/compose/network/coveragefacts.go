@@ -52,6 +52,8 @@ type dealFacts struct {
 	// date, so a deal nobody has contacted and one contacted the day it was
 	// written down carry the same instant.
 	everTouched bool
+	// quietSuppressed is deals.QuietSuppressedSQL judged at asOf.
+	quietSuppressed bool
 	// asOf is the DATABASE's clock, read in the same statement as the row.
 	// going-cold measures against it rather than against the service's, so
 	// both ends of that subtraction come from the clock that wrote the touch —
@@ -68,9 +70,9 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 	var company *ids.UUID
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT status, company_id, %s, %s,
-		       last_activity_at IS NOT NULL, now()
-		  FROM deal WHERE id = $1`, idlebase.SQL(""), deals.LastActivityDaySQL("deal")), dealID).
-		Scan(&out.status, &company, &out.lastTouchAt, &out.lastTouchDateOnly, &out.everTouched, &out.asOf)
+		       last_activity_at IS NOT NULL, %s, now()
+		  FROM deal WHERE id = $1`, idlebase.SQL(""), deals.LastActivityDaySQL("deal"), deals.QuietSuppressedSQL("deal", "now()")), dealID).
+		Scan(&out.status, &company, &out.lastTouchAt, &out.lastTouchDateOnly, &out.everTouched, &out.quietSuppressed, &out.asOf)
 	if err != nil {
 		return out, fmt.Errorf("network: reading the deal a coverage view describes: %w", err)
 	}
