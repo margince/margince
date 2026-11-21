@@ -127,6 +127,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/taskansweredbatch.go:CompleteAnsweredTasksTx":     "Pages the same rule over open contact tasks once, to close those stored mail already answered. It creates and surfaces no open work.",
 	"modules/activities/taskansweredbatch.go:CountAnsweredTaskCandidates": "Counts the open contact tasks the one-time batch will inspect, for its progress estimate. It surfaces no open work.",
 	"modules/activities/taskbooked.go:CloseTasksAnsweredByBookingTx":      "A booking answers every open task on the booked lead or contact, current or dormant, whoever made it. It creates and surfaces no open work.",
+	"modules/activities/taskchatted.go:chatTasksSQL":                      "A filed chat is read against the filer's own open tasks on its record, current or dormant, made by a user. It creates and surfaces no open work.",
 	"modules/activities/taskbooked.go:answeredByCalledOffMeetingSQL":      "Reopens only the tasks a called-off booking closed itself, found by their completion evidence. It surfaces no list.",
 	"modules/activities/taskanswered.go:RecentTaskCompletions":            "Reads only completed tasks from audit evidence for Done for you, never open work.",
 	"modules/activities/memberhandover.go:ConsolidateMemberTasksTx":       "moves every open task during an admitted identity merge, including tasks no longer current, so none can be left on a hidden account",

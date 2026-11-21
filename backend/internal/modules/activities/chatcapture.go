@@ -3,8 +3,8 @@
 
 package activities
 
-// Filing a chat screenshot on the contact it was pasted on. One message
-// activity is linked to the contact, and the stored image moves onto it.
+// Filing a chat screenshot on the contact, lead or deal it was pasted on. One
+// message activity is linked to that record, and the stored image moves onto it.
 // Nothing is written before the user confirms. The reading of the image never
 // writes anything.
 
@@ -83,6 +83,9 @@ type ChatCaptureFiling struct {
 	WriteAs func(context.Context) context.Context
 }
 
+// chatParents are the records a chat screenshot is filed on.
+var chatParents = []string{linkEntityContact, linkEntityLead, linkEntityDeal}
+
 // refuseUnaskableQuestion refuses a chat capture of a file that is not an
 // image. The text lane would otherwise read any text file as a "chat".
 func refuseUnaskableQuestion(ctx context.Context, tx pgx.Tx, attachmentID ids.UUID, question string) error {
@@ -144,23 +147,23 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 			filed, err = refiledChat(ctx, tx, in)
 			return err
 		}
-		if parentType != linkEntityContact {
+		if !slices.Contains(chatParents, parentType) {
 			return &ChatCaptureError{
 				Code:    "unsupported_entity_type",
-				Message: "a chat is filed from a screenshot on a contact; this file hangs on a " + parentType,
+				Message: "a chat is filed from a screenshot on a contact, lead or deal; this file hangs on a " + parentType,
 			}
 		}
 		read, err := requireChatReading(ctx, tx, in)
 		if err != nil {
 			return err
 		}
-		if err := requireSameCounterparty(ctx, tx, in, read); err != nil {
+		if err := requireSameCounterparty(ctx, tx, in, parentType, read); err != nil {
 			return err
 		}
 		if err := requireRegisteredChannel(ctx, tx, in.Channel); err != nil {
 			return err
 		}
-		filed, err = s.writeChatActivity(ctx, tx, in)
+		filed, err = s.writeChatActivity(ctx, tx, in, parentType)
 		if err != nil {
 			return err
 		}
@@ -197,21 +200,21 @@ func requireChatReading(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling) (E
 }
 
 // requireSameCounterparty refuses a chat whose header names someone other
-// than the contact, unless the user confirmed it belongs here anyway.
-func requireSameCounterparty(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling, read ExtractionRead) error {
+// than the contact or lead, unless the user confirmed it belongs here anyway.
+func requireSameCounterparty(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling, parentType string, read ExtractionRead) error {
 	if in.ConfirmOtherCounterparty {
 		return nil
 	}
-	contactID, err := attachmentParentID(ctx, tx, in.AttachmentID)
+	parentID, err := attachmentParentID(ctx, tx, in.AttachmentID)
 	if err != nil {
 		return err
 	}
-	shows, err := otherChatCounterparty(ctx, tx, contactID, read)
+	shows, err := otherChatCounterparty(ctx, tx, parentType, parentID, read)
 	if err != nil || shows == "" {
 		return err
 	}
-	return fmt.Errorf("%w: this chat shows %s, not this contact; confirm to file it here anyway",
-		apperrors.ErrConflict, shows)
+	return fmt.Errorf("%w: this chat shows %s, not this %s; confirm to file it here anyway",
+		apperrors.ErrConflict, shows, parentType)
 }
 
 // requireRegisteredChannel checks the channel against the registry, so a
@@ -231,8 +234,8 @@ func requireRegisteredChannel(ctx context.Context, tx pgx.Tx, channel string) er
 	return nil
 }
 
-func (s *Store) writeChatActivity(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling) (ids.UUID, error) {
-	contactID, err := attachmentParentID(ctx, tx, in.AttachmentID)
+func (s *Store) writeChatActivity(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling, parentType string) (ids.UUID, error) {
+	parentID, err := attachmentParentID(ctx, tx, in.AttachmentID)
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -251,7 +254,7 @@ func (s *Store) writeChatActivity(ctx context.Context, tx pgx.Tx, in ChatCapture
 		Kind:            string(crmcontracts.ActivityKindMessage),
 		ChannelProvider: in.Channel,
 		Body:            body,
-		Links:           []ActivityLinkInput{{EntityType: linkEntityContact, EntityID: contactID}},
+		Links:           []ActivityLinkInput{{EntityType: parentType, EntityID: parentID}},
 		SourceSystem:    &source,
 		SourceID:        &sourceID,
 		Source:          ChatCaptureSourceSystem,

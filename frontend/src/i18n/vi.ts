@@ -2417,6 +2417,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.rbac_defaults": "Quyền khởi đầu của tiện ích mở rộng",
   "systemJob.release_version": "Kiểm tra bản phát hành",
   "systemJob.report_schedule": "Báo cáo theo lịch",
+  "systemJob.chat_task_reader": "Cuộc trò chuyện và việc cần làm đang mở",
   "systemJob.request_settlement": "Hoàn tất yêu cầu",
   "systemJob.restore_drill": "Bản ghi diễn tập khôi phục",
   "systemJob.risk_verdict": "Kiểm tra rủi ro deal",
@@ -7718,6 +7719,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "chatCapture.readBadge": "AI sao chép từ ảnh chụp màn hình",
   "chatCapture.channel": "Ứng dụng chat",
   "chatCapture.file": "Lưu vào liên hệ này",
+  "chatCapture.fileOnLead": "Lưu vào lead này",
+  "chatCapture.fileOnDeal": "Lưu vào deal này",
   "chatCapture.fileFailed": "Không lưu được cuộc trò chuyện",
 
   // Thêm một tài liệu. Câu hỏi "Thuộc về đâu" mới là quyết định thật: chỉ tài
@@ -22962,6 +22965,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
   "aiTask.name.rewrite": "Viết lại",
   "aiTask.name.chat_summary": "Tóm tắt kênh chat",
+  "aiTask.name.chat_task_reading": "Cuộc trò chuyện và việc cần làm đang mở",
   "aiTask.name.signal_extract": "Trích xuất tín hiệu từ cuộc trao đổi",
   "aiTask.name.site_extract": "Phân tích chuyên sâu trang web",
   "aiTask.name.site_fact_extract": "Trích xuất thông tin từ trang web",

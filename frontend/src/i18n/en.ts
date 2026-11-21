@@ -2394,6 +2394,7 @@ export const en = {
   "systemJob.rbac_defaults": "Extension starting permissions",
   "systemJob.release_version": "Release check",
   "systemJob.report_schedule": "Scheduled reports",
+  "systemJob.chat_task_reader": "Chat and open tasks",
   "systemJob.request_settlement": "Request settlement",
   "systemJob.restore_drill": "Restore drill record",
   "systemJob.risk_verdict": "Deal risk check",
@@ -7912,6 +7913,8 @@ export const en = {
   "chatCapture.readBadge": "Copied from the screenshot by AI",
   "chatCapture.channel": "Chat app",
   "chatCapture.file": "File on this contact",
+  "chatCapture.fileOnLead": "File on this lead",
+  "chatCapture.fileOnDeal": "File on this deal",
   "chatCapture.fileFailed": "The chat could not be filed",
 
   // Adding one. The "About" wording is doing real work: it decides whether the
@@ -23251,6 +23254,7 @@ export const en = {
     "Checking whether the reply answered the request",
   "aiTask.name.rewrite": "Rewriting",
   "aiTask.name.chat_summary": "Chat channel summary",
+  "aiTask.name.chat_task_reading": "Chat and open tasks",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",

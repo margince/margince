@@ -25681,18 +25681,25 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * File a chat screenshot on its contact as one message activity, with the image attached.
+         * File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
          * @description The confirm step after a `chat_capture` reading of a screenshot uploaded to a
-         *     contact. It writes one `message` activity linked to that contact, on the channel
-         *     named, with `body` as its text, and moves the image from the contact onto the
-         *     activity. Nothing is written before this call: the reading never files anything.
+         *     contact, lead or deal. It writes one `message` activity linked to that record, on
+         *     the channel named, with `body` as its text, and moves the image from the record
+         *     onto the activity. Nothing is written before this call: the reading never files anything.
+         *
+         *     With a `chat_task_reading` model set up, the filed text is then read against the
+         *     caller's own open tasks on that record. A task the chat settles is marked done, or
+         *     moved to the day the chat names, by Margince on the caller's behalf, with the chat
+         *     line it rests on as evidence. The change shows in Done for you with Undo, and the
+         *     same chat never changes that task again. An unsure reading, or no model, changes
+         *     no task, and a failed reading never refuses the filing.
          *
          *     When `body` is the reading's own text unchanged, the activity is written by the
          *     reader on behalf of the caller, which is how the product marks text a model
          *     read. A body the caller typed or changed is the caller's own. An empty body is
          *     allowed, so a screenshot the model could not read is still filed.
          *
-         *     Requires UPDATE on the contact and CREATE on activities. The reading named must
+         *     Requires UPDATE on the record and CREATE on activities. The reading named must
          *     belong to this file, be a `chat_capture` reading, and be finished; otherwise
          *     422. `channel_provider` must be a registered provider (`GET /v1/channel-providers`).
          *     A second call with the same reading answers the activity the first one wrote.
@@ -44729,9 +44736,9 @@ export interface components {
             /** Format: date-time */
             finished_at?: string | null;
             /**
-             * @description For a finished `chat_capture` reading of a screenshot on a contact: the name or
-             *     number the chat header shows when neither agrees with that contact. Null when
-             *     they agree, when the header shows neither, and for every other reading.
+             * @description For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+             *     name or number the chat header shows when neither agrees with that record. Null
+             *     when they agree, when the header shows neither, on a deal, and for every other reading.
              *     `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
              */
             other_counterparty?: string | null;
@@ -44755,7 +44762,7 @@ export interface components {
             /** @description The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone. */
             body?: string | null;
             /**
-             * @description The caller confirms the chat belongs on this contact although its header shows
+             * @description The caller confirms the chat belongs on this record although its header shows
              *     someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
              *     is refused with 409.
              * @default false
@@ -53298,7 +53305,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "chat_task_reading" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -53324,7 +53331,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary" | "chat_task_reading";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -103983,7 +103990,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set. */
+            /** @description The chat's header shows someone other than the contact or lead, and `confirm_other_counterparty` was not set. */
             409: {
                 headers: {
                     [name: string]: unknown;

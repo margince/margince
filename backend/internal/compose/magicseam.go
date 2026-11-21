@@ -83,7 +83,7 @@ func decidedUndo(receipt attention.Receipt) *crmcontracts.MagicUndo {
 	if receipt.Source != attention.ReceiptFromCorrection || receipt.Undo == nil {
 		return nil
 	}
-	if receipt.TargetType == entityTypeActivity && receipt.Kind == "task_completed" && !receipt.Undo.Reversed {
+	if receipt.TargetType == entityTypeActivity && attention.IsTaskReceipt(receipt.Kind) && !receipt.Undo.Reversed {
 		undo := magicOffer(receipt.Undo.AuditLogID)
 		undo.Version = &receipt.Undo.Version
 		return undo

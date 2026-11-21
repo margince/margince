@@ -37,6 +37,8 @@ var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
 	"(*compose.OwedClassifier).reviewedVerdictPredictions": "budget deferral or an unbound lane ends the bounded preview; unattempted messages remain human-review rows with classification_not_attempted, and all other errors propagate to modelfailure.Write",
 	"(*compose.OwedClassifier).predictBatch":               "a declined batch retries the same messages individually through the ordinary classifier; declined or uncertain outcomes stay review-only, while other errors propagate to modelfailure.Write",
 
+	"(*compose.ChatCaptureFile).File":                "the chat is filed before the reading; a failed reading is logged and changes no task, which is the decided answer without a model",
+	"(compose.chatCaptureHandlers).FileChatCapture":  "File drops the reading's error itself, so every error the handler writes is the filing's own and never a model's",
 	"(compose.Server).RegenerateOffer":               "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
 	"compose.writeCorpusAnswer":                      "a failed lane serves the retrieved passages with their citations as unreviewed, never as answered, and logs which lane failed",
 	"(*compose.onboardingCompanyAssistant).converse": "a clicked option was proved against the read before any model was asked, so it is recorded and confirmed in a server-written sentence; with no option clicked the error is returned",

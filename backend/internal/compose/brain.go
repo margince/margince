@@ -82,11 +82,10 @@ type ModelPath struct {
 	// company-view lane whose absence changes the ANSWER rather than the prose:
 	// its floor abstains, because grading is not a restatement of recorded
 	// values (DOSS-PARAM-7).
-	GrowthFit   completer
-	DraftReply  completer // activity-anchored email reply drafting
-	Rewrite     completer // the rewrite verbs over a rep's own words, premium first
-	ChatSummary completer // judges and summarises a linked chat channel's talk
-	OfferDraft  completer // the offer regenerate-from-signal drafting call
+	GrowthFit                    completer
+	DraftReply, Rewrite          completer // reply drafting; the rewrite verbs over a rep's own words, premium first
+	ChatSummary, ChatTaskReading completer // a linked channel's talk; a filed chat screenshot against its record's open tasks
+	OfferDraft                   completer // the offer regenerate-from-signal drafting call
 	// CaptureClassify is the §2.8 batched mail-label lane (ADR-0063) —
 	// the highest-volume, cheapest task, routed L-S with the C-C solo
 	// re-ask riding the same ladder.
@@ -359,6 +358,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		DraftReply:                    brain(ai.TaskDraftReply),
 		Rewrite:                       brain(ai.TaskRewrite),
 		ChatSummary:                   brain(ai.TaskChatSummary),
+		ChatTaskReading:               brain(ai.TaskChatTaskReading),
 		OfferDraft:                    brain(ai.TaskOfferDraft),
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),

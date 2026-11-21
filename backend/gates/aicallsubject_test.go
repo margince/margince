@@ -69,6 +69,10 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/rewrite/service.go",
 		"the record the words on screen are written on, which every rewrite names; the rep's words are the request",
 	},
+	"internal/compose/chattasks/reader.go:Settle": {
+		"internal/compose/chattasks/reader.go",
+		"the filed chat message whose text is the request, beside the open tasks on its record",
+	},
 	"internal/compose/chatsync/summary.go:summarise": {
 		"internal/compose/chatsync/summary.go",
 		"the deal or project whose linked channel's talk is the request",

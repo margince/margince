@@ -2488,6 +2488,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.rbac_defaults": "Anfangsberechtigungen der Erweiterungen",
   "systemJob.release_version": "Versionsprüfung",
   "systemJob.report_schedule": "Geplante Berichte",
+  "systemJob.chat_task_reader": "Chat und offene Aufgaben",
   "systemJob.request_settlement": "Abschluss von Anfragen",
   "systemJob.restore_drill": "Eintrag eines Wiederherstellungstests",
   "systemJob.risk_verdict": "Prüfung des Deal-Risikos",
@@ -7904,6 +7905,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "chatCapture.readBadge": "Von der KI aus dem Screenshot übernommen",
   "chatCapture.channel": "Chat-App",
   "chatCapture.file": "Beim Kontakt ablegen",
+  "chatCapture.fileOnLead": "Beim Lead ablegen",
+  "chatCapture.fileOnDeal": "Beim Deal ablegen",
   "chatCapture.fileFailed": "Der Chat konnte nicht abgelegt werden",
 
   // Ein Dokument hinzufügen. Die Frage „Wozu gehört es?" trägt die eigentliche
@@ -23590,6 +23593,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
   "aiTask.name.chat_summary": "Zusammenfassung eines Chat-Kanals",
+  "aiTask.name.chat_task_reading": "Chat und offene Aufgaben",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
   "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",

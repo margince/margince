@@ -125,13 +125,18 @@ func (s *Store) closeAnsweredTasksTx(ctx context.Context, tx pgx.Tx, email ids.A
 	return len(tasks), nil
 }
 
-// TaskCompletion ties a completed task to the sent mail and reversible audit entry.
+// TaskCompletion ties a task Margince changed to its evidence and the
+// reversible audit entry. Moved is a new due day from a chat, not a completion.
 type TaskCompletion struct {
 	ID, AuditID, EmailID ids.UUID
 	Subject, Contact     string
 	At, WrittenAt        time.Time
 	Version              int64
 	Writable, Booking    bool
+	Chat, Moved          bool
+	// Quote is the chat's sentence the change rests on; DueAt is the new day.
+	Quote string
+	DueAt *time.Time
 }
 
 // RecentTaskCompletions returns only the caller's still-completed tasks and their reversible evidence.
@@ -151,36 +156,28 @@ func (s *Store) RecentTaskCompletions(ctx context.Context, since time.Time, limi
 		if err != nil {
 			return err
 		}
-		contactScope := "false"
-		if auth.ReadGranted(ctx, "contact") {
-			contactScope, err = auth.ScopeClauseFor(ctx, "contact", "p", arg)
-			if err != nil {
-				return err
-			}
-			if contactScope == "" {
-				contactScope = sqlTrue
-			}
+		contactScope, err := receiptNameScope(ctx, "contact", "p", arg)
+		if err != nil {
+			return err
 		}
-		leadScope := "false"
-		if auth.ReadGranted(ctx, "lead") {
-			leadScope, err = auth.ScopeClauseFor(ctx, "lead", "ld", arg)
-			if err != nil {
-				return err
-			}
-			if leadScope == "" {
-				leadScope = sqlTrue
-			}
+		leadScope, err := receiptNameScope(ctx, "lead", "ld", arg)
+		if err != nil {
+			return err
 		}
-		query := `SELECT a.id, trail.id, (trail.evidence->>` + args.add(taskAnsweredBy) + `)::uuid,
-    coalesce(a.subject,''), coalesce(c.full_name, lead_name.full_name, ''), trail.occurred_at, a.version, sent.occurred_at, sent.kind='meeting'
+		answered, moved := args.add(taskAnsweredBy), args.add(taskMovedBy)
+		evidence := `coalesce(trail.evidence->>` + answered + `, trail.evidence->>` + moved + `)::uuid`
+		query := `SELECT a.id, trail.id, ` + evidence + `,
+    coalesce(a.subject,''), coalesce(c.full_name, lead_name.full_name, ''), trail.occurred_at, a.version, sent.occurred_at, sent.kind='meeting',
+    sent.kind='message', trail.evidence ? ` + moved + `, coalesce(trail.evidence->>` + args.add(taskAnswerQuote) + `, ''), ` + storekit.TaskDueSQL("a") + `
     FROM audit_log trail JOIN activity a ON a.id=trail.entity_id
- JOIN activity sent ON sent.id=(trail.evidence->>'task_answered_by')::uuid
+ JOIN activity sent ON sent.id=` + evidence + `
     LEFT JOIN LATERAL (SELECT p.full_name FROM activity_link l JOIN contact p ON p.id=l.contact_id WHERE l.activity_id=a.id AND p.archived_at IS NULL AND (` + contactScope + `) ORDER BY p.id LIMIT 1) c ON true
     LEFT JOIN LATERAL (SELECT ld.full_name FROM activity_link l JOIN lead ld ON ld.id=l.lead_id WHERE l.activity_id=a.id AND ld.archived_at IS NULL AND (` + leadScope + `) ORDER BY ld.id LIMIT 1) lead_name ON true
-    WHERE trail.entity_type='activity' AND trail.evidence ? ` + args.add(taskAnsweredBy) + `
+    WHERE trail.entity_type='activity' AND (trail.evidence ? ` + answered + ` OR trail.evidence ? ` + moved + `)
       AND trail.occurred_at >= ` + args.add(since) + ` AND a.assignee_id=` + args.add(actor.UserID) + `
-      AND a.kind='task' AND a.is_done AND a.archived_at IS NULL AND (` + readable + `)
-      AND NOT EXISTS (SELECT 1 FROM audit_log later WHERE later.entity_type='activity' AND later.entity_id=a.id AND (later.occurred_at,later.id)>(trail.occurred_at,trail.id) AND later.after ? 'is_done')
+      AND a.kind='task' AND a.is_done <> (trail.evidence ? ` + moved + `) AND a.archived_at IS NULL AND (` + readable + `)
+      AND NOT EXISTS (SELECT 1 FROM audit_log later WHERE later.entity_type='activity' AND later.entity_id=a.id AND (later.occurred_at,later.id)>(trail.occurred_at,trail.id)
+        AND (later.after ? 'is_done' OR (trail.evidence ? ` + moved + ` AND later.after ? 'due_at')))
     ORDER BY trail.occurred_at DESC,trail.id DESC LIMIT ` + args.add(limit)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
@@ -188,7 +185,8 @@ func (s *Store) RecentTaskCompletions(ctx context.Context, since time.Time, limi
 		}
 		candidates, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (TaskCompletion, error) {
 			var one TaskCompletion
-			err := row.Scan(&one.ID, &one.AuditID, &one.EmailID, &one.Subject, &one.Contact, &one.At, &one.Version, &one.WrittenAt, &one.Booking)
+			err := row.Scan(&one.ID, &one.AuditID, &one.EmailID, &one.Subject, &one.Contact, &one.At, &one.Version, &one.WrittenAt, &one.Booking,
+				&one.Chat, &one.Moved, &one.Quote, &one.DueAt)
 			return one, err
 		})
 		if err != nil {
@@ -214,6 +212,19 @@ func (s *Store) RecentTaskCompletions(ctx context.Context, since time.Time, limi
 	return out, nil
 }
 
+// receiptNameScope is the row scope a receipt names its contact or lead under:
+// false without the read grant, true when the scope is unbounded.
+func receiptNameScope(ctx context.Context, object, alias string, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, object) {
+		return "false", nil
+	}
+	scope, err := auth.ScopeClauseFor(ctx, object, alias, arg)
+	if err != nil || scope != "" {
+		return scope, err
+	}
+	return sqlTrue, nil
+}
+
 func (s *Store) readableTaskCompletions(ctx context.Context, tx pgx.Tx, candidates []TaskCompletion) ([]TaskCompletion, error) {
 	out := []TaskCompletion{}
 	var err error
@@ -226,6 +237,10 @@ func (s *Store) readableTaskCompletions(ctx context.Context, tx pgx.Tx, candidat
 	}
 	for _, one := range candidates {
 		one.WrittenAt = one.WrittenAt.In(zone)
+		if one.DueAt != nil {
+			due := one.DueAt.In(zone)
+			one.DueAt = &due
+		}
 		if _, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](one.ID), storekit.LiveOnly); errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			continue
 		} else if err != nil {

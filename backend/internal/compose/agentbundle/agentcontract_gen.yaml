@@ -41873,9 +41873,9 @@ components:
         other_counterparty:
           type: [string, 'null']
           description: |-
-            For a finished `chat_capture` reading of a screenshot on a contact: the name or
-            number the chat header shows when neither agrees with that contact. Null when
-            they agree, when the header shows neither, and for every other reading.
+            For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+            name or number the chat header shows when neither agrees with that record. Null
+            when they agree, when the header shows neither, on a deal, and for every other reading.
             `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
     AttachmentReadRequest:
       type: object
@@ -50870,6 +50870,7 @@ components:
         - capture_confidentiality_verdict
         - capture_counterparty_verdict
         - chat_summary
+        - chat_task_reading
         - cert_judge
         - cold_start
         - corpus_ask
@@ -50903,7 +50904,7 @@ components:
         - weekly_review
     AiActivityKind:
       type: string
-      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret, reader_rendering, deal_verdict, rewrite, chat_summary]
+      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret, reader_rendering, deal_verdict, rewrite, chat_summary, chat_task_reading]
       description: |-
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
