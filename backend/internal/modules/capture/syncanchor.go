@@ -202,20 +202,15 @@ func (c *syncCheckpointer) RecordLostCursor(ctx context.Context, readFrom time.T
 		var lastGood *time.Time
 		err := tx.QueryRow(ctx, `SELECT last_success_at FROM capture_sync_state WHERE connection_id = $1`,
 			c.snapshot.id).Scan(&lastGood)
-		if errors.Is(err, pgx.ErrNoRows) || (err == nil && (lastGood == nil || !lastGood.Before(readFrom))) {
-			return nil
-		}
-		if err != nil {
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("capture: reading when a lost cursor was last good: %w", err)
 		}
-		recorded, err := recordUnreadPeriod(ctx, tx, c.snapshot.id, c.snapshot.generation, *lastGood, readFrom)
-		if err != nil {
-			return err
+		if lastGood == nil {
+			return nil
 		}
-		if !recorded {
-			return errSyncSuperseded
-		}
-		return nil
+		// A superseded sync records nothing here, and its cursor write declines on the same fence.
+		_, err = recordUnreadPeriod(ctx, tx, c.snapshot.id, c.snapshot.generation, *lastGood, readFrom)
+		return err
 	})
 }
 

@@ -31,6 +31,8 @@ import (
 type stalledGmail struct {
 	mu       sync.Mutex
 	received map[string]time.Time
+	// undated leaves Gmail's own receive time off each message.
+	undated bool
 }
 
 func (g *stalledGmail) holds(first time.Time, count int) {
@@ -69,10 +71,11 @@ func (g *stalledGmail) serve(t *testing.T, owner string) *httptest.Server {
 		rfc822 := "From: Buyer <buyer@acme.com>\r\nTo: " + owner + "\r\nSubject: Note " + id + "\r\n" +
 			"Date: " + at.Format(time.RFC1123Z) + "\r\nMessage-ID: <" + id + "@acme.com>\r\n" +
 			"Content-Type: text/plain; charset=utf-8\r\n\r\nHello."
-		integration.WriteJSON(w, map[string]any{
-			"id": id, "internalDate": strconv.FormatInt(at.UnixMilli(), 10),
-			"raw": base64.RawURLEncoding.EncodeToString([]byte(rfc822)),
-		})
+		message := map[string]any{"id": id, "raw": base64.RawURLEncoding.EncodeToString([]byte(rfc822))}
+		if !g.undated {
+			message["internalDate"] = strconv.FormatInt(at.UnixMilli(), 10)
+		}
+		integration.WriteJSON(w, message)
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -97,12 +100,17 @@ func TestAGmailSyncThatLostItsCursorRecordsTheMailItLeftOut(t *testing.T) {
 	const owner = "rep@ws.example"
 	connected := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
 	resumed := connected.AddDate(0, 0, 14)
+	dayBefore := resumed.Add(-24 * time.Hour)
 	for name, tc := range map[string]struct {
-		newest  int
-		leftOut bool
+		newest      int
+		oldest      time.Time
+		undated     bool
+		wantUnread  bool
+		wantReadsTo time.Time
 	}{
-		"more mail arrived than one round lists":  {newest: 50, leftOut: true},
-		"the round lists everything that arrived": {newest: 3},
+		"more mail arrived than one round lists":  {newest: 50, oldest: dayBefore, wantUnread: true, wantReadsTo: dayBefore},
+		"the mail read again states no date":      {newest: 50, oldest: dayBefore, undated: true, wantUnread: true, wantReadsTo: resumed},
+		"the round lists everything that arrived": {newest: 3, oldest: dayBefore},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := integration.SetupSearch(t)
@@ -135,22 +143,22 @@ func TestAGmailSyncThatLostItsCursorRecordsTheMailItLeftOut(t *testing.T) {
 			}
 
 			now = resumed
-			oldestListed := resumed.Add(-24 * time.Hour)
-			mailbox.holds(oldestListed, tc.newest)
+			mailbox.holds(tc.oldest, tc.newest)
+			mailbox.undated = tc.undated
 			if err := registry.SyncOnce(grantCtx, connection); err != nil {
 				t.Fatalf("the sync after the stall: %v", err)
 			}
 
 			from, to := unreadPeriod(t, e, connection)
-			if !tc.leftOut {
+			if !tc.wantUnread {
 				if from != nil || to != nil {
 					t.Fatalf("unread period = %v..%v, want none: the round read all the mail there was", from, to)
 				}
 				return
 			}
-			if from == nil || to == nil || !from.Equal(connected) || !to.Equal(oldestListed) {
-				t.Fatalf("unread period = %s..%s, want the last good sync %s to the oldest mail read again %s",
-					fmt.Sprint(from), fmt.Sprint(to), connected, oldestListed)
+			if from == nil || to == nil || !from.Equal(connected) || !to.Equal(tc.wantReadsTo) {
+				t.Fatalf("unread period = %s..%s, want the last good sync %s to where the round read again %s",
+					fmt.Sprint(from), fmt.Sprint(to), connected, tc.wantReadsTo)
 			}
 		})
 	}
