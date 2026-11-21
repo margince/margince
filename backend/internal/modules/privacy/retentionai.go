@@ -88,25 +88,32 @@ func (s *RetentionService) eraseVoiceSignalContent(ctx context.Context, id ids.U
 // per transaction, and records each pass once. They are engine telemetry with
 // no subject, so no row gets its own audit.
 //
-// retainOnly narrows it to the rows without a stored payload.
-func (s *RetentionService) evaluateCallRetention(ctx context.Context, retainOnly bool) error {
+// An answer trace with a stored payload always stays. The payload has its own
+// retention rule, and deleting the trace would take the payload with it.
+func (s *RetentionService) evaluateCallRetention(ctx context.Context) error {
 	if s.pruneEmbedCalls == nil || s.pruneAnswerCalls == nil {
 		s.log.Warn("retention: call traces are kept, because their prunes were not supplied")
 		return nil
 	}
-	if err := s.pruneCalls(ctx, s.pruneEmbedCalls, embedCallPrune, embedCallRetention, retainOnly); err != nil {
+	if err := s.pruneCalls(ctx, s.pruneEmbedCalls, embedCallPrune, embedCallRetention, false); err != nil {
 		return err
 	}
-	return s.pruneCalls(ctx, s.pruneAnswerCalls, answerCallPrune, answerCallRetention, retainOnly)
+	return s.pruneCalls(ctx, s.pruneAnswerCalls, answerCallPrune, answerCallRetention, true)
 }
 
-func (s *RetentionService) pruneCalls(ctx context.Context, prune CallPrune, rows string, days int, retainOnly bool) error {
+// pruneCalls reads the retain-only posture in each batch's transaction. A
+// switch to retain-only during a long pass then holds from the next batch.
+func (s *RetentionService) pruneCalls(ctx context.Context, prune CallPrune, rows string, days int, keepWithPayload bool) error {
 	cutoff := time.Now().AddDate(0, 0, -days)
 	var total int64
 	for {
 		var removed int64
-		err := s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
-			removed, err = prune(ctx, tx, cutoff, operationalPruneBatch, retainOnly)
+		err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+			retainOnly, err := retainOnlyTx(ctx, tx)
+			if err != nil {
+				return err
+			}
+			removed, err = prune(ctx, tx, cutoff, operationalPruneBatch, keepWithPayload || retainOnly)
 			return err
 		})
 		if err != nil {

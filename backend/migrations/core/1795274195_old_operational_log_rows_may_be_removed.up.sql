@@ -1,5 +1,5 @@
 -- A delete is admitted only for an action with a window, and only past it.
--- Every other action, and any new one, stays until it is given a window.
+-- Every other action stays, and so does a sign-in row that waits for its key.
 SET LOCAL lock_timeout = '3s';
 
 CREATE OR REPLACE FUNCTION system_log_immutable() RETURNS trigger
@@ -22,7 +22,8 @@ BEGIN
           'contact_employer_repair.skipped', 'dedupe_recheck', 'dedupe_near_match',
           'comms_identity_reconcile_failed', 'ai_task.state_changed'))
     OR (entry_age > interval '400 days' AND OLD.action IN (
-          'login', 'password_reset', 'password_reset_requested', 'capture.credential_rotated'))) THEN
+          'login', 'password_reset', 'password_reset_requested', 'capture.credential_rotated')
+        AND NOT (OLD.action = 'login' AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'))) THEN
     RETURN OLD;
   END IF;
   RAISE EXCEPTION 'system_log is append-only (attempted % on row %)', TG_OP, OLD.id

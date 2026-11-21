@@ -237,7 +237,7 @@ Enabled rules act each time the retention pass runs, as the panel says: "Enabled
 
 ### Windows nobody can change
 
-These four run with or without a rule, and no admin can edit them. Traces of AI embedding calls are kept for **90 days**, and traces of every other AI call for **400 days**. Error and skip entries of the system log are kept for **90 days**. Its sign-in and password reset entries are kept for **400 days**, and every other entry of it is kept.
+These four run with or without a rule, and no admin can edit them. Traces of AI embedding calls are kept for **90 days**, and traces of every other AI call for **400 days**. Error and skip entries of the system log are kept for **90 days**. Its sign-in, password reset and mailbox credential entries are kept for **400 days**, and every other entry of it is kept. Traces of AI answers that still have their stored content are kept past their window. Retain-only mode keeps all these system log entries, and it still removes old traces that have no stored content.
 
 ### Turning a retention policy off, versus deleting it
 

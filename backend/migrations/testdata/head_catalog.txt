@@ -10083,7 +10083,8 @@ BEGIN
           'contact_employer_repair.skipped', 'dedupe_recheck', 'dedupe_near_match',
           'comms_identity_reconcile_failed', 'ai_task.state_changed'))
     OR (entry_age > interval '400 days' AND OLD.action IN (
-          'login', 'password_reset', 'password_reset_requested', 'capture.credential_rotated'))) THEN
+          'login', 'password_reset', 'password_reset_requested', 'capture.credential_rotated')
+        AND NOT (OLD.action = 'login' AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'))) THEN
     RETURN OLD;
   END IF;
   RAISE EXCEPTION 'system_log is append-only (attempted % on row %)', TG_OP, OLD.id

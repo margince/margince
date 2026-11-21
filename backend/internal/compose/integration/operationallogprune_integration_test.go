@@ -80,6 +80,9 @@ func TestTheSystemLogAdmitsADeleteOnlyForAListedActionPastItsWindow(t *testing.T
 			}
 		}
 	}
+	if err := remove(logEntry(t, e, "login", `{"outcome":"failed","email_hash":"aa"}`, 5000)); err == nil {
+		t.Errorf("a sign-in row that waits for its key was deleted")
+	}
 	for _, action := range []string{"export", "retention.pruned", "installation_bootstrap", "an action nobody listed"} {
 		if err := remove(logEntry(t, e, action, `{}`, 5000)); err == nil {
 			t.Errorf("%s has no window and was deleted", action)
@@ -88,7 +91,7 @@ func TestTheSystemLogAdmitsADeleteOnlyForAListedActionPastItsWindow(t *testing.T
 }
 
 // The nightly pass removes a completion or decision trace past 400 days.
-// It keeps a younger one, which a spend report over the last year reads.
+// It keeps a younger one, and one whose stored content has its own rule.
 func TestTheNightlyPassRemovesAnswerTracesPastTheirYear(t *testing.T) {
 	e := Setup(t)
 	trace := func(kind string, days int) ids.UUID {
@@ -98,7 +101,10 @@ func TestTheNightlyPassRemovesAnswerTracesPastTheirYear(t *testing.T) {
 		return id
 	}
 	gone := []ids.UUID{trace("completion", 401), trace("decision", 401)}
-	kept := []ids.UUID{trace("completion", 399), trace("decision", 100)}
+	withContent := trace("completion", 401)
+	e.WsExec(t, `INSERT INTO ai_call_payload (ai_call_id, request_payload, response_payload, occurred_at)
+		VALUES ($1, '{}'::jsonb, '{}'::jsonb, now() - make_interval(days => 401))`, withContent)
+	kept := []ids.UUID{trace("completion", 399), trace("decision", 100), withContent}
 
 	if err := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
@@ -111,7 +117,7 @@ func TestTheNightlyPassRemovesAnswerTracesPastTheirYear(t *testing.T) {
 	}
 	for _, id := range kept {
 		if n := e.WsCount(t, `SELECT count(*) FROM ai_call WHERE id = $1`, id); n != 1 {
-			t.Errorf("a trace inside 400 days was removed")
+			t.Errorf("a trace inside 400 days, or one with stored content, was removed")
 		}
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM system_log WHERE action = 'retention.pruned'

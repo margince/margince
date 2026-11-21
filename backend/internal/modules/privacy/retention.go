@@ -309,7 +309,7 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := s.evaluateCallRetention(ctx, retainOnly); err != nil {
+	if err := s.evaluateCallRetention(ctx); err != nil {
 		return err
 	}
 	if err := s.pruneRecordCopies(ctx, retainOnly); err != nil {
