@@ -198,7 +198,7 @@ describe("a returning browser that never saw its reader finish onboarding", () =
   // A member with a step to take: setup holds only a seat that has one.
   const allow = {
     deal: ["read"],
-    voice_profile: ["create"],
+    voice_profile: ["read", "create"],
     activity: ["create"],
   } as const;
   const journey = (row: ReturnType<typeof wizardRow>) => ({

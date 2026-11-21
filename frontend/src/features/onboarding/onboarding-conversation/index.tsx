@@ -6,7 +6,11 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { Button } from "../../../design-system/atoms";
 import { useLocale, useT } from "../../../i18n";
-import { useCanWrite, useHoldsAdminRole } from "../../../lib/capability";
+import {
+  useCan,
+  useCanWrite,
+  useHoldsAdminRole,
+} from "../../../lib/capability";
 import {
   type useCompany,
   useInstallationDescribed,
@@ -201,7 +205,9 @@ function useRestore(
   const { company: existing, described } = useInstallationDescribed(true);
   const mayDescribe = useHoldsAdminRole();
   const mayTrainVoice = useCanWrite("voice_profile", "create");
-  // Both grants above read false until /me answers, so the restore waits on it.
+  // The probe's GET needs this grant, which a custom role may leave out.
+  const readsVoice = useCan("voice_profile", "read");
+  // The grants above read false until /me answers, so the restore waits on it.
   const meAnswered = useMe().data !== undefined;
   const progress = useQuery({
     ...onboardingProgressOptions,
@@ -215,6 +221,7 @@ function useRestore(
   }
   const wizard = atMount?.row ?? null;
   const voiceNeeded =
+    readsVoice &&
     atMount !== undefined &&
     described !== undefined &&
     voiceProbeNeeded(wizard, described, mayDescribe);

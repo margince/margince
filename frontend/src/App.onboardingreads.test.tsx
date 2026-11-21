@@ -91,7 +91,7 @@ describe("the reads of a member held on onboarding", () => {
           const grants = {
             deal: ["read"],
             forecast: ["read"],
-            voice_profile: ["create"],
+            voice_profile: ["read", "create"],
             activity: ["create"],
           } as const;
           return json(meFixture({ roles: ["rep"], allow: grants }));

@@ -350,7 +350,7 @@ describe("onboarding gate", () => {
                 roles: session.roles ?? ["admin"],
                 seat: session.seat,
                 allow: session.allow ?? {
-                  voice_profile: ["create"],
+                  voice_profile: ["read", "create"],
                   activity: ["create"],
                 },
               }),
@@ -514,7 +514,7 @@ describe("onboarding gate", () => {
       window.location.hash = "#/contacts";
       stubCompany(403, journey, {
         roles: ["rep"],
-        allow: { voice_profile: ["create"] },
+        allow: { voice_profile: ["read", "create"] },
       });
       mount();
       expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
@@ -567,7 +567,7 @@ describe("onboarding gate", () => {
       { row: { code: "not_found" }, status: 404 },
       {
         roles: ["ops"],
-        allow: { automation: ["update"], voice_profile: ["create"] },
+        allow: { automation: ["update"], voice_profile: ["read", "create"] },
       },
     );
     mount();
@@ -737,7 +737,7 @@ describe("onboarding gate", () => {
       window.location.hash = "#/contacts";
       const first = meFixture({
         roles: ["rep"],
-        allow: { voice_profile: ["create"], activity: ["create"] },
+        allow: { voice_profile: ["read", "create"], activity: ["create"] },
       });
       const next = { ...first, user: { ...first.user, id: "next-user" } };
       let signedIn: typeof first | null = first;

@@ -143,6 +143,8 @@ type StubOptions = {
   roles?: string[];
   /** Whether /me grants voice_profile create; granted unless a case says no. */
   voiceGrant?: boolean;
+  /** The /me grants in full, where a case needs more than the voice grant. */
+  allow?: GrantSpec;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -327,7 +329,10 @@ function stubApi(options: StubOptions = {}) {
       // role is admin, meFixture's default, unless a case names another.
       if (path.endsWith("/me") && request.method === "GET") {
         const allow: GrantSpec =
-          options.voiceGrant === false ? {} : { voice_profile: ["create"] };
+          options.allow ??
+          (options.voiceGrant === false
+            ? {}
+            : { voice_profile: ["read", "create"] });
         return jsonResponse(meFixture({ allow, roles: options.roles }));
       }
       throw new Error(`unstubbed request: ${request.method} ${request.url}`);
@@ -495,6 +500,22 @@ describe("restore into the conversational shell", () => {
     expect(screen.queryByText(/Train your writing voice/)).toBeNull();
     expect(screen.getByText(/Step 1 of 1/)).toBeTruthy();
     expect(requestsTo(calls, "/voice-profiles", "POST")).toHaveLength(0);
+  });
+
+  // GET /voice-profiles needs voice_profile read, which a custom role may
+  // leave out while it still lets the member connect mail.
+  it("a seat that may connect mail but not read a voice restores into connect without asking for one", async () => {
+    const calls = stubApi({
+      state: null,
+      roles: ["viewer"],
+      allow: { activity: ["create"] },
+    });
+    render(<OnboardingScreen />);
+
+    expect(
+      await screen.findByText("Connect your mail and calendar"),
+    ).toBeTruthy();
+    expect(requestsTo(calls, "/voice-profiles", "GET")).toHaveLength(0);
   });
 
   it("reopens the invite for a creator whose company is confirmed", async () => {
