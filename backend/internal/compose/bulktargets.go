@@ -26,15 +26,13 @@ type bulkRow struct {
 	label   string
 	version int64
 	ownerID *ids.UUID
-	// archived and lock are set by hold only. lock is the zero RowLock for a
-	// type whose writer takes its own lock.
+	// Set by hold only; lock stays zero where the writer takes its own.
 	archived bool
 	lock     storekit.RowLock
 }
 
-// bulkTarget is one record type's share of a bulk change. hold takes every
-// row's lock before any row changes, archived rows included; lock re-reads one
-// live row under it.
+// bulkTarget is one record type's share of a bulk change. hold locks every
+// row first, archived ones included, because an undo restores them.
 type bulkTarget interface {
 	hold(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
 	lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
@@ -180,19 +178,4 @@ func (t leadBulkTarget) lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkR
 
 func (t leadBulkTarget) reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error {
 	return t.store.ReassignLeadTx(ctx, tx, ids.From[ids.LeadKind](id), owner, &version)
-}
-
-// reassignHeldRow hands one held row to owner, on the hold's lock where the
-// record type's writer takes one.
-func reassignHeldRow(
-	ctx context.Context, tx pgx.Tx, target bulkTarget, id ids.UUID, row bulkRow, owner ids.UserID, version int64,
-) error {
-	if held, ok := target.(bulkHeldReassigner); ok {
-		return held.reassignHeld(ctx, tx, row.lock, owner, version)
-	}
-	reassigner, err := reassignerOf(target)
-	if err != nil {
-		return err
-	}
-	return reassigner.reassign(ctx, tx, id, owner, version)
 }

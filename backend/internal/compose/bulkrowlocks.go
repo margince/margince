@@ -14,16 +14,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// heldRows is what holdBulkRows found: each held row as it stood under its
-// lock, and why each refused row is left alone.
-type heldRows struct {
-	rows    map[ids.UUID]bulkRow
-	refused map[ids.UUID]crmcontracts.BulkSkip
-}
-
-// Row locks precede every identity lock a per-record writer may take.
-func holdBulkRows(ctx context.Context, tx pgx.Tx, target bulkTarget, items []crmcontracts.BulkItem, previewed map[openapi_types.UUID]bool) (heldRows, error) {
-	held := heldRows{rows: map[ids.UUID]bulkRow{}, refused: map[ids.UUID]crmcontracts.BulkSkip{}}
+// Row locks precede every identity lock a per-record writer may take. It answers
+// each held row as it stood under its lock, and why each refused row is left alone.
+func holdBulkRows(ctx context.Context, tx pgx.Tx, target bulkTarget, items []crmcontracts.BulkItem, previewed map[openapi_types.UUID]bool) (
+	held map[ids.UUID]bulkRow, refused map[ids.UUID]crmcontracts.BulkSkip, err error,
+) {
+	held, refused = map[ids.UUID]bulkRow{}, map[ids.UUID]crmcontracts.BulkSkip{}
 	for _, item := range items {
 		id := ids.UUID(item.Id)
 		if previewed != nil && !previewed[item.Id] {
@@ -33,18 +29,16 @@ func holdBulkRows(ctx context.Context, tx pgx.Tx, target bulkTarget, items []crm
 		if err != nil {
 			skip, unexpected := bulkSkipFor(err)
 			if unexpected != nil {
-				return heldRows{}, unexpected
+				return nil, nil, unexpected
 			}
 			skip.Id = item.Id
-			held.refused[id] = skip
+			refused[id] = skip
 			continue
 		}
-		held.rows[id] = row
+		held[id] = row
 	}
-	return held, nil
+	return held, refused, nil
 }
-
-// The holds take archived rows too, because an undo restores them.
 
 func (t contactBulkTarget) hold(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error) {
 	row, err := t.store.HoldContactForBulkTx(ctx, tx, ids.From[ids.ContactKind](id))
