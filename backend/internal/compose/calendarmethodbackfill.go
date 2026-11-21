@@ -13,7 +13,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,11 +20,71 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// calendarMethodBackfillPerTick bounds one batch, as the rsvp backfill's does.
-const calendarMethodBackfillPerTick = 200
+// calendarMethodsDataTask re-reads the mail captured before calendar_method
+// existed. The engine records that it finished, so a drained installation
+// reads the table no more.
+func calendarMethodsDataTask(pool *pgxpool.Pool) datatask.Task {
+	return datatask.Task{
+		ID: "core/1795240327_legacy_calendar_methods", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795240327_legacy_calendar_methods"),
+		Requires: []string{"core/" + activities.CalendarMethodMigration},
+		Steps: []datatask.Step{{
+			Name: "read_calendar_methods", Limit: 200, MinLimit: 10,
+			Audit:    datatask.AuditPolicy{PerRecord: true},
+			Estimate: activities.EstimateCalendarMethodCandidates,
+			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+				return readCalendarMethodsBatch(ctx, tx, activities.NewStore(InstallationDB(pool)), in)
+			},
+		}},
+	}
+}
+
+// readCalendarMethodsBatch checks each offered mail and marks it, so a replay
+// offers it no more. A slimmed original's parts come from the bound object
+// store; with none bound such an original reads as unreadable.
+func readCalendarMethodsBatch(ctx context.Context, tx pgx.Tx, store *activities.Store, in datatask.BatchIn) (datatask.BatchOut, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return datatask.BatchOut{}, err
+	}
+	after, err := datatask.UUIDCursor(in.Cursor)
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	found, err := activities.CalendarMethodCandidatesTx(ctx, tx, after, in.Limit)
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	if blob, err := originalstore.Objects(ctx); err == nil {
+		store = store.WithBlobstore(blob)
+	}
+	pass := storedOriginalPass[calendarMethodCandidate]{
+		settle: func(ctx context.Context, tx pgx.Tx, c calendarMethodCandidate, payload []byte) (string, error) {
+			return backfillOneCalendarMethod(ctx, tx, store, c, payload)
+		},
+		mark:         activities.MarkCalendarMethodCheckedTx,
+		settleUnread: settleCalendarMethodUnread,
+	}
+	scanned := make([]ids.UUID, 0, len(found))
+	changed := 0
+	for _, c := range found {
+		scanned = append(scanned, c.ActivityID.UUID)
+		settled, err := settleStoredOriginal(ctx, tx, pass, calendarMethodCandidate{c})
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
+		if settled {
+			changed++
+		}
+	}
+	return datatask.AdvanceUUID(in, scanned, changed)
+}
 
 // calendarMethodCandidate adapts activities' candidate to the drain.
 type calendarMethodCandidate struct {
@@ -38,34 +97,6 @@ func (c calendarMethodCandidate) original() ids.UUID {
 		return ids.UUID{}
 	}
 	return *c.RawCaptureID
-}
-
-// backfillCalendarMethodBatch re-reads up to limit stored originals and records
-// the calendar method each declared, returning how many rows it settled. files
-// reads a slimmed original's moved parts back; it needs an object store.
-func backfillCalendarMethodBatch(ctx context.Context, pool *pgxpool.Pool, files *activities.Store, limit int, log *slog.Logger) (int, error) {
-	return drainStoredOriginals(ctx, pool, limit, log, storedOriginalPass[calendarMethodCandidate]{
-		name:  "calendar method backfill",
-		unit:  "messages",
-		offer: selectCalendarMethodCandidates,
-		settle: func(ctx context.Context, tx pgx.Tx, c calendarMethodCandidate, payload []byte) (string, error) {
-			return backfillOneCalendarMethod(ctx, tx, files, c, payload)
-		},
-		mark:         activities.MarkCalendarMethodCheckedTx,
-		settleUnread: settleCalendarMethodUnread,
-	})
-}
-
-func selectCalendarMethodCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]calendarMethodCandidate, error) {
-	found, err := activities.CalendarMethodCandidatesTx(ctx, tx, limit)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]calendarMethodCandidate, len(found))
-	for i, c := range found {
-		out[i] = calendarMethodCandidate{c}
-	}
-	return out, nil
 }
 
 // settleCalendarMethodUnread settles mail whose original is gone without a read.
