@@ -205,12 +205,13 @@ Two months in, Nordwind subcontracts the warehouse integration to
 *DACHPartner GmbH*. The project is now more than one company's work, and
 Margince can show that.
 
-1. On the project page, in **Companies**, press **Attach company**.
-2. Under **As**, leave **Partner**. The list opens on Partner, not Customer,
-   because the project already has its customer. Set the role before you pick
-   the company, because picking is what attaches it.
-3. Search for *DACHPartner GmbH* and pick it from the results. The dialog
-   closes and the company is on the project.
+1. On the project page, choose **More actions** → **Companies and contacts**.
+   Under **Companies**, press **Attach company**.
+2. Search for *DACHPartner GmbH* and select it in the results. Selecting does
+   not attach it, and the dialog stays open.
+3. Under **As**, leave **Partner**.
+4. Press **Attach company**. The dialog closes and the company is on the
+   project.
 
 The Companies card now shows both: *Nordwind Logistik: Customer* and
 *DACHPartner GmbH: Partner*.

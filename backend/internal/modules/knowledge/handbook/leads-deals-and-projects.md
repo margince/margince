@@ -308,7 +308,7 @@ Also called: hand over a project, change project lead, transfer a project, relea
 ### How do I add or remove a company on a project?
 To add a company to a project in Margince, open the project and choose **More actions** → **Companies and contacts**, then **Attach company** under **Companies**. Search under **Search companies by name** and pick the company. Pick its role under **As** (**Customer**, **Partner** or **Subcontractor**), then choose **Attach company**.
 
-To take one off, choose **More actions** → **Detach** on its card, then **Remove company** in "Remove company from project?". The only company on a project has no **Detach**. A company that still has deals on the project is refused until those deals move to another project or are archived.
+To take one off, open **More actions** → **Companies and contacts** in the same way. On the company's card, choose **More actions** → **Detach**, then **Remove company** in "Remove company from project?". The only company on a project has no **Detach**. A company that still has deals on the project is refused until those deals move to another project or are archived.
 Also called: add a partner to a project, link a client to a project.
 
 ### How do I move a project to another phase or close it?
