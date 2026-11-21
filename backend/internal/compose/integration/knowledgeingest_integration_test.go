@@ -96,7 +96,7 @@ func (ie *ingestEnv) attempt(t *testing.T, documentID ids.UUID) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	body, err := ie.store.OpenDocument(ie.ctx, src.StorageKey)
+	body, err := ie.store.OpenDocument(ie.ctx, src)
 	if err != nil {
 		return 0, err
 	}

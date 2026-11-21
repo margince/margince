@@ -63,6 +63,7 @@ func (e *CorpusFullError) Error() string {
 type IngestSource struct {
 	CorpusID   ids.UUID
 	StorageKey string
+	Checksum   string
 }
 
 // IngestOwed reports whether a document is still waiting for its ingest or part
@@ -98,9 +99,9 @@ func (s *Store) BeginIngest(ctx context.Context, documentID ids.UUID) (IngestSou
 		// overlap is reachable, and the schema's uniqueness index is the
 		// backstop rather than the only guard.
 		if err := tx.QueryRow(ctx,
-			`SELECT corpus_id, storage_key FROM knowledge_document
+			`SELECT corpus_id, storage_key, checksum FROM knowledge_document
 			 WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, documentID).
-			Scan(&src.CorpusID, &src.StorageKey); err != nil {
+			Scan(&src.CorpusID, &src.StorageKey, &src.Checksum); err != nil {
 			return notFoundOr(err, "read the document to ingest")
 		}
 		if err := deleteChunksOf(ctx, tx, documentID); err != nil {
@@ -271,10 +272,11 @@ func (s *Store) FailIngest(ctx context.Context, documentID ids.UUID, detail stri
 	return s.discardContent(ctx, storageKey)
 }
 
-// OpenDocument streams a stored document's bytes, from object storage or from
-// the embedded handbook — content.go decides which, for every caller.
-func (s *Store) OpenDocument(ctx context.Context, storageKey string) (io.ReadCloser, error) {
-	return s.openContent(ctx, storageKey)
+// OpenDocument streams the bytes an ingest attempt reads, from object storage
+// or from the embedded handbook; content.go decides which. A handbook page this
+// binary holds in other bytes than the row names is refused.
+func (s *Store) OpenDocument(ctx context.Context, src IngestSource) (io.ReadCloser, error) {
+	return s.openIngestContent(ctx, src)
 }
 
 func deleteChunksOf(ctx context.Context, tx pgx.Tx, documentID ids.UUID) error {

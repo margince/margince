@@ -173,13 +173,12 @@ func reconcilePages(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, pages []h
 		// pages each time would spend an embedding call per page per boot to
 		// arrive at the passages already in the table.
 		//
-		// A page still marked running is queued again, as its worker may have
-		// died. The ingest's per-document lock lets a live run keep it.
+		// A running page is queued again, as its worker may have died; the
+		// per-document lock lets a live run keep it. A failed page is too: a
+		// worker lagging past the snooze window failed it and nothing else retries.
 		if known && prior.checksum == checksum {
-			if prior.status == ingestRunning {
-				if err := queueIngestOf(ctx, tx, prior.id, queue); err != nil {
-					return 0, err
-				}
+			if err := requeueUnsettled(ctx, tx, prior, queue); err != nil {
+				return 0, err
 			}
 			continue
 		}
@@ -211,6 +210,29 @@ func reconcilePages(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, pages []h
 		written++
 	}
 	return written, nil
+}
+
+// requeueUnsettled queues the ingest of a page whose bytes are current but
+// whose ingest did not finish. A failed row goes back to queued first, since
+// the worker reads only a queued or running document.
+func requeueUnsettled(ctx context.Context, tx pgx.Tx, doc managedDoc, queue QueueIngest) error {
+	switch doc.status {
+	case ingestRunning:
+	case ingestFailed:
+		tag, err := tx.Exec(ctx,
+			`UPDATE knowledge_document
+			    SET ingest_status = 'queued', ingest_started_at = NULL, ingest_detail = NULL
+			  WHERE id = $1 AND archived_at IS NULL AND ingest_status = 'failed'`, doc.id)
+		if err != nil {
+			return fmt.Errorf("queue the failed handbook page again: %w", err)
+		}
+		if tag.RowsAffected() != 1 {
+			return nil
+		}
+	default:
+		return nil
+	}
+	return queueIngestOf(ctx, tx, doc.id, queue)
 }
 
 // managedDoc is what the reconciliation needs to know about a page already

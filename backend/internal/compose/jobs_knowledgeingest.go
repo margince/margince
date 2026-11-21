@@ -189,7 +189,7 @@ func (w *knowledgeIngestWorker) ingest(ctx context.Context, documentID ids.UUID)
 	if err != nil {
 		return err
 	}
-	text, err := w.readDocument(ctx, src.StorageKey)
+	text, err := w.readDocument(ctx, src)
 	if err != nil {
 		return err
 	}
@@ -212,8 +212,8 @@ func (w *knowledgeIngestWorker) ingest(ctx context.Context, documentID ids.UUID)
 // chunker is a pure function over the text and the upload ceiling is what keeps
 // the size bounded — a streaming chunker would have to carry boundary state
 // across reads to gain nothing at these sizes.
-func (w *knowledgeIngestWorker) readDocument(ctx context.Context, key string) (string, error) {
-	body, err := w.store.OpenDocument(ctx, key)
+func (w *knowledgeIngestWorker) readDocument(ctx context.Context, src knowledge.IngestSource) (string, error) {
+	body, err := w.store.OpenDocument(ctx, src)
 	if err != nil {
 		return "", err
 	}
@@ -240,7 +240,7 @@ func ingestDetail(err error) string {
 		return unsupported.Error()
 	}
 	if errors.Is(err, knowledge.ErrHandbookPageGone) {
-		return "This handbook page is not in the handbook the worker holds, so it could not be indexed. An administrator has to update every worker to the current release, or the page has been withdrawn."
+		return "This handbook page is missing from, or differs in, the handbook the worker holds, so it could not be indexed. An administrator has to update every worker to the current release, or the page has been withdrawn."
 	}
 	if errors.Is(err, ai.ErrProviderThrottled) {
 		return "The AI provider was rate limiting this installation, so the document could not be indexed. Try uploading it again in a few minutes."
