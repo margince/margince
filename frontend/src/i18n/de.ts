@@ -502,6 +502,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approvalPreferences.explain":
     "Stummgeschaltete Arten verschwinden nur aus deiner Worklist. Andere Mitglieder behalten ihre Vorschläge. Stummschalten und Wiederherstellen deaktivieren deine automatischen Änderungen dieser Art. Versand, Buchungen, Zusammenführungen und Vorschläge mit Agentenpass bleiben sichtbar.",
   "approvalPreferences.review": "Auch stumme Vorschläge prüfen",
+  "approvalPreferences.reviewKind": "Auch stumme Vorschläge prüfen: {kind}",
+  "approvalPreferences.reviewTitle": "Stumm: {kind}",
   "approvalPreferences.reviewExplain":
     "Diese Ansicht enthält stumme und abgelaufene Vorschläge. Pakete in deiner normalen Worklist können durch persönliche Einstellungen weniger Einträge zeigen. Prüfe jeden Vorschlag vor der Entscheidung.",
   "approvalPreferences.close": "Prüfung schließen",
@@ -2643,8 +2645,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.verb.update": "{subject} hat den Datensatz aktualisiert",
   "history.verb.archive": "{subject} hat den Datensatz archiviert",
   "history.verb.merge": "{subject} hat den Datensatz zusammengeführt",
-  "history.verb.promote": "{subject} hat den Datensatz hochgestuft",
-  "history.verb.demote": "{subject} hat den Datensatz herabgestuft",
+  "history.verb.promote": "{subject} hat den Lead qualifiziert",
+  "history.verb.demote": "{subject} hat die Qualifizierung zurückgenommen",
   "history.verb.disqualify": "{subject} hat den Datensatz disqualifiziert",
   "history.verb.restore": "{subject} hat den Datensatz wiederhergestellt",
   "history.verb.export": "{subject} hat den Datensatz exportiert",
@@ -2778,6 +2780,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.full_name": "Name",
   "history.field.win_probability": "Abschlusschance",
   "history.field.stage_id": "Phase",
+  "history.field.disqualify_reason_id": "Disqualifizierungsgrund",
+  "history.field.trigger": "Qualifiziert durch",
   "history.field.win_probability_override": "Abschlusschance am Deal",
   "history.field.win_probability_set_by": "Abschlusschance gesetzt von",
   "history.field.fx_rate_date": "Datum des Wechselkurses",
@@ -2870,6 +2874,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.emptyList": "Nichts festgelegt",
   "history.value.occurred_precision.instant": "Datum und Uhrzeit",
   "history.value.occurred_precision.day": "Nur Datum",
+  "history.value.direction.inbound": "Eingegangen",
+  "history.value.direction.outbound": "Gesendet",
+  "history.value.meeting_status.booked": "Gebucht",
+  "history.value.meeting_status.held": "Stattgefunden",
+  "history.value.meeting_status.no_show": "Nicht erschienen",
+  "history.value.meeting_status.canceled": "Abgesagt",
+  "history.value.relationship_mark.vendor_marketing": "Anbieter-Werbung",
 
   "confidence.high": "hoch",
   "confidence.med": "mittel",
@@ -3326,6 +3337,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.revokeConfirm":
     "{access} auf {record} für {name} widerrufen? Der Zugriff endet mit der nächsten Anfrage und kann anschließend nicht mehr rückgängig gemacht werden.",
   "share.granted": "{name} hat jetzt {access} auf {record}.",
+  "share.limitedByRole":
+    "Mit Lesezugriff gespeichert. {name} kann {record} mit der eigenen Rolle nicht bearbeiten.",
+  "share.companyContactsLimitedByRole":
+    "Mit Lesezugriff gespeichert. {name} kann Kontakte mit der eigenen Rolle nicht bearbeiten.",
   "share.thisRecord": "diesen Datensatz",
   "share.until": "Bis {date}",
   "share.approvalRequired":
@@ -3605,6 +3620,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.slotTaken":
     "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
   "common.retry": "Erneut versuchen",
+  "common.goneBackToAnalytics": "Zurück zu Analytics",
+  "reporting.sharedForecastGone":
+    "Dieser Link funktioniert nicht mehr. Wer ihn dir geschickt hat, kann dir einen neuen schicken.",
+  "reporting.reportGone":
+    "Diesen Bericht gibt es nicht, oder er ist nicht mit dir geteilt.",
+  "analytics.q.gone":
+    "Diese Frage gibt es nicht, oder sie ist nicht mit dir geteilt.",
+  "book.linkGone":
+    "Diese Buchungsseite ist nicht verfügbar. Frage nach einem neuen Link.",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",
@@ -3721,6 +3745,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Nach {column} sortieren",
   "table.noMatches": "Keine {unit} entsprechen diesen Filtern.",
   "table.clearFilters": "Filter zurücksetzen",
+  "table.dialsRefused":
+    "Mit diesen Filtern lässt sich die Liste nicht anzeigen.",
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
@@ -5642,6 +5668,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.roleLabel.blocker": "Blocker",
   "co.roleLabel.influencer": "Influencer",
   "co.roleLabel.user": "Endnutzende",
+  "co.roleLabel.decision_maker": "Entscheidungstragende",
   "co.evidence.extractedUnconfirmed": "Von KI extrahiert · nicht bestätigt",
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",
@@ -7615,6 +7642,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.save": "Erstellen",
   "create.saving": "Wird erstellt…",
   "create.contact": "Neuer Kontakt",
+  "create.added": "{name} hinzugefügt",
+  "create.addedOpen": "Öffnen",
   "vcardImport.action": "vCards importieren",
   "vcardImport.title": "Visitenkarten importieren",
   "vcardImport.fileLabel": "vCard-Datei oder Kartenfoto",
@@ -8751,6 +8780,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
 
   "tasks.complete": "Erledigt",
+  "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
   "tasks.log.action": "Ergebnis erfassen",
@@ -9587,6 +9617,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.cancel": "Abbrechen",
   "forecast.saveCall": "Einschätzung speichern",
   "forecast.callAmountNeeded": "Gib zuerst die erwartete Summe ein.",
+  "forecast.callAmountNegative": "Gib einen Betrag ab null ein.",
   "analytics.scopeLabel": "Auswahl der Datensätze",
   "analytics.scopeFixed": "Diese Zahlen umfassen {scope}.",
   "forecast.period": "Zeitraum",
@@ -9866,6 +9897,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Markiere den Passport oben und kopiere ihn manuell.",
   "settings.passportNext": "So nutzt du den Passport",
   "settings.passportLabel": "Agentenname",
+  "settings.passportUnnamed": "Passport ohne Namen",
+  "settings.passportNameRequired": "Gib dem Agenten einen Namen",
+  "settings.passportNameTooLong": "Verwende höchstens 120 Zeichen.",
   "settings.mint": "Passport ausstellen",
   "settings.minting": "Wird ausgestellt…",
   "settings.mintCancel": "Abbrechen",
@@ -20965,6 +20999,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Archivieren entfernt dieses Projekt aus der aktiven Liste und gibt sein Kürzel frei. Das lässt sich hier nicht rückgängig machen.",
   "project.archivedReadOnly":
     "Dieses Projekt ist archiviert und lässt keine Änderungen zu.",
+  "project.page.notFound": "Projekt nicht gefunden",
+  "project.page.notFoundBody":
+    "Dieses Projekt gibt es nicht, oder du kannst es nicht sehen.",
+  "project.page.backToProjects": "Zurück zu den Projekten",
   "project.notYoursToChange":
     "Du kannst dieses Projekt nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "project.phaseLabel": "Phase",

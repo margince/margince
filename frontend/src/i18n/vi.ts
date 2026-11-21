@@ -494,6 +494,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approvalPreferences.explain":
     "Loại bị ẩn chỉ rời hàng đợi của bạn. Thành viên khác vẫn thấy đề xuất. Ẩn hoặc khôi phục một loại sẽ tắt thay đổi tự động của bạn cho loại đó. Gửi tin, đặt lịch, hợp nhất và đề xuất có passport vẫn hiển thị.",
   "approvalPreferences.review": "Xem cả đề xuất đã ẩn",
+  "approvalPreferences.reviewKind": "Xem cả đề xuất đã ẩn: {kind}",
+  "approvalPreferences.reviewTitle": "Đã ẩn: {kind}",
   "approvalPreferences.reviewExplain":
     "Chế độ này gồm đề xuất đã ẩn và hết hạn. Gói trong hàng đợi thường có thể hiển thị ít mục hơn do tùy chọn cá nhân. Xem từng đề xuất trước khi quyết định.",
   "approvalPreferences.close": "Đóng xem xét",
@@ -2568,8 +2570,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.verb.update": "{subject} đã cập nhật hồ sơ",
   "history.verb.archive": "{subject} đã chuyển hồ sơ vào kho lưu trữ",
   "history.verb.merge": "{subject} đã gộp hồ sơ",
-  "history.verb.promote": "{subject} đã nâng cấp hồ sơ",
-  "history.verb.demote": "{subject} đã hạ cấp hồ sơ",
+  "history.verb.promote": "{subject} đã xác nhận lead đủ điều kiện",
+  "history.verb.demote": "{subject} đã hủy xác nhận đủ điều kiện",
   "history.verb.disqualify": "{subject} đã loại hồ sơ",
   "history.verb.restore": "{subject} đã khôi phục hồ sơ",
   "history.verb.export": "{subject} đã xuất hồ sơ",
@@ -2689,6 +2691,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.full_name": "Tên",
   "history.field.win_probability": "Xác suất",
   "history.field.stage_id": "Giai đoạn",
+  "history.field.disqualify_reason_id": "Lý do loại",
+  "history.field.trigger": "Xác nhận bởi",
   "history.field.win_probability_override": "Xác suất đặt cho deal",
   "history.field.win_probability_set_by": "Xác suất do ai đặt",
   "history.field.fx_rate_date": "Ngày tỷ giá",
@@ -2778,6 +2782,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.emptyList": "Chưa có",
   "history.value.occurred_precision.instant": "Ngày và giờ",
   "history.value.occurred_precision.day": "Chỉ ngày",
+  "history.value.direction.inbound": "Đã nhận",
+  "history.value.direction.outbound": "Đã gửi",
+  "history.value.meeting_status.booked": "Đã đặt",
+  "history.value.meeting_status.held": "Đã họp",
+  "history.value.meeting_status.no_show": "Không đến",
+  "history.value.meeting_status.canceled": "Đã hủy",
+  "history.value.relationship_mark.vendor_marketing":
+    "Quảng cáo từ nhà cung cấp",
 
   "confidence.high": "cao",
   "confidence.med": "trung bình",
@@ -3228,6 +3240,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "share.revokeConfirm":
     "Thu hồi quyền {access} với {record} của {name}? Quyền sẽ bị hủy ở yêu cầu tiếp theo và không thể hoàn tác.",
   "share.granted": "{name} giờ có quyền {access} với {record}.",
+  "share.limitedByRole":
+    "Đã lưu với quyền đọc. Vai trò của {name} không cho phép sửa {record}.",
+  "share.companyContactsLimitedByRole":
+    "Đã lưu với quyền đọc. Vai trò của {name} không cho phép sửa liên hệ.",
   "share.thisRecord": "hồ sơ này",
   "share.until": "Đến {date}",
   "share.approvalRequired":
@@ -3499,6 +3515,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.slotTaken":
     "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
+  "common.goneBackToAnalytics": "Quay lại Analytics",
+  "reporting.sharedForecastGone":
+    "Liên kết này không còn dùng được. Hãy hỏi bên gửi để có liên kết mới.",
+  "reporting.reportGone":
+    "Báo cáo này không tồn tại, hoặc chưa được chia sẻ với bạn.",
+  "analytics.q.gone":
+    "Câu hỏi này không tồn tại, hoặc chưa được chia sẻ với bạn.",
+  "book.linkGone":
+    "Trang đặt lịch này không khả dụng. Hãy hỏi bên gửi để có liên kết mới.",
   "common.empty": "Chưa có gì ở đây.",
   "common.saving": "Đang lưu…",
   "common.loading": "Đang tải…",
@@ -3603,6 +3628,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Sắp xếp theo {column}",
   "table.noMatches": "Không có {unit} nào khớp với các bộ lọc này.",
   "table.clearFilters": "Bỏ bộ lọc",
+  "table.dialsRefused": "Không thể hiển thị danh sách với bộ lọc này.",
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "Đã tải {first} đến {last} trong {count} {unit}",
@@ -5492,6 +5518,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.roleLabel.blocker": "Người cản trở",
   "co.roleLabel.influencer": "Người có ảnh hưởng",
   "co.roleLabel.user": "Người dùng cuối",
+  "co.roleLabel.decision_maker": "Người ra quyết định",
   "co.evidence.extractedUnconfirmed": "AI trích xuất · chưa xác nhận",
   "co.evidence.previous": "Thông tin trước",
   "co.evidence.next": "Thông tin sau",
@@ -7431,6 +7458,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.save": "Tạo",
   "create.saving": "Đang tạo…",
   "create.contact": "Liên hệ mới",
+  "create.added": "Đã thêm {name}",
+  "create.addedOpen": "Mở",
   "vcardImport.action": "Nhập vCard",
   "vcardImport.title": "Nhập danh thiếp",
   "vcardImport.fileLabel": "Tệp vCard hoặc ảnh danh thiếp",
@@ -8523,6 +8552,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 
   "tasks.complete": "Xong",
+  "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
   "tasks.log.action": "Ghi lại kết quả",
@@ -9332,6 +9362,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.cancel": "Hủy",
   "forecast.saveCall": "Lưu dự báo",
   "forecast.callAmountNeeded": "Hãy nhập tổng dự kiến trước.",
+  "forecast.callAmountNegative": "Hãy nhập số tiền từ không trở lên.",
   "analytics.scopeLabel": "Phạm vi hồ sơ",
   "analytics.scopeFixed": "Các số liệu này bao gồm {scope}.",
   "forecast.period": "Kỳ",
@@ -9602,6 +9633,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tokenCopyFailed": "Chọn passport ở trên và sao chép thủ công.",
   "settings.passportNext": "Tiếp theo, dùng passport",
   "settings.passportLabel": "Tên agent",
+  "settings.passportUnnamed": "Passport chưa đặt tên",
+  "settings.passportNameRequired": "Hãy đặt tên cho agent",
+  "settings.passportNameTooLong": "Dùng tối đa 120 ký tự.",
   "settings.mint": "Tạo passport",
   "settings.minting": "Đang tạo…",
   "settings.mintCancel": "Hủy",
@@ -20425,6 +20459,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chuyển vào kho lưu trữ sẽ gỡ dự án này khỏi danh sách đang hoạt động và giải phóng mã của dự án. Không thể hoàn tác ở đây.",
   "project.archivedReadOnly":
     "Dự án này đang trong kho lưu trữ và không thể thay đổi.",
+  "project.page.notFound": "Không tìm thấy dự án",
+  "project.page.notFoundBody":
+    "Dự án này không tồn tại, hoặc bạn không có quyền xem.",
+  "project.page.backToProjects": "Quay lại danh sách dự án",
   "project.notYoursToChange":
     "Bạn không có quyền sửa dự án này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
   "project.phaseLabel": "Giai đoạn dự án",

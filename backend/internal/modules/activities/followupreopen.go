@@ -3,7 +3,7 @@
 
 package activities
 
-// A meeting that was called off reopens the quiet reminder it answered.
+// A meeting that was called off reopens the quiet reminders and tasks it closed.
 
 import (
 	"context"
@@ -92,6 +92,13 @@ func (w quietReminderReopen) Apply(
 			"reopening the quiet reminders a called-off meeting %s had answered: %w", ev.Entity.ID, err,
 		)
 	}
+	answered, err := w.store.ReopenTasksAnsweredByMeeting(ctx, ids.From[ids.ActivityKind](ev.Entity.ID))
+	if err != nil {
+		return workflow.RunResult{}, fmt.Errorf(
+			"reopening the tasks a called-off booking %s had closed: %w", ev.Entity.ID, err,
+		)
+	}
+	reopened += answered
 	// Nothing reopened is the ordinary answer: most called-off meetings
 	// answered no reminder, and the record may have been touched since.
 	if reopened == 0 {

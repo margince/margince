@@ -6,9 +6,9 @@ import { Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { useLeadDisqualifyReasons } from "../../lib/leaddisqualifyreasons";
 import { invalidateClosedLead } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useLeadDisqualifyReasons } from "./leadhandling";
 import { leadIdentityName } from "./leadname";
 
 type Lead = components["schemas"]["Lead"];

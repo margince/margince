@@ -125,7 +125,7 @@ func contactShareSummary(ctx context.Context, tx pgx.Tx, requester ids.UUID) (st
 }
 
 // contactShareAcceptEffect shares the contact with the colleague who asked:
-// Write, the access Share gives, or Read for a seat that may not write. The
+// Write, the access Share gives, or Read for a seat or role that may not write. The
 // contact's own visibility does not change.
 //
 // Decline needs no effect: the request closes, and StageUnlessDeclined files
@@ -139,17 +139,15 @@ func contactShareAcceptEffect(svc *approvals.Service, grants *identity.Service) 
 		// Executed as the deciding owner, whose grants the share is checked
 		// against as if they pressed Share.
 		return svc.RedeemAndApply(ctx, approvalID, contactShareKind, diffHash, func(tx pgx.Tx) error {
-			access, err := identity.ShareAccessForTx(ctx, tx, req.RequesterID)
-			if err != nil {
-				return err
-			}
-			return grants.CreateRecordGrantTx(ctx, tx, identity.CreateGrantInput{
-				RecordType:  string(recordTypeContact),
-				RecordID:    req.ContactID,
-				SubjectType: entityUser,
-				SubjectID:   req.RequesterID,
-				Access:      access,
+			_, err := grants.CreateRecordGrantTx(ctx, tx, identity.CreateGrantInput{
+				RecordType:     string(recordTypeContact),
+				RecordID:       req.ContactID,
+				SubjectType:    entityUser,
+				SubjectID:      req.RequesterID,
+				Access:         identity.GrantAccessWrite,
+				FitToRecipient: true,
 			})
+			return err
 		})
 	}
 }

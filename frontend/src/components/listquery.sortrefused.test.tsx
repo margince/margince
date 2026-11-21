@@ -87,12 +87,14 @@ describe("an address whose sort the server refuses", () => {
     ).toBeTruthy();
   });
 
-  it("still shows any other refusal with its Retry", async () => {
+  // A refused filter is not dropped behind the reader's back: the list says it
+  // cannot be shown with these filters and offers to clear them.
+  it("still shows any other refusal, with Clear filters", async () => {
     globalThis.history.replaceState(null, "", "#/contacts?sort=bogus");
     const fetchPage = refusingSort("owner_id", "invalid_uuid");
     render(<ListTableHarness fetchPage={fetchPage} />);
 
-    await screen.findByText("Could not load this view. Reload the page.");
-    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+    await screen.findByText("This list cannot be shown with these filters.");
+    expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
   });
 });

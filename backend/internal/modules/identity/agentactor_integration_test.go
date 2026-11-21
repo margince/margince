@@ -20,7 +20,7 @@ func TestAnAgentOfADeactivatedMemberActsForNobody(t *testing.T) {
 	// The suite's database holds one workspace per env, so the singleton read
 	// would find several; this env's own workspace is the installation here.
 	e.svc.installation.Store(&e.ws)
-	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("issue passport: %v", err)
 	}

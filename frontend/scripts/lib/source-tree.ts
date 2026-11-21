@@ -264,14 +264,15 @@ export function moduleSpecifiers(
   const visit = (node: ts.Node): void => {
     const declared = declaredSpecifier(node, edges);
     if (declared !== null) found.push(declared);
+    const specifier = ts.isCallExpression(node) ? node.arguments[0] : undefined;
     if (
       edges !== "static" &&
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      node.arguments.length > 0 &&
-      ts.isStringLiteralLike(node.arguments[0])
+      specifier !== undefined &&
+      ts.isStringLiteralLike(specifier)
     ) {
-      found.push(node.arguments[0].text);
+      found.push(specifier.text);
     }
     ts.forEachChild(node, visit);
   };

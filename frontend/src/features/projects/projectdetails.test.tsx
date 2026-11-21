@@ -156,6 +156,31 @@ describe("the details groups", () => {
     expect(screen.queryByTestId("project-company-withheld")).toBeNull();
   });
 
+  it("shows a written description and folds only an unwritten one", async () => {
+    const written = "Roll out the CRM.\nThen train the team.";
+    const { unmount } = show(
+      <ProjectDetails
+        view={project360({ project: project({ description: written }) })}
+      />,
+    );
+    // Drawn under its term across the column, with its line break as written.
+    const row = screen.getByText(en["project.description"]).closest("div");
+    expect(row?.classList.contains("factlist-row-block")).toBe(true);
+    expect(row?.querySelector("dd")?.textContent).toBe(written);
+    unmount();
+
+    show(
+      <ProjectDetails
+        view={project360({ project: project({ description: null }) })}
+      />,
+    );
+    expect(screen.queryByText(en["project.description"])).toBeNull();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: /Show \d+ empty fields?/ }));
+    expect(screen.getByText(en["project.description"])).toBeTruthy();
+  });
+
   it("drops the closing rule once the project is closed", () => {
     show(
       <ProjectDetails

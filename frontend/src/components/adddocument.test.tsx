@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  QueryObserver,
+} from "@tanstack/react-query";
 import {
   cleanup,
   render,
@@ -13,11 +17,11 @@ import {
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Button } from "../../design-system/atoms";
-import { pickOption } from "../../design-system/select-testing";
-import { LocaleProvider } from "../../i18n";
-import { companyDocumentsKey, dealFilesKey } from "../../lib/attachmentkeys";
-import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
+import { Button } from "../design-system/atoms";
+import { pickOption } from "../design-system/select-testing";
+import { LocaleProvider } from "../i18n";
+import { companyDocumentsKey, dealFilesKey } from "../lib/attachmentkeys";
+import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../lib/attachmentupload";
 import { AddDocumentDialog } from "./adddocument";
 
 // What this dialog owes the reader: the file lands on the record they chose,
@@ -713,6 +717,84 @@ describe("adding a document from the account", () => {
       await screen.findByText("Drop a file here, or click to choose one"),
     ).toBeTruthy();
     expect(screen.queryByText(/Uploaded, but not filed/)).toBeNull();
+  });
+
+  it("leaves a draft begun after reopening alone when the earlier upload lands", async () => {
+    const user = userEvent.setup();
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    stubApi(FULL_SEAT, { holdUpload: held, stampedCompany: "o-1" });
+    renderHosted();
+    const lists = shared ?? client();
+    lists.setQueryData(companyDocumentsKey("o-1"), { data: [] });
+
+    await user.upload(screen.getByLabelText(/File/), orderForm());
+    await pressUpload(user);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "reopen" }));
+    await user.type(await screen.findByLabelText(/Title/), "Second draft");
+
+    release?.();
+    // The list refresh comes after any change the result makes to the dialog.
+    await waitFor(() =>
+      expect(
+        lists.getQueryState(companyDocumentsKey("o-1"))?.isInvalidated,
+      ).toBe(true),
+    );
+    expect(screen.getByText("Add document")).toBeTruthy();
+    expect(screen.getByLabelText<HTMLInputElement>(/Title/).value).toBe(
+      "Second draft",
+    );
+  });
+
+  it("leaves a draft begun during the list refresh alone when the metadata failed", async () => {
+    const user = userEvent.setup();
+    stubApi(FULL_SEAT, { metadataThrows: true, stampedCompany: "o-1" });
+    renderHosted();
+    const lists = shared ?? client();
+    let reads = 0;
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    // An open file list, so the refresh after the upload is a refetch to wait on.
+    const shown = new QueryObserver(lists, {
+      queryKey: companyDocumentsKey("o-1"),
+      queryFn: async () => {
+        reads += 1;
+        if (reads > 1) {
+          await held;
+        }
+        return { data: [] };
+      },
+    });
+    const unsubscribe = shown.subscribe(() => undefined);
+    await waitFor(() => expect(reads).toBe(1));
+
+    // A category, so the metadata request is sent and its failure is a partial.
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: /Category/ }),
+      "SOW/Contract",
+    );
+    await user.upload(screen.getByLabelText(/File/), orderForm());
+    await pressUpload(user);
+    await waitFor(() => expect(reads).toBe(2));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "reopen" }));
+    await user.type(await screen.findByLabelText(/Title/), "Second draft");
+
+    release?.();
+    await waitFor(() =>
+      expect(shown.getCurrentResult().isFetching).toBe(false),
+    );
+    unsubscribe();
+    expect(screen.queryByText(/Uploaded, but not filed/)).toBeNull();
+    expect(screen.getByLabelText<HTMLInputElement>(/Title/).value).toBe(
+      "Second draft",
+    );
   });
 
   it("calls a thrown metadata request a partial success, because the bytes are already stored", async () => {

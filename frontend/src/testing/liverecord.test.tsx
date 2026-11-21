@@ -3,13 +3,16 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createQueryClient } from "../../app/queryclient";
-import { useDeal } from "../../lib/dealread";
-import { useCompany360 } from "../companies/company360";
-import { useContact360 } from "../contacts/contact360";
-import { useDealStatusCard } from "../deals/dealstatus";
-import { useOutcomeReviews } from "../deals/outcomereview.queries";
-import { useProject360 } from "../projects/project360";
+import { createQueryClient } from "../app/queryclient";
+import { useCompany360 } from "../features/companies/company360";
+import { useContact360 } from "../features/contacts/contact360";
+import { useDealStatusCard } from "../features/deals/dealstatus";
+import { useOutcomeReviews } from "../features/deals/outcomereview.queries";
+import {
+  useProject360,
+  useProjectScreenReads,
+} from "../features/projects/project360.reads";
+import { useDeal } from "../lib/dealread";
 
 // A RECORD RE-READS ITSELF WHILE SOMEBODY IS LOOKING AT IT (FE-PARAM-5).
 //
@@ -155,6 +158,52 @@ describe("a record the reader has open", () => {
       "/v1/deals/d-1/outcome-reviews",
       "/v1/deals/d-1/outcome-reviews",
     ]);
+  });
+
+  // The 360 refuses an archived project, so its row is what learns of a restore.
+  it("re-reads an archived project's row, and a live one's 360 alone", async () => {
+    const paths: string[] = [];
+    let archived = true;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        paths.push(path);
+        if (path.endsWith("/360") && archived) {
+          return new Response(JSON.stringify({ status: 404 }), {
+            status: 404,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return jsonResponse({
+          id: "pr-1",
+          archived_at: archived ? "2026-11-01T09:00:00Z" : null,
+        });
+      }),
+    );
+    renderHook(() => useProjectScreenReads("pr-1"), { wrapper });
+    await advance(0);
+    expect(paths).toEqual(["/v1/projects/pr-1/360", "/v1/projects/pr-1"]);
+
+    // Restored elsewhere: the row's next read turns the 360 back on.
+    archived = false;
+    await advance(LIVE_RECORD_MS + 1_000);
+    expect(paths.slice(2)).toEqual([
+      "/v1/projects/pr-1",
+      "/v1/projects/pr-1/360",
+    ]);
+
+    await advance(LIVE_RECORD_MS);
+    expect(paths.slice(4)).toEqual(["/v1/projects/pr-1/360"]);
+  });
+
+  it("opens a live project on its 360 and never reads its row", async () => {
+    const { paths } = mount(() => useProjectScreenReads("pr-1"), {
+      id: "pr-1",
+    });
+    await advance(0);
+    await advance(LIVE_RECORD_MS);
+    expect(paths).toEqual(["/v1/projects/pr-1/360", "/v1/projects/pr-1/360"]);
   });
 
   // The return is what the minute-long cadence is priced against, so it has

@@ -49,6 +49,7 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 				Objects: map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
 			})
 			if tc.share != "" {
+				e.GrantRole(t, e.Rep1, "rep")
 				if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 					RecordType: "contact", RecordID: contact, SubjectType: "user", SubjectID: e.Rep1, Access: tc.share,
 				}); err != nil {

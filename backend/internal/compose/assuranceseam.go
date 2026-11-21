@@ -110,7 +110,7 @@ var assuranceSubjectsSQL = `
 		          FROM relationship r
 		         WHERE r.kind = 'deal_stakeholder'
 		           AND r.deal_id = d.id
-		           AND r.role = $3
+		           AND %[12]s = $3
 		           AND r.archived_at IS NULL) AS has_economic_buyer,
 		       (SELECT count(*)
 		          FROM stage_exit_criterion c
@@ -334,7 +334,7 @@ func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, a
 		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "al.deal_id", "$2"), visibleToAllSQL("a"),
 		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
 		// A date an import moved is the source system's history, not a push.
-		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"))
+		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"), dealrole.RecordedSQL("r.role"))
 }
 
 // onlyDealSQL narrows the read to the deals in only, or not at all when only is

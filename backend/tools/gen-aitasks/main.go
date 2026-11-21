@@ -203,13 +203,16 @@ type taskDef struct {
 	// "degrades" says it answers from the record's own facts and reports so,
 	// and absent means it fails fast. A background task waits, so it declares
 	// nothing.
-	OnOutage       string             `yaml:"on_outage"`
-	Status         string             `yaml:"status"`
-	Sites          []siteDef          `yaml:"sites"`
-	NoPayload      bool               `yaml:"no_payload"`
-	Decision       bool               `yaml:"decision"`
-	CompanyContext *companyContextDef `yaml:"company_context"`
-	CostUnit       string             `yaml:"cost_unit"`
+	OnOutage  string    `yaml:"on_outage"`
+	Status    string    `yaml:"status"`
+	Sites     []siteDef `yaml:"sites"`
+	NoPayload bool      `yaml:"no_payload"`
+	// LatencyScalesWithInput says the task takes longer the larger its input,
+	// so certified latency over fixed fixtures cannot set its time limit.
+	LatencyScalesWithInput bool               `yaml:"latency_scales_with_input"`
+	Decision               bool               `yaml:"decision"`
+	CompanyContext         *companyContextDef `yaml:"company_context"`
+	CostUnit               string             `yaml:"cost_unit"`
 	// SubjectRestriction is honour or none: whether the task refuses to read
 	// a contact under a restriction of processing. none names its reason.
 	SubjectRestriction       string `yaml:"subject_restriction"`
