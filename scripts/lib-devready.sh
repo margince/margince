@@ -12,10 +12,13 @@
 # Each request is bounded too: a proxy that accepts the connection and never
 # answers would otherwise hold the loop past its timeout, for ever.
 wait_ready() {
-  local url="$1" timeout="$2" pid="${3:-}" code deadline=$((SECONDS + $2))
+  local url="$1" timeout="$2" pid="${3:-}" code deadline=$((SECONDS + $2)) limit
   while :; do
     [[ -z "$pid" ]] || kill -0 "$pid" 2>/dev/null || return 2
-    code=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || true)
+    limit=$((deadline - SECONDS))
+    ((limit <= 10)) || limit=10
+    ((limit >= 1)) || limit=1
+    code=$(curl -s --max-time "$limit" -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || true)
     [[ "$code" =~ ^2[0-9]{2}$ ]] && return 0
     ((SECONDS < deadline)) || return 1
     sleep 1
@@ -28,16 +31,25 @@ wait_ready() {
 # while the api answers on its own port is a frontend fault, and the two have
 # different logs to read.
 dev_require_app() {
-  local base="$1" wait_s="${2:-${DEV_APP_WAIT_SECONDS:-30}}" fe_port api_port slug_flag=""
+  local base="$1" wait_s="${2:-${DEV_APP_WAIT_SECONDS:-30}}" fe_port api_port
   wait_ready "${base}/readyz" "$wait_s" && return 0
   echo "FAIL: ${base}/readyz did not answer 2xx within ${wait_s}s" >&2
   fe_port="$(dev_recorded_stack FE_PORT || true)"
   api_port="$(dev_recorded_stack API_PORT || true)"
-  [[ -z "${DEV_SLUG:-}" ]] || slug_flag=" DEV_SLUG=${DEV_SLUG}"
   if [[ -z "$api_port" || "$base" != "http://localhost:${fe_port}" ]]; then
     echo "  Is the stack up? Start it: make dev" >&2
     return 1
   fi
+  dev_explain_unready "$fe_port" "$api_port" "${DEV_SLUG:-}"
+  return 1
+}
+
+# dev_explain_unready FE_PORT API_PORT [SLUG] — after the app port missed, ask the
+# api on its own port now and name the log to read: the frontend's if the api
+# answers, the api's if it does not.
+dev_explain_unready() {
+  local fe_port="$1" api_port="$2" slug_flag=""
+  [[ -z "${3:-}" ]] || slug_flag=" DEV_SLUG=$3"
   if wait_ready "http://localhost:${api_port}/readyz" 0; then
     echo "  The api answers on its own port :${api_port}, so the fault is the frontend dev server on :${fe_port} or its proxy to the api." >&2
     echo "  Read its log: make dev-logs${slug_flag} ROLE=fe" >&2
@@ -45,20 +57,43 @@ dev_require_app() {
     echo "  The api does not answer on its own port :${api_port} either." >&2
     echo "  Read its log: make dev-logs${slug_flag} ROLE=api" >&2
   fi
-  return 1
 }
 
-# run_bounded SECONDS CMD… — CMD's status, or 124 if it still runs after SECONDS.
-# macOS ships no timeout(1).
+# process_tree PID — PID and every process below it, parents first.
+process_tree() {
+  local child
+  printf '%s\n' "$1"
+  for child in $(pgrep -P "$1" 2>/dev/null || true); do
+    process_tree "$child"
+  done
+}
+
+# run_bounded SECONDS OUT CMD… — run CMD with its output in the file OUT, and
+# return its status, or 124 if it still runs after SECONDS. macOS ships no
+# timeout(1). The output goes to a file because a $(…) pipe waits for every
+# process holding it, so a child left behind would hold the caller past the
+# limit. On time-out the whole tree gets TERM, then KILL after one second, since
+# `docker compose` is a plugin process below the docker CLI.
 run_bounded() {
-  local ticks=$(($1 * 10)) pid status=0
-  shift
-  "$@" &
+  local ticks=$(($1 * 10)) out="$2" pid tree status=0
+  shift 2
+  "$@" >"$out" 2>&1 &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
     if ((ticks-- <= 0)); then
-      kill -TERM "$pid" 2>/dev/null || true
-      wait "$pid" 2>/dev/null || true
+      tree="$(process_tree "$pid")"
+      # The group's stderr also takes bash's "Terminated" notice for the job.
+      {
+        # shellcheck disable=SC2086
+        kill -TERM $tree || true
+        for _ in 1 2 3 4 5 6 7 8 9 10; do
+          kill -0 "$pid" || break
+          sleep 0.1
+        done
+        # shellcheck disable=SC2086
+        kill -KILL $tree || true
+        wait "$pid" || true
+      } 2>/dev/null
       return 124
     fi
     sleep 0.1
@@ -73,7 +108,7 @@ run_bounded() {
 # socket under WSL) holds the boot with no message at all.
 : "${DOCKER_CHECK_SECONDS:=15}"
 require_docker_compose() {
-  local out status=0 guide="docs/how-to/set-up-windows-wsl-development.md"
+  local out status=0 guide="docs/how-to/set-up-windows-wsl-development.md" out_file
   # COMPOSE is the Makefile's own override of the compose command.
   local -a compose=(docker compose)
   [[ -z "${COMPOSE:-}" ]] || read -r -a compose <<<"$COMPOSE"
@@ -83,7 +118,9 @@ require_docker_compose() {
     echo "  On Windows, run the stack inside WSL: ${guide}" >&2
     return 1
   fi
-  out="$(run_bounded "$DOCKER_CHECK_SECONDS" "${compose[@]}" version 2>&1)" || status=$?
+  out_file="$(mktemp)"
+  run_bounded "$DOCKER_CHECK_SECONDS" "$out_file" "${compose[@]}" version || status=$?
+  out="$(cat "$out_file")"
   if ((status != 0)); then
     printf '%s\n' "$out" | tail -n 5 | sed 's/^/    /' >&2
     if ((status == 124)); then
@@ -91,12 +128,15 @@ require_docker_compose() {
     else
       echo "FAIL: Docker is installed, but its Compose plugin is not ('${compose[*]} version' failed)" >&2
     fi
+    rm -f "$out_file"
     echo "  Docker Desktop ships the plugin. On Linux, install the docker-compose-plugin package: https://docs.docker.com/compose/install/linux/" >&2
     echo "  The old standalone docker-compose (v1) is not enough: the Makefile runs 'docker compose'." >&2
     return 1
   fi
   status=0
-  out="$(run_bounded "$DOCKER_CHECK_SECONDS" docker info --format '{{.ServerVersion}}' 2>&1)" || status=$?
+  run_bounded "$DOCKER_CHECK_SECONDS" "$out_file" docker info --format '{{.ServerVersion}}' || status=$?
+  out="$(cat "$out_file")"
+  rm -f "$out_file"
   if ((status != 0)); then
     printf '%s\n' "$out" | tail -n 5 | sed 's/^/    /' >&2
     if ((status == 124)); then

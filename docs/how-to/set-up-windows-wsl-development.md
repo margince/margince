@@ -1,4 +1,4 @@
-<!-- describes: scripts/lib-devready.sh -->
+<!-- describes: scripts/lib-devready.sh scripts/dev.sh -->
 # Set up development on Windows with WSL
 
 Margince builds and runs on Linux and macOS. On Windows, run it inside WSL 2 (Windows Subsystem for
@@ -28,11 +28,12 @@ editor that connects to WSL. Do not move the checkout to the Windows drive for t
 ## Keep the WSL session open
 
 `make dev` starts the API, the worker and Vite in the background and returns. They belong to the WSL
-session that started them. When the last WSL terminal closes, Windows stops the distribution after a short
-idle time, and the stack goes with it.
+session that started them. When the last WSL terminal closes, WSL can stop the distribution after a short
+idle time, and the stack then goes with it. The idle settings are in Microsoft's
+[WSL configuration docs](https://learn.microsoft.com/windows/wsl/wsl-config).
 
 Start the stack from a WSL terminal and keep that terminal open while you use the app. A one-off
-`wsl make dev` from PowerShell returns at once, and the stack stops soon after. To check from Windows
+`wsl make dev` from PowerShell returns at once, and the stack can stop soon after. To check from Windows
 that the distribution still runs:
 
 ```powershell

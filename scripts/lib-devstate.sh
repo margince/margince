@@ -146,7 +146,7 @@ dev_recorded_stack() { # name
   env_file="$(dev_state_dir "$slug")/env"
   [[ -f "$env_file" ]] || return 1
   # shellcheck disable=SC1090
-  (. "$env_file" && [[ -n "${!1:-}" ]] && printf '%s' "${!1}")
+  (unset "$1"; . "$env_file" && [[ -n "${!1:-}" ]] && printf '%s' "${!1}")
 }
 
 # dev_app_base_url — the URL this worktree's stack actually serves the app on.

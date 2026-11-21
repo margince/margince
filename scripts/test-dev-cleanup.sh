@@ -774,7 +774,7 @@ STUB
 }
 infra_calls() { wc -l <"$infra_dir/calls" | tr -d ' '; }
 # The Docker preflight ensure_infra runs first has its own suite
-# (test-dev-ready.sh); here a docker that answers lets the make stub be reached.
+# (scripts/lib-devready.test.sh); here a docker that answers lets the make stub be reached.
 printf '#!/usr/bin/env bash\nexit 0\n' >"$infra_dir/docker"
 chmod +x "$infra_dir/docker"
 infra_retry_count=2 infra_retry_pause=0

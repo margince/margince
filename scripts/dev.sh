@@ -1080,6 +1080,9 @@ sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
 # "unhealthy" and is healthy again within a minute, so only that answer is
 # tried again, for that minute, before it is reported.
 infra_retry_count=6 infra_retry_pause=10
+# How long the boot waits for the api through Vite's proxy once Vite serves its
+# page. The api itself is already ready by then, so this covers Vite alone.
+fe_proxy_wait=30
 ensure_infra() {
   local out tries=0
   require_docker_compose || exit 1
@@ -1518,11 +1521,11 @@ up)
   # Vite serving its page does not prove its proxy to the api works, and
   # `make seed-dev` and `make verify-boot` reach the api only through that proxy.
   if [[ "$ready" == 0 ]]; then
-    wait_ready "http://localhost:${fe_port}/readyz" 30 "$fe_pid" || ready=$?
+    wait_ready "http://localhost:${fe_port}/readyz" "$fe_proxy_wait" "$fe_pid" || ready=$?
     [[ "$ready" != 2 ]] || fail_exited_during_boot fe "$fe_pid" "the app has no dev server"
     if [[ "$ready" != 0 ]]; then
-      echo "FAIL: $label FE serves its page, but its proxy to the api does not answer: :${fe_port}/readyz failed while :${api_port}/readyz answers directly" >&2
-      echo "  make seed-dev and make verify-boot go through this proxy. Read the FE log: make dev-logs${slug:+ DEV_SLUG=$slug} ROLE=fe" >&2
+      echo "FAIL: $label FE serves its page, but :${fe_port}/readyz does not answer through its proxy, which make seed-dev and make verify-boot use" >&2
+      dev_explain_unready "$fe_port" "$api_port" "$slug" >&2
       exit 1
     fi
   fi

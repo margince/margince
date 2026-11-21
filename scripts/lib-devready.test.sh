@@ -19,7 +19,7 @@ work="$(mktemp -d)"
 servers=""
 cleanup() {
   local pid
-  for pid in $servers; do kill "$pid" 2>/dev/null || true; done
+  for pid in $servers $(cat "$work/server-pids" 2>/dev/null || true); do kill "$pid" 2>/dev/null || true; done
   rm -rf "$work"
 }
 trap cleanup EXIT
@@ -27,7 +27,7 @@ trap cleanup EXIT
 # A PATH with the tools the helper needs and no docker, so "docker is missing"
 # holds on a machine that has one installed.
 mkdir -p "$work/base"
-for tool in bash tail sed sleep cat grep; do
+for tool in bash tail sed sleep cat grep pgrep mktemp rm; do
   ln -s "$(command -v "$tool")" "$work/base/$tool"
 done
 
@@ -69,6 +69,22 @@ check_docker "$work/hangs" DOCKER_CHECK_SECONDS=1
 [[ "$STATUS" = "1" ]] || fail "a compose that hangs exited $STATUS, want 1"
 [[ "$SAID" == *"did not answer within 1s"* ]] || fail "a compose that hangs said '$SAID', want the bound named"
 ((SECONDS - started < 10)) || fail "a compose that hangs held the check $((SECONDS - started))s, past its 1s bound"
+
+# The real plugin runs as a child of the docker CLI, so the bound must hold for
+# the whole process tree: a child that outlives the CLI, and one that ignores TERM.
+fake_docker "$work/child" 'if [[ "$1" == compose ]]; then bash -c "sleep 37; true"; fi; exit 0'
+started=$SECONDS
+check_docker "$work/child" DOCKER_CHECK_SECONDS=1
+[[ "$STATUS" = "1" && "$SAID" == *"did not answer within 1s"* ]] || fail "a compose with a hung child exited $STATUS saying '$SAID', want the bound named"
+((SECONDS - started < 6)) || fail "a compose with a hung child held the check $((SECONDS - started))s, past its 1s bound"
+[[ -z "$(pgrep -f 'sleep 37' || true)" ]] || fail "a compose with a hung child left that child running after the check"
+
+fake_docker "$work/deaf" 'if [[ "$1" == compose ]]; then trap "" TERM; bash -c "sleep 38; true"; fi; exit 0'
+started=$SECONDS
+check_docker "$work/deaf" DOCKER_CHECK_SECONDS=1
+[[ "$STATUS" = "1" && "$SAID" == *"did not answer within 1s"* ]] || fail "a compose that ignores TERM exited $STATUS saying '$SAID', want the bound named"
+((SECONDS - started < 6)) || fail "a compose that ignores TERM held the check $((SECONDS - started))s, past its 1s bound"
+[[ -z "$(pgrep -f 'sleep 38' || true)" ]] || fail "a compose that ignores TERM left its child running after the check"
 
 fake_docker "$work/no-daemon" 'if [[ "$1" == info ]]; then echo "Cannot connect to the Docker daemon at unix:///var/run/docker.sock" >&2; exit 1; fi; exit 0'
 check_docker "$work/no-daemon"
@@ -114,18 +130,24 @@ fi
 echo "dev_require_app: a missed app port says whether the api or the frontend proxy is down"
 
 # serve MODE — an HTTP server on a free port, printing that port. MODE is
-# `hang` (accept, never answer), `status:<code>`, or `slow:<s>` (503 for <s>
+# `hang` (accept, never answer), `hangproxy` (200 on `/`, hang elsewhere: a Vite
+# whose page works and whose proxy does not), `badproxy` (200 on `/`, 502
+# elsewhere), `status:<code>`, or `slow:<s>` (503 for <s>
 # seconds, then 200: a proxy still warming up).
 cat >"$work/server.py" <<'PY'
 import http.server, socketserver, sys, time
 mode, started = sys.argv[1], time.time()
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        if mode == "hang":
+        if mode == "hang" or (mode == "hangproxy" and self.path != "/"):
             time.sleep(60)
             return
-        code = int(mode.split(":")[1]) if mode.startswith("status:") else (
-            200 if time.time() - started >= float(mode.split(":")[1]) else 503)
+        if mode in ("hangproxy", "badproxy"):
+            code = 200 if self.path == "/" else 502
+        elif mode.startswith("status:"):
+            code = int(mode.split(":")[1])
+        else:
+            code = 200 if time.time() - started >= float(mode.split(":")[1]) else 503
         self.send_response(code)
         self.end_headers()
     def log_message(self, *args):
@@ -139,7 +161,8 @@ PY
 serve() {
   local out="$work/port.$RANDOM"
   python3 "$work/server.py" "$1" >"$out" 2>/dev/null &
-  servers="$servers $!"
+  # serve runs inside $(…), so the pid goes to a file the EXIT trap reads.
+  echo "$!" >>"$work/server-pids"
   for _ in $(seq 1 50); do
     [[ -s "$out" ]] && break
     sleep 0.1
@@ -193,13 +216,46 @@ require_app "http://localhost:$proxy_warming" 20
 require_app "http://localhost:1" 0
 [[ "$SAID" == *"Is the stack up?"* ]] || fail "an unrecorded base said '$SAID', want the plain start hint"
 
-echo "wiring: make dev waits for the proxy; seed-dev and verify-boot wait for the app"
-grep -qF 'wait_ready "http://localhost:${fe_port}/readyz"' "$SCRIPT_DIR/dev.sh" \
-  || fail "dev.sh announces ready without asking for /readyz through the app port"
-# The first top-level request of each: seed-dev signs in, verify-boot logs in.
-for script in seed-dev.sh verify-boot.sh; do
+echo "dev.sh: make dev is not ready until its app port reaches the api"
+# The readiness block of the boot, run as dev.sh runs it: from the wait on the
+# app's page through the end of the wait on /readyz behind it.
+readiness_src="$(awk '
+  index($0, "wait_ready \"http://localhost:${fe_port}/\" 90") { inside = 1 }
+  inside { print }
+  inside && index($0, "/readyz\" \"$fe_proxy_wait\"") { proxy = 1 }
+  proxy && $0 == "  fi" { exit }
+' "$SCRIPT_DIR/dev.sh")"
+[[ "$readiness_src" == *'/readyz" "$fe_proxy_wait"'* ]] || fail "found no wait on /readyz through the app port in dev.sh's boot"
+printf '%s\n' "$readiness_src" >"$work/readiness.sh"
+sleep 600 >/dev/null 2>&1 &
+vite_pid=$!
+disown "$vite_pid"
+servers="$servers $vite_pid"
+boot() { # fe_port api_port — the readiness block's exit status in STATUS, its output in SAID
+  set +e
+  SAID="$(fe_port="$1" api_port="$2" fe_pid="$vite_pid" bash -c "
+    source '$SCRIPT_DIR/lib-devstate.sh'; source '$LIB'
+    label=probe slug=probe ready=0 fe_proxy_wait=2
+    fail_exited_during_boot() { echo \"exited \$1\"; exit 3; }
+    source '$work/readiness.sh'
+    echo \"ready=\$ready\"" 2>&1)"
+  STATUS=$?
+  set -e
+}
+boot "$(serve hangproxy)" "$api_up"
+[[ "$STATUS" = "1" ]] || fail "a boot whose proxy hangs in front of a live api exited $STATUS, want 1 ('$SAID')"
+[[ "$SAID" == *"ROLE=fe"* ]] || fail "a boot whose proxy hangs said '$SAID', want the FE log named"
+boot "$(serve badproxy)" "$api_down"
+[[ "$STATUS" = "1" && "$SAID" == *"ROLE=api"* ]] || fail "a boot whose api went down after its check said '$SAID' (exit $STATUS), want the api log named"
+proxy_up="$(serve status:200)"
+boot "$proxy_up" "$api_up"
+[[ "$STATUS" = "0" && "$SAID" == *"ready=0"* ]] || fail "a boot whose proxy works exited $STATUS saying '$SAID', want ready=0"
+
+echo "wiring: every seed and verify script waits for the app before its first request"
+# The first top-level request of each: a sign-in or a login.
+for script in seed-dev.sh verify-boot.sh seed-demo-company.sh seed-analytics.sh; do
   first_check="$(grep -n '^dev_require_app "\$API_BASE"' "$SCRIPT_DIR/$script" | head -1 | cut -d: -f1 || true)"
-  first_request="$(grep -nE '^(sign_in_as_admin$|login_status=)' "$SCRIPT_DIR/$script" | head -1 | cut -d: -f1 || true)"
+  first_request="$(grep -nE '^(sign_in_as_admin$|login_status=|status="\$\(api POST /auth/login|as_admin$)' "$SCRIPT_DIR/$script" | head -1 | cut -d: -f1 || true)"
   [[ -n "$first_check" ]] || { fail "$script never calls dev_require_app"; continue; }
   [[ -n "$first_request" ]] || { fail "$script: found no first request to place the check against"; continue; }
   ((first_check < first_request)) || fail "$script sends its first request (line $first_request) before dev_require_app (line $first_check)"
