@@ -3607,7 +3607,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.retry": "Erneut versuchen",
   "common.goneBackToAnalytics": "Zurück zu Analytics",
   "reporting.sharedForecastGone":
-    "Dieser Link funktioniert nicht mehr. Frage nach einem neuen Link.",
+    "Dieser Link funktioniert nicht mehr. Wer ihn dir geschickt hat, kann dir einen neuen schicken.",
   "reporting.reportGone":
     "Diesen Bericht gibt es nicht, oder er ist nicht mit dir geteilt.",
   "analytics.q.gone":
