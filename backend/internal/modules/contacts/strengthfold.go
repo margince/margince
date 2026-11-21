@@ -5,7 +5,8 @@ package contacts
 
 // The two reads every strength fold is made of. The recency read takes plain
 // maxima over the whole history; only the window read counts, and it reads
-// only the 90 days.
+// only the 90 days. The dates a contact row stores are the recency read
+// rendered for one contact at now(), so a gate holds the migration to this text.
 
 import (
 	"context"
@@ -38,6 +39,23 @@ func strengthRecencySQL(contact string) string {
 		       ` + occurredday.LatestPrecisionSQL("a", theyWrote) + `,
 		       max(a.occurred_at) FILTER (WHERE ` + weWrote + `),
 		       ` + occurredday.LatestAnswerPrecisionSQL("a", weWrote)
+}
+
+// StoredStrengthDatesSQL is the body of contact_strength_dates(cid) and, with
+// among, of contact_strength_dates_among(cid, aids). It is the recency read for
+// one contact at now(), over its whole history or over the activities in aids.
+// The statement triggers that keep the stored dates call them.
+func StoredStrengthDatesSQL(among bool) string {
+	only := ""
+	if among {
+		only = " AND a.id = ANY (aids)"
+	}
+	return `
+  SELECT ` + strengthRecencySQL("cid") + `
+    FROM activity a
+    JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = cid
+   WHERE ` + strengthAdmittedSQL("now()") + only + `
+`
 }
 
 // strengthWindowSQL is a lateral read of one contact's interactions inside the
