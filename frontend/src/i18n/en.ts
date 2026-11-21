@@ -12991,10 +12991,10 @@ export const en = {
   "connectors.imapSecretHint":
     "Use an app-specific password. It is stored in the key vault and used to read mail on a schedule until you disconnect, which deletes it.",
   "connectors.imapSubmitCta": "Connect",
-  "connectors.imapNeeded": "Required fields",
-  "connectors.imapStillNeeded": "Required: {fields}",
-  "connectors.imapRange": "From {min} to {max}",
-  "connectors.imapOutOfRange": "Out of range: {fields}",
+  "connectors.imapHostName":
+    "Enter the server name only, such as imap.example.com.",
+  "connectors.imapSecretEmptied":
+    "Emptied after the failed attempt. Enter it again.",
   "connectors.imapLoginRejected":
     "The mailbox rejected these credentials. Check host, email and app password.",
   "connectors.imapUnreachable":
@@ -17247,6 +17247,7 @@ export const en = {
     "Meetings appear on contacts and deals, and your booking link offers only your free times.",
   "connectFlow.calendarImap": "Not available over IMAP.",
   "connectFlow.pickService": "Tick Mail, Calendar or both.",
+  "connectFlow.pickMail": "Tick Mail.",
   "connectFlow.importLabel": "Import past email",
   "connectFlow.importNone": "None",
   "connectFlow.importAfter":
@@ -17856,10 +17857,9 @@ export const en = {
   "aiTasks.embeddingsEdit":
     "Search and retrieval has no thinking level or timeouts to set. Change its provider and model on the Embedding model row under Model tiers.",
   "workingHours.unsetTitle": "Not set yet",
-  "workingHours.unset":
-    "Customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.",
+  "workingHours.unset": "Guests are offered 09:00 to 17:00, Monday to Friday.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
-  "workingHours.narrowed": "Customers have fewer times to choose from.",
+  "workingHours.narrowed": "Guests have fewer times to choose from.",
   "workingHours.day.1": "Monday",
   "workingHours.day.2": "Tuesday",
   "workingHours.day.3": "Wednesday",
@@ -18200,6 +18200,9 @@ export const en = {
   "capturePurge.preview": "Check first",
   "capturePurge.confirm": "Delete permanently",
   "capturePurge.done": "Close",
+  "capturePurge.recheck": "Check again",
+  "capturePurge.changed":
+    "The mail changed since the check. Check the count below before deleting.",
   "capturePurge.failed":
     "The deletion did not finish. Some messages may already have been destroyed. Check again to see what is left.",
   "capturePurge.refused": "The deletion was refused, so nothing was destroyed.",
@@ -18250,7 +18253,12 @@ export const en = {
   "captureExclusions.containersUnreadableBody":
     "The mail provider did not answer, so this list may be missing folders. Try again in a moment, or keep senders out by address or domain instead.",
   "captureExclusions.kindLabel": "Kind",
-  "captureExclusions.addLabel": "Exclude address or domain",
+  "captureExclusions.title.address": "Exclude an address",
+  "captureExclusions.title.domain": "Exclude a domain",
+  "captureExclusions.title.container": "Exclude a folder or label",
+  "captureExclusions.field.address": "Address",
+  "captureExclusions.field.domain": "Domain",
+  "captureExclusions.noMailbox": "Connect a mailbox first.",
   "captureExclusions.placeholder.address": "name@example.com",
   "captureExclusions.placeholder.domain": "example.com",
   "captureExclusions.add": "Exclude",
@@ -22857,6 +22865,7 @@ export const en = {
   "saveBar.save": "Save",
   "saveBar.discard": "Discard",
   "saveBar.unsaved": "Unsaved changes",
+  "saveBar.offered": "Save to make these yours.",
   "saveBar.invalid": "Fix the marked fields to save.",
   "privacy.typeErasePrompt": "Type this word to confirm:",
   "aiFigures.window.24h": "24 h",
