@@ -64,6 +64,9 @@ func NewCommitmentSettleTrigger(pool *pgxpool.Pool, log *slog.Logger) *Commitmen
 // HandleEvent routes one envelope. An event this consumer does not act on
 // answers nil so the group keeps flowing.
 func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
+	if !events.CommitmentSettleTypes.Has(env.Type) {
+		return nil
+	}
 	// The system acts here, and the originating request's correlation id rides
 	// along so the settlement and what caused it read as one trace.
 	ctx = principal.WithCorrelationID(principal.WithActor(ctx, principal.Principal{
