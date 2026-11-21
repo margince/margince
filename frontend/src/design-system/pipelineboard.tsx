@@ -420,7 +420,14 @@ function ColumnHead({
 }>) {
   const { ref, trigger, tip } = useTruncationTooltip<HTMLDivElement>(label);
   return (
-    <div ref={ref} className="board-col-head" {...trigger} {...fold}>
+    <div
+      ref={ref}
+      className="board-col-head"
+      {...trigger}
+      {...fold}
+      // A head that folds is a button named by this text already.
+      aria-describedby={fold.role ? undefined : trigger["aria-describedby"]}
+    >
       {children}
       {tip}
     </div>

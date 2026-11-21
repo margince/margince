@@ -524,7 +524,6 @@ describe("LeadsScreen — rich create (P-15)", () => {
     });
     const user = userEvent.setup();
     render(<LeadsScreen />);
-    // Partner is offered under View rather than drawn by default.
     const step = within(await openViewStep(user, "Columns"));
     await user.click(
       await step.findByRole("checkbox", { name: "Referred by partner" }),

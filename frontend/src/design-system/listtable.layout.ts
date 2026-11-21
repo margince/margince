@@ -31,8 +31,8 @@ type ColumnSize = Readonly<{
   // For a value whose length hardly changes. The width past it goes to the text
   // columns, or to the trailing gap once only capped columns are left.
   max?: number;
-  // Taken from the room past every minimum before any other column grows. A
-  // narrow page spends its spare pixels on the name.
+  // Taken from the room past every minimum before any other column grows, so a
+  // narrow page spends its spare pixels on the name. Columns carrying it split it.
   first?: number;
 }>;
 
@@ -48,9 +48,7 @@ const COLUMN_SIZES: Readonly<
     ColumnSize
   >
 > = {
-  // `first` holds about 40 characters of name beside a selection box and an
-  // avatar.
-  identity: { share: 2.4, min: 280, first: 400 },
+  identity: { share: 2.4, min: 200, first: 400 },
   numeric: { share: 0.9, min: 110, max: 200 },
   // "28. Sept. 2027" in German, the longest abbreviated date this tree ships.
   date: { share: 0.8, min: 120, max: 150 },
@@ -218,14 +216,15 @@ export function columnLayout(
     return share === null ? min : undefined;
   };
   const shared = shown.filter((column) => fixedWidth(column) === undefined);
-  const othersNeed = (column: SizedColumn) => {
-    const { first, min } = boundsAt(column);
-    return fixedWidth(column) ?? (first === undefined ? min : 0);
-  };
+  const growsFirst = (column: SizedColumn) =>
+    fixedWidth(column) === undefined && boundsAt(column).first !== undefined;
+  const othersNeed = (column: SizedColumn) =>
+    growsFirst(column) ? 0 : (fixedWidth(column) ?? boundsAt(column).min);
   const roomFirst =
-    available - shown.reduce((total, column) => total + othersNeed(column), 0);
-  // A column that grows first takes the room left, up to `first`, as its floor.
-  const sizeOf = (column: SizedColumn): ColumnSize => {
+    (available -
+      shown.reduce((total, column) => total + othersNeed(column), 0)) /
+    Math.max(1, shown.filter(growsFirst).length);
+  const limitsOf = (column: SizedColumn): ColumnSize => {
     const size = boundsAt(column);
     return size.first === undefined
       ? size
@@ -235,7 +234,7 @@ export function columnLayout(
   const pinnedWidth = (column: SizedColumn) =>
     fixedWidth(column) ?? held.get(column.key);
   const shareOf = (column: SizedColumn) =>
-    pinnedWidth(column) === undefined ? (sizeOf(column).share ?? 0) : 0;
+    pinnedWidth(column) === undefined ? (limitsOf(column).share ?? 0) : 0;
   const sum = (of: (column: SizedColumn) => number) =>
     shown.reduce((total, column) => total + of(column), 0);
   // The shares divide what the pinned columns leave, not the whole width, or
@@ -249,13 +248,13 @@ export function columnLayout(
     const shareWidth = (column: SizedColumn) =>
       (spareOf() * shareOf(column)) / sum(shareOf);
     const short = free.filter(
-      (column) => shareWidth(column) < sizeOf(column).min,
+      (column) => shareWidth(column) < limitsOf(column).min,
     );
     if (short.length > 0) {
-      return short.map((column) => [column.key, sizeOf(column).min]);
+      return short.map((column) => [column.key, limitsOf(column).min]);
     }
     return free.flatMap((column): [string, number][] => {
-      const { max } = sizeOf(column);
+      const { max } = limitsOf(column);
       return max !== undefined && shareWidth(column) > max
         ? [[column.key, max]]
         : [];

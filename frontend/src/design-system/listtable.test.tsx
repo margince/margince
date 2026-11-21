@@ -379,7 +379,7 @@ describe("column widths", () => {
       />,
     );
     // identity, numeric, standard, standard — COLUMN_SIZES' own floors.
-    expect(widthOf(container, 0)).toBe("280px");
+    expect(widthOf(container, 0)).toBe("200px");
     expect(widthOf(container, 1)).toBe("110px");
     expect(widthOf(container, 2)).toBe("130px");
     expect(widthOf(container, 3)).toBe("130px");
@@ -403,7 +403,7 @@ describe("column widths", () => {
     expect(widthOf(container, 4)).toBe("320px");
     // And the columns beside it keep their own floors rather than being
     // squeezed to pay for it.
-    expect(widthOf(container, 0)).toBe("280px");
+    expect(widthOf(container, 0)).toBe("200px");
     expect(widthOf(container, 1)).toBe("110px");
   });
 

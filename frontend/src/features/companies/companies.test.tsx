@@ -212,7 +212,6 @@ describe("CompaniesScreen — whose account each row is", () => {
 });
 
 describe("CompaniesScreen — how many work here, how many deals are open", () => {
-  // Contacts is offered under View rather than drawn by default.
   async function showContacts() {
     const user = userEvent.setup();
     const step = within(await openViewStep(user, "Columns"));

@@ -2,7 +2,6 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  act,
   cleanup,
   fireEvent,
   render,
@@ -13,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import type { CreateFieldOption } from "../../components/create.fields";
+import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { type ListColumn, ListTable } from "../../design-system/listtable";
 import { LocaleProvider, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
@@ -268,24 +268,25 @@ describe("the referring partner column", () => {
 });
 
 describe("the lead score cell", () => {
-  it("shows the score alone and keeps its reason as the score's description", () => {
+  it("shows the score alone, described by its reason, with no tab stop", () => {
     renderCell("score", {
       ...lead,
       score: 72,
       score_reason: "decision_maker_title",
     });
-    const score = screen.getByText("72").closest(".lead-score");
+    const score = screen.getByText("72").closest(".readonly-value");
     if (!(score instanceof HTMLElement)) throw new Error("no score anchor");
     expect(score).toHaveAccessibleDescription("Decision-maker title");
+    expect(score).not.toHaveAttribute("tabindex");
     expect(screen.getByText("Decision-maker title")).not.toBeVisible();
   });
 
-  it("raises the reason as a tip from the keyboard", () => {
+  it("raises the reason as a tip once the pointer settles on the score", async () => {
+    const user = userEvent.setup();
+    armHoverIntent();
     renderCell("score", { ...lead, score: 12 });
-    const score = screen.getByText("12").closest(".lead-score");
-    if (!(score instanceof HTMLElement)) throw new Error("no score anchor");
-    act(() => score.focus());
-    expect(screen.getByRole("tooltip")).toHaveTextContent("No signals");
+    await user.hover(screen.getByText("12"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("No signals");
   });
 });
 

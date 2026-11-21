@@ -29,20 +29,20 @@ describe("columnLayout", () => {
     const layout = columnLayout(catalogue, {}, 707);
     expect(layout.floor).toBeCloseTo(707);
     expect(px(layout.widthOf(catalogue[1]))).toBe(110);
-    expect(px(layout.widthOf(catalogue[0]))).toBeGreaterThan(280);
+    expect(px(layout.widthOf(catalogue[0]))).toBeGreaterThan(200);
   });
 
-  it("never draws the identity column narrower than 280px", () => {
+  it("draws the identity column at 200px by default when the box has no room", () => {
     const layout = columnLayout(catalogue, {}, 0);
-    expect(layout.widthOf(catalogue[0])).toBe("280px");
+    expect(layout.widthOf(catalogue[0])).toBe("200px");
   });
 
   it("holds every column at its minimum when the box has no room for them", () => {
     const layout = columnLayout(catalogue, {}, 400);
     expect(catalogue.map((column) => px(layout.widthOf(column)))).toEqual([
-      280, 110, 130, 130, 56,
+      200, 110, 130, 130, 56,
     ]);
-    expect(layout.floor).toBe(706);
+    expect(layout.floor).toBe(626);
   });
 
   it("gives the room past every minimum to the identity column first", () => {
@@ -61,6 +61,18 @@ describe("columnLayout", () => {
 
     const wide = columnLayout(catalogue, {}, 1400);
     expect(px(wide.widthOf(catalogue[0]))).toBeGreaterThan(400);
+  });
+
+  it("splits the room past every minimum between two identity columns", () => {
+    const pair: SizedColumn[] = [
+      { key: "name", fixed: true },
+      { key: "alias", fixed: true },
+      { key: "status" },
+    ];
+    const layout = columnLayout(pair, {}, 630);
+    expect(pair.map((column) => px(layout.widthOf(column)))).toEqual([
+      250, 250, 130,
+    ]);
   });
 
   it("gives a dragged identity column no room ahead of the others", () => {
@@ -117,7 +129,7 @@ describe("columnLayout", () => {
   it("never sets a numeric column narrower than the widest figure it holds", () => {
     const layout = columnLayout(catalogue, {}, 400, figures(150));
     expect(px(layout.widthOf(catalogue[1]))).toBe(150);
-    expect(layout.floor).toBe(746);
+    expect(layout.floor).toBe(666);
   });
 
   it("lets a figure wider than the numeric cap widen its column past it", () => {

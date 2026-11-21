@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider, translate } from "../../i18n";
@@ -56,7 +56,7 @@ export const NameFallbacks: Story = {
   },
 };
 
-// The score alone in its cell; its main reason is the tip on hover and focus.
+// The score alone in its cell; its main reason is the tip on hover.
 export const ScoreWithItsReason: Story = {
   render: () => {
     const score = leadColumns(
@@ -67,20 +67,22 @@ export const ScoreWithItsReason: Story = {
     ).find((column) => column.key === "score");
     return (
       <LocaleProvider initial="en">
-        {[
-          { ...leads[0], score: 72, score_reason: "decision_maker_title" },
-          { ...leads[1], score: 12 },
-        ].map((lead) => (
-          <div key={lead.id}>{score?.cell(lead)}</div>
-        ))}
+        {leads
+          .slice(0, 2)
+          .map<Lead>((lead, index) =>
+            index === 0
+              ? { ...lead, score: 72, score_reason: "decision_maker_title" }
+              : { ...lead, score: 12 },
+          )
+          .map((lead) => (
+            <div key={lead.id}>{score?.cell(lead)}</div>
+          ))}
       </LocaleProvider>
     );
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const first = canvas.getByText("72").closest<HTMLElement>(".lead-score");
-    if (!first) throw new Error("the score cell drew no anchor");
-    first.focus();
+    await userEvent.hover(canvas.getByText("72"));
     await expect(
       await within(document.body).findByRole("tooltip"),
     ).toHaveTextContent("Decision-maker title");

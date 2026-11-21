@@ -140,7 +140,7 @@ To name a lead's product in Margince, open the lead, press **Edit** in the **Abo
 Also called: lead product, the product a lead asks about.
 
 ### How do I see why a lead has its score?
-To see why a lead has its score in Margince, open the lead and look at its **Score** panel. Each factor lists what counted, and **{count} activities** on a factor opens **Activities behind this factor**. On the **Leads** table, point at a score or move to it with Tab to read its main reason.
+To see why a lead has its score in Margince, open the lead and look at its **Score** panel. Each factor lists what counted, and **{count} activities** on a factor opens **Activities behind this factor**. On the **Leads** table, point at a score to read its main reason.
 Also called: lead score explained, why is this lead hot.
 
 ### Scoring
