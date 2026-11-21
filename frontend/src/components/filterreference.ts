@@ -133,8 +133,7 @@ export function useReferenceOptions(
     // Configuration changes rarely and a builder reads it on every clause, so a
     // minute of staleness saves a request per keystroke-adjacent render.
     staleTime: 60_000,
-    queryFn: async (): Promise<ReferenceOption[]> =>
-      readOptions(reference, locale),
+    queryFn: async (): Promise<ReferenceList> => readOptions(reference, locale),
   });
   if (kind === "user") {
     return members;
@@ -157,7 +156,7 @@ export function useReferenceOptions(
     };
   }
   return {
-    options: query.data ?? [],
+    options: query.data?.options ?? [],
     loading: query.isPending,
     // A read that FAILED must not be reported as an empty set. Without this the
     // caller renders an enabled dropdown with nothing in it, which says "this
@@ -165,9 +164,8 @@ export function useReferenceOptions(
     // answered. The caller falls back to a plain box instead, so a reader can
     // still write the clause.
     failed: query.isError,
-    // Every list left here answers in one page by contract, so there is no
-    // truncation to disclose.
-    partial: false,
+    // Projects and products read one page, and a longer list says it stopped.
+    partial: query.data?.partial ?? false,
   };
 }
 
@@ -180,25 +178,31 @@ export function useReferenceOptions(
 async function readOptions(
   reference: Reference | undefined,
   locale: string,
-): Promise<ReferenceOption[]> {
+): Promise<ReferenceList> {
   switch (reference) {
     case "tag": {
       const data = unwrap(await api.GET("/tags"));
-      return data.data.map((tag) => ({ value: tag.id, label: tag.name }));
+      return whole(
+        data.data.map((tag) => ({ value: tag.id, label: tag.name })),
+      );
     }
     case "pipeline": {
       const data = unwrap(await api.GET("/pipelines"));
-      return data.data.map((pipeline) => ({
-        value: pipeline.id,
-        label: pipeline.name,
-      }));
+      return whole(
+        data.data.map((pipeline) => ({
+          value: pipeline.id,
+          label: pipeline.name,
+        })),
+      );
     }
     case "stage": {
       const data = unwrap(await api.GET("/stages"));
-      return data.data.map((stage) => ({
-        value: stage.id,
-        label: translatedLabel(stage.name, stage.name_translations, locale),
-      }));
+      return whole(
+        data.data.map((stage) => ({
+          value: stage.id,
+          label: translatedLabel(stage.name, stage.name_translations, locale),
+        })),
+      );
     }
     case "project": {
       const data = unwrap(
@@ -206,10 +210,13 @@ async function readOptions(
           params: { query: { limit: PROJECT_LIMIT } },
         }),
       );
-      return data.data.map((project) => ({
-        value: project.id,
-        label: project.name,
-      }));
+      return {
+        options: data.data.map((project) => ({
+          value: project.id,
+          label: project.name,
+        })),
+        partial: data.page.has_more,
+      };
     }
     case "product": {
       // Archived products stay named, so a view saved against one still reads.
@@ -224,10 +231,13 @@ async function readOptions(
           },
         }),
       );
-      return data.data.map((product) => ({
-        value: product.id,
-        label: product.name,
-      }));
+      return {
+        options: data.data.map((product) => ({
+          value: product.id,
+          label: product.name,
+        })),
+        partial: data.page.has_more,
+      };
     }
     default:
       // `company`, an absent target, and the two roster targets all land
@@ -235,6 +245,16 @@ async function readOptions(
       // unreachable rather than a silent empty answer — and the arms above stay
       // one per target so a new one added to the contract arrives here as an
       // empty dropdown a reader reports rather than a wrong list nobody sees.
-      return [];
+      return whole([]);
   }
+}
+
+/** The options one target read, and whether that read stopped short. */
+type ReferenceList = Readonly<{
+  options: ReferenceOption[];
+  partial: boolean;
+}>;
+
+function whole(options: ReferenceOption[]): ReferenceList {
+  return { options, partial: false };
 }

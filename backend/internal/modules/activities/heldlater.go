@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -74,6 +75,18 @@ func (s *Store) MoveHeldTx(ctx context.Context, tx pgx.Tx, move HeldMove) error 
 		return err
 	}
 	return s.RescheduleInTx(ctx, tx, move.id, move.sched, move.current.Version, move.current, move.timer)
+}
+
+// LockHeldTx takes the planned message's row before a caller locks its review.
+// A cancel and the fire lock the row first too, so the two cannot deadlock.
+func (*Store) LockHeldTx(ctx context.Context, tx pgx.Tx, move HeldMove) error {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM scheduled_send WHERE id = $1 FOR UPDATE`, move.id); err != nil {
+		return fmt.Errorf("scheduled send: locking the held message: %w", err)
+	}
+	return nil
 }
 
 // ScheduledSendWire is one message as the scheduled list renders it.

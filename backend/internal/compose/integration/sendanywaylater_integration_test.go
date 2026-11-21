@@ -7,11 +7,17 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Send anyway with a moment records the decision now and sends nothing until
@@ -211,6 +217,122 @@ func TestSendAnywayOnACancelledMessageIsNotFound(t *testing.T) {
 	}
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+read.ID+"/direct-send", confirmationOf(read), nil, &answer); status != http.StatusNotFound {
 		t.Fatalf("Send anyway on a cancelled message → %d %q, want 404", status, answer.Code)
+	}
+}
+
+// Another tab may send the message while a later Send anyway plans its move.
+// Its sender then hears that it already went, as the first check says.
+func TestSendAnywayLaterHearsTheMessageWentWhileItPlanned(t *testing.T) {
+	p, id := heldByAnObjectionAtFire(t)
+	review := p.liveReviewFor(t, id)
+	body := confirmationFor(t, p.AppEnv, review)
+	body["scheduled_at"] = momentIn(time.Hour)
+	body["scheduled_tz"] = "UTC"
+	ctx := context.Background()
+	holder := freshConnection(t)
+	tx, err := holder.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
+	// The checks before planning read only the review, so planning is the first read to wait.
+	if _, err := tx.Exec(ctx, `LOCK TABLE scheduled_send IN ACCESS EXCLUSIVE MODE`); err != nil {
+		t.Fatal(err)
+	}
+	var answer struct {
+		Code string `json:"code"`
+	}
+	status := make(chan int, 1)
+	returned := make(chan struct{})
+	go func() {
+		defer close(returned)
+		status <- p.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", body, nil, &answer)
+	}()
+	waitUntilSomethingQueuesBehind(t, holder.PgConn().PID(), returned,
+		"the later Send anyway answered before it read the message", "the later Send anyway never read the message")
+	// What the other tab's send leaves behind: the message gone and its review resolved.
+	if _, err := tx.Exec(ctx, `UPDATE scheduled_send SET status = 'cancelled', held_reason = NULL WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE communication_review SET state = 'resolved', resolved_at = now() WHERE id = $1`, review); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := <-status; got != http.StatusConflict || answer.Code != "already_sent" {
+		t.Fatalf("a later Send anyway after the other tab sent → %d %q, want 409 already_sent", got, answer.Code)
+	}
+}
+
+// A later Send anyway locks the message row before the review, as a cancel and
+// the fire do. In the other order a cancel racing it deadlocks.
+func TestSendAnywayLaterLocksTheMessageBeforeTheReview(t *testing.T) {
+	p, id := heldByAnObjectionAtFire(t)
+	review := p.liveReviewFor(t, id)
+	reviewID, err := ids.Parse(review)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := confirmationFor(t, p.AppEnv, review)
+	body["scheduled_at"] = momentIn(time.Hour)
+	body["scheduled_tz"] = "UTC"
+	release, holder := pinRow(t, `SELECT 1 FROM scheduled_send WHERE id = $1 FOR UPDATE`, id)
+	status := make(chan int, 1)
+	returned := make(chan struct{})
+	go func() {
+		defer close(returned)
+		status <- p.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", body, nil, nil)
+	}()
+	waitUntilSomethingQueuesBehind(t, holder, returned,
+		"the later Send anyway finished without locking the message", "the later Send anyway never waited on the message")
+	held, err := lockIsRefused(t, `SELECT 1 FROM communication_review WHERE id = $1 FOR UPDATE NOWAIT`, reviewID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if held {
+		t.Fatal("the later Send anyway holds the review while it waits for the message; a cancel takes them the other way round")
+	}
+	release()
+	if got := <-status; got != http.StatusAccepted {
+		t.Fatalf("the later Send anyway after the lock let go → %d, want 202", got)
+	}
+}
+
+// Send anyway at a chosen local time spends its decision at the fire. The
+// local time the move writes is not part of the message the sender approved.
+func TestSendAnywayAtALocalTimeSpendsTheDecisionAtTheFire(t *testing.T) {
+	p, id := heldByAnObjectionAtFire(t)
+	review := p.liveReviewFor(t, id)
+	body := confirmationFor(t, p.AppEnv, review)
+	body["scheduled_intent"] = AnyMap{
+		"wall_clock": clocktest.Now(t).Add(59 * time.Minute).Format("2006-01-02T15:04"),
+		"timezone":   "UTC",
+	}
+	if status := p.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", body, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("Send anyway at a local time → %d, want 202", status)
+	}
+	// One hour east of UTC puts that wall clock a minute or two in the past.
+	// Only the zone changes, and the approval leaves the zone out already.
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE scheduled_send SET scheduled_tz = 'Etc/GMT-1' WHERE id = $1`, id)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	p.fire(t, id)
+	var deliveries int
+	var authority string
+	if err := p.Owner.QueryRow(context.Background(),
+		`SELECT count(*), coalesce(min(execution_authority), '') FROM comms_outbound`).Scan(&deliveries, &authority); err != nil {
+		t.Fatal(err)
+	}
+	if deliveries != 1 || authority != "instruction" {
+		t.Fatalf("%d deliveries under %q at the local time, want 1 under instruction", deliveries, authority)
 	}
 }
 
