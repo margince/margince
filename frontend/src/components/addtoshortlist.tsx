@@ -171,9 +171,7 @@ export function AddToShortlistDialog({
   }
 
   const edited = (field: string) => {
-    faults.edited(field);
-    create.reset();
-    change.reset();
+    faults.edited(field, create, change);
   };
 
   const add = async (input: AddInput) => {

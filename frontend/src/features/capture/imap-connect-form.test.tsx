@@ -223,6 +223,37 @@ describe("ImapConnectForm", () => {
     );
   });
 
+  it("drops the server's refusal once an outgoing-server field changes", async () => {
+    const user = userEvent.setup();
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByLabelText(/Send from this mailbox/));
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await screen.findByText(/could not be reached/i);
+
+    await user.type(screen.getByLabelText("SMTP port"), "587");
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
+  });
+
+  it("drops the server's refusal once Send from this mailbox is toggled", async () => {
+    const user = userEvent.setup();
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await screen.findByText(/could not be reached/i);
+
+    await user.click(screen.getByLabelText(/Send from this mailbox/));
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
+  });
+
   it("asks for the server name only when a web address is pasted", async () => {
     const user = userEvent.setup();
     const calls: unknown[] = [];

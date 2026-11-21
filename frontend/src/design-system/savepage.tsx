@@ -248,10 +248,18 @@ export function focusFirstRefused(root: ParentNode | null): void {
 
 const NO_FAULTS: ReadonlyMap<string, string> = new Map();
 
+type Resettable = Readonly<{ reset: () => void }>;
+
+/** An edit makes the error of a write that refused the old value stale. */
+export function retireErrors(...writes: readonly Resettable[]): void {
+  for (const write of writes) write.reset();
+}
+
 export type FieldFaults = Readonly<{
   of: (field: string) => string | undefined;
-  // The reader changed the field, so its refusal no longer describes it.
-  edited: (field: string) => void;
+  // The reader changed the field, so its refusal no longer describes it, and
+  // nor does the error of any write given here.
+  edited: (field: string, ...stale: readonly Resettable[]) => void;
   // Puts each sentence on its field and focuses the first; true when any.
   show: (faults: ReadonlyMap<string, string>) => boolean;
 }>;
@@ -270,13 +278,15 @@ export function useFieldFaults<
   }, [shown, root]);
   const fieldFaults: FieldFaults = {
     of: (field) => faults.get(field),
-    edited: (field) =>
+    edited: (field, ...stale) => {
+      retireErrors(...stale);
       setFaults((current) => {
         if (!current.has(field)) return current;
         const next = new Map(current);
         next.delete(field);
         return next;
-      }),
+      });
+    },
     show: (next) => {
       setFaults(next);
       if (next.size === 0) return false;

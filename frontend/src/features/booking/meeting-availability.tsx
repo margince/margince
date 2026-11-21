@@ -10,7 +10,7 @@ import { Callout } from "../../design-system/callout";
 import { ChoiceList } from "../../design-system/choicelist";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { useSaveDraft } from "../../design-system/savepage";
+import { retireErrors, useSaveDraft } from "../../design-system/savepage";
 import { StatusBadge } from "../../design-system/statusbadge";
 import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
 import { timezoneOption } from "../../format/timezoneoptions";
@@ -152,21 +152,26 @@ function useAvailabilityDraft(
     },
   });
   const pickPreset = (field: RuleField, value: number) => {
+    retireErrors(save);
     const { [field]: _picked, ...kept } = other;
     setOther(kept);
     if (next) setDraftRules({ ...next, [field]: value });
   };
   // A refusal describes the value it refused, so the next edit retires it.
   const editHours = (value: WorkingHours) => {
-    save.reset();
+    retireErrors(save);
     setDraftHours(value);
+  };
+  const editOther = (value: Partial<Record<RuleField, string>>) => {
+    retireErrors(save);
+    setOther(value);
   };
   return {
     draftHours,
     setDraftHours: editHours,
     next,
     other,
-    setOther,
+    setOther: editOther,
     pickPreset,
     narrowed,
     save,

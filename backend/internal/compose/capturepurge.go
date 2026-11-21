@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturepurgebind"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -91,6 +92,16 @@ func NewCapturePurger(pool *pgxpool.Pool, retention *privacy.RetentionService) *
 // preview answers the same question and changes nothing, so the counts a caller
 // is shown before they confirm are the counts they get.
 func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview bool) (PurgeOutcome, error) {
+	return p.purge(ctx, exclusionID, preview, nil)
+}
+
+// PurgeAsPreviewed destroys only while the selection still has the counts the
+// caller confirmed, and answers a conflict otherwise.
+func (p *CapturePurger) PurgeAsPreviewed(ctx context.Context, exclusionID ids.UUID, seen capturepurgebind.Counts) (PurgeOutcome, error) {
+	return p.purge(ctx, exclusionID, false, &seen)
+}
+
+func (p *CapturePurger) purge(ctx context.Context, exclusionID ids.UUID, preview bool, seen *capturepurgebind.Counts) (PurgeOutcome, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
 		return PurgeOutcome{}, errors.New("capture purge: destroying mail is a contact's own act")
@@ -153,6 +164,9 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	}
 	if preview {
 		return outcome, nil
+	}
+	if err := seen.Check(outcome.Destroyed, outcome.Released, outcome.Anonymised); err != nil {
+		return PurgeOutcome{}, err
 	}
 	reason := privacy.PurgeOwnerRule
 	if workspaceScoped {

@@ -157,3 +157,70 @@ describe("hours the user never chose", () => {
     ).toBeGreaterThan(0);
   });
 });
+
+describe("a refused save of the booking rules", () => {
+  it("retires the refusal once a booking rule is edited", async () => {
+    const profile = {
+      enabled: true,
+      notice_minutes: 60,
+      buffer_minutes: 0,
+      horizon_days: 30,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) return jsonResponse(meFixture({}));
+        if (req.url.includes("/scheduling/profile")) {
+          if (req.method !== "PUT") return jsonResponse(profile);
+          return jsonResponse(
+            {
+              title: "Unprocessable Entity",
+              status: 422,
+              code: "validation_error",
+              detail: "refused",
+              details: {
+                errors: [
+                  { field: "end_time", code: "invalid", message: "refused" },
+                ],
+              },
+            },
+            422,
+          );
+        }
+        return jsonResponse(HOURS);
+      }),
+    );
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <SavePageProvider>
+            <AvailabilityCard profile={profile as never} />
+            <PageSaveBar />
+          </SavePageProvider>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const [notice, buffer] = await screen.findAllByRole("combobox");
+    await user.click(notice);
+    await user.click(await screen.findByRole("option", { name: /^2 hours/ }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Until")).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      ),
+    );
+
+    await user.click(buffer);
+    await user.click(await screen.findByRole("option", { name: /^5 min/ }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Until")).not.toHaveAttribute(
+        "aria-invalid",
+      ),
+    );
+  });
+});

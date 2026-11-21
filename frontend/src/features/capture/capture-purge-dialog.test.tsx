@@ -118,4 +118,85 @@ it("offers only Close when the check counts nothing to delete", async () => {
     screen.queryByRole("button", { name: "Delete permanently" }),
   ).toBeNull();
   expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(2);
+  expect(
+    screen.getByRole("button", { name: "Check again" }),
+  ).toBeInTheDocument();
+});
+
+const NONE = {
+  held: 0,
+  under_statute: 0,
+  under_request: 0,
+  under_undetermined_floor: 0,
+};
+const outcomeOf = (destroyed: number, preview: boolean) => ({
+  preview,
+  destroyed,
+  released: 0,
+  anonymised: 0,
+  kept: NONE,
+});
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+
+function renderPurge() {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <PurgeDialog ruleId="ex-2" ruleValue="example.test" onClose={vi.fn()} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+// Mail that arrives after a zero check is found by Check again, not left behind Close.
+it("rechecks a zero count and then offers the delete for what arrived", async () => {
+  const counts = [0, 2];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => json(outcomeOf(counts.shift() ?? 2, true))),
+  );
+  const user = userEvent.setup();
+  renderPurge();
+  await user.click(screen.getByRole("button", { name: "Check first" }));
+  await user.click(await screen.findByRole("button", { name: "Check again" }));
+
+  expect(await screen.findByText(/2 messages would be/)).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Delete permanently" }),
+  ).toBeInTheDocument();
+});
+
+// The confirm carries the counts the reader saw; a 409 means more mail arrived, so
+// the dialog shows the new count and asks again instead of deleting it unseen.
+it("sends the previewed counts and re-checks when the server says they moved", async () => {
+  const urls: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      urls.push(request.url);
+      if (request.url.includes("preview=true")) {
+        return json(outcomeOf(urls.length === 1 ? 1 : 3, true));
+      }
+      return json({ code: "conflict", status: 409, title: "Conflict" }, 409);
+    }),
+  );
+  const user = userEvent.setup();
+  renderPurge();
+  await user.click(screen.getByRole("button", { name: "Check first" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Delete permanently" }),
+  );
+
+  expect(await screen.findByText(/3 messages would be/)).toBeInTheDocument();
+  expect(screen.getByText(/changed since the check/)).toBeInTheDocument();
+  expect(urls[1]).toContain("expect_destroyed=1");
+  expect(urls[1]).toContain("expect_released=0");
+  expect(urls[1]).toContain("expect_anonymised=0");
+  expect(screen.queryByText(/could not|failed/i)).toBeNull();
 });

@@ -18377,6 +18377,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "capturePurge.preview": "Zuerst prüfen",
   "capturePurge.confirm": "Endgültig löschen",
   "capturePurge.done": "Schließen",
+  "capturePurge.recheck": "Erneut prüfen",
+  "capturePurge.changed":
+    "Die E-Mails haben sich seit der Prüfung geändert. Prüfe die Anzahl unten, bevor du löschst.",
   "capturePurge.failed":
     "Die Löschung konnte nicht abgeschlossen werden. Einige Nachrichten wurden möglicherweise bereits vernichtet. Prüfe erneut, was noch vorhanden ist.",
   "capturePurge.refused":
@@ -23192,7 +23195,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "saveBar.save": "Speichern",
   "saveBar.discard": "Verwerfen",
   "saveBar.unsaved": "Ungespeicherte Änderungen",
-  "saveBar.offered": "Speichere, damit diese Werte deine werden.",
+  "saveBar.offered": "Speichere, um diese Werte zu übernehmen.",
   "saveBar.invalid": "Korrigiere die markierten Felder, um zu speichern.",
   "privacy.typeErasePrompt": "Gib zur Bestätigung dieses Wort ein:",
   "aiFigures.window": "Zeitraum",

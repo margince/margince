@@ -17889,6 +17889,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "capturePurge.preview": "Kiểm tra trước",
   "capturePurge.confirm": "Xóa vĩnh viễn",
   "capturePurge.done": "Đóng",
+  "capturePurge.recheck": "Kiểm tra lại",
+  "capturePurge.changed":
+    "Thư đã thay đổi kể từ lần kiểm tra. Hãy xem số lượng bên dưới trước khi xóa.",
   "capturePurge.failed":
     "Chưa xóa xong. Một số thư có thể đã bị xóa vĩnh viễn. Kiểm tra lại để xem còn lại những gì.",
   "capturePurge.refused":

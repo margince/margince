@@ -552,9 +552,9 @@ describe("InstallationSettingsCard", () => {
     const { fetchMock } = backendFor(SETTINGS_EDITOR, {
       refuse: [
         {
-          field: "installation.fiscal_year_start_month",
+          field: "installation.forecast_likely_threshold",
           code: "setting_invalid",
-          message: "Month out of range.",
+          message: "Threshold out of range.",
         },
       ],
     });
@@ -566,8 +566,8 @@ describe("InstallationSettingsCard", () => {
     await user.type(zone, "x");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
-    await within(dialog).findByText(/Month out of range/);
-    expect(zone.getAttribute("aria-invalid")).not.toBe("true");
+    await within(dialog).findByText("Settings not saved");
+    expect(dialog.querySelector('[aria-invalid="true"]')).toBeNull();
   });
 
   it("says a refusal once — on the field, or in the summary, never both", async () => {

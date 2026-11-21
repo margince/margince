@@ -34,6 +34,8 @@ export function PurgeDialog({
   // confirmation they were in the middle of — and after an error the preview
   // stayed gone, so the dialog forgot what it had told them.
   const [outcome, setOutcome] = useState<PurgeOutcome | null>(null);
+  // The selection moved between the check and the confirm, so a fresh check ran.
+  const [changed, setChanged] = useState(false);
   useEffect(() => {
     if (purge.data) {
       setOutcome(purge.data);
@@ -48,6 +50,24 @@ export function PurgeDialog({
     outcome.destroyed + outcome.released + outcome.anonymised > 0;
   // Escape and the backdrop wait for the server too: leaving mid-purge loses
   // the receipt of what it destroyed and kept.
+  const recheck = () => purge.mutate({ id: ruleId, preview: true });
+  // A rejection other than the conflict stays on `purge.error`, which the
+  // callout below shows.
+  const confirm = async () => {
+    if (outcome === null) return;
+    try {
+      await purge.mutateAsync({
+        id: ruleId,
+        preview: false,
+        expected: outcome,
+      });
+    } catch (error) {
+      if (problemCodeOf(error) === "conflict") {
+        setChanged(true);
+        recheck();
+      }
+    }
+  };
   const close = () => {
     if (!purge.isPending) onClose();
   };
@@ -68,7 +88,8 @@ export function PurgeDialog({
       <div className="form-stack">
         {!outcome && <p>{t("capturePurge.intro")}</p>}
         {outcome && <PurgeReceipt outcome={outcome} />}
-        {purge.isError && (
+        {changed && previewed && <p>{t("capturePurge.changed")}</p>}
+        {purge.isError && problemCodeOf(purge.error) !== "conflict" && (
           <Callout
             tone="danger"
             kind="outcome"
@@ -96,9 +117,14 @@ export function PurgeDialog({
               type="button"
               variant="primary"
               pending={purge.isPending}
-              onClick={() => purge.mutate({ id: ruleId, preview: true })}
+              onClick={recheck}
             >
               {t("capturePurge.preview")}
+            </Button>
+          )}
+          {previewed && !actionable && (
+            <Button type="button" pending={purge.isPending} onClick={recheck}>
+              {t("capturePurge.recheck")}
             </Button>
           )}
           {previewed && actionable && (
@@ -106,7 +132,7 @@ export function PurgeDialog({
               type="button"
               variant="danger"
               pending={purge.isPending}
-              onClick={() => purge.mutate({ id: ruleId, preview: false })}
+              onClick={() => void confirm()}
             >
               {t("capturePurge.confirm")}
             </Button>

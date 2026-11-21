@@ -182,8 +182,7 @@ export function ImapMailboxForm({
     (field: string, set: (value: string) => void) =>
     (event: { target: { value: string } }) => {
       set(event.target.value);
-      faults.edited(field);
-      connect.reset();
+      faults.edited(field, connect);
       if (field === "secret") setSecretEmptied(false);
     };
 
@@ -331,7 +330,7 @@ export function ImapMailboxForm({
             draft={send}
             onChange={(next) => {
               setSend(next);
-              faults.edited("smtp_port");
+              faults.edited("smtp_port", connect);
             }}
             imapHost={host}
             portError={faults.of("smtp_port")}

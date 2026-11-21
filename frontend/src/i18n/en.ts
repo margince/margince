@@ -18200,6 +18200,9 @@ export const en = {
   "capturePurge.preview": "Check first",
   "capturePurge.confirm": "Delete permanently",
   "capturePurge.done": "Close",
+  "capturePurge.recheck": "Check again",
+  "capturePurge.changed":
+    "The mail changed since the check. Check the count below before deleting.",
   "capturePurge.failed":
     "The deletion did not finish. Some messages may already have been destroyed. Check again to see what is left.",
   "capturePurge.refused": "The deletion was refused, so nothing was destroyed.",
