@@ -73,18 +73,20 @@ reducer, and the reducer is the conversation, so the rail cannot disagree with i
 the server (`/onboarding/state`, `onboarding_wizard_state` in the identity module). So loading the page again, or an
 OAuth round trip, builds the same scene again.
 
-The rail of the user who set up the workspace reads **Read · Confirm · Basis · Voice · Connect**. Basis
-is what the setup settles right after the company is confirmed, and before any step about the user. It is
-the installation's base for reports: the base currency, and the `timezone` for reports. An admin can
-change it later in Settings. A currency a deal has already frozen shows as locked there, as it does here.
+When their seat may create a voice profile, the rail of the user who set up the workspace reads **Read ·
+Confirm · Basis · Voice · Connect**. Basis is what the setup settles right after the company is
+confirmed, and before any step about the user. It is the installation's base for reports: the base
+currency, and the `timezone` for reports. An admin can change it later in Settings. A currency a deal has
+already frozen shows as locked there, as it does here.
 
 Connect is the last stop. Leaving it writes that onboarding is complete, and shows the hand off. Leaving
 the team act does the same for a creator who will not work in Margince.
 
 A member invited later walks the personal stops. Their company and its basis are already settled: the
 server refuses every new seat with 409 `company_not_described` until the company is saved. Their rail
-reads Voice · Connect, and a first visit starts in the voice act. A member who comes back resumes where
-their wizard state says, so a saved Connect checkpoint or a recorded voice skip reopens Connect.
+reads Voice · Connect when their seat may create a voice profile, and a first visit then starts in the
+voice act. A member who comes back resumes where their wizard state says, so a saved Connect checkpoint
+or a recorded voice skip reopens Connect.
 
 A seat whose role may not create a voice profile has no Voice stop, creator and member alike. A member
 starts at Connect. A creator goes on from the invite question to Connect, and resumes there.
