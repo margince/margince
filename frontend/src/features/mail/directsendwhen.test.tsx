@@ -29,7 +29,7 @@ function open(onSent = vi.fn()) {
     <QueryClientProvider client={new QueryClient()}>
       <DirectSendModal
         open
-        offerLater
+        laterZone="Europe/Berlin"
         onClose={vi.fn()}
         onSent={onSent}
         review={review}
@@ -71,7 +71,7 @@ describe("Send anyway at a later moment", () => {
       wall_clock: "2031-03-04T09:30",
     });
     expect(body.scheduled_at).toEqual(expect.any(String));
-    expect(body.scheduled_tz).toEqual(expect.any(String));
+    expect(body.scheduled_tz).toBe("Europe/Berlin");
   });
 
   it("will not confirm a later send without a whole moment", async () => {
@@ -86,6 +86,24 @@ describe("Send anyway at a later moment", () => {
       name: /send email/i,
     }) as HTMLButtonElement;
     expect(confirm.disabled).toBe(true);
+  });
+
+  it("refuses a moment already past", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    open();
+    await user.click(screen.getByRole("checkbox"));
+    await user.type(screen.getByLabelText(/^explanation$/i), "They asked.");
+    await user.click(screen.getByRole("radio", { name: /at a later time/i }));
+    await user.type(screen.getByLabelText(/^date$/i), "2020-03-04{Enter}");
+    await user.type(screen.getByLabelText(/^time$/i), "09:30{Enter}");
+    const confirm = screen.getByRole("button", {
+      name: /schedule send/i,
+    }) as HTMLButtonElement;
+    expect(
+      confirm.getAttribute("aria-disabled") ?? String(confirm.disabled),
+    ).toBe("true");
+    expect(screen.getByText("Choose a time in the future.")).toBeTruthy();
   });
 
   it("sends now with no moment when Now stays chosen", async () => {

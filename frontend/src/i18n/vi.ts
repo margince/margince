@@ -8433,6 +8433,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "directSend.whenLater": "Vào lúc khác",
   "directSend.whenLaterDetail":
     "Quyết định của bạn được ghi nhận ngay. Các bước kiểm tra sẽ chạy lại khi tin nhắn được gửi.",
+  "directSend.scheduled": "Đã hẹn giờ gửi theo ngoại lệ đã ghi nhận.",
   "directSend.queued": "Đã xếp hàng gửi theo ngoại lệ đã ghi nhận.",
   "directSend.opening": "Đang mở…",
   "directSend.alreadySettled":
@@ -20286,8 +20287,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một địa chỉ nhận đã dừng nhận tiếp thị sau khi bạn lên lịch. Thư sẽ không gửi đến địa chỉ đó.",
   "sched.held.recipientReplied":
     "Có thư mới từ bên nhận sau khi bạn lên lịch thư theo dõi này. Hãy đọc thư đó trước khi gửi.",
-  "sched.held.confirmSendsNow":
-    "Khi bạn xác nhận, tin nhắn sẽ được gửi ngay bây giờ, không theo giờ đã hẹn.",
+  "sched.held.confirmChoosesWhen":
+    "Giờ đã hẹn đã qua. Khi xác nhận, bạn chọn gửi ngay hoặc vào một thời điểm mới.",
   "sched.held.sendRefused":
     "Một bước kiểm tra đã chặn tin nhắn này khi đến giờ gửi. Không có gì được gửi.",
   "sched.inZone": "theo giờ {zone}",

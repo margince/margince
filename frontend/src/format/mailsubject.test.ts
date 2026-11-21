@@ -7,7 +7,7 @@ import { withoutSubjectPrefixes } from "./mailsubject";
 describe("withoutSubjectPrefixes", () => {
   it("removes every stacked reply and forward marker in front", () => {
     expect(withoutSubjectPrefixes("AW: WG: Budget")).toBe("Budget");
-    expect(withoutSubjectPrefixes(" FW: re:TR: Budget")).toBe("Budget");
+    expect(withoutSubjectPrefixes(" FW: re:AW: Budget")).toBe("Budget");
   });
 
   it("keeps a marker that is not in front", () => {

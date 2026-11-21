@@ -46,14 +46,14 @@ type CommunicationReview = components["schemas"]["CommunicationReview"];
 export function DirectSendAction({
   review,
   onSent,
-  offerLater,
+  laterZone,
   open: shownOpen,
   onOpenChange,
 }: Readonly<{
   review: SendReview;
   onSent?: (outcome: DirectSendOutcome) => void;
-  /** Offer a later moment, for a message held in the scheduled list. */
-  offerLater?: boolean;
+  /** Offer a later moment, picked in this zone: the held message's own. */
+  laterZone?: string;
   /** Controlled: the composer opens the modal from its own Send press. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -134,7 +134,7 @@ export function DirectSendAction({
           onClose={() => setOpen(false)}
           review={opened.data}
           onSent={onSent}
-          offerLater={offerLater}
+          laterZone={laterZone}
           onReviewRefreshed={(updated) =>
             queryClient.setQueryData(
               ["communication-review", review.reviewId],

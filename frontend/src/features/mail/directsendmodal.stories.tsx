@@ -67,7 +67,7 @@ export const WithNoServedWarning: Story = {
 // A message held in the scheduled list: the sender may also pick a later
 // moment, and the decision waits for it.
 export const OfferingALaterMoment: Story = {
-  args: { open: true, onClose: () => {}, review, offerLater: true },
+  args: { open: true, onClose: () => {}, review, laterZone: "Europe/Berlin" },
 };
 
 export const AsItOpensPhone: Story = { ...AsItOpens, tags: ["uat-phone"] };

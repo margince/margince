@@ -6,9 +6,13 @@ package activities
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // CheckLater normalizes a moment to send at and refuses one that is invalid or
@@ -27,18 +31,54 @@ func (s *Store) CheckLater(sched SendSchedule) (SendSchedule, error) {
 	return normalized, nil
 }
 
-// ScheduleHeldLater moves a held message to a later moment, at the version it
-// has now. A Send anyway decision recorded on its review stays and is spent
-// when the message fires. A row no longer held was settled by someone else.
-func (s *Store) ScheduleHeldLater(ctx context.Context, id ids.UUID, sched SendSchedule, timer ScheduleTimer) (crmcontracts.ScheduledSend, error) {
+// HeldMove is a checked move of a held message to a later moment. The caller
+// writes it with MoveHeldTx in its own transaction, beside the decision it
+// records, so a cancel cannot slip between the two.
+type HeldMove struct {
+	id      ids.UUID
+	sched   SendSchedule
+	current ScheduledSend
+	timer   ScheduleTimer
+}
+
+// PlanHeldMove runs every check a move of this held message runs, and writes
+// nothing: the grant, the moment, and that the row is still held.
+func (s *Store) PlanHeldMove(ctx context.Context, id ids.UUID, sched SendSchedule, timer ScheduleTimer) (HeldMove, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return HeldMove{}, err
+	}
+	if timer == nil {
+		return HeldMove{}, errNoScheduleTimer
+	}
+	sched, err := s.CheckLater(sched)
+	if err != nil {
+		return HeldMove{}, err
+	}
 	current, err := s.GetScheduledSend(ctx, id)
 	if err != nil {
-		return crmcontracts.ScheduledSend{}, err
+		return HeldMove{}, err
 	}
 	if current.Status != ScheduledStatusHeld {
-		return crmcontracts.ScheduledSend{}, apperrors.ErrVersionSkew
+		return HeldMove{}, apperrors.ErrNotFound
 	}
-	row, err := s.RescheduleScheduledSend(ctx, id, sched, current.Version, timer)
+	if err := mayReleaseHeld(ctx); err != nil {
+		return HeldMove{}, err
+	}
+	return HeldMove{id: id, sched: sched, current: current, timer: timer}, nil
+}
+
+// MoveHeldTx writes a planned move. The version it was planned at must still
+// stand, so a message cancelled or moved since refuses the whole transaction.
+func (s *Store) MoveHeldTx(ctx context.Context, tx pgx.Tx, move HeldMove) error {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return err
+	}
+	return s.RescheduleInTx(ctx, tx, move.id, move.sched, move.current.Version, move.current, move.timer)
+}
+
+// ScheduledSendWire is one message as the scheduled list renders it.
+func (s *Store) ScheduledSendWire(ctx context.Context, id ids.UUID) (crmcontracts.ScheduledSend, error) {
+	row, err := s.GetScheduledSend(ctx, id)
 	if err != nil {
 		return crmcontracts.ScheduledSend{}, err
 	}

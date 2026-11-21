@@ -2,49 +2,35 @@
 // moment records the decision now and the message waits for it.
 
 import { useState } from "react";
-import { Field } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
-import { DateInput, type ISODate } from "../../design-system/dateinput";
-import { type ClockTime, TimeInput } from "../../design-system/timeinput";
+import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
-import { useViewerZone } from "../../lib/viewerzone";
-import { type ScheduleFields, scheduleFields } from "./composeschedule";
+import { MomentFields, useMomentChoice } from "./scheduledmoment";
 
 type When = "now" | "later";
 
-export type SendAnywayWhen = Readonly<{
-  /** The moment to send at, or undefined to send now. */
-  later: ScheduleFields | undefined;
-  /** True while "later" is chosen and no full moment is picked. */
-  incomplete: boolean;
-}>;
-
-/** The state behind the choice, kept by the dialog that confirms. */
-export function useSendAnywayWhen() {
+/** The choice behind the dialog, picked in `zone`: the held message's own. */
+export function useSendAnywayWhen(zone: string) {
   const t = useT();
-  const zone = useViewerZone();
+  const now = new Date(useNow(60_000));
   const [when, setWhen] = useState<When>("now");
-  const [day, setDay] = useState<ISODate | "">("");
-  const [time, setTime] = useState<ClockTime | "">("");
-  const fields =
-    when === "later" && day && time
-      ? scheduleFields(`${day}T${time}`, undefined, zone)
-      : undefined;
-  const chosen: SendAnywayWhen = {
-    later: fields,
-    incomplete: when === "later" && fields === undefined,
+  const moment = useMomentChoice(zone, now);
+  const later = when === "later" ? moment.fields : undefined;
+  const missing = () => {
+    if (when !== "later" || moment.ready) return undefined;
+    return t(moment.past ? "compose.schedulePast" : "compose.schedulePick");
   };
   return {
     when,
     setWhen,
-    day,
-    setDay,
-    time,
-    setTime,
-    chosen,
-    /** Why confirm waits: a later moment is chosen and not yet complete. */
-    missing: chosen.incomplete ? t("compose.schedulePick") : undefined,
-    confirmLabel: t(fields ? "compose.scheduleSend" : "directSend.confirm"),
+    moment,
+    /** The moment to send at, or undefined to send now. */
+    later,
+    /** Why confirm waits: a later moment that is not whole, or is past. */
+    missing: missing(),
+    confirmLabel: t(
+      later?.scheduled_at ? "compose.scheduleSend" : "directSend.confirm",
+    ),
   };
 }
 
@@ -68,26 +54,11 @@ export function DirectSendWhen({
         ]}
       />
       {state.when === "later" && (
-        <>
-          <Field label={t("compose.scheduleDate")}>
-            {(control) => (
-              <DateInput
-                {...control}
-                value={state.day}
-                onChange={(event) => state.setDay(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("compose.scheduleTime")}>
-            {(control) => (
-              <TimeInput
-                {...control}
-                value={state.time}
-                onChange={(event) => state.setTime(event.target.value)}
-              />
-            )}
-          </Field>
-        </>
+        <MomentFields
+          choice={state.moment}
+          dayLabel={t("compose.scheduleDate")}
+          timeLabel={t("compose.scheduleTime")}
+        />
       )}
     </>
   );

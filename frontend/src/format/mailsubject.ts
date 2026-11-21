@@ -13,7 +13,6 @@ export const MAIL_SUBJECT_PREFIXES: readonly string[] = [
   "fwd",
   "fw",
   "wg",
-  "tr",
 ];
 
 const leadingPrefixes = new RegExp(

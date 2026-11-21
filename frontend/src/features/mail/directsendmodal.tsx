@@ -30,6 +30,7 @@ import { footerFindingsText } from "../../format/footerfindings";
 import { sendingCompanyScope } from "../../format/sendingcompany";
 import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { communicationContextLabel } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
 import type { ScheduleFields } from "./composeschedule";
@@ -63,6 +64,17 @@ export type DirectSendCommand = Readonly<{
 /** What a Send anyway came to: sent now, waiting for its moment, or gone
  *  already from another tab. */
 export type DirectSendOutcome = "sent" | "scheduled" | "alreadySent";
+
+const OUTCOME_KEY: Readonly<Record<DirectSendOutcome, MessageKey>> = {
+  sent: "directSend.queued",
+  scheduled: "directSend.scheduled",
+  alreadySent: "directSend.alreadySent",
+};
+
+/** The line a surface shows once a Send anyway has answered. */
+export function directSendOutcomeKey(outcome: DirectSendOutcome): MessageKey {
+  return OUTCOME_KEY[outcome];
+}
 
 // A decision retried after a lost answer reuses its key, whichever reviews
 // were decided in between. The server then replays the send it recorded
@@ -125,19 +137,19 @@ export function DirectSendModal({
   review: initialReview,
   onSent,
   onReviewRefreshed,
-  offerLater,
+  laterZone,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   review: CommunicationReview;
   onSent?: (outcome: DirectSendOutcome) => void;
   onReviewRefreshed?: (review: CommunicationReview) => void;
-  /** Offer a later moment, for a message held in the scheduled list. */
-  offerLater?: boolean;
+  /** Offer a later moment, picked in this zone: the held message's own. */
+  laterZone?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const when = useSendAnywayWhen();
+  const when = useSendAnywayWhen(laterZone ?? "UTC");
   const [review, setReview] = useState(initialReview);
   const correction = review.wording_correction;
   const prior = correction ?? {
@@ -256,7 +268,7 @@ export function DirectSendModal({
           shownReasons: (review.refusals ?? []).map(
             (refusal) => refusal.reason_code,
           ),
-          later: when.chosen.later,
+          later: when.later,
         })
       }
     >
@@ -340,7 +352,7 @@ export function DirectSendModal({
         label={t("directSend.acknowledge")}
         onChange={(e) => setAcknowledged(e.target.checked)}
       />
-      {offerLater && <DirectSendWhen state={when} />}
+      {laterZone !== undefined && <DirectSendWhen state={when} />}
     </ConfirmModal>
   );
 }

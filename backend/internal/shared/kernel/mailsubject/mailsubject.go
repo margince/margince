@@ -19,14 +19,15 @@ import (
 )
 
 // ReplyPrefixes are the ways a client marks a subject as a reply, in the
-// languages this product writes. Lower case, colon included.
+// languages this product writes. Lower case, colon included. "antwort:" is
+// left out: adding it means rebuilding the answered-check index.
 func ReplyPrefixes() []string {
 	return []string{"re:", "aw:", "antw:"}
 }
 
 // ForwardPrefixes are the ways a client marks a subject as a forward.
 func ForwardPrefixes() []string {
-	return []string{"fwd:", "fw:", "wg:", "tr:"}
+	return []string{"fwd:", "fw:", "wg:"}
 }
 
 // ReplyPrefixPattern matches any run of reply prefixes at the start of a

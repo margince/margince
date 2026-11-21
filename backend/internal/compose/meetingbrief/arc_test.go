@@ -54,6 +54,7 @@ func TestRepliesAndForwardsFoldUnderTheSharedSubjectPrefixes(t *testing.T) {
 		mail(activityID, 3, "Requirements", "inbound"),
 		mail(dealID, 4, "AW: WG: Requirements", "outbound"),
 		mail(contactID, 5, "FW: Re: Requirements", "inbound"),
+		mail(activityID, 6, "Antw: Requirements", "outbound"),
 	}
 	if got := threadsOf(history); len(got) != 1 {
 		t.Fatalf("threads = %d, want 1: prefixes are not a new subject", len(got))
