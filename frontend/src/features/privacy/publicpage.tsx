@@ -25,7 +25,7 @@ export function PublicPage({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /** The page every dead public link lands on: the answer as the heading, the
- * reason under it, and a tab title that names the answer instead of the product. */
+ * reason under it. The tab title names the answer, not the product. */
 export function DeadLinkPage({ children }: Readonly<{ children: ReactNode }>) {
   const t = useT();
   useBookingTitle(t("prefs.unsub.deadLinkTitle"));
