@@ -445,7 +445,7 @@ describe("handing a file to the Settings voice card", () => {
 
     expect(
       await screen.findByText(
-        "big.txt is too large to add: a file can hold up to 1 MB of text. Split it into smaller files.",
+        "big.txt is too large to add: a file can hold up to about 1 MB of text. Split it into smaller files.",
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/MiB cap/)).toBeNull();
