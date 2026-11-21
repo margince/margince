@@ -7,14 +7,17 @@ package storekit
 // one of them moved.
 //
 // A transaction remembers each fact it reads. An import run keeps them across
-// its transactions. A transaction takes the run's copy only after it read the
-// version and saw no writer still open. A writer advances the version and
-// holds a shared lock until it ends. The version moves before the writer
-// commits, so the lock is how a reader knows the rows may still be old. A
-// reader that cannot take the lock for an instant reads the facts itself.
+// its transactions, and a capture transaction takes the run's copy only while
+// it holds the facts lock shared (HoldCaptureFactsTx). A writer takes that
+// lock exclusively before it advances the version, so no writer commits
+// between a reader's check and its use of the copy.
+//
+// Lock order: a capture transaction takes the facts lock after its connection
+// row and the authorization lock, and a writer after its own row locks.
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
@@ -29,28 +32,26 @@ const CaptureFactsMemo = "capture.facts:"
 
 const (
 	captureFactsWritten = "capture.facts-written"
+	captureFactsHeld    = "capture.facts-held"
 	captureFactsVersion = "capture.facts-version"
 )
 
-// captureFactsLock is the advisory lock a writer of a fact holds shared.
+// captureFactsLock is the advisory lock readers hold shared and writers hold
+// exclusively, each until its transaction ends.
 const captureFactsLock = `hashtext('margince:capture-facts')::bigint`
-
-// CaptureFactsVersionSQL selects the version and whether no writer of a fact is
-// still open, for a statement a capture transaction already sends.
-const CaptureFactsVersionSQL = `(SELECT last_value FROM capture_facts_version_seq),
-       CASE WHEN pg_try_advisory_lock(` + captureFactsLock + `)
-            THEN pg_advisory_unlock(` + captureFactsLock + `) ELSE false END`
 
 // CaptureFactsChanged is called by every writer of a capture fact, in its own
 // transaction. The rest of that transaction reads the facts again, and every
-// import run reads them again from its next transaction on.
+// import run reads them again from its next transaction on. It waits for the
+// capture transactions that hold the facts lock.
 // gates/capturefactwriters_test.go finds every such writer.
 func CaptureFactsChanged(ctx context.Context, tx pgx.Tx) error {
 	database.Forget(tx, CaptureFactsMemo)
 	if !database.Mark(tx, captureFactsWritten) {
 		return nil
 	}
-	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(`+captureFactsLock+`), nextval('capture_facts_version_seq')`)
+	_, err := tx.Exec(ctx, `WITH held AS MATERIALIZED (SELECT pg_advisory_xact_lock(`+captureFactsLock+`))
+		SELECT nextval('capture_facts_version_seq') FROM held`)
 	return err
 }
 
@@ -77,28 +78,32 @@ func CaptureFactsChangedBy(ctx context.Context, tx pgx.Tx, written pgconn.Comman
 	return CaptureFactsChanged(ctx, tx)
 }
 
-// factsVersion is what one transaction read of the version.
-type factsVersion struct {
-	value   int64
-	settled bool
+// HoldCaptureFactsTx takes the facts lock shared until tx ends and reads the
+// version under it, so the run's copy is current for the rest of tx. A sequence
+// nobody has advanced reads as 0, since its first nextval leaves last_value.
+func HoldCaptureFactsTx(ctx context.Context, tx pgx.Tx) error {
+	var version int64
+	if err := tx.QueryRow(ctx, `WITH held AS MATERIALIZED (SELECT pg_advisory_xact_lock_shared(`+captureFactsLock+`))
+		SELECT CASE WHEN is_called THEN last_value ELSE 0 END FROM capture_facts_version_seq, held`).Scan(&version); err != nil {
+		return err
+	}
+	if _, err := database.Remember(tx, captureFactsVersion, func() (int64, error) { return version, nil }); err != nil {
+		return err
+	}
+	database.Mark(tx, captureFactsHeld)
+	return nil
 }
 
-// NoteCaptureFactsVersion records the version a transaction's own statement
-// read through CaptureFactsVersionSQL, so the facts ask for it no second time.
-func NoteCaptureFactsVersion(tx pgx.Tx, version int64, settled bool) error {
-	_, err := database.Remember(tx, captureFactsVersion, func() (factsVersion, error) {
-		return factsVersion{value: version, settled: settled}, nil
-	})
-	return err
+// heldCaptureFactsVersion is the version tx read under the facts lock.
+func heldCaptureFactsVersion(tx pgx.Tx) (int64, bool) {
+	if !database.Marked(tx, captureFactsHeld) {
+		return 0, false
+	}
+	version, err := database.Remember(tx, captureFactsVersion, func() (int64, error) { return 0, errFactsLockNotHeld })
+	return version, err == nil
 }
 
-func captureFactsVersionTx(ctx context.Context, tx pgx.Tx) (factsVersion, error) {
-	return database.Remember(tx, captureFactsVersion, func() (factsVersion, error) {
-		var read factsVersion
-		err := tx.QueryRow(ctx, `SELECT `+CaptureFactsVersionSQL).Scan(&read.value, &read.settled)
-		return read, err
-	})
-}
+var errFactsLockNotHeld = errors.New("storekit: the capture facts lock is not held")
 
 // captureFactsRun is what one import run read, at one version.
 type captureFactsRun struct {
@@ -146,22 +151,15 @@ func (r *captureFactsRun) put(version int64, key string, value any) {
 // because what it read may never commit.
 func RememberCaptureFact[T any](ctx context.Context, tx pgx.Tx, key string, read func() (T, error)) (T, error) {
 	return database.Remember(tx, key, func() (T, error) {
-		// A savepoint has no memo to hold the version, so it would read the
-		// version once per fact; it reads the facts instead.
+		// Outside a transaction that holds the facts lock, a writer could
+		// commit while the copy is in use, so the facts are read.
 		run, ok := ctx.Value(captureFactsRunKey{}).(*captureFactsRun)
-		if !ok || !database.Memoized(tx) || wroteCaptureFacts(tx) {
+		version, held := heldCaptureFactsVersion(tx)
+		if !ok || !held || wroteCaptureFacts(tx) {
 			return read()
 		}
-		version, err := captureFactsVersionTx(ctx, tx)
-		if err != nil {
-			var none T
-			return none, err
-		}
-		if !version.settled {
-			return read()
-		}
-		if held, ok := run.get(version.value, key); ok {
-			if value, typed := held.(T); typed {
+		if cached, ok := run.get(version, key); ok {
+			if value, typed := cached.(T); typed {
 				return value, nil
 			}
 		}
@@ -170,7 +168,7 @@ func RememberCaptureFact[T any](ctx context.Context, tx pgx.Tx, key string, read
 			return value, err
 		}
 		if !wroteCaptureFacts(tx) {
-			run.put(version.value, key, value)
+			run.put(version, key, value)
 		}
 		return value, nil
 	})

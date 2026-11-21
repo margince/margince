@@ -179,30 +179,32 @@ func (s *Sink) mailboxRunAllowedTx(ctx context.Context, tx pgx.Tx) (context.Cont
 	// An archived mailbox births held mail without provider keys. The lock still
 	// excludes writes from a different account generation.
 	if connection, bound := ctx.Value(mailboxConnectionKey{}).(mailboxConnection); bound {
-		// The facts version rides on the lock, so checking the run's facts
-		// costs this transaction no round trip of its own.
 		var generation int
-		var facts int64
-		var settled bool
-		err := tx.QueryRow(ctx, `SELECT generation, `+storekit.CaptureFactsVersionSQL+` FROM capture_connection
+		err := tx.QueryRow(ctx, `SELECT generation FROM capture_connection
  WHERE id=@id AND generation=@account_generation FOR SHARE`,
-			pgx.NamedArgs{"id": connection.ID, "account_generation": connection.Generation}).Scan(&generation, &facts, &settled)
+			pgx.NamedArgs{"id": connection.ID, "account_generation": connection.Generation}).Scan(&generation)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ctx, apperrors.ErrPermissionDenied
 		}
 		if err != nil {
 			return ctx, err
 		}
-		if err := storekit.NoteCaptureFactsVersion(tx, facts, settled); err != nil {
-			return ctx, err
-		}
 	}
 	if shared, ok := sharedMailboxOf(ctx); ok {
-		return ctx, sharedMailboxAllowedTx(ctx, tx, shared)
+		if err := sharedMailboxAllowedTx(ctx, tx, shared); err != nil {
+			return ctx, err
+		}
+		return ctx, storekit.HoldCaptureFactsTx(ctx, tx)
 	}
 	_, owner := capturePrincipal(ctx)
 	if owner.IsZero() {
 		return ctx, &RoleCannotCaptureError{Missing: seatMissing}
 	}
-	return s.captureAllowedTx(ctx, tx, owner)
+	ctx, err := s.captureAllowedTx(ctx, tx, owner)
+	if err != nil {
+		return ctx, err
+	}
+	// After the authorization lock, never before: a role change holds that
+	// lock while it waits for the facts lock.
+	return ctx, storekit.HoldCaptureFactsTx(ctx, tx)
 }
