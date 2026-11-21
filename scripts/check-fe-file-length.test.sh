@@ -73,11 +73,19 @@ run() {
   done
   FE_FILE_LINE_CAP=10 FE_TEST_FILE_LINE_CAP=20 \
     FE_FILE_LENGTH_ROOT="$TMP/src" FE_FILE_LENGTH_SCRIPTS_ROOT="$TMP/scripts" \
-    FE_FILE_LENGTH_WAIVERS="$waivers" \
+    FE_FILE_LENGTH_E2E_ROOT="$TMP/e2e" FE_FILE_LENGTH_WAIVERS="$waivers" \
     bash "$GATE" >/dev/null 2>&1
 }
 
-reset() { rm -rf "$TMP/src" "$TMP/scripts"; mkdir -p "$TMP/src" "$TMP/scripts"; }
+# e2elines writes one under the fake browser-spec root, the third tree.
+e2elines() {
+  local path="$TMP/e2e/$1" count="$2"
+  mkdir -p "$(dirname "$path")"
+  : >"$path"
+  for ((i = 0; i < count; i++)); do echo "const line$i = $i;" >>"$path"; done
+}
+
+reset() { rm -rf "$TMP/src" "$TMP/scripts" "$TMP/e2e"; mkdir -p "$TMP/src" "$TMP/scripts" "$TMP/e2e"; }
 
 # report answers what the gate SAID, for the cases where the refusal and the
 # reason are different claims.
@@ -86,7 +94,7 @@ report() {
   : >"$waivers"
   FE_FILE_LINE_CAP=10 FE_TEST_FILE_LINE_CAP=20 \
     FE_FILE_LENGTH_ROOT="$TMP/src" FE_FILE_LENGTH_SCRIPTS_ROOT="$TMP/scripts" \
-    FE_FILE_LENGTH_WAIVERS="$waivers" \
+    FE_FILE_LENGTH_E2E_ROOT="$TMP/e2e" FE_FILE_LENGTH_WAIVERS="$waivers" \
     bash "$GATE" 2>&1
 }
 
@@ -216,13 +224,24 @@ ledger="$TMP/seeded.txt"
 : >"$ledger"
 if FE_FILE_LINE_CAP=10 FE_TEST_FILE_LINE_CAP=20 \
   FE_FILE_LENGTH_ROOT="$TMP/src" FE_FILE_LENGTH_SCRIPTS_ROOT="$TMP/scripts" \
-  FE_FILE_LENGTH_WAIVERS="$ledger" \
+  FE_FILE_LENGTH_E2E_ROOT="$TMP/e2e" FE_FILE_LENGTH_WAIVERS="$ledger" \
   bash "$SCRIPT_DIR/seed-fe-file-length-waivers.sh" >/dev/null 2>&1; then
   fail "the seeder froze a baseline from a census that never ran"
 fi
 if grep -qE "^[0-9]+ " "$ledger"; then
   fail "the seeder wrote entries from a report it could not read a count off"
 fi
+
+# 17. The browser-spec tree is counted at all: a spec there grew past four
+# thousand lines with no gate to say so.
+reset
+e2elines "ac.spec.ts" 21
+if run; then fail "a browser spec over the test cap passed: the third tree is not counted"; fi
+
+# 18. A helper the specs share is test code too, so it takes the wider ceiling.
+reset
+e2elines "mockapi/routes.ts" 15
+if ! run; then fail "a browser-spec helper between the two caps was refused the wider ceiling"; fi
 
 if [[ "$FAILURES" -ne 0 ]]; then
   echo "" >&2
