@@ -57,7 +57,7 @@ export function FollowUpTaskFields({
                 {...control}
                 value={isoOrBlank(value.day)}
                 {...dueDayBounds(readerZone)}
-                onChange={(event) => patch({ day: event.target.value })}
+                onChange={(event) => patch(dueDayChange(event.target.value))}
               />
             )}
           </Field>
@@ -83,6 +83,14 @@ export function FollowUpTaskFields({
       )}
     </>
   );
+}
+
+/**
+ * What changes when a task's due day is edited. A cleared day takes the time
+ * with it, because a time with no day names nothing and its box is locked.
+ */
+export function dueDayChange(day: string): { day: string; time?: string } {
+  return day === "" ? { day, time: "" } : { day };
 }
 
 /**
@@ -128,6 +136,9 @@ export function TaskTimeField({
       {(control) => (
         <TimeInput
           {...control}
+          // A fresh box once the day is gone, so a refused text does not
+          // outlive the day that made the time meaningful.
+          key={day === "" ? "no-day" : "day"}
           value={clockOrBlank(value)}
           disabled={day === ""}
           onChange={(event) => onChange(event.target.value)}

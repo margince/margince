@@ -14,7 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-const deliveryTeamRequired = "required"
+const deliveryTeamRequired = requiredFieldCode
 
 func validateDeliveryTeam(ctx context.Context, tx pgx.Tx, d Delivery) error {
 	if d.TeamID == nil && (d.Scope == nil || *d.Scope == RoutinePersonal) {

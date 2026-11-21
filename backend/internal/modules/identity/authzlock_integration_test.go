@@ -113,7 +113,7 @@ func TestEveryAuthorizationChangeWaitsForTheLock(t *testing.T) {
 		{"reactivate", func() error { return e.svc.ReactivateUser(ctx, e.admin, gone.UserID) }},
 		{"issue a link", func() error { _, _, err := e.svc.IssuePasswordLink(ctx, e.admin, member.UserID); return err }},
 		{"issue a passport", func() error {
-			_, err := e.svc.IssuePassport(ctx, e.admin, IssuePassportInput{Scopes: []string{"read"}})
+			_, err := e.svc.IssuePassport(ctx, e.admin, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 			return err
 		}},
 		{"deactivate", func() error { return e.svc.DeactivateUser(ctx, e.admin, DeactivateUserInput{UserID: member.UserID}) }},

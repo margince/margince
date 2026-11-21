@@ -79531,7 +79531,7 @@ components:
       additionalProperties: false
       required: [scopes]
       properties:
-        label:  { type: [string, 'null'], maxLength: 120, description: 'Which agent this binds, e.g. "Claude Desktop".' }
+        label:  { type: [string, 'null'], maxLength: 120, description: 'Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one.' }
         scopes:
           type: array
           minItems: 1

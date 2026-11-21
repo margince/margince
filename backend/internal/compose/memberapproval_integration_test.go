@@ -26,7 +26,7 @@ func TestAMemberMergeStagesReviewsApprovesAndRedeemsThroughTheToolDoor(t *testin
 	manager := memberManagerFor(t, e)
 	human := e.As(e.AdminUser, nil, integration.AdminWithSignals)
 	actor := identity.Identity{UserID: ids.From[ids.UserKind](e.AdminUser), Roles: []string{"admin"}, SeatType: "full", Permissions: integration.AdminWithSignals}
-	passport, err := manager.service.IssuePassport(human, actor, identity.IssuePassportInput{Scopes: []string{"read", "write"}})
+	passport, err := manager.service.IssuePassport(human, actor, identity.IssuePassportInput{Label: new("test agent"), Scopes: []string{"read", "write"}})
 	if err != nil {
 		t.Fatal(err)
 	}

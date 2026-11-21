@@ -54923,7 +54923,7 @@ type IssuePassportRequest struct {
 	// Areas Where the passport may act. Absent means all areas.
 	Areas *PassportAreas `json:"areas,omitempty"`
 
-	// Label Which agent this binds, e.g. "Claude Desktop".
+	// Label Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one.
 	Label *string `json:"label,omitempty"`
 
 	// Scopes Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC.

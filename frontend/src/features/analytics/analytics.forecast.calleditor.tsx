@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import { useIdempotencyKey } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { MoneyInput } from "../../design-system/moneyinput";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { useT } from "../../i18n";
@@ -41,6 +42,9 @@ export function ForecastCallEditor({
   const [note, setNote] = useState("");
   // The box keeps a refused text in view; the save waits until it reads.
   const [amountRefused, setAmountRefused] = useState(false);
+
+  // The server takes no negative call, so the editor refuses one first.
+  const negative = amountMinor !== null && amountMinor < 0;
 
   const idempotency = useIdempotencyKey();
   const save = useMutation({
@@ -95,9 +99,13 @@ export function ForecastCallEditor({
           <Button onClick={onClose}>{t("forecast.cancel")}</Button>
           <Button
             variant="primary"
-            disabled={save.isPending || amountRefused}
+            disabled={save.isPending || amountRefused || negative}
             reason={
-              amountMinor === null ? t("forecast.callAmountNeeded") : undefined
+              amountMinor === null
+                ? t("forecast.callAmountNeeded")
+                : negative
+                  ? t("forecast.callAmountNegative")
+                  : undefined
             }
             onClick={() => {
               if (amountMinor !== null) {
@@ -119,6 +127,7 @@ export function ForecastCallEditor({
           {(control) => (
             <MoneyInput
               {...control}
+              aria-invalid={negative || control["aria-invalid"]}
               valueMinor={amountMinor ?? 0}
               blankWhenZero={amountMinor === null}
               currency={readings.base_currency}
@@ -138,6 +147,7 @@ export function ForecastCallEditor({
             />
           )}
         </Field>
+        <ErrorLine error={save.error} />
       </PanelBody>
     </Panel>
   );

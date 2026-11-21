@@ -85,6 +85,8 @@ type StubOpts = {
   // run, which is why that case went unrendered until somebody opened the page.
   assuranceStatus?: number;
   unreadSource?: boolean;
+  // Answers every call with this refusal instead of storing it.
+  callRefusal?: { status: number; body: Record<string, unknown> };
 };
 
 function forecastStub(opts: StubOpts = {}) {
@@ -103,6 +105,9 @@ function forecastStub(opts: StubOpts = {}) {
         body,
         request ? request.headers.get("Idempotency-Key") : null,
       );
+      if (opts.callRefusal) {
+        return jsonResponse(opts.callRefusal.body, opts.callRefusal.status);
+      }
       return jsonResponse({ id: "c1", ...body }, 201);
     }
     if (url.includes("/forecast/assurance/exceptions")) {
@@ -487,6 +492,48 @@ describe("ForecastView", () => {
     await user.click(screen.getByRole("button", { name: /Save forecast/i }));
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0].amount_minor).toBe(0);
+  });
+
+  it("refuses a negative amount in the editor, before any request", async () => {
+    const posted: Record<string, unknown>[] = [];
+    vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await openCallEditor(user, "-500");
+
+    expect(screen.getByText(en["forecast.callAmountNegative"])).toBeTruthy();
+    const save = screen.getByRole("button", { name: /Save forecast/i });
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(save);
+    expect(posted).toHaveLength(0);
+  });
+
+  it("says why a refused call was not saved and keeps the editor open", async () => {
+    vi.stubGlobal(
+      "fetch",
+      forecastStub({
+        callRefusal: {
+          status: 422,
+          body: {
+            type: "about:blank",
+            title: "Unprocessable Entity",
+            status: 422,
+            detail: "The server refused this amount.",
+          },
+        },
+      }),
+    );
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await openCallEditor(user);
+    await user.click(screen.getByRole("button", { name: /Save forecast/i }));
+
+    expect(
+      await screen.findByText("The server refused this amount."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Save forecast/i })).toBeTruthy();
   });
 
   // An empty note is no note. Sent as "", it claims the author wrote something
