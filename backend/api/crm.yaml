@@ -73063,7 +73063,7 @@ components:
             withholds it, and on an unlink; a client then falls back to `kind` or to `summary`.
         previous_role:
           type: [string, 'null']
-          description: The role an update replaced. Set only when `role` changed.
+          description: The role an update replaced, or removed when `role` is then absent. Set only when the role changed.
         changed_fields:
           type: array
           items: { type: string }

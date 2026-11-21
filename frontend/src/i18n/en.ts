@@ -2538,6 +2538,8 @@ export const en = {
   "history.edge.roleSet": "{subject} changed the role at {name} to {role}",
   "history.edge.changed": "{subject} changed {name}: {fields}",
   "history.edge.unlinked": "{subject} unlinked {name}",
+  "history.edge.roleRemoved": "{subject} removed the role {previous} at {name}",
+  "history.edge.alsoChanged": "also changed: {fields}",
   "history.subject.viaClient": "{name}, via {client},",
   "history.subject.viaAgent": "{name}, via an agent,",
   "history.subject.viaConnector": "{name}, via a connector,",

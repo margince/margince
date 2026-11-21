@@ -80,9 +80,25 @@ export function historySubject(
 
 type Edge = NonNullable<AuditHistoryEntry["edge"]>;
 
+// What an update did to the link's role, from the two role parts on the wire.
+function roleSentence(
+  edge: Edge,
+  params: { subject: string; name: string },
+  t: Translator,
+): string | null {
+  const { role, previous_role: previous } = edge;
+  if (role && previous) {
+    return t("history.edge.roleChanged", { ...params, role, previous });
+  }
+  if (role) return t("history.edge.roleSet", { ...params, role });
+  if (previous) return t("history.edge.roleRemoved", { ...params, previous });
+  return null;
+}
+
 // A link line from the parts on the wire, or null when they are absent (an
 // older server) so the caller keeps `summary`. The other end falls back to its
-// id, as the server's sentence does.
+// id, as the server's sentence does. A link made without a role is worded from
+// its kind, as the server's sentence is.
 function edgeLine(
   action: string,
   edge: Edge,
@@ -92,25 +108,26 @@ function edgeLine(
   const name = edge.other_label || edge.other_entity_id;
   const params = { subject, name };
   if (action === "archive") return t("history.edge.unlinked", params);
-  if (action === "create" && edge.role) {
-    return t("history.edge.linked", { ...params, role: edge.role });
+  if (action === "create") {
+    const role = edge.role || edge.kind;
+    return role ? t("history.edge.linked", { ...params, role }) : null;
   }
   if (action !== "update") return null;
-  if (edge.role && edge.previous_role) {
-    return t("history.edge.roleChanged", {
-      ...params,
-      role: edge.role,
-      previous: edge.previous_role,
-    });
+  const roleLine = roleSentence(edge, params, t);
+  // The role is named by its own sentence only when one could be worded; a
+  // masked role leaves "role" out of the list anyway.
+  const others = (edge.changed_fields ?? []).filter(
+    (field) => !(roleLine && field === "role"),
+  );
+  const fields = others.map((field) => historyFieldLabel(field, t)).join(", ");
+  if (!roleLine) {
+    return others.length
+      ? t("history.edge.changed", { ...params, fields })
+      : null;
   }
-  if (edge.role && edge.changed_fields?.length === 1) {
-    return t("history.edge.roleSet", { ...params, role: edge.role });
-  }
-  if (!edge.changed_fields?.length) return null;
-  const fields = edge.changed_fields
-    .map((field) => historyFieldLabel(field, t))
-    .join(", ");
-  return t("history.edge.changed", { ...params, fields });
+  return others.length
+    ? `${roleLine}; ${t("history.edge.alsoChanged", { fields })}`
+    : roleLine;
 }
 
 /** The history line for one entry, in the reader's language. */

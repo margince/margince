@@ -316,11 +316,63 @@ describe("historyLine", () => {
       }
     });
 
-    it("keeps the server's sentence when an older server sends no parts", () => {
-      expect(historyLine(linkRow("create", {}), de_t)).toBe(
+    it("words a link made without a role from its kind, for every kind", () => {
+      const kinds = [
+        "employment",
+        "deal_stakeholder",
+        "project_stakeholder",
+        "project_company",
+        "partner_of",
+        "referred_by",
+        "co_sell_with",
+        "works_with",
+        "billing_contact",
+      ];
+      for (const kind of kinds) {
+        for (const locale of LOCALES) {
+          const line = historyLine(linkRow("create", { kind }), (key, params) =>
+            translate(locale, key, params),
+          );
+          expect(line, `${locale} ${kind}`).toContain(kind);
+          expect(line, `${locale} ${kind}`).toContain("Employer GmbH");
+          expect(line, `${locale} ${kind}`).not.toContain("server");
+        }
+      }
+    });
+
+    it("words a role change that also moved other link fields", () => {
+      const row = linkRow("update", {
+        role: "ceo",
+        previous_role: "cto",
+        changed_fields: ["ended_at", "role"],
+      });
+      expect(historyLine(row, de_t)).toBe(
+        "Uma hat die Rolle bei Employer GmbH von cto zu ceo geändert; außerdem geändert: Beendet",
+      );
+    });
+
+    it("words a removed role in every locale", () => {
+      const row = linkRow("update", {
+        previous_role: "cto",
+        changed_fields: ["role"],
+      });
+      expect(historyLine(row, de_t)).toBe(
+        "Uma hat die Rolle cto bei Employer GmbH entfernt",
+      );
+      for (const locale of LOCALES) {
+        const line = historyLine(row, (key, params) =>
+          translate(locale, key, params),
+        );
+        expect(line, locale).toContain("cto");
+        expect(line, locale).not.toContain("server");
+      }
+    });
+
+    it("keeps the server's sentence when an update carries no parts", () => {
+      expect(historyLine(linkRow("update", {}), de_t)).toBe(
         "the server's English link sentence",
       );
-      expect(historyLine(linkRow("update", {}), de_t)).toBe(
+      expect(historyLine(linkRow("create", { kind: "" }), de_t)).toBe(
         "the server's English link sentence",
       );
     });

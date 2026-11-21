@@ -272,7 +272,7 @@ func TestRecordHistoryEntryMasksBothPayloadSidesByOmission(t *testing.T) {
 		after:  map[string]any{"email": "new@x.com", "iban": "DE02"},
 	}
 
-	entry := recordHistoryEntry(row, entityFieldMask{"iban": {}})
+	entry := recordHistoryEntry(row, entityFieldMask{"iban": {}}, nil)
 	for side, payload := range map[string]map[string]any{"before": entry.Before, "after": entry.After} {
 		if _, leaked := payload["iban"]; leaked {
 			t.Errorf("masked field leaked through %s: %v", side, payload)
@@ -283,7 +283,7 @@ func TestRecordHistoryEntryMasksBothPayloadSidesByOmission(t *testing.T) {
 	}
 
 	// A reader whose role withholds nothing: the payload passes through whole.
-	entry = recordHistoryEntry(row, nil)
+	entry = recordHistoryEntry(row, nil, nil)
 	if entry.Before["iban"] != "DE01" || entry.After["iban"] != "DE02" {
 		t.Errorf("an empty mask must pass the payload through: before %v after %v", entry.Before, entry.After)
 	}
@@ -304,7 +304,7 @@ func TestAnEdgeEntryCarriesNoRecordFieldImages(t *testing.T) {
 		},
 	}
 
-	entry := recordHistoryEntry(row, nil)
+	entry := recordHistoryEntry(row, nil, nil)
 	if entry.Before != nil || entry.After != nil {
 		t.Errorf("an edge entry carries before=%v after=%v; those are the LINK's columns, and on the "+
 			"record's own entry they read as fields the record never had", entry.Before, entry.After)
@@ -317,11 +317,11 @@ func TestAnEdgeEntryCarriesNoRecordFieldImages(t *testing.T) {
 
 func TestRecordHistoryEntryActorDisplayFallsBackToRawActorID(t *testing.T) {
 	row := recordAuditRow{actorType: "human", actorID: "human:1a2b", action: "update"}
-	if got := recordHistoryEntry(row, nil).Summary; got != "human:1a2b updated the record" {
+	if got := recordHistoryEntry(row, nil, nil).Summary; got != "human:1a2b updated the record" {
 		t.Errorf("unresolved actor summary = %q, want the raw actor_id, never an invented name", got)
 	}
 	row.actorDisplayName = new("Uma Underwriter")
-	if got := recordHistoryEntry(row, nil).Summary; got != "Uma Underwriter updated the record" {
+	if got := recordHistoryEntry(row, nil, nil).Summary; got != "Uma Underwriter updated the record" {
 		t.Errorf("resolved actor summary = %q", got)
 	}
 }
@@ -390,7 +390,7 @@ func TestAMaskedFieldIsWithheldFromItsHistory(t *testing.T) {
 			"amount_minor": 900, "expected_arr_minor": 9600, "currency": "USD", "title": "New",
 		},
 	}
-	entry := recordHistoryEntry(row, mask)
+	entry := recordHistoryEntry(row, mask, nil)
 
 	for _, side := range []struct {
 		name  string
@@ -433,7 +433,7 @@ func TestAMaskedAmountWithholdsTheProductSplitFromHistory(t *testing.T) {
 		before: map[string]any{"products": []any{}, "commercial_revision": 1},
 		after:  map[string]any{"products": split, "commercial_revision": 2},
 	}
-	entry := recordHistoryEntry(row, mask)
+	entry := recordHistoryEntry(row, mask, nil)
 	if _, present := entry.After["products"]; present {
 		t.Fatalf("the record history still carries the product split: %v", entry.After)
 	}
@@ -484,7 +484,7 @@ func TestAnEdgeEntryCarriesTheRoleAndTheChangedFields(t *testing.T) {
 	created := recordHistoryEntry(recordAuditRow{
 		actorType: actorTypeHuman, actorID: "human:x", action: actionCreate,
 		after: map[string]any{"kind": "employment", "role": "cto"}, edge: subject,
-	}, nil)
+	}, nil, nil)
 	if created.Edge.Role == nil || *created.Edge.Role != "cto" || len(created.Edge.ChangedFields) != 0 {
 		t.Errorf("a link create reports role=%v fields=%v, want cto and none", created.Edge.Role, created.Edge.ChangedFields)
 	}
@@ -493,7 +493,7 @@ func TestAnEdgeEntryCarriesTheRoleAndTheChangedFields(t *testing.T) {
 		actorType: actorTypeHuman, actorID: "human:x", action: actionUpdate,
 		before: map[string]any{"role": "cto", "ended_at": nil},
 		after:  map[string]any{"kind": "employment", "role": "ceo", "ended_at": "2026-01-01"}, edge: subject,
-	}, nil)
+	}, nil, nil)
 	if updated.Edge.Role == nil || *updated.Edge.Role != "ceo" ||
 		updated.Edge.PreviousRole == nil || *updated.Edge.PreviousRole != "cto" {
 		t.Errorf("a role change reports role=%v previous=%v, want ceo from cto", updated.Edge.Role, updated.Edge.PreviousRole)
@@ -504,24 +504,44 @@ func TestAnEdgeEntryCarriesTheRoleAndTheChangedFields(t *testing.T) {
 
 	unlinked := recordHistoryEntry(recordAuditRow{
 		actorType: actorTypeHuman, actorID: "human:x", action: actionArchive, edge: subject,
-	}, nil)
+	}, nil, nil)
 	if unlinked.Edge.Role != nil || len(unlinked.Edge.ChangedFields) != 0 {
 		t.Errorf("an unlink reports role=%v fields=%v, want neither", unlinked.Edge.Role, unlinked.Edge.ChangedFields)
 	}
 }
 
-// A role the reader's mask withholds is withheld from the edge object too.
-func TestAnEdgeEntryWithholdsAMaskedRole(t *testing.T) {
-	row := recordAuditRow{
-		actorType: actorTypeHuman, actorID: "human:x", action: actionUpdate,
-		before: map[string]any{"role": "cto"}, after: map[string]any{"role": "ceo", "ended_at": "2026-01-01"},
-		edge: &edgeSubject{kind: "employment", otherType: "company", otherID: ids.NewV7()},
+// A link row's images are masked by the relationship object's mask, never by
+// the page record's. The real resolution is held by the integration test
+// TestEdgeHistoryWithholdsAMaskedLinkRoleFromTheEdgeObject.
+func TestAnEdgeEntryIsMaskedByTheRelationshipMaskNotThePageRecords(t *testing.T) {
+	row := func() recordAuditRow {
+		return recordAuditRow{
+			actorType: actorTypeHuman, actorID: "human:x", action: actionUpdate,
+			before: map[string]any{"role": "cto"}, after: map[string]any{"role": "ceo", "ended_at": "2026-01-01"},
+			edge: &edgeSubject{kind: "employment", otherType: "company", otherID: ids.NewV7()},
+		}
 	}
-	entry := recordHistoryEntry(row, entityFieldMask{"role": {}})
+	pageOnly := recordHistoryEntry(row(), entityFieldMask{"role": {}}, nil)
+	if pageOnly.Edge.Role == nil {
+		t.Error("the page record's mask hid the link's role; it is the relationship's mask that applies")
+	}
+	entry := recordHistoryEntry(row(), nil, entityFieldMask{"role": {}})
 	if entry.Edge.Role != nil || entry.Edge.PreviousRole != nil {
 		t.Errorf("masked role leaked: role=%v previous=%v", entry.Edge.Role, entry.Edge.PreviousRole)
 	}
 	if got := strings.Join(entry.Edge.ChangedFields, ","); got != "ended_at" {
 		t.Errorf("changed fields = %q, want the masked field left out", got)
+	}
+}
+
+// Clearing a role still says which role went away.
+func TestAnEdgeEntryReportsTheRoleAnUpdateCleared(t *testing.T) {
+	entry := recordHistoryEntry(recordAuditRow{
+		actorType: actorTypeHuman, actorID: "human:x", action: actionUpdate,
+		before: map[string]any{"role": "cto"}, after: map[string]any{"role": ""},
+		edge: &edgeSubject{kind: "employment", otherType: "company", otherID: ids.NewV7()},
+	}, nil, nil)
+	if entry.Edge.Role != nil || entry.Edge.PreviousRole == nil || *entry.Edge.PreviousRole != "cto" {
+		t.Errorf("a cleared role reports role=%v previous=%v, want none and cto", entry.Edge.Role, entry.Edge.PreviousRole)
 	}
 }

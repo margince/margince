@@ -53199,7 +53199,7 @@ export interface components {
             other_label?: string | null;
             /** @description The role the link was made with (create) or changed to (update), as the reader's field mask allows. Absent when the link has no role, when the reader's mask withholds it, and on an unlink; a client then falls back to `kind` or to `summary`. */
             role?: string | null;
-            /** @description The role an update replaced. Set only when `role` changed. */
+            /** @description The role an update replaced, or removed when `role` is then absent. Set only when the role changed. */
             previous_role?: string | null;
             /** @description Names of the link fields an update moved, sorted, masked like `role`. Absent on create and unlink. An older server omits it, and the client then shows `summary`. */
             changed_fields?: string[];

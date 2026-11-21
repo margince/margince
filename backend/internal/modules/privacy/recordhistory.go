@@ -146,7 +146,7 @@ type recordAuditRow struct {
 // identifier, never an invented name; agent/connector/system ids never
 // resolve, and their lines render from their own branch (an agent's human
 // context is the on-behalf-of authority, nothing else).
-func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryEntry {
+func recordHistoryEntry(row recordAuditRow, mask, edgeMask entityFieldMask) RecordHistoryEntry {
 	display := row.actorID
 	if row.actorDisplayName != nil && *row.actorDisplayName != "" {
 		display = *row.actorDisplayName
@@ -155,6 +155,11 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 		row.before, row.after = sidecarImages(*row.sideField, row.action, row.before, row.after)
 		// Whatever the sidecar row did, the company was updated.
 		row.action = actionUpdate
+	}
+	if row.edge != nil {
+		// A link row's images are the RELATIONSHIP's columns, so the reader's mask
+		// on the relationship object applies, not the page record's.
+		mask = edgeMask
 	}
 	before, after := applyFieldMask(row.before, mask), applyFieldMask(row.after, mask)
 	summary := composeRecordSummary(row.actorType, display, row.onBehalfOfName,
@@ -213,6 +218,16 @@ func admitRecordHistoryRead(ctx context.Context, f RecordHistoryFilter) error {
 	return auth.Require(ctx, f.EntityType, principal.ActionRead)
 }
 
+// historyMasks is what the caller's role withholds on the page's record kind and
+// on the relationship object, whose columns the link rows' images carry.
+func historyMasks(ctx context.Context, entityType string) (record, edge entityFieldMask, err error) {
+	if record, err = withheldHistoryOf(ctx, entityType); err != nil {
+		return nil, nil, err
+	}
+	edge, err = withheldHistoryOf(ctx, EdgeEntityType)
+	return record, edge, err
+}
+
 // ListRecordHistory reads one record's whole-mutation timeline, one line per
 // audit row, inside a single workspace tx. The gate stack is ListFieldHistory's.
 // There is no action allowlist, because a merge or export line belongs here.
@@ -233,7 +248,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		}
 		cursor, useCursor = c, true
 	}
-	mask, err := withheldHistoryOf(ctx, f.EntityType)
+	mask, edgeMask, err := historyMasks(ctx, f.EntityType)
 	if err != nil {
 		return RecordHistoryPage{}, err
 	}
@@ -269,7 +284,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 			page.NextCursor = next
 		}
 		for _, row := range rows {
-			page.Entries = append(page.Entries, recordHistoryEntry(row, mask))
+			page.Entries = append(page.Entries, recordHistoryEntry(row, mask, edgeMask))
 		}
 		return nil
 	})

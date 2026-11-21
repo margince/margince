@@ -354,8 +354,12 @@ func historyEdgeOf(edge edgeSubject, action string, before, after map[string]any
 	}
 	if action == actionUpdate {
 		out.ChangedFields = edgeChangedFieldNames(after)
-		if prev := edgeRoleOf(before); prev != "" && out.Role != nil {
-			out.PreviousRole = &prev
+		// The after image holds only what moved, so a role key there means the role
+		// changed, to nothing included.
+		if _, moved := after[relationshipRoleImageKey]; moved {
+			if prev := edgeRoleOf(before); prev != "" {
+				out.PreviousRole = &prev
+			}
 		}
 	}
 	return out

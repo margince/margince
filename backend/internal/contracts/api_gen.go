@@ -53288,7 +53288,7 @@ type HistoryEdge struct {
 	// OtherLabel The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it.
 	OtherLabel *string `json:"other_label,omitempty"`
 
-	// PreviousRole The role an update replaced. Set only when `role` changed.
+	// PreviousRole The role an update replaced, or removed when `role` is then absent. Set only when the role changed.
 	PreviousRole *string `json:"previous_role,omitempty"`
 
 	// Role The role the link was made with (create) or changed to (update), as the reader's field mask allows. Absent when the link has no role, when the reader's mask withholds it, and on an unlink; a client then falls back to `kind` or to `summary`.

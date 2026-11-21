@@ -2641,6 +2641,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.edge.changed":
     "{subject} hat die Verknüpfung mit {name} geändert: {fields}",
   "history.edge.unlinked": "{subject} hat die Verknüpfung mit {name} gelöst",
+  "history.edge.roleRemoved":
+    "{subject} hat die Rolle {previous} bei {name} entfernt",
+  "history.edge.alsoChanged": "außerdem geändert: {fields}",
   "history.subject.viaClient": "{name} (über {client})",
   "history.subject.viaAgent": "{name} (über einen Agenten)",
   "history.subject.viaConnector": "{name} (über einen Connector)",

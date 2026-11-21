@@ -2563,6 +2563,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.edge.roleSet": "{subject} đã đổi vai trò tại {name} thành {role}",
   "history.edge.changed": "{subject} đã thay đổi liên kết với {name}: {fields}",
   "history.edge.unlinked": "{subject} đã hủy liên kết với {name}",
+  "history.edge.roleRemoved": "{subject} đã xóa vai trò {previous} tại {name}",
+  "history.edge.alsoChanged": "cũng đã đổi: {fields}",
   "history.subject.viaClient": "{name} (qua {client})",
   "history.subject.viaAgent": "{name} (qua trợ lý AI)",
   "history.subject.viaConnector": "{name} (qua trình kết nối)",
