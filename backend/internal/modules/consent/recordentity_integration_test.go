@@ -50,8 +50,8 @@ func joinBranch(t *testing.T, e *resolveEnv) ids.UUID {
 	branch := ids.NewV7()
 	ctx := context.Background()
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', $2, 'human:x')`, branch, string(branchCountry)); err != nil {
+		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', $2, $2, 'human:x')`, branch, string(branchCountry)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `

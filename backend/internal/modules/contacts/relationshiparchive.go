@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -62,15 +63,14 @@ func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 // requireRelationshipArchive asks the authority questions of an edge removal,
 // shared by the archive and its stage-time refusal. A deal stakeholder seat is
 // removed by whoever may write its deal, as it is added; every other kind also
-// needs the relationship delete grant.
+// needs the relationship delete grant. dealseat.RemovalGrants names that grant,
+// so a staged archive and an undo ask the same.
 func requireRelationshipArchive(ctx context.Context, tx pgx.Tx, current relationshipRow) error {
 	if err := refuseGenericProjectCompany(current.Kind); err != nil {
 		return err
 	}
-	if current.Kind != dealStakeholderKind {
-		if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
-			return err
-		}
+	if err := auth.RequireAny(ctx, "relationship", dealseat.RemovalGrants(current.Kind)...); err != nil {
+		return err
 	}
 	anchorObject, _ := relationshipAnchor(current.Kind)
 	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {

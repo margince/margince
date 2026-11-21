@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "../../api/client";
 import { Field } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
@@ -18,6 +18,7 @@ import {
   type ReportingSelection,
   reportingQuery,
 } from "./reporting.model";
+import { MetricLabels } from "./reporting.queries";
 
 export function ReportingForecastGraphs({
   scope,
@@ -53,6 +54,8 @@ export function ReportingForecastGraphs({
     JSON.stringify(selection),
   );
   const evaluated = showCharts ? query.data : undefined;
+  const openClosing = t("analytics.overview.openClosing");
+  const labels = useMemo(() => ({ open_pipeline: openClosing }), [openClosing]);
   return (
     <div className={inSheet ? "reporting-results-part" : "reporting-results"}>
       {/* The snapshot and the verbs that share it, as one row: the choice only
@@ -76,25 +79,30 @@ export function ReportingForecastGraphs({
         />
       </div>
       {showCharts && (
-        <QueryGate query={query} pendingLabel={t("reporting.forecast_support")}>
-          {(evaluation) => (
-            <>
-              <ReportingCharts
-                evaluation={evaluation}
-                board={inSheet && "sheet"}
-                onEvidence={openEvidence}
-              />
-              {evidence && (
-                <ReportingEvidenceDrawer
-                  key={JSON.stringify(evidence)}
+        <MetricLabels.Provider value={labels}>
+          <QueryGate
+            query={query}
+            pendingLabel={t("reporting.forecast_support")}
+          >
+            {(evaluation) => (
+              <>
+                <ReportingCharts
                   evaluation={evaluation}
-                  reference={evidence}
-                  onClose={closeEvidence}
+                  board={inSheet && "sheet"}
+                  onEvidence={openEvidence}
                 />
-              )}
-            </>
-          )}
-        </QueryGate>
+                {evidence && (
+                  <ReportingEvidenceDrawer
+                    key={JSON.stringify(evidence)}
+                    evaluation={evaluation}
+                    reference={evidence}
+                    onClose={closeEvidence}
+                  />
+                )}
+              </>
+            )}
+          </QueryGate>
+        </MetricLabels.Provider>
       )}
     </div>
   );

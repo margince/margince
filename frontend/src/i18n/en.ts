@@ -909,6 +909,7 @@ export const en = {
   "reporting.targetStatus": "Target status",
   "reporting.activeTargets": "Active targets",
   "reporting.allTargets": "All targets",
+  "reporting.retiredTargets": "Retired targets",
   "reporting.noTargetsYet":
     "No target is set yet. Team leads, management and admins set targets.",
   "reporting.periodYear": "Year",
@@ -1332,7 +1333,6 @@ export const en = {
   "reporting.setup.unusedItem": "“{phrase}”: {reason}",
   "reporting.setup.fieldName": "Name",
   "reporting.setup.fieldCountry": "Country",
-  "reporting.setup.fieldMetric": "Metric",
   "reporting.setup.fieldChart": "Chart",
   "reporting.describeInitiative": "Describe the initiative",
   "reporting.describeInitiativeHint":
@@ -1418,9 +1418,9 @@ export const en = {
     "Opens Sales review for one product. No setup is needed, and nothing is written.",
   "reporting.noProducts":
     "No live products yet. Add products under Settings to report on them.",
-  "reporting.actualsThrough": "Actuals through {at}",
+  "reporting.actualsThrough": "Actuals through {at} · {zone}",
   "reporting.periodNotStarted":
-    "The period starts {at}; nothing has happened in it yet",
+    "The period starts {at} ({zone}); nothing has happened in it yet",
   "reporting.writtenNoneWon": "No sales won in {period}.",
   "reporting.writtenWon": "Won in {period}: {amount}.",
   "reporting.writtenTarget":
@@ -1655,6 +1655,7 @@ export const en = {
   "reporting.blocks": "Charts and order",
   "reporting.metricUnavailable": "Metric no longer available",
   "reporting.metrics": "Metrics",
+  "reporting.metric": "Metric",
   "reporting.cancel": "Cancel",
   "reporting.saved": "Report saved",
   "reporting.live": "Live report",
@@ -6465,22 +6466,26 @@ export const en = {
   "legalEntities.colName": "Name",
   "legalEntities.colLegalName": "Legal name",
   "legalEntities.colCountry": "Country",
-  "legalEntities.countryMissing": "Not set: the installation’s country applies",
+  "legalEntities.colJurisdiction": "Jurisdiction",
+  "legalEntities.jurisdictionMissing":
+    "Not set: the installation’s jurisdiction applies",
   "legalEntities.defaultBadge": "Default",
   "legalEntities.defaultUnnamed": "Your company",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
-  "legalEntities.defaultCountry":
-    "Country: {country}. The default company follows the installation’s jurisdiction.",
-  "legalEntities.defaultCountryNone":
-    "No country set. The default company follows the installation’s jurisdiction.",
-  "legalEntities.defaultCountryLink": "Change it under Jurisdiction",
+  "legalEntities.countryHint": "The country of the registered address.",
+  "legalEntities.jurisdiction": "Jurisdiction",
+  "legalEntities.jurisdictionHint":
+    "Its law applies to the mail this company’s team sends and the contacts it owns.",
+  "legalEntities.defaultJurisdiction":
+    "Jurisdiction: {jurisdiction}. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultJurisdictionNone":
+    "No jurisdiction set. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultJurisdictionLink": "Change it under Jurisdiction",
   "jurisdiction.entities.title": "Legal entities",
-  "jurisdiction.entities.lead":
-    "Each company’s country sets the law for the mail its team sends and the contacts it owns.",
-  "jurisdiction.entities.default": "{country}, the selection above",
-  "jurisdiction.entities.none": "No country set",
+  "jurisdiction.entities.default": "{jurisdiction}, the selection above",
+  "jurisdiction.entities.none": "No jurisdiction set",
   "jurisdiction.entities.edit": "Change legal entities",
   "legalEntities.edit": "Edit",
   "legalEntities.archive": "Archive",
@@ -9376,7 +9381,7 @@ export const en = {
   "analytics.meetingsNoShow": "No-show",
   "analytics.meetingsCanceled": "Canceled",
   "analytics.outcomesOwnLensOnly":
-    "This section measures one user’s records. Wider sections cover the rest of the lens.",
+    "This section counts one person’s own records.",
   "analytics.reportWinLoss": "Won and lost",
   "analytics.reportLossEvents": "Every loss, one by one",
   "analytics.reportStageAge": "Time in stage",
@@ -19680,6 +19685,7 @@ export const en = {
   "contact.deals.noClose": "None dated",
   "contact.deals.untitled": "Untitled deal",
   "contact.deals.noStage": "No stage yet",
+  "contact.deals.seatEnded": "No longer on this deal",
   "contact.meetings.upcoming": "Upcoming",
   "contact.meetings.past": "Held",
   "contact.meetings.noneBooked": "No upcoming meetings.",
@@ -23581,6 +23587,8 @@ export const en = {
   "analytics.overview.chipIndustry": "Industry: {name}",
   "analytics.overview.chipBasis": "Value: {basis}",
   "analytics.overview.profileCompany": "Company sales",
+  "analytics.overview.profileTeam": "Team sales",
+  "analytics.overview.profileSeller": "Seller sales",
   "analytics.overview.profileProduct": "Product sales",
   "analytics.overview.removeFilter": "Remove {filter}",
   "analytics.intervention.scope":
@@ -24005,7 +24013,7 @@ export const en = {
   "progress.closedRevenue": "Sales won",
   "progress.goal": "Goal",
   "progress.goalLine": "Goal for the period: {goal}",
-  "progress.figuresUpTo": "Figures up to {cutoff}",
+  "progress.figuresUpTo": "Figures up to {cutoff} · {zone}",
   "progress.ofGoalLine": "of {goal} goal",
   "progress.toGo": "{amount} to go",
   "progress.noGoalFor": "No sales goal is published for {period}.",
@@ -24038,8 +24046,8 @@ export const en = {
   "progress.readings": "Revenue readings",
   "progress.productSales": "Product sales",
   "progress.serviceSales": "Services and projects",
-  "progress.planned": "Open pipeline",
-  "progress.plannedAt": "Open deals as of {at}",
+  "progress.planned": "Open pipeline closing in period",
+  "progress.plannedAt": "Open deals as of {at} · {zone}",
   "progress.scenarios": "Where the month may finish",
   "progress.scenario.worst": "Worst case",
   "progress.scenario.worstWhy": "If nothing more closes",
@@ -24128,6 +24136,7 @@ export const en = {
   "goals.history.what": "Change",
   "goals.history.reason": "Reason",
   "goals.history.when": "When",
+  "goals.history.zone": "Times in {zone}",
   "goals.event.draft": "{name} saved a draft",
   "goals.event.published": "{name} published the goals",
   "goals.event.discarded": "{name} discarded the draft",

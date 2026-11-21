@@ -11,6 +11,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -181,8 +182,15 @@ func exactContactByEmail(ctx context.Context, tx pgx.Tx, emails []string) ([]ids
 		WHERE email = ANY($1) AND archived_at IS NULL
 		GROUP BY contact_id
 		ORDER BY bool_or(email = ANY($2)) DESC, contact_id
-		LIMIT 2`, storekit.EmailLookups(emails...), typed)
+		LIMIT 2`, emailLookupKeys(emails), typed)
 }
+
+// emailLookupKeys are the stored spellings the exact email lane matches for
+// these addresses. A stored spelling is storedEmail of the address written.
+func emailLookupKeys(emails []string) []string { return storekit.EmailLookups(emails...) }
+
+// storedEmail is how contact_email holds an address: lower-cased as written.
+func storedEmail(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
 
 // exactContactIDs collects what one exact lane's keys reach: the distinct
 // contacts, lowest id first.

@@ -14,8 +14,7 @@ import {
   formatAnalyticsNumber,
   formatDateTime,
 } from "../../format/format";
-import { INTL_LOCALE } from "../../format/intllocale";
-import { zoneNameAndOffset } from "../../format/timezone";
+import { zoneLabelAt } from "../../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { translatedPipeline } from "../../lib/labeltranslation";
@@ -367,11 +366,7 @@ function ExplainBody({
         <p className="t-caption">
           {t("analytics.frame", {
             asOf: formatDateTime(asOf, locale, timezone),
-            zone: zoneNameAndOffset(
-              INTL_LOCALE[locale],
-              new Date(asOf),
-              timezone,
-            ),
+            zone: zoneLabelAt(asOf, timezone, locale),
           })}
         </p>
       )}

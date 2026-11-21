@@ -107,6 +107,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
+    "analytics.outcomesOwnLensOnly",
     "firstRun.microsoft.tenantHint",
     "firstRun.platform.sub",
     "oauthApp.google.sub",

@@ -61,7 +61,9 @@ func TestAnthropicSendsTheSystemPromptAsItsOwnFieldNotATurn(t *testing.T) {
 		t.Fatal(err)
 	}
 	var wire struct {
-		System   string `json:"system"`
+		System []struct {
+			Text string `json:"text"`
+		} `json:"system"`
 		Messages []struct {
 			Role string `json:"role"`
 		} `json:"messages"`
@@ -69,8 +71,8 @@ func TestAnthropicSendsTheSystemPromptAsItsOwnFieldNotATurn(t *testing.T) {
 	if err := json.Unmarshal(sent, &wire); err != nil {
 		t.Fatalf("wire not JSON: %v (%s)", err, sent)
 	}
-	if wire.System != "be brief" {
-		t.Errorf("the system prompt must ride the top-level field, got %q", wire.System)
+	if len(wire.System) != 1 || wire.System[0].Text != "be brief" {
+		t.Errorf("the system prompt must ride the top-level field, got %s", sent)
 	}
 	for _, m := range wire.Messages {
 		if m.Role == roleSystem {

@@ -189,5 +189,8 @@
 1795241482_an_embedding_can_be_stored_at_half_precision.up.sql | * | the procedural body only checks that the halfvec type exists and writes no row; the migration adds one empty column and a check that is not validated here
 1795241482_an_embedding_can_be_stored_at_half_precision.down.sql | embedding | runs only on a rollback; it writes each vector back at full precision, one row per embedded record
 1795241485_the_embedding_vector_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795243928_a_legal_entity_states_its_jurisdiction_apart_from_its_address.up.sql | *, legal_entity | replaces the two text-bound triggers, which act on later writes only; legal_entity holds one row per further legal entity an administrator described by hand, a handful per installation, each given one column copied from its own country
+1795243928_a_legal_entity_states_its_jurisdiction_apart_from_its_address.down.sql | * | drops the column and the check this migration added and restores the two text-bound triggers; no existing row is changed
+1795243929_the_legal_entity_jurisdiction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795247581_address_columns_hold_their_canonical_form.up.sql | app_user, capture_pending_counterparty, capture_sender_override, communication_suppression | only a row whose address is not already lowercased and trimmed is written, and every writer has folded the value for many releases, so the set is at most a handful of old rows
 1795247585_the_canonical_address_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

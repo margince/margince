@@ -358,6 +358,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           MAIN_GATES_RESULT: ${{ needs.gates.result }}
           MAIN_INTEGRATION_RESULT: ${{ needs.integration.result }}
           MAIN_FRONTEND_RESULT: ${{ needs.frontend.result }}

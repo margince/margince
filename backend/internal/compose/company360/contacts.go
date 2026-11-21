@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -292,11 +293,10 @@ func contactDealRoles(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, c
 		SELECT r.contact_id, r.deal_id, r.role
 		FROM relationship r
 		JOIN deal d ON d.id = r.deal_id
-		WHERE r.kind = 'deal_stakeholder' AND r.contact_id = ANY($%d)
-		  AND r.archived_at IS NULL AND r.ended_at IS NULL
+		WHERE %s AND r.contact_id = ANY($%d)
 		  AND d.company_id = $%d AND d.archived_at IS NULL
 		  AND (%s) AND (%s)
-		ORDER BY r.contact_id, r.deal_id`, contactsPos, companyPos, edgeBound, dealScope), args...)
+		ORDER BY r.contact_id, r.deal_id`, dealseat.CurrentSQL("r"), contactsPos, companyPos, edgeBound, dealScope), args...)
 	if err != nil {
 		return nil, err
 	}

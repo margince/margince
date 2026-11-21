@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/contractterm"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -284,10 +285,9 @@ func documentRecipientSQL(company, deal string) string {
 		                   WHERE b.kind = 'billing_contact' AND b.company_id = ` + company + `
 		                     AND b.archived_at IS NULL)
 		      AND EXISTS (SELECT 1 FROM relationship r JOIN deal d ON d.id = r.deal_id
-		                   WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ` + deal + `
+		                   WHERE ` + dealseat.CurrentSQL("r") + ` AND r.deal_id = ` + deal + `
 		                     AND d.company_id = ` + company + ` AND d.archived_at IS NULL
-		                     AND r.contact_id = $2::uuid AND r.role = ANY($4)
-		                     AND r.ended_at IS NULL AND r.archived_at IS NULL)))`
+		                     AND r.contact_id = $2::uuid AND r.role = ANY($4))))`
 }
 
 // validateCustomerNotice answers service, account and security mail to a
@@ -378,10 +378,8 @@ func quoteOnDeal(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject
 			   -- ago is not a quote in progress.
 			   AND d.status = 'open'
 			   AND d.archived_at IS NULL
-			   AND r.kind = 'deal_stakeholder'
+			   AND `+dealseat.CurrentSQL("r")+`
 			   AND r.contact_id = $2::uuid
-			   AND r.ended_at IS NULL
-			   AND r.archived_at IS NULL
 		)`, req.Evidence.DealID)
 }
 

@@ -5,17 +5,17 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { AppLink } from "../../design-system/applink";
 import { FactList } from "../../design-system/factlist";
-import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { jurisdictionName } from "../../format/jurisdiction";
-import { useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
 import { useLegalEntities } from "../../lib/legalentities.queries";
 import { throwProblem } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 
-// The default company's country is the installation's jurisdiction, so one
-// value answers for it everywhere. Further companies each state their own.
+// The default company's jurisdiction is the installation's, so one value
+// answers for it everywhere. Further companies each state their own.
 
 export const JURISDICTION_QUERY_KEY = ["installation-jurisdiction"] as const;
 
@@ -35,22 +35,33 @@ export function useInstallationJurisdiction() {
   });
 }
 
-/** The default company's country on its editor, read-only, with the way to change it. */
-export function DefaultEntityCountry() {
+/** The packs this build offers, as Select options named in the reader's language. */
+export function jurisdictionOptions(
+  available: readonly Readonly<{ code: string }>[],
+  locale: Locale,
+): { value: string; label: string }[] {
+  return available.map((unit) => ({
+    value: unit.code,
+    label: jurisdictionName(unit.code, locale),
+  }));
+}
+
+/** The default company's jurisdiction on its editor, read-only, with the way to change it. */
+export function DefaultEntityJurisdiction() {
   const t = useT();
   const { locale } = useLocale();
   const query = useInstallationJurisdiction();
   return (
-    <QueryGate query={query} pendingLabel={t("legalEntities.country")}>
+    <QueryGate query={query} pendingLabel={t("legalEntities.jurisdiction")}>
       {(jurisdiction) => (
         <p className="t-caption">
           {jurisdiction.selected
-            ? t("legalEntities.defaultCountry", {
-                country: jurisdictionName(jurisdiction.selected, locale),
+            ? t("legalEntities.defaultJurisdiction", {
+                jurisdiction: jurisdictionName(jurisdiction.selected, locale),
               })
-            : t("legalEntities.defaultCountryNone")}{" "}
+            : t("legalEntities.defaultJurisdictionNone")}{" "}
           <AppLink href={routeHash(settingsHref("jurisdiction"))}>
-            {t("legalEntities.defaultCountryLink")}
+            {t("legalEntities.defaultJurisdictionLink")}
           </AppLink>
         </p>
       )}
@@ -58,7 +69,7 @@ export function DefaultEntityCountry() {
   );
 }
 
-/** Every live company and the country whose law it answers under. */
+/** Every live company and the jurisdiction whose law it answers under. */
 export function JurisdictionEntitiesPanel({
   selected,
 }: Readonly<{ selected: string | null | undefined }>) {
@@ -67,21 +78,20 @@ export function JurisdictionEntitiesPanel({
   const entities = useLegalEntities();
   const live = entities.data ?? [];
   if (live.length < 2) return null;
-  const countryOf = (code: string | null | undefined) =>
+  const lawOf = (code: string | null | undefined) =>
     code ? jurisdictionName(code, locale) : t("jurisdiction.entities.none");
   return (
     <Panel title={t("jurisdiction.entities.title")}>
       <PanelBody>
-        <PanelIntro>{t("jurisdiction.entities.lead")}</PanelIntro>
         <FactList
           facts={live.map((entity) => ({
             key: entity.id,
             term: entity.display_name || t("legalEntities.defaultUnnamed"),
             value: entity.is_default
               ? t("jurisdiction.entities.default", {
-                  country: countryOf(selected),
+                  jurisdiction: lawOf(selected),
                 })
-              : countryOf(entity.country),
+              : lawOf(entity.jurisdiction),
           }))}
         />
         <AppLink href={routeHash(settingsHref("company", "entities"))}>
