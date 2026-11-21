@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4557 |
+| Columns | 4558 |
 | Foreign keys | 635 |
 | Owning areas | 40 |
 
@@ -339,7 +339,7 @@ erDiagram
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
 | [`graph_contact_edge`](search.md#graph_contact_edge) | search | 10 | 0 |
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 18 | 0 |
-| [`home_read_cache`](compose.md#home_read_cache) | compose | 8 | 0 |
+| [`home_read_cache`](compose.md#home_read_cache) | compose | 9 | 0 |
 | [`home_read_fence`](compose.md#home_read_fence) | compose | 2 | 0 |
 | [`home_read_fence_pending`](compose.md#home_read_fence_pending) | compose | 2 | 0 |
 | [`home_read_forgotten`](compose.md#home_read_forgotten) | compose | 2 | 0 |
