@@ -29,8 +29,8 @@ type Usage struct {
 	// CacheWriteTokens is the cache-creation bucket a native provider reports
 	// (e.g. Anthropic's cache_creation_input_tokens) — disjoint from
 	// CachedTokens (a read), already counted inside TokensIn, 0 when the
-	// provider reports none. Record persists it into ai_usage.cache_write_tokens;
-	// the pricer (pricing.go) is the other reader.
+	// provider reports none. The pricer (pricing.go) reads it, and the call's
+	// own row in ai_call keeps it.
 	CacheWriteTokens int
 }
 
@@ -81,17 +81,14 @@ func (m *Meter) Record(ctx context.Context, u Usage) error {
 	}
 	return m.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO ai_usage (day, task, tier, calls, cached_hits, tokens_in, tokens_out, reasoning_tokens, cached_tokens, cache_write_tokens)
-			VALUES ($1, $2, $3, 1, $4, $5, $6, $7, $8, $9)
+			INSERT INTO ai_usage (day, task, tier, calls, cached_hits, tokens_in, tokens_out)
+			VALUES ($1, $2, $3, 1, $4, $5, $6)
 			ON CONFLICT (day, task, tier) DO UPDATE SET
-			  calls              = ai_usage.calls + 1,
-			  cached_hits        = ai_usage.cached_hits + EXCLUDED.cached_hits,
-			  tokens_in          = ai_usage.tokens_in + EXCLUDED.tokens_in,
-			  tokens_out         = ai_usage.tokens_out + EXCLUDED.tokens_out,
-			  reasoning_tokens   = ai_usage.reasoning_tokens + EXCLUDED.reasoning_tokens,
-			  cached_tokens      = ai_usage.cached_tokens + EXCLUDED.cached_tokens,
-			  cache_write_tokens = ai_usage.cache_write_tokens + EXCLUDED.cache_write_tokens`,
-			day, string(u.Task), string(u.Tier), cachedHit, u.TokensIn, u.TokensOut, u.ReasoningTokens, u.CachedTokens, u.CacheWriteTokens)
+			  calls       = ai_usage.calls + 1,
+			  cached_hits = ai_usage.cached_hits + EXCLUDED.cached_hits,
+			  tokens_in   = ai_usage.tokens_in + EXCLUDED.tokens_in,
+			  tokens_out  = ai_usage.tokens_out + EXCLUDED.tokens_out`,
+			day, string(u.Task), string(u.Tier), cachedHit, u.TokensIn, u.TokensOut)
 		if err != nil {
 			return fmt.Errorf("ai: metering: %w", err)
 		}
