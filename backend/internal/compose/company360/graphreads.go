@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -185,10 +186,9 @@ func (g *graphAssembly) readSeats(dealIDs []ids.UUID) error {
 		SELECT r.deal_id, p.id, p.full_name, p.title, r.role
 		FROM relationship r
 		JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
-		WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%d)
-		  AND r.ended_at IS NULL AND r.archived_at IS NULL
+		WHERE %s AND r.deal_id = ANY($%d)
 		  AND (%s) AND (%s)
-		ORDER BY r.deal_id, p.id, r.id`, dealsPos, edgeBound, contactScope), args...)
+		ORDER BY r.deal_id, p.id, r.id`, dealseat.CurrentSQL("r"), dealsPos, edgeBound, contactScope), args...)
 	if err != nil {
 		return err
 	}

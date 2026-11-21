@@ -29,25 +29,25 @@ import (
 // stricter than the default one. A weaker one is left out, because a message
 // never keeps less than the default entity's floor.
 func entityFloorsAt(ctx context.Context, tx pgx.Tx, current jurisdiction.RetentionClass, ref time.Time) (map[ids.UUID]jurisdiction.RetentionClass, error) {
-	rows, err := tx.Query(ctx, `SELECT id, country FROM legal_entity
-		 WHERE NOT is_default AND archived_at IS NULL AND country IS NOT NULL`)
+	rows, err := tx.Query(ctx, `SELECT id, jurisdiction FROM legal_entity
+		 WHERE NOT is_default AND archived_at IS NULL AND jurisdiction IS NOT NULL`)
 	if err != nil {
-		return nil, fmt.Errorf("privacy: reading the legal entities' countries for the retention floor: %w", err)
+		return nil, fmt.Errorf("privacy: reading the legal entities' jurisdictions for the retention floor: %w", err)
 	}
-	type entityCountry struct {
-		id      ids.UUID
-		country jurisdiction.Code
+	type entityLaw struct {
+		id   ids.UUID
+		code jurisdiction.Code
 	}
-	entities, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (entityCountry, error) {
-		var e entityCountry
-		return e, row.Scan(&e.id, &e.country)
+	entities, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (entityLaw, error) {
+		var e entityLaw
+		return e, row.Scan(&e.id, &e.code)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("privacy: reading the legal entities' countries for the retention floor: %w", err)
+		return nil, fmt.Errorf("privacy: reading the legal entities' jurisdictions for the retention floor: %w", err)
 	}
 	var out map[ids.UUID]jurisdiction.RetentionClass
 	for _, e := range entities {
-		floor := countryFloor(e.country, ref)
+		floor := jurisdictionFloor(e.code, ref)
 		if !stricterThan(floor, current, ref) {
 			continue
 		}
@@ -59,10 +59,10 @@ func entityFloorsAt(ctx context.Context, tx pgx.Tx, current jurisdiction.Retenti
 	return out, nil
 }
 
-// countryFloor is a further entity's own floor: its country's pack, or the
-// strictest compiled-in floor when no pack is compiled in for it.
-func countryFloor(country jurisdiction.Code, ref time.Time) jurisdiction.RetentionClass {
-	if pack, ok := jurisdiction.For(country); ok {
+// jurisdictionFloor is a further entity's own floor: its jurisdiction's pack,
+// or the strictest compiled-in floor when no pack is compiled in for it.
+func jurisdictionFloor(code jurisdiction.Code, ref time.Time) jurisdiction.RetentionClass {
+	if pack, ok := jurisdiction.For(code); ok {
 		return correspondenceClassOf(pack)
 	}
 	return statutoryCorrespondenceFloor(ref)
@@ -73,14 +73,14 @@ func stricterThan(class, than jurisdiction.RetentionClass, ref time.Time) bool {
 }
 
 // EntityJurisdiction is what decides a legal entity's floor: whether it is
-// the default entity, which follows the installation, and its own country.
+// the default entity, which follows the installation, and its own jurisdiction.
 type EntityJurisdiction struct {
-	Default bool
-	Country jurisdiction.Code
+	Default      bool
+	Jurisdiction jurisdiction.Code
 }
 
 // CarryOnEntityChangeTx keeps the floor on mail already held when a user
-// moves from one entity to another, or an entity changes its country. It
+// moves from one entity to another, or an entity changes its jurisdiction. It
 // runs the carry a jurisdiction change runs. Its two floors are what the
 // members' mail had before and has after. Each is the stricter of the
 // default floor and the entity's own.
@@ -90,7 +90,7 @@ func CarryOnEntityChangeTx(ctx context.Context, tx pgx.Tx, store *settings.Store
 		return err
 	}
 	memberFloor := func(e EntityJurisdiction) jurisdiction.RetentionClass {
-		if own := countryFloor(e.Country, now); !e.Default && stricterThan(own, policy.Current, now) {
+		if own := jurisdictionFloor(e.Jurisdiction, now); !e.Default && stricterThan(own, policy.Current, now) {
 			return own
 		}
 		return policy.Current

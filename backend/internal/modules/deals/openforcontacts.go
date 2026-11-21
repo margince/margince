@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -74,12 +75,11 @@ func OpenDealContacts(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID) 
 		SELECT DISTINCT r.contact_id
 		  FROM relationship r
 		  JOIN deal d ON d.id = r.deal_id AND d.archived_at IS NULL
-		 WHERE r.kind = 'deal_stakeholder'
+		 WHERE %s
 		   AND r.contact_id = ANY($%d)
-		   AND r.archived_at IS NULL
 		   AND d.status = 'open'
 		   AND (%s)
-		   AND (%s)`, contactsPos, bound, visible), args...)
+		   AND (%s)`, dealseat.CurrentSQL("r"), contactsPos, bound, visible), args...)
 	if err != nil {
 		return nil, err
 	}

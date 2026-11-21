@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -216,14 +217,14 @@ func (s *Service) dealRolesSection(ctx context.Context, tx pgx.Tx, contactID ids
 	}
 	stageName := labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT r.id, r.deal_id, r.role, d.name, %s, d.status, r.ended_at IS NULL
+		SELECT r.id, r.deal_id, r.role, d.name, %s, d.status, %s
 		FROM relationship r
 		JOIN deal d ON d.id = r.deal_id AND d.archived_at IS NULL
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $%d
 		  AND r.archived_at IS NULL AND (%s)
 		ORDER BY r.id
-		LIMIT %d`, stageName, contactPos, dealScope, sectionCap+1), args...)
+		LIMIT %d`, stageName, dealseat.CurrentSQL("r"), contactPos, dealScope, sectionCap+1), args...)
 	if err != nil {
 		return err
 	}

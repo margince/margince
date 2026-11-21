@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -191,9 +192,9 @@ func stakeholderNames(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers [
 	}
 	limit := arg(maxContactFacts)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT p.full_name FROM relationship r JOIN contact p ON p.id = r.contact_id
-		WHERE r.deal_id = $%d AND r.kind = 'deal_stakeholder' AND r.archived_at IS NULL AND r.ended_at IS NULL
+		WHERE r.deal_id = $%d AND %s
 		  AND p.archived_at IS NULL AND p.visibility = 'workspace' AND NOT `+auth.ContactRestrictedSQL("p.id")+`%s
-		ORDER BY r.is_current_primary DESC, p.full_name, p.id LIMIT $%d`, deal, andClause(strings.Join(nonEmpty(scopes), " AND ")), limit), args...)
+		ORDER BY r.is_current_primary DESC, p.full_name, p.id LIMIT $%d`, deal, dealseat.CurrentSQL("r"), andClause(strings.Join(nonEmpty(scopes), " AND ")), limit), args...)
 	if err != nil {
 		return nil, err
 	}

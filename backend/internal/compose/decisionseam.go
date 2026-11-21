@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/decisionview"
 	"github.com/margince/margince/backend/internal/compose/dueday"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -31,11 +31,6 @@ import (
 // written through the activities store, so it lives where every other task
 // lives. decisionSourceSystem marks those tasks; nothing else writes it.
 const decisionSourceSystem = provenance.AnalyticsDecisionSource
-
-// decisionOutcomeMarker separates the expected result from the recorded one
-// inside the task's body. The two are one text on the task, as a rep reads
-// it, and are read back apart here.
-const decisionOutcomeMarker = "\n\nOutcome: "
 
 // decisionListLimit bounds the list a review reads: the latest decisions,
 // not every task ever recorded. decisionMatchLimit is how far back a repeat
@@ -75,11 +70,15 @@ func (s salesDecisions) Record(ctx context.Context, in crmcontracts.SalesDecisio
 		return crmcontracts.SalesDecision{}, false, httperr.Validation("decision", "required", "say what was decided")
 	}
 	deal := ids.UUID(in.DealId)
+	loc, err := dueday.InstallationZone(ctx, s.db)
+	if err != nil {
+		return crmcontracts.SalesDecision{}, false, err
+	}
 	var out crmcontracts.SalesDecision
 	var created bool
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		owner := ids.UserID{UUID: ids.UUID(in.OwnerId)}
-		existing, err := s.openDecisionTx(ctx, tx, deal, owner.UUID, decision)
+		existing, err := s.openDecisionTx(ctx, tx, loc, deal, owner.UUID, decision)
 		if err != nil {
 			return err
 		}
@@ -92,7 +91,7 @@ func (s salesDecisions) Record(ctx context.Context, in crmcontracts.SalesDecisio
 		if err := auth.EnsureAssignee(ctx, tx, owner.UUID); err != nil {
 			return err
 		}
-		due, err := reviewDue(ctx, tx, in.ReviewOn.Time)
+		reviewOn, err := dueday.ComingDay(ctx, tx, "review_on", in.ReviewOn.Format(time.DateOnly), "", time.Now())
 		if err != nil {
 			return err
 		}
@@ -109,7 +108,7 @@ func (s salesDecisions) Record(ctx context.Context, in crmcontracts.SalesDecisio
 			Kind:             kind,
 			Subject:          &decision,
 			Body:             body,
-			DueAt:            &due,
+			DueIntent:        &reviewOn,
 			AssigneeID:       &owner,
 			SourceSystem:     &source,
 			SourceID:         &sourceID,
@@ -119,7 +118,7 @@ func (s salesDecisions) Record(ctx context.Context, in crmcontracts.SalesDecisio
 		if err != nil {
 			return err
 		}
-		out, created = decisionOf(task), true
+		out, created = decisionview.Of(task, loc), true
 		return nil
 	})
 	return out, created, err
@@ -143,18 +142,22 @@ func (s salesDecisions) Outcome(ctx context.Context, id ids.UUID, result string)
 	expected := ""
 	if current.Body != nil {
 		var recorded *string
-		expected, recorded = splitOutcome(*current.Body)
+		expected, recorded = decisionview.SplitOutcome(*current.Body)
 		if recorded != nil {
 			return crmcontracts.SalesDecision{}, fmt.Errorf("the outcome is recorded: %w", apperrors.ErrConflict)
 		}
 	}
-	body := expected + decisionOutcomeMarker + result
+	body := expected + decisionview.OutcomeMarker + result
 	done := true
+	loc, err := dueday.InstallationZone(ctx, s.db)
+	if err != nil {
+		return crmcontracts.SalesDecision{}, err
+	}
 	updated, err := s.activities.UpdateActivity(ctx, ids.ActivityID{UUID: id}, activities.UpdateActivityInput{Body: &body, IsDone: &done})
 	if err != nil {
 		return crmcontracts.SalesDecision{}, err
 	}
-	return decisionOf(updated), nil
+	return decisionview.Of(updated, loc), nil
 }
 
 // List answers the decisions the filter keeps, newest first.
@@ -179,9 +182,13 @@ func (s salesDecisions) List(ctx context.Context, filter decisionFilter) ([]crmc
 	if err != nil {
 		return nil, err
 	}
+	loc, err := dueday.InstallationZone(ctx, s.db)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]crmcontracts.SalesDecision, 0, len(tasks))
 	for _, task := range tasks {
-		decision := decisionOf(task)
+		decision := decisionview.Of(task, loc)
 		if filter.status != nil && string(decision.Status) != *filter.status {
 			continue
 		}
@@ -214,73 +221,21 @@ func (s salesDecisions) reviewedDeals(ctx context.Context, selection crmcontract
 // openDecisionTx finds the open task that already records this decision on
 // this deal for this owner. A completed one, or the same decision handed to
 // someone else, never blocks a new occurrence.
-func (s salesDecisions) openDecisionTx(ctx context.Context, tx pgx.Tx, deal, owner ids.UUID, decision string) (*crmcontracts.SalesDecision, error) {
+func (s salesDecisions) openDecisionTx(ctx context.Context, tx pgx.Tx, loc *time.Location, deal, owner ids.UUID, decision string) (*crmcontracts.SalesDecision, error) {
 	kind, source, limit := "task", decisionSourceSystem, decisionMatchLimit
 	tasks, _, err := s.activities.ListActivitiesIn(ctx, tx, activities.ListActivitiesInput{Kind: &kind, SourceSystem: &source, LinkedToDeals: []ids.UUID{deal}, Limit: &limit})
 	if err != nil {
 		return nil, err
 	}
 	for _, task := range tasks {
-		if isDone(task) || task.Subject == nil || strings.TrimSpace(*task.Subject) != decision {
+		if decisionview.Done(task) || task.Subject == nil || strings.TrimSpace(*task.Subject) != decision {
 			continue
 		}
 		if task.AssigneeId == nil || ids.UUID(*task.AssigneeId) != owner {
 			continue
 		}
-		found := decisionOf(task)
+		found := decisionview.Of(task, loc)
 		return &found, nil
 	}
 	return nil, nil
-}
-
-// decisionOf reads a task back as the decision it records.
-func decisionOf(task crmcontracts.Activity) crmcontracts.SalesDecision {
-	out := crmcontracts.SalesDecision{Id: task.Id, Status: crmcontracts.SalesDecisionStatusOpen, CreatedAt: task.CreatedAt, OwnerId: task.AssigneeId, DoneAt: task.DoneAt}
-	if task.Subject != nil {
-		out.Decision = *task.Subject
-	}
-	if task.Links != nil {
-		for _, link := range *task.Links {
-			if link.EntityType == "deal" {
-				out.DealId = link.EntityId
-				break
-			}
-		}
-	}
-	if task.DueAt != nil {
-		out.ReviewOn = &openapi_types.Date{Time: task.DueAt.UTC()}
-	}
-	if task.Body != nil {
-		expected, result := splitOutcome(*task.Body)
-		if expected != "" {
-			out.ExpectedResult = &expected
-		}
-		if result != nil {
-			out.Result = result
-		}
-	}
-	if isDone(task) {
-		out.Status = crmcontracts.SalesDecisionStatusDone
-	}
-	return out
-}
-
-func isDone(task crmcontracts.Activity) bool {
-	return task.IsDone != nil && *task.IsDone
-}
-
-// reviewDue is the end of the review day in the installation's calendar, as
-// a task picked for a day falls due.
-func reviewDue(ctx context.Context, tx pgx.Tx, day time.Time) (time.Time, error) {
-	return dueday.EndOf(ctx, tx, day.Format(time.DateOnly), "")
-}
-
-// splitOutcome reads the expected result and, after the marker, the
-// recorded one.
-func splitOutcome(body string) (expected string, result *string) {
-	before, after, found := strings.Cut(body, decisionOutcomeMarker)
-	if !found {
-		return body, nil
-	}
-	return before, &after
 }

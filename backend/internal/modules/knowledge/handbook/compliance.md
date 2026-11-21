@@ -170,7 +170,7 @@ How long business mail is kept follows the legal entity of the colleague it belo
 
 When a colleague moves to another legal entity, or a legal entity changes its law, mail already kept keeps its time.
 
-Each legal entity follows its own law. The default company follows the law chosen on this page, and its own form shows that law without a field to change it. With more than one legal entity, the page lists each one with its law.
+Each legal entity has a **Country**, where its address is, and a **Jurisdiction**, the law it follows. The two may differ: a company with its address in Germany may follow Italian law. The default company follows the law chosen on this page, and its own form shows that law without a field to change it. You choose the **Jurisdiction** of each further company on its form under **Settings → Company profile → Legal entities**. With more than one legal entity, the page lists each one with its law.
 
 A contact or lead follows the legal entity of the colleague who owns it. That entity sets when a privacy request about the contact is due, and which company the contact's privacy page names. Mail that Margince sends to the contact on its own, such as a confirmation request, goes out for that company too. A contact with no owner follows the default company.
 
