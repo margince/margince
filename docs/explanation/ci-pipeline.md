@@ -37,7 +37,7 @@ some change reaches it.
 
 Once a week `scheduled.yml` also measures the PERF budgets; the use cases a model drives cost tokens, so only a
 maintainer starts them, by hand. Neither writes a record to `main`. The workflow opens a pull request with the
-records and the pages they feed, and a record is published when a maintainer merges that pull request. See [the workflows beside the merge
+records and the pages they feed. A record is published when a maintainer merges that pull request. See [the workflows beside the merge
 gate](../reference/ci-workflows.md#scheduledyml).
 
 **The merge queue is a ruleset setting**, not a file in this tree. Both required checks, `ci` and `cla`,

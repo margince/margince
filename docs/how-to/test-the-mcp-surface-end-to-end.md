@@ -294,11 +294,12 @@ No cron runs this lane. Sweep it by hand in the pull request that changes the to
 harness, and commit the verdicts there. The surface changes often, and a verdict from an older tree
 is stale as soon as it lands.
 
-A maintainer can also start the sweep in CI: run `scheduled.yml` by hand with the `llm` input. It
-sweeps every case in parts, side by side. Started on `main`, it opens a pull request with its
-verdicts only when every case has a new one from a stack whose search ranks by meaning. The
-`RECORDS_OWNER` repository variable names who owns that pull request. Started on any other branch,
-it opens none: download the `e2e-llm-verdicts` artifact of the run and commit those verdicts to the
+You can also start the sweep in CI: run `scheduled.yml` by hand with the `llm` input. It sweeps
+every case in parts, side by side. Started on `main`, it opens a pull request with its verdicts. It
+does so only when every case has a new one from a stack whose search ranks by meaning. The
+`RECORDS_OWNER` repository variable names who owns that pull request.
+
+Started on any other branch, it opens none. Download the `e2e-llm-verdicts` artifact of the run, and commit those verdicts to the
 pull request of that branch.
 
 `make check` fails while the page and the committed verdicts do not agree. Delete a
@@ -308,4 +309,4 @@ Do not leave it next to the others without a commit.
 ## 9. Run the role sweep with every pass
 
 A pass also needs `make test-roles` green. It calls every tool and action as every seeded role, costs no tokens and needs `make db-up`.
-It checks the `mcp-tool-roles/` and `toolchecks/` folders and `mcp-tool-roles.md`. A change in those files means a role is now allowed or refused a call, so `tools/list` offers the wrong tools: follow [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md). `make e2e-llm` does not run it, so a sweep by hand runs both. `scheduled.yml` also runs the role sweep every Monday, as it costs no tokens.
+It checks the `mcp-tool-roles/` and `toolchecks/` folders and `mcp-tool-roles.md`. A change in those files means a role is now allowed or refused a call, so `tools/list` offers the wrong tools: follow [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md). `make e2e-llm` does not run it, so a sweep by hand runs both. `scheduled.yml` also runs the role sweep by itself, as it costs no tokens.
