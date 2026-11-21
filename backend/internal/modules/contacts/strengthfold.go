@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -124,6 +125,9 @@ func (f foldScope) narrowSQL(arg func(any) int) string {
 func liveStrengths(
 	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, scope foldScope,
 ) (map[ids.ContactID]*RelationshipStrength, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactsPos, admitPos := arg(contacts), arg(scope.admit)
@@ -176,6 +180,9 @@ func windowRead(
 	ctx context.Context, tx pgx.Tx, warm []ids.ContactID, engaged []*time.Time,
 	scope foldScope, byContact map[ids.ContactID]*RelationshipStrength,
 ) error {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactsPos, engagedPos := arg(warm), arg(engaged)
