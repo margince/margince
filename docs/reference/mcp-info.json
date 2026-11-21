@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 282194,
+    "tool_catalog_bytes": 282356,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 71954,
+    "approx_wire_tokens_total": 71994,
     "largest_tool_bytes": 17890,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 55028,
+      "description_bytes": 55190,
       "input_schema_bytes": 162163,
       "output_schema_bytes": 52895,
-      "description_plus_input_schema_bytes": 217191
+      "description_plus_input_schema_bytes": 217353
     }
   },
   "tools": {
@@ -888,7 +888,7 @@
           "readOnlyHint": false,
           "title": "Log, plan and file activities"
         },
-        "description": "Log, plan and file activities, and work the mail, drafts and documents on them. log records what already happened; one the user only tells you about is logged from what they said, saying so, without its exact words. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. relink and relink_many usually run at once; filing under a project, or a move the installation's policy holds, answers staged with an approval id, and nothing has moved until the retry answers. Tell the user before you file under a project, which only a member can undo from the activity. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, archive_document, assign_inquiry, attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; the user's yes is needed for the actions archive_document, assign_inquiry, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Log, plan and file activities, and work the mail, drafts and documents on them. log records what already happened; one the user only tells you about is logged from what they said, saying so, without its exact words. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. relink and relink_many usually run at once; filing under a project, or a move the installation's policy holds, answers staged with an approval id, and nothing has moved until the retry answers. Tell the user before you file under a project, which only a member can undo from the activity. Before log, read the record's recent activity with read_context about catch_up: a call or meeting already on it is reported as there, never logged a second time. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, archive_document, assign_inquiry, attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; the user's yes is needed for the actions archive_document, assign_inquiry, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
