@@ -163,12 +163,6 @@ func rowKeyTargets(object string) []string {
 	return keys
 }
 
-// newRowKeyTargets are the row keys a new row can carry. An id names only a
-// record that already exists, so it never stands in for a new row's own key.
-func newRowKeyTargets(object string) []string {
-	return slices.DeleteFunc(rowKeyTargets(object), func(key string) bool { return key == csvTargetID })
-}
-
 // importTargets is the closed set a mapping may name for one object: its core
 // fields, then each active custom field by key, in column order.
 func importTargets(object string, cat importCatalog) ([]string, error) {
