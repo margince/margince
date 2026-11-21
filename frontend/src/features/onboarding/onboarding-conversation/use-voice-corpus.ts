@@ -217,6 +217,12 @@ export function useVoiceCorpus({
   // core decides, this translates the verdict into what the thread says.
   const applyOutcome = useCallback(
     (seq: number, outcome: IntakeOutcome, reactionKey: MessageKey): void => {
+      // An added sample reaches the restore probe even after the step closed;
+      // recordIngest keeps the step's own state behind its mounted check.
+      if (outcome.kind === "ingested") {
+        recordIngest(seq, outcome, reactionKey);
+        return;
+      }
       if (!mounted.current) {
         return;
       }
@@ -246,9 +252,7 @@ export function useVoiceCorpus({
             preview: outcome.preview,
           },
         ]);
-        return;
       }
-      recordIngest(seq, outcome, reactionKey);
     },
     [dispatch, locale, noteFailure, recordIngest, skip, t],
   );

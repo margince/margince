@@ -323,4 +323,41 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
     await waitFor(() => expect(cached()?.sources).toEqual([]));
     expect(cached()?.summary?.total_words).toBe(0);
   });
+
+  it("takes an added sample into the probe even when the step closed first", async () => {
+    const ingest = gate();
+    stubApi({
+      ingests: [
+        {
+          stats: documentStats,
+          summary: summaryOf(900),
+          release: ingest.held,
+        },
+      ],
+    });
+    const client = new QueryClient();
+    client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, {
+      built: false,
+      summary: null,
+      sources: [],
+    });
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result, unmount } = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      {
+        wrapper: ({ children }) =>
+          createElement(QueryClientProvider, { client }, children),
+      },
+    );
+    act(() => {
+      result.current.addPaste("A paragraph I actually wrote.", "Pasted text");
+    });
+
+    unmount();
+    ingest.open();
+    const cached = () =>
+      client.getQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY);
+    await waitFor(() => expect(cached()?.sources).toHaveLength(1));
+    expect(cached()?.summary?.total_words).toBe(900);
+  });
 });
