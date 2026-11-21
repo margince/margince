@@ -8,7 +8,9 @@ import {
 } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Heading } from "../../../design-system/heading";
-import { useT } from "../../../i18n";
+import { useFieldFaults } from "../../../design-system/savepage";
+import { useLocale, useT } from "../../../i18n";
+import { fieldCheckSentence } from "../../../lib/problem";
 import { shippedLabel } from "../../../lib/shippedlabels";
 import {
   type ReviewTemplate,
@@ -72,6 +74,9 @@ export function OutcomeReviewModal({
   // the mutation object, which is a new object every render: depending on the
   // object would reset the form under the reader mid-typing.
   const resetCreate = create.reset;
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const clearFaults = faults.show;
 
   // Re-taken on every open. The modal is mounted for the life of the panel
   // rather than remounted per open, so without this a second review would
@@ -108,8 +113,9 @@ export function OutcomeReviewModal({
       setDraftClosing(openingRef.current.closingOccurrenceId);
       setDraftTemplate(openingRef.current.template);
       resetCreate();
+      clearFaults(new Map());
     }
-  }, [open, resetCreate]);
+  }, [open, resetCreate, clearFaults]);
 
   const missing = draftTemplate.questions.filter(
     (q) =>
@@ -125,6 +131,13 @@ export function OutcomeReviewModal({
   }
 
   async function submit() {
+    const blank = new Map(
+      missing.map((q) => [
+        q.key,
+        fieldCheckSentence("required", locale, shippedLabel(q, t)),
+      ]),
+    );
+    if (faults.show(blank)) return;
     const submitted = submissionId;
     await create.mutateAsync({
       closing_occurrence_id: draftClosing,
@@ -151,7 +164,7 @@ export function OutcomeReviewModal({
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {shippedLabel(draftTemplate, t)}
       </Heading>
-      <div className="form-stack">
+      <div className="form-stack" ref={faultsRoot}>
         {draftTemplate.questions.map((question) =>
           question.type === "multiselect" ? (
             <fieldset key={question.key} className="field-multiselect">
@@ -159,13 +172,17 @@ export function OutcomeReviewModal({
                 {shippedLabel(question, t)}
                 {question.required ? " *" : ""}
               </legend>
-              {(question.options ?? []).map((option) => (
+              {(question.options ?? []).map((option, index) => (
                 <Checkbox
                   key={option}
                   label={option}
                   disabled={create.isPending}
+                  aria-invalid={
+                    index === 0 && faults.of(question.key) ? true : undefined
+                  }
                   checked={(choiceAnswers[question.key] ?? []).includes(option)}
-                  onChange={() =>
+                  onChange={() => {
+                    faults.edited(question.key);
                     setChoiceAnswers((prev) => {
                       const selected = prev[question.key] ?? [];
                       return {
@@ -174,16 +191,18 @@ export function OutcomeReviewModal({
                           ? selected.filter((value) => value !== option)
                           : [...selected, option],
                       };
-                    })
-                  }
+                    });
+                  }}
                 />
               ))}
+              <ErrorLine>{faults.of(question.key)}</ErrorLine>
             </fieldset>
           ) : (
             <Field
               key={question.key}
               label={shippedLabel(question, t)}
               required={question.required}
+              error={faults.of(question.key)}
             >
               {(control) => (
                 <Textarea
@@ -191,12 +210,13 @@ export function OutcomeReviewModal({
                   rows={3}
                   value={answers[question.key] ?? ""}
                   disabled={create.isPending}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    faults.edited(question.key);
                     setAnswers((prev) => ({
                       ...prev,
                       [question.key]: event.target.value,
-                    }))
-                  }
+                    }));
+                  }}
                 />
               )}
             </Field>
@@ -221,10 +241,7 @@ export function OutcomeReviewModal({
         <Button variant="ghost" onClick={close} disabled={create.isPending}>
           {t("deals.cancel")}
         </Button>
-        <Button
-          onClick={() => void submit()}
-          disabled={create.isPending || missing.length > 0}
-        >
+        <Button onClick={() => void submit()} disabled={create.isPending}>
           {t("outcomeReview.save")}
         </Button>
       </div>

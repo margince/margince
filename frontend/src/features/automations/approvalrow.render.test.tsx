@@ -637,14 +637,17 @@ describe("whether the staged mail may go", () => {
     render(<ApprovalRow approval={heldDraft()} />);
     await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
 
-    await userEvent.clear(screen.getByLabelText(/Subject/));
+    const subject = screen.getByLabelText(/Subject/);
+    await userEvent.clear(subject);
 
     expect(
       screen.getAllByText(en["decision.fieldRequired"]).length,
     ).toBeGreaterThan(0);
-    expect(
+    await userEvent.click(
       screen.getByRole("button", { name: en["decision.approveEdited"] }),
-    ).toBeDisabled();
+    );
+    expect(subject).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
 
   it("keeps the edited text when the approve is refused", async () => {

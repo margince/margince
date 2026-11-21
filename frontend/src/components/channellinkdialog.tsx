@@ -8,11 +8,12 @@ import { Button, Checkbox, Field, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ComboBox } from "../design-system/combobox";
 import { Heading } from "../design-system/heading";
+import { useFieldFaults } from "../design-system/savepage";
 import { Select } from "../design-system/select";
-import { type Translator, useT } from "../i18n";
+import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { labelFor } from "../lib/labelfor";
-import { problemMessageOf } from "../lib/problem";
+import { blankRequired, problemMessageOf } from "../lib/problem";
 
 type ChannelLinkState = components["schemas"]["ChannelLinkState"];
 type LinkChannelRequest = components["schemas"]["LinkChannelRequest"];
@@ -60,24 +61,38 @@ export function LinkExistingDialog({
   channels: readonly LinkableChannel[] | undefined;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const headingId = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
   const [channel, setChannel] = useState("");
   const [summarize, setSummarize] = useState(true);
   const [verbosity, setVerbosity] = useState<Verbosity>(DEFAULT_VERBOSITY);
-  const ready = channel.trim() !== "";
+  const channelLabel = t("channelLink.channelField");
   const failed = link.isError && link.variables?.mode === "existing";
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
+    <Modal
+      open={open}
+      onClose={() => {
+        faults.show(new Map());
+        onClose();
+      }}
+      labelledBy={headingId}
+      intent="form"
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("channelLink.linkExisting")}
       </Heading>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!ready || link.isPending) return;
+          const blank = blankRequired(locale, {
+            channel: [channelLabel, channel],
+          });
+          if (faults.show(blank) || link.isPending) return;
           link.mutate(
             {
               mode: "existing",
@@ -90,15 +105,19 @@ export function LinkExistingDialog({
         }}
       >
         <Field
-          label={t("channelLink.channelField")}
+          label={channelLabel}
           required
           hint={t("channelLink.channelHint")}
+          error={faults.of("channel")}
         >
           {(control) => (
             <ComboBox
               {...control}
               value={channel}
-              onChange={setChannel}
+              onChange={(next) => {
+                setChannel(next);
+                faults.edited("channel");
+              }}
               suggestions={(channels ?? []).map((offered) => ({
                 value: offered.slug,
                 label: offered.name,
@@ -142,7 +161,6 @@ export function LinkExistingDialog({
           variant="primary"
           type="submit"
           form={formId}
-          disabled={!link.isPending && !ready}
           pending={link.isPending}
           busyLabel={t("create.saving")}
         >
