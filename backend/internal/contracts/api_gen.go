@@ -38253,9 +38253,9 @@ type AuditAction string
 // masked to the viewer's readable fields — an absent key was hidden, not null.
 // `summary` is server-composed plain language in English. A client that
 // renders the line in its reader's language builds it from `action` and the
-// actor fields. It falls back to `summary` for an edge row, whose role
-// travels only in the sentence, and for an action or actor kind it does
-// not know.
+// actor fields. For an edge row it builds from `edge.role` and
+// `edge.changed_fields`, and falls back to `summary` when an older server
+// omits them, and for an action or actor kind it does not know.
 // Field-level detail lives in before/after for the client to render.
 type AuditHistoryEntry struct {
 	// Action The verb of one audit row, as both the audit log and a record's history
@@ -53277,6 +53277,9 @@ type HiddenBacklogRowsRule string
 // fields would invent fields it does not have — which is also why edge entries never
 // appear in `/field-history`.
 type HistoryEdge struct {
+	// ChangedFields Names of the link fields an update moved, sorted, masked like `role`. Absent on create and unlink. An older server omits it, and the client then shows `summary`.
+	ChangedFields *[]string `json:"changed_fields,omitempty"`
+
 	// Kind The relationship kind, e.g. `employment`, `co_sell_with`, `deal_stakeholder`.
 	Kind            string                     `json:"kind"`
 	OtherEntityId   openapi_types.UUID         `json:"other_entity_id"`
@@ -53284,6 +53287,12 @@ type HistoryEdge struct {
 
 	// OtherLabel The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it.
 	OtherLabel *string `json:"other_label,omitempty"`
+
+	// PreviousRole The role an update replaced, or removed when `role` is then absent. Set only when the role changed.
+	PreviousRole *string `json:"previous_role,omitempty"`
+
+	// Role The role the link was made with (create) or changed to (update), as the reader's field mask allows. Absent when the link has no role, when the reader's mask withholds it, and on an unlink; a client then falls back to `kind` or to `summary`.
+	Role *string `json:"role,omitempty"`
 }
 
 // HistoryEdgeOtherEntityType defines model for HistoryEdge.OtherEntityType.

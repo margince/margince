@@ -2633,6 +2633,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.reversal.undoneBy": "Rückgängig gemacht von {undoer}",
   "history.reversal.unpaired": "Macht eine frühere Änderung rückgängig",
   "history.edge.marker": "Verknüpfung",
+  "history.edge.linked": "{subject} hat {name} als {role} verknüpft",
+  "history.edge.roleChanged":
+    "{subject} hat die Rolle bei {name} von {previous} zu {role} geändert",
+  "history.edge.roleSet":
+    "{subject} hat die Rolle bei {name} zu {role} geändert",
+  "history.edge.changed":
+    "{subject} hat die Verknüpfung mit {name} geändert: {fields}",
+  "history.edge.unlinked": "{subject} hat die Verknüpfung mit {name} gelöst",
+  "history.edge.roleRemoved":
+    "{subject} hat die Rolle {previous} bei {name} entfernt",
+  "history.edge.alsoChanged": "außerdem geändert: {fields}",
   "history.subject.viaClient": "{name} (über {client})",
   "history.subject.viaAgent": "{name} (über einen Agenten)",
   "history.subject.viaConnector": "{name} (über einen Connector)",
@@ -2784,6 +2795,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.stage_id": "Phase",
   "history.field.disqualify_reason_id": "Disqualifizierungsgrund",
   "history.field.trigger": "Qualifiziert durch",
+  "history.field.role": "Rolle",
+  "history.field.is_current_primary": "Hauptarbeitgeber",
+  "history.field.employment_status": "Beschäftigungsstatus",
+  "history.field.started_precision": "Genauigkeit des Startdatums",
+  "history.field.ended_precision": "Genauigkeit des Enddatums",
   "history.field.win_probability_override": "Abschlusschance am Deal",
   "history.field.win_probability_set_by": "Abschlusschance gesetzt von",
   "history.field.fx_rate_date": "Datum des Wechselkurses",
