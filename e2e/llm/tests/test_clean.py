@@ -138,7 +138,7 @@ class RunClaudeTest(unittest.TestCase):
         env = dict(os.environ, PATH=self.bin + os.pathsep + os.environ["PATH"], FAKE_CLAUDE_SEEN=self.seen_file,
                    ROOT=ROOT, MODEL="claude-sonnet-5-5", MCP_CONFIG=self.mcp_config, MCP_SERVER=transcript.SERVER)
         env.pop("CLAUDE_CODE_DISABLE_AUTO_MEMORY", None)
-        script = lane_function("run_claude") + f'run_claude "{self.prompt}" "{self.out}"\n'
+        script = lane_function("mcp_attached") + lane_function("run_claude") + f'run_claude "{self.prompt}" "{self.out}"\n'
         done = subprocess.run(["bash", "-c", script], cwd=ROOT, env=env, capture_output=True, text=True, check=False)
         self.assertEqual(done.returncode, 0, done.stderr)
         with open(self.seen_file, encoding="utf-8") as handle:

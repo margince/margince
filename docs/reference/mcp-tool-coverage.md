@@ -19,9 +19,9 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 81 of 82 | 🟡 Mostly | Reliable on 77 of 81 jobs tried; not yet: Catch me up, and show me the brief; Sofia is leaving the team; Send it anyway; Add a review stage to the pipeline. A model of the same family judged its answers. |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 70 of 82 | 🟢 Yes | Reliable on 70 of 70 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 70 of 82 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Tidy up the deal room. |
+| `claude-sonnet-5-5` | Claude Code CLI | 81 of 83 | 🟡 Mostly | Reliable on 77 of 81 jobs tried; not yet: Catch me up, and show me the brief; Sofia is leaving the team; Send it anyway; Add a review stage to the pipeline. A model of the same family judged its answers. |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 70 of 83 | 🟢 Yes | Reliable on 70 of 70 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 70 of 83 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Tidy up the deal room. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -117,6 +117,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | The same contact twice | A merge waits for a yes | an admin | ✅ re-graded | - | - |
 | Move a deal to the service pipeline | A deal moves to another pipeline | an admin | ✅ re-graded | - | - |
 | Put the offer link on the deal | A link joins the deal's documents | an admin | ✅ re-graded | - | - |
+| No to the hand-over | A no in the chat changes nothing<br>The no is not routed round | an admin | - | - | - |
 
 ## The same jobs on the neutral harness
 
@@ -128,7 +129,7 @@ An assistant can also reach Margince through the REST API, with the downloadable
 
 | Assistant | How we connected it | Jobs tried | Reliable on |
 |---|---|---:|---:|
-| `claude-sonnet-5-5` | Claude Code CLI, REST | 20 of 82 | 16 |
+| `claude-sonnet-5-5` | Claude Code CLI, REST | 20 of 83 | 16 |
 
 | Job | What a good answer does | Who asks | `claude-sonnet-5-5`<br>Claude Code CLI |
 |---|---|---|:---:|
@@ -179,13 +180,13 @@ Everything below is the detail behind the two tables above: which tools each job
 | | |
 |---|---:|
 | Tools the assistant is offered | 48 |
-| … some case requires | 41 |
+| … some case requires | 42 |
 | … some case requires as one of a set | 1 |
-| … **no case requires** | 6 |
-| … of those, permitted somewhere but never required | 2 |
-| Prompt tokens spent on tools no case requires | 4063 |
-| Use cases | 82 |
-| Acceptance criteria the cases declare, each with a statement | 131 |
+| … **no case requires** | 5 |
+| … of those, permitted somewhere but never required | 1 |
+| Prompt tokens spent on tools no case requires | 3265 |
+| Use cases | 83 |
+| Acceptance criteria the cases declare, each with a statement | 133 |
 
 ## By model
 
@@ -193,17 +194,17 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability | Calls per case (median) | Slow |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 81 of 82 | 77 | 4 | 157/165 | 95% | 4.5 over 81 | 0 |
-| `gemini-4-hydrogen-medium@agy-cli` | 70 of 82 | 70 | 0 | 140/142 | 99% | - | 0 |
-| `gpt-5.6-sol@codex-cli` | 70 of 82 | 69 | 1 | 138/148 | 93% | - | 0 |
+| `claude-sonnet-5-5@claude-cli` | 81 of 83 | 77 | 4 | 157/165 | 95% | 4.5 over 81 | 0 |
+| `gemini-4-hydrogen-medium@agy-cli` | 70 of 83 | 70 | 0 | 140/142 | 99% | - | 0 |
+| `gpt-5.6-sol@codex-cli` | 70 of 83 | 69 | 1 | 138/148 | 93% | - | 0 |
 
-> `claude-sonnet-5-5@claude-cli` has no committed run for 1 of 82 cases.
+> `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 83 cases.
 
 > `claude-sonnet-5-5@claude-cli` below its bar on: case64_catch_me_up_and_the_brief, case75_sofia_is_leaving, case88_send_it_anyway, case91_add_a_review_stage
 
-> `gemini-4-hydrogen-medium@agy-cli` has no committed run for 12 of 82 cases.
+> `gemini-4-hydrogen-medium@agy-cli` has no committed run for 13 of 83 cases.
 
-> `gpt-5.6-sol@codex-cli` has no committed run for 12 of 82 cases.
+> `gpt-5.6-sol@codex-cli` has no committed run for 13 of 83 cases.
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room
 
@@ -319,6 +320,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case128_is_she_here_twice](../../e2e/llm/scenarios/case128-is-she-here-twice.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 4 | 5 | **1** A merge waits for a yes | - |
 | [case129_move_it_to_service](../../e2e/llm/scenarios/case129-move-it-to-service.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 3 | 4 | **1** A deal moves to another pipeline | - |
 | [case130_put_the_offer_link_on_the_deal](../../e2e/llm/scenarios/case130-put-the-offer-link-on-the-deal.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 4 | 5 | **1** A link joins the deal's documents | - |
+| [case131_no_to_the_hand_over](../../e2e/llm/scenarios/case131-no-to-the-hand-over.yaml) | - | not run | - | - | - | - | **1** A no in the chat changes nothing<br>**2** The no is not routed round | `bulk_update_records` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 4.5 (4–5) | 5.5 (5–6) | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | - | - | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | - | - | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
@@ -520,6 +522,8 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case128_is_she_here_twice` | 1 | A merge waits for a yes | The model shows how the two cards differ and asks before it merges or removes either. |
 | `case129_move_it_to_service` | 1 | A deal moves to another pipeline | The model moves the deal into the named pipeline, where it lands on its first open stage. |
 | `case130_put_the_offer_link_on_the_deal` | 1 | A link joins the deal's documents | The model lists the address as a link among the deal's documents. |
+| `case131_no_to_the_hand_over` | 1 | A no in the chat changes nothing | When the user says no in the form the bulk change puts up, the answer says the hand-over did not happen, and no owner changes. |
+| `case131_no_to_the_hand_over` | 2 | The no is not routed round | The model leaves the decision with the user and does not change the owners one record at a time instead. |
 | `case1_log_it` | 8 | Promises come back as suggestions | Only what was actually promised is reported. Listing every topic that was discussed means the reader is reciting what it saw rather than what was committed to. |
 | `case20_put_it_in_the_board_pack` | 1 | Every figure in the document is the database's | The report is composed from a saved analytics run and cites the cells holding its numbers, rather than being written around figures the assistant read once and retyped. |
 | `case20_put_it_in_the_board_pack` | 3 | A refused literal is not a missing capability | Being refused a number written into a block says nothing about whether the product can produce a report, and the assistant must not turn that refusal into a conclusion that it cannot. |
@@ -745,7 +749,7 @@ the tool as the answer. That lane asks which tool a goal should reach for, which
 it sees that a name appeared, never whether it was the right first reach. `Near miss in` names the tasks that only check
 a model does not reach for the tool, which says nothing about whether one can use it.
 
-So of the 6 tools no use case requires, **0 are graded elsewhere** as an expected answer and 6 are untried by any lane. Of the untried, 1 appear elsewhere only as a near miss.
+So of the 5 tools no use case requires, **0 are graded elsewhere** as an expected answer and 5 are untried by any lane. Of the untried, 1 appear elsewhere only as a near miss.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -753,7 +757,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 |---|---:|---|---|---|---|
 | `change_record_parts` | 1017 | - | - | - | - |
 | `change_relationships` | 816 | - | - | - | - |
-| `bulk_update_records` | 798 | - | - | `case47_tidy_the_fair_list` | - |
 | `change_lists` | 620 | - | - | `case47_tidy_the_fair_list` | - |
 | `annotate_brief` | 417 | - | `agent_loop` | - | `morning_brief` |
 | `enrich` | 395 | - | - | - | - |
