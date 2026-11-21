@@ -17,7 +17,7 @@ import {
   ProposedNextSteps,
   type SuggestionAction,
 } from "./company360";
-import { NewDealAction } from "./companyactions";
+import { CompanyNewDealAction } from "./companyactions";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyProjectsPanel } from "./companyprojects";
 import { CompanyTasksFinds } from "./companytasksfinds";
@@ -167,7 +167,7 @@ function CompanyDealsTab({
     <DealsCard
       view={view}
       actions={
-        <NewDealAction
+        <CompanyNewDealAction
           companyId={company.id}
           companyName={company.display_name}
         />

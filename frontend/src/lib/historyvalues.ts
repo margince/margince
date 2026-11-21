@@ -235,6 +235,10 @@ export function historyValue(
   if (structured !== undefined) {
     return structured;
   }
+  // A partner stage is stored by its key, which only the stage list can name.
+  if (field === "relationship_stage") {
+    return ctx.nameOf?.(value) ?? value;
+  }
   if (isUuid(value)) {
     // Left EXACTLY as stored when the resolver cannot name it — a shortened
     // uuid is a value the reader can no longer check against the record.

@@ -643,7 +643,7 @@ func TestAPassportStopsWorkingWhileItsHumanOwesARotation(t *testing.T) {
 	// does not have to remember the cascade to be safe.
 	e := setupRevocationEnv(t, "forced-passport")
 	ctx := e.wsOnlyCtx()
-	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("issue passport: %v", err)
 	}

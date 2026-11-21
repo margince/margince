@@ -46,6 +46,7 @@ import {
 import { ShareAccessRow, useShareRecordName } from "./share.accessrow";
 import { ShareBack } from "./share.back";
 import { ShareConfirmation } from "./share.confirmation";
+import { LimitedByRoleNotice, useLimitedByRole } from "./share.limited";
 import { draftToGrant, pickedToGrant, shareCandidates } from "./share.roster";
 import {
   ApprovalRequiredError,
@@ -127,6 +128,7 @@ export function ShareScreenBody({
     name: string;
     access: Access;
   } | null>(null);
+  const limited = useLimitedByRole();
   const [confirmationDraft, setConfirmationDraft] = useState<GrantDraft | null>(
     null,
   );
@@ -165,6 +167,7 @@ export function ShareScreenBody({
       return data;
     },
     onSuccess: (data, draft) => {
+      const limitedByRole = limited.note(data, draft.subject.name);
       if (data && "shared" in data) {
         setSharedResult(data);
         queryClient.invalidateQueries({ queryKey: ["contact"] });
@@ -176,12 +179,13 @@ export function ShareScreenBody({
       queryClient.invalidateQueries({ queryKey: grantsKey });
       // A reader who lowered their own share may no longer change the record.
       void invalidateRecord(queryClient, recordType, recordId);
+      const unchangedShown = draft.change === "unchanged" && !limitedByRole;
       setUnchanged(
-        draft.change === "unchanged"
+        unchangedShown
           ? { name: draft.subject.name, access: draft.access }
           : null,
       );
-      if (!contactsOnly && draft.change !== "unchanged") {
+      if (!contactsOnly && draft.change !== "unchanged" && !limitedByRole) {
         toast.show(
           t("share.granted", {
             name: draft.subject.name,
@@ -210,6 +214,7 @@ export function ShareScreenBody({
     }
     setUnchanged(null);
     setSharedResult(null);
+    limited.clear();
   }
 
   function draftFor(picked: RosterSubject): GrantDraft {
@@ -414,6 +419,10 @@ export function ShareScreenBody({
               </p>
             )}
 
+            <LimitedByRoleNotice
+              name={limited.name}
+              record={contactsOnly ? null : recordName}
+            />
             {sharedResult && (
               <p role="status">
                 {t("share.companyContactsResult", {

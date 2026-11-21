@@ -54923,7 +54923,7 @@ type IssuePassportRequest struct {
 	// Areas Where the passport may act. Absent means all areas.
 	Areas *PassportAreas `json:"areas,omitempty"`
 
-	// Label Which agent this binds, e.g. "Claude Desktop".
+	// Label Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one.
 	Label *string `json:"label,omitempty"`
 
 	// Scopes Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC.
@@ -62536,6 +62536,11 @@ type RecordGrant struct {
 	GrantedBy openapi_types.UUID `json:"granted_by"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// LimitedByRole Only on the answer to a share, and only when true: the share asked for `write` and the
+	// user's role can neither change records of this type nor create activities, so the grant
+	// was saved as `read`. A team grant is never limited, because its members hold different roles.
+	LimitedByRole *bool `json:"limited_by_role,omitempty"`
+
 	// Reason Accountability/lawful-basis note surfaced in the audit row.
 	Reason     *string               `json:"reason,omitempty"`
 	RecordId   openapi_types.UUID    `json:"record_id"`
@@ -67751,8 +67756,12 @@ type ShareCompanyContactsRequestSubjectType string
 
 // ShareCompanyContactsResult defines model for ShareCompanyContactsResult.
 type ShareCompanyContactsResult struct {
-	Shared  int `json:"shared" minimum:"0"`
-	Skipped int `json:"skipped" minimum:"0"`
+	// LimitedByRole Present, and true, only when at least one grant was written and the share asked for `write`
+	// while the user's role can neither change contacts nor create activities, so the grants were
+	// saved as `read`.
+	LimitedByRole *bool `json:"limited_by_role,omitempty"`
+	Shared        int   `json:"shared" minimum:"0"`
+	Skipped       int   `json:"skipped" minimum:"0"`
 }
 
 // SharedForecastView What one caller reads through a share.

@@ -79,6 +79,70 @@ describe("ShareScreen", () => {
     expect(screen.queryByTestId("share-acl-list")).toBeNull();
   });
 
+  it("says so when an edit share is saved as read because of the colleague's role", async () => {
+    const posts: Record<string, unknown>[] = [];
+    installBaseFetch({
+      "/record-grants": (request) => {
+        if (request.method === "POST") {
+          return request.json().then((body: Record<string, unknown>) => {
+            posts.push(body);
+            return jsonResponse(
+              {
+                ...existingGrant,
+                ...body,
+                access: "read",
+                limited_by_role: true,
+              },
+              201,
+            );
+          });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      },
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Priya Shah/ }));
+    await user.click(screen.getByRole("button", { name: "Write" }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+
+    const notice = await screen.findByTestId("share-limited-by-role");
+    expect(notice.textContent).toMatch(
+      /^Saved as read access\. Priya Shah cannot edit .+ with their role\.$/,
+    );
+    expect(posts).toMatchObject([{ access: "write" }]);
+    expect(screen.queryByText(/now has/)).toBeNull();
+  });
+
+  it("says so when company contacts shared for editing are saved as read", async () => {
+    installBaseFetch({
+      "/companies/co-1/share-contacts": () =>
+        jsonResponse({ shared: 2, skipped: 0, limited_by_role: true }),
+    });
+    render(<ShareScreen recordType="company-contacts" recordId="co-1" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Deal Desk/ }));
+    await user.clear(screen.getByLabelText("Person or team"));
+    await user.click(await screen.findByRole("button", { name: /Priya Shah/ }));
+    await user.click(screen.getByRole("button", { name: "Write" }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+    const confirm = await screen.findByRole("dialog", {
+      name: "Share these contacts?",
+    });
+    await user.click(
+      within(confirm).getByRole("button", { name: "Grant access" }),
+    );
+
+    expect(
+      (await screen.findByTestId("share-limited-by-role")).textContent,
+    ).toBe(
+      "Saved as read access. Priya Shah cannot edit contacts with their role.",
+    );
+  });
+
   it("renders who-has-access, resolving subject and granter names via the roster", async () => {
     installBaseFetch();
     render(<ShareScreen recordType="deal" recordId="d-1" />);
@@ -437,6 +501,36 @@ describe("ShareScreen", () => {
     const notice = await screen.findByTestId("share-unchanged");
     expect(notice.textContent).toContain("Nothing changed");
     expect(notice.textContent).toContain("Mor Adler");
+  });
+
+  it("shows only the limited notice when re-saving a write share the colleague's role cannot use", async () => {
+    const posts: Record<string, unknown>[] = [];
+    const listed = grantEndpoint(posts, writeGrant);
+    installBaseFetch({
+      "/record-grants": async (request) => {
+        const answer = await listed(request);
+        if (request.method !== "POST") {
+          return answer;
+        }
+        const saved = await answer.json();
+        return jsonResponse(
+          { ...saved, access: "read", limited_by_role: true },
+          201,
+        );
+      },
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toMatchObject({ access: "write" });
+    expect(
+      (await screen.findByTestId("share-limited-by-role")).textContent,
+    ).toContain("Mor Adler");
+    expect(screen.queryByTestId("share-unchanged")).toBeNull();
   });
 
   it("names the recipient's seat for a 403 seat_tier_insufficient", async () => {

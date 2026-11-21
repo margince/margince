@@ -267,6 +267,7 @@ func TestQualificationFiltersReadOnlySharesBeforePagingAndRechecksAtWrite(t *tes
 		t.Fatal("read-share refusal left a contact")
 	}
 	grant.Access = "write"
+	f.e.GrantRole(t, f.e.Rep1, "rep")
 	if _, err := shares.CreateRecordGrant(f.e.Admin(), grant); err != nil {
 		t.Fatal(err)
 	}

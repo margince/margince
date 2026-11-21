@@ -13,6 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { workEmailAddress } from "./contactformfields";
@@ -330,5 +331,39 @@ it("requires an email, phone or LinkedIn URL before creating a contact", async (
   await waitFor(() => expect(posted).toHaveLength(1));
   expect(posted[0]).toMatchObject({
     social: { linkedin: "https://www.linkedin.com/in/dana-buyer" },
+  });
+});
+
+describe("New contact on a company's page", () => {
+  it("keeps the reader on the company and names the new contact", async () => {
+    const { posted } = stubApi(() =>
+      json({ id: "p-new", full_name: "Dana Buyer" }, 201),
+    );
+    window.location.hash = "#/companies/c-1";
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            <NewContactAction company={{ id: "c-1", listKey: "company360" }} />
+            <ToastRegion />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await user.click(screen.getByTestId("new-record"));
+    await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    await user.type(
+      screen.getByLabelText("LinkedIn"),
+      "https://www.linkedin.com/in/dana-buyer",
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ company_id: "c-1" });
+    expect(await screen.findByText("Dana Buyer added")).toBeTruthy();
+    expect(window.location.hash).toBe("#/companies/c-1");
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    expect(window.location.hash).toBe("#/contacts/p-new");
   });
 });

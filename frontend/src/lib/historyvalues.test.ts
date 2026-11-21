@@ -52,6 +52,29 @@ describe("historyValue", () => {
     },
   );
 
+  it("names the stored codes of a company and a lead in both languages", () => {
+    expect(historyValue("lifecycle", "former_customer", ctx())).toBe(
+      "Former customer",
+    );
+    expect(historyValue("margin_tier", "tier2_20", ctx())).not.toBe("tier2_20");
+    expect(historyValue("trigger", "human_qualify", ctx())).toBe(
+      "Qualified manually",
+    );
+    expect(
+      historyValue("trigger", "human_qualify", ctx({ locale: "de" })),
+    ).toBe("Manuell qualifiziert");
+  });
+
+  it("names a partner stage through the stage list, or leaves its key", () => {
+    const named = ctx({
+      nameOf: (key) => (key === "board_review" ? "Board review" : undefined),
+    });
+    expect(historyValue("relationship_stage", "board_review", named)).toBe(
+      "Board review",
+    );
+    expect(historyValue("relationship_stage", "no_fit", named)).toBe("no_fit");
+  });
+
   it("names a change of time precision in words, not wire spellings", () => {
     expect(historyValue("occurred_precision", "day", ctx())).toBe("Date only");
     expect(historyValue("occurred_precision", "instant", ctx())).toBe(

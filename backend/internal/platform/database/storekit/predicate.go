@@ -92,13 +92,15 @@ var operatorsByType = map[FieldType]map[string]bool{
 	// `acme` yields a host and then substring-matching it would answer a
 	// question nobody asked. The equality family is what a normalized value
 	// can honestly support.
-	FieldDomain:   {OpEq: true, OpNeq: true, OpIn: true, OpExists: true},
-	FieldID:       {OpEq: true, OpNeq: true, OpIn: true, OpExists: true},
-	FieldNumber:   {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpIn: true, OpExists: true},
-	FieldCurrency: {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpIn: true, OpExists: true},
-	FieldDate:     {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpExists: true},
-	FieldBoolean:  {OpEq: true, OpNeq: true, OpExists: true},
-	FieldDistance: {OpWithinRadius: true},
+	FieldDomain: {OpEq: true, OpNeq: true, OpIn: true, OpExists: true},
+	// Contains stays: a rep may search part of a key as before.
+	FieldCompanyKey: {OpEq: true, OpNeq: true, OpIn: true, OpContains: true, OpExists: true},
+	FieldID:         {OpEq: true, OpNeq: true, OpIn: true, OpExists: true},
+	FieldNumber:     {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpIn: true, OpExists: true},
+	FieldCurrency:   {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpIn: true, OpExists: true},
+	FieldDate:       {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpExists: true},
+	FieldBoolean:    {OpEq: true, OpNeq: true, OpExists: true},
+	FieldDistance:   {OpWithinRadius: true},
 }
 
 // operatorOrder is the one reading order for an operator list: equality,
@@ -366,6 +368,9 @@ func compileScalarLeaf(p Predicate, field Field, compared string, arg func(any) 
 	value, err := scalarOperand(p.Value, field, p.Field, p.Op)
 	if err != nil {
 		return "", err
+	}
+	if field.Type == FieldCompanyKey {
+		return compileCompanyKeyLeaf(p, field, arg)
 	}
 	if field.Type == FieldMultiselect {
 		member := fmt.Sprintf("COALESCE($%d = ANY(%s), false)", arg(value), field.Expr)

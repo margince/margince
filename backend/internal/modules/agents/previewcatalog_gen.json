@@ -324,6 +324,8 @@
      "Note (optional)",
     "disqualify_reason":
      "Reason",
+    "disqualify_reason_id":
+     "Disqualify reason",
     "domain":
      "Domain",
     "domains":
@@ -1272,6 +1274,8 @@
      "Job title",
     "to":
      "To",
+    "trigger":
+     "Qualified by",
     "true":
      "true",
     "unavailable_name":
@@ -4612,6 +4616,26 @@
      "Unknown",
     "disqualify_reason/boolean/true":
      "Yes",
+    "disqualify_reason_id/lifecycle/customer":
+     "Customer",
+    "disqualify_reason_id/lifecycle/disqualified":
+     "Disqualified",
+    "disqualify_reason_id/lifecycle/former_customer":
+     "Former customer",
+    "disqualify_reason_id/lifecycle/live":
+     "Live",
+    "disqualify_reason_id/lifecycle/onboarding":
+     "Onboarding",
+    "disqualify_reason_id/lifecycle/opportunity":
+     "Opportunity",
+    "disqualify_reason_id/lifecycle/prospect":
+     "Prospect",
+    "disqualify_reason_id/lifecycle/target":
+     "Target",
+    "disqualify_reason_id/lifecycle/unknown":
+     "Unknown",
+    "disqualify_reason_id/boolean/true":
+     "Yes",
     "domain/lifecycle/customer":
      "Customer",
     "domain/lifecycle/disqualified":
@@ -9202,6 +9226,8 @@
      "Name",
     "merge_profile_field/text/disposition":
      "Disposition",
+    "merge_profile_field/text/disqualify_reason_id":
+     "Disqualify reason",
     "merge_profile_field/text/domain":
      "Domain",
     "merge_profile_field/text/domains":
@@ -9426,6 +9452,8 @@
      "Task type",
     "merge_profile_field/text/title":
      "Job title",
+    "merge_profile_field/text/trigger":
+     "Qualified by",
     "merge_profile_field/text/usp":
      "Differentiation",
     "merge_profile_field/text/value_proposition":
@@ -9548,6 +9576,8 @@
      "Name",
     "merge_profile_field/lifecycle/disposition":
      "Disposition",
+    "merge_profile_field/lifecycle/disqualify_reason_id":
+     "Disqualify reason",
     "merge_profile_field/lifecycle/domain":
      "Domain",
     "merge_profile_field/lifecycle/domains":
@@ -9772,6 +9802,8 @@
      "Task type",
     "merge_profile_field/lifecycle/title":
      "Job title",
+    "merge_profile_field/lifecycle/trigger":
+     "Qualified by",
     "merge_profile_field/lifecycle/usp":
      "Differentiation",
     "merge_profile_field/lifecycle/value_proposition":
@@ -15248,6 +15280,26 @@
      "Unknown",
     "to/boolean/true":
      "Yes",
+    "trigger/lifecycle/customer":
+     "Customer",
+    "trigger/lifecycle/disqualified":
+     "Disqualified",
+    "trigger/lifecycle/former_customer":
+     "Former customer",
+    "trigger/lifecycle/live":
+     "Live",
+    "trigger/lifecycle/onboarding":
+     "Onboarding",
+    "trigger/lifecycle/opportunity":
+     "Opportunity",
+    "trigger/lifecycle/prospect":
+     "Prospect",
+    "trigger/lifecycle/target":
+     "Target",
+    "trigger/lifecycle/unknown":
+     "Unknown",
+    "trigger/boolean/true":
+     "Yes",
     "true/lifecycle/customer":
      "Customer",
     "true/lifecycle/disqualified":
@@ -16975,6 +17027,12 @@
     "disqualify_reason/empty":
      "Not set",
     "disqualify_reason/execution":
+     "Set when applied",
+    "disqualify_reason_id/boolean":
+     "No",
+    "disqualify_reason_id/empty":
+     "Not set",
+    "disqualify_reason_id/execution":
      "Set when applied",
     "domain/boolean":
      "No",
@@ -19884,6 +19942,12 @@
      "Not set",
     "to/execution":
      "Set when applied",
+    "trigger/boolean":
+     "No",
+    "trigger/empty":
+     "Not set",
+    "trigger/execution":
+     "Set when applied",
     "true/boolean":
      "No",
     "true/empty":
@@ -20410,6 +20474,8 @@
      "Notiz (optional)",
     "disqualify_reason":
      "Grund",
+    "disqualify_reason_id":
+     "Disqualifizierungsgrund",
     "domain":
      "Domain",
     "domains":
@@ -21358,6 +21424,8 @@
      "Jobtitel",
     "to":
      "An",
+    "trigger":
+     "Qualifiziert durch",
     "true":
      "true",
     "unavailable_name":
@@ -24698,6 +24766,26 @@
      "Unbekannt",
     "disqualify_reason/boolean/true":
      "Ja",
+    "disqualify_reason_id/lifecycle/customer":
+     "Kunde",
+    "disqualify_reason_id/lifecycle/disqualified":
+     "Disqualifiziert",
+    "disqualify_reason_id/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "disqualify_reason_id/lifecycle/live":
+     "Live",
+    "disqualify_reason_id/lifecycle/onboarding":
+     "Onboarding",
+    "disqualify_reason_id/lifecycle/opportunity":
+     "Chance",
+    "disqualify_reason_id/lifecycle/prospect":
+     "Interessent",
+    "disqualify_reason_id/lifecycle/target":
+     "Zielunternehmen",
+    "disqualify_reason_id/lifecycle/unknown":
+     "Unbekannt",
+    "disqualify_reason_id/boolean/true":
+     "Ja",
     "domain/lifecycle/customer":
      "Kunde",
     "domain/lifecycle/disqualified":
@@ -29288,6 +29376,8 @@
      "Name",
     "merge_profile_field/text/disposition":
      "Einstufung",
+    "merge_profile_field/text/disqualify_reason_id":
+     "Disqualifizierungsgrund",
     "merge_profile_field/text/domain":
      "Domain",
     "merge_profile_field/text/domains":
@@ -29512,6 +29602,8 @@
      "Aufgabentyp",
     "merge_profile_field/text/title":
      "Jobtitel",
+    "merge_profile_field/text/trigger":
+     "Qualifiziert durch",
     "merge_profile_field/text/usp":
      "Differenzierung",
     "merge_profile_field/text/value_proposition":
@@ -29634,6 +29726,8 @@
      "Name",
     "merge_profile_field/lifecycle/disposition":
      "Einstufung",
+    "merge_profile_field/lifecycle/disqualify_reason_id":
+     "Disqualifizierungsgrund",
     "merge_profile_field/lifecycle/domain":
      "Domain",
     "merge_profile_field/lifecycle/domains":
@@ -29858,6 +29952,8 @@
      "Aufgabentyp",
     "merge_profile_field/lifecycle/title":
      "Jobtitel",
+    "merge_profile_field/lifecycle/trigger":
+     "Qualifiziert durch",
     "merge_profile_field/lifecycle/usp":
      "Differenzierung",
     "merge_profile_field/lifecycle/value_proposition":
@@ -35334,6 +35430,26 @@
      "Unbekannt",
     "to/boolean/true":
      "Ja",
+    "trigger/lifecycle/customer":
+     "Kunde",
+    "trigger/lifecycle/disqualified":
+     "Disqualifiziert",
+    "trigger/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "trigger/lifecycle/live":
+     "Live",
+    "trigger/lifecycle/onboarding":
+     "Onboarding",
+    "trigger/lifecycle/opportunity":
+     "Chance",
+    "trigger/lifecycle/prospect":
+     "Interessent",
+    "trigger/lifecycle/target":
+     "Zielunternehmen",
+    "trigger/lifecycle/unknown":
+     "Unbekannt",
+    "trigger/boolean/true":
+     "Ja",
     "true/lifecycle/customer":
      "Kunde",
     "true/lifecycle/disqualified":
@@ -37061,6 +37177,12 @@
     "disqualify_reason/empty":
      "Nicht gesetzt",
     "disqualify_reason/execution":
+     "Wird beim Anwenden festgelegt",
+    "disqualify_reason_id/boolean":
+     "Nein",
+    "disqualify_reason_id/empty":
+     "Nicht gesetzt",
+    "disqualify_reason_id/execution":
      "Wird beim Anwenden festgelegt",
     "domain/boolean":
      "Nein",
@@ -39970,6 +40092,12 @@
      "Nicht gesetzt",
     "to/execution":
      "Wird beim Anwenden festgelegt",
+    "trigger/boolean":
+     "Nein",
+    "trigger/empty":
+     "Nicht gesetzt",
+    "trigger/execution":
+     "Wird beim Anwenden festgelegt",
     "true/boolean":
      "Nein",
     "true/empty":
@@ -40496,6 +40624,8 @@
      "Ghi chú (không bắt buộc)",
     "disqualify_reason":
      "Lý do",
+    "disqualify_reason_id":
+     "Lý do loại",
     "domain":
      "Tên miền",
     "domains":
@@ -41444,6 +41574,8 @@
      "Chức danh",
     "to":
      "Đến",
+    "trigger":
+     "Xác nhận bởi",
     "true":
      "true",
     "unavailable_name":
@@ -44784,6 +44916,26 @@
      "Chưa rõ",
     "disqualify_reason/boolean/true":
      "Có",
+    "disqualify_reason_id/lifecycle/customer":
+     "Khách hàng",
+    "disqualify_reason_id/lifecycle/disqualified":
+     "Đã loại",
+    "disqualify_reason_id/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "disqualify_reason_id/lifecycle/live":
+     "Đang vận hành",
+    "disqualify_reason_id/lifecycle/onboarding":
+     "Đang triển khai",
+    "disqualify_reason_id/lifecycle/opportunity":
+     "Cơ hội",
+    "disqualify_reason_id/lifecycle/prospect":
+     "Tiềm năng",
+    "disqualify_reason_id/lifecycle/target":
+     "Mục tiêu",
+    "disqualify_reason_id/lifecycle/unknown":
+     "Chưa rõ",
+    "disqualify_reason_id/boolean/true":
+     "Có",
     "domain/lifecycle/customer":
      "Khách hàng",
     "domain/lifecycle/disqualified":
@@ -49374,6 +49526,8 @@
      "Tên",
     "merge_profile_field/text/disposition":
      "Kết quả xử lý",
+    "merge_profile_field/text/disqualify_reason_id":
+     "Lý do loại",
     "merge_profile_field/text/domain":
      "Tên miền",
     "merge_profile_field/text/domains":
@@ -49598,6 +49752,8 @@
      "Loại việc",
     "merge_profile_field/text/title":
      "Chức danh",
+    "merge_profile_field/text/trigger":
+     "Xác nhận bởi",
     "merge_profile_field/text/usp":
      "Điểm khác biệt",
     "merge_profile_field/text/value_proposition":
@@ -49720,6 +49876,8 @@
      "Tên",
     "merge_profile_field/lifecycle/disposition":
      "Kết quả xử lý",
+    "merge_profile_field/lifecycle/disqualify_reason_id":
+     "Lý do loại",
     "merge_profile_field/lifecycle/domain":
      "Tên miền",
     "merge_profile_field/lifecycle/domains":
@@ -49944,6 +50102,8 @@
      "Loại việc",
     "merge_profile_field/lifecycle/title":
      "Chức danh",
+    "merge_profile_field/lifecycle/trigger":
+     "Xác nhận bởi",
     "merge_profile_field/lifecycle/usp":
      "Điểm khác biệt",
     "merge_profile_field/lifecycle/value_proposition":
@@ -55420,6 +55580,26 @@
      "Chưa rõ",
     "to/boolean/true":
      "Có",
+    "trigger/lifecycle/customer":
+     "Khách hàng",
+    "trigger/lifecycle/disqualified":
+     "Đã loại",
+    "trigger/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "trigger/lifecycle/live":
+     "Đang vận hành",
+    "trigger/lifecycle/onboarding":
+     "Đang triển khai",
+    "trigger/lifecycle/opportunity":
+     "Cơ hội",
+    "trigger/lifecycle/prospect":
+     "Tiềm năng",
+    "trigger/lifecycle/target":
+     "Mục tiêu",
+    "trigger/lifecycle/unknown":
+     "Chưa rõ",
+    "trigger/boolean/true":
+     "Có",
     "true/lifecycle/customer":
      "Khách hàng",
     "true/lifecycle/disqualified":
@@ -57147,6 +57327,12 @@
     "disqualify_reason/empty":
      "Chưa đặt",
     "disqualify_reason/execution":
+     "Được xác định khi áp dụng",
+    "disqualify_reason_id/boolean":
+     "Không",
+    "disqualify_reason_id/empty":
+     "Chưa đặt",
+    "disqualify_reason_id/execution":
      "Được xác định khi áp dụng",
     "domain/boolean":
      "Không",
@@ -60055,6 +60241,12 @@
     "to/empty":
      "Chưa đặt",
     "to/execution":
+     "Được xác định khi áp dụng",
+    "trigger/boolean":
+     "Không",
+    "trigger/empty":
+     "Chưa đặt",
+    "trigger/execution":
      "Được xác định khi áp dụng",
     "true/boolean":
      "Không",

@@ -29230,6 +29230,11 @@ paths:
         record every write to which the ceiling then refuses. A `read` grant to a read seat is the
         authority their licence already carries and is accepted. A `team` subject is not a seat and is
         not filtered — the read seats inside it are still refused every write at their own admission.
+
+        The recipient's role binds as well: a `write` grant to a user whose role can neither change
+        records of this type nor create activities (attaching one needs `write`) is saved as `read`,
+        and the answer carries `limited_by_role: true`. The answer names no role. A `team` grant
+        keeps `write`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       x-mcp-tool: { verb: share_record, router: change_access, action: share, tier: auto_execute, scope: write, served_by: route }
@@ -76283,6 +76288,12 @@ components:
         expires_at: { type: [string, 'null'], format: date-time, description: 'Optional TTL; an expired grant matches no rows.' }
         created_at: { type: string, format: date-time }
         version: { type: integer, format: int64 }
+        limited_by_role:
+          type: boolean
+          description: |
+            Only on the answer to a share, and only when true: the share asked for `write` and the
+            user's role can neither change records of this type nor create activities, so the grant
+            was saved as `read`. A team grant is never limited, because its members hold different roles.
 
     CreateRecordGrantRequest:
       type: object
@@ -76312,6 +76323,12 @@ components:
       properties:
         shared: { type: integer, minimum: 0 }
         skipped: { type: integer, minimum: 0 }
+        limited_by_role:
+          type: boolean
+          description: |
+            Present, and true, only when at least one grant was written and the share asked for `write`
+            while the user's role can neither change contacts nor create activities, so the grants were
+            saved as `read`.
 
     RecordAccess:
       type: object
@@ -79531,7 +79548,7 @@ components:
       additionalProperties: false
       required: [scopes]
       properties:
-        label:  { type: [string, 'null'], maxLength: 120, description: 'Which agent this binds, e.g. "Claude Desktop".' }
+        label:  { type: [string, 'null'], maxLength: 120, description: 'Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one.' }
         scopes:
           type: array
           minItems: 1

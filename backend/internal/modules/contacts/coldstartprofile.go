@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -402,7 +402,11 @@ func coldStartHost(rawURL string) (string, error) {
 	if err != nil || parsed.Host == "" {
 		return "", fmt.Errorf("contacts: coldstart source url %q has no host", rawURL)
 	}
-	return strings.TrimPrefix(strings.ToLower(parsed.Hostname()), "www."), nil
+	host, err := owndomain.ParseDomain(parsed.Hostname())
+	if err != nil {
+		return "", fmt.Errorf("contacts: coldstart source url %q has no valid host: %w", rawURL, err)
+	}
+	return host.String(), nil
 }
 
 // UnmarshalColdStartFields decodes the staged proposal's field array —

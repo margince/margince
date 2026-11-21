@@ -483,10 +483,14 @@ func (e *Env) SeedWonDealLinkedTo(t *testing.T, activities ...ids.UUID) ids.UUID
 
 // ShareForWriting is the admin sharing one record at `write` with each
 // subject, a user or a team, through the real grant writer. A fixture uses it
-// so a seat may file onto a record it does not own.
+// so a seat may file onto a record it does not own. A user subject gets the
+// rep role first, because a share follows the subject's role.
 func (e *Env) ShareForWriting(t *testing.T, recordType string, record ids.UUID, subjectType string, subjects ...ids.UUID) {
 	t.Helper()
 	for _, subject := range subjects {
+		if subjectType == "user" {
+			e.GrantRole(t, subject, "rep")
+		}
 		if _, err := identity.NewService(e.Pool).CreateRecordGrant(e.Admin(), identity.CreateGrantInput{
 			RecordType: recordType, RecordID: record, SubjectType: subjectType, SubjectID: subject, Access: "write",
 		}); err != nil {

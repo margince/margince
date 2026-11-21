@@ -1527,6 +1527,8 @@
   "history.field.full_name": "Name",
   "history.field.win_probability": "Probability",
   "history.field.stage_id": "Stage",
+  "history.field.disqualify_reason_id": "Disqualify reason",
+  "history.field.trigger": "Qualified by",
   "history.field.win_probability_override": "Probability set on the deal",
   "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",

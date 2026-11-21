@@ -1527,6 +1527,8 @@
   "history.field.full_name": "Tên",
   "history.field.win_probability": "Xác suất",
   "history.field.stage_id": "Giai đoạn",
+  "history.field.disqualify_reason_id": "Lý do loại",
+  "history.field.trigger": "Xác nhận bởi",
   "history.field.win_probability_override": "Xác suất đặt cho deal",
   "history.field.win_probability_set_by": "Xác suất do ai đặt",
   "history.field.fx_rate_date": "Ngày tỷ giá",

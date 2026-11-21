@@ -1527,6 +1527,8 @@
   "history.field.full_name": "Name",
   "history.field.win_probability": "Abschlusschance",
   "history.field.stage_id": "Phase",
+  "history.field.disqualify_reason_id": "Disqualifizierungsgrund",
+  "history.field.trigger": "Qualifiziert durch",
   "history.field.win_probability_override": "Abschlusschance am Deal",
   "history.field.win_probability_set_by": "Abschlusschance gesetzt von",
   "history.field.fx_rate_date": "Datum des Wechselkurses",

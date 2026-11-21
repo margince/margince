@@ -51,6 +51,9 @@ type grantRow struct {
 	ExpiresAt   *time.Time
 	CreatedAt   time.Time
 	Version     int64
+	// LimitedByRole is set on a share's answer, not stored, and only to true:
+	// the share asked for write and the subject's role made it read.
+	LimitedByRole *bool
 }
 
 func scanGrant(r pgx.Row) (grantRow, error) {
@@ -77,6 +80,9 @@ type CreateGrantInput struct {
 	Access      string
 	Reason      *string
 	ExpiresAt   *time.Time
+	// FitToRecipient saves read for a read seat asked for write, instead of
+	// refusing: a share the product makes for the recipient fits their seat.
+	FitToRecipient bool
 }
 
 // refuseAnExpiryAlreadyPast refuses a grant that would be dead on arrival.
@@ -142,12 +148,11 @@ func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (g
 // CreateRecordGrantTx is CreateRecordGrant on a transaction the caller owns,
 // for a share that must commit with the decision releasing it. The checks are
 // the same, in the same order.
-func (s *Service) CreateRecordGrantTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
+func (s *Service) CreateRecordGrantTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (grantRow, error) {
 	if err := s.refuseMalformedGrant(ctx, in); err != nil {
-		return err
+		return grantRow{}, err
 	}
-	_, err := createRecordGrantInTx(ctx, tx, in)
-	return err
+	return createRecordGrantInTx(ctx, tx, in)
 }
 
 // refuseMalformedGrant is what a share settles before any transaction opens.
@@ -200,19 +205,20 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	// Two rules bind a grant, and they judge different seats.
 	//
 	// Scope-intersection (ADR-0039) judges the grantor at every access level.
-	// EnsureLinkTarget above admits a caller whose only claim is a share, so
-	// authority is asked separately here. The upsert restates the whole grant,
-	// its term and its width, so a `read` assertion needs it as a `write` does.
+	// EnsureLinkTarget admits a caller whose only claim is a share, and the
+	// upsert restates the whole grant, so authority is asked here for `read` too.
 	//
-	// The seat ceiling (AAD-AC-4) judges the recipient by the asserted access.
-	// A `read` grant to a read seat is fine. Both rules bind a re-assert as they
-	// bind a first share.
+	// The recipient's seat and role decide the access saved (grantAccessFor).
+	// Both rules bind a re-assert as they bind a first share.
 	if err := auth.EnsureCanGrant(ctx, tx, in.RecordType, in.RecordID); err != nil {
 		return grantRow{}, err
 	}
-	if err := refuseWriteGrantToReadSeat(ctx, tx, in); err != nil {
+	requested := in.Access
+	access, cut, err := grantAccessFor(ctx, tx, in)
+	if err != nil {
 		return grantRow{}, err
 	}
+	in.Access = access
 	// The precondition read and the write it feeds run under one lock. FOR
 	// UPDATE cannot order two callers creating this grant at once, because an
 	// absent row locks nothing. The loser would then audit a first share over a
@@ -240,9 +246,12 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	// the verb, and `record_unshare` belongs to revocation. Both images render
 	// the persisted row through one shape. An image that omitted a field the
 	// upsert can change would report that nothing moved when it did.
-	if _, err := storekit.Audit(ctx, tx, "record_share",
-		in.RecordType, in.RecordID, before, grantImage(out)); err != nil {
+	if _, err := storekit.AuditWithEvidence(ctx, tx, "record_share",
+		in.RecordType, in.RecordID, before, grantImage(out), grantCutEvidence(requested, cut)); err != nil {
 		return grantRow{}, fmt.Errorf("audit record_share: %w", err)
+	}
+	if cut == grantCutRole {
+		out.LimitedByRole = new(true)
 	}
 	return out, nil
 }
@@ -312,75 +321,6 @@ func grantImage(g grantRow) map[string]any {
 		"subject_type": g.SubjectType, "subject_id": g.SubjectID, "access": g.Access,
 		"reason": g.Reason, "expires_at": g.ExpiresAt, "granted_by": g.GrantedBy,
 	}
-}
-
-// refuseWriteGrantToReadSeat holds the receiving half of the seat ceiling
-// (AAD-AC-4): a read seat may be handed a record to READ, which is exactly
-// the authority its licence already carries, but never one to write.
-//
-// The granting half is enforced a layer up — sharing is a POST, so a
-// read-seat grantor never reaches here — and it is not the same rule. A
-// full-seat admin sharing a deal for editing with a read-seat colleague is
-// the case this closes: the grant would have widened that colleague's row
-// scope onto a record the seat ceiling then refuses every write to, which
-// is a grant that reads as authority and cannot be exercised.
-//
-// A `team` subject is deliberately out of scope: a team is not a seat, and
-// refusing a whole team because one member reads is a wider rule than the
-// AC states. The read seats inside it are still refused every write at
-// their own admission, so no authority leaks — the grant is just less
-// useful to them than to their colleagues.
-//
-// WHOEVER SHIPS A SEAT-CHANGE ENDPOINT OWES THE OTHER HALF. This guard runs at
-// grant creation and nowhere else, so a member downgraded to a read seat keeps
-// every write grant they were given while they held a full one. That is the
-// rule and the stored data disagreeing, and the fix belongs in the seat
-// write's own transaction: revoke the subject's write grants there, audited
-// like any other grant change, so the data matches the rule at every instant.
-// A downgrade quietly parking authority is how somebody gets it back on an
-// upgrade nobody re-examined.
-//
-// Until then it is inert rather than wrong: platform/auth's write-authority
-// predicate drops its record_grant arm for a read-seat principal, so the
-// standing grant confers nothing at the place authority is actually read. That
-// is the second guard, it holds whatever the row says, and it is not a reason
-// to skip the revocation — data that states the opposite of the rule is a
-// defect the next reader inherits.
-func refuseWriteGrantToReadSeat(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
-	if in.Access != string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite) || in.SubjectType == grantSubjectTeam {
-		return nil
-	}
-	seat, err := seatOf(ctx, tx, in.SubjectID)
-	if err != nil {
-		return err
-	}
-	if !seat.CanMutate() {
-		return fmt.Errorf("a write grant needs a full seat; the subject holds %q: %w",
-			seat, apperrors.ErrSeatTierInsufficient)
-	}
-	return nil
-}
-
-// ShareAccessForTx is the widest access the seat ceiling lets a share give this
-// member. It is write for a seat that may write, and read otherwise.
-func ShareAccessForTx(ctx context.Context, tx pgx.Tx, member ids.UUID) (string, error) {
-	seat, err := seatOf(ctx, tx, member)
-	if err != nil {
-		return "", err
-	}
-	if seat.CanMutate() {
-		return string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite), nil
-	}
-	return string(crmcontracts.RecordGrantAccessRecordGrantAccessRead), nil
-}
-
-func seatOf(ctx context.Context, tx pgx.Tx, member ids.UUID) (principal.SeatType, error) {
-	var seat string
-	if err := tx.QueryRow(ctx,
-		`SELECT seat_type FROM app_user WHERE id = $1`, member).Scan(&seat); err != nil {
-		return "", fmt.Errorf("read the subject's seat: %w", err)
-	}
-	return principal.SeatType(seat), nil
 }
 
 // mayRevoke answers who may take a share away, and it is deliberately not the
