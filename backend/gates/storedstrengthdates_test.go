@@ -140,7 +140,7 @@ func strengthDatesTriggers(catalog string) map[string]map[string]string {
 	return out
 }
 
-// strengthDatesFindings is every input of the read a trigger misses. That is an
+// strengthDatesFindings lists the inputs of the read a trigger misses. That is an
 // event a table has no trigger for, or a column its UPDATE trigger does not compare.
 func strengthDatesFindings(reads map[string][]string, triggers map[string]map[string]string,
 	bodies map[string]string, waived func(string) bool,

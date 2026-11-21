@@ -11373,6 +11373,15 @@ BEGIN
 	END IF;
 	RETURN NEW;
 END 
+public.unfold_contact_strength_dates() secdef=false cfg=- acl=- 
+DECLARE
+  moving text := current_setting('margince.last_activity_move', true);
+BEGIN
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  UPDATE contact SET strength_folded = false WHERE strength_folded AND archived_at IS NULL;
+  PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+END;
+
 public.update_intent_time(old_wall timestamp without time zone, old_zone text, old_instant timestamp with time zone, new_wall timestamp without time zone, new_zone text, new_instant timestamp with time zone) secdef=false cfg=search_path=pg_catalog acl=- 
  WITH kept AS MATERIALIZED (
   SELECT CASE

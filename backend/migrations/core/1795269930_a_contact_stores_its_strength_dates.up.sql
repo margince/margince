@@ -322,6 +322,20 @@ BEGIN
 END;
 $$;
 
+-- Marks every live contact's dates unfolded, so readers fold the history until
+-- they are folded again. A move of the installation zone runs it, because
+-- whether a day entry has happened depends on the zone's today.
+CREATE FUNCTION unfold_contact_strength_dates() RETURNS void
+LANGUAGE plpgsql AS $$
+DECLARE
+  moving text := current_setting('margince.last_activity_move', true);
+BEGIN
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  UPDATE contact SET strength_folded = false WHERE strength_folded AND archived_at IS NULL;
+  PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+END;
+$$;
+
 -- Moves the dates of each contact after a statement changed the activities
 -- paired with it. was is the date the activity held before the change:
 -- -infinity when it held none, NULL when nobody knows. A contact is recomputed

@@ -124,14 +124,8 @@ func UnfoldStrengthDatesTx(ctx context.Context, tx pgx.Tx) error {
 	if err := auth.Require(ctx, "installation_settings", principal.ActionUpdate); err != nil {
 		return err
 	}
-	for _, statement := range []string{
-		`SELECT set_config('margince.last_activity_move', 'on', true)`,
-		`UPDATE contact SET strength_folded = false WHERE strength_folded AND archived_at IS NULL`,
-		`SELECT set_config('margince.last_activity_move', '', true)`,
-	} {
-		if _, err := tx.Exec(ctx, statement); err != nil {
-			return fmt.Errorf("contacts: marking stored strength dates unfolded: %w", err)
-		}
+	if _, err := tx.Exec(ctx, `SELECT unfold_contact_strength_dates()`); err != nil {
+		return fmt.Errorf("contacts: marking stored strength dates unfolded: %w", err)
 	}
 	return nil
 }

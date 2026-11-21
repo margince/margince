@@ -43,6 +43,7 @@ DROP FUNCTION IF EXISTS touch_strength_dates_of_holds(jsonb);
 DROP FUNCTION IF EXISTS touch_strength_dates_of_activities(uuid[]);
 DROP FUNCTION IF EXISTS touch_contact_strength_dates(uuid[], uuid[], timestamptz[]);
 DROP FUNCTION IF EXISTS refresh_contact_strength_dates(uuid[]);
+DROP FUNCTION IF EXISTS unfold_contact_strength_dates();
 DROP FUNCTION IF EXISTS contact_strength_dates_among(uuid, uuid[]);
 DROP FUNCTION IF EXISTS contact_strength_dates(uuid);
 
