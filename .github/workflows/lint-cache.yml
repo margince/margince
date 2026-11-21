@@ -4,7 +4,7 @@ name: lint-cache
 # so a pull request's backend-lint starts from the tip it merges into rather than
 # from cache-warm's last green run, often hours and dozens of merges behind.
 # Each run restores the previous entry, so it analyzes only what the push changed.
-# On main it also saves the `lint` Go build cache: golangci compiles every
+# It also saves the `lint` Go build cache for its branch: golangci compiles every
 # package it loads, and a build cache hours behind made that load most of the
 # lint job even when every analysis was cached.
 # It gates nothing: a red run still analyzed the tree, and its entries are saved.
@@ -92,18 +92,17 @@ jobs:
         with:
           go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
-      # On main this job writes the `lint` entry, so it compiles from empty, as
+      # This job writes its branch's `lint` entry, so it compiles from empty, as
       # cache-warm.yml's writers do: an entry built on the one before keeps
-      # every package any earlier tree held. On develop it reads main's entry.
+      # every package any earlier tree held.
       - name: Start from an empty build cache
-        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         run: go clean -cache
-      - name: Restore the Go build cache
+      - name: Compute the Go build cache key (this job writes it, never reads it)
         id: go-cache
         uses: ./.github/actions/go-build-cache
         with:
           flavor: lint
-          restore: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
+          restore: "false"
       - name: Gate binaries on PATH
         if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
@@ -138,7 +137,7 @@ jobs:
       # census of test inputs.
       - name: Save the lint Go build cache
         id: save-build
-        if: ${{ !cancelled() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        if: ${{ !cancelled() }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/go-build

@@ -494,10 +494,8 @@ jobs:
         with:
           go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
-      # The shared Go build cache (see .github/actions/go-build-cache): this job
-      # compiles the untagged tree twice over — `go build ./...` plus the unit
-      # test binaries — and is the natural writer of the `plain` flavour every
-      # other untagged Go job reads.
+      # The shared Go build cache (see .github/actions/go-build-cache). Restored,
+      # never saved: cache-warm.yml writes the `plain` entries on main and develop.
       - name: Restore the Go build cache
         id: go-cache
         uses: ./.github/actions/go-build-cache
@@ -553,7 +551,8 @@ jobs:
         # Outside a PR into develop, the unit leg's pass is also the test-input
         # census: testlog-exec.sh logs what each package read, and the next step
         # judges it. It runs uncached (-count=1), since a replayed result reads
-        # nothing; develop keeps the test cache.
+        # nothing. No leg replays a test result here: TEST_SHUFFLE_SEED adds
+        # -shuffle, and Go caches no result run with it.
         run: |
           set -o pipefail
           census=()

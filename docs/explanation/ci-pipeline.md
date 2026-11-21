@@ -382,24 +382,32 @@ dependency builds under them are shared:
 |---|---|---|
 | `plain` | `cache-warm.yml` job `plain`, its `runner` part | `integration unit coverage`, `live-boot`, `vuln`, and the [CI image](ci-image.md) jobs when they run on the runner |
 | `plain-in-image` | `cache-warm.yml` job `plain`, its `image` part | `deterministic-gates` |
-| `lint`, `lint-in-image` | `lint-cache.yml`, after each push to `main`: it compiles, and runs no test | `backend-lint` |
-| `integration` | `cache-warm.yml` job `integration` | `integration build`, and every shard for the tools it runs with `go run` |
+| `lint`, `lint-in-image` | `lint-cache.yml`, after each push to `main` or `develop`: it compiles, and runs no test | `backend-lint` |
+| `integration` | `cache-warm.yml` job `integration`, on `main` only | `integration build`, and every shard for the tools it runs with `go run` |
 
-### The writer lives in `cache-warm.yml`, on a schedule
+### The writer lives in `cache-warm.yml`, on `main` and `develop`
 
 `ci.yml` only ever **loads** the cache. The writing of `plain` and `integration` lives in
-[`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml). It runs on `main` every
-three hours, plus `workflow_dispatch`, and **gates nothing**. GitHub drops some cron runs, so `pace.yml`
-also starts one from a push to `main` once the newest run is three hours old. A red or cancelled run there costs time on
-the next lane, and nothing else.
+[`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml), and it **gates nothing**.
+It runs every three hours on `main` and on `develop`, plus `workflow_dispatch`. A red or cancelled run
+there costs time on the next lane, and nothing else.
+
+- GitHub runs a cron only on the default branch, and drops some of those runs. So `pace.yml` starts a run
+  from a push to `main` or `develop` once that branch's newest run is three hours old. That push is the
+  only thing that starts the `develop` run.
+- `integration` and `integration-timing` run on `main` only. A pull request into `develop` skips the
+  integration lane, so a `develop` entry would have no reader.
+- Its concurrency group holds the ref, so a `develop` run and a `main` run do not queue behind each other.
+- After the saves, its `prune` job runs `scripts/reap-build-caches.sh` for its own ref, so each branch keeps
+  one generation of each kind.
 
 Three limits shaped that, and each rules out a choice that looks less hard:
 
 - **The writer cannot live on the merge queue.** `actions/cache` scopes an entry to the branch that wrote
-  it, plus the default branch. A `merge_group` run lives on a `gh-readonly-queue/main/...` ref that is
-  removed later. An entry saved there is hidden from every PR lane, and dies with the ref. *Loading* has
-  no such scope (entries on the default branch can be read from any branch). So only the write has to be
-  on `main`.
+  it. A reader looks in its own ref, then its base branch, then the default branch. A `merge_group` run
+  lives on a `gh-readonly-queue/main/...` ref that is removed later. An entry saved there is hidden from
+  every PR lane, and dies with the ref. So the write runs on the two branches pull requests merge into.
+  A pull request into `develop` reads `develop`'s entry, and one into `main` reads `main`'s.
 - **The writer cannot run on each push.** Seeding a kind is a side effect of compiling. The `plain` job
   runs a full `make check-backend`, and the `integration` job builds the test binaries and runs a shard from them against a live Postgres. At
   about 80 merges a day, that pair would run about 80 times and mostly cancel itself. Paced to one run
@@ -409,15 +417,25 @@ Three limits shaped that, and each rules out a choice that looks less hard:
   because a stale load only misses the entries whose inputs changed. A cache three hours old is mostly
   warm. A cache from before a new dependency version is still better than an empty one.
 
-There is one writer per kind. Each run of a kind compiles much the same set. So a second writer would add
+There is one writer per kind and branch. Each run of a kind compiles much the same set. So a second writer would add
 nothing but two writers on the same key. And every runner sending up about 550 MB would push out the entry
 they meant to seed. `cache-warm.yml` runs one job per kind it writes, and it and `lint-cache.yml` take
 `concurrency: cancel-in-progress: false`, because a cancelled run saves nothing.
 
+`scripts/reap-build-caches.sh` keeps the newest entry of each ref and key prefix, and deletes the older
+ones. It groups by ref, because a newer `develop` entry must not delete the `main` entry that pull
+requests into `main` and the merge queue read. `scheduled.yml` runs it daily over every ref, and
+`scripts/test-reap-build-caches.sh` holds both cases.
+
+A `develop` entry hides every `main` entry from a pull request into `develop`, even a newer one. If
+the `develop` writer stops, those pull requests stay on an ageing entry. The census does not run on a
+pull request into `develop`, so an undeclared test input can reach `develop`, and the `develop` writer
+then holds back its `plain` save until someone fixes it.
+
 The refresh steps use `!cancelled()`, not `success()`. A red gate still compiled the tree, and that build
 output can be used again as well as a green run's.
 
-### The lint caches are saved on `main`, and the golangci one on `develop` too
+### The lint caches are saved on `main` and `develop`
 
 Three smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
 saves can be read by that PR alone. It still counts against the 10 GB cache quota of the repository,
@@ -425,9 +443,9 @@ and there it pushes out the `main` entries that every PR loads.
 
 | Cache | Key | Saved by |
 |---|---|---|
-| Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss on `main` |
+| Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss on `main` only: the key holds no commit, so a `develop` copy would only take room |
 | golangci analysis, `~/.cache/golangci-lint` | [`golangci-cache-key`](../../.github/actions/golangci-cache-key/action.yml): `go.mod`, `go.sum`, both lint configs, then the commit | `cache-warm.yml` job `plain`, and [`lint-cache.yml`](../../.github/workflows/lint-cache.yml) after each push to `main` or `develop` |
-| Type check and compiler lint, under `frontend/node_modules` | [`frontend-cache-key`](../../.github/actions/frontend-cache-key/action.yml): `pnpm-lock.yaml`, `frontend/eslint.config.js`, then the commit | `cache-warm.yml` job `frontend`; `fe-quality` and `fe-bundle` load it |
+| Type check and compiler lint, under `frontend/node_modules` | [`frontend-cache-key`](../../.github/actions/frontend-cache-key/action.yml): `pnpm-lock.yaml`, `frontend/eslint.config.js`, then the commit | `cache-warm.yml` job `frontend`, on `main` and `develop`; `fe-quality` and `fe-bundle` load it |
 
 - **The gate binaries key reads the recipe.** An edit elsewhere in `backend/Makefile` keeps the
   key, and a new tool or pin in `make tools` changes it.
@@ -436,19 +454,24 @@ and there it pushes out the `main` entries that every PR loads.
   red lint run still saves, because it read the whole tree. A run that stopped before lint saves
   nothing. The census does not hold this entry back, because golangci replays no test result.
 - `lint-cache.yml` also saves the golangci entry after each push to `main` or `develop` that changes Go files,
-  from the entry of the push before. On `main` it also saves the `lint` build cache, compiled from empty. Lint
+  from the entry of the push before. It also saves the `lint` build cache of that branch, compiled from empty. Lint
   compiles each package it loads before it reads its own cache. So a build cache hours behind cost minutes,
   even when every analysis was cached. The job then deletes the older entries.
-- **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
-  entry until `cache-warm` runs after the merge.
+- **A new dependency or lint config lints cold.** The key prefix of such a PR matches no entry on
+  its base branch until `cache-warm` runs after the merge.
 - **An old frontend entry is never wrong.** tsc checks the hash of each input against what it stored.
   The compiler lint checks the hash of each file and its own version, so the lockfile is in the key.
 
 ### Test results replay only on a stable mtime
 
-The build cache holds test results as well as compiled packages. So a PR whose change does not reach a
-package replays that package's result, and does not run it. Go checks a cached result against every file
-the test opened at runtime: a migration, a fixture, its own source. It checks by size, mode and
+The build cache holds test results as well as compiled packages. **No job in `ci.yml` replays one.**
+`ci.yml` sets `TEST_SHUFFLE_SEED` for the whole workflow, `backend/Makefile` turns it into
+`-shuffle=<n>`, and Go caches no result of a run with `-shuffle`. So in `ci.yml` the cache saves compile
+time only. `main-health.yml` passes no seed, and there a package that no change reached replays its
+result. The rest of this section is about that replay.
+
+Go checks a cached result against every file the test opened at runtime: a migration, a fixture, its
+own source. It checks by size, mode and
 **mtime**, never content. A new checkout stamps every file with the time of checkout. So without stable `mtime` values,
 every package whose tests read the tree would run again on every job, `internal/compose` and `identity`
 among them.
