@@ -103,6 +103,8 @@ export function ContactToday({
               id: row.id,
               subject: row.subject ?? t("task.untitled"),
               dueAt: row.due_at,
+              dueHasTime: row.due_has_time,
+              dueIntent: row.due_intent,
               overdue: row.due_at
                 ? daysPast(
                     Date.parse(
@@ -117,7 +119,7 @@ export function ContactToday({
                   ).late
                 : false,
             })),
-            { t, plural, locale, zone },
+            { t, plural, locale, zone, companyZone },
             rows.length,
             onOpenTasks,
           ),

@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -210,4 +211,29 @@ func TestALimitOutsideTheServedRangeIsRefusedByName(t *testing.T) {
 func newTaskID() *ids.UUID {
 	id := ids.NewV7()
 	return &id
+}
+
+// A promise due on a date with no time is late once that date is over in the
+// company's zone. Picked in Los Angeles for the 16th, it resolves to 07:59 UTC
+// on the 17th. The instant alone calls it on time at 08:00 in Berlin.
+func TestADateOnlyPromiseIsRankedAndJudgedByItsPickedDate(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	due := time.Date(2026, 11, 17, 7, 59, 59, 0, time.UTC)
+	promise := OpenCommitment{
+		TaskID: newTaskID(), DueAt: &due,
+		DueIntent: &crmcontracts.IntentTime{WallClock: "2026-11-16T23:59:59", Timezone: "America/Los_Angeles"},
+	}
+	if got := promise.RankedDue(berlin); !got.Equal(time.Date(2026, 11, 16, 23, 59, 59, 0, berlin)) {
+		t.Errorf("ranked at %v, want the end of the 16th in Berlin", got)
+	}
+	asOf := time.Date(2026, 11, 17, 7, 0, 0, 0, time.UTC)
+	late := true
+	promise.Overdue = &late
+	item := promise.wire(asOf)
+	if item.State != commitmentOverdue || item.DaysOverdue == nil {
+		t.Errorf("state %q, days %v: want overdue with a day count", item.State, item.DaysOverdue)
+	}
 }

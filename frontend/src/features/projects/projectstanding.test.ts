@@ -233,7 +233,10 @@ describe("the figures and the axis", () => {
       commitments: { data: [task("t", { overdue: true })], page },
     });
     expect(
-      projectMoments(view).map((moment) => [moment.what, moment.kind]),
+      projectMoments(view, UTC_ZONE).map((moment) => [
+        moment.what,
+        moment.kind,
+      ]),
     ).toEqual([
       ["opened", "done"],
       ["won", "done"],
@@ -244,7 +247,7 @@ describe("the figures and the axis", () => {
   });
 
   it("opens the axis on the start day and draws no phase move", () => {
-    const moments = projectMoments(deliveringProject360());
+    const moments = projectMoments(deliveringProject360(), UTC_ZONE);
     expect(moments.filter((moment) => moment.key.startsWith("phase-"))).toEqual(
       [],
     );
@@ -280,7 +283,7 @@ describe("the figures and the axis", () => {
       },
     });
     expect(
-      projectMoments(view).find((moment) => moment.what === "update"),
+      projectMoments(view, UTC_ZONE).find((moment) => moment.what === "update"),
     ).toMatchObject({ kind: "last", subject: "Site report" });
   });
 

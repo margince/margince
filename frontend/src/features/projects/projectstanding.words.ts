@@ -324,7 +324,7 @@ function momentSub(moment: ProjectMoment, view: Project360, ctx: Ctx): string {
 }
 
 export function projectEvents(view: Project360, ctx: Ctx): TimelineEvent[] {
-  return projectMoments(view).map((moment) => ({
+  return projectMoments(view, ctx.zone).map((moment) => ({
     key: moment.key,
     at: moment.at,
     kind: moment.kind,

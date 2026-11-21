@@ -68,6 +68,10 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "lib/standingpeeks.test.ts",
+    why: "A task with only a date must print its picked day for readers east and west of the picker; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
     file: "features/mail/directsendmodal.stories.tsx",
     why: "Draws Send anyway at a later time for a held message set in a named zone, so the picker reads that zone rather than the viewer's.",
   },

@@ -15,6 +15,7 @@ import {
   activityIsAhead,
   type OccurredPrecision,
 } from "../../format/activitywhen";
+import { taskDueOnDay } from "../../format/calendarday";
 import {
   daysAgoText,
   formatDayMonth,
@@ -465,7 +466,14 @@ export function leadNext(lead: Lead, ctx: ReadingContext): LeadNext {
   if (!lead.next_task_subject) {
     return { qualify: false, more: tasks };
   }
-  const due = lead.next_task_due_at;
+  const due = lead.next_task_due_at
+    ? taskDueOnDay(
+        lead.next_task_due_at,
+        lead.next_task_due_has_time,
+        lead.next_task_due_intent,
+        ctx.record,
+      )
+    : undefined;
   const late = due
     ? daysPast(Date.parse(due), Date.parse(ctx.asOf)).late
     : false;

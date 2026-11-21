@@ -12,6 +12,7 @@ import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { useOpenTasks } from "../../lib/opentasks";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { Partner } from "./partners.vocab";
@@ -30,6 +31,7 @@ export function PartnerNextStep({
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const canFileTask = useCanWrite("activity", "create");
   const tasks = useOpenTasks("company", companyId);
   const taskUpdate = useTaskUpdate(taskWriteKeys("company", companyId));
@@ -53,7 +55,7 @@ export function PartnerNextStep({
           {soonestFirst(tasks.data).map((task) => (
             <OpenTaskRow
               key={task.id}
-              task={openTaskOf(task, asOf, t("task.untitled"))}
+              task={openTaskOf(task, asOf, t("task.untitled"), companyZone)}
               asOf={asOf}
               taskUpdate={taskUpdate}
             />

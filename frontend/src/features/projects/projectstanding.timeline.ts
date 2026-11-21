@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import type { TimelineEventKind } from "../../design-system/standingtimeline";
+import { taskDueOnDay } from "../../format/calendarday";
 import { stable } from "../../format/collate";
 import { lastUpdate } from "./projectstanding";
 
@@ -86,7 +87,7 @@ function paperMoments(view: Project360): ProjectMoment[] {
 
 // The first overdue task and the first one still ahead: the axis shows what
 // slipped and what comes next, not the whole task list.
-function taskMoments(view: Project360): ProjectMoment[] {
+function taskMoments(view: Project360, zone: string): ProjectMoment[] {
   const dated = (view.commitments?.data ?? []).filter((row) => row.due_at);
   const picks = [
     dated.find((row) => row.overdue),
@@ -97,7 +98,12 @@ function taskMoments(view: Project360): ProjectMoment[] {
       ? [
           {
             key: `task-${row.activity_id}`,
-            at: row.due_at,
+            at: taskDueOnDay(
+              row.due_at,
+              row.due_has_time,
+              row.due_intent,
+              zone,
+            ),
             kind: row.overdue ? "late" : "ahead",
             what: "due",
             subject: row.subject,
@@ -108,11 +114,14 @@ function taskMoments(view: Project360): ProjectMoment[] {
 }
 
 /** Every moment the axis draws, in no particular order (the axis sorts). */
-export function projectMoments(view: Project360): ProjectMoment[] {
+export function projectMoments(
+  view: Project360,
+  zone: string,
+): ProjectMoment[] {
   const moments = [
     ...openedMoment(view),
     ...paperMoments(view),
-    ...taskMoments(view),
+    ...taskMoments(view, zone),
   ];
   const last = lastUpdate(view);
   if (last) {

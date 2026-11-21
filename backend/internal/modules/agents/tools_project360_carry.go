@@ -146,7 +146,7 @@ func project360Commitments(rows []crmcontracts.Project360Commitment, asOf time.T
 		taskID := ids.UUID(c.ActivityId)
 		promise := OpenCommitment{
 			Source: CommitmentFromTask, TaskID: &taskID,
-			Subject: c.Subject, DueAt: c.DueAt,
+			Subject: c.Subject, DueAt: c.DueAt, Overdue: &c.Overdue,
 			AssigneeID: (*ids.UUID)(c.AssigneeId), AssigneeName: orBlank(c.AssigneeName),
 		}
 		out = append(out, promise.wire(asOf))

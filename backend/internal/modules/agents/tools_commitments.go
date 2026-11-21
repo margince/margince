@@ -36,6 +36,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -78,6 +79,9 @@ type OpenCommitment struct {
 	// DueHasTime is true when DueAt names a time of day; a claim never does.
 	DueHasTime bool
 	DueIntent  *crmcontracts.IntentTime
+	// Overdue is the task's own lateness under the one due-day rule, set by a
+	// reader that judged it. Nil means judge DueAt as an instant.
+	Overdue *bool
 	// FiledAt is when the promise was made: a task's creation, a claim's
 	// message. It breaks ties between two promises sharing a deadline, so the
 	// answer does not depend on which source a seam happened to read first.
@@ -238,6 +242,12 @@ func requireCommitmentLimit(limit int) error {
 	}
 }
 
+// RankedDue is the instant the promise is judged and ranked at. A task with a
+// chosen date and no time is due at the end of that date in loc.
+func (c OpenCommitment) RankedDue(loc *time.Location) *time.Time {
+	return deadline.TaskDueOn(c.DueAt, c.DueHasTime, storekit.WallClock(c.DueIntent), loc)
+}
+
 // wire turns one swept promise into the item a caller is served, with the
 // state it is in as of the sweep's own instant.
 func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
@@ -247,7 +257,7 @@ func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 		Quote:            c.Quote, Subject: c.Subject, DueAt: c.DueAt,
 		DueHasTime: c.DueHasTime,
 		DueIntent:  c.DueIntent,
-		State:      commitmentState(c.DueAt, asOf),
+		State:      c.state(asOf),
 		// Never null: a model handed null reads it as "unknown" where an empty
 		// array says "this promise names no record".
 		About: c.About,
@@ -261,8 +271,22 @@ func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 	}
 	if days, overdue := daysOverdue(c.DueAt, asOf); overdue {
 		item.DaysOverdue = &days
+	} else if c.late() {
+		// Late by its chosen date while its instant has not passed yet.
+		item.DaysOverdue = new(0)
 	}
 	return item
+}
+
+// late says the reader that built this row judged it overdue by the one task
+// rule, which a chosen date cannot get from its instant.
+func (c OpenCommitment) late() bool { return c.Overdue != nil && *c.Overdue }
+
+func (c OpenCommitment) state(asOf time.Time) string {
+	if c.late() {
+		return commitmentOverdue
+	}
+	return commitmentState(c.DueAt, asOf)
 }
 
 // commitmentState judges one promise against the instant the set was swept at.

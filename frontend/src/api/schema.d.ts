@@ -46506,6 +46506,10 @@ export interface components {
              * @description Due time of the earliest open task linked to this lead; undated tasks follow dated ones.
              */
             readonly next_task_due_at?: string | null;
+            /** @description True when next_task_due_at names a time of day; false when the next task is due on a date with no time. */
+            readonly next_task_due_has_time?: boolean;
+            /** @description The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader. */
+            readonly next_task_due_intent?: components["schemas"]["IntentTime"];
             /** @description The highest-impact factor in the retained current score explanation, for a compact queue reason. */
             readonly score_reason?: string | null;
             /** @description How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from. The `lead_source` list that administered it is deprecated. */
@@ -49855,6 +49859,9 @@ export interface components {
             subject: string;
             /** Format: date-time */
             due_at?: string | null;
+            /** @description True when due_at names a time of day; false when the task is due on a date with no time. */
+            due_has_time?: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
             /**
              * Format: uuid
              * @description Who the task is for. It may differ from the deal's owner.

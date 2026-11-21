@@ -136,3 +136,21 @@ func TestWallDayOffsetFollowsThePickedDate(t *testing.T) {
 		t.Error("text that is not a date must report false")
 	}
 }
+
+func TestTaskDueOnJudgesADateOnlyTaskAtTheEndOfItsChosenDate(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	due := time.Date(2026, 11, 17, 7, 59, 59, 0, time.UTC)
+	got := TaskDueOn(&due, false, "2026-11-16T23:59:59", berlin)
+	if want := time.Date(2026, 11, 16, 23, 59, 59, 0, berlin); !got.Equal(want) {
+		t.Errorf("a date-only task is judged at %v, want %v", got, want)
+	}
+	if TaskDueOn(&due, true, "2026-11-16T22:30", berlin) != &due {
+		t.Error("a timed task keeps its instant")
+	}
+	if TaskDueOn(&due, false, "", berlin) != &due || TaskDueOn(&due, false, "2026-11-16T23:59:59", nil) != &due {
+		t.Error("a task with no chosen clock, or no zone, keeps its instant")
+	}
+}

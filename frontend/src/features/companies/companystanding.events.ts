@@ -10,6 +10,7 @@ import {
   activityHasHappened,
   type OccurredPrecision,
 } from "../../format/activitywhen";
+import { taskDueOnDay } from "../../format/calendarday";
 import { formatMoneyCompact, formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
@@ -180,13 +181,19 @@ function owedAhead(
   // The two the spine always drew: a longer list is the Tasks tab.
   for (const step of (view.next_steps?.data ?? []).slice(0, 2)) {
     if (step.due_at) {
+      const at = taskDueOnDay(
+        step.due_at,
+        step.due_has_time,
+        step.due_intent,
+        words.zone,
+      );
       events.push({
         key: `step-${step.activity_id}`,
-        at: step.due_at,
+        at,
         title: step.subject,
         sub: step.overdue
-          ? `${day(step.due_at)} · ${words.t("co.spine.overdue")}`
-          : day(step.due_at),
+          ? `${day(at)} · ${words.t("co.spine.overdue")}`
+          : day(at),
         kind: step.overdue ? "late" : "ahead",
       });
     }

@@ -49,3 +49,11 @@ func ResolveIntentTime(field string, wire crmcontracts.IntentTime) (time.Time, e
 	}
 	return intent.Resolve()
 }
+
+// WallClock is the text of a chosen clock, or empty when the row has none.
+func WallClock(intent *crmcontracts.IntentTime) string {
+	if intent == nil {
+		return ""
+	}
+	return intent.WallClock
+}

@@ -170,7 +170,7 @@ type sectionOrder string
 
 var (
 	byRecency sectionOrder = "a.occurred_at DESC, a.id DESC"
-	byUrgency sectionOrder = sectionOrder(storekit.TaskDueSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
+	byUrgency sectionOrder = sectionOrder(storekit.TaskDueOrderSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
 )
 
 // byUrgencyHumanFirst is byUrgency with work a colleague filed ahead of work
