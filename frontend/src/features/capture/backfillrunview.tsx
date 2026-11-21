@@ -16,7 +16,7 @@ import type { MessageKey } from "../../i18n/en";
 import { isLiveRun } from "../../lib/backfill-run";
 import { progressFraction } from "../../lib/capture-progress";
 import "../../components/backfill.css";
-import { RunCourseNote } from "./runcoursenote";
+import { RunCourseNote } from "../../components/runcoursenote";
 
 // What a capture run looks like while it runs and once it has stopped. It shows
 // the three headline figures, the state it is in, and the share of the window

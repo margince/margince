@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { RunCourseNote } from "../../components/runcoursenote";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -13,7 +14,6 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isLiveRun } from "../../lib/backfill-run";
 import { errorClassKey } from "../../lib/connector-status";
-import { RunCourseNote } from "../capture/runcoursenote";
 import "./onboarding-backread.css";
 
 // A started import as onboarding draws it: progress, what it found, and how it

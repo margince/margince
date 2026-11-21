@@ -115,6 +115,7 @@ describe("liveCapture", () => {
       estimatedIsFloor: false,
       fraction: 0.42,
       sources: ["ada@acme.test"],
+      course: null,
     });
   });
 
@@ -127,6 +128,7 @@ describe("liveCapture", () => {
       estimatedIsFloor: false,
       fraction: 0,
       sources: ["ada@acme.test"],
+      course: null,
     });
   });
 
@@ -139,6 +141,7 @@ describe("liveCapture", () => {
       estimatedIsFloor: false,
       fraction: null,
       sources: ["ada@acme.test"],
+      course: null,
     });
     // A zero estimate is no denominator either.
     expect(
@@ -175,6 +178,7 @@ describe("liveCapture", () => {
       fraction: 0.2,
       // A mailbox with no label is named by its provider, never dropped.
       sources: ["ada@acme.test", "graph"],
+      course: null,
     });
   });
 
@@ -206,5 +210,28 @@ describe("connectorsPollInterval", () => {
         data: [mailbox({ backfill: run("running", 1, 10) })],
       }),
     ).toBe(2_500);
+  });
+});
+
+describe("liveCapture course", () => {
+  it("carries no note for a run that only went up", () => {
+    const reading = liveCapture([
+      mailbox({ backfill: run("running", 40, 100) }),
+    ]);
+    expect(reading?.course).toBeNull();
+  });
+
+  it("carries the retry note, and the restart note over it across mailboxes", () => {
+    const retried = { ...run("running", 40, 100), retry_attempts: 1 };
+    const restarted = { ...run("running", 0, 100), window_restarts: 1 };
+    expect(liveCapture([mailbox({ backfill: retried })])?.course).toBe(
+      "backfill.retryNote",
+    );
+    expect(
+      liveCapture([
+        mailbox({ backfill: restarted }),
+        mailbox({ id: "x2", backfill: retried }),
+      ])?.course,
+    ).toBe("backfill.restartedNote");
   });
 });

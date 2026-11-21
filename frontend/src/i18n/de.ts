@@ -12726,7 +12726,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "backfill.restartedNote":
     "Der Import hat von vorn begonnen, weil das Postfach seine Position verloren hat. Die Zählung der E-Mails beginnt neu; gefundene Kontakte bleiben erhalten.",
   "backfill.retryNote":
-    "Beim Import ist ein Verbindungsproblem aufgetreten. Er versucht es erneut. Bereits gezählte E-Mails bleiben erhalten.",
+    "Beim Import ist ein Verbindungsproblem aufgetreten. Er versucht es erneut. Die letzte Seite wird neu gelesen, ihre E-Mails werden erneut gezählt.",
   "backfill.countScanned_one": "{count} E-Mail geprüft",
   "backfill.countScanned_other": "{count} E-Mails geprüft",
   "backfill.errorResumeNote":

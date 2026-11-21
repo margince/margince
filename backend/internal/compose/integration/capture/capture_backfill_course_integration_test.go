@@ -11,12 +11,14 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func TestARetriedPageKeepsTheCommittedCountAndSaysItIsRetrying(t *testing.T) {
@@ -95,5 +97,27 @@ func TestARestartedScanIsReportedAsARestartNotAsLostWork(t *testing.T) {
 	}
 	if run.Scanned != 10 || run.WindowRestarts != 1 {
 		t.Errorf("after the new walk's first page scanned = %d, window_restarts = %d, want 10 and the restart still reported", run.Scanned, run.WindowRestarts)
+	}
+}
+
+func TestContinuingAFailedRunKeepsItsRestartCount(t *testing.T) {
+	e := integration.SetupSearch(t)
+	registry, runID := startFlakyBackfill(t, e, []error{nil, connector.ErrCursorGone, nil, connector.ErrAuthRejected})
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	rep := ids.From[ids.UserKind](e.Rep1)
+	for range 4 {
+		// The scripted faults end some of these steps with an error by design.
+		if _, _, _, err := registry.RunBackfillStep(wsCtx, runID); err != nil && !errors.Is(err, connector.ErrCursorGone) && !errors.Is(err, connector.ErrAuthRejected) {
+			t.Fatalf("step: %v", err)
+		}
+	}
+
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	if err != nil {
+		t.Fatalf("StartBackfill: %v", err)
+	}
+	if run.ID != runID || run.WindowRestarts != 1 {
+		t.Errorf("continued run %s has window_restarts = %d, want the same run with its 1 restart kept", run.ID, run.WindowRestarts)
 	}
 }

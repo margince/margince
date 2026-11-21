@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { RunCourseNote } from "../../components/runcoursenote";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Meter } from "../../design-system/readings";
@@ -21,7 +22,6 @@ import {
 } from "../../mail-history/window-picker";
 import { EstimateCard } from "./backfill";
 import { canResume, runReading } from "./backfillrunview";
-import { RunCourseNote } from "./runcoursenote";
 
 // The Past email service of a connected mailbox: the import of mail from before
 // it was connected. A connect asks for a window. A small one starts on its own.
