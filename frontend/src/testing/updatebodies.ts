@@ -56,9 +56,8 @@ function membersOf(node: ts.TypeNode): ts.PropertySignature[] {
   return node.members.filter(ts.isPropertySignature);
 }
 
-// The record types a field-history row can be ABOUT — the contract's own
-// closed enum, so a type added upstream widens this corpus rather than
-// slipping past it.
+// The record types a field-history row can be ABOUT: the contract's own closed enum.
+// A type added upstream widens this corpus instead of slipping past it.
 function recordTypesInHistory(source: ts.SourceFile): string[] {
   const entityType = propertyOf(source, "FieldHistoryEntry", "entity_type");
   const declared = entityType?.type;

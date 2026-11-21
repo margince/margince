@@ -24,8 +24,8 @@ export function useProject360(id: string, enabled = true) {
   });
 }
 
-// A restore from the archived page re-reads the row through its key's prefix,
-// and a restore elsewhere reaches it because the row is a live read.
+// A restore from the archived page re-reads the row through its key's prefix.
+// A restore elsewhere reaches it because the row is a live read.
 function useProjectRow(id: string, enabled: boolean) {
   return useQuery({
     queryKey: projectRowKey(id),

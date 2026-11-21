@@ -352,8 +352,8 @@ function useWidth(
   return width;
 }
 
-// A grid line's words. On a span across New Year, the first line and each one
-// that opens a year name the year against `prior`, so the dates read in order.
+// A grid line's words. On a span across New Year, the first line names its year.
+// So does each line that opens a year against `prior`, so the dates read in order.
 function tickText(
   range: TimelineAxis["range"],
   day: Date,
