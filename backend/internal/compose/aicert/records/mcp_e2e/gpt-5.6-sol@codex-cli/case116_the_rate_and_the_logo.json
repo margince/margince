@@ -12,13 +12,75 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "40988d62fbd40cec",
+    "tools": "e3fa3c95941aa7c6",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "76380376098e0887",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:27:13Z",
+    "graded_commit": "70b67d3880c2c887033752ec1cbc0fdc54db880b",
+    "graded_at": "2026-11-21T22:28:04Z"
+  },
   "usage": {
-    "input_tokens": 62952,
-    "output_tokens": 2887,
+    "input_tokens": 56447,
+    "output_tokens": 2773,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 417024,
+    "cache_read_input_tokens": 408448,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "get_anchor_company",
+        "get_company_logo",
+        "list_fx_rates",
+        "read_details",
+        "read_workspace",
+        "set_fx_rate",
+        "upload_company_logo"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "get_anchor_company",
+        "list_fx_rates",
+        "read_workspace",
+        "set_fx_rate",
+        "upload_company_logo"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 11,
+      "min": 10,
+      "max": 12
+    },
+    "refused": {
+      "median": 3,
+      "min": 2,
+      "max": 4
+    },
+    "prompt_tokens": {
+      "median": 232447.5,
+      "min": 173466,
+      "max": 291429
+    },
+    "output_tokens": {
+      "median": 1386.5,
+      "min": 1119,
+      "max": 1654
+    }
   }
 }

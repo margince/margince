@@ -1,0 +1,79 @@
+{
+  "scenario": "case126_file_it_i_approve",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "d54621aaaf02b31b",
+    "tools": "9f576fc71e66d866",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "76380376098e0887",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T22:00:11Z",
+    "graded_commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "graded_at": "2026-11-21T22:00:11Z"
+  },
+  "usage": {
+    "input_tokens": 73360,
+    "output_tokens": 3494,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 451584,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_activities",
+        "decide_approvals",
+        "find_records",
+        "relink_activity",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_activities",
+        "decide_approvals",
+        "find_records",
+        "relink_activity",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 262472,
+      "min": 221034,
+      "max": 303910
+    },
+    "output_tokens": {
+      "median": 1747,
+      "min": 1630,
+      "max": 1864
+    }
+  }
+}

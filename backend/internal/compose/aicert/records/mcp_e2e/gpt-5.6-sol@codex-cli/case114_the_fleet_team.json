@@ -12,13 +12,77 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "4b8c594793654078",
+    "tools": "b988605438e85e23",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "76380376098e0887",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:25:40Z",
+    "graded_commit": "70b67d3880c2c887033752ec1cbc0fdc54db880b",
+    "graded_at": "2026-11-21T22:28:04Z"
+  },
   "usage": {
-    "input_tokens": 57402,
-    "output_tokens": 3831,
+    "input_tokens": 44228,
+    "output_tokens": 2611,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 431104,
+    "cache_read_input_tokens": 304128,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "add_team_member",
+        "change_access",
+        "create_team",
+        "describe_router_actions",
+        "find_records",
+        "list_colleagues",
+        "read_workspace",
+        "search_records",
+        "share_record"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "add_team_member",
+        "change_access",
+        "create_team",
+        "describe_router_actions",
+        "find_records",
+        "list_colleagues",
+        "read_workspace",
+        "search_records",
+        "share_record"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 11,
+      "min": 11,
+      "max": 11
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 174178,
+      "min": 163692,
+      "max": 184664
+    },
+    "output_tokens": {
+      "median": 1305.5,
+      "min": 1297,
+      "max": 1314
+    }
   }
 }

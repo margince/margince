@@ -12,13 +12,83 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "ad14160c97b2ad8e",
+    "tools": "3e7244bead932e3a",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "76380376098e0887",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T22:12:43Z",
+    "graded_commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "graded_at": "2026-11-21T22:12:43Z"
+  },
   "usage": {
-    "input_tokens": 53483,
-    "output_tokens": 5669,
+    "input_tokens": 106071,
+    "output_tokens": 7290,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 572800,
+    "cache_read_input_tokens": 846080,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "compose_analytics_report",
+        "describe_analytics_vocabulary",
+        "describe_report_vocabulary",
+        "list_pipelines",
+        "list_report_runs",
+        "read_analytics",
+        "read_reporting",
+        "read_reports",
+        "read_workspace",
+        "run_analytics_query",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "compose_analytics_report",
+        "describe_analytics_vocabulary",
+        "describe_report_blocks",
+        "describe_report_vocabulary",
+        "describe_router_actions",
+        "explain_report_run_cell",
+        "get_report_run",
+        "list_pipelines",
+        "list_report_runs",
+        "read_analytics",
+        "read_reports",
+        "read_workspace",
+        "run_analytics_query"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 16,
+      "min": 15,
+      "max": 17
+    },
+    "refused": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "prompt_tokens": {
+      "median": 476075.5,
+      "min": 461401,
+      "max": 490750
+    },
+    "output_tokens": {
+      "median": 3645,
+      "min": 3468,
+      "max": 3822
+    }
   }
 }

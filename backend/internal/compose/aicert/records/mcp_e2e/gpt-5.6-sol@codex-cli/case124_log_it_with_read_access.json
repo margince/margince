@@ -1,0 +1,91 @@
+{
+  "scenario": "case124_log_it_with_read_access",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "5aae5b2a5844fc46",
+    "tools": "a0e54e4e88516d33",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "76380376098e0887",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T21:56:26Z",
+    "graded_commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "graded_at": "2026-11-21T21:56:26Z"
+  },
+  "usage": {
+    "input_tokens": 90474,
+    "output_tokens": 4651,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 978304,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "list_agent_tools",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "read_relationships",
+        "read_workspace",
+        "review_commitments",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "list_agent_tools",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "read_relationships",
+        "read_workspace",
+        "review_commitments",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 17,
+      "min": 10,
+      "max": 24
+    },
+    "refused": {
+      "median": 5,
+      "min": 2,
+      "max": 8
+    },
+    "prompt_tokens": {
+      "median": 534389,
+      "min": 498725,
+      "max": 570053
+    },
+    "output_tokens": {
+      "median": 2325.5,
+      "min": 1603,
+      "max": 3048
+    }
+  }
+}

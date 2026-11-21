@@ -11,13 +11,67 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "728e51c2156938b0",
+    "tools": "65a390166fea5359",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "76380376098e0887",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T21:39:47Z",
+    "graded_commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "graded_at": "2026-11-21T21:39:47Z"
+  },
   "usage": {
-    "input_tokens": 53540,
-    "output_tokens": 1787,
+    "input_tokens": 50191,
+    "output_tokens": 1650,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 285184,
+    "cache_read_input_tokens": 299904,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_company_dossier",
+        "read_details",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_company_dossier",
+        "read_details",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "refused": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 175047.5,
+      "min": 171276,
+      "max": 178819
+    },
+    "output_tokens": {
+      "median": 825,
+      "min": 734,
+      "max": 916
+    }
   }
 }

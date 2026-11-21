@@ -1,0 +1,85 @@
+{
+  "scenario": "case123_take_over_sofias_deal",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "a893ab89a3fd3ef0",
+    "tools": "220941525a2f3975",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "76380376098e0887",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T21:54:01Z",
+    "graded_commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "graded_at": "2026-11-21T21:54:01Z"
+  },
+  "usage": {
+    "input_tokens": 87596,
+    "output_tokens": 5905,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 1001216,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "describe_views",
+        "find_records",
+        "read_record",
+        "read_view",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "describe_views",
+        "find_records",
+        "read_record",
+        "read_view",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 15.5,
+      "min": 12,
+      "max": 19
+    },
+    "refused": {
+      "median": 5,
+      "min": 4,
+      "max": 6
+    },
+    "prompt_tokens": {
+      "median": 544406,
+      "min": 411510,
+      "max": 677302
+    },
+    "output_tokens": {
+      "median": 2952.5,
+      "min": 2622,
+      "max": 3283
+    }
+  }
+}

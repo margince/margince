@@ -12,13 +12,79 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "cb71612989250354",
+    "tools": "1941f6e6445ac369",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "76380376098e0887",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:24:16Z",
+    "graded_commit": "70b67d3880c2c887033752ec1cbc0fdc54db880b",
+    "graded_at": "2026-11-21T22:28:04Z"
+  },
   "usage": {
-    "input_tokens": 75183,
-    "output_tokens": 4259,
+    "input_tokens": 61983,
+    "output_tokens": 2859,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 455808,
+    "cache_read_input_tokens": 294656,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_reports",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "record_forecast_call",
+        "record_sales_decision",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_reports",
+        "describe_router_actions",
+        "find_records",
+        "forecast_readings",
+        "read_context",
+        "read_forecast",
+        "read_workspace",
+        "record_forecast_call",
+        "record_sales_decision",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "refused": {
+      "median": 1,
+      "min": 0,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 178319.5,
+      "min": 172182,
+      "max": 184457
+    },
+    "output_tokens": {
+      "median": 1429.5,
+      "min": 1318,
+      "max": 1541
+    }
   }
 }
