@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -79,6 +80,20 @@ type openPipeline struct {
 	noRateCurrencies *string
 }
 
+// withholdsDealDetail is true for a reader whose deal amount or currency is
+// masked on any row. The counts and the currency list are read over every open
+// deal of the company, so they would name what the mask hides. Such a reader
+// gets the partial flag and nothing more.
+func withholdsDealDetail(ctx context.Context) (bool, error) {
+	for _, field := range []string{"amount_minor", "currency"} {
+		masked, err := auth.MasksAnyRowOf(ctx, "deal", field)
+		if err != nil || masked {
+			return true, err
+		}
+	}
+	return false, nil
+}
+
 // openPipelineRollup reads the company_open_pipeline_rollup view
 // (0065) for one company, inside the SAME workspace transaction the
 // caller (GetCompany) already opened. The view is
@@ -116,6 +131,15 @@ func openPipelineRollup(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 		 JOIN company_open_pipeline_gaps(`+occurredday.TodaySQL("$2::timestamptz")+`) g USING (company_id)
 		 WHERE company_id = $1`,
 		companyID, asOf).Scan(&roll.minorBase, &roll.dealCount, &roll.pricedCount, &roll.noValue, &roll.noRate, &roll.noRateCurrencies)
+	if err == nil {
+		withheld, maskErr := withholdsDealDetail(ctx)
+		if maskErr != nil {
+			return openPipeline{}, maskErr
+		}
+		if withheld {
+			roll.noValue, roll.noRate, roll.noRateCurrencies = 0, 0, nil
+		}
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Scan never ran, so roll is still its zero value — return it, not
 		// literal zeroes: the honest "nothing to sum" case above, not a

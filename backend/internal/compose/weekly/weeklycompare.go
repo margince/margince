@@ -174,12 +174,18 @@ func openedInWeek(
 	if err != nil {
 		return nil, err
 	}
+	// The currency is masked like the amount: a masked currency is never
+	// listed as one with no rate.
+	currencySQL, err := auth.MaskedColumnSQL(ctx, "deal", "currency", "d", "currency", arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT %[5]s, d.currency FROM deal d
+		SELECT %[5]s, %[6]s FROM deal d
 		 WHERE d.owner_id = $%[3]d AND d.archived_at IS NULL
 		   AND d.created_at >= $%[1]d AND d.created_at < $%[2]d
-		   AND %[5]s IS NOT NULL AND d.currency IS NOT NULL
-		   AND (%[4]s)`, startPos, endPos, userPos, scope, amountSQL), args...)
+		   AND %[5]s IS NOT NULL AND %[6]s IS NOT NULL
+		   AND (%[4]s)`, startPos, endPos, userPos, scope, amountSQL, currencySQL), args...)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: reading the week's new deals: %w", err)
 	}

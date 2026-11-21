@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -136,5 +137,43 @@ func TestTheHierarchyWonCoverageNamesNoCurrencyOfAMaskedDeal(t *testing.T) {
 	c := read().ClosedWonCoverage
 	if len(c.MissingCurrencies) != 0 || c.NoRateDeals != 0 {
 		t.Errorf("coverage = %+v names the currency of a deal whose amount this reader cannot see", c)
+	}
+}
+
+// A reader whose deal currency is masked learns no currency and no count from
+// the company's open pipeline coverage. The figure still says it is partial.
+func TestACompanyOpenPipelineNamesNothingToAReaderWhoseCurrencyIsMasked(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	company := e.SeedCompany(t, "Masked Pipeline", &e.Rep1)
+	companyID := ids.From[ids.CompanyKind](company)
+	for _, deal := range []partialSumDeal{{10_000, "EUR"}, {5_000, "JPY"}} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Deal", AmountMinor: &deal.amount, Currency: &deal.currency,
+			PipelineID: pipeline, StageID: open, CompanyID: &companyID, Source: "manual",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read := func(masks []principal.FieldMask) crmcontracts.ComputedField {
+		t.Helper()
+		reader := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"company": {Read: true}, "deal": {Read: true}, "computed_field": {Read: true}, "installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeOwn, FieldMasks: masks,
+		})
+		got, err := e.Contacts.GetCompany(reader, companyID, storekit.IncludeArchived)
+		if err != nil || got.ComputedFields == nil {
+			t.Fatalf("reading the company: %+v, %v", got.ComputedFields, err)
+		}
+		return computedFieldByKey(*got.ComputedFields, "open_pipeline")
+	}
+	if c := read(nil).Coverage; c == nil || !c.Partial || c.NoRateDeals != 1 || len(c.MissingCurrencies) != 1 || c.MissingCurrencies[0] != "JPY" {
+		t.Fatalf("an unmasked reader's coverage = %+v, want one deal with no rate in JPY", c)
+	}
+	masked := read([]principal.FieldMask{{Object: "deal", Field: "currency", Condition: principal.MaskAlways}}).Coverage
+	if masked == nil || !masked.Partial || masked.NoRateDeals != 0 || masked.NoValueDeals != 0 || len(masked.MissingCurrencies) != 0 {
+		t.Errorf("a masked reader's coverage = %+v, want partial and no count or currency", masked)
 	}
 }

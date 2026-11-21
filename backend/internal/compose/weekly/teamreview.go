@@ -294,7 +294,7 @@ func gatherTeamWeek(
 		if memberMoney.Assessed {
 			money.NoValueDeals += memberMoney.NoValueDeals
 			money.NoRateDeals += memberMoney.NoRateDeals
-			for _, code := range strings.Split(memberMoney.MissingCurrencies, ",") {
+			for code := range strings.SplitSeq(memberMoney.MissingCurrencies, ",") {
 				if code != "" {
 					missing[code] = true
 				}
