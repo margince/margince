@@ -7,7 +7,7 @@ import type { components } from "../../api/schema";
 import { throwProblem } from "../../lib/problem";
 import { signInShowsRefusal } from "../../lib/session.read";
 
-export async function loadWizardState(): Promise<
+async function loadWizardState(): Promise<
   components["schemas"]["OnboardingState"] | null
 > {
   const { data, error, response } = await api.GET("/onboarding/state");

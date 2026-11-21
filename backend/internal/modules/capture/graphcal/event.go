@@ -15,6 +15,7 @@ package graphcal
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -261,4 +262,31 @@ func RecordOf(raw []byte, owner string) (connector.NormalizedRecord, error) {
 		return connector.NormalizedRecord{}, err
 	}
 	return records[0], nil
+}
+
+// OwnCalendar is the address of the calendar a stored event was read from, or
+// "" when the event proves none. Graph marks no entry as the calendar's own.
+// An organizer's copy says so, and its organizer is that calendar. A guest's
+// copy proves its calendar only when it lists one connected address.
+func OwnCalendar(raw []byte, connected []string) (string, error) {
+	var ev rawEvent
+	if err := json.Unmarshal(raw, &ev); err != nil {
+		return "", fmt.Errorf("graphcal: parsing calendar event: %w", err)
+	}
+	fold := func(address string) string { return strings.ToLower(strings.TrimSpace(address)) }
+	if ev.IsOrganizer {
+		return fold(ev.Organizer.EmailAddress.Address), nil
+	}
+	listed := ""
+	for _, guest := range ev.Attendees {
+		address := fold(guest.EmailAddress.Address)
+		if address == "" || address == listed || !slices.ContainsFunc(connected, func(c string) bool { return fold(c) == address }) {
+			continue
+		}
+		if listed != "" {
+			return "", nil
+		}
+		listed = address
+	}
+	return listed, nil
 }

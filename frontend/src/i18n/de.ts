@@ -2908,6 +2908,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "shell.railAria": "Hauptnavigation",
   "shell.skipToContent": "Zum Inhalt springen",
+  "shell.pageLoading": "{page}: wird geladen…",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
@@ -11266,7 +11267,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.capture_confidentiality_verdict":
     "Vertraulichkeitsprüfung von E-Mails",
   "jobs.kind.capture_counterparty_verdict": "Prüfung der Absendeadressen",
-  "jobs.kind.capture_digest": "Morgendliche E-Mail-Zusammenfassung",
   "jobs.kind.capture_enrich": "Kontaktdaten aus Signaturen",
   "jobs.kind.captured_deal_refile": "Erfasste Aktivitäten zu Deals zuordnen",
   "jobs.kind.captured_deal_refile_sweep":
@@ -15135,7 +15135,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.scopeAriaMixed":
     "Einstellungen auf dieser Seite betreffen unterschiedliche Personen. Jede Einstellung nennt, wen sie betrifft.",
   "settings.readOnlyPageTitle": "Schreibgeschützte Einstellungen",
-  "settings.pageLoading": "{page} wird geladen…",
   "settings.readOnlyPage": "Deine Rolle darf diese Einstellungen nicht ändern.",
   "settings.seatRefused":
     "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",

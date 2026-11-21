@@ -15253,6 +15253,7 @@ export interface paths {
         };
         /**
          * The calling user's morning digest — what capture did overnight.
+         * @deprecated
          * @description Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
          *     review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
          *     the connector health strip. `404 no_digest_yet` before the first nightly run — the
@@ -89107,10 +89108,7 @@ export interface operations {
     };
     getMorningDigest: {
         parameters: {
-            query?: {
-                /** @description A specific digest day; default: the latest generated. */
-                date?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
