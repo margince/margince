@@ -16,11 +16,11 @@
     "tools": "1a12fa8ab3926d3b",
     "instructions": "c5c644eee9719be0",
     "judge": "",
-    "harness": "ae187a3b5da6dda2",
+    "harness": "024566e70b0c3db3",
     "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
     "ran_at": "2026-11-21T19:07:58Z",
-    "graded_commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
-    "graded_at": "2026-11-21T22:43:13Z"
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:28Z"
   },
   "usage": {
     "input_tokens": 52430,

@@ -12,52 +12,51 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "728e51c2156938b0",
+    "scenario": "6d19527b1b74a315",
     "tools": "65a390166fea5359",
     "instructions": "c5c644eee9719be0",
     "judge": "",
-    "harness": "ae187a3b5da6dda2",
-    "commit": "7696013c3ccfe98088de10eea2a7682d01573fd9",
-    "ran_at": "2026-11-21T19:52:30Z",
-    "graded_commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
-    "graded_at": "2026-11-21T22:40:32Z"
+    "harness": "024566e70b0c3db3",
+    "commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "ran_at": "2026-11-21T23:35:10Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:35:10Z"
   },
   "usage": {
-    "input_tokens": 75802,
-    "output_tokens": 10240,
+    "input_tokens": 72042,
+    "output_tokens": 9744,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 148491,
+    "cache_read_input_tokens": 116624,
     "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
   },
   "tools_by_run": [
     {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_company_dossier",
+        "read_details",
+        "search_records"
+      ]
+    },
+    {
       "passed": false,
       "tools": [
         "find_records",
         "get_company_dossier",
+        "read_details",
+        "read_record",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_company_dossier",
         "list_weekly_reviews",
-        "read_details",
-        "search_records",
-        "whoami"
-      ]
-    },
-    {
-      "passed": true,
-      "tools": [
-        "find_records",
-        "get_company_dossier",
-        "read_details",
-        "search_records",
-        "whoami"
-      ]
-    },
-    {
-      "passed": true,
-      "tools": [
-        "find_records",
-        "get_company_dossier",
         "read_details",
         "search_records",
         "whoami"
@@ -67,29 +66,29 @@
   "efficiency": {
     "runs": 3,
     "calls": {
-      "median": 4,
-      "min": 4,
+      "median": 5,
+      "min": 3,
       "max": 5
     },
     "turns": {
-      "median": 5,
+      "median": 4,
       "min": 4,
-      "max": 5
+      "max": 4
     },
     "refused": {
       "median": 1,
       "min": 1,
-      "max": 1
+      "max": 2
     },
     "prompt_tokens": {
-      "median": 78737,
-      "min": 58344,
-      "max": 87212
+      "median": 63485,
+      "min": 61273,
+      "max": 63908
     },
     "output_tokens": {
-      "median": 3317,
-      "min": 3154,
-      "max": 3769
+      "median": 3256,
+      "min": 2940,
+      "max": 3548
     }
   }
 }
