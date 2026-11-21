@@ -35,7 +35,6 @@ type captureFact struct {
 // captureFacts are the tables behind what a capture transaction remembers. The
 // own company's domains change only in company_domain: archiving a company
 // archives its domains in the same function, and no code moves is_anchor.
-// gatekit:fixture the tables and columns storekit.CaptureFactsMemo stands for.
 var captureFacts = []captureFact{
 	{table: "capture_freemail_domain"},
 	{table: "capture_owner_identity"},
@@ -45,7 +44,7 @@ var captureFacts = []captureFact{
 	{table: "app_user", columns: []string{"email", "status", "archived_at", "removed_at"}},
 }
 
-var captureFactsChanged = regexp.MustCompile(`\bCaptureFactsChanged(By)?\(`)
+var captureFactsChanged = regexp.MustCompile(`\b(CaptureFactsChanged(By)?|OwnCompanyDomainsChanged)\(`)
 
 var (
 	sqlLiteralEnd = regexp.MustCompile("[`\"]")
@@ -102,7 +101,7 @@ func TestEveryWriterOfACaptureFactSaysItChanged(t *testing.T) {
 // the integration lane is test support: it seeds a database no capture reads yet.
 func judgeCaptureFactWriters(t *testing.T, path string, writers map[string]int) []string {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}

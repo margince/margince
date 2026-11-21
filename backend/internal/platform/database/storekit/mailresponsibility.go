@@ -12,7 +12,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -159,7 +158,7 @@ func readMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity,
 	if snapshot, ok := ctx.Value(mailSeatSnapshotKey{}).(mailSeatSnapshot); ok && snapshot.tx == tx && snapshot.actorID == actor.ID {
 		return snapshot.records, nil
 	}
-	return database.Remember(tx, mailSeatIdentitiesMemo, func() ([]mailSeatIdentity, error) { return queryMailSeatIdentities(ctx, tx) })
+	return RememberCaptureFact(ctx, tx, mailSeatIdentitiesMemo, func() ([]mailSeatIdentity, error) { return queryMailSeatIdentities(ctx, tx) })
 }
 
 const mailSeatIdentitiesMemo = CaptureFactsMemo + "mail_seat_identities"

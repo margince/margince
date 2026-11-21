@@ -156,7 +156,7 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 		sourceID.UUID, targetID.UUID); err != nil {
 		return false, fmt.Errorf("relink domains: %w", err)
 	}
-	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+	if err := storekit.OwnCompanyDomainsChanged(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
 		return false, err
 	}
 	if err := relinkCompanyEdges(ctx, tx, sourceID, targetID); err != nil {

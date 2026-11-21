@@ -189,3 +189,4 @@
 1795229160_a_legal_entity_states_its_jurisdiction_apart_from_its_address.up.sql | *, legal_entity | replaces the two text-bound triggers, which act on later writes only; legal_entity holds one row per further legal entity an administrator described by hand, a handful per installation, each given one column copied from its own country
 1795229160_a_legal_entity_states_its_jurisdiction_apart_from_its_address.down.sql | * | drops the column and the check this migration added and restores the two text-bound triggers; no existing row is changed
 1795229161_the_legal_entity_jurisdiction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795240939_capture_knows_when_a_fact_it_judges_mail_by_moved.up.sql | * | the procedural body grants USAGE on the new sequence to the app role when that role exists; the migration changes no existing row

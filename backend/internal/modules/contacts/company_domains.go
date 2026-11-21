@@ -202,7 +202,7 @@ func insertCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 			}
 			return fmt.Errorf("insert company domain: %w", err)
 		}
-		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+		if err := storekit.OwnCompanyDomainsChanged(ctx, tx, companyID.UUID); err != nil {
 			return err
 		}
 		if err := fileNameDomainTwins(ctx, tx, companyID, normalizeDomain(d.Domain), source, by); err != nil {
@@ -428,7 +428,10 @@ func archiveRemovedDomains(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		if err != nil {
 			return fmt.Errorf("archive removed domain: %w", err)
 		}
-		if err := storekit.CaptureFactsChangedBy(ctx, tx, archived); err != nil {
+		if archived.RowsAffected() == 0 {
+			continue
+		}
+		if err := storekit.OwnCompanyDomainsChanged(ctx, tx, companyID.UUID); err != nil {
 			return err
 		}
 	}

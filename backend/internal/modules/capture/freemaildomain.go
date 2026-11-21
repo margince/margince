@@ -306,14 +306,14 @@ func freemailEntryAuthor(ctx context.Context) *ids.UUID {
 // index, so the read costs less than the correspondence check already run for
 // every captured message.
 //
-// One message asks it about ten times in one transaction, so the transaction
-// remembers the answer; an admin's edit lands in its own transaction.
+// One message asks it about ten times. An import run keeps the answer while the
+// capture facts version stands, and an admin's edit moves the version.
 func MatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
-	return database.Remember(tx, freemailMemo, func() (*freemail.Matcher, error) { return readMatcherTx(ctx, tx) })
+	return storekit.RememberCaptureFact(ctx, tx, freemailMemo, func() (*freemail.Matcher, error) { return readMatcherTx(ctx, tx) })
 }
 
 // freemailMemo keys the matcher in a transaction's memo. Every writer of the
-// list forgets it (TestEveryWriterOfAMemoizedReadForgetsIt).
+// list forgets it (gates/capturefactwriters_test.go).
 const freemailMemo = storekit.CaptureFactsMemo + "freemail"
 
 func readMatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {

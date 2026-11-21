@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -117,11 +118,12 @@ func (r *Registry) syncCredential(runCtx context.Context, credentialRef *string,
 }
 
 // mailboxRunKey marks a context the registry built for one mailbox sync, page or
-// push. Its writes ask CaptureRefusal again inside their own transaction.
+// push. Its writes ask CaptureRefusal again inside their own transaction, and
+// its transactions share one copy of the workspace facts mail is judged by.
 type mailboxRunKey struct{}
 
 func asMailboxRun(ctx context.Context) context.Context {
-	return context.WithValue(ctx, mailboxRunKey{}, true)
+	return storekit.WithCaptureFactsRun(context.WithValue(ctx, mailboxRunKey{}, true))
 }
 
 type mailboxConnectionKey struct{}
@@ -177,14 +179,21 @@ func (s *Sink) mailboxRunAllowedTx(ctx context.Context, tx pgx.Tx) (context.Cont
 	// An archived mailbox births held mail without provider keys. The lock still
 	// excludes writes from a different account generation.
 	if connection, bound := ctx.Value(mailboxConnectionKey{}).(mailboxConnection); bound {
+		// The facts version rides on the lock, so checking the run's facts
+		// costs this transaction no round trip of its own.
 		var generation int
-		err := tx.QueryRow(ctx, `SELECT generation FROM capture_connection
+		var facts int64
+		var settled bool
+		err := tx.QueryRow(ctx, `SELECT generation, `+storekit.CaptureFactsVersionSQL+` FROM capture_connection
  WHERE id=@id AND generation=@account_generation FOR SHARE`,
-			pgx.NamedArgs{"id": connection.ID, "account_generation": connection.Generation}).Scan(&generation)
+			pgx.NamedArgs{"id": connection.ID, "account_generation": connection.Generation}).Scan(&generation, &facts, &settled)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ctx, apperrors.ErrPermissionDenied
 		}
 		if err != nil {
+			return ctx, err
+		}
+		if err := storekit.NoteCaptureFactsVersion(tx, facts, settled); err != nil {
 			return ctx, err
 		}
 	}

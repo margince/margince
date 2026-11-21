@@ -24,7 +24,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -305,7 +304,7 @@ func holdingVerdict(status string) bool {
 // establish is the last one to publish on a guess.
 func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
 	if shared, ok := sharedMailboxOf(ctx); ok {
-		return database.Remember(tx, mailboxPostureMemo+shared.String(), func() (string, error) {
+		return storekit.RememberCaptureFact(ctx, tx, mailboxPostureMemo+shared.String(), func() (string, error) {
 			return connectionPostureTx(ctx, tx, sharedConnection(shared))
 		})
 	}
@@ -319,7 +318,7 @@ func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
 		// posture from.
 		return PostureHeld, nil
 	}
-	return database.Remember(tx, mailboxPostureMemo+actor.UserID.String()+":"+provider, func() (string, error) {
+	return storekit.RememberCaptureFact(ctx, tx, mailboxPostureMemo+actor.UserID.String()+":"+provider, func() (string, error) {
 		return mailboxPostureForTx(ctx, tx, actor.UserID, provider)
 	})
 }

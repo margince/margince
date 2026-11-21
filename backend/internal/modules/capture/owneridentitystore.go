@@ -289,12 +289,12 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	}
 	// A message asks this about eight times in one transaction; the
 	// transaction remembers it, and every writer of what it reads forgets it.
-	return database.Remember(tx, ownerIdentitiesMemo+user.String(), func() (SelfSet, error) { return readOwnerIdentitiesTx(ctx, tx, user) })
+	return storekit.RememberCaptureFact(ctx, tx, ownerIdentitiesMemo+user.String(), func() (SelfSet, error) { return readOwnerIdentitiesTx(ctx, tx, user) })
 }
 
 // ownerIdentitiesMemo prefixes a seat's identities in a transaction's memo.
 // Every writer of an owner identity or a connection label forgets it
-// (TestEveryWriterOfAMemoizedReadForgetsIt).
+// (gates/capturefactwriters_test.go).
 const ownerIdentitiesMemo = storekit.CaptureFactsMemo + "owner_identities:"
 
 func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfSet, error) {

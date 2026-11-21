@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -84,7 +83,7 @@ const anchorDomains = auth.OwnCompanyDomainsSQL
 // decisions that only affect whether a COLLEAGUE becomes a contact; getting
 // that wrong costs a junk record, which a human can see and undo.
 func ownDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
-	return database.Remember(tx, ownDomainsMemo+"candidates", func() (InternalDomains, error) {
+	return storekit.RememberCaptureFact(ctx, tx, ownDomainsMemo+"candidates", func() (InternalDomains, error) {
 		return queryDomains(ctx, tx, `SELECT domain FROM workspace_email_domain UNION `+anchorDomains)
 	})
 }
@@ -103,13 +102,13 @@ const ownDomainsMemo = storekit.CaptureFactsMemo + "own_domains:"
 // genuine account at a customer's company would otherwise suppress that
 // customer's correspondence workspace-wide.
 //
-// Asked fresh in every transaction rather than stamped on the row when the
-// mailbox was seen. A company that corrects a mistyped domain, or changes it,
-// stops suppressing the old one immediately — a cached answer would go on
-// hiding mail for a domain nobody claims any more, and nothing would ever
-// revoke it. Inside one transaction every writer of the set forgets it.
+// Never stamped on the row when the mailbox was seen. A company that corrects a
+// mistyped domain, or changes it, stops suppressing the old one at once. A
+// stamped answer would go on hiding mail for a domain nobody claims any more,
+// and nothing would ever revoke it. An import run keeps the set only while the
+// capture facts version stands, and every writer of the set moves it.
 func TrustedOwnDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
-	return database.Remember(tx, ownDomainsMemo+"trusted", func() (InternalDomains, error) {
+	return storekit.RememberCaptureFact(ctx, tx, ownDomainsMemo+"trusted", func() (InternalDomains, error) {
 		return queryDomains(ctx, tx, auth.TrustedOwnDomainsSQL)
 	})
 }

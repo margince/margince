@@ -438,10 +438,7 @@ func seedDomainOfAddressTx(ctx context.Context, tx pgx.Tx, address string) error
 	if err != nil {
 		return fmt.Errorf("capture: seeding workspace email domain: %w", err)
 	}
-	if seeded.RowsAffected() == 0 {
-		return nil
-	}
-	return storekit.CaptureFactsChanged(ctx, tx)
+	return storekit.CaptureFactsChangedBy(ctx, tx, seeded)
 }
 
 // resolveCredential turns a stored connection's credential into the opaque

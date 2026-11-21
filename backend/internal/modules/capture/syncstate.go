@@ -278,13 +278,7 @@ func (r *Registry) recordSyncFailure(ctx context.Context, snapshot syncSnapshot,
 			// The connection needs its human, not a retry: park it. The
 			// due-scan only selects connected/error, so no next_sync_at
 			// gymnastics are needed.
-			parked, err := tx.Exec(ctx, `
-				UPDATE capture_connection SET status = 'reauth_required'
-				WHERE id = $1 AND status IN ('connected','error') AND archived_at IS NULL`, connectionID)
-			if err != nil {
-				return err
-			}
-			if err := storekit.CaptureFactsChangedBy(ctx, tx, parked); err != nil {
+			if err := parkForReauthTx(ctx, tx, connectionID); err != nil {
 				return err
 			}
 		case classRateLimited:
@@ -307,13 +301,7 @@ func (r *Registry) recordSyncFailure(ctx context.Context, snapshot syncSnapshot,
 			// Degraded, probed daily — never a tombstone. One success in the
 			// daily probe flips the status back (recordSyncSuccess).
 			delay = errProbeInterval
-			degraded, err := tx.Exec(ctx, `
-				UPDATE capture_connection SET status = 'error'
-				WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`, connectionID)
-			if err != nil {
-				return err
-			}
-			if err := storekit.CaptureFactsChangedBy(ctx, tx, degraded); err != nil {
+			if err := degradeConnectionTx(ctx, tx, connectionID); err != nil {
 				return err
 			}
 		}
@@ -358,6 +346,29 @@ func logSyncFailureTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, cla
 		"detail":           syncErr.Error(),
 	})
 	return err
+}
+
+// parkForReauthTx parks a connection whose credential the provider refused
+// until its human connects it again.
+func parkForReauthTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+	parked, err := tx.Exec(ctx, `
+		UPDATE capture_connection SET status = 'reauth_required'
+		WHERE id = $1 AND status IN ('connected','error') AND archived_at IS NULL`, connectionID)
+	if err != nil {
+		return err
+	}
+	return storekit.CaptureFactsChangedBy(ctx, tx, parked)
+}
+
+// degradeConnectionTx marks a connection that keeps failing as errored.
+func degradeConnectionTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+	degraded, err := tx.Exec(ctx, `
+		UPDATE capture_connection SET status = 'error'
+		WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`, connectionID)
+	if err != nil {
+		return err
+	}
+	return storekit.CaptureFactsChangedBy(ctx, tx, degraded)
 }
 
 // parkForbiddenTx marks a connection whose member may no longer capture as

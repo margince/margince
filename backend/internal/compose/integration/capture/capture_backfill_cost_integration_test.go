@@ -93,8 +93,8 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 // It includes one statement per filed message that names the linked contact as
 // the sender when the stated address proves them (stampProvenSenders).
 const (
-	historyExchangesPerMessage    = 172
-	historyTransactionsPerMessage = 6.15
+	historyExchangesPerMessage    = 165
+	historyTransactionsPerMessage = 5.15
 )
 
 func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
