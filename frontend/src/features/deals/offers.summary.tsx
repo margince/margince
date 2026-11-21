@@ -36,7 +36,8 @@ function useOfferTemplate(offer: Offer) {
   const draft = isOpenDraft(offer);
   const scope = useHealthScope();
   const list = useOfferTemplates(draft && id != null);
-  const listed = list.data?.find((each) => each.id === id);
+  // A list cached earlier can hold an older name, so only a draft reads it.
+  const listed = draft ? list.data?.find((each) => each.id === id) : undefined;
   const byId = useQuery({
     queryKey: ["offer-template", id, scope ?? ""],
     enabled:

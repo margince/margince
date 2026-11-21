@@ -16,11 +16,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderHeader(shown: Offer) {
+function renderHeader(shown: Offer, client = testClient()) {
   const paths: string[] = [];
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -51,6 +48,10 @@ function renderHeader(shown: Offer) {
     </QueryClientProvider>,
   );
   return { paths, client };
+}
+
+function testClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
 it("names the offer's template", async () => {
@@ -102,4 +103,17 @@ it("names a draft's template by its id when the list does not hold it", async ()
   const { paths } = renderHeader(offer({ template_id: "tpl-old" }));
   expect(await screen.findByText("Retired terms")).toBeInTheDocument();
   expect(paths.filter((p) => p.includes("/offer-templates"))).toHaveLength(2);
+});
+
+// A list read earlier in the session can hold a name changed since.
+it("names a sent offer's template as its own read gives it, not as a cached list does", async () => {
+  const client = testClient();
+  const scope = JSON.stringify(["u1", undefined, {}]);
+  client.setQueryData(
+    ["offer-templates-all", scope],
+    [{ id: "tpl-old", name: "Terms as they were" }],
+  );
+  renderHeader(offer({ status: "sent", template_id: "tpl-old" }), client);
+  expect(await screen.findByText("Retired terms")).toBeInTheDocument();
+  expect(screen.queryByText("Terms as they were")).toBeNull();
 });
