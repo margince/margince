@@ -47,6 +47,10 @@ coverage-extensions.out
 # lockfile are what ship; node_modules is what pnpm makes from them, and it is
 # per-member now that a unit's frontend layer is a workspace package.
 /extensions/*/frontend/node_modules/
+# The e2e-llm Agent SDK runner's install. It keeps no lockfile, so the source
+# SBOM never lists the Agent SDK, which never ships.
+/e2e/llm/sdk-runner/node_modules/
+/e2e/llm/sdk-runner/package-lock.json
 
 # Compiled cmd binaries left in the module dir by `go build ./cmd/<role>`
 # (anchored so they never match the cmd/<role> source directories; the api
