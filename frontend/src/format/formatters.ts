@@ -3,6 +3,7 @@
 
 import type { Locale } from "../i18n";
 import { INTL_LOCALE } from "./intllocale";
+import { browserZone } from "./timezone";
 
 // The one place this tree builds an Intl formatter. Building one costs far
 // more than one format() call, and a list page asks the same question per row.
@@ -52,26 +53,23 @@ export function numberFormat(
   );
 }
 
-// A formatter built without a zone keeps the browser zone it was built in,
-// so a cached one would miss a later change of zone. Refused here.
-function requireZone(options: ZonedDateTimeOptions): void {
-  // RangeError, as Intl throws for a zone it cannot use.
-  if (typeof options.timeZone !== "string" || options.timeZone === "") {
-    throw new RangeError(
-      "a cached date formatter needs a timeZone; use zonelessDateTimeFormat",
-    );
-  }
+// A value that names no zone means the browser's, read again on each call so
+// the key holds the zone in use. A zone Intl rejects still throws.
+function withZone(options: ZonedDateTimeOptions): ZonedDateTimeOptions {
+  return typeof options.timeZone === "string"
+    ? options
+    : { ...options, timeZone: browserZone() };
 }
 
 export function dateTimeFormat(
   locale: Locale,
   options: ZonedDateTimeOptions,
 ): Intl.DateTimeFormat {
-  requireZone(options);
+  const zoned = withZone(options);
   return remember(
     dates,
-    keyOf("date", locale, options),
-    () => new Intl.DateTimeFormat(INTL_LOCALE[locale], options),
+    keyOf("date", locale, zoned),
+    () => new Intl.DateTimeFormat(INTL_LOCALE[locale], zoned),
   );
 }
 
@@ -83,11 +81,11 @@ export function pinnedDateTimeFormat(
   tag: "en-CA" | "en-US",
   options: ZonedDateTimeOptions,
 ): Intl.DateTimeFormat {
-  requireZone(options);
+  const zoned = withZone(options);
   return remember(
     dates,
-    keyOf("pinned-date", tag, options),
-    () => new Intl.DateTimeFormat(tag, options),
+    keyOf("pinned-date", tag, zoned),
+    () => new Intl.DateTimeFormat(tag, zoned),
   );
 }
 

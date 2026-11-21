@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pretendReaderZone } from "../testing/readerzone.testkit";
 import { formatDate, formatMoney, formatTimeOfDay } from "./format";
 import {
   dateTimeFormat,
@@ -143,11 +144,23 @@ describe("the formatter cache", () => {
     );
   });
 
-  it("refuses to cache a date formatter that names no zone", () => {
-    // @ts-expect-error the type requires a zone; this proves the runtime does too.
-    expect(() => dateTimeFormat("en", { day: "numeric" })).toThrow(RangeError);
+  it("formats a missing zone in the browser's zone, as before the cache", () => {
+    // 00:30 on the 16th in Auckland, 05:30 on the 15th in Los Angeles.
+    const instant = "2026-06-15T12:30:00Z";
+    pretendReaderZone("Pacific/Auckland");
+    // @ts-expect-error a wire field the schema requires can still be absent.
+    expect(formatDate(instant, "en", undefined)).toBe("16/06/2026");
+    pretendReaderZone("America/Los_Angeles");
+    // @ts-expect-error as above, after the browser's zone changed.
+    expect(formatDate(instant, "en", undefined)).toBe("15/06/2026");
+  });
+
+  it("still throws for a zone Intl rejects", () => {
     expect(() =>
       dateTimeFormat("en", { day: "numeric", timeZone: "" }),
+    ).toThrow(RangeError);
+    expect(() =>
+      dateTimeFormat("en", { day: "numeric", timeZone: "Mars/Olympus" }),
     ).toThrow(RangeError);
   });
 
