@@ -180,8 +180,12 @@ type settledThread struct {
 
 func (e *loadEnv) settledThread(t *testing.T) settledThread {
 	t.Helper()
-	s := settledThread{key: "thread-" + ids.NewV7().String(), buyer: "buyer-" + ids.NewV7().String() + "@customer.test",
-		sender: ids.NewV7(), now: clocktest.Now(t)}
+	s := settledThread{
+		key:    "thread-" + ids.NewV7().String(),
+		buyer:  "buyer-" + ids.NewV7().String() + "@customer.test",
+		sender: ids.NewV7(),
+		now:    clocktest.Now(t),
+	}
 	s.answered = e.mailAt(t, s.key, "inbound", s.buyer, s.now.Add(-6*time.Hour))
 	s.reply = e.mailAt(t, s.key, "outbound", s.buyer, s.now.Add(-5*time.Hour))
 	s.later = e.mailAt(t, s.key, "inbound", s.buyer, s.now.Add(-2*time.Hour))

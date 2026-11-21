@@ -74,7 +74,7 @@ func CalendarMethodCandidatesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, 
 		   AND a.id > @after
 		 ORDER BY a.id
 		 LIMIT @batch_limit
-		   FOR UPDATE OF a`, pgx.NamedArgs{"after": after, "batch_limit": limit})
+		   FOR UPDATE OF a`, pgx.NamedArgs{repairAfterArg: after, "batch_limit": limit})
 	if err != nil {
 		return nil, fmt.Errorf("activities: selecting mail whose calendar method can be re-read: %w", err)
 	}

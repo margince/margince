@@ -56,6 +56,8 @@ func Bind(ctx context.Context, db *database.DB, blob blobstore.Store) context.Co
 
 // Objects is the object store Bind put on ctx. A background reader restores a
 // slimmed original's moved parts from it.
+//
+//nolint:ireturn // the store has several providers behind one interface, and this only hands back what Bind was given.
 func Objects(ctx context.Context) (blobstore.Store, error) {
 	s, err := serviceOf(ctx)
 	if err != nil {
