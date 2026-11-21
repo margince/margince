@@ -26,8 +26,14 @@ const (
 // signedMail seeds a contact and one open mail they wrote, and answers both.
 func (e *dedupeEnv) signedMail(ctx context.Context, t *testing.T, name string) (ids.ContactID, ids.UUID) {
 	t.Helper()
+	return e.signedMailAt(ctx, t, name, nil)
+}
+
+// signedMailAt is signedMail for a contact created with an address.
+func (e *dedupeEnv) signedMailAt(ctx context.Context, t *testing.T, name string, address *crmcontracts.Address) (ids.ContactID, ids.UUID) {
+	t.Helper()
 	contact, err := e.store.CreateContact(ctx, CreateContactInput{
-		FullName: name, Source: "connector:gmail",
+		FullName: name, Source: "connector:gmail", Address: address,
 		Emails: []ContactEmailInput{{Email: "sig-" + ids.NewV7().String() + "@seed.test", EmailType: emailTypeWork, IsPrimary: true}},
 	})
 	if err != nil {
@@ -69,11 +75,8 @@ func TestASignatureFillsAnEmptyAddressAndNeverOneAColleagueDecided(t *testing.T)
 		t.Fatal("a signature's address line did not fill an empty address")
 	}
 
-	typed, mail := e.signedMail(ctx, t, "Dana Typed")
 	street := "Somewhere 1"
-	if _, err := e.store.UpdateContact(ctx, typed, UpdateContactInput{Address: &crmcontracts.Address{Line1: &street}}); err != nil {
-		t.Fatalf("typing an address: %v", err)
-	}
+	typed, mail := e.signedMailAt(ctx, t, "Dana Typed", &crmcontracts.Address{Line1: &street})
 	cleared, clearedMail := e.signedMail(ctx, t, "Dana Cleared")
 	if _, err := e.store.UpdateContact(ctx, cleared, UpdateContactInput{Address: &crmcontracts.Address{Line1: &street}}); err != nil {
 		t.Fatalf("typing an address: %v", err)
@@ -184,7 +187,19 @@ func TestASignatureFillsItsOneEmployersEmptyStreet(t *testing.T) {
 	otherName, mail := e.signedMail(ctx, t, "Dana Elsewhere")
 	unnamed := e.employee(ctx, t, otherName, "Acme Shipping", true)
 	e.applySigned(ctx, t, otherName, mail, signed(fieldAddress, signedAddress), signed(fieldCompanyName, "Somebody Else"))
-	for what, company := range map[string]ids.CompanyID{"two current employers": first, "an employer the signature does not name": unnamed} {
+	clearedStreet, mail := e.signedMail(ctx, t, "Dana Cleared Street")
+	cleared := e.employee(ctx, t, clearedStreet, "Acme Docks", true)
+	city := "Bremen"
+	if _, err := e.store.UpdateCompany(ctx, cleared, UpdateCompanyInput{Address: &crmcontracts.Address{City: &city}}); err != nil {
+		t.Fatalf("typing the company's address: %v", err)
+	}
+	if _, err := e.store.UpdateCompany(ctx, cleared, UpdateCompanyInput{Address: &crmcontracts.Address{}}); err != nil {
+		t.Fatalf("clearing the company's address: %v", err)
+	}
+	e.applySigned(ctx, t, clearedStreet, mail, signed(fieldAddress, signedAddress), signed(fieldCompanyName, "Acme Docks"))
+	for what, company := range map[string]ids.CompanyID{
+		"two current employers": first, "an employer the signature does not name": unnamed, "a street a colleague cleared": cleared,
+	} {
 		if got := e.count(ctx, t, `SELECT count(*) FROM company WHERE id = $1 AND address_line1 IS NULL`, company); got != 1 {
 			t.Errorf("with %s the company's street was filled", what)
 		}
