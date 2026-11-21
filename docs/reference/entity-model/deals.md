@@ -36,7 +36,6 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Indexes**
 
-- `close_date_run_open`: `btree (as_of DESC) WHERE (status = 'running')`
 - `close_date_run_pkey`: `unique, btree (id)`
 - `uq_close_date_run_one_running`: `unique, btree (status) WHERE (status = 'running')`
 
@@ -187,11 +186,11 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Indexes**
 
 - `deal_pkey`: `unique, btree (id)`
-- `deal_won_without_contract_ix`: `btree (won_without_contract_reason) WHERE (won_without_contract_reason IS NOT NULL)`
 - `idx_deal_acquisition_source`: `btree (acquisition_source) WHERE ((archived_at IS NULL) AND (acquisition_source IS NOT NULL))`
 - `idx_deal_close`: `btree (expected_close_date) WHERE ((status = 'open') AND (archived_at IS NULL))`
 - `idx_deal_commercial_motion`: `btree (commercial_motion) WHERE ((archived_at IS NULL) AND (commercial_motion IS NOT NULL))`
 - `idx_deal_company`: `btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL))`
+- `idx_deal_live_newest`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_deal_lost_reason_code`: `btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL)`
 - `idx_deal_lost_reason_note_key`: `btree (md5(lower(btrim(lost_reason)))) WHERE (lost_reason IS NOT NULL)`
 - `idx_deal_name_trgm`: `gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)`

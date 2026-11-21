@@ -1757,7 +1757,6 @@ public.assurance_task_item.trg_assurance_task_item_subject_keys CREATE TRIGGER t
 public.assurance_task_item_by_task CREATE INDEX assurance_task_item_by_task ON public.assurance_task_item USING btree (task_activity_id)
 public.assurance_task_item_once CREATE UNIQUE INDEX assurance_task_item_once ON public.assurance_task_item USING btree (exception_id, cycle_id)
 public.assurance_task_item_one_task_per_subject CREATE INDEX assurance_task_item_one_task_per_subject ON public.assurance_task_item USING gist (cycle_id, subject_kind, subject_id, task_activity_id)
-public.assurance_task_item_open_in_cycle CREATE INDEX assurance_task_item_open_in_cycle ON public.assurance_task_item USING btree (cycle_id, subject_kind, subject_id) WHERE (state = 'open'::text)
 public.assurance_task_item_pkey CREATE UNIQUE INDEX assurance_task_item_pkey ON public.assurance_task_item USING btree (id)
 public.attachment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.attachment.activity_id uuid gen=- def=-
@@ -2113,7 +2112,6 @@ public.automation_effect_claim.planned jsonb gen=- def=-
 public.automation_effect_claim.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.automation_effect_claim FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"handler": 20000, "occurrence_key": 20000, "effect_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"effect_fingerprint":20000,"handler":20000,"occurrence_key":20000}')
 public.automation_effect_claim.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.automation_effect_claim FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"handler": 20000, "occurrence_key": 20000, "effect_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"effect_fingerprint":20000,"handler":20000,"occurrence_key":20000}')
 public.automation_effect_claim_pkey CREATE UNIQUE INDEX automation_effect_claim_pkey ON public.automation_effect_claim USING btree (id)
-public.automation_effect_claim_unapplied CREATE INDEX automation_effect_claim_unapplied ON public.automation_effect_claim USING btree (created_at) WHERE (applied_at IS NULL)
 public.automation_effect_claim_unique CREATE UNIQUE INDEX automation_effect_claim_unique ON public.automation_effect_claim USING btree (handler, occurrence_key, effect_fingerprint)
 public.automation_pkey CREATE UNIQUE INDEX automation_pkey ON public.automation USING btree (id)
 public.bind_requests_on_address_move() secdef=false cfg=- acl=- 
@@ -2666,7 +2664,6 @@ public.capture_sender_override.updated_at timestamp with time zone NOT NULL gen=
 public.capture_sender_override.user_id uuid NOT NULL gen=- def=-
 public.capture_sender_override_pkey CREATE UNIQUE INDEX capture_sender_override_pkey ON public.capture_sender_override USING btree (id)
 public.capture_sender_override_user_address_key CREATE UNIQUE INDEX capture_sender_override_user_address_key ON public.capture_sender_override USING btree (user_id, address)
-public.capture_sender_override_user_idx CREATE INDEX capture_sender_override_user_idx ON public.capture_sender_override USING btree (user_id, created_at DESC)
 public.capture_sweep_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sweep_run.cap_hit boolean NOT NULL gen=- def=false
 public.capture_sweep_run.capture_sweep_run_cap_names_the_outcome CHECK (((outcome <> ALL (ARRAY['ok'::text, 'partial'::text])) OR ((outcome = 'partial'::text) = cap_hit)))
@@ -2940,7 +2937,6 @@ public.close_date_run_member.text_bound_insert CREATE TRIGGER text_bound_insert 
 public.close_date_run_member.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.close_date_run_member FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')
 public.close_date_run_member_pkey CREATE UNIQUE INDEX close_date_run_member_pkey ON public.close_date_run_member USING btree (run_id, deal_id)
 public.close_date_run_member_walk CREATE INDEX close_date_run_member_walk ON public.close_date_run_member USING btree (run_id, deal_created_at, deal_id) WHERE (outcome = 'pending'::text)
-public.close_date_run_open CREATE INDEX close_date_run_open ON public.close_date_run USING btree (as_of DESC) WHERE (status = 'running'::text)
 public.close_date_run_pkey CREATE UNIQUE INDEX close_date_run_pkey ON public.close_date_run USING btree (id)
 public.commission_entry acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.commission_entry.amount_minor bigint NOT NULL gen=- def=-
@@ -3207,7 +3203,6 @@ public.communication_instruction.text_bound_update CREATE TRIGGER text_bound_upd
 public.communication_instruction.valid_until timestamp with time zone NOT NULL gen=- def=-
 public.communication_instruction.warning_version text NOT NULL gen=- def=-
 public.communication_instruction_by_director CREATE INDEX communication_instruction_by_director ON public.communication_instruction USING btree (directed_by, directed_at DESC)
-public.communication_instruction_live CREATE INDEX communication_instruction_live ON public.communication_instruction USING btree (valid_until) WHERE (status = 'directed'::text)
 public.communication_instruction_pkey CREATE UNIQUE INDEX communication_instruction_pkey ON public.communication_instruction USING btree (id)
 public.communication_instruction_refuse_rewrite() secdef=false cfg=- acl=- 
 BEGIN
@@ -3305,7 +3300,6 @@ public.communication_review.text_bound_insert CREATE TRIGGER text_bound_insert A
 public.communication_review.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_review FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}')
 public.communication_review_by_initiator CREATE INDEX communication_review_by_initiator ON public.communication_review USING btree (initiated_by, opened_at DESC)
 public.communication_review_one_live_per_intent CREATE UNIQUE INDEX communication_review_one_live_per_intent ON public.communication_review USING btree (delivery_intent_id) WHERE ((delivery_intent_id IS NOT NULL) AND (resolved_at IS NULL))
-public.communication_review_open CREATE INDEX communication_review_open ON public.communication_review USING btree (opened_at) WHERE (resolved_at IS NULL)
 public.communication_review_pkey CREATE UNIQUE INDEX communication_review_pkey ON public.communication_review USING btree (id)
 public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_suppression.address text gen=- def=-
@@ -4525,7 +4519,6 @@ public.contract.version bigint NOT NULL gen=- def=1
 public.contract_account_ix CREATE INDEX contract_account_ix ON public.contract USING btree (company_id, starts_on DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.contract_deal_ix CREATE INDEX contract_deal_ix ON public.contract USING btree (deal_id) WHERE ((deal_id IS NOT NULL) AND (archived_at IS NULL))
 public.contract_pkey CREATE UNIQUE INDEX contract_pkey ON public.contract USING btree (id)
-public.contract_renewal_due_ix CREATE INDEX contract_renewal_due_ix ON public.contract USING btree (renewal_on) WHERE ((renewal_on IS NOT NULL) AND (archived_at IS NULL))
 public.conversation_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.conversation_claim.archived_at timestamp with time zone gen=- def=-
 public.conversation_claim.body text NOT NULL gen=- def=-
@@ -5397,7 +5390,6 @@ public.deal_suggestion_evidence.text_bound_insert CREATE TRIGGER text_bound_inse
 public.deal_suggestion_evidence.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_suggestion_evidence FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')
 public.deal_suggestion_evidence_pkey CREATE UNIQUE INDEX deal_suggestion_evidence_pkey ON public.deal_suggestion_evidence USING btree (id)
 public.deal_suggestion_pkey CREATE UNIQUE INDEX deal_suggestion_pkey ON public.deal_suggestion USING btree (id)
-public.deal_won_without_contract_ix CREATE INDEX deal_won_without_contract_ix ON public.deal USING btree (won_without_contract_reason) WHERE (won_without_contract_reason IS NOT NULL)
 public.dedupe_candidate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.dedupe_candidate.archived_at timestamp with time zone gen=- def=-
 public.dedupe_candidate.captured_by text NOT NULL gen=- def=-
@@ -5789,7 +5781,6 @@ public.finance_invoice.void_at timestamp with time zone gen=- def=-
 public.finance_invoice_account_ix CREATE INDEX finance_invoice_account_ix ON public.finance_invoice USING btree (company_id, issued_at DESC)
 public.finance_invoice_connection_id_external_id_key CREATE UNIQUE INDEX finance_invoice_connection_id_external_id_key ON public.finance_invoice USING btree (connection_id, external_id)
 public.finance_invoice_credit_owner_idx CREATE INDEX finance_invoice_credit_owner_idx ON public.finance_invoice USING btree (credits_invoice_id, connection_id, company_id)
-public.finance_invoice_credits_ix CREATE INDEX finance_invoice_credits_ix ON public.finance_invoice USING btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL)
 public.finance_invoice_customer_owner_idx CREATE INDEX finance_invoice_customer_owner_idx ON public.finance_invoice USING btree (customer_link_id, connection_id, company_id)
 public.finance_invoice_open_ix CREATE INDEX finance_invoice_open_ix ON public.finance_invoice USING btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL))
 public.finance_invoice_owner_key CREATE UNIQUE INDEX finance_invoice_owner_key ON public.finance_invoice USING btree (id, connection_id, company_id)
@@ -6246,7 +6237,6 @@ public.idx_are_deal CREATE INDEX idx_are_deal ON public.activity_retention_evide
 public.idx_are_decided_by CREATE INDEX idx_are_decided_by ON public.activity_retention_evidence USING btree (decided_by) WHERE (decided_by IS NOT NULL)
 public.idx_are_project CREATE INDEX idx_are_project ON public.activity_retention_evidence USING btree (project_id) WHERE (project_id IS NOT NULL)
 public.idx_assurance_exception_open CREATE INDEX idx_assurance_exception_open ON public.assurance_exception USING btree (status, severity, last_seen_at DESC) WHERE (status = 'open'::text)
-public.idx_assurance_exception_owner CREATE INDEX idx_assurance_exception_owner ON public.assurance_exception USING btree (owner_id) WHERE (owner_id IS NOT NULL)
 public.idx_assurance_exception_subject CREATE INDEX idx_assurance_exception_subject ON public.assurance_exception USING btree (subject_kind, subject_id)
 public.idx_assurance_resolution_exception CREATE INDEX idx_assurance_resolution_exception ON public.assurance_resolution USING btree (exception_id, created_at DESC)
 public.idx_assurance_run_as_of CREATE INDEX idx_assurance_run_as_of ON public.assurance_run USING btree (as_of DESC)
@@ -6276,8 +6266,6 @@ public.idx_brief_item_deal CREATE INDEX idx_brief_item_deal ON public.brief_item
 public.idx_brief_item_state CREATE INDEX idx_brief_item_state ON public.brief_item USING btree (brief_run_id, state, state_at)
 public.idx_brief_run_user CREATE INDEX idx_brief_run_user ON public.brief_run USING btree (user_id, generated_at DESC)
 public.idx_bulk_confirmation_expires CREATE INDEX idx_bulk_confirmation_expires ON public.bulk_confirmation USING btree (expires_at)
-public.idx_bulk_operation_created CREATE INDEX idx_bulk_operation_created ON public.bulk_operation USING btree (created_at)
-public.idx_bulk_operation_requested_by CREATE INDEX idx_bulk_operation_requested_by ON public.bulk_operation USING btree (requested_by, created_at)
 public.idx_capture_auto_enrich_due CREATE INDEX idx_capture_auto_enrich_due ON public.capture_auto_enrich_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_capture_backfill_conn CREATE INDEX idx_capture_backfill_conn ON public.capture_backfill USING btree (connection_id, created_at DESC)
 public.idx_capture_connection CREATE INDEX idx_capture_connection ON public.capture_connection USING btree (provider, status) WHERE (archived_at IS NULL)
@@ -6394,6 +6382,7 @@ public.idx_deal_company CREATE INDEX idx_deal_company ON public.deal USING btree
 public.idx_deal_correction_deal CREATE INDEX idx_deal_correction_deal ON public.deal_correction USING btree (deal_id)
 public.idx_deal_correction_stage_history CREATE INDEX idx_deal_correction_stage_history ON public.deal_correction USING btree (stage_history_id)
 public.idx_deal_document_hide_attachment CREATE INDEX idx_deal_document_hide_attachment ON public.deal_document_hide USING btree (attachment_id)
+public.idx_deal_live_newest CREATE INDEX idx_deal_live_newest ON public.deal USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_deal_loss_reason_mapping_reason CREATE INDEX idx_deal_loss_reason_mapping_reason ON public.deal_loss_reason_mapping USING btree (reason_key)
 public.idx_deal_lost_reason_code CREATE INDEX idx_deal_lost_reason_code ON public.deal USING btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL)
 public.idx_deal_lost_reason_note_key CREATE INDEX idx_deal_lost_reason_note_key ON public.deal USING btree (md5(lower(btrim(lost_reason)))) WHERE (lost_reason IS NOT NULL)
@@ -6441,15 +6430,12 @@ public.idx_dedupe_candidate_open CREATE INDEX idx_dedupe_candidate_open ON publi
 public.idx_dedupe_candidate_right_company CREATE INDEX idx_dedupe_candidate_right_company ON public.dedupe_candidate USING btree (right_company_id)
 public.idx_dedupe_candidate_right_contact CREATE INDEX idx_dedupe_candidate_right_contact ON public.dedupe_candidate USING btree (right_contact_id)
 public.idx_dedupe_candidate_right_lead CREATE INDEX idx_dedupe_candidate_right_lead ON public.dedupe_candidate USING btree (right_lead_id)
-public.idx_domain_disposition_admission CREATE INDEX idx_domain_disposition_admission ON public.company_domain_disposition USING btree (admission_at DESC) WHERE (admission IS NOT NULL)
-public.idx_domain_disposition_unevidenced CREATE INDEX idx_domain_disposition_unevidenced ON public.company_domain_disposition USING btree (updated_at DESC) WHERE (pending_reason = 'unevidenced'::text)
 public.idx_dsr_open CREATE INDEX idx_dsr_open ON public.data_subject_request USING btree (due_at) WHERE (status = ANY (ARRAY['open'::text, 'in_progress'::text]))
 public.idx_event_outbox_unpublished CREATE INDEX idx_event_outbox_unpublished ON public.event_outbox USING btree (seq) WHERE (published_at IS NULL)
 public.idx_existing_customer_notice_legal_entity CREATE INDEX idx_existing_customer_notice_legal_entity ON public.existing_customer_notice USING btree (legal_entity_id)
 public.idx_existing_customer_notice_purpose_purpose CREATE INDEX idx_existing_customer_notice_purpose_purpose ON public.existing_customer_notice_purpose USING btree (purpose_id)
 public.idx_field_provenance_object CREATE INDEX idx_field_provenance_object ON public.field_provenance USING btree (object_type, object_id, field_name, captured_at DESC)
 public.idx_forecast_call_period CREATE INDEX idx_forecast_call_period ON public.forecast_call USING btree (period_start, period_end, scope_kind, scope_id)
-public.idx_forecast_contribution_audit CREATE INDEX idx_forecast_contribution_audit ON public.forecast_contribution USING btree (audit_id) WHERE (audit_id IS NOT NULL)
 public.idx_forecast_contribution_deal CREATE INDEX idx_forecast_contribution_deal ON public.forecast_contribution USING btree (deal_id, created_at DESC)
 public.idx_forecast_snapshot_call CREATE INDEX idx_forecast_snapshot_call ON public.forecast_snapshot USING btree (call_id) WHERE (call_id IS NOT NULL)
 public.idx_forecast_snapshot_context CREATE INDEX idx_forecast_snapshot_context ON public.forecast_snapshot USING btree (scope_kind, scope_id, pipeline_id, taken_at DESC)
@@ -6496,7 +6482,6 @@ public.idx_linkedin_connection_email CREATE INDEX idx_linkedin_connection_email 
 public.idx_linkedin_connection_match CREATE INDEX idx_linkedin_connection_match ON public.linkedin_connection USING btree (normalized_name, normalized_company) WHERE (tombstoned_at IS NULL)
 public.idx_linkedin_connection_matched_contact CREATE INDEX idx_linkedin_connection_matched_contact ON public.linkedin_connection USING btree (matched_contact_id)
 public.idx_linkedin_connection_owner_user CREATE INDEX idx_linkedin_connection_owner_user ON public.linkedin_connection USING btree (owner_user_id)
-public.idx_list_evaluation_due CREATE INDEX idx_list_evaluation_due ON public.list_evaluation USING btree (evaluated_at)
 public.idx_list_live_member_entity CREATE INDEX idx_list_live_member_entity ON public.list_live_member USING btree (entity_type, entity_id)
 public.idx_list_member_entity CREATE INDEX idx_list_member_entity ON public.list_member USING btree (entity_type, entity_id)
 public.idx_list_member_event_entity CREATE INDEX idx_list_member_event_entity ON public.list_member_event USING btree (entity_type, entity_id)
@@ -6607,17 +6592,15 @@ public.idx_tag_suggestion_tag CREATE INDEX idx_tag_suggestion_tag ON public.tag_
 public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable USING btree (entity_type, entity_id)
 public.idx_team_membership_user CREATE INDEX idx_team_membership_user ON public.team_membership USING btree (user_id)
 public.idx_team_weekly_review_rep_review CREATE INDEX idx_team_weekly_review_rep_review ON public.team_weekly_review_rep USING btree (team_weekly_review_id, display_name)
-public.idx_team_weekly_review_team CREATE INDEX idx_team_weekly_review_team ON public.team_weekly_review USING btree (team_id, local_week_start DESC)
-public.idx_technical_lookup_cache_expiry CREATE INDEX idx_technical_lookup_cache_expiry ON public.technical_lookup_cache USING btree (expires_at)
 public.idx_transcript_read_latest CREATE INDEX idx_transcript_read_latest ON public.transcript_read USING btree (activity_id, created_at DESC)
 public.idx_user_record_view_entity_company CREATE INDEX idx_user_record_view_entity_company ON public.user_record_view USING btree (entity_company_id) WHERE (entity_company_id IS NOT NULL)
 public.idx_user_record_view_entity_contact CREATE INDEX idx_user_record_view_entity_contact ON public.user_record_view USING btree (entity_contact_id) WHERE (entity_contact_id IS NOT NULL)
-public.idx_voice_corpus_profile CREATE INDEX idx_voice_corpus_profile ON public.voice_corpus_source USING btree (voice_profile_id, created_at DESC)
 public.idx_web_form_lead_origin CREATE INDEX idx_web_form_lead_origin ON public.web_form USING btree (lead_origin) WHERE (lead_origin IS NOT NULL)
 public.idx_web_form_owner CREATE INDEX idx_web_form_owner ON public.web_form USING btree (owner_id) WHERE (owner_id IS NOT NULL)
 public.idx_webhook_delivery_body_kept CREATE INDEX idx_webhook_delivery_body_kept ON public.webhook_delivery USING btree (id) WHERE ((payload_pruned_at IS NULL) AND (payload <> ''::text) AND (status = ANY (ARRAY['delivered'::text, 'dead_lettered'::text, 'visibility_revoked'::text])))
 public.idx_webhook_delivery_by_subscription CREATE INDEX idx_webhook_delivery_by_subscription ON public.webhook_delivery USING btree (subscription_id, created_at DESC)
 public.idx_webhook_delivery_due CREATE INDEX idx_webhook_delivery_due ON public.webhook_delivery USING btree (next_retry_at) WHERE (status = 'retrying'::text)
+public.idx_webhook_delivery_pending CREATE INDEX idx_webhook_delivery_pending ON public.webhook_delivery USING btree (created_at) WHERE (status = 'pending'::text)
 public.idx_webhook_subscription_live CREATE INDEX idx_webhook_subscription_live ON public.webhook_subscription USING btree (state) WHERE (archived_at IS NULL)
 public.idx_webhook_subscription_owner CREATE INDEX idx_webhook_subscription_owner ON public.webhook_subscription USING btree (owner_id)
 public.idx_weekly_plan_commitment_help CREATE INDEX idx_weekly_plan_commitment_help ON public.weekly_plan_commitment USING btree (plan_id) WHERE (btrim(help_requested) <> ''::text)
@@ -6627,9 +6610,7 @@ public.idx_weekly_plan_commitment_linked_deal CREATE INDEX idx_weekly_plan_commi
 public.idx_weekly_plan_commitment_linked_lead CREATE INDEX idx_weekly_plan_commitment_linked_lead ON public.weekly_plan_commitment USING btree (linked_lead_id) WHERE (linked_lead_id IS NOT NULL)
 public.idx_weekly_plan_commitment_linked_project CREATE INDEX idx_weekly_plan_commitment_linked_project ON public.weekly_plan_commitment USING btree (linked_project_id) WHERE (linked_project_id IS NOT NULL)
 public.idx_weekly_plan_commitment_plan CREATE INDEX idx_weekly_plan_commitment_plan ON public.weekly_plan_commitment USING btree (plan_id, "position", created_at)
-public.idx_weekly_plan_owner CREATE INDEX idx_weekly_plan_owner ON public.weekly_plan USING btree (owner_id, local_week_start DESC)
 public.idx_weekly_review_deal_review CREATE INDEX idx_weekly_review_deal_review ON public.weekly_review_deal USING btree (weekly_review_id, occurred_at DESC)
-public.idx_weekly_review_user CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC)
 public.idx_withdrawal_credential_contact CREATE INDEX idx_withdrawal_credential_contact ON public.withdrawal_credential USING btree (contact_id) WHERE (contact_id IS NOT NULL)
 public.idx_withdrawal_credential_lead CREATE INDEX idx_withdrawal_credential_lead ON public.withdrawal_credential USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.idx_withdrawal_credential_live CREATE INDEX idx_withdrawal_credential_live ON public.withdrawal_credential USING btree (lower(address), scope) WHERE (revoked_at IS NULL)
@@ -6760,7 +6741,6 @@ public.ix_confirm_token_contact CREATE INDEX ix_confirm_token_contact ON public.
 public.ix_confirm_token_lead CREATE INDEX ix_confirm_token_lead ON public.confirm_token USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.ix_contact_confirm_submission_contact CREATE INDEX ix_contact_confirm_submission_contact ON public.contact_confirm_submission USING btree (contact_id)
 public.ix_contact_confirm_submission_open CREATE INDEX ix_contact_confirm_submission_open ON public.contact_confirm_submission USING btree (submitted_at) WHERE (resolved_at IS NULL)
-public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
 public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
 public.ix_lead_privacy_notice_approval CREATE INDEX ix_lead_privacy_notice_approval ON public.lead_privacy_notice USING btree (approval_id) WHERE (approval_id IS NOT NULL)
 public.keep_reply_settled(messages uuid[], settled timestamp with time zone[]) secdef=false cfg=- acl=- 
