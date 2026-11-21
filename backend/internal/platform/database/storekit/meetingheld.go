@@ -57,9 +57,9 @@ func MeetingHeldAsOfSQL(alias, asOf string, unread func(transition string) strin
 	return held
 }
 
-// TransitionStartSQL is the start and precision the status transition under
-// transition placed the meeting under alias at, so a day meeting moved later
-// stays on the day it was then. A transition recorded before it said its
+// TransitionStartSQL is where the status transition under transition placed
+// the meeting under alias. So a day meeting moved later stays on its day then.
+// A transition recorded before it said its
 // precision reads as the meeting's precision only while it is the meeting's
 // time; otherwise as an instant. No transition reads as the meeting today.
 func TransitionStartSQL(transition, alias string) (start, precision string) {

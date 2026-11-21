@@ -78,10 +78,9 @@ func introductionsMadeSQL(ctx context.Context, r Reading, arg func(any) int) (st
 // meetingsBookedForColleaguesSQL credits the seat whose session, or agent,
 // created the meeting, at its creation, for the host that create named. A
 // source system means an import, transcript or connector booked it. A meeting
-// created at or after its start, or first recorded as held, missed or
-// cancelled, was logged rather than booked. The start judged is the one set
-// at creation, so a later reschedule neither makes nor unmakes a booking. A
-// later cancellation keeps it.
+// created at or after the start it was created with, or first recorded as
+// held, missed or cancelled, was logged rather than booked. A later
+// reschedule or cancellation keeps the answer.
 func meetingsBookedForColleaguesSQL(ctx context.Context, r Reading, arg func(any) int) (string, error) {
 	readable, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
