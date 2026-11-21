@@ -19504,7 +19504,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Mối quan hệ đang thế nào",
   "contact.standing.dim.promises": "Cam kết của bạn",
   "contact.standing.dim.promisesNone": "Không có cam kết mở",
-  "contact.standing.dim.promisesUncounted": "Quá nhiều việc để đếm",
   "standing.overdue_one": "{count} quá hạn",
   "standing.overdue_other": "{count} quá hạn",
   "standing.ofOpen_one": "trong {count} đang mở",

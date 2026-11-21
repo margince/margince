@@ -19817,7 +19817,6 @@ export const en = {
   "contact.standing.dims": "How the relationship stands",
   "contact.standing.dim.promises": "Your commitments",
   "contact.standing.dim.promisesNone": "None open",
-  "contact.standing.dim.promisesUncounted": "Too many tasks to count",
   "standing.overdue_one": "{count} overdue",
   "standing.overdue_other": "{count} overdue",
   "standing.ofOpen_one": "of {count} open",

@@ -86,6 +86,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry has a row in the frontend's kind table, or the client shows a reader the source's own identifier. |
 | `frontendaudiencereasons_test.go` | H3 | A held message says why it was held, or the reader cannot argue with the verdict. |
+| `frontendauditkinds_test.go` | H2 | Every record type an audit row names has words in the audit log, and the log's own map words no type that nothing writes. |
 | `frontendautonomykinds_test.go` | H1 | Every kind a rep may put on automatic must have words on the settings screen that offers it, and the screen must offer no kind the product cannot automate. |
 | `frontendcatalogwords_test.go` | H2 | The automation library reads in the reader's language. |
 | `frontendcollapsespace_test.go` | H3 | The viewer and the server must fold whitespace by the same set, or a citation opens a document with nothing marked. |
@@ -278,6 +279,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `audiencereaders_test.go` | H2 | A message's audience says who may read its content. |
 | `audienceretractioncallers_test.go` | H3 | activities.RetractDerivedForActivityTx documents that it is not atomic with the narrowing it follows, and the sentence is only true while every caller is an async consumer reacting to a committed audience change. |
 | `auditbeforeimage_test.go` | H2 | An audited update says what it changed from. |
+| `auditentitycensus_fixture_test.go` | H2 | The audit census reads, refuses or reports each Go shape it has met, on planted packages type-checked the way the module is. |
+| `auditkindsplanted_test.go` | H2 | The two readers behind the audit kinds gate, on planted migrations and planted TypeScript: each shape is read, or refused rather than guessed. |
 | `audittraildoor_test.go` | H2 | The audit trail is a second door onto an activity's content, and every reader of it says what it does about a held one. |
 | `automatictaskwriters_test.go` | H2 | Every native writer of an activity row, and every reader of open tasks, found in the code of the whole backend tree. |
 | `basecurrencyguard_test.go` | H2 | Every table with an fx\_rate\_to\_base column is on the base-currency lock's list. |
