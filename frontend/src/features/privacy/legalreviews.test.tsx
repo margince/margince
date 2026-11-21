@@ -185,7 +185,7 @@ describe("one review", () => {
         "GET /legal-reviews/settings": legalOn,
         [`GET /legal-reviews/${REVIEW_ID}`]: () => jsonResponse(shown),
       },
-      REVIEWER,
+      { ...REVIEWER, deal: ["read"] },
     );
     mount(REVIEW_ID);
 
@@ -196,6 +196,10 @@ describe("one review", () => {
     expect(screen.getAllByText("Tax 19%")).toHaveLength(2);
     expect(screen.getAllByText(en["legalReview.offerTotal"])).not.toHaveLength(
       0,
+    );
+    // The deal links only for a reader who may open deals, once that is known.
+    await vi.waitFor(() =>
+      expect(screen.getByRole("radio", { name: /Approve/ })).toBeEnabled(),
     );
     expect(
       screen.getByRole("link", { name: "Warehouse rollout" }),
