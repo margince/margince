@@ -4,6 +4,7 @@ import { loadEssentialLocale, loadLocale } from "./i18n/catalogs";
 import { effectiveDisplayLocale, preferredLocale } from "./i18n/locale";
 import { paintsFromEssentialCopy } from "./lib/essentialscreens";
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
+import { restoreRecordAddress } from "./lib/recordaddress";
 import { restoreReturnRoute } from "./lib/returnroute";
 import { parseHash } from "./lib/router";
 import {
@@ -14,6 +15,8 @@ import { reloadOnStaleBuild } from "./lib/stalebuild";
 
 reloadOnStaleBuild();
 restoreReturnRoute();
+// A record link that came as a path names its screen once the hash is back.
+restoreRecordAddress();
 // main.tsx can run after the window's load event and Chrome's install offer, so this script catches both.
 listenForInstall();
 registerServiceWorker();

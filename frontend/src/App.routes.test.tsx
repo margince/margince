@@ -2,7 +2,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isValidElement, type ReactElement } from "react";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parseSource } from "../scripts/lib/source-tree";
 import { addressedScreenCode, SCREEN_CODE } from "./App.screencode";
 import * as screens from "./App.screens";
 import { screenOfAddress, screenWithLocale } from "./App.views";
@@ -186,10 +188,34 @@ describe("the catalog each screen waits for", () => {
   });
 });
 
+// A call whose callee is the `import` keyword, however spaced; an `import()` type is no call.
+function dynamicImports(node: ts.Node): number {
+  const own =
+    ts.isCallExpression(node) &&
+    node.expression.kind === ts.SyntaxKind.ImportKeyword
+      ? 1
+      : 0;
+  let total = own;
+  ts.forEachChild(node, (child) => {
+    total += dynamicImports(child);
+  });
+  return total;
+}
+
 describe("the screen code bootstrap starts", () => {
   it("is named by the screen-code map alone, never by a second import", () => {
-    const source = readFileSync(join(__dirname, "App.screens.tsx"), "utf8");
-    expect(source).not.toMatch(/import\(/);
+    const path = join(__dirname, "App.screens.tsx");
+    expect(dynamicImports(parseSource(path, readFileSync(path, "utf8")))).toBe(
+      0,
+    );
+  });
+
+  it.each([
+    ['const x = import ("./x");', 1],
+    ["const x = import(name);", 1],
+    ['type X = typeof import("./x");', 0],
+  ])("counts the dynamic imports in %s", (text, count) => {
+    expect(dynamicImports(parseSource("planted.ts", text))).toBe(count);
   });
 
   it.each([

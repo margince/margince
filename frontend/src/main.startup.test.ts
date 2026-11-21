@@ -127,3 +127,25 @@ it("starts the shell's reads and the screen's code together, before the language
     vi.doUnmock("./i18n/en");
   }
 });
+
+it("starts the code and the complete catalog of a record link that arrives as a path", async () => {
+  history.replaceState(
+    null,
+    "",
+    "/r/contacts/018f3a1b-0000-7000-8000-0000000000c1",
+  );
+  const { SCREEN_CODE } = await import("./App.screencode");
+  const contactPage = vi.spyOn(SCREEN_CODE, "contactPage");
+  const { completeRequested } = await import("./i18n/catalogs");
+  try {
+    await import("./bootstrap");
+    expect(location.hash).toBe(
+      "#/contacts/018f3a1b-0000-7000-8000-0000000000c1",
+    );
+    expect(contactPage).toHaveBeenCalledTimes(1);
+    expect(completeRequested("en")).toBe(true);
+    await vi.waitFor(() => expect(createRoot).toHaveBeenCalledTimes(1));
+  } finally {
+    history.replaceState(null, "", "/");
+  }
+});
