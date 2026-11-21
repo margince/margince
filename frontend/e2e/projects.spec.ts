@@ -80,7 +80,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(
     page
       .getByRole("region", { name: "Phasenverlauf" })
-      .getByText(/Lars Brandt hat das Projekt angelegt/),
+      .getByText(/Lars Brandt hat das Projekt erstellt/),
   ).toBeVisible();
   // A new project has filed no documents, and its standing says so.
   await expect(
@@ -92,7 +92,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.goto("/#/deals/d-fleet");
   await page.getByRole("button", { name: "Weitere Aktionen" }).click();
   await page.getByRole("button", { name: "Details bearbeiten" }).click();
-  await page.getByRole("button", { name: /^Unternehmen ändern/ }).click();
+  await page
+    .getByRole("button", { name: /^Feld „Unternehmen“ ändern/ })
+    .click();
   const group = page.getByRole("dialog", { name: "Unternehmen", exact: true });
   await choose(
     page,
@@ -260,11 +262,14 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
 
   // 7. Close with a reason. The close button stays disabled until a reason
   // is typed, and the reason is what the history shows afterwards.
-  await phase.getByRole("button", { name: "Abgeschlossen" }).click();
+  // The Closed step is named for the move it makes, as the dialog's heading is.
+  await phase.getByRole("button", { name: "Wechsel zu Abgeschlossen" }).click();
   await expect(
     page.getByRole("heading", { name: "Wechsel zu Abgeschlossen" }),
   ).toBeVisible();
-  const close = page.getByRole("button", { name: "Projekt abschließen" });
+  const close = page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Projekt abschließen" });
   await expect(close).toBeDisabled();
   await page
     .getByTestId("project-advance-reason")

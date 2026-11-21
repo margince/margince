@@ -655,7 +655,7 @@ describe("CustomFieldsAdmin", () => {
     const menu = await openFieldMenu("Renewal date");
     await userEvent.click(menu.getByRole("button", { name: en["cf.edit"] }));
     const input = screen.getByLabelText(/New label/i);
-    expect(screen.getByText("deal.cf_renewal_date").tagName).toBe("CODE");
+    expect(screen.queryByText("deal.cf_renewal_date")).toBeNull();
     await userEvent.clear(input);
     await userEvent.type(input, "Contract end date");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));

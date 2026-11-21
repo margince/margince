@@ -189,6 +189,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			boundRungs = append(boundRungs, t)
 		}
 	}
+	r.startWalk(lc, task, b, boundRungs)
 	var lastErr, skipped error
 	var lastTier Tier
 	for i, t := range boundRungs {
@@ -198,9 +199,13 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		}
 		// The rail's lease covers one model call, and this is the next one.
 		lc.renewRailLease(ctx)
-		// Each rung gets its own deadline, so one slow host spends at most its
-		// share and the walk still reaches the rung above it.
-		callCtx, cancel := context.WithTimeout(ctx, r.callSettings(lc, task).AttemptTimeout)
+		// A walk's first rung is admitted here, after its preparation; each
+		// later one after the rung below it failed (endWalk).
+		if err := r.walkSpent(lc, task); i == 0 && err != nil {
+			return model.Response{}, "", false, err
+		}
+		// Each rung gets its own deadline, so one slow host spends at most its share.
+		callCtx, cancel := r.tryContext(ctx, r.tryTimeout(lc, task))
 		out, callErr := b.clients[t].Complete(callCtx, req)
 		cancel()
 		if callErr != nil {
@@ -235,10 +240,11 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// provider and model: only then is the identical request re-sent to
 			// the API that refused it. Any other rung may accept it.
 			if errors.Is(callErr, ErrProviderQuota) || rejectedAgainAbove(b, callErr, boundRungs[i:]) {
-				lc.append(r.traceForFailedRung(ctx, b, *trace, t, callErr, start))
 				// Not an exhausted ladder — the rungs above were never tried.
 				// Reported as the refusal alone so a caller cannot read "every
-				// tier failed" off a walk that stopped at the first one.
+				// tier failed" off a walk that stopped at the first one. The
+				// refusing rung is the terminal, so serveAttempt's deferred
+				// trace is its one row.
 				return model.Response{}, t, false, callErr
 			}
 			// A withheld answer walks on: a different model may answer what this
@@ -247,8 +253,10 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			if meterErr := r.meterWithheld(ctx, task, t, callErr); meterErr != nil {
 				return model.Response{}, t, false, meterErr
 			}
-			if err := ctx.Err(); err != nil {
-				return model.Response{}, t, false, fmt.Errorf("%w (the rung: %w)", err, callErr)
+			// Checked before this rung's row is appended, so the rung that
+			// spent the walk bound is the terminal and is recorded once.
+			if err := r.endWalk(ctx, lc, task, callErr); err != nil {
+				return model.Response{}, t, false, err
 			}
 			if i < len(boundRungs)-1 {
 				lc.append(r.traceForFailedRung(ctx, b, *trace, t, callErr, start))

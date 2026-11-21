@@ -100,6 +100,9 @@ func faultFor(ctx context.Context, kind string, err error) error {
 	if errors.As(err, &snooze) || errors.As(err, &cancel) {
 		return err
 	}
+	if wait := postponed(ctx, kind, err); wait != nil {
+		return wait
+	}
 	// The UNIT'S OWN classification wins over the core vocabulary, and is checked
 	// before it. A tick that wrapped a core sentinel in one of its declared classes
 	// looked at the whole operation and said what it means for THIS unit — that a

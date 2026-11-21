@@ -1,5 +1,8 @@
 {"type": "system", "subtype": "init", "tools": ["mcp__margince__commit_import", "mcp__margince__preview_import", "mcp__margince__read_import"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__commit_import", "input": {}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__preview_import", "input": {"object": "company"}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_import", "input": {"view": "report"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__commit_import", "input": {}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "{}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__preview_import", "input": {"object": "company"}, "id": "fixture2"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture2", "content": "{}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_import", "input": {"view": "report"}, "id": "fixture3"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture3", "content": "{}", "is_error": false}]}}
 {"type": "result", "subtype": "success", "is_error": false, "result": "Die Datei ist eingelesen und der Lauf ist bestätigt.\n\nDer Bericht meldet vier Organisationen im Import, davon drei angelegt und eine übersprungen: bei einer Zeile fehlte der Name, und ohne Namen legt der Import nichts an."}

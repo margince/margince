@@ -2,10 +2,12 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AddDocumentDialog } from "../../components/adddocument";
 import {
   AttachmentGrid,
   AttachmentTile,
   CATEGORY_LABELS,
+  categoryCuts,
 } from "../../components/attachmenttile";
 import { Button } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
@@ -16,8 +18,8 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { ContactChatCapture } from "./contactchatcapture";
 import "./contact360.css";
 import { contactFilesKey } from "../../lib/attachmentkeys";
@@ -40,18 +42,13 @@ type Category = NonNullable<Attachment["category"]>;
 // recognise a contact that has been busy, and the rest is one button away.
 const PAGE_LIMIT = 20;
 
-// The cuts always offered, and the two a contact's files seldom carry, which
-// join the row only when a file does.
+// The cuts always offered; a category a contact's files seldom carry joins
+// the row only when a file does.
 const STEADY_CUTS: readonly Category[] = [
   "offer",
   "legal",
   "email_attachment",
   "other",
-];
-const RARE_CUTS: readonly Category[] = [
-  "message_attachment",
-  "contract",
-  "link",
 ];
 
 /**
@@ -218,7 +215,7 @@ function FileCuts({
   const t = useT();
   const countOf = (key: Category) =>
     files.filter((file) => file.category === key).length;
-  const cuts = [...STEADY_CUTS, ...RARE_CUTS.filter((key) => countOf(key) > 0)];
+  const cuts = categoryCuts(files, STEADY_CUTS, value);
   return (
     <FilterPills
       label={t("docs.filterLabel")}
@@ -232,7 +229,7 @@ function FileCuts({
         },
         ...cuts.map((key) => ({
           value: key,
-          label: t(CATEGORY_LABELS[key]),
+          label: t(labelFor(CATEGORY_LABELS, key)),
           count: complete ? countOf(key) : undefined,
         })),
       ]}

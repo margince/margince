@@ -149,7 +149,7 @@ func initiativeMemberSQL(ctx context.Context, b *reportingBindings, alias string
 var reportingInitiativeOriginLabels = map[string]langcopy.Phrase{
 	"existing":      {En: "Existing at launch", De: "Beim Start vorhanden", Vi: "Có sẵn khi khởi động"},
 	"sourced":       {En: "Sourced by the initiative", De: "Durch die Initiative gewonnen", Vi: "Do sáng kiến mang về"},
-	"created_after": {En: "Created after launch", De: "Nach dem Start angelegt", Vi: "Tạo sau khi khởi động"},
+	"created_after": {En: "Created after launch", De: "Nach dem Start erstellt", Vi: "Tạo sau khi khởi động"},
 	"added_after":   {En: "Added after launch", De: "Nach dem Start hinzugefügt", Vi: "Thêm sau khi khởi động"},
 }
 

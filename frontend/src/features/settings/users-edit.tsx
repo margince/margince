@@ -16,7 +16,7 @@ import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
 import { LEGAL_ENTITIES_KEY } from "../../lib/legalentities.queries";
-import { problemCode, unwrap } from "../../lib/problem";
+import { isVersionSkewOf, unwrap } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { MemberEntityField, useMemberEntityDraft } from "./users-entitycell";
 import { memberChecks, memberRefusal } from "./users-invite-form";
@@ -228,7 +228,7 @@ export function EditMember({
         <MemberEntityField draft={entity} />
         <MergedAccounts member={baseline} />
         {refused.rest !== null && <ErrorLine>{refused.rest}</ErrorLine>}
-        {problemCode(save.error) === "version_skew" && (
+        {isVersionSkewOf(save.error) && (
           <Button
             type="button"
             disabled={reload.isPending}

@@ -8,6 +8,7 @@ import {
   useLatestInboundRead,
 } from "../../components/latestinbound";
 import { useRailRename } from "../../components/railfield";
+import { RecordGone } from "../../components/recordgone";
 import { Badge } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
@@ -269,7 +270,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={dealQuery} pendingLabel={t("nav.deals")}>
+      <QueryGate
+        query={dealQuery}
+        pendingLabel={t("nav.deals")}
+        gone={<RecordGone kind="deal" />}
+      >
         {(deal) => {
           const stages = stagesInOrder(pipelineQuery.data?.stages ?? []);
           const openStages = stages.filter(

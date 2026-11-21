@@ -18,6 +18,7 @@ The eight shapes, what each is for, and how each one silently passes:
 |---|---|---|
 | `accountreachcopies_test.go` | H2 | The stored company clock and the activity walk use the same employment bounds. |
 | `acquisitionvocabulary_test.go` | H1 | Two modules spell "we do not know how this contact arrived" the same way. |
+| `agentegresscolumn_test.go` | H2 | The outgoing allowance counts what its name says: a call that sends something out of the workspace. |
 | `agenttoolcatalogtiers_test.go` | H2 | The tool catalog's Tier column says what the contract says. |
 | `aiactivitycatalogparity_test.go` | H3 | The AI-activity contract names the work that can reach it and nothing else, and caps what the read caps. |
 | `aiconnectreadme_test.go` | H2 | Every connect path in aiconnect.ts has one skill README section that links the same vendor guide, and the README offers no path the page lacks. |
@@ -90,6 +91,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendcurrencies_test.go` | H3 | The currency picker must never offer a code the server refuses. |
 | `frontendcustomfieldtypes_test.go` | H3 | The custom-field types are one list on both sides of the wire. |
 | `frontenddatenotation_test.go` | H3 | A server-written brief and the app around it must write one day the same way, or the reader sees 16/11/2026 beside 2026-11-16 on one screen. |
+| `frontenddealroles_test.go` | H3 | A stored deal role is free text, and both sides decide the same question. |
 | `frontenddue_window_test.go` | H3 | The task due-date box offers days inside the window the server accepts. |
 | `frontendeffectfailures_test.go` | H2 | A failed approval's line reads in the reader's language when the browser has words for its code. |
 | `frontendemailtext_test.go` | H3 | The browser and the server split a mail body by the same rules, or a row's preview and the message it opens disagree about where the sender stopped writing. |

@@ -978,7 +978,9 @@ export interface paths {
          *     8,388,608 bytes is refused with `413` before it is read. The reading runs inside
          *     the request. `422` with code `no_cards` means the photo shows no business card, and `422`
          *     with `not_readable` means the configured model cannot read photos or the reply could not
-         *     be used. `501` means the installation has no model configured.
+         *     be used. `501` means the installation has no model configured. `503` means the model did
+         *     not read it: `ai_allowance_used_up` when the monthly AI allowance is spent, a
+         *     `provider_*` code when the AI provider is blocked, and `assistant_unavailable` otherwise.
          */
         post: operations["importCardPhoto"];
         delete?: never;
@@ -6066,11 +6068,15 @@ export interface paths {
         put?: never;
         /**
          * Add an exit criterion to a stage.
-         * @description Requires `pipeline:update`, like every other pipeline-shape edit.
+         * @description Requires `pipeline:update`, like every other pipeline-shape edit. Leave
+         *     `key` out and Margince makes it from the label, adding a number on a clash
+         *     in the stage. A `key` you send is validated, and a live clash is
+         *     `criterion_key_taken`.
          *
-         *     Two refusals, both `422`. `terminal_stage_has_no_exit_criteria` on a
-         *     `won`/`lost` stage. `criterion_key_taken` when the stage already has a LIVE
-         *     criterion with this key — archiving one frees its key for reuse, and both
+         *     Refusals, all `422`. `terminal_stage_has_no_exit_criteria` on a
+         *     `won`/`lost` stage. `invalid_criterion_key` for a key that is empty or has
+         *     the wrong shape. `criterion_key_taken` when a key you sent matches a LIVE
+         *     criterion of the stage — archiving one frees its key for reuse, and both
          *     rows survive so the older evidence stays legible.
          */
         post: operations["createStageExitCriterion"];
@@ -19883,6 +19889,11 @@ export interface paths {
          *     record every write to which the ceiling then refuses. A `read` grant to a read seat is the
          *     authority their licence already carries and is accepted. A `team` subject is not a seat and is
          *     not filtered — the read seats inside it are still refused every write at their own admission.
+         *
+         *     The recipient's role binds as well: a `write` grant to a user whose role can neither change
+         *     records of this type nor create activities (attaching one needs `write`) is saved as `read`,
+         *     and the answer carries `limited_by_role: true`. The answer names no role. A `team` grant
+         *     keeps `write`.
          */
         post: operations["createRecordGrant"];
         delete?: never;
@@ -29394,8 +29405,9 @@ export interface components {
         /**
          * @description The decision-model lane: a model that answers a typed question with calibrated
          *     probabilities, asked before a decision site's ladder. Absent means no task uses
-         *     one. It serves a task only when certified for that site and when its endpoint
-         *     reaches no further than the task's own bindings.
+         *     one. Bound, it answers every task that declares a decision form, with or without
+         *     a certification record; each site keeps an answer only at its own floor and
+         *     otherwise falls back to its ladder.
          */
         AiDecisionsBinding: {
             /** @description jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required) | gemini_decision (Google's Decisions API on the Gemini Developer API, keyed by the gemini provider's GEMINI_API_KEY; no EU hosting). */
@@ -32452,7 +32464,7 @@ export interface components {
              * @description Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
              * @enum {string}
              */
-            decision_skip_reason?: "unbound" | "uncertified";
+            decision_skip_reason?: "unbound";
             decision_candidate?: components["schemas"]["AiRouteCandidate"];
             /** @description The task declares a decision form, so a decision model may answer it first and its decision timeout applies. */
             decides?: boolean;
@@ -32782,7 +32794,7 @@ export interface components {
         AiCallAttempt: {
             attempt: number;
             is_terminal: boolean;
-            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
+            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, or decision_uncertified on a row stored before the decision lane stopped reading certification — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
             attempt_reason: string;
             /**
              * @description What this attempt asked: a chat completion, an embedding, or a decision model.
@@ -36603,6 +36615,7 @@ export interface components {
         Company360NextStep: {
             /** Format: uuid */
             activity_id: string;
+            /** @description The task's subject. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written. */
             subject: string;
             /**
              * @description The task's own words, as written. Only a task whose content this reader may read is
@@ -41120,6 +41133,8 @@ export interface components {
             updated_at: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /** @description List reads only. Whether the caller may archive this edge, answered by the rule the archive itself applies. */
+            readonly can_archive?: boolean;
         };
         CreateRelationshipRequest: {
             /** @enum {string} */
@@ -42020,7 +42035,7 @@ export interface components {
             };
             health?: components["schemas"]["Project360Health"];
             contracts?: components["schemas"]["ContractListResponse"];
-            /** @description The files attached to the project itself, newest first. */
+            /** @description The project's own uploads and the files of the activities filed under it, newest first. */
             documents?: {
                 data: components["schemas"]["Attachment"][];
                 page: components["schemas"]["PageInfo"];
@@ -42863,7 +42878,11 @@ export interface components {
          */
         StageCriterionKind: "buyer_confirmed" | "event_held" | "document_signed" | "role_identified" | "terms_accepted" | "custom" | "legal_reviewed";
         CreateStageExitCriterionRequest: {
-            key: string;
+            /**
+             * @description Optional. Left out, Margince makes the key from the label and adds a
+             *     number when the stage already has a live criterion under that key.
+             */
+            key?: string;
             label: string;
             kind: components["schemas"]["StageCriterionKind"];
             /** @default true */
@@ -46264,7 +46283,7 @@ export interface components {
             readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118). */
             readonly open_task_count?: number | null;
-            /** @description Subject of the earliest open task linked to this lead. */
+            /** @description Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written. */
             readonly next_task_subject?: string | null;
             /**
              * Format: date-time
@@ -53068,7 +53087,7 @@ export interface components {
             type: string;
             /** Format: uuid */
             id: string;
-            /** @description Display label (name/subject). */
+            /** @description Display label (name/subject). An activity Margince wrote is titled in the reader's language, as its History row names it. */
             title?: string | null;
             snippet?: string | null;
             /** @description Relevance score. */
@@ -55775,6 +55794,12 @@ export interface components {
             created_at: string;
             /** Format: int64 */
             version: number;
+            /**
+             * @description Only on the answer to a share, and only when true: the share asked for `write` and the
+             *     user's role can neither change records of this type nor create activities, so the grant
+             *     was saved as `read`. A team grant is never limited, because its members hold different roles.
+             */
+            limited_by_role?: boolean;
         };
         CreateRecordGrantRequest: {
             /** @enum {string} */
@@ -55805,6 +55830,12 @@ export interface components {
         ShareCompanyContactsResult: {
             shared: number;
             skipped: number;
+            /**
+             * @description Present, and true, only when at least one grant was written and the share asked for `write`
+             *     while the user's role can neither change contacts nor create activities, so the grants were
+             *     saved as `read`.
+             */
+            limited_by_role?: boolean;
         };
         /**
          * @description Who can open one contact or company and who can change it. `data` is one page of the
@@ -58858,7 +58889,7 @@ export interface components {
             reason?: string | null;
         };
         IssuePassportRequest: {
-            /** @description Which agent this binds, e.g. "Claude Desktop". */
+            /** @description Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one. */
             label?: string | null;
             /** @description Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC. */
             scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
@@ -64366,7 +64397,9 @@ export interface components {
          * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
          *     create (API-CC-6). **Scope:** the key is unique within
          *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-         *     returns the original status + body. Reusing the same key with a *different* request body
+         *     returns the original status + body. A connected agent's principal is its connection, so a
+         *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+         *     key as its `idempotency_key`. Reusing the same key with a *different* request body
          *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
          *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
          *     means the first request under the key is still running and carries `Retry-After`;
@@ -65792,7 +65825,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -65871,7 +65906,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -66006,6 +66043,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /** @description The model did not read the photo (`code: ai_allowance_used_up`, `provider_out_of_credit`, `provider_unauthorized`, `provider_unavailable` or `assistant_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getContact: {
@@ -66080,7 +66126,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -66146,7 +66194,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -66218,7 +66268,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -67405,7 +67457,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -67483,7 +67537,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -67570,7 +67626,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -67854,7 +67912,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -68003,7 +68063,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -68076,7 +68138,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -68142,7 +68206,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -68581,7 +68647,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -68666,7 +68734,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -70000,7 +70070,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -70189,7 +70261,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -70267,7 +70341,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -70746,7 +70822,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -70804,7 +70882,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -71025,7 +71105,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -71247,7 +71329,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -71311,7 +71395,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -72044,7 +72130,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -72294,7 +72382,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -72393,7 +72483,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -72507,7 +72599,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -72598,7 +72692,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -72721,7 +72817,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -72796,7 +72894,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -72973,7 +73073,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -73030,7 +73132,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -73088,7 +73192,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -73347,7 +73453,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -73460,7 +73568,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -73543,7 +73653,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -73605,7 +73717,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -73689,7 +73803,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -73802,7 +73918,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -74054,7 +74172,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -74299,7 +74419,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -74460,7 +74582,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -74637,7 +74761,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -75099,7 +75225,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -75484,7 +75612,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -75538,7 +75668,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -75891,7 +76023,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -75976,7 +76110,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -76353,7 +76489,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -76734,7 +76872,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -77074,7 +77214,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -77276,7 +77418,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -77423,7 +77567,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -78782,7 +78928,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -79083,7 +79231,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -79159,7 +79309,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -79380,7 +79532,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -79457,7 +79611,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -79522,7 +79678,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -79801,7 +79959,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -79879,7 +80039,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -79957,7 +80119,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80035,7 +80199,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80113,7 +80279,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80174,7 +80342,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80252,7 +80422,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80313,7 +80485,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80395,7 +80569,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80499,7 +80675,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80552,7 +80730,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80635,7 +80815,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80717,7 +80899,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80795,7 +80979,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -80881,7 +81067,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -81908,7 +82096,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -82620,7 +82810,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -82741,7 +82933,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -85620,7 +85814,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -86409,7 +86605,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -86563,7 +86761,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -91369,7 +91569,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -91627,7 +91829,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -92099,7 +92303,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -92600,7 +92806,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -92687,7 +92895,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -92815,7 +93025,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -92876,7 +93088,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -93219,7 +93433,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -93280,7 +93496,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -93387,7 +93605,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -93480,7 +93700,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -93542,7 +93764,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -93741,7 +93965,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -94120,7 +94346,35 @@ export interface operations {
     issueDoubleOptIn: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -94242,7 +94496,35 @@ export interface operations {
     sendPrivacyNotice: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -94274,7 +94556,35 @@ export interface operations {
     requestDetailsConfirmation: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -94552,7 +94862,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -94679,7 +94991,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -94848,7 +95162,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -94993,7 +95309,35 @@ export interface operations {
     inviteUser: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -95136,7 +95480,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -95704,7 +96050,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -95890,7 +96238,35 @@ export interface operations {
     resendUserInvite: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -96510,7 +96886,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -96690,7 +97068,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -96805,7 +97185,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -96943,7 +97325,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -96995,7 +97379,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -97127,7 +97513,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -97189,7 +97577,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -97243,7 +97633,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -97364,7 +97756,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -97478,7 +97872,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -97778,7 +98174,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -98588,7 +98986,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -98686,7 +99086,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -98856,7 +99258,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -98980,7 +99384,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -99267,7 +99673,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -99399,7 +99807,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -99451,7 +99861,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -99600,7 +100012,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -99713,7 +100127,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -99776,7 +100192,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -100463,7 +100881,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -102996,7 +103416,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -104337,7 +104759,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -104422,7 +104846,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -104503,7 +104929,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -104578,7 +105006,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;
@@ -104659,7 +105089,9 @@ export interface operations {
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
                  *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
                  *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
                  *     means the first request under the key is still running and carries `Retry-After`;

@@ -36,6 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Assembler reads the account exactly as its reader would see it. The
@@ -126,9 +128,9 @@ func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane 
 // the scoped 360 reports what the narrowing kept, and that report is handed
 // back beside the input so the wire can say so.
 func (s *Service) assemble(
-	ctx context.Context, companyID ids.CompanyID, withProfile bool, projectID *ids.ProjectID,
+	ctx context.Context, companyID ids.CompanyID, withProfile bool, projectID *ids.ProjectID, lang string,
 ) (Input, *crmcontracts.ProjectScope, error) {
-	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: projectID, WrittenByHumanOnly: true})
+	view, err := s.view.AssembleScoped(writtenIn(ctx, lang), companyID, company360.AssembleOptions{ProjectID: projectID, WrittenByHumanOnly: true})
 	if err != nil {
 		return Input{}, nil, err
 	}
@@ -169,11 +171,11 @@ func (s *Service) GetScoped(
 	// The gates that matter run HERE, in the caller's own composite read: a
 	// brief can only be written from what this caller may see, and an
 	// account they cannot read refuses before any cache is consulted.
-	in, scope, err := s.assemble(ctx, companyID, true, projectID)
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	in, scope, err := s.assemble(ctx, companyID, true, projectID, lang)
 	if err != nil {
 		return crmcontracts.CompanyBrief{}, err
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
 	in = in.WordedIn(lang)
 	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
@@ -248,11 +250,11 @@ func (s *Service) AskScoped(
 	// The gates that matter run HERE, in the caller's own composite read: an
 	// answer can only be written from what this caller may see, and an account
 	// they cannot read refuses before a single word is written.
-	in, scope, err := s.assemble(ctx, companyID, false, projectID)
+	lang := s.answerLanguage(ctx)
+	in, scope, err := s.assemble(ctx, companyID, false, projectID, lang)
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
 	}
-	lang := s.answerLanguage(ctx)
 	sentences, by, err := Answer(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, question, companyID.String(), in.WordedIn(lang), lang)
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
@@ -269,6 +271,12 @@ func (s *Service) AskScoped(
 		return crmcontracts.CompanyAnswer{}, err
 	}
 	return out, nil
+}
+
+// writtenIn reads the account in the language the text is written in. A task
+// Margince wrote is then named alike for every reader of one brief.
+func writtenIn(ctx context.Context, lang string) context.Context {
+	return systemtext.WithLocale(ctx, textlang.Lang(lang))
 }
 
 // answerLanguage is the language a prepared answer is written in: the

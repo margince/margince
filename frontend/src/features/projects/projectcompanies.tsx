@@ -102,8 +102,13 @@ export function ProjectCompanies({
       };
     }),
     readOnly,
+    // A project keeps at least one company and the server refuses the last
+    // detach, so the only company's card offers no verb to be refused.
     card: (company, onDetach) => (
-      <ProjectCompanyCard company={company} onDetach={onDetach} />
+      <ProjectCompanyCard
+        company={company}
+        onDetach={(companies ?? []).length > 1 ? onDetach : undefined}
+      />
     ),
     allowsMany: true,
     search: searchCompanies,

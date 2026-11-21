@@ -53,6 +53,9 @@ export type StageStep = {
   // control. Absent where the reader may not move the record: a stage is then
   // its name only, and a way out not taken is left out.
   onPick?: () => void;
+  // The move's accessible name where the step's label alone does not say that
+  // pressing it moves the record ("Move to Pursuing"). Absent, the label names it.
+  actionLabel?: string;
   disabled?: boolean;
   // Why this move cannot be made. Both go straight to `Button`, which owns the
   // refusal contract: `reason` is a sentence it draws under the control,
@@ -201,6 +204,7 @@ function LadderStep({
         <Button
           variant="ghost"
           data-testid={step.testId}
+          aria-label={step.actionLabel}
           disabled={step.disabled}
           reason={step.reason}
           reasonId={step.reasonId}

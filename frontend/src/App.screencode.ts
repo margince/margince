@@ -29,6 +29,7 @@ export const SCREEN_CODE = {
   preferences: () => import("./features/settings/preferences"),
   progress: () => import("./features/analytics/progress"),
   project: () => import("./features/projects/project360"),
+  recordHistory: () => import("./features/records/history"),
   projects: () => import("./features/projects/projects"),
   scheduled: () => import("./features/mail/scheduledsends"),
   search: () => import("./features/voice-knowledge/search"),

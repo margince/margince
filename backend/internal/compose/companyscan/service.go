@@ -27,6 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -336,7 +338,7 @@ func (s *Service) RaisesForCaller(ctx context.Context, tx pgx.Tx, companyID ids.
 // assemble reads the input as the caller: the composite read, then the
 // message words, and the fingerprint over both.
 func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID, language string) (Input, string, error) {
-	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{})
+	view, err := s.view.AssembleScoped(systemtext.WithLocale(ctx, textlang.Lang(language)), companyID, company360.AssembleOptions{})
 	if err != nil {
 		return Input{}, "", err
 	}

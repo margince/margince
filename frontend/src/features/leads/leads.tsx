@@ -44,6 +44,7 @@ export type Lead = components["schemas"]["Lead"];
 
 export type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
+import { RecordGone } from "../../components/recordgone";
 import { leadKey, leadWriteKeys } from "../../lib/leadkeys";
 import type { RecordTabId } from "../../lib/recordtaborder";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -300,7 +301,11 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap lead-surface">
-      <QueryGate query={leadQuery} pendingLabel={t("nav.leads")}>
+      <QueryGate
+        query={leadQuery}
+        pendingLabel={t("nav.leads")}
+        gone={<RecordGone kind="lead" />}
+      >
         {(lead) => (
           // Keyed by lead: every piece of page state below — the open dialog,
           // the tab, a half-typed score override — is about THIS lead, and

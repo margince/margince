@@ -807,6 +807,11 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '503':
+          description: 'The model did not read the photo (`code: ai_allowance_used_up`, `provider_out_of_credit`, `provider_unauthorized`, `provider_unavailable` or `assistant_unavailable`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
   /contacts/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -6507,7 +6512,10 @@ paths:
       security: [{bearerAuth: []}]
       summary: Add an exit criterion to a stage.
       description: |-
-        Requires `pipeline:update`, like every other pipeline-shape edit.
+        Requires `pipeline:update`, like every other pipeline-shape edit. Leave
+        `key` out and Margince makes it from the label, adding a number on a clash
+        in the stage. A `key` you send is validated, and a live clash is
+        `criterion_key_taken`.
 
         Needs the passport permission Change records.
 
@@ -18996,6 +19004,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -19107,6 +19117,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -19139,6 +19151,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -19687,6 +19701,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -20178,6 +20194,8 @@ paths:
         Needs the passport permission Send messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
           description: The member, and whether the new invitation email was handed to the sender.
@@ -26800,7 +26818,8 @@ components:
         Client-supplied key making a mutation safe to retry — an update exactly as much as a
         create. **Scope:** the key is unique within
         `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-        returns the original status + body. Reusing the same key with a *different* request body
+        returns the original status + body. A connected agent's principal is its connection, so a
+        retry on a refreshed token replays too. Reusing the same key with a *different* request body
         returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
         do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
         means the first request under the key is still running and carries `Retry-After`;
@@ -28035,8 +28054,9 @@ components:
       description: |-
         The decision-model lane: a model that answers a typed question with calibrated
         probabilities, asked before a decision site's ladder. Absent means no task uses
-        one. It serves a task only when certified for that site and when its endpoint
-        reaches no further than the task's own bindings.
+        one. Bound, it answers every task that declares a decision form, with or without
+        a certification record; each site keeps an answer only at its own floor and
+        otherwise falls back to its ladder.
       properties:
         provider:
           type: string
@@ -30363,7 +30383,7 @@ components:
         decision_first: {type: boolean, description: 'The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor.'}
         decision_skip_reason:
           type: string
-          enum: [unbound, uncertified]
+          enum: [unbound]
           description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
         decision_candidate:
           $ref: '#/components/schemas/AiRouteCandidate'
@@ -30650,7 +30670,7 @@ components:
       properties:
         attempt: {type: integer}
         is_terminal: {type: boolean}
-        attempt_reason: {type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.'}
+        attempt_reason: {type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, or decision_uncertified on a row stored before the decision lane stopped reading certification — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.'}
         kind: {type: string, enum: [completion, embedding, decision], description: 'What this attempt asked: a chat completion, an embedding, or a decision model.'}
         tier: {type: string, description: 'The tier this attempt ran on; decide for the decision lane.'}
         provider: {type: string}
@@ -34153,7 +34173,7 @@ components:
       required: [activity_id, subject, overdue]
       properties:
         activity_id: {type: string, format: uuid}
-        subject: {type: string}
+        subject: {type: string, description: 'The task''s subject. A task Margince wrote is named in the reader''s language, as its History row names it; a task typed by hand reads as written.'}
         body:
           type: [string, 'null']
           description: |-
@@ -38689,6 +38709,7 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+        can_archive: {type: boolean, readOnly: true, description: 'List reads only. Whether the caller may archive this edge, answered by the rule the archive itself applies.'}
     CreateRelationshipRequest:
       type: object
       required: [kind, source]
@@ -39459,7 +39480,7 @@ components:
         contracts: {$ref: '#/components/schemas/ContractListResponse'}
         documents:
           type: object
-          description: The files attached to the project itself, newest first.
+          description: The project's own uploads and the files of the activities filed under it, newest first.
           required: [data, page]
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Attachment'}}
@@ -40212,9 +40233,13 @@ components:
       enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed]
     CreateStageExitCriterionRequest:
       type: object
-      required: [key, label, kind]
+      required: [label, kind]
       properties:
-        key: {type: string}
+        key:
+          type: string
+          description: |-
+            Optional. Left out, Margince makes the key from the label and adds a
+            number when the stage already has a live criterion under that key.
         label: {type: string}
         kind: {$ref: '#/components/schemas/StageCriterionKind'}
         required: {type: boolean, default: true}
@@ -43211,7 +43236,7 @@ components:
           readOnly: true
           description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         open_task_count: {type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them.'}
-        next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
+        next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader''s language, as its History row names it; a task typed by hand reads as written.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
         score_reason: {type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.'}
         source: {type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from.'}
@@ -50695,7 +50720,7 @@ components:
       properties:
         type: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
         id: {type: string, format: uuid}
-        title: {type: [string, 'null'], description: Display label (name/subject).}
+        title: {type: [string, 'null'], description: 'Display label (name/subject). An activity Margince wrote is titled in the reader''s language, as its History row names it.'}
         snippet: {type: [string, 'null']}
         score: {type: [number, 'null'], description: Relevance score.}
         identifier_match:
@@ -52931,6 +52956,12 @@ components:
         expires_at: {type: [string, 'null'], format: date-time, description: 'Optional TTL; an expired grant matches no rows.'}
         created_at: {type: string, format: date-time}
         version: {type: integer, format: int64}
+        limited_by_role:
+          type: boolean
+          description: |-
+            Only on the answer to a share, and only when true: the share asked for `write` and the
+            user's role can neither change records of this type nor create activities, so the grant
+            was saved as `read`. A team grant is never limited, because its members hold different roles.
     CreateRecordGrantRequest:
       type: object
       required: [record_type, record_id, subject_type, subject_id, access]
@@ -52957,6 +52988,12 @@ components:
       properties:
         shared: {type: integer, minimum: 0}
         skipped: {type: integer, minimum: 0}
+        limited_by_role:
+          type: boolean
+          description: |-
+            Present, and true, only when at least one grant was written and the share asked for `write`
+            while the user's role can neither change contacts nor create activities, so the grants were
+            saved as `read`.
     UserListResponse:
       type: object
       required: [data, page]

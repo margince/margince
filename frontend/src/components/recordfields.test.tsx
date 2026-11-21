@@ -287,6 +287,11 @@ it("refuses an address it cannot read and keeps the dialog open", async () => {
   await user.type(input, "invalid");
   await user.click(screen.getByRole("button", { name: "Save" }));
   expect(screen.getByRole("dialog", { name: "Email" })).toBeInTheDocument();
+  // The app's own sentence on the field, not the browser's bubble.
+  expect(
+    await screen.findByText("Enter an email address for Email."),
+  ).toBeInTheDocument();
+  expect(input).toHaveAttribute("aria-invalid", "true");
   expect(save).not.toHaveBeenCalled();
 });
 it("connects the reference label to its search input", async () => {

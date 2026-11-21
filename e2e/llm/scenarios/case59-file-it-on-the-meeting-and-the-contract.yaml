@@ -68,6 +68,7 @@ must_mention:
 
 # The base64 or the PDF's own markup in a note is the file retyped.
 must_not_call_with:
+  - attach_link~.
   - "log_activity~JVBERi0|%PDF|BaseFont|endobj"
 
 must_end_with:

@@ -27,6 +27,7 @@ const idnaImportPath = "golang.org/x/net/idna"
 
 var idnaReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/platform/owndomain/owndomain.go":   "is the fold itself, and the Spellings that a SQL comparison against stored header addresses needs because Postgres cannot fold IDNA. Cost: none, every other domain fold delegates here",
+	"internal/platform/owndomain/parse.go":       "parses a typed company domain into the punycode form Fold gives, and refuses what IDNA cannot read. Cost: none, it stores the same ASCII form",
 	"internal/modules/capture/owndomainstore.go": "validates an own domain before it is stored and refuses one IDNA cannot read, where Fold keeps it. It stores the same ASCII form Fold gives a readable domain. Cost: a second IDNA call, kept so a typo is refused rather than stored as protection that never fires",
 	"internal/modules/capture/strangermail.go":   "adds the IDNA spelling of a sender for the stranger lookup and the Unicode spelling for the stored-counterparty repair. It is a comparison, not display. Routing it through mailidentity.AddressSpellings waits on one IDNA-folded correspondence lock (#9083), because widening the lookup first lets a punycode inbound and a Unicode outbound miss each other's lock. Cost: a second spelling helper until then",
 	"internal/platform/freemail/displayname.go":  "renders a domain for display with idna.ToUnicode; it never compares. Cost: none for matching, a display-only conversion",
@@ -120,8 +121,7 @@ var foldsADomainInSQL = regexp.MustCompile(
 // sqlFoldsAdmitted are the statements that may still lower() a domain, by name
 // and with the reason, because no fold reaches them.
 var sqlFoldsAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/search/branches.go":     "ranks a company by the trigram similarity of a typed query to its domains, through the expression idx_company_domain_trgm indexes. It scores how alike two strings look and answers no question of which domain is which, so a punycode spelling ranking lower is a search result, not two domains.",
-	"internal/compose/company360/contacts.go": "compares a stored provider claim's company_domain against the company's own domains, both sides stored, inside a correlated subquery over every claim. Postgres cannot fold IDNA and no Go value passes through, so folding it needs a folded column on both sides, which is a schema change rather than a predicate change.",
+	"internal/modules/search/branches.go": "ranks a company by the trigram similarity of a typed query to its domains, through the expression idx_company_domain_trgm indexes. It scores how alike two strings look and answers no question of which domain is which, so a punycode spelling ranking lower is a search result, not two domains.",
 })
 
 // TestNoSQLStatementFoldsADomainWithLower censuses the SQL that compares a
@@ -207,5 +207,36 @@ func TestTheDomainFoldCensusReadsEverySpelling(t *testing.T) {
 		if foldsADomainInSQL.MatchString(statement) {
 			t.Errorf("the census flags %q, which compares a fold or both spellings", statement)
 		}
+	}
+}
+
+// TestOnlyOwndomainCallsTheKernelDomainParser holds that a domain is stored in
+// one form. values.ParseDomain cannot transcode, so a caller of it directly
+// would store a Unicode domain the mail matching never sees.
+func TestOnlyOwndomainCallsTheKernelDomainParser(t *testing.T) {
+	t.Parallel()
+	const owner = "internal/platform/owndomain/parse.go"
+	seen := 0
+	err := gatekit.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
+		rel := filepath.ToSlash(path)
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
+			rel == owner || strings.HasPrefix(rel, "internal/shared/kernel/values/") {
+			return err
+		}
+		src, err := gatekit.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		seen++
+		if strings.Contains(string(src), "values.ParseDomain(") {
+			t.Errorf("%s calls values.ParseDomain: use owndomain.ParseDomain, which stores the punycode form", rel)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seen < 100 {
+		t.Fatalf("scanned %d files; the walk missed the tree", seen)
 	}
 }

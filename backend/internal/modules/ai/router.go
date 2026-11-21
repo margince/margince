@@ -87,10 +87,12 @@ type Router struct {
 	// the cert lane and scripted repeat-call tests need every call to reach
 	// the model, not collapse onto a cached answer.
 	cacheOff bool
-	// decisionCertified answers whether the decisions lane may serve one site:
-	// the generated certification table, except on the certification lane's
-	// own DB-less router (WithEveryDecisionCertified).
-	decisionCertified func(DecisionCertKey) bool
+	// unlimited sends every task at CallCeiling with no walk bound
+	// (ai.WithoutInteractiveLimits), for a lane that measures latency.
+	unlimited bool
+	// tryDeadline replaces context.WithTimeout for one try, so a test can read
+	// the timeout a try was given without a real clock.
+	tryDeadline func(context.Context, time.Duration) (context.Context, context.CancelFunc)
 	// overrides is the admin's per-task thinking level and deadlines
 	// (ai.task_overrides), republished by the routing watcher.
 	overrides atomic.Pointer[TaskOverrides]
@@ -164,9 +166,8 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 		// coldStartOptions and offerDraftOptions each mint their own Router
 		// over the same routing config, and /metrics must report one honest
 		// total across both, rendered exactly once.
-		metrics:           sharedCallMetrics,
-		now:               time.Now,
-		decisionCertified: decisionIsCertified,
+		metrics: sharedCallMetrics,
+		now:     time.Now,
 	}
 	r.install(binding{clients: clients, embedder: embedder, profile: profile, routeMeta: meta})
 	return r

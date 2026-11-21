@@ -25,7 +25,7 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { AutonomyDot } from "../../design-system/trust";
 import { useT } from "../../i18n";
 import { dotTier } from "../../lib/autonomy";
-import { usePassports } from "../../lib/passports.queries";
+import { passportName, usePassports } from "../../lib/passports.queries";
 import { unwrap } from "../../lib/problem";
 import "./settings-agents.css";
 import { holdsEveryWord, searchWords } from "../../format/collate";
@@ -90,7 +90,10 @@ export function AgentToolsCard() {
               <PassportSelect
                 options={live.map((passport) => ({
                   id: passport.id,
-                  label: t("tools.scopedTo", { label: passport.label }),
+                  label: t("tools.scopedTo", {
+                    label:
+                      passportName(passport) ?? t("settings.passportUnnamed"),
+                  }),
                   scopes: passport.scopes,
                 }))}
                 value={scopeId}

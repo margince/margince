@@ -100,7 +100,7 @@ func TestTheAccountStartedSendSummaryNamesEveryArgumentItReleases(t *testing.T) 
 		To: []string{"buyer@example.test"}, Cc: []string{"rival@example.test"}, Subject: "Q3 pricing",
 	}, []RecordLink{{EntityType: "company", EntityID: ids.NewV7()}})
 
-	for _, want := range []string{"buyer@example.test", "rival@example.test", `"Q3 pricing"`, "1 record(s)"} {
+	for _, want := range []string{"buyer@example.test", "rival@example.test", `“Q3 pricing”`, "1 record(s)"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("summary %q does not name %q", got, want)
 		}

@@ -153,7 +153,7 @@ function insideADialog(trigger: HTMLElement | null): boolean {
   return trigger?.closest('[role="dialog"][aria-modal="true"]') != null;
 }
 
-function stopsIn(panel: HTMLElement | null): HTMLElement[] {
+export function stopsIn(panel: HTMLElement | null): HTMLElement[] {
   return panel ? [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)] : [];
 }
 

@@ -154,7 +154,7 @@ func TestListPassportsShowsRevocation(t *testing.T) {
 	ctx := e.ctx()
 
 	id := e.identityFor(e.alice, []string{"rep"})
-	issued, err := e.svc.IssuePassport(ctx, id, identity.IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, id, identity.IssuePassportInput{Label: new("test agent"), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestRevocationReachesARunAlreadyInFlight(t *testing.T) {
 	ctx := e.ctx()
 	id := e.identityFor(e.alice, []string{"rep"})
 
-	issued, err := e.svc.IssuePassport(ctx, id, identity.IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, id, identity.IssuePassportInput{Label: new("test agent"), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
@@ -234,7 +234,7 @@ func TestAPassportRegrantedElsewhereStopsActingForTheHumanItLeft(t *testing.T) {
 	ctx := e.ctx()
 	id := e.identityFor(e.alice, []string{"rep"})
 
-	issued, err := e.svc.IssuePassport(ctx, id, identity.IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, id, identity.IssuePassportInput{Label: new("test agent"), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}

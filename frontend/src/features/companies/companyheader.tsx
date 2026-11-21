@@ -37,6 +37,7 @@ import { useShortcut } from "../../lib/shortcuts";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
+import { displayDomain } from "./domaindisplay";
 
 // The header's pieces that write: the owner, the lifecycle's shared PATCH and
 // the record menu. The facts and other verbs live in companyheader*.tsx.
@@ -448,7 +449,7 @@ export function CompanyActionBadges({
 // we cannot parse is shown whole rather than silently dropped.
 export function displayHost(url: string): string {
   try {
-    return new URL(url).host.replace(/^www\./, "");
+    return displayDomain(new URL(url).host.replace(/^www\./, ""));
   } catch {
     return url;
   }

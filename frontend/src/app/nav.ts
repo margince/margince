@@ -167,6 +167,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         screen: "analytics",
         labelKey: "nav.analytics",
         icon: ChartNoAxesCombined,
+        // Reports and the forecast live here, so a reader typing either lands.
+        aliases: ["reports", "report", "forecast"],
       },
       // Closed revenue against the goal. The rail names it My progress or
       // Team progress (navLabelKey); this key is its name in the shortcuts.

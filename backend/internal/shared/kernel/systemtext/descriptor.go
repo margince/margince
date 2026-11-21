@@ -8,12 +8,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"strings"
 	"time"
-	"unicode/utf8"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -126,78 +122,7 @@ func Fingerprint(value string) string {
 
 // Render refuses invalid or unbounded template arguments.
 func (c Component) Render(lang textlang.Lang) (string, error) {
-	return c.renderBounded(lang, 0, "", true)
-}
-
-func (c Component) renderBounded(lang textlang.Lang, depth int, original string, bounded bool) (string, error) {
-	if len(c.Following) > 8 || depth > 4 || len(c.Args) > 16 {
-		return "", errors.New("system text: sentence sequence exceeds limit")
-	}
-
-	definition, ok := definitionOf(c.Code)
-	if !ok || c.Origin != Template || len(c.Args) != len(definition.Arguments) {
-		return "", errors.New("system text: invalid definition")
-	}
-	values := make([]any, len(c.Args))
-	for i, arg := range c.Args {
-		if !argumentKindMatches(arg.Kind, definition.Arguments[i]) {
-			return "", errors.New("system text: invalid argument")
-		}
-		if arg.Kind == argumentCount {
-			values[i] = arg.Count
-			continue
-		}
-		value, err := arg.renderText(lang, depth, original, bounded)
-		if err != nil {
-			return "", err
-		}
-		values[i] = value
-	}
-
-	sentence := definition.Words.In(lang)
-	if len(values) > 0 {
-		sentence = fmt.Sprintf(sentence, values...)
-	}
-	lines := []string{sentence}
-	for _, part := range c.Following {
-		line, err := part.renderBounded(lang, depth+1, original, bounded)
-		if err != nil {
-			return "", err
-		}
-		lines = append(lines, line)
-	}
-	separator, err := layoutSeparator(c.Layout)
-	if err != nil {
-		return "", err
-	}
-	return strings.Join(lines, separator), nil
-}
-
-func (arg Argument) renderText(lang textlang.Lang, depth int, original string, bounded bool) (string, error) {
-	if bounded && (arg.Kind == argumentText || arg.Kind == argumentLabel) && utf8.RuneCountInString(arg.Text) > 512 {
-		return "", ErrDisplayLimit
-	}
-	switch arg.Kind {
-	case argumentComponent:
-		if arg.Component == nil {
-			return "", errors.New("system text: missing nested component")
-		}
-		return arg.Component.renderBounded(lang, depth+1, original, bounded)
-	case argumentSourceSpan:
-		return arg.sourceSpan(original)
-	case argumentMessage:
-		nested, ok := definitionOf(arg.Text)
-		if !ok || len(nested.Arguments) != 0 {
-			return "", errors.New("system text: invalid nested message")
-		}
-		return nested.Words.In(lang), nil
-	case argumentDate:
-		return calendarText(arg.Text)
-	case argumentText, argumentLabel:
-		return credentialmask.MaskText(arg.Text), nil
-	default:
-		return "", errors.New("system text: invalid argument kind")
-	}
+	return c.renderBounded(lang, "", true)
 }
 
 func calendarText(value string) (string, error) {
@@ -260,11 +185,13 @@ func bindComponent(component Component, text string) (Component, bool, error) {
 	case Template:
 		matches := false
 		for _, language := range textlang.Shipped {
-			rendered, err := component.renderBounded(language, 0, text, true)
-			if err != nil {
-				return component, false, err
+			for _, spell := range []spelling{ownMarks, goQuoted} {
+				rendered, err := component.renderSpelled(language, 0, text, true, spell)
+				if err != nil {
+					return component, false, err
+				}
+				matches = matches || rendered == text
 			}
-			matches = matches || rendered == text
 		}
 		if !matches {
 			return component, false, nil
@@ -288,7 +215,7 @@ func (c *Component) Display(text string, lang textlang.Lang) *string {
 	if !c.Matches(text) || c.Origin != Template {
 		return nil
 	}
-	rendered, err := c.renderBounded(lang, 0, text, true)
+	rendered, err := c.renderBounded(lang, text, true)
 	if err != nil {
 		return nil
 	}
@@ -457,7 +384,7 @@ func metadataSize(encoded []byte) int {
 
 // Canonical produces the owner’s source spelling before binding it.
 func Canonical(component *Component, language textlang.Lang) string {
-	rendered, err := component.renderBounded(language, 0, "", false)
+	rendered, err := component.renderBounded(language, "", false)
 	if err != nil {
 		panic(err)
 	}

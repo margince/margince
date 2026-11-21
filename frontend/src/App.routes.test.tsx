@@ -96,7 +96,11 @@ describe("the address dispatch", () => {
     ["#/deals/d1/room", screens.DealsRoute, { id: "d1", id2: "room" }],
     ["#/projects", screens.ProjectsScreen, { startCreating: false }],
     ["#/projects/new", screens.ProjectsScreen, { startCreating: true }],
-    ["#/projects/p1", screens.ProjectScreen, { id: "p1" }],
+    [
+      "#/projects/p1",
+      screens.ProjectScreen,
+      { id: "p1", archivedHistory: screens.ArchivedRecordHistory },
+    ],
     ["#/worklist/me", screens.WorklistRedirect, { opensOn: "me" }],
     ["#/analytics", screens.AnalyticsScreen, {}],
     ["#/filters/f1/v1", screens.FiltersScreen, { id: "f1", view: "v1" }],
@@ -124,11 +128,7 @@ describe("the address dispatch", () => {
     ["#/confirm/tok", screens.ConfirmDetailsScreen, { token: "tok" }],
     ["#/reset-password", screens.ResetAddressSignedIn, {}],
     ["#/x/fork", screens.CustomRoute, { name: "fork" }],
-    [
-      "#/no-such-page",
-      screens.ScreenNotice,
-      { messageKey: "shell.unknownPage" },
-    ],
+    ["#/no-such-page", screens.UnknownAddress, {}],
   ])("%s draws its screen", (address, component, props) => {
     const view = viewOf(address);
     expect(view.type).toBe(component);
@@ -158,15 +158,15 @@ describe("the route parts", () => {
       recordType: "deal",
       recordId: "d1",
     });
-    expect(drawn(screens.ShareRoute({ id: "deal" }))).toEqual({
-      messageKey: "screen.pending",
-    });
+    expect(screens.ShareRoute({ id: "deal" }).type).toBe(
+      screens.UnknownAddress,
+    );
   });
 
   it("answers a fork address the registry does not hold as not found", () => {
-    expect(drawn(screens.CustomRoute({ name: "fork" }))).toEqual({
-      messageKey: "shell.unknownPage",
-    });
+    expect(screens.CustomRoute({ name: "fork" })?.type).toBe(
+      screens.UnknownAddress,
+    );
   });
 });
 

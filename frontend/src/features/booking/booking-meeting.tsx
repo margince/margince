@@ -9,6 +9,7 @@ import {
   MeetingFacts,
   openCalendarLabel,
 } from "../../components/booking-meeting-parts";
+import { GoneNotice } from "../../components/gonenotice";
 import { ActionRow } from "../../design-system/actionrow";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -104,7 +105,11 @@ export function BookingMeetingScreen({
             </Button>
           </div>
         )}
-        <QueryGate pendingLabel={t("common.loading")} query={query}>
+        <QueryGate
+          pendingLabel={t("common.loading")}
+          query={query}
+          gone={host ? undefined : <GoneNotice messageKey="book.linkGone" />}
+        >
           {(meeting) => {
             const cancelable =
               meeting.status !== "canceled" && meeting.status !== "canceling";

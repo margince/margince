@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { browserZone, UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
+import type { LeadDisqualifyReason } from "../../lib/leaddisqualifyreasons";
 import { withShippedLabels } from "../../lib/shippedlabels";
-import type { LeadDisqualifyReason } from "./leadhandling";
 import { leadStanding, standingReasons, terminalBadge } from "./leadstanding";
 
 type Lead = components["schemas"]["Lead"];

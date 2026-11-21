@@ -97,6 +97,15 @@ planned. It does not say what a release needs.
   the tag while an open issue carries it. The label names no version: an issue still open when a
   release ships blocks the one after it. The maintainer who plans the release sets it.
 
+## Records
+
+This label also goes on a **pull request**. The weekly scheduled run opens one pull request for each
+record it measured, and puts this label on it.
+
+- `records: weekly`: a measurement the weekly run puts up for review, such as the speed records or
+  the MCP use-case verdicts. It goes to the maintainer that the `RECORDS_OWNER` repository variable names.
+  That maintainer compares the record with the one it replaces, then merges or closes the pull request.
+
 ## Provenance
 
 **Provenance** labels say where an issue comes from. They add to priority, area and status, and

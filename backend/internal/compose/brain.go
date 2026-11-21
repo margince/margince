@@ -35,11 +35,11 @@ type completer interface {
 	Complete(ctx context.Context, req model.Request) (model.Response, error)
 }
 
-// ModelPath is the wired model surface one process role hands around:
-// each lane is the same router under a task label, so ai-routing.yaml
-// decides the tier per workload, and every lane draws on the
-// seat-derived monthly budget. A lane is named for the ai.Task it rides,
-// so the wiring reads in one vocabulary — the contract's.
+// ModelPath is the wired model surface one process role hands around.
+// Each lane is the same router under a task label, so the routing setting
+// decides the tier per workload. Every lane draws on the seat-derived
+// monthly budget. A lane is named for the ai.Task it rides, so the wiring
+// reads in the contract's vocabulary.
 type ModelPath struct {
 	// router is the assembled model runtime behind every lane below. It is
 	// held so a composition can bind what only IT knows — the per-Passport
@@ -393,7 +393,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 // arch_test.go's TestNoModelClientOutsideTheGate enforces — rather than
 // aicert becoming a second, ungated construction site.
 func NewLocalRouterForCert(cfg ai.RoutingConfig, opts ...ai.LocalOption) (*ai.Router, error) {
-	return ai.NewLocalRouter(cfg, opts...)
+	return ai.NewLocalRouter(cfg, append([]ai.LocalOption{ai.WithoutInteractiveLimits()}, opts...)...)
 }
 
 // Router exposes the model path's underlying router — the same one every model
@@ -461,7 +461,7 @@ func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Resp
 	}
 	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
 	meta := runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier), Reject: func() { b.router.Reject(info) }}
-	return resp, meta, err
+	return resp, meta, agentStepRefusal(err)
 }
 
 // PromptWindow is the window of the agent loop's own ladder, read fresh on

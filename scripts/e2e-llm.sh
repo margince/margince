@@ -52,10 +52,6 @@ ONLY=" ${SCENARIO:-} "
 #   E2E_LLM_VERDICTS   write the verdicts to this directory INSTEAD of the
 #                      committed records tree — a run that sets it publishes
 #                      nothing.
-#
-# The verdicts under claude-opus-5/ were measured over the claude CLI before
-# routes existed, and those before 2026-08-27 on claude-fable-5 because nothing
-# pinned the model then: neither is a baseline for a bridge number.
 CANDIDATE="${E2E_LLM_CANDIDATE:-claude}"
 VIA="${E2E_LLM_VIA:-api}"
 # THE DOOR the assistant works through. mcp (the default) offers the product's own
@@ -98,6 +94,12 @@ fi
 
 command -v python3 >/dev/null || { echo "python3 is required to read the scenarios" >&2; exit 1; }
 
+# The whole corpus is linted before the stack boots: an unknown key, a pattern
+# that does not compile, a writes:, passport: or setup: value the lane cannot
+# act on. A typo in the last scenario would otherwise stop the lane after every
+# earlier case was paid for, or switch a check off without a word.
+python3 "$ROOT/e2e/llm/check.py" --lint "$SCENARIO_DIR"/*.yaml || exit 1
+
 # A name SCENARIO lists that no scenario carries would run nothing for it and
 # report the sweep as complete, so every listed name is matched before a boot.
 if [[ -n "${ONLY// /}" ]]; then
@@ -120,10 +122,18 @@ eval "$ROUTE"
 VERDICT_TREE=mcp_e2e
 [[ "$DOOR" = rest ]] && VERDICT_TREE=mcp_e2e_rest
 VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/$VERDICT_TREE/$FOLDER}"
+# A word-overlap search measures a harder tool than a run by hand, so its
+# verdicts never land in the published records, where they would replace ones
+# made by meaning. The page refuses a folder that mixes the two as well.
+if [[ "${E2E_LLM_ALLOW_LEXICAL:-0}" = "1" && -z "${E2E_LLM_VERDICTS:-}" ]]; then
+  echo "E2E_LLM_ALLOW_LEXICAL=1 needs E2E_LLM_VERDICTS: a lexical verdict is never filed in the records tree" >&2
+  exit 1
+fi
 SYSTEM_PROMPT=mcp-instructions
 [[ "$VIA" = cli ]] && SYSTEM_PROMPT=cli-default
-SELF_JUDGED=false
-[[ "$CANDIDATE" = claude ]] && SELF_JUDGED=true
+# A judge of the candidate's own family grades its own kind, which the page shows.
+SELF_JUDGED="$(cd "$ROOT/e2e/llm" && python3 -c 'import sys, judge
+print(str(judge.family(judge.pinned_model()) == sys.argv[1]).lower())' "$CANDIDATE")"
 
 if [[ "$WIRE" = claude-cli || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
   command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
@@ -164,6 +174,19 @@ cleanup() {
   rm -rf "$WORK"
 }
 trap cleanup EXIT
+
+# THE STAMP SAYS WHAT EACH VERDICT MEASURED: the scenario, the copy of the tools
+# it names, the instructions, the judge and the grading harness, read from
+# committed files by the generator `make e2e-llm-report` uses. A sweep works it
+# out once and hands it over in E2E_LLM_STAMP_DIR; a lone run works it out here.
+# shellcheck source=scripts/lib-e2e-llm-stamp.sh
+. "$ROOT/scripts/lib-e2e-llm-stamp.sh"
+STAMP_DIR="${E2E_LLM_STAMP_DIR:-$WORK/stamp}"
+if [[ ! -s "$STAMP_DIR/stamps.json" || ! -s "$STAMP_DIR/commit" ]]; then
+  echo "==> stamping what this run measures"
+  e2e_llm_stamp "$ROOT" "$DOOR" "$STAMP_DIR" || exit 1
+fi
+COMMIT="$(cat "$STAMP_DIR/commit")"
 
 # --- the stack ---------------------------------------------------------------
 #
@@ -290,15 +313,24 @@ zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$WORK/skill.zip" "$WORK/s
 }
 
 # use_passport points the assistant at the narrow credential (read, write), the
-# wide one (adds draft and send) or the research one (adds enrich). A scenario
-# asks for another with `passport: wide` or `passport: research`; every other
-# case is measured exactly as before, because a send tool offered to a case that
-# never asked for one is a different experiment.
+# wide one (adds draft and send), the research one (adds enrich), the rep one
+# (read, write, for a seat with the rep role) or the readonly one (read only). A
+# scenario asks for another with `passport:`; every other case is measured
+# exactly as before, because a send tool offered to a case that never asked for
+# one is a different experiment.
+#
+# READER_PASSPORT reads the end state. It is the admin's own unless the case's
+# passport already is: a rep's or a read-only credential sees less than the
+# world the case holds, and a read it cannot make is not the model's failure.
 use_passport() {
+  READER_PASSPORT="$PASSPORT_NARROW"
   case "$1" in
-    wide) PASSPORT="$PASSPORT_WIDE" ;;
-    research) PASSPORT="$PASSPORT_RESEARCH" ;;
-    *) PASSPORT="$PASSPORT_NARROW" ;;
+    wide) PASSPORT="$PASSPORT_WIDE"; READER_PASSPORT="$PASSPORT_WIDE" ;;
+    research) PASSPORT="$PASSPORT_RESEARCH"; READER_PASSPORT="$PASSPORT_RESEARCH" ;;
+    rep) PASSPORT="$PASSPORT_REP" ;;
+    readonly) PASSPORT="$PASSPORT_READONLY" ;;
+    "") PASSPORT="$PASSPORT_NARROW" ;;
+    *) echo "HARNESS: no passport is named '$1'; check.py PASSPORTS lists the names" >&2; exit 2 ;;
   esac
   write_mcp_config
 }
@@ -312,31 +344,40 @@ restart_stack() {
   write_mcp_config
 }
 
+# mint_with SESSION_JAR LABEL SCOPES_JSON prints the token of a passport minted
+# by the seat signed in to that jar, or nothing when the mint was refused.
+mint_with() {
+  curl -sS -b "$1" -X POST -H 'Content-Type: application/json' \
+    -d "{\"label\":\"$2\",\"scopes\":$3}" "$APP_BASE/v1/passports" | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("token",""))
+except Exception: print("")'
+}
+
+# THE REP IS LENA FISCHER, a seeded seat with the rep role whose row scope is
+# her own records. Every seeded deal is Sofia Meier's, so a write on one is a
+# write on a colleague's record, which the rep role refuses.
+REP_EMAIL=lena.fischer@demo.test
+
 mint_passport() {
   curl -sS -c "$COOKIES" -X POST -H 'Content-Type: application/json' \
     -d '{"email":"admin@demo.test","password":"demo-password-123"}' \
     "$APP_BASE/v1/auth/login" >/dev/null
 
-  PASSPORT="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-llm","scopes":["read","write"]}' \
-    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
-  [[ -n "$PASSPORT" ]] || { echo "could not mint a passport" >&2; exit 1; }
-
-  PASSPORT_NARROW="$PASSPORT"
-  PASSPORT_WIDE="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-llm-send","scopes":["read","write","draft","send"]}' \
-    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
+  PASSPORT_NARROW="$(mint_with "$COOKIES" e2e-llm '["read","write"]')"
+  [[ -n "$PASSPORT_NARROW" ]] || { echo "could not mint a passport" >&2; exit 1; }
+  PASSPORT="$PASSPORT_NARROW"
+  PASSPORT_WIDE="$(mint_with "$COOKIES" e2e-llm-send '["read","write","draft","send"]')"
   [[ -n "$PASSPORT_WIDE" ]] || { echo "could not mint the draft+send passport" >&2; exit 1; }
-  PASSPORT_RESEARCH="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-llm-research","scopes":["read","write","enrich"]}' \
-    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
+  PASSPORT_RESEARCH="$(mint_with "$COOKIES" e2e-llm-research '["read","write","enrich"]')"
   [[ -n "$PASSPORT_RESEARCH" ]] || { echo "could not mint the enrich passport" >&2; exit 1; }
+  PASSPORT_READONLY="$(mint_with "$COOKIES" e2e-llm-readonly '["read"]')"
+  [[ -n "$PASSPORT_READONLY" ]] || { echo "could not mint the read-only passport" >&2; exit 1; }
+  # The seed sets every colleague's password to this one.
+  curl -sS -c "$WORK/rep.cookies" -X POST -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$REP_EMAIL\",\"password\":\"colleague-password-123\"}" \
+    "$APP_BASE/v1/auth/login" >/dev/null
+  PASSPORT_REP="$(mint_with "$WORK/rep.cookies" e2e-llm-rep '["read","write"]')"
+  [[ -n "$PASSPORT_REP" ]] || { echo "could not mint the passport of the rep seat $REP_EMAIL" >&2; exit 1; }
 
   [[ "$DOOR" = rest ]] && fetch_skill
   write_mcp_config
@@ -345,7 +386,7 @@ except Exception: print("")')"
   # which reads downstream as a model that chose not to call anything. Fail
   # here instead, where the cause is still visible.
   local probe token
-  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE" "$PASSPORT_RESEARCH"; do
+  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE" "$PASSPORT_RESEARCH" "$PASSPORT_READONLY" "$PASSPORT_REP"; do
     probe="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$APP_BASE/mcp" \
       -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
       -H 'Accept: application/json, text/event-stream' \
@@ -423,7 +464,7 @@ if [[ "$ready" -eq 1 ]]; then
     echo "HARNESS: $why." >&2
     echo "  Every candidate would be measured on a degraded search. Put GEMINI_API_KEY in" >&2
     echo "  .env.local, or OPENAI_COMPATIBLE_API_KEY with E2E_LLM_STACK_PRESET=config/presets/" >&2
-    echo "  openrouter_cloud_eu.yaml; E2E_LLM_ALLOW_LEXICAL=1 runs anyway and files it as lexical." >&2
+    echo "  openrouter_cloud_eu.yaml; E2E_LLM_ALLOW_LEXICAL=1 with E2E_LLM_VERDICTS runs anyway, unpublished." >&2
     exit 2
   fi
   echo "==> search is lexical only, by E2E_LLM_ALLOW_LEXICAL: $why"
@@ -599,54 +640,11 @@ drive_once() {
 # scenario, so the first run of the first case has the world the seed built.
 WORLD_DIRTY=0
 
-# EVERY DECLARATION IS CHECKED BEFORE THE FIRST TOKEN IS SPENT.
-#
-# The per-scenario check below runs inside the loop, which is the right place to
-# USE the value and the wrong place to discover it is missing: a typo in the last
-# scenario would abort the lane after every earlier case had been paid for. This
-# lane bills real money, so the whole corpus is validated while it is still free.
-# The judge is one of those declarations. A lane that drives twenty-one cases
-# and then cannot score the judged half of them has spent the whole budget to
-# learn one environment variable was unset, so it is asked before the first
-# token — and only for the scenarios that actually carry a judged criterion.
+# THE JUDGE IS ASKED FOR BEFORE THE FIRST TOKEN. A lane that drives every case
+# and then cannot score the judged half has spent the budget to learn that one
+# variable was unset, so it is asked here, and only for scenarios that carry a
+# judged criterion.
 python3 "$ROOT/e2e/llm/check.py" --judge-ready "$SCENARIO_DIR"/*.yaml
-
-for scenario in "$SCENARIO_DIR"/*.yaml; do
-  declared="$(python3 "$ROOT/e2e/llm/check.py" --field writes "$scenario")"
-  case "$declared" in
-    true|false) ;;
-    *)
-      echo "$(basename "$scenario") declares writes=${declared:-<absent>}; it must be exactly" >&2
-      echo "true or false. It is the case author's statement that this case changes the world," >&2
-      echo "and TestEveryWritingScenarioDeclaresThatItWrites derives the same fact from the tools" >&2
-      echo "the case names and fails when the two disagree — an absent or misspelled value would" >&2
-      echo "leave that gate comparing against nothing." >&2
-      exit 1
-      ;;
-  esac
-done
-
-# `passport:` is absent (the narrow credential), `wide` or `research`. Anything else would be
-# read as narrow by use_passport and measure a case on a surface its author did
-# not mean, so a misspelling stops the lane here, before the first token.
-for scenario in "$SCENARIO_DIR"/*.yaml; do
-  declared="$(python3 "$ROOT/e2e/llm/check.py" --field passport "$scenario")"
-  case "$declared" in
-    ""|wide|research) ;;
-    *)
-      echo "$(basename "$scenario") declares passport=$declared; it must be absent, wide or research" >&2
-      exit 1
-      ;;
-  esac
-done
-
-# `setup:` names a step in e2e/llm/casesetup.py, never a command, and a name it does
-# not know stops the lane before the first token rather than at that case.
-for scenario in "$SCENARIO_DIR"/*.yaml; do
-  declared="$(python3 "$ROOT/e2e/llm/check.py" --field setup "$scenario")"
-  [[ -z "$declared" ]] || python3 "$ROOT/e2e/llm/casesetup.py" --known "$declared" ||
-    { echo "$(basename "$scenario") declares setup=$declared" >&2; exit 1; }
-done
 
 PASSED=0
 FAILED=0
@@ -799,11 +797,11 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     fi
     # THE WORLD IS READ BEFORE IT IS RESTORED. An answer can report a write
     # that never landed, and nothing above reads the database, so a case's
-    # must_end_with is read back here through the same passport. Exit 4 is a
+    # must_end_with is read back here through the reader's passport. Exit 4 is a
     # world that did not hold; any other failure is a world the reader could
     # not read, a harness stop like the bridge's.
     ended=0
-    MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
+    MARGINCE_E2E_TOKEN="$READER_PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
       --scenario "$scenario" --transcript "$transcript" \
       --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN >> "$results" 2>&1 || ended=$?
     if [[ "$ended" -ne 0 && "$ended" -ne 4 ]]; then
@@ -884,8 +882,15 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
+    E2E_LLM_STAMPS="$STAMP_DIR/stamps.json" E2E_LLM_COMMIT="$COMMIT" \
     python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$made" \
-    ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
+    ${transcripts[@]+"${transcripts[@]}"} > "$WORK/${name}.verdict.json" || {
+    echo "HARNESS: the verdict of $name could not be written; the committed one is unchanged." >&2
+    exit 2
+  }
+  # Moved into place whole: a redirect into the committed file would empty it
+  # before the writer ran, and a writer that crashed would leave it empty.
+  mv "$WORK/${name}.verdict.json" "$VERDICT_DIR/${name}.json"
 
   # And the same total in prose while the reason for it is still on screen. The
   # line is formatted by check.py, which owns what a usage total means, rather

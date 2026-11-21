@@ -1,5 +1,6 @@
 /* The outbox clock beside the bell. The trigger is a bare design-system Button
-   and owns its own geometry; this only seats the count on its shoulder. */
+   and owns its own geometry; this only centres the count on its top-right
+   corner, so a wider count grows to both sides instead of over the glyph. */
 .outbox {
   position: relative;
   display: flex;
@@ -9,6 +10,7 @@
 .outbox-count {
   position: absolute;
   top: calc(var(--space-2) * -1);
-  right: -2px;
+  left: calc(50% + var(--controlIcon) / 2);
+  transform: translateX(-50%);
   pointer-events: none;
 }

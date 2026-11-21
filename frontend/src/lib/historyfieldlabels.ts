@@ -110,6 +110,8 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
   ...ADDRESS_COLUMN_LABELS,
   ["stage_id", "history.field.stage_id"],
+  ["disqualify_reason_id", "history.field.disqualify_reason_id"],
+  ["trigger", "history.field.trigger"],
   ["win_probability_override", "history.field.win_probability_override"],
   ["win_probability_set_by", "history.field.win_probability_set_by"],
 ]);

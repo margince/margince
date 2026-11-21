@@ -1,0 +1,2 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__list_approvals", "mcp__margince__read_approval", "mcp__margince__decide_approvals"]}
+{"type": "result", "subtype": "success", "is_error": false, "result": "The Abnahmeprotokoll move is probably still waiting for approval in the CRM."}

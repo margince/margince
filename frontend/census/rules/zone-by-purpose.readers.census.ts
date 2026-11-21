@@ -105,14 +105,6 @@ export const browserZoneSites: { file: string; why: string }[] = [
   { file: "features/privacy/confirmprivacy.tsx", why: PUBLIC },
   { file: "features/privacy/confirmdetailsaction.tsx", why: PUBLIC },
   {
-    file: "features/sign-in/magic.tsx",
-    why: `${PUBLIC} It is the magic-link sign-in.`,
-  },
-  {
-    file: "features/sign-in/magic.records.tsx",
-    why: `${PUBLIC} It is the magic-link sign-in.`,
-  },
-  {
     file: "features/sign-in/setupclaim.tsx",
     why: "The first admin sets the installation up before any user or zone is stored; the browser's zone is the only one there is.",
   },

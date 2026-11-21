@@ -86,6 +86,7 @@ func recordActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []
 func (f sharedContactFixture) share(t *testing.T, access string) {
 	t.Helper()
 	svc := identity.NewService(f.env.Pool)
+	f.env.GrantRole(t, f.env.Rep1, "rep")
 	if _, err := svc.CreateRecordGrant(f.owner, identity.CreateGrantInput{
 		RecordType: "contact", RecordID: f.contact,
 		SubjectType: "user", SubjectID: f.env.Rep1, Access: access,
@@ -97,7 +98,7 @@ func (f sharedContactFixture) share(t *testing.T, access string) {
 // AAD-AC-4 against the database: a read-seat member holding a WRITE share is
 // still refused.
 //
-// The rule had one guard, at grant creation (refuseWriteGrantToReadSeat), and
+// The rule had one guard, at grant creation (identity.grantAccessFor), and
 // nothing revokes a standing grant when a seat is downgraded. So the stored
 // row can say the opposite of the rule, and the only thing making that inert
 // is the seat ceiling on the doors that exist today — which is exactly the
@@ -234,6 +235,7 @@ func TestAReadShareOfALeadCannotScoreIt(t *testing.T) {
 	}
 	shareLead := func(access string) {
 		t.Helper()
+		e.GrantRole(t, e.Rep1, "rep")
 		if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 			RecordType: "lead", RecordID: lead,
 			SubjectType: "user", SubjectID: e.Rep1, Access: access,
@@ -338,6 +340,7 @@ func revokeShare(t *testing.T, e *SearchEnv, record, subject ids.UUID) {
 
 func shareWith(owner context.Context, t *testing.T, e *SearchEnv, record, subject ids.UUID, access string) {
 	t.Helper()
+	e.GrantRole(t, subject, "rep")
 	if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 		RecordType: "contact", RecordID: record,
 		SubjectType: "user", SubjectID: subject, Access: access,
@@ -404,6 +407,7 @@ func TestAReadShareOfADealCannotEditItsOffer(t *testing.T) {
 	}
 	shareDeal := func(access string) {
 		t.Helper()
+		e.GrantRole(t, e.Rep1, "rep")
 		if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 			RecordType: "deal", RecordID: deal,
 			SubjectType: "user", SubjectID: e.Rep1, Access: access,

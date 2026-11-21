@@ -8,6 +8,7 @@ import {
   SCHEDULED_SCREEN,
   useScheduledSends,
 } from "../features/mail/scheduledqueue";
+import { formatBadgeCount } from "../format/badgecount";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useFirstScreenSettled } from "../lib/journeymarks";
@@ -65,7 +66,7 @@ function Outbox() {
           <span className="outbox-count">
             {/* A held message will not send itself, so it changes the colour. */}
             <Badge variant="primary" tone={held > 0 ? "warning" : "accent"}>
-              {formatNumber(total, locale)}
+              {formatBadgeCount(total, locale)}
             </Badge>
           </span>
         )}

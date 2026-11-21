@@ -9,7 +9,6 @@ import {
   Modal,
 } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
-import { KeyCode } from "../../design-system/keyedname";
 import { NameDialog, nameRefusal } from "../../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
@@ -435,11 +434,6 @@ export function CustomFieldsAdmin() {
         title={t("cf.edit")}
         label={t("cf.renamePrompt")}
         initial={renaming?.label ?? ""}
-        hint={
-          renaming && (
-            <KeyCode code={`${renaming.object}.${renaming.column_name}`} />
-          )
-        }
         confirmLabel={t("trust.save")}
         pending={rename.isPending}
         problem={renameRefused.problem}

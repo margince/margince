@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -27,14 +26,21 @@ import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useCan } from "../../lib/capability";
+import { archivedContactRow } from "../../lib/contact.queries";
 import { catalogOfRecord } from "../../lib/customfields.logic";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
-import { project360Key } from "./project360.key";
+import { useProjectScreenReads } from "./project360.reads";
 import { useProjectVerbRefusal } from "./project360.refusal";
+import {
+  type ArchivedHistory,
+  ArchivedProjectPage,
+  isMissingProject,
+  ProjectNotFound,
+} from "./projectarchived";
 import { ProjectCompanies } from "./projectcompanies";
 import {
   ProjectDetails,
@@ -61,6 +67,7 @@ import { nextCommitment } from "./projectstanding";
 import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
+import { RecordGone } from "../../components/recordgone";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
 import { ProjectCards } from "./projectcards";
@@ -72,27 +79,33 @@ import { useProjectEdit } from "./projectedit";
 // full history, the files, the companies and contacts on it) opens in a drawer.
 // `sections_omitted` marks what a card cannot show: a section the reader's role
 // cannot read says so instead of drawing an empty list.
-
-export function useProject360(id: string) {
-  return useQuery({
-    queryKey: project360Key(id),
-    queryFn: async ({ signal }) => {
-      return unwrap(
-        await api.GET("/projects/{id}/360", {
-          signal,
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
-}
-
-export function ProjectScreen({ id }: Readonly<{ id: string }>) {
+export function ProjectScreen({
+  id,
+  archivedHistory,
+}: Readonly<{ id: string; archivedHistory?: ArchivedHistory }>) {
   const t = useT();
-  const view = useProject360(id);
+  const { view, row } = useProjectScreenReads(id);
+  const archived = archivedContactRow(row);
+  // A disabled row keeps its last error, so a 360 that answers since then wins.
+  const missing = view.isError && row.isError && isMissingProject(row.error);
+  if (archived || missing) {
+    return (
+      <div className="wrap">
+        {archived ? (
+          <ArchivedProjectPage project={archived} history={archivedHistory} />
+        ) : (
+          <ProjectNotFound />
+        )}
+      </div>
+    );
+  }
   return (
     <div className="wrap">
-      <QueryGate query={view} pendingLabel={t("nav.projects")}>
+      <QueryGate
+        query={view}
+        pendingLabel={t("nav.projects")}
+        gone={<RecordGone kind="project" />}
+      >
         {(data) => <ProjectPage view={data} />}
       </QueryGate>
     </div>
@@ -252,7 +265,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         title={t("project.documents.title")}
         onClose={() => setDrawer(null)}
       >
-        <ProjectDocuments view={view} />
+        <ProjectDocuments view={view} readOnly={readOnly} />
       </ProjectDrawer>
       <ProjectDrawer
         open={drawer === "contacts"}
@@ -346,6 +359,7 @@ function CommitmentTick({
   return (
     <TaskCompleteCheck
       activityId={commitment.activity_id}
+      subject={commitment.subject}
       version={commitment.version}
       update={update}
     />

@@ -473,3 +473,19 @@ func TestGoingColdCountsADayTouchFromItsOwnDate(t *testing.T) {
 		t.Fatalf("a day touch dated %d days ago reads %+v, want going cold for %d days", goingColdDays, cold, goingColdDays)
 	}
 }
+
+// A stored role is free text, so " Champion " is the champion for both the
+// coverage gap and the departure finding.
+func TestAChampionStoredInOtherCaseIsStillTheChampion(t *testing.T) {
+	champion := seat(true, " Champion ")
+	covered := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
+		champion, seat(true, "user"),
+	}}
+	if kinds(foldRisks(covered, testEnglish))[RiskCoverageGap] {
+		t.Error("an engaged champion stored as \" Champion \" was not counted")
+	}
+	covered.DepartedContactIDs = []ids.UUID{champion.ContactID}
+	if !kinds(foldRisks(covered, testEnglish))[RiskChampionLeft] {
+		t.Error("a departed champion stored as \" Champion \" was not reported as champion_left")
+	}
+}

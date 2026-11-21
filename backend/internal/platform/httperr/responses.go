@@ -46,16 +46,13 @@ func NotImplemented(w http.ResponseWriter, r *http.Request, op string) {
 	})
 }
 
-// Unavailable is ServiceUnavailable with a code of its own.
+// UnavailableProblem is a 503 with a code of its own. It is an error, so a
+// caller that answers through a handler it does not own can return it.
 //
-// The code is what a UI can translate. `service_unavailable` says only that
-// something is down, so a client with a reader to speak to has to render the
-// detail verbatim — and the detail is written in one language, which is how an
-// English sentence ends up inside a German screen. A named code lets the client
-// carry its own copy and keeps the detail for everyone else: curl, a log, an
-// integrator with no catalog.
-func Unavailable(w http.ResponseWriter, r *http.Request, code, detail string) {
-	writeProblem(w, problem{Status: http.StatusServiceUnavailable, Code: code, Detail: detail})
+// The code is what a UI translates; the detail is one language, kept for a
+// caller with no catalog (curl, a log, an integrator).
+func UnavailableProblem(code, detail string) *DetailedError {
+	return &DetailedError{Status: http.StatusServiceUnavailable, Code: code, Detail: detail}
 }
 
 // CodeAINotConfigured is the one problem code that says no AI model is bound.

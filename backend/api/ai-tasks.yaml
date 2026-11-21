@@ -2,19 +2,20 @@
 #
 # This file is the authority for the AI task DECLARATION — the task list, its
 # tiers, each task's fallback ladder, execution mode (interactive | background),
-# budget-exhaustion posture (degrade | queue), and (ADR-0074) whether the task
+# and (ADR-0074) whether the task
 # ships at all, its named invocation sites, its payload-capture posture, its
 # company-context policy, and which cost-unit rule prices it. tools/gen-aitasks
 # compiles it into the binary (tasks_gen.go) behind a drift gate, the same
 # mechanism crm.yaml uses for the HTTP contract.
 # Tier→model binding (which concrete provider/model serves local_small /
-# cheap_cloud / premium / frontier / local_large) stays a per-deployment config
-# (config/ai-routing.yaml, §1.4) — editing THAT never requires a rebuild.
+# cheap_cloud / premium / frontier / local_large) is the routing setting, stored
+# in the database and changed in Settings -> AI (§1.4) — never a rebuild.
 # Editing the ladders/posture below is a routing-POLICY change: it needs this
 # edit, `make gen`, and a rebuild — never a silent code diff.
-# Closed pairing invariant: interactive tasks use `degrade`; background tasks
-# use `queue`. Here `queue` means "return a typed budget deferral to the task's
-# existing durable carrier" — the router never creates an unowned generic job.
+# The execution mode decides what a spent monthly budget does. From 80% every
+# task's ladder moves one tier down. From 100% an interactive task is pinned to
+# local_small, and a background task returns a typed budget deferral to its
+# existing durable carrier — the router never creates an unowned generic job.
 # Deferral makes no provider call and does not consume a worker attempt.
 #
 # ADR-0074 fields, and what each is for:
@@ -56,6 +57,10 @@
 #                     ProviderOptions, then the binding's thinking_level or
 #                     routing.reasoning_effort, then this. What each provider
 #                     is sent: docs/reference/ai-thinking.md.
+#   latency_scales_with_input  this interactive task takes longer the larger its
+#                     input, so certified latency over the corpus's fixed inputs
+#                     sets no time limit for it: it keeps CallCeiling on each try
+#                     and no bound on the walk. Only an interactive task may say it.
 #   no_payload        content from this task must NEVER reach ai_call_payload,
 #                     whatever the deployment's capture posture says. A parsed
 #                     field, not a phrase in `doc:` — a sentence in a comment
@@ -109,7 +114,6 @@ tasks:
     summary: "Sorts each incoming email and meeting into what it is about, so it lands on the right record."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [classify, deal_topic]
@@ -122,7 +126,6 @@ tasks:
     summary: "Decides whether an unanswered message actually asks us for something, or only informs us."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [owed]
@@ -135,7 +138,6 @@ tasks:
     summary: "Checks whether our reply actually answered what the other side asked for."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [request_settle]
@@ -148,7 +150,6 @@ tasks:
     summary: "Reads an open deal's mail, meetings, calls, notes and offers at night and sets its close date, amount or win probability when the customer's words show they changed."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [deal_verdict]
@@ -161,7 +162,6 @@ tasks:
     summary: "Reads captured mail, meetings, notes and calls and suggests the tags whose description of interest they show."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [interest]
@@ -174,7 +174,6 @@ tasks:
     summary: "Decides who a first-time sender is — an individual, a company mailbox, a newsletter, spam — before a contact is created."
     ladder: [local_small]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [verdict]
@@ -188,7 +187,6 @@ tasks:
     summary: "Decides whether an email thread in a restricted mailbox is ordinary enough to open to the team."
     ladder: [local_small]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [thread]
@@ -202,7 +200,6 @@ tasks:
     summary: "Picks out important events from a finished thread, such as a contract ending or a new opportunity."
     ladder: [frontier]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [thread_events]
@@ -215,7 +212,6 @@ tasks:
     summary: "Reads what the buyer wrote or said against a deal stage's exit criteria."
     ladder: [cheap_cloud, premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [criteria]
@@ -228,7 +224,6 @@ tasks:
     summary: "Reads next steps and commitments out of a meeting transcript, and writes a short summary of the meeting."
     ladder: [premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [next_steps]
@@ -240,7 +235,6 @@ tasks:
     summary: "Suggests each contact's buying role — who signs, who champions, who can block."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     status: shipped
     subject_restriction: honour
     sites: [committee]
@@ -252,7 +246,6 @@ tasks:
     summary: "Fills in a contact's title, phone and other details from their own email signature."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [signature]
@@ -265,7 +258,7 @@ tasks:
     summary: "Writes the short summaries shown on account, contact and deal pages."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
+    latency_scales_with_input: true
     on_outage: degrades
     status: shipped
     subject_restriction: honour
@@ -278,7 +271,6 @@ tasks:
     summary: "Judges how well a company fits what we sell."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
     subject_restriction: none
@@ -292,7 +284,6 @@ tasks:
     summary: "Drafts emails and replies for you to review before sending."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
     subject_restriction: honour
@@ -305,7 +296,6 @@ tasks:
     summary: "Rewrites the words you typed when you press Polish, Shorter, Warmer, More formal or Add a deadline."
     ladder: [premium, cheap_cloud]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     status: shipped
     subject_restriction: honour
     sites: [rewrite]
@@ -317,7 +307,6 @@ tasks:
     summary: "Turns a list described in plain words into filters you can check and save."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "is handed a sentence and the caller's filter vocabulary, never a record"
@@ -330,7 +319,6 @@ tasks:
     summary: "Runs the onboarding conversation that sets up your company profile."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads our own company's website and what the admin types about our company"
@@ -347,7 +335,7 @@ tasks:
     summary: "Reads pasted meeting transcripts. Not in use yet."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
+    latency_scales_with_input: true
     status: planned
     subject_restriction: honour
     company_context: none
@@ -358,7 +346,6 @@ tasks:
     summary: "Turns a described sales initiative or custom report, or a seller's closed revenue, into a proposal you check before saving."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads the manager's description, the report catalog and a seller's closed revenue by month, never a record"
@@ -371,7 +358,6 @@ tasks:
     summary: "Writes an assessment beside a report's leading chart, citing the figures it rests on."
     ladder: [premium, cheap_cloud]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads evaluated report figures and deal names, never a contact's record or mail"
@@ -385,7 +371,7 @@ tasks:
     summary: "Shows a note, email or meeting in the reader's own language when they ask for it."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
+    latency_scales_with_input: true
     status: shipped
     subject_restriction: honour
     sites: [activity_text]
@@ -398,7 +384,7 @@ tasks:
     summary: "Answers questions from the documents your company filed, citing where each answer comes from."
     ladder: [premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
+    latency_scales_with_input: true
     on_outage: degrades
     status: shipped
     subject_restriction: none
@@ -408,11 +394,10 @@ tasks:
     doc: "corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung."
 
   account_scan:
-    display_name: "Reading what an account needs"
-    summary: "Reads an account's recent emails and pipeline to find what it needs from you."
+    display_name: "Reading what a company needs"
+    summary: "Reads a company's recent emails and pipeline to find what it needs from you."
     ladder: [cheap_cloud, premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [company_scan]
@@ -425,7 +410,6 @@ tasks:
     summary: "Writes the deal page's status card: where the deal stands and what could lose it."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
     subject_restriction: honour
@@ -438,7 +422,6 @@ tasks:
     summary: "Writes the one or two sentences that open your weekly review."
     ladder: [cheap_cloud, premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads the week's counts and deal names, never a contact's record or mail"
@@ -451,7 +434,6 @@ tasks:
     summary: "Suggests what last week's results teach for the week ahead."
     ladder: [cheap_cloud, premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads the week's results as figures, never a contact's record or mail"
@@ -464,7 +446,6 @@ tasks:
     summary: "Orders the morning brief so the most important items come first."
     ladder: [premium, cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "ranks deals by numeric factor scores; no contact's data is in the prompt"
@@ -477,7 +458,6 @@ tasks:
     summary: "Runs the scheduled AI agents that act on your behalf with the tools they are given."
     ladder: [cheap_cloud, premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "an agent principal's reads are filtered below the model: the content gate and the audience arm (auth.ActivityContentClause, auth.ActivityAudienceArm) withhold the subject, body and reminders of every mail a restricted contact sent or received, discover-level listings included, and the contact row scope hides the restricted contact itself from every record read, listing and link walk. The runner binds the agent principal for every tool step, a resumed run included, so no tool step reads as the system principal"
@@ -497,7 +477,6 @@ tasks:
     summary: "Drafts offers and quotes from a deal's details."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
-    on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
     subject_restriction: honour
@@ -509,7 +488,6 @@ tasks:
     summary: "Reads an attached document, such as an invoice or order, for deal facts you can accept."
     ladder: [premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [fields, cards, chat]
@@ -522,7 +500,6 @@ tasks:
     summary: "Reads a company's website in depth, quoting the pages each fact comes from."
     ladder: [premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads a company's public website"
@@ -535,7 +512,6 @@ tasks:
     summary: "Picks short, quoted facts out of each page of a company's website."
     ladder: [cheap_cloud, premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads a company's public website"
@@ -548,7 +524,6 @@ tasks:
     summary: "Decides what an email domain's website is — a company, a personal site or a mailbox provider — before a company is created."
     ladder: [cheap_cloud, premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads an email domain's public website"
@@ -562,7 +537,6 @@ tasks:
     summary: "Grades model answers when a model is certified for a task. Used only in testing."
     ladder: [premium, cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "grades certification corpus answers, never live records"
@@ -575,7 +549,6 @@ tasks:
     summary: "Learns your writing voice from emails you wrote, so drafts sound like you."
     ladder: [cheap_cloud, premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "learns from the user's own corpus, and loading it leaves out sent mail a restricted contact received"
@@ -588,7 +561,6 @@ tasks:
     summary: "Reads exchange rates from a published rates page for the currency refresh."
     ladder: [premium, cheap_cloud]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: none
     subject_restriction_reason: "reads a published exchange-rate page"
@@ -601,7 +573,6 @@ tasks:
     summary: "Reads one stretch of talk in a deal's or project's chat channel and writes a short note when it matters."
     ladder: [cheap_cloud, premium]
     execution_mode: background
-    on_budget_exhausted: queue
     status: shipped
     subject_restriction: honour
     sites: [episode]
@@ -616,9 +587,13 @@ tasks:
 # Forcing it through the task shape would make it unparseable and would give
 # those obligations no meaning. Its absence from `tasks:` is why it escaped
 # every completeness check before this ADR.
+#
+# no_payload: an input is record text, and an activity's input is its subject
+# and body, so a mail embedded for search must not be kept by capture either.
 embed:
   tier: embed
   cost_unit: per_entity
+  no_payload: true
 
 degrade_to:
   frontier: premium

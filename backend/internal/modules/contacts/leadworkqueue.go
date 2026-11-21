@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -204,7 +205,7 @@ func readLeadQueuePage(ctx context.Context, tx pgx.Tx, query string, args []any,
 	defer rows.Close()
 	for rows.Next() {
 		var rank int
-		lead, err := scanLead(rows, active, policy, asOf, &rank)
+		lead, err := scanLead(rows, active, policy, asOf, systemtext.Locale(ctx), &rank)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}

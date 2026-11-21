@@ -75,7 +75,7 @@ export function recentCommand(
     subtitle:
       entry.kind === "record"
         ? t(SEARCH_HIT_KIND_KEY[entry.entity_type])
-        : undefined,
+        : t("palette.recentSearch"),
     type: entry.kind === "query" ? "action" : "record",
     group: t("palette.recent"),
     recent: entry,

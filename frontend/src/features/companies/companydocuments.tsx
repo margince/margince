@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AddDocumentDialog } from "../../components/adddocument";
 import {
   AttachmentGrid,
   AttachmentTile,
   CATEGORY_LABELS,
+  categoryCuts,
 } from "../../components/attachmenttile";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
@@ -20,7 +22,6 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { DocumentExtractionPanel } from "../voice-knowledge/documentextraction";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -52,12 +53,10 @@ import { companyDocumentsKey } from "../../lib/attachmentkeys";
 type Attachment = components["schemas"]["Attachment"];
 type Category = NonNullable<Attachment["category"]>;
 
-// The chips a reader can press. `contract` is absent because the agreements
-// card above is where contract paper is read — a chip that filtered this list
-// down to the files it deliberately excludes would be a control whose every
-// press looks like a bug. The badge vocabulary above keeps the word, since a
-// file may still carry the category without being filed to an agreement.
-const FILTER_CATEGORIES: readonly Category[] = [
+// The chips always offered. `contract` joins them only while a file holds it.
+// Contract paper filed to an agreement is read in the agreements card above,
+// so the chip counts only a contract file that no agreement holds.
+const STEADY_CUTS: readonly Category[] = [
   "offer",
   "legal",
   "email_attachment",
@@ -246,7 +245,7 @@ export function CompanyDocumentsCard({
             onChange={setCategory}
             pills={[
               { value: "", label: t("docs.category.all"), count: live.length },
-              ...FILTER_CATEGORIES.map((key) => ({
+              ...categoryCuts(live, STEADY_CUTS, category).map((key) => ({
                 value: key,
                 label: t(labelFor(CATEGORY_LABELS, key)),
                 count: live.filter((doc) => doc.category === key).length,

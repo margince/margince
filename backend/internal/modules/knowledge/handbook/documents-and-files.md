@@ -1,18 +1,18 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx frontend/src/features/projects/projectdocuments.tsx frontend/src/components/adddocument.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
 
-1. **Documents** on a company, a contact or a deal: the papers of the
-   relationship.
+1. **Documents** on a company, a contact, a deal or a project: the papers
+   of the relationship.
 2. **Files** on a deal: everything the deal has picked up, including
    attachments that arrived with email.
 3. **Document sets** in Settings → Knowledge: bodies of text the whole
    company can ask questions of.
 
 ### How do I upload a document?
-To upload a document in Margince, such as a customer's signed contract, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
+To upload a document in Margince, such as a customer's signed contract, open the company, contact or deal. Choose its **Documents** tab and click **Add document**. On a project, press **Documents** on the **Contracts** card and click **Add document** in the panel that opens.
 1. On a company, set **About** to **This company** or **A deal** and pick the deal.
 2. Choose a **Category** (a signed contract takes **SOW/Contract**); **Title** is optional.
 3. Drop the file on **File**, or click to choose one, and click **Upload**.
@@ -237,8 +237,8 @@ Also called: can I upload a PDF to the knowledge base, supported formats.
 ### How do I ask my documents a question?
 To ask your documents a question in Margince, open the command palette and choose **Ask your documents**.
 1. Press ⌘K (Mac) or Ctrl+K, or click **Search or ask Margince** in the top bar.
-2. Choose **Ask your documents**, the first row.
-3. Pick the **Document set**, type **Your question**, and click **Ask**.
+2. Choose **Ask your documents**, the last row.
+3. Pick the **Document set**, type **Your question** (at most 1,000 characters), and click **Ask**.
 
 "Answers come only from one document set, questions the set does not cover are refused, and every sentence cites its passage."
 Also called: search the knowledge base, ask the handbook, FAQ.
@@ -261,8 +261,9 @@ you always know whether an AI model was used.
 
 - **This set is still being read**: "{embedded} of {total} passages are
   searchable. Retry shortly. The question is not the problem."
-- **No search index is configured**: "Nothing was searched. This installation
-  has no search index configured."
+- **Documents cannot be searched yet**: "No embedding model is chosen for search, so nothing was
+  searched." With the right to change AI settings you get **Choose an embedding model**, which opens
+  **AI models**, **Model tiers**. Without that right, it says an administrator can choose one there.
 - **No document sets**: "This company has no documents yet, so there is
   nothing to search."
 - **You cannot open this company’s documents**: "You do not have access to this

@@ -44,3 +44,10 @@ func stored(folded string) *string {
 	}
 	return &folded
 }
+
+// FoldedEqualsSQL compares a company_domain row with a domain Fold already
+// produced. It reads the folded column, so a legacy Unicode row still matches.
+// A row with no stored fold, such as a public suffix, matches on its raw text.
+func FoldedEqualsSQL(alias, folded string) string {
+	return fmt.Sprintf(`(%[1]s.domain_folded = %[2]s OR (%[1]s.domain_folded IS NULL AND %[1]s.domain = %[2]s))`, alias, folded)
+}

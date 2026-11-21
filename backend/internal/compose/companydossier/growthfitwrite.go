@@ -191,7 +191,7 @@ func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 	}
 	assessed, err := assessWithModel(ctx, lane, in, selfConfirmed, now, lang)
 	if err != nil {
-		// The declared degrade posture (on_budget_exhausted: degrade), not a
+		// The interactive degrade posture (execution_mode: interactive), not a
 		// swallowed error. A lane that is unavailable, over budget, or
 		// answering unparseable JSON must not take the panel down: the reader
 		// gets the floor's abstention, labelled as the floor's.

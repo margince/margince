@@ -22,6 +22,7 @@ const NEVER: readonly ScreenKey[] = [
   "confirm",
   "onboarding",
   "buyerRoom",
+  "recordHistory",
 ];
 
 const isScreenKey = (key: string): key is ScreenKey =>

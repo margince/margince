@@ -84,16 +84,20 @@ export function snoozedDueAt(
 
 /**
  * TaskCompleteCheck is the tick itself: a checkbox for a row that names its
- * own verb, since ticking is completing. Every caller lists open tasks only,
- * so the box starts unchecked. The row leaves on the invalidated re-read,
- * with the confirmation and its Undo raised meanwhile.
+ * own verb, since ticking is completing. Its name is for screen readers only,
+ * and names the task, so a box read out of its row still says what it does.
+ * Every caller lists open tasks only, so the box starts unchecked. The row
+ * leaves on the invalidated re-read, with the confirmation and its Undo raised
+ * meanwhile.
  */
 export function TaskCompleteCheck({
   activityId,
+  subject,
   version,
   update,
 }: Readonly<{
   activityId: string;
+  subject: string;
   version: number | undefined;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
@@ -104,13 +108,11 @@ export function TaskCompleteCheck({
   // A rejected PATCH re-enables the box, unchecked, like a click that did
   // nothing; this line is what tells the two apart.
   const failed = update.isError && isThisTask;
+  const name = t("tasks.completeNamed", { subject });
   return (
     <>
-      {/* The row already names the task beside it, so the tick's own name is
-          screen-reader-only — the words are not repeated on screen, and the
-          box still announces what ticking it does. */}
       <Checkbox
-        label={<span className="sr-only">{t("tasks.complete")}</span>}
+        label={<span className="sr-only">{name}</span>}
         checked={false}
         disabled={pending}
         onChange={() => complete(activityId, version)}

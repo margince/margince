@@ -210,9 +210,9 @@ export const en = {
   "homeRepair.reason.buyer":
     "The reviewed sources no longer verify a current buyer request.",
   "homeRepair.reason.engagement":
-    "An active contract or delivery contradicts ending the whole account.",
+    "An active contract or delivery contradicts ending the whole company relationship.",
   "homeRepair.reason.workstream":
-    "The evidence ends one engagement, not the whole account.",
+    "The evidence ends one engagement, not the whole company relationship.",
   "homeRepair.reason.evidenceChanged":
     "Newer verified evidence replaces the context of this proposal.",
   "homeRepair.withdraw": "Withdraw automatic proposal",
@@ -472,6 +472,8 @@ export const en = {
   "approvalPreferences.explain":
     "Muted kinds leave your queue only. Other readers keep their proposals. Muting or restoring a kind turns off your automatic changes for that kind. Sends, bookings, merges and proposals from agent passports stay visible.",
   "approvalPreferences.review": "Review including muted",
+  "approvalPreferences.reviewKind": "Review including muted: {kind}",
+  "approvalPreferences.reviewTitle": "Muted: {kind}",
   "approvalPreferences.reviewExplain":
     "This review includes muted proposals and expired items. Bundles in your ordinary queue can show fewer members because of your personal mutes; review each proposal before deciding.",
   "approvalPreferences.close": "Close review",
@@ -655,16 +657,16 @@ export const en = {
   "history.field.closed_at": "Closed on",
   "history.field.amount_minor_base": "Amount in base currency",
   "approval.preview.activeContract":
-    "An agreement is still active. Review it before ending the account relationship.",
+    "An agreement is still active. Review it before ending the company relationship.",
   "approval.preview.activeDelivery":
-    "A project is still in delivery. Review it before ending the account relationship.",
+    "A project is still in delivery. Review it before ending the company relationship.",
   "approval.preview.unknownScope":
-    "The source does not establish that the whole account relationship ended.",
+    "The source does not establish that the whole company relationship ended.",
   "approval.preview.incompleteEvidence":
-    "The current evidence is incomplete. Review the account before changing its lifecycle.",
+    "The current evidence is incomplete. Review the company before changing its lifecycle.",
   "approval.preview.newerEvidence":
     "The source changed after this proposal. Review the current evidence.",
-  "approval.preview.scopeCompany": "Whole account relationship",
+  "approval.preview.scopeCompany": "Whole company relationship",
   "approval.preview.scopeWorkstream": "One engagement",
   "approval.preview.scopeUnknown": "Scope not established",
   "approval.preview.scope": "Scope of the ending",
@@ -1212,9 +1214,9 @@ export const en = {
     "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
   "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
-  "reporting.coverageThresholds": "Account coverage limits",
+  "reporting.coverageThresholds": "Company coverage limits",
   "reporting.coverageThresholdsHelp":
-    "What the Account coverage section counts as at risk. The limits apply from the next read.",
+    "What the Company coverage section counts as at risk. The limits apply from the next read.",
   "reporting.maxEngagedSeats": "Engaged contacts at most",
   "reporting.untouchedDays": "Days without exchange in pipeline",
   "reporting.silentDays": "Days without exchange after a win",
@@ -2040,8 +2042,6 @@ export const en = {
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
-  "aiAdmin.decisionSkip.uncertified":
-    "Decision model not used: not certified for this activity.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -2168,7 +2168,7 @@ export const en = {
   "dealSuggestion.field.amount": "Amount",
   "dealSuggestion.field.currency": "Currency",
   "dealSuggestion.field.stage": "Stage",
-  "dealSuggestion.accountOwner": "Account owner",
+  "dealSuggestion.accountOwner": "Company owner",
   "dealSuggestion.unassignedOwner": "Unassigned",
   "dealSuggestion.field.owner": "Owner",
   "dealSuggestion.ownerMe": "Me",
@@ -2545,8 +2545,8 @@ export const en = {
   "history.verb.update": "{subject} updated the record",
   "history.verb.archive": "{subject} archived the record",
   "history.verb.merge": "{subject} merged the record",
-  "history.verb.promote": "{subject} promoted the record",
-  "history.verb.demote": "{subject} demoted the record",
+  "history.verb.promote": "{subject} qualified the lead",
+  "history.verb.demote": "{subject} reversed the qualification",
   "history.verb.disqualify": "{subject} disqualified the record",
   "history.verb.restore": "{subject} restored the record",
   "history.verb.export": "{subject} exported the record",
@@ -2668,6 +2668,8 @@ export const en = {
   "history.field.full_name": "Name",
   "history.field.win_probability": "Probability",
   "history.field.stage_id": "Stage",
+  "history.field.disqualify_reason_id": "Disqualify reason",
+  "history.field.trigger": "Qualified by",
   "history.field.win_probability_override": "Probability set on the deal",
   "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
@@ -2759,6 +2761,13 @@ export const en = {
   "history.emptyList": "None set",
   "history.value.occurred_precision.instant": "Date and time",
   "history.value.occurred_precision.day": "Date only",
+  "history.value.direction.inbound": "Received",
+  "history.value.direction.outbound": "Sent",
+  "history.value.meeting_status.booked": "Booked",
+  "history.value.meeting_status.held": "Held",
+  "history.value.meeting_status.no_show": "No-show",
+  "history.value.meeting_status.canceled": "Canceled",
+  "history.value.relationship_mark.vendor_marketing": "Vendor marketing",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -2843,12 +2852,15 @@ export const en = {
   "shell.shortcuts.sendEmail": "Send email",
   "shell.shortcuts.submitDialog": "Submit dialog",
   "shell.shortcuts.then": "then",
+  "shell.shortcuts.ctrl": "Ctrl",
   "shell.shortcuts.or": "or",
   "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.unavailableForRole": "Not available for your role.",
+  "shell.unknownAddress": "This address does not lead anywhere in Margince.",
+  "shell.unknownAddress.goTo": "Go to {name}",
   "shell.closeMenu": "Close",
   // The agent panel's one promise, as opposed to its readings: what the agent
   // can REACH. Row scope bounds it on the server, and a guarantee nobody is
@@ -2934,6 +2946,7 @@ export const en = {
   "palette.placeholder": "Search or ask Margince",
   "palette.empty": "No matches.",
   "palette.recent": "Recent",
+  "palette.recentSearch": "Search",
   "palette.clearRecent": "Clear",
   "palette.filter": "Show only",
   "palette.filterAll": "All",
@@ -2951,7 +2964,8 @@ export const en = {
   "palette.seeAll": "See all results for “{query}”",
   "palette.searching": "Searching records…",
   "palette.searchFailedTitle": "Search failed",
-  "palette.searchFailed": "The commands above still work.",
+  "palette.searchFailed":
+    "Records could not be searched. Screens and actions still work.",
   "palette.askDataRow": "Ask CRM data: “{query}”",
   "palette.openAnalytics": "Open in Analytics",
   "palette.dataUnsupportedOnly":
@@ -3022,6 +3036,8 @@ export const en = {
   "common.dateInFuture": "This date cannot be in the future.",
   "common.fieldDecimalPlaces": "Decimal places allowed in {field}: {max}.",
   "common.valueDecimalPlaces": "Decimal places allowed: {max}.",
+  "common.characterCount_one": "{count} of {max} character",
+  "common.characterCount_other": "{count} of {max} characters",
   "common.valueTooLong": "This value is too long.",
   "common.undo": "Undo",
   "common.close": "Close",
@@ -3112,6 +3128,10 @@ export const en = {
     "Enter the amount without thousands separators, such as {example}.",
   "amount.refused.notNumber": "Enter the amount in digits, such as {example}.",
   "amount.refused.tooLarge": "This amount is too large to store.",
+  "amount.refused.noCurrency": "This amount needs a currency first.",
+  "amount.waitsForCurrency": "Opens once a currency is set.",
+  "amount.currencyUnread":
+    "The currency could not be read, so no amount can be entered yet.",
   "amount.refused.negative": "Enter an amount of zero or more.",
   "number.refused.ambiguous": "Enter the number as {whole} or {fraction}.",
   "number.refused.grouping":
@@ -3216,8 +3236,16 @@ export const en = {
   "share.whoHasAccess": "Shared with",
   "share.grantedBy": "granted by",
   "share.revoke": "Revoke",
+  "share.revokeFor": "Revoke access to {record} for {name}",
   "share.revokeConfirm":
-    "Revoke this access? It ends at the next request and cannot be undone.",
+    "Revoke {access} access to {record} for {name}? It ends at the next request and cannot be undone.",
+  "share.granted": "{name} now has {access} access to {record}.",
+  "share.limitedByRole":
+    "Saved as read access. {name} cannot edit {record} with their role.",
+  "share.companyContactsLimitedByRole":
+    "Saved as read access. {name} cannot edit contacts with their role.",
+  "share.thisRecord": "this record",
+  "share.until": "Until {date}",
   "share.approvalRequired":
     "This share takes effect only after approval. It is not applied yet.",
   "share.teamMembers_one": "Team · {count} member",
@@ -3227,6 +3255,7 @@ export const en = {
   "share.rosterErrorTeams": "Teams did not load. People are shown below.",
   "share.rosterErrorBoth": "People and teams did not load.",
   "share.rosterEmpty": "No people or teams to share with.",
+  "share.rosterNoMatch": "No member or team matches your search.",
 
   "merge.contact": "Merge contact",
   "merge.company": "Merge company",
@@ -3461,6 +3490,8 @@ export const en = {
     "The AI provider refused the configured credential. Contact your system administrator.",
   "common.providerUnavailable":
     "The AI provider is not answering right now. Try again later or contact your system administrator.",
+  "common.aiAllowanceUsedUp":
+    "The monthly AI allowance is used up. Ask your admin to raise it under Settings → AI, or try again when it renews.",
   "common.gatewayUnavailable":
     "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
   "common.requestTimedOut":
@@ -3499,6 +3530,15 @@ export const en = {
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
+  "common.goneBackToAnalytics": "Back to Analytics",
+  "reporting.sharedForecastGone":
+    "This link no longer works. Ask the sender for a new one.",
+  "reporting.reportGone":
+    "This report does not exist, or it is not shared with you.",
+  "analytics.q.gone":
+    "This question does not exist, or it is not shared with you.",
+  "book.linkGone":
+    "This booking page is not available. Ask the sender for a new link.",
   "common.empty": "Nothing here yet.",
   "common.saving": "Saving…",
   "common.loading": "Loading…",
@@ -3634,6 +3674,7 @@ export const en = {
   "table.sortBy": "Sort by {column}",
   "table.noMatches": "No {unit} match these filters.",
   "table.clearFilters": "Clear filters",
+  "table.dialsRefused": "This list cannot be shown with these filters.",
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
@@ -4114,7 +4155,7 @@ export const en = {
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
   "co.health.reason.singleThreaded":
-    "In contact, but one contact carries the whole account.",
+    "In contact, but one contact carries the whole company relationship.",
   "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
   "co.health.reason.severalContacts_other":
     "{count} contacts here are in touch.",
@@ -5561,6 +5602,7 @@ export const en = {
   "co.roleLabel.blocker": "Blocker",
   "co.roleLabel.influencer": "Influencer",
   "co.roleLabel.user": "End user",
+  "co.roleLabel.decision_maker": "Decision-maker",
   "co.evidence.extractedUnconfirmed": "Extracted by AI · not confirmed",
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
@@ -6173,8 +6215,6 @@ export const en = {
   "lead.qualify.dealName": "Deal name",
   "lead.qualify.amount": "Amount ({currency})",
   "lead.qualify.amountHint": "Optional. In the installation’s base currency.",
-  "lead.qualify.amountNoCurrency":
-    "Opens once the installation’s base currency has loaded.",
   "lead.qualify.why": "Why",
   "lead.qualify.reasonReplied": "Reason: the lead replied on {at}.",
   "lead.qualify.reasonMeetingBooked": "Reason: a meeting was booked for {at}.",
@@ -6302,7 +6342,7 @@ export const en = {
   "deal.room.invited": "{invited} invited",
   "deal.room.nobodyInvited": "Nobody invited yet",
   "deal.room.signedIn": "{active} signed in",
-  "deal.aside.account": "Account",
+  "deal.aside.account": "Company",
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "None",
   "deal.editDetails": "Edit details",
@@ -6355,7 +6395,6 @@ export const en = {
   "deal.standing.figure.probability": "Probability",
   "deal.winProbability": "Probability",
   "deal.winProbability.hint": "Leave empty to use the stage’s probability.",
-  "deal.winProbability.invalid": "Enter a whole number from 0 to 100.",
   "deal.winProbability.source.stage": "from the stage",
   "deal.winProbability.source.human": "set by hand",
   "deal.winProbability.source.you": "set by you",
@@ -7614,6 +7653,8 @@ export const en = {
   "create.save": "Create",
   "create.saving": "Creating…",
   "create.contact": "New contact",
+  "create.added": "{name} added",
+  "create.addedOpen": "Open",
   // The fast path beside it: reading a profile in another window and typing
   // what it says. The label names the ACT, not the source, because the same
   // form takes a conference badge and a business card.
@@ -8406,6 +8447,7 @@ export const en = {
   "calendar.patternMonth": "MM",
   "calendar.patternYear": "YYYY",
   "calendar.invalidDate": "Enter a date as {pattern}.",
+  "calendar.noSuchDay": "There is no {date} in the calendar.",
   "calendar.patternHour": "hh",
   "calendar.patternMinute": "mm",
   "calendar.invalidTime": "Enter a time as {pattern}.",
@@ -8721,6 +8763,7 @@ export const en = {
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",
+  "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
   "tasks.log.action": "Log what happened",
@@ -9002,30 +9045,30 @@ export const en = {
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
   "analytics.sectionDelivery": "Delivery",
-  "analytics.sectionAccounts": "Account coverage",
+  "analytics.sectionAccounts": "Company coverage",
   "analytics.accounts.views": "Risk views",
   "analytics.accounts.singleThreaded": "Single-contact deals",
   "analytics.accounts.untouched": "Untouched in pipeline",
   "analytics.accounts.silent": "Won but silent",
-  "analytics.accounts.pending": "Judging the accounts",
+  "analytics.accounts.pending": "Judging the companies",
   "analytics.accounts.thresholds":
     "At risk means: at most {seats} engaged contact on a deal, no exchange in {untouched} days while in pipeline, no exchange in {silent} days after a win within {won} days.",
   "analytics.accounts.singleThreadedPurpose":
-    "Open deals where at most {seats} contact inside the account has exchanged mail or met with you lately.",
+    "Open deals where at most {seats} contact inside the company has exchanged mail or met with you lately.",
   "analytics.accounts.untouchedPurpose":
-    "Accounts with an open deal and no exchange either way in the last {days} days.",
+    "Companies with an open deal and no exchange either way in the last {days} days.",
   "analytics.accounts.silentPurpose":
-    "Accounts with a deal won in the last {won} days, no open deal, and no exchange either way in the last {days} days.",
+    "Companies with a deal won in the last {won} days, no open deal, and no exchange either way in the last {days} days.",
   "analytics.accounts.noActivityGrant":
-    "Judging accounts needs permission to read activities.",
+    "Judging companies needs permission to read activities.",
   "analytics.accounts.none": "Nothing at risk here.",
   "analytics.accounts.truncated":
-    "More accounts than this read judges: the counts cover the largest ones. Narrow the records you chose.",
+    "More companies than this read judges: the counts cover the largest ones. Narrow the records you chose.",
   "analytics.accounts.withheld_one":
     "{count} more deal has contacts you may not see, so it is not judged.",
   "analytics.accounts.withheld_other":
     "{count} more deals have contacts you may not see, so they are not judged.",
-  "analytics.accounts.account": "Account",
+  "analytics.accounts.account": "Company",
   "analytics.accounts.deal": "Deal",
   "analytics.accounts.owner": "Owner",
   "analytics.accounts.engagedSeats": "Engaged contacts",
@@ -9039,8 +9082,8 @@ export const en = {
   "analytics.accounts.factSeats":
     "{engaged} of {named} contacts named on the deal exchanged mail or met with you in the last 90 days.",
   "analytics.accounts.factStage": "The deal is in stage {stage}.",
-  "analytics.accounts.factOpen_one": "{count} open deal on this account.",
-  "analytics.accounts.factOpen_other": "{count} open deals on this account.",
+  "analytics.accounts.factOpen_one": "{count} open deal on this company.",
+  "analytics.accounts.factOpen_other": "{count} open deals on this company.",
   "analytics.accounts.factWon": "{deal} was won on {date}.",
   "analytics.accounts.factInbound": "They last wrote: {date}.",
   "analytics.accounts.factOutbound": "You last wrote: {date}.",
@@ -9366,6 +9409,7 @@ export const en = {
   "analytics.share.listCreated": "Created {date}",
   "analytics.share.listExpires": "Expires {date}",
   "analytics.share.populationCompany": "Whole company",
+  "analytics.scope.workspace": "Whole company",
   "analytics.share.populationTeam": "Team",
   "analytics.share.populationOwner": "Colleague",
   "analytics.share.closeTitle": "Close this link?",
@@ -9522,6 +9566,7 @@ export const en = {
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save forecast",
   "forecast.callAmountNeeded": "Type the expected total first.",
+  "forecast.callAmountNegative": "Enter an amount of zero or more.",
   "analytics.scopeLabel": "Record scope",
   "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.period": "Period",
@@ -9597,8 +9642,6 @@ export const en = {
     "Your mail carries this instead of the company template. Leave it empty to use the company template again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
   "settings.signatureHtmlHintPlain":
     "Leave this empty to use your plain text again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
-  "settings.signatureHtmlCount_one": "{count} of {max} character",
-  "settings.signatureHtmlCount_other": "{count} of {max} characters",
   "settings.signatureOwnHtml": "Your HTML signature",
   "settings.signatureReviewTitle": "Review {name}’s retained signature",
   "settings.signatureReviewIntro":
@@ -9796,6 +9839,9 @@ export const en = {
   "settings.tokenCopyFailed": "Select the passport above and copy it by hand.",
   "settings.passportNext": "Next, use it",
   "settings.passportLabel": "Agent name",
+  "settings.passportUnnamed": "Unnamed passport",
+  "settings.passportNameRequired": "Give the agent a name",
+  "settings.passportNameTooLong": "Use at most 120 characters.",
   "settings.mint": "Mint passport",
   "settings.minting": "Minting…",
   "settings.mintCancel": "Cancel",
@@ -12228,14 +12274,16 @@ export const en = {
     "Reload before changing them; the list may be incomplete.",
   "stage.criteria.none": "No exit criteria yet.",
   "stage.criteria.add": "Add criterion",
-  "stage.criteria.key": "Key",
-  "stage.criteria.keyHint":
-    "The name evidence cites. Lowercase letters, digits and underscores. It cannot be changed later.",
   "stage.criteria.label": "Label",
   "stage.criteria.kind": "Kind",
   "stage.criteria.required": "Required",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hint",
+  "stage.criteria.kindHelp":
+    "What counts as proof. Buyer kinds count only the buyer’s own words.",
+  "stage.criteria.requiredHelp":
+    "A required criterion keeps Margince from moving the deal on by itself.",
+  "stage.criteria.hintHelp": "Guidance for the AI that looks for evidence.",
   "stage.criteria.editOf": "Edit {name}",
   "stage.criteria.removeOf": "Remove {name}",
   "stage.criteria.remove": "Remove",
@@ -14665,7 +14713,7 @@ export const en = {
   "cf.builder.open": "New field",
   "cf.builder.noCode": "No code",
   "cf.builder.intro":
-    "A new field is a real column on the existing table. It works in filters, reports, exports and the API like any core field. It is not a new object.",
+    "A new field appears on every record of this kind. It works in filters, reports, exports and the API like any built-in field. You can archive it later, but not bring it back.",
   "cf.label": "Label",
   "cf.apiKey": "API name",
   "cf.apiKeyHint":
@@ -14696,7 +14744,7 @@ export const en = {
     "Choices of “{label}” saved. {count} records changed.",
   "cf.gate.title": "Add this field?",
   "cf.gate.body":
-    "On confirm, it becomes a live column on every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
+    "On confirm, it is added to every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
   "cf.refuse.title": "This looks like a new object or relationship",
   "cf.refuse.body":
     "This builder adds simple fields to existing records only. A new object, a link between objects or a calculated roll-up is a structural change. It ships as a reviewed change in a new Margince version, made by people, not by the product editing its own code.",
@@ -15249,8 +15297,9 @@ export const en = {
     "Leave empty for today. A request logged late keeps the deadline its real arrival gives it.",
   "privacy.earlierDue": "Earlier deadline",
   "privacy.earlierDueHint":
-    "Optional. Only a date before the deadline above is accepted.",
+    "Optional. A day from the one the request arrived on up to the deadline above.",
   "privacy.earlierDueTooLate": "Choose a date before {date}.",
+  "privacy.earlierDueTooEarly": "Choose a date on or after {date}.",
   "privacy.dueRule": "Deadline rule",
   "privacy.dueRuleUnknown": "Typed by hand before deadlines were worked out",
   "privacy.dueOverridden": "Set earlier than the rule gives",
@@ -15275,13 +15324,15 @@ export const en = {
   "corpusAsk.notReady":
     "This set is still being read: {embedded} of {total} passages are searchable. Retry shortly. The question is not the problem.",
   "corpusAsk.retrievalUnavailable":
-    "Nothing was searched. This installation has no search index configured.",
+    "No embedding model is chosen for search, so nothing was searched. The question is not the problem.",
+  "corpusAsk.retrievalUnavailableAskAdmin":
+    "An administrator can choose one under AI models, Model tiers.",
   "corpusAsk.unreviewed":
     "These passages are closest to your question. They have not been reviewed for whether they answer it.",
   "corpusAsk.failed": "Question not answered",
   "corpusAsk.unreviewedTitle": "Passages not reviewed",
   "corpusAsk.notReadyTitle": "This set is still being read",
-  "corpusAsk.retrievalUnavailableTitle": "No search index is configured",
+  "corpusAsk.retrievalUnavailableTitle": "Documents cannot be searched yet",
   "corpusAsk.noGrantTitle": "You cannot open this company’s documents",
   "corpusAsk.noGrant":
     "You do not have access to this document set. An administrator can grant access.",
@@ -16718,7 +16769,7 @@ export const en = {
   "aicalls.reason.decision_state_too_large":
     "Input too large for the decision model",
   "aicalls.reason.decision_uncertified":
-    "Decision model not certified for this task",
+    "Decision model not certified for this task (older calls only)",
   "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
@@ -17549,8 +17600,7 @@ export const en = {
   "aiRouting.lane.local_large":
     "Higher local-tier route; inspect the configured endpoint",
   "aiRouting.lane.embeddings": "Search and retrieval across records",
-  "aiRouting.lane.decisions":
-    "Typed questions, asked before the tiers where certified",
+  "aiRouting.lane.decisions": "Typed questions, asked before the tiers",
   "aiRouting.decisions.add": "Add decision model",
   "aiRouting.decisions.remove": "Remove decision model",
   "aiRouting.decisions.preset.openrouter": "Preset: OpenRouter",
@@ -20300,6 +20350,15 @@ export const en = {
   "lists.restore": "Restore",
   "lists.unavailable": "Lists are switched off for this installation.",
   "lists.gone": "This list is not there, or it is not shared with you.",
+  "record.gone.contact":
+    "This contact is not there, or it is not shared with you.",
+  "record.gone.company":
+    "This company is not there, or it is not shared with you.",
+  "record.gone.lead": "This lead is not there, or it is not shared with you.",
+  "record.gone.deal": "This deal is not there, or it is not shared with you.",
+  "record.gone.project":
+    "This project is not there, or it is not shared with you.",
+  "record.gone.offer": "This offer is not there, or it is not shared with you.",
   "lists.unnamed": "Unnamed",
   "lists.filterLine": "Filter: {sentence}",
   "lists.head.exported_one": "{count} time, last on {when}",
@@ -20367,7 +20426,7 @@ export const en = {
   "lists.noteHint": "Kept with the change so colleagues can see why.",
   "lists.record.title": "Lists",
   "lists.record.help":
-    "The lists this company is on. Live Lists add it by their rules; you add it to a Shortlist yourself. Use a list to work through accounts one after another.",
+    "The lists this company is on. Live Lists add it by their rules; you add it to a Shortlist yourself. Use a list to work through companies one after another.",
   "lists.record.loading": "Loading lists",
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",
@@ -20723,6 +20782,10 @@ export const en = {
   "project.archiveConfirm":
     "Archiving removes this project from the active list and frees its key. This cannot be undone here.",
   "project.archivedReadOnly": "This project is archived and takes no changes.",
+  "project.page.notFound": "Project not found",
+  "project.page.notFoundBody":
+    "This project does not exist, or you cannot see it.",
+  "project.page.backToProjects": "Back to projects",
   "project.notYoursToChange":
     "You cannot edit this project. Ask its owner to share it, or an administrator for edit rights.",
   "project.phaseLabel": "Phase",
@@ -21606,7 +21669,7 @@ export const en = {
   "worklist.filter.linked.except_decisions":
     "Showing everything except approvals already in your Morning brief.",
   "worklist.filter.linked.changed_since_brief":
-    "Showing only changes since last night’s Morning brief.",
+    "Showing only changes since your last Morning brief.",
   "worklist.filter.linked.clear": "Show full Worklist",
   "worklist.category.customer_waiting": "Customer waiting",
   "worklist.category.leads": "Lead",
@@ -21649,7 +21712,7 @@ export const en = {
   "worklist.because.promised": "committed by you",
   "worklist.because.approved_and_failed": "approved but did not run",
   "worklist.because.account_termination":
-    "account termination needs a decision",
+    "ending a company relationship needs a decision",
   "worklist.because.blocks_customer_work": "customer waiting on this",
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
@@ -23153,7 +23216,7 @@ export const en = {
   "legalReview.packOlder":
     "This pack was made before agreements, contact and tasks were included.",
   "legalReview.packBinding": "Other offers sent to the buyer",
-  "aiTask.name.account_scan": "Reading what an account needs",
+  "aiTask.name.account_scan": "Reading what a company needs",
   "aiTask.name.agent_loop": "Agent reasoning loop",
   "aiTask.name.brief_ranking": "Morning brief ranking",
   "aiTask.name.capture_classify": "Message classification",
@@ -23235,7 +23298,7 @@ export const en = {
   "standing.peek.partial_other": "Showing {shown} of {count}.",
   "co.standing.peek.inTouch": "Contacts here who have been in touch",
   "standing.peek.lastInTouch": "last in touch {date}",
-  "co.standing.peek.openDeals": "Open deals on this account",
+  "co.standing.peek.openDeals": "Open deals on this company",
   "co.standing.peek.closes": "closes {date}",
   "standing.next.peek": "Other open tasks",
   "standing.next.peek.undated": "No date",
@@ -23293,14 +23356,14 @@ export const en = {
   "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
   "deal.verdict.notStarted": "Not started",
   "co.verdict.active": "Active",
-  "co.verdict.lastExchange": "The last activity with this account was {date}.",
+  "co.verdict.lastExchange": "The last activity with this company was {date}.",
   "co.verdict.cooling": "Cooling",
   "co.verdict.dormant": "Dormant",
   "co.verdict.stale": "Stale",
   "co.verdict.silentFor":
-    "Nothing has happened with this account for {days} days, since {date}. An account cools from day {cooling}, goes dormant from day {dormant} and stale from day {stale}.",
+    "Nothing has happened with this company for {days} days, since {date}. A company cools from day {cooling}, goes dormant from day {dormant} and stale from day {stale}.",
   "co.verdict.noActivity":
-    "No activity recorded since the account was added {date}.",
+    "No activity recorded since the company was added {date}.",
   "project.verdict.startsOn": "The project starts {date}.",
   "project.verdict.overrunning": "Overrunning",
   "project.verdict.endPassed": "The target end, {date}, has passed.",
@@ -23326,7 +23389,7 @@ export const en = {
     "No exchange with this contact is recorded yet.",
   "contactCase.title": "Possible duplicates",
   "contactCase.intro":
-    "Tick the contacts that are the same person. Then choose which record to keep and who owns it.",
+    "Tick the contacts that are the same person. Then choose which one stays and who owns it.",
   "contactCase.loading": "Loading possible duplicates…",
   "contactCase.none": "This contact has no open duplicates.",
   "contactCase.settledElsewhere":
@@ -23363,8 +23426,10 @@ export const en = {
   "contactCase.merge_other": "Merge {count} contacts",
   "contactCase.member.owner": "Owner: {name}",
   "contactCase.member.unowned": "No owner",
-  "contactCase.member.keep": "Keep this record’s details",
-  "contactCase.member.keepNamed": "Keep details of {name}",
+  "contactCase.member.stays": "{name} stays",
+  "contactCase.survivor.legend": "Which contact stays?",
+  "contactCase.survivor.hint":
+    "The other ticked contacts merge into it and are archived.",
   "contactCase.member.dismissedWith":
     "Marked as a different person from {names}.",
   "contactCase.notAllowed.tooLarge":
@@ -23389,11 +23454,13 @@ export const en = {
   "contactCase.field.domain": "Domain",
   "contactCase.field.other": "Detail",
   "contactCase.evidence.title": "Why they look alike",
+  "contactCase.evidence.hint":
+    "Not the same person stops only that pair from being suggested. A contact you leave unticked stays a possible duplicate.",
   "contactCase.evidence.pair": "{left} and {right}",
   "contactCase.evidence.different": "Different people",
   "contactCase.preview.title": "What the merge does",
-  "contactCase.preview.keeps": "{name} remains, owned by {owner}.",
-  "contactCase.preview.mergedTitle": "Merged into it",
+  "contactCase.preview.keeps": "{name} stays, owned by {owner}.",
+  "contactCase.preview.mergedTitle": "Merged into it and archived",
   "contactCase.preview.sharesTitle": "Keeps access",
   "contactCase.preview.noShares": "No other owner.",
   "contactCase.preview.shareWrite": "{name}, can edit",

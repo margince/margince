@@ -1,23 +1,27 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  act,
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RosterSubject } from "../../components/share.parts";
 import { pickOption } from "../../design-system/select-testing";
-import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ShareScreen } from "./share";
 import { pickedToGrant } from "./share.roster";
+import {
+  existingGrant,
+  grantEndpoint,
+  installBaseFetch,
+  jsonResponse,
+  ownedAccess,
+  PICK_MOR,
+  render,
+  SHARER,
+  writeGrant,
+} from "./share.testkit";
 
 // AS-3/4/5 — the record-share screen (A52/ADR-0039): list who has manual
 // access to this one record, grant a new user/team subject, revoke an
@@ -27,158 +31,6 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function render(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-const usersPage = {
-  data: [
-    { id: "u-1", display_name: "Priya Shah", email: "priya@example.com" },
-    { id: "u-2", display_name: "Mor Adler", email: "mor@example.com" },
-    // An agent seat — must NOT be offered as a share subject (spec §2.1).
-    {
-      id: "u-agent",
-      display_name: "SDR Bot",
-      email: "bot@example.com",
-      is_agent: true,
-    },
-  ],
-  page: { next_cursor: null, has_more: false },
-};
-
-const teamsPage = {
-  data: [{ id: "t-1", name: "Deal Desk", member_count: 4 }],
-  page: { next_cursor: null, has_more: false },
-};
-
-const existingGrant = {
-  id: "g-1",
-  record_type: "deal",
-  record_id: "d-1",
-  subject_type: "user" as const,
-  subject_id: "u-2",
-  access: "read" as const,
-  granted_by: "u-1",
-  reason: "compliance review",
-  expires_at: null,
-  created_at: "2026-06-22T14:08:00Z",
-  version: 1,
-};
-
-// The same subject, holding write instead of read — the only starting point
-// from which a reduction is possible.
-const writeGrant = { ...existingGrant, access: "write" as const };
-
-// Either level: each fixture fixes its own `access` literal, so a case seeds
-// the starting point it is about.
-type SeededGrant = typeof existingGrant | typeof writeGrant;
-
-/**
- * The grants endpoint with the POST bodies collected.
- *
- * `listed` is the grant the record already carries, so the screen knows what a
- * re-assert would be measured against; the POST answers with the restated row
- * the way an idempotent create does.
- */
-function grantEndpoint(posts: Record<string, unknown>[], listed: SeededGrant) {
-  return (request: Request) => {
-    if (request.method === "POST") {
-      return request.json().then((body: Record<string, unknown>) => {
-        posts.push(body);
-        return jsonResponse({ ...listed, ...body }, 201);
-      });
-    }
-    return jsonResponse({
-      data: [listed],
-      page: { next_cursor: null, has_more: false },
-    });
-  };
-}
-
-// A seat that may share every record kind: sharing asks the record's update.
-const SHARER = {
-  rowScope: "all",
-  allow: {
-    contact: ["read", "update"],
-    company: ["read", "update"],
-    deal: ["read", "update"],
-    lead: ["read", "update"],
-    project: ["read", "update"],
-  },
-} as const satisfies Parameters<typeof meFixture>[0];
-
-// The record read the screen makes before it offers a share.
-const RECORD_READ = /^\/v1\/(contacts|companies|deals|leads|projects)\/[^/]+$/;
-
-function installBaseFetch(
-  overrides: Record<
-    string,
-    (req: Request) => Response | Promise<Response>
-  > = {},
-) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request =
-        input instanceof Request ? input : new Request(String(input), init);
-      for (const [match, handler] of Object.entries(overrides)) {
-        if (request.url.includes(match)) {
-          return handler(request);
-        }
-      }
-      const path = new URL(request.url).pathname;
-      if (path === "/v1/me") return jsonResponse(meFixture(SHARER));
-      if (RECORD_READ.test(path)) {
-        return jsonResponse({ id: path.split("/").pop(), writable: true });
-      }
-      if (request.url.includes("/users")) return jsonResponse(usersPage);
-      if (request.url.includes("/teams")) return jsonResponse(teamsPage);
-      if (request.url.includes("/record-grants")) {
-        return jsonResponse({
-          data: [existingGrant],
-          page: { next_cursor: null, has_more: false },
-        });
-      }
-      return jsonResponse({}, 404);
-    }),
-  );
-}
-
-// The access answer of a contact owned by `ownerId`.
-function ownedAccess(ownerId: string): Response {
-  return jsonResponse({
-    visibility: "owner",
-    owner_id: ownerId,
-    archived: false,
-    detail: false,
-    you: {
-      can_change: true,
-      read_reasons: [{ code: "owner" }],
-      change_reasons: [{ code: "owner" }],
-    },
-    data: [],
-    page: { has_more: false, total: 0 },
-    group_counts: { owner: 0, shared: 0, team_shared: 0, everyone: 0 },
-    can_change_count: 0,
-    team_access_count: 0,
-    refresh_at: null,
-  });
-}
 
 describe("ShareScreen", () => {
   it("defaults a new team share to lasting write access and a colleague share to seven days of read access", async () => {
@@ -225,6 +77,70 @@ describe("ShareScreen", () => {
       { subject_type: "team", subject_id: "t-1", access: "write" },
     ]);
     expect(screen.queryByTestId("share-acl-list")).toBeNull();
+  });
+
+  it("says so when an edit share is saved as read because of the colleague's role", async () => {
+    const posts: Record<string, unknown>[] = [];
+    installBaseFetch({
+      "/record-grants": (request) => {
+        if (request.method === "POST") {
+          return request.json().then((body: Record<string, unknown>) => {
+            posts.push(body);
+            return jsonResponse(
+              {
+                ...existingGrant,
+                ...body,
+                access: "read",
+                limited_by_role: true,
+              },
+              201,
+            );
+          });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      },
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Priya Shah/ }));
+    await user.click(screen.getByRole("button", { name: "Write" }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+
+    const notice = await screen.findByTestId("share-limited-by-role");
+    expect(notice.textContent).toMatch(
+      /^Saved as read access\. Priya Shah cannot edit .+ with their role\.$/,
+    );
+    expect(posts).toMatchObject([{ access: "write" }]);
+    expect(screen.queryByText(/now has/)).toBeNull();
+  });
+
+  it("says so when company contacts shared for editing are saved as read", async () => {
+    installBaseFetch({
+      "/companies/co-1/share-contacts": () =>
+        jsonResponse({ shared: 2, skipped: 0, limited_by_role: true }),
+    });
+    render(<ShareScreen recordType="company-contacts" recordId="co-1" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Deal Desk/ }));
+    await user.clear(screen.getByLabelText("Person or team"));
+    await user.click(await screen.findByRole("button", { name: /Priya Shah/ }));
+    await user.click(screen.getByRole("button", { name: "Write" }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+    const confirm = await screen.findByRole("dialog", {
+      name: "Share these contacts?",
+    });
+    await user.click(
+      within(confirm).getByRole("button", { name: "Grant access" }),
+    );
+
+    expect(
+      (await screen.findByTestId("share-limited-by-role")).textContent,
+    ).toBe(
+      "Saved as read access. Priya Shah cannot edit contacts with their role.",
+    );
   });
 
   it("renders who-has-access, resolving subject and granter names via the roster", async () => {
@@ -388,7 +304,7 @@ describe("ShareScreen", () => {
     installBaseFetch({ "/contacts/c-1/access": () => ownedAccess("u-1") });
     render(<ShareScreen recordType="contact" recordId="c-1" />);
 
-    await screen.findByRole("button", { name: /Mor Adler/ });
+    await screen.findByRole("button", { name: PICK_MOR });
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull(),
     );
@@ -406,10 +322,10 @@ describe("ShareScreen", () => {
 
     await screen.findByRole("button", { name: /Deal Desk/ });
     expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Mor Adler/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: PICK_MOR })).toBeNull();
 
     answerAccess(ownedAccess("u-1"));
-    await screen.findByRole("button", { name: /Mor Adler/ });
+    await screen.findByRole("button", { name: PICK_MOR });
     expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
   });
 
@@ -428,9 +344,9 @@ describe("ShareScreen", () => {
 
     const retry = await screen.findByRole("button", { name: "Retry" });
     await screen.findByRole("button", { name: /Deal Desk/ });
-    expect(screen.queryByRole("button", { name: /Mor Adler/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: PICK_MOR })).toBeNull();
     await user.click(retry);
-    await screen.findByRole("button", { name: /Mor Adler/ });
+    await screen.findByRole("button", { name: PICK_MOR });
     expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull();
   });
 
@@ -443,7 +359,7 @@ describe("ShareScreen", () => {
     installBaseFetch();
     render(<ShareScreen recordType="deal" recordId="d-1" />);
 
-    const row = await screen.findByRole("button", { name: /Mor Adler/ });
+    const row = await screen.findByRole("button", { name: PICK_MOR });
     // Selectable: the only way to change a level used to be revoke-and-share.
     // Refused in either spelling counts: `disabled` is what the row used to
     // carry, `aria-disabled` is how Button refuses a press without dropping
@@ -461,7 +377,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="deal" recordId="d-1" />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     await user.click(screen.getByRole("button", { name: "Write" }));
     await user.click(screen.getByTestId("share-grant-submit"));
 
@@ -478,7 +394,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="deal" recordId="d-1" />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     // Picking opens the form on what they hold (write); Read is the reduction.
     await user.click(screen.getByRole("button", { name: "Read" }));
     await user.click(screen.getByTestId("share-grant-submit"));
@@ -514,7 +430,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="contact" recordId="c-1" />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     await user.click(screen.getByRole("button", { name: "Read" }));
     await user.click(screen.getByTestId("share-grant-submit"));
     await screen.findByRole("dialog");
@@ -532,7 +448,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="deal" recordId="d-1" />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     await user.click(screen.getByRole("button", { name: "Read" }));
     await user.click(screen.getByTestId("share-grant-submit"));
 
@@ -557,7 +473,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="deal" recordId="d-1" />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     await user.click(screen.getByRole("button", { name: "Read" }));
     await user.click(screen.getByTestId("share-grant-submit"));
 
@@ -577,7 +493,7 @@ describe("ShareScreen", () => {
     // Picked and submitted untouched: same level, same (absent) expiry, same
     // reason. The list below looks identical afterwards, so silence here would
     // read as a change that landed.
-    await user.click(await screen.findByRole("button", { name: /Mor Adler/ }));
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
     await user.click(screen.getByTestId("share-grant-submit"));
 
     await waitFor(() => expect(posts).toHaveLength(1));
@@ -585,6 +501,36 @@ describe("ShareScreen", () => {
     const notice = await screen.findByTestId("share-unchanged");
     expect(notice.textContent).toContain("Nothing changed");
     expect(notice.textContent).toContain("Mor Adler");
+  });
+
+  it("shows only the limited notice when re-saving a write share the colleague's role cannot use", async () => {
+    const posts: Record<string, unknown>[] = [];
+    const listed = grantEndpoint(posts, writeGrant);
+    installBaseFetch({
+      "/record-grants": async (request) => {
+        const answer = await listed(request);
+        if (request.method !== "POST") {
+          return answer;
+        }
+        const saved = await answer.json();
+        return jsonResponse(
+          { ...saved, access: "read", limited_by_role: true },
+          201,
+        );
+      },
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: PICK_MOR }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toMatchObject({ access: "write" });
+    expect(
+      (await screen.findByTestId("share-limited-by-role")).textContent,
+    ).toContain("Mor Adler");
+    expect(screen.queryByTestId("share-unchanged")).toBeNull();
   });
 
   it("names the recipient's seat for a 403 seat_tier_insufficient", async () => {
@@ -634,6 +580,132 @@ describe("ShareScreen", () => {
     );
     return dialog;
   }
+
+  // Every row has a Revoke, so the button and its question name whose access
+  // to which record a press ends.
+  it("names the member and the record on Revoke and in its question", async () => {
+    installBaseFetch();
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Revoke access to Acme renewal for Mor Adler",
+      }),
+    );
+
+    expect((await screen.findByRole("dialog")).textContent).toContain(
+      "Revoke Read access to Acme renewal for Mor Adler?",
+    );
+  });
+
+  // A colleague who left is not on the live roster, and is still named by id.
+  it("names a grantee the roster does not list, on Revoke and in its question", async () => {
+    const departed = { ...existingGrant, subject_id: "u-gone" };
+    installBaseFetch({
+      "/users/names": () =>
+        jsonResponse({
+          data: [
+            { id: "u-gone", display_name: "Lee Former", departed: true },
+            { id: "u-1", display_name: "Priya Shah" },
+          ],
+        }),
+      "/record-grants": () =>
+        jsonResponse({
+          data: [departed],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Revoke access to Acme renewal for Lee Former (left)",
+      }),
+    );
+
+    expect((await screen.findByRole("dialog")).textContent).toContain(
+      "Revoke Read access to Acme renewal for Lee Former (left)?",
+    );
+  });
+
+  it("confirms a grant by naming who can now see the record", async () => {
+    const posts: Record<string, unknown>[] = [];
+    installBaseFetch({ "/record-grants": grantEndpoint(posts, existingGrant) });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+    await screen.findByRole("button", {
+      name: "Revoke access to Acme renewal for Mor Adler",
+    });
+
+    await user.click(await screen.findByRole("button", { name: /Priya Shah/ }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+
+    expect(
+      await screen.findByText(
+        "Priya Shah now has Read access to Acme renewal.",
+      ),
+    ).toBeTruthy();
+    expect(posts).toHaveLength(1);
+  });
+
+  it("leads back to the record it shares", async () => {
+    installBaseFetch();
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    const back = await screen.findByRole("link", {
+      name: "Back to Acme renewal",
+    });
+    expect(back.getAttribute("href")).toMatch(/deals\/d-1$/);
+  });
+
+  it("labels a share's end date and writes it the way the record page does", async () => {
+    const ending = { ...existingGrant, expires_at: "2026-11-23T12:00:00Z" };
+    installBaseFetch({
+      "/record-grants": () =>
+        jsonResponse({
+          data: [ending],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    const aclList = await screen.findByTestId("share-acl-list");
+    expect(within(aclList).getByText(/^Until /).textContent).toBe(
+      "Until 23 Nov 2026",
+    );
+  });
+
+  // A reason is free text: one long word has to break inside its row.
+  it("lets a long reason break inside its row", async () => {
+    installBaseFetch();
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    const reason = await screen.findByText("compliance review");
+    expect(reason.classList.contains("share-acl-reason")).toBe(true);
+    // jsdom loads no stylesheet, so the rule is read off the file.
+    const sheet = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "share.css"),
+      "utf8",
+    );
+    expect(sheet).toMatch(
+      /\.share-acl-reason\s*\{[^}]*overflow-wrap\s*:\s*anywhere\s*[;}]/,
+    );
+  });
+
+  it("says a search matched nobody, not that there is nobody to share with", async () => {
+    installBaseFetch();
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+    await screen.findByRole("button", { name: /Priya Shah/ });
+
+    await user.type(screen.getByLabelText("Person or team"), "zzzz");
+
+    expect(screen.getByTestId("share-roster-empty").textContent).toBe(
+      "No member or team matches your search.",
+    );
+  });
 
   it("revoke on a row, confirmed, fires DELETE /record-grants/{id} behind the version it showed", async () => {
     let deletedIfMatch: string | null = null;

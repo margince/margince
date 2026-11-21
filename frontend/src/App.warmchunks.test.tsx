@@ -114,6 +114,7 @@ describe("the warm-up order", () => {
         "confirm",
         "onboarding",
         "buyerRoom",
+        "recordHistory",
       ]),
     );
     expect(new Set(WARM_ORDER).size).toBe(WARM_ORDER.length);

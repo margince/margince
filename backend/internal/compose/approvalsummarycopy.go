@@ -32,9 +32,8 @@ import (
 // without anybody remembering to list it.
 type approvalSummaryCopy struct {
 	taskCompleted    string
-	taskContact      string
 	signaturePrivate string
-	// draftedReplyWaiting: a follow-up reply is drafted. %q is its subject.
+	// draftedReplyWaiting: a follow-up reply is drafted. The quoted %s is its subject.
 	draftedReplyWaiting string
 	// counterpartyWorthKeeping asks about an unresolved sender. %s is the address.
 	counterpartyWorthKeeping string
@@ -58,7 +57,7 @@ type approvalSummaryCopy struct {
 	// linkedInLooksLike's second hole.
 	unnamedEmployer string
 
-	// heldNotSent: %q is the message's subject, %s one of the held* reasons.
+	// heldNotSent: the quoted %s is the message's subject, the other one of the held* reasons.
 	heldNotSent          string
 	heldConsentWithdrawn string
 	heldSenderInactive   string
@@ -105,7 +104,6 @@ type approvalSummaryCopy struct {
 var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 	textlang.English: {
 		taskCompleted:            systemtext.Copy("approval.taskCompleted", textlang.English),
-		taskContact:              systemtext.Copy("approval.taskContact", textlang.English),
 		signaturePrivate:         systemtext.Copy("approval.signaturePrivate", textlang.English),
 		draftedReplyWaiting:      systemtext.Copy("approval.draftedReplyWaiting", textlang.English),
 		counterpartyWorthKeeping: systemtext.Copy("approval.counterpartyWorthKeeping", textlang.English),
@@ -149,7 +147,6 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 	},
 	textlang.German: {
 		taskCompleted:            systemtext.Copy("approval.taskCompleted", textlang.German),
-		taskContact:              systemtext.Copy("approval.taskContact", textlang.German),
 		signaturePrivate:         systemtext.Copy("approval.signaturePrivate", textlang.German),
 		draftedReplyWaiting:      systemtext.Copy("approval.draftedReplyWaiting", textlang.German),
 		counterpartyWorthKeeping: systemtext.Copy("approval.counterpartyWorthKeeping", textlang.German),
@@ -193,7 +190,6 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 	},
 	textlang.Vietnamese: {
 		taskCompleted:            systemtext.Copy("approval.taskCompleted", textlang.Vietnamese),
-		taskContact:              systemtext.Copy("approval.taskContact", textlang.Vietnamese),
 		signaturePrivate:         systemtext.Copy("approval.signaturePrivate", textlang.Vietnamese),
 		draftedReplyWaiting:      systemtext.Copy("approval.draftedReplyWaiting", textlang.Vietnamese),
 		counterpartyWorthKeeping: systemtext.Copy("approval.counterpartyWorthKeeping", textlang.Vietnamese),

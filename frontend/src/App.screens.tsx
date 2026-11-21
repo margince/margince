@@ -2,8 +2,10 @@ import { lazy, useEffect } from "react";
 import { SCREEN_CODE } from "./App.screencode";
 import { AuthScreen } from "./app/authscreens";
 import { findCustomScreen } from "./app/custom";
-import { opensReservedPage } from "./app/nav";
+import { firstAvailableRoute, opensReservedPage } from "./app/nav";
+import { usePageName } from "./app/pagemeta";
 import {
+  Button,
   Card,
   EmptyState,
   PendingBody,
@@ -11,7 +13,9 @@ import {
 } from "./design-system/atoms";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
+import { useHiddenCoreFeatures } from "./lib/corefeatures";
 import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
+import { navigate } from "./lib/router";
 import { useAddressWriters } from "./lib/urlstate";
 
 export const OnboardingScreen = lazy(() =>
@@ -62,6 +66,14 @@ export const LeadScreen = lazy(() =>
 
 export const LeadsScreen = lazy(() =>
   SCREEN_CODE.leads().then((m) => ({ default: m.LeadsScreen })),
+);
+
+// The records feature's history panel an archived project's page shows. The
+// shell hands it over, since one feature never imports another.
+export const ArchivedRecordHistory = lazy(() =>
+  SCREEN_CODE.recordHistory().then((m) => ({
+    default: m.ArchivedRecordHistory,
+  })),
 );
 
 export const ProjectScreen = lazy(() =>
@@ -212,9 +224,9 @@ export function safeDecode(value: string): string {
   }
 }
 
-// What stands in the content column when the address names no page, or names
-// one half written. Both are statements about the address. A small card is the
-// right shape for a statement, since it is all there is to say.
+// What stands in the content column when the address names a page only half
+// written. A small card is the right shape for that statement about the
+// address, since it is all there is to say.
 export function ScreenNotice({
   messageKey,
 }: Readonly<{ messageKey: MessageKey }>) {
@@ -222,6 +234,25 @@ export function ScreenNotice({
   return (
     <div className="wrap">
       <EmptyState>{t(messageKey)}</EmptyState>
+    </div>
+  );
+}
+
+// An address no page answers. It says what happened and offers a way on,
+// because the shell's heading has already said "Not found". The way on is the
+// first page the sidebar offers, since an installation may turn Home off.
+export function UnknownAddress() {
+  const t = useT();
+  const { screen } = firstAvailableRoute(useHiddenCoreFeatures());
+  const name = usePageName(screen);
+  return (
+    <div className="wrap">
+      <EmptyState>
+        <p>{t("shell.unknownAddress")}</p>
+        <Button variant="link" onClick={() => navigate({ screen })}>
+          {t("shell.unknownAddress.goTo", { name })}
+        </Button>
+      </EmptyState>
     </div>
   );
 }
@@ -258,9 +289,8 @@ export function DealsRoute({
   return id2 === "room" ? <DealRoomPage dealId={id} /> : <DealScreen id={id} />;
 }
 
-// #/share/<record_type>/<record_id> (AS-3/4/5): both segments are required.
-// A bare #/share renders the pending state instead of a screen with nothing to
-// share.
+// #/share/<record_type>/<record_id>: both segments are required. A bare
+// #/share names nothing to share, so it is an address no page answers.
 export function ShareRoute({
   id,
   id2,
@@ -268,7 +298,7 @@ export function ShareRoute({
   return id && id2 ? (
     <ShareScreen recordType={id} recordId={id2} />
   ) : (
-    <ScreenNotice messageKey="screen.pending" />
+    <UnknownAddress />
   );
 }
 
@@ -335,7 +365,7 @@ const extensionScreens = composedScreens;
 export function CustomRoute({ name }: Readonly<{ name?: string }>) {
   const screen = findCustomScreen(name);
   if (!screen) {
-    return <ScreenNotice messageKey="shell.unknownPage" />;
+    return <UnknownAddress />;
   }
   const ForkScreen = screen.component;
   return <ForkScreen />;

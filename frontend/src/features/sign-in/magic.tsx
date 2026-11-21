@@ -15,7 +15,6 @@ import { PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
-import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
@@ -31,6 +30,7 @@ import {
   useMagic,
 } from "../../lib/magic.queries";
 import { doneLinesApart } from "../../lib/magiccopy";
+import { useViewerZone } from "../../lib/viewerzone";
 import { sourceUnavailableText } from "../../lib/worklistcopy";
 import { MagicDoneCard } from "./magic.done";
 import { MagicLaneSection } from "./magic.lines";
@@ -73,7 +73,7 @@ export function MagicPanel({
   const plural = usePlural();
   // The READER's own zone. A receipt says when something happened to them, and
   // an instant rendered in UTC asks them to do the arithmetic.
-  const zone = browserZone();
+  const zone = useViewerZone();
   // Embedded, this part mounts to say a read failed. Reading again on that
   // mount would blank the failure and unmount it, so only Retry reads again.
   const magic = useMagic(useCan("deal", "read"), !embedded);

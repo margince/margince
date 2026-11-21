@@ -166,7 +166,7 @@ func TestRouterBrainDecides(t *testing.T) {
 	cfg.Decisions = &ai.DecisionsConfig{Provider: "jev_compatible", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api/alpha/decisions"}
 	decider := &oneAnswerDecider{answer: decision.Answer{Choice: siteKindParked, Confidence: 0.95}}
 	fake := ai.NewFakeClient()
-	path, err := NewLocalModelPath(cfg, ai.WithFakeClient(fake), ai.WithFakeDecider(decider), ai.WithEveryDecisionCertified())
+	path, err := NewLocalModelPath(cfg, ai.WithFakeClient(fake), ai.WithFakeDecider(decider))
 	if err != nil {
 		t.Fatalf("NewLocalModelPath: %v", err)
 	}

@@ -3,7 +3,11 @@
 
 package owndomain
 
-import "testing"
+import (
+	"testing"
+
+	"golang.org/x/net/idna"
+)
 
 // CAP-AC1.3c: a registered domain covers its subdomains and no lookalike, and
 // both spellings of an internationalized domain are one value. Exact equality
@@ -130,6 +134,59 @@ func TestOfAddressReadsTheDomainAfterTheLastAt(t *testing.T) {
 	} {
 		if got := OfAddress(in); got != want {
 			t.Errorf("OfAddress(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestParseDomainStoresOneFormForBothSpellings(t *testing.T) {
+	for _, in := range []string{"münchen.de", "MÜNCHEN.DE", "https://www.münchen.de/kontakt", "xn--mnchen-3ya.de", "müNchen.de."} {
+		got, err := ParseDomain(in)
+		if err != nil || got.String() != "xn--mnchen-3ya.de" {
+			t.Errorf("ParseDomain(%q) = %q, %v; want xn--mnchen-3ya.de", in, got, err)
+		}
+	}
+	if OfAddress("someone@münchen.de") != "xn--mnchen-3ya.de" || OfAddress("someone@xn--mnchen-3ya.de") != "xn--mnchen-3ya.de" {
+		t.Error("a sender at either spelling must fold to the stored domain")
+	}
+}
+
+func TestParseDomainRefusesWhatIsNotAHost(t *testing.T) {
+	for _, in := range []string{
+		"аpple.com",
+		"münchen",
+		"xn--mün.de",
+		"mün chen.de",
+		"-münchen.de",
+		"mün_chen.de",
+		"",
+	} {
+		if got, err := ParseDomain(in); err == nil {
+			t.Errorf("ParseDomain(%q) = %q, want a refusal", in, got)
+		}
+	}
+	if _, err := ParseDomain("пример.рф"); err != nil {
+		t.Errorf("a single-script Cyrillic domain is refused: %v", err)
+	}
+	if _, err := ParseDomain("日本語ひらがな.jp"); err != nil {
+		t.Errorf("Han and kana in one label are one script group: %v", err)
+	}
+}
+
+func TestParseDomainChecksTheDecodedLabel(t *testing.T) {
+	cyrillicA, err := idna.Lookup.ToASCII("аpple.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, in := range map[string]string{
+		"mixed script written as punycode": cyrillicA,
+		"right-to-left override":           "ac\u202eme.com",
+		"zero-width joiner":                "ac\u200dme.com",
+		"zero-width space":                 "ac\u200bme.com",
+		"unreadable punycode":              "xn--acme-ik2d.com",
+		"punycode of a bidi control":       "xn--acme-yd7a.com",
+	} {
+		if got, err := ParseDomain(in); err == nil {
+			t.Errorf("%s: ParseDomain(%q) = %q, want a refusal", name, in, got)
 		}
 	}
 }

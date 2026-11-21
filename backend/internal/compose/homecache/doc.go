@@ -8,7 +8,8 @@
 // paid that again, however little had changed. An answer here is served while:
 //   - it is younger than Life, which is how far behind Home may be for changes
 //     made by colleagues and by background work. A day answer is served for
-//     StaleGrace past Life too. It is then flagged stale and read again;
+//     the rest of its day too (StaleGrace). It is then flagged stale and read
+//     again, so a reader back from a break sees their day at once;
 //   - the access fence has not moved since its own read began. Every write that
 //     can take a record out of somebody's reach advances home_read_fence through
 //     a trigger, so no writer can forget it. A write that only widens reach
