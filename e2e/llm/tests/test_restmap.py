@@ -33,7 +33,7 @@ class GradeTest(unittest.TestCase):
 
     def test_a_path_parameter_is_named_and_the_prefix_is_optional(self):
         self.assertEqual(restmap.grade(OPERATIONS, "get", "/contacts/abc?limit=2"),
-                         ("read_record", {"limit": "2", "id": "abc"}))
+                         ("read_record", {"limit": "2", "record_type": "contact", "id": "abc"}))
 
     def test_a_record_named_in_the_path_takes_the_mcp_argument_names(self):
         graded = restmap.grade(OPERATIONS, "GET", "/v1/records/company/c1/tags")
@@ -52,12 +52,12 @@ class RewriteTest(unittest.TestCase):
         calls = json.loads(lines[1])["message"]["content"]
         router, field, action = FRONTED["merge_records"]
         self.assertEqual(calls[0]["name"], transcript.tool_name(router))
-        self.assertEqual(calls[0]["input"], {"id": "c1", "target_id": "c2", **({field: action} if field else {})})
+        self.assertEqual(calls[0]["input"], {"id": "c1", "target_id": "c2", "record_type": "company", **({field: action} if field else {})})
 
     def test_a_verb_no_router_fronts_keeps_its_own_name(self):
         lines = restmap.rewrite(run(call("GET", "/v1/contacts/c1")), OPERATIONS, FRONTED, [])
         block = json.loads(lines[1])["message"]["content"][0]
-        self.assertEqual((block["name"], block["input"]), (transcript.tool_name("read_record"), {"id": "c1"}))
+        self.assertEqual((block["name"], block["input"]), (transcript.tool_name("read_record"), {"record_type": "contact", "id": "c1"}))
 
     def test_a_record_named_in_the_body_takes_the_mcp_argument_names_too(self):
         lines = restmap.rewrite(run(call("DELETE", "/v1/tags/t1/apply", {"entity_type": "company", "entity_id": "c1"})),
@@ -96,6 +96,17 @@ class RewriteTest(unittest.TestCase):
         self.assertEqual(content, [text, skill])
 
 
+class TypedRouteTest(unittest.TestCase):
+    """A typed route grades as the generic record verb with the MCP arguments."""
+
+    def test_a_typed_update_names_its_record_type_and_carries_the_body_as_fields(self):
+        lines = restmap.rewrite(run(call("PATCH", "/v1/companies/c1", {"lifecycle": "prospect"})),
+                                OPERATIONS, FRONTED, [], restmap.fields_verbs())
+        block = json.loads(lines[1])["message"]["content"][0]
+        self.assertEqual(block["name"], transcript.tool_name("update_record"))
+        self.assertEqual(block["input"], {"record_type": "company", "id": "c1", "fields": {"lifecycle": "prospect"}})
+
+
 class MainTest(unittest.TestCase):
     def test_a_transcript_outside_the_repo_and_the_temp_directory_is_refused(self):
         self.assertEqual(restmap.main(["restmap.py", "/etc/hosts", "--mcp-url", "http://127.0.0.1:1/mcp", "--token-env", "X"]), 3)
@@ -107,7 +118,7 @@ class ScoredAsOverMcpTest(unittest.TestCase):
     def scored(self, scenario, offered, *blocks):
         import tempfile
 
-        lines = restmap.rewrite(run(*blocks), OPERATIONS, FRONTED, offered)
+        lines = restmap.rewrite(run(*blocks), OPERATIONS, FRONTED, offered, restmap.fields_verbs())
         fd, path = tempfile.mkstemp(suffix=".jsonl")
         with os.fdopen(fd, "w") as handle:
             handle.write("\n".join(lines) + "\n")
@@ -132,3 +143,9 @@ class ScoredAsOverMcpTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TypedRouteScoredTest(ScoredAsOverMcpTest):
+    def test_a_typed_update_holds_the_record_type_and_fields_a_scenario_pins(self):
+        scenario = {"must_call_with": ["update_record.record_type=company", 'update_record.fields={"lifecycle":"prospect"}']}
+        self.assertEqual(self.scored(scenario, ["update_record"], call("PATCH", "/v1/companies/c1", {"lifecycle": "prospect"})), ("", []))

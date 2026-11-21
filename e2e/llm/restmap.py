@@ -46,37 +46,50 @@ def routers(path=ROUTES):
 
 
 def load(path=OPERATIONS):
-    """Each operation as (method, pattern, parameter names, verb), most specific first."""
+    """Each operation as (method, pattern, parameter names, verb, record type), most specific first."""
     with open(path, encoding="utf-8") as handle:
-        table = json.load(handle)["operations"]
+        table = json.load(handle)
     out = []
-    for route, verb in table.items():
+    for route, verb in table["operations"].items():
         method, template = route.split(" ", 1)
         names = re.findall(r"\{(\w+)\}", template)
         pattern = re.compile("^" + re.sub(r"\\\{\w+\\\}", "([^/]+)", re.escape(template)) + "$")
-        out.append((method, pattern, names, verb, len(re.sub(r"\{\w+\}", "", template))))
-    return [entry[:4] for entry in sorted(out, key=lambda entry: -entry[4])]
+        record_type = table["record_types"].get(route, "")
+        out.append((method, pattern, names, verb, record_type, len(re.sub(r"\{\w+\}", "", template))))
+    return [entry[:5] for entry in sorted(out, key=lambda entry: -entry[5])]
+
+
+def fields_verbs(path=OPERATIONS):
+    """The verbs whose MCP arguments carry the record's own fields under `fields`."""
+    with open(path, encoding="utf-8") as handle:
+        return set(json.load(handle)["fields_verbs"])
 
 
 def grade(operations, method, path):
-    """The verb and the path and query parameters of a call, or None for a call that runs no verb."""
+    """The verb and the path and query parameters of a call, or None for a call that runs no verb.
+
+    A typed route names its record type in the path, where the MCP verb takes it
+    as record_type, so the type is one of the parameters.
+    """
     parts = urlsplit(path)
     route = parts.path.rstrip("/") or "/"
     if not (route == "/v1" or route.startswith("/v1/")):
         route = "/v1" + route
-    for known, pattern, names, verb in operations:
+    for known, pattern, names, verb, record_type in operations:
         found = pattern.match(route)
         if known == str(method).upper() and found:
             named = {ALIASES.get(name, name): value for name, value in zip(names, found.groups())}
-            return verb, {**dict(parse_qsl(parts.query)), **named}
+            typed = {"record_type": record_type} if record_type else {}
+            return verb, {**dict(parse_qsl(parts.query)), **typed, **named}
     return None
 
 
-def rewrite_call(operations, fronted, call):
+def rewrite_call(operations, fronted, call, wrapped=frozenset()):
     """One `http` tool_use as the call that runs the same verb over MCP.
 
     The path parameters win over a body key of the same name, and the router
-    that fronts the verb is named with the argument that picks the action.
+    that fronts the verb is named with the argument that picks the action. A
+    verb in wrapped takes the body under fields, as its MCP arguments do.
     """
     arguments = call.get("input") or {}
     if not isinstance(arguments, dict):
@@ -86,6 +99,8 @@ def rewrite_call(operations, fronted, call):
         return call
     verb, parameters = graded
     body = arguments.get("body") if isinstance(arguments.get("body"), dict) else {}
+    if verb in wrapped:
+        body = {"fields": body}
     merged = {ALIASES.get(key, key): value for key, value in {**body, **parameters}.items()}
     if verb in fronted:
         router, field, action = fronted[verb]
@@ -93,7 +108,7 @@ def rewrite_call(operations, fronted, call):
     return {**call, "name": transcript.tool_name(verb), "input": merged}
 
 
-def rewrite(lines, operations, fronted, offered):
+def rewrite(lines, operations, fronted, offered, wrapped=frozenset()):
     """A REST run's transcript as a run over the MCP surface, offered as that surface offers it."""
     out = []
     for line in lines:
@@ -109,7 +124,7 @@ def rewrite(lines, operations, fronted, offered):
         elif event.get("type") == "assistant":
             blocks = (event.get("message") or {}).get("content") or []
             blocks = [
-                rewrite_call(operations, fronted, block) if block.get("type") == "tool_use" and block.get("name") == HTTP_TOOL else block
+                rewrite_call(operations, fronted, block, wrapped) if block.get("type") == "tool_use" and block.get("name") == HTTP_TOOL else block
                 for block in blocks
             ]
             event = {**event, "message": {**event["message"], "content": blocks}}
@@ -138,7 +153,7 @@ def main(argv):
     with open(path, encoding="utf-8") as handle:
         lines = [line for line in handle.read().splitlines() if line.strip()]
     with open(path, "w", encoding="utf-8") as handle:
-        handle.write("\n".join(rewrite(lines, load(), routers(), offered)) + "\n")
+        handle.write("\n".join(rewrite(lines, load(), routers(), offered, fields_verbs())) + "\n")
     return 0
 
 
