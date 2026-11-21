@@ -407,15 +407,17 @@ END;
 $$;
 
 -- A seat's import and its verdict on a thread decide together whether the
--- verdict holds the activity, so a change to either touches the activities of
--- that seat on that thread.
-CREATE FUNCTION touch_strength_dates_of_holds(keys text[], seats uuid[]) RETURNS void
+-- verdict holds the activity, so a change to a verdict touches the activities
+-- that seat imported on that thread. holds carries each (thread, seat) pair as
+-- one value, so no two lists are paired by position.
+CREATE FUNCTION touch_strength_dates_of_holds(holds jsonb) RETURNS void
 LANGUAGE plpgsql AS $$
 BEGIN
   PERFORM touch_strength_dates_of_activities(ARRAY(
-    SELECT DISTINCT i.activity_id FROM unnest(keys, seats) h(key, seat)
-      JOIN activity a ON a.thread_key = h.key
-      JOIN capture_import i ON i.activity_id = a.id AND i.user_id = h.seat));
+    SELECT DISTINCT i.activity_id
+      FROM jsonb_to_recordset(holds) h(thread_key text, user_id uuid)
+      JOIN activity a ON a.thread_key = h.thread_key
+      JOIN capture_import i ON i.activity_id = a.id AND i.user_id = h.user_id));
 END;
 $$;
 
@@ -597,7 +599,8 @@ $$;
 CREATE FUNCTION trg_capture_thread_verdict_strength_dates_added() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  PERFORM touch_strength_dates_of_holds(ARRAY(SELECT n.thread_key FROM added n), ARRAY(SELECT n.user_id FROM added n));
+  PERFORM touch_strength_dates_of_holds(
+    (SELECT jsonb_agg(jsonb_build_object('thread_key', n.thread_key, 'user_id', n.user_id)) FROM added n));
   RETURN NULL;
 END;
 $$;
@@ -605,7 +608,8 @@ $$;
 CREATE FUNCTION trg_capture_thread_verdict_strength_dates_removed() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  PERFORM touch_strength_dates_of_holds(ARRAY(SELECT o.thread_key FROM removed o), ARRAY(SELECT o.user_id FROM removed o));
+  PERFORM touch_strength_dates_of_holds(
+    (SELECT jsonb_agg(jsonb_build_object('thread_key', o.thread_key, 'user_id', o.user_id)) FROM removed o));
   RETURN NULL;
 END;
 $$;
@@ -613,16 +617,16 @@ $$;
 CREATE FUNCTION trg_capture_thread_verdict_strength_dates_moved() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  PERFORM touch_strength_dates_of_holds(
-    ARRAY(SELECT unnest(ARRAY[o.thread_key, n.thread_key]) FROM moved_from o JOIN moved_to n ON n.id = o.id
-           WHERE (o.thread_key, o.user_id, o.status) IS DISTINCT FROM (n.thread_key, n.user_id, n.status)),
-    ARRAY(SELECT unnest(ARRAY[o.user_id, n.user_id]) FROM moved_from o JOIN moved_to n ON n.id = o.id
-           WHERE (o.thread_key, o.user_id, o.status) IS DISTINCT FROM (n.thread_key, n.user_id, n.status)));
+  PERFORM touch_strength_dates_of_holds((
+    SELECT jsonb_agg(jsonb_build_object('thread_key', side.thread_key, 'user_id', side.user_id))
+      FROM moved_from o
+      JOIN moved_to n ON n.id = o.id
+     CROSS JOIN LATERAL (VALUES (o.thread_key, o.user_id), (n.thread_key, n.user_id)) side(thread_key, user_id)
+     WHERE (o.thread_key, o.user_id, o.status) IS DISTINCT FROM (n.thread_key, n.user_id, n.status)));
   RETURN NULL;
 END;
 $$;
 
--- An archived contact stores no dates, so an erasure, which archives it, leaves
 -- none behind. One brought back is folded again from its history.
 CREATE FUNCTION trg_contact_strength_dates_archive() RETURNS trigger
 LANGUAGE plpgsql AS $$

@@ -39,7 +39,7 @@ DROP FUNCTION IF EXISTS trg_capture_thread_verdict_strength_dates_added();
 DROP FUNCTION IF EXISTS trg_capture_thread_verdict_strength_dates_removed();
 DROP FUNCTION IF EXISTS trg_capture_thread_verdict_strength_dates_moved();
 DROP FUNCTION IF EXISTS refresh_strength_dates_of_addresses(text[], uuid[]);
-DROP FUNCTION IF EXISTS touch_strength_dates_of_holds(text[], uuid[]);
+DROP FUNCTION IF EXISTS touch_strength_dates_of_holds(jsonb);
 DROP FUNCTION IF EXISTS touch_strength_dates_of_activities(uuid[]);
 DROP FUNCTION IF EXISTS touch_contact_strength_dates(uuid[], uuid[], timestamptz[]);
 DROP FUNCTION IF EXISTS refresh_contact_strength_dates(uuid[]);

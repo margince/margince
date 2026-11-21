@@ -10963,12 +10963,13 @@ BEGIN
   PERFORM touch_contact_strength_dates(c, a, w);
 END;
 
-public.touch_strength_dates_of_holds(keys text[], seats uuid[]) secdef=false cfg=- acl=- 
+public.touch_strength_dates_of_holds(holds jsonb) secdef=false cfg=- acl=- 
 BEGIN
   PERFORM touch_strength_dates_of_activities(ARRAY(
-    SELECT DISTINCT i.activity_id FROM unnest(keys, seats) h(key, seat)
-      JOIN activity a ON a.thread_key = h.key
-      JOIN capture_import i ON i.activity_id = a.id AND i.user_id = h.seat));
+    SELECT DISTINCT i.activity_id
+      FROM jsonb_to_recordset(holds) h(thread_key text, user_id uuid)
+      JOIN activity a ON a.thread_key = h.thread_key
+      JOIN capture_import i ON i.activity_id = a.id AND i.user_id = h.user_id));
 END;
 
 public.transcript_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -11208,23 +11209,26 @@ END;
 
 public.trg_capture_thread_verdict_strength_dates_added() secdef=false cfg=- acl=- 
 BEGIN
-  PERFORM touch_strength_dates_of_holds(ARRAY(SELECT n.thread_key FROM added n), ARRAY(SELECT n.user_id FROM added n));
+  PERFORM touch_strength_dates_of_holds(
+    (SELECT jsonb_agg(jsonb_build_object('thread_key', n.thread_key, 'user_id', n.user_id)) FROM added n));
   RETURN NULL;
 END;
 
 public.trg_capture_thread_verdict_strength_dates_moved() secdef=false cfg=- acl=- 
 BEGIN
-  PERFORM touch_strength_dates_of_holds(
-    ARRAY(SELECT unnest(ARRAY[o.thread_key, n.thread_key]) FROM moved_from o JOIN moved_to n ON n.id = o.id
-           WHERE (o.thread_key, o.user_id, o.status) IS DISTINCT FROM (n.thread_key, n.user_id, n.status)),
-    ARRAY(SELECT unnest(ARRAY[o.user_id, n.user_id]) FROM moved_from o JOIN moved_to n ON n.id = o.id
-           WHERE (o.thread_key, o.user_id, o.status) IS DISTINCT FROM (n.thread_key, n.user_id, n.status)));
+  PERFORM touch_strength_dates_of_holds((
+    SELECT jsonb_agg(jsonb_build_object('thread_key', side.thread_key, 'user_id', side.user_id))
+      FROM moved_from o
+      JOIN moved_to n ON n.id = o.id
+     CROSS JOIN LATERAL (VALUES (o.thread_key, o.user_id), (n.thread_key, n.user_id)) side(thread_key, user_id)
+     WHERE (o.thread_key, o.user_id, o.status) IS DISTINCT FROM (n.thread_key, n.user_id, n.status)));
   RETURN NULL;
 END;
 
 public.trg_capture_thread_verdict_strength_dates_removed() secdef=false cfg=- acl=- 
 BEGIN
-  PERFORM touch_strength_dates_of_holds(ARRAY(SELECT o.thread_key FROM removed o), ARRAY(SELECT o.user_id FROM removed o));
+  PERFORM touch_strength_dates_of_holds(
+    (SELECT jsonb_agg(jsonb_build_object('thread_key', o.thread_key, 'user_id', o.user_id)) FROM removed o));
   RETURN NULL;
 END;
 

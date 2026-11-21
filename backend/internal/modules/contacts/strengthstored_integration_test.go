@@ -295,3 +295,39 @@ func TestAnImportBatchUpdatesTheContactOncePerStatement(t *testing.T) {
 	}
 	e.assertStoredIsLive(t, "a batch import", contact, now)
 }
+
+// One statement can hold threads for several seats at once, with the thread of
+// one seat and the seat of another side by side. Each seat's hold must reach
+// the mail that seat imported on that thread, and no other pair.
+func TestAStatementHoldingSeveralSeatsThreadsLowersEachContact(t *testing.T) {
+	e := setupDedupe(t)
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
+	held := map[ids.ContactID]time.Time{}
+	seed := func(name, thread string, seat ids.UUID) ids.ContactID {
+		t.Helper()
+		contact := e.seedVisibleContact(t, name)
+		mail := e.seedInteractionOfKind(t, contact, "email", day(2), "inbound")
+		e.seedInteraction(t, contact, day(9), "inbound")
+		e.execTx(e.as(), t, `UPDATE activity SET thread_key = $2 WHERE id = $1`, mail, thread)
+		e.execTx(e.as(), t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, mail, seat)
+		held[contact] = day(2)
+		return contact
+	}
+	ann := seed("Ann Held", "thread-ann", e.rep)
+	ben := seed("Ben Held", "thread-ben", e.otherRep)
+	e.execTx(e.as(), t, `
+		INSERT INTO capture_thread_verdict (thread_key, user_id, kind, status) VALUES
+		  ('thread-ann', $1, 'personal', 'pending'), ('thread-ben', $2, 'personal', 'pending'),
+		  ('thread-ann', $2, 'personal', 'pending'), ('thread-ben', $1, 'personal', 'pending')`, e.rep, e.otherRep)
+	e.execTx(e.as(), t, `
+		UPDATE capture_thread_verdict SET status = 'held'
+		 WHERE (thread_key, user_id) IN (('thread-ann', $1::uuid), ('thread-ben', $2::uuid))`, e.rep, e.otherRep)
+	for _, contact := range []ids.ContactID{ann, ben} {
+		got := e.storedDatesOf(t, contact)
+		if got.inbound == nil || !got.inbound.Before(held[contact]) {
+			t.Errorf("contact %s still stores the held message's date as its last inbound: %v", contact, got.inbound)
+		}
+		e.assertStoredIsLive(t, "holding two seats' threads in one statement", contact, now)
+	}
+}
