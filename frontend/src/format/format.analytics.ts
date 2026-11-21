@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Locale } from "../i18n";
-import { INTL_LOCALE } from "./intllocale";
+import { numberFormat } from "./formatters";
 import { toMajorUnits } from "./minorunits";
 import { formatMoneyOrWord, MONEY_ABSENT } from "./moneyword";
 
@@ -18,7 +18,7 @@ export function formatAnalyticsMoney(
 ): string {
   const major = toMajorUnits(amountMinor, currency);
   if (!Number.isFinite(major)) return MONEY_ABSENT;
-  const format = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const format = numberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
@@ -35,17 +35,16 @@ export function formatAnalyticsNumber(value: number, locale: Locale): string {
   if (!Number.isFinite(value)) return MONEY_ABSENT;
   if (value !== 0 && Math.abs(value) < 0.5) return value < 0 ? "−(<1)" : "<1";
   const rounded = Math.sign(value) * Math.round(Math.abs(value));
-  return `${value === rounded ? "" : "≈"}${new Intl.NumberFormat(
-    INTL_LOCALE[locale],
-    { maximumFractionDigits: 0 },
-  ).format(rounded === 0 ? 0 : rounded)}`;
+  return `${value === rounded ? "" : "≈"}${numberFormat(locale, {
+    maximumFractionDigits: 0,
+  }).format(rounded === 0 ? 0 : rounded)}`;
 }
 
 export function formatAnalyticsHours(hours: number, locale: Locale): string {
   if (!Number.isFinite(hours)) return MONEY_ABSENT;
   const minutes = Math.round(Math.abs(hours) * 60);
   const part = (value: number, unit: "hour" | "minute") =>
-    new Intl.NumberFormat(INTL_LOCALE[locale], {
+    numberFormat(locale, {
       style: "unit",
       unit,
       unitDisplay: "short",
@@ -92,7 +91,7 @@ export function formatAnalyticsPercentPoints(
   locale: Locale,
 ): string {
   const figure = formatAnalyticsNumber(points, locale);
-  return new Intl.NumberFormat(INTL_LOCALE[locale], { style: "percent" })
+  return numberFormat(locale, { style: "percent" })
     .formatToParts(0)
     .map((part) => (part.type === "integer" ? figure : part.value))
     .join("");

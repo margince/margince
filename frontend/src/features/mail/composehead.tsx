@@ -20,7 +20,6 @@ import {
   type TokenParse,
   type TokenSuggestion,
 } from "../../design-system/tokeninput";
-import { INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { addressKey } from "../../lib/addresskey";
 import type { Transport } from "../../lib/contacttransports";
@@ -30,6 +29,7 @@ import { readAddressList } from "./composeaddresslist";
 import type { RecipientCountries } from "./composecountries";
 import { RecipientCountryControl } from "./composecountry";
 import "./composehead.css";
+import { listFormat } from "../../format/formatters";
 
 type Contact = components["schemas"]["Contact"];
 type Contact360 = components["schemas"]["Contact360"];
@@ -344,7 +344,7 @@ export function AddressBlock({
       holders.length === 0
         ? undefined
         : t("compose.alreadyIn", {
-            field: new Intl.ListFormat(INTL_LOCALE[locale], {
+            field: listFormat(locale, {
               type: "conjunction",
             }).format(holders.map((held) => label[held])),
           }),

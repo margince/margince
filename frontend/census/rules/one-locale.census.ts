@@ -166,7 +166,7 @@ function namesTheMapping(
  * `Intl.DateTimeFormat().resolvedOptions()` asks which zone the runtime is in
  * and renders nothing. The zone-by-purpose rule owns that question.
  */
-function isZoneLookup(node: ts.Node): boolean {
+export function isZoneLookup(node: ts.Node): boolean {
   const parent = node.parent;
   return (
     parent !== undefined &&
@@ -179,7 +179,7 @@ function isZoneLookup(node: ts.Node): boolean {
  * The local names bound to an Intl formatter, by destructure, declaration or
  * assignment. A call through one is judged like a direct call.
  */
-function intlAliases(
+export function intlAliases(
   parsed: ts.SourceFile,
   formatters: readonly string[],
 ): Set<string> {
@@ -243,7 +243,7 @@ function memberOfIntl(
 }
 
 /** The Intl formatter a callee reaches: `Intl.X`, `Intl["X"]` or an alias. */
-function formatterReached(
+export function formatterReached(
   callee: ts.Expression,
   formatters: readonly string[],
   aliases: ReadonlySet<string>,
@@ -332,20 +332,8 @@ export function findingsIn(
 // that pins a locale to make an expectation writable.
 const pinnedLocales: { file: string; why: string }[] = [
   {
-    file: "format/address.ts",
-    why: "countryBeyondCity names a country code in EVERY locale this build speaks to compare it with a city, whichever language the city was typed in. The names are matched, never shown.",
-  },
-  {
-    file: "format/format.dates.ts",
-    why: "hourInZone reads an hour back as a number. The output is never shown, so the pinned tag fixes the parsing and not the wording.",
-  },
-  {
-    file: "format/calendarday.ts",
-    why: "Both sites format in en-CA to COMPUTE, never to render: en-CA yields ISO-8601 YYYY-MM-DD, which is what makes the string comparable and parseable back into parts. A reader's locale here would be a defect — the bucketing would read 'yesterday' because an ICU format changed under it.",
-  },
-  {
-    file: "format/timezone.ts",
-    why: "zoneOffsetMs formats in en-US with hourCycle h23 to READ an instant's wall clock back as numbers and derive a zone offset from it. The output is parsed, never shown, so a locale that varied would change the arithmetic rather than the wording. assertIanaZone builds a formatter only to make Intl reject an unknown zone, and shows nothing.",
+    file: "format/formatters.ts",
+    why: "pinnedDateTimeFormat builds the en-CA and en-US formatters whose output calendarday.ts and timezone.ts read back as numbers and never show. graphemeSegmenter passes no locale, because Unicode grapheme clusters are the same in every locale.",
   },
   {
     file: "features/sign-in/fiscalyear.test.ts",
@@ -358,10 +346,6 @@ const pinnedLocales: { file: string; why: string }[] = [
   {
     file: "mcp-apps/values.ts",
     why: "An MCP app document is inlined whole into a page this product does not own. Importing INTL_LOCALE would be cheap; what is missing is the locale to look it up WITH — no LocaleProvider stands above the document and no signed-in reader's choice reaches inside it, so there is nothing to index the mapping by. The host browser's own locale is the honest remaining answer, and the file says so at the subject.",
-  },
-  {
-    file: "design-system/relationshipmap.layout.ts",
-    why: "fitLabel segments a label into graphemes only to find where a cut may fall. Extended grapheme clusters are defined by Unicode and do not vary by locale, and nothing is formatted for a reader.",
   },
   {
     file: "mcp-apps/values.test.ts",
@@ -459,7 +443,7 @@ export const rule: CensusRule = {
   advice:
     "A count goes through formatNumber; a date through formatDate, " +
     "formatDateAbbrev, formatDayMonth or formatDateTime; money through " +
-    "formatMoney. A rendering none of those covers builds its formatter with " +
-    "INTL_LOCALE[locale]. A file that must pin a locale earns an entry in " +
+    "formatMoney. A rendering none of those covers asks src/format/formatters.ts " +
+    "for its formatter. A file that must pin a locale earns an entry in " +
     "pinnedLocales with its reason.",
 };

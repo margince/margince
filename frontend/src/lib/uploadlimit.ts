@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { INTL_LOCALE } from "../format/format";
+import { numberFormat } from "../format/formatters";
 import { type Locale, useLocale, useT } from "../i18n";
 import { throwProblem } from "./problem";
 import { signInShowsRefusal } from "./session.read";
@@ -75,7 +75,7 @@ export function formatUploadLimit(bytes: number, locale: Locale): string {
   // Through Intl, so the decimal separator is the reader's own: a German reader
   // shown "12.5 MB" reads twelve and a half as twelve-thousand-five-hundred,
   // and the unit word rides Intl's vocabulary rather than a table here.
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit: "megabyte",
     unitDisplay: "short",

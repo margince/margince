@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type RefObject, useEffect, useRef, useState } from "react";
-import { formatNumber, INTL_LOCALE } from "../format/format";
+import { formatNumber } from "../format/format";
+import { listFormat } from "../format/formatters";
 import { type Locale, translatePlural } from "../i18n";
 import type { BoardColumn, BoardRecord } from "./pipelineboard";
 
@@ -28,7 +29,7 @@ export function matchesTitle<Record extends BoardRecord>(
     (sum, column) => sum + (column.count ?? column.deals.length),
     0,
   );
-  const names = new Intl.ListFormat(INTL_LOCALE[locale], {
+  const names = listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(columns.map((column) => column.label));

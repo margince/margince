@@ -1,5 +1,6 @@
+import { LOCALES } from "../i18n/locale";
 import { foldForSearch } from "./collate";
-import { INTL_LOCALE } from "./intllocale";
+import { displayNames } from "./formatters";
 
 // The stored parts of an address, as the API sends them on a record.
 export type PostalAddress = Readonly<{
@@ -61,8 +62,8 @@ function countryNames(country: string): string[] {
     return [country];
   }
   const code = country.toUpperCase();
-  const names = Object.values(INTL_LOCALE).map((tag) =>
-    new Intl.DisplayNames(tag, { type: "region" }).of(code),
+  const names = LOCALES.map((locale) =>
+    displayNames(locale, { type: "region" }).of(code),
   );
   return [country, ...names.filter((name): name is string => Boolean(name))];
 }

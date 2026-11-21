@@ -1,3 +1,4 @@
+import { graphemeSegmenter } from "../format/formatters";
 // The map's geometry and its route arithmetic, as pure functions.
 //
 // Separate from the drawing so both can be tested for what they actually
@@ -462,8 +463,7 @@ function graphemes(text: string): string[] {
   if (typeof Intl.Segmenter !== "function") {
     return Array.from(text);
   }
-  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-  return Array.from(segmenter.segment(text), (part) => part.segment);
+  return Array.from(graphemeSegmenter().segment(text), (part) => part.segment);
 }
 
 function cutAt(glyphs: readonly string[], count: number): string {
