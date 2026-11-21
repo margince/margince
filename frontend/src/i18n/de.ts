@@ -7709,7 +7709,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.city": "Stadt",
   "create.region": "Bundesland oder Region",
   "create.postalCode": "Postleitzahl",
-  "create.country": "Ländercode (ISO 3166)",
+  "create.country": "Land",
   "create.companyName": "Unternehmen",
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
@@ -7732,8 +7732,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib einen Link zu einem persönlichen Profil ein, etwa linkedin.com/in/name.",
   "create.dateRangeReversed":
     "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",
-  "create.countryCodeInvalid":
-    "Gib das Land als Code aus zwei Buchstaben ein, etwa DE oder US.",
   "create.referenceNotFound":
     "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",

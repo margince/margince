@@ -19,7 +19,7 @@
     "address_city":
      "City",
     "address_country":
-     "Country code (ISO 3166)",
+     "Country",
     "address_line1":
      "Street and number",
     "address_line2":
@@ -9143,7 +9143,7 @@
     "merge_profile_field/text/address_city":
      "City",
     "merge_profile_field/text/address_country":
-     "Country code (ISO 3166)",
+     "Country",
     "merge_profile_field/text/address_line1":
      "Street and number",
     "merge_profile_field/text/address_line2":
@@ -9493,7 +9493,7 @@
     "merge_profile_field/lifecycle/address_city":
      "City",
     "merge_profile_field/lifecycle/address_country":
-     "Country code (ISO 3166)",
+     "Country",
     "merge_profile_field/lifecycle/address_line1":
      "Street and number",
     "merge_profile_field/lifecycle/address_line2":
@@ -20169,7 +20169,7 @@
     "address_city":
      "Stadt",
     "address_country":
-     "Ländercode (ISO 3166)",
+     "Land",
     "address_line1":
      "Straße und Hausnummer",
     "address_line2":
@@ -29293,7 +29293,7 @@
     "merge_profile_field/text/address_city":
      "Stadt",
     "merge_profile_field/text/address_country":
-     "Ländercode (ISO 3166)",
+     "Land",
     "merge_profile_field/text/address_line1":
      "Straße und Hausnummer",
     "merge_profile_field/text/address_line2":
@@ -29643,7 +29643,7 @@
     "merge_profile_field/lifecycle/address_city":
      "Stadt",
     "merge_profile_field/lifecycle/address_country":
-     "Ländercode (ISO 3166)",
+     "Land",
     "merge_profile_field/lifecycle/address_line1":
      "Straße und Hausnummer",
     "merge_profile_field/lifecycle/address_line2":
@@ -40319,7 +40319,7 @@
     "address_city":
      "Thành phố",
     "address_country":
-     "Mã quốc gia (ISO 3166)",
+     "Quốc gia",
     "address_line1":
      "Số nhà và tên đường",
     "address_line2":
@@ -49443,7 +49443,7 @@
     "merge_profile_field/text/address_city":
      "Thành phố",
     "merge_profile_field/text/address_country":
-     "Mã quốc gia (ISO 3166)",
+     "Quốc gia",
     "merge_profile_field/text/address_line1":
      "Số nhà và tên đường",
     "merge_profile_field/text/address_line2":
@@ -49793,7 +49793,7 @@
     "merge_profile_field/lifecycle/address_city":
      "Thành phố",
     "merge_profile_field/lifecycle/address_country":
-     "Mã quốc gia (ISO 3166)",
+     "Quốc gia",
     "merge_profile_field/lifecycle/address_line1":
      "Số nhà và tên đường",
     "merge_profile_field/lifecycle/address_line2":
