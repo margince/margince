@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx frontend/src/features/projects/projectdocuments.tsx frontend/src/components/adddocument.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/components/chatcapture.tsx frontend/src/features/leads/leadhistory.tsx backend/internal/compose/chatcapturefile.go backend/internal/compose/chattasks -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/components/filerowverbs.tsx frontend/src/features/contacts/contactfiles.tsx frontend/src/features/companies/companydocuments.tsx frontend/src/features/records/activityfiles.tsx frontend/src/features/projects/projectdocuments.tsx frontend/src/components/adddocument.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/components/chatcapture.tsx frontend/src/features/leads/leadhistory.tsx backend/internal/compose/chatcapturefile.go backend/internal/compose/chattasks -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
@@ -214,6 +214,12 @@ To remove a file from a deal in Margince, open the deal's **Documents** tab. Ope
 - **Delete**: asks first, and names the file as its tile does. "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room."
 Use hide when the file does not matter here; use delete when it should not be on the deal at all.
 Also called: delete an attachment, remove a document.
+
+### How do I edit or delete a document I uploaded?
+To change or remove an uploaded document in Margince, open the **⋯** menu on its tile or row in **Documents**. This works on a contact, a company and a deal. Choose **Edit** or **Delete**. The menu is missing when you may not edit the record. It is also missing on a file that came with an email or chat message, because that file belongs to its message.
+- **Edit**: opens a small dialog for **Title**, **Category** and **State** (**Draft**, **Current**, **Final** or **Superseded**). Only the fields you change are saved. On a company's library, a **Superseded** document leaves the list until you choose **Show superseded**. On a contact or a deal it stays in the list and is marked as superseded.
+- **Delete**: asks first and names the file. The file leaves every Documents list that showed it.
+Also called: rename a document, change a document's category, mark a document superseded, remove a wrong upload.
 
 ## Document sets — asking your documents questions
 

@@ -7856,6 +7856,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
     "Tệp sẽ bị gỡ khỏi deal này và bên mua sẽ không còn thấy tệp trong bất kỳ Deal Room nào. Mục trong Deal Room vẫn còn cho đến khi bạn gỡ nó.",
+  "files.edit": "Chỉnh sửa",
+  "files.editTitle": "Chỉnh sửa {name}",
+  "files.editState": "Trạng thái",
+  "files.save": "Lưu",
+  "files.deleteBodyRecord": "Tệp sẽ bị gỡ khỏi tài liệu của hồ sơ này.",
   "files.showHidden": "Hiển thị tệp đã ẩn",
   "files.hideHidden": "Thôi hiển thị tệp đã ẩn",
   "dealfiles.origin.from": "Từ {who}",
