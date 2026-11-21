@@ -16,6 +16,15 @@ const STEP_ADDRESSES: Partial<Record<ConversationAct, string>> = {
   connect: "connect",
 };
 
+// The event that walks on from the voice step, where one is legal right now.
+function forwardFromVoice(state: ConversationState): ConversationEvent | null {
+  const ways: readonly ConversationEvent[] = [
+    { type: "VOICE_DONE" },
+    { type: "VOICE_SKIPPED" },
+  ];
+  return ways.find((event) => isLegal(state, event)) ?? null;
+}
+
 /** Keeps `#/onboarding/<step>` in step with the act. A disagreeing address is
  *  rewritten, except the browser's move back to voice, which moves the act. */
 export function useStepAddress(
@@ -26,10 +35,15 @@ export function useStepAddress(
   const seen = useRef({ act: state.act, routeId });
   // The addresses this hook wrote that the route has not reached yet, in order.
   const written = useRef<string[]>([]);
+  // Forward to connect returns where the reader stood; a typed address does not.
+  const cameBack = useRef(false);
   const { navigateReplacing } = useAddressWriters();
   useEffect(() => {
     const prev = seen.current;
     seen.current = { act: state.act, routeId };
+    if (prev.act === "connect" && state.act === "voice") {
+      cameBack.current = true;
+    }
     const arrived = routeId !== prev.routeId;
     const echo =
       arrived && routeId !== undefined && written.current.includes(routeId);
@@ -42,13 +56,21 @@ export function useStepAddress(
     if (address === undefined || routeId === address) {
       return;
     }
+    const moved = arrived && !echo;
     if (
-      arrived &&
-      !echo &&
+      moved &&
       routeId === STEP_ADDRESSES.voice &&
       isLegal(state, { type: "CONNECT_BACK" })
     ) {
       dispatch({ type: "CONNECT_BACK" });
+      return;
+    }
+    const forward =
+      moved && cameBack.current && routeId === STEP_ADDRESSES.connect
+        ? forwardFromVoice(state)
+        : null;
+    if (forward !== null) {
+      dispatch(forward);
       return;
     }
     const next = { screen: "onboarding", id: address } as const;

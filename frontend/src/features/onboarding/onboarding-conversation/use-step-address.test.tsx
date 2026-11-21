@@ -68,6 +68,24 @@ describe("each step at its own address", () => {
     expect(globalThis.location.hash).toBe("#/onboarding/voice");
   });
 
+  it("takes the browser's move forward to connect, after a Back, as the step forward", async () => {
+    render(<Harness />);
+    act(() => send({ type: "VOICE_SKIPPED" }));
+    await waitFor(() =>
+      expect(globalThis.location.hash).toBe("#/onboarding/connect"),
+    );
+    act(() => {
+      globalThis.location.hash = "#/onboarding/voice";
+    });
+    await waitFor(() => expect(actShown()).toBe("voice"));
+
+    act(() => {
+      globalThis.location.hash = "#/onboarding/connect";
+    });
+    await waitFor(() => expect(actShown()).toBe("connect"));
+    expect(globalThis.location.hash).toBe("#/onboarding/connect");
+  });
+
   it("follows the Back button's own step back", async () => {
     render(<Harness />);
     act(() => send({ type: "VOICE_SKIPPED" }));
