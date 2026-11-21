@@ -46609,6 +46609,9 @@ type ConversationClaim struct {
 
 	// TaskActivityId The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
 	TaskActivityId *openapi_types.UUID `json:"task_activity_id,omitempty"`
+
+	// TaskOpen True when the task `task_activity_id` names is open and this reader may see it. Set only by the contact 360 read; absent elsewhere and when the claim names no task. `next_steps` is capped, so a claim whose task is past the cap still counts as owed, and one whose task is done or hidden does not.
+	TaskOpen *bool `json:"task_open,omitempty"`
 }
 
 // ConversationClaimStatus `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.
@@ -69074,7 +69077,7 @@ type Team struct {
 	CreatedAt  *time.Time         `json:"created_at,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 
-	// MemberCount Active memberships; populated by listTeams.
+	// MemberCount Active and invited memberships; populated by listTeams.
 	MemberCount  *int                `json:"member_count,omitempty"`
 	Name         string              `json:"name"`
 	ParentTeamId *openapi_types.UUID `json:"parent_team_id,omitempty"`

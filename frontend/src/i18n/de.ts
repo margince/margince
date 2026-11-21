@@ -9457,7 +9457,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.share.linkWarning":
     "Der Link wird nur einmal angezeigt und lässt sich später nicht mehr abrufen. Kopiere den Link jetzt.",
   "analytics.share.leaveWarning":
-    "Schließen ohne Kopieren verwirft den Link, und ein neuer muss erstellt werden.",
+    "Wenn du ohne Kopieren schließt, lässt sich der Link nicht mehr anzeigen. Er bleibt offen, bis er abläuft, du ihn unter Geteilte Links schließt oder du den Zugriff auf die Prognose verlierst.",
   "analytics.share.copy": "Link kopieren",
   "analytics.share.copied": "Kopiert",
   "analytics.share.copyFailed":
@@ -14396,6 +14396,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ihre Antwort wurde erfasst. Das zuständige Team bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
     "Dieser Link ist nicht mehr gültig. Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
+  "confirm.deadLinkBody":
+    "Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
   "confirm.questionChanged":
     "Die Frage auf dieser Seite hat sich geändert, nachdem Sie sie geöffnet haben. Laden Sie die Seite neu und antworten Sie noch einmal.",
   "prefs.lockedWhy":
@@ -20046,7 +20048,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Wie die Beziehung steht",
   "contact.standing.dim.promises": "Deine Zusagen",
   "contact.standing.dim.promisesNone": "Keine offen",
-  "contact.standing.dim.promisesUncounted": "Zu viele Aufgaben zum Zählen",
   "standing.overdue_one": "{count} überfällig",
   "standing.overdue_other": "{count} überfällig",
   "standing.ofOpen_one": "von {count} offenen",
@@ -23574,6 +23575,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.docState.final": "Endfassung",
   "legalReview.advanceRefused":
     "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Frage eine Rechtsprüfung an und verschiebe den Deal danach.",
+  "legalReview.advanceRefused.pending":
+    "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Die Prüfung wartet noch auf eine Antwort der Rechtsabteilung.",
+  "legalReview.advanceRefused.changesNeeded":
+    "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Die Rechtsabteilung hat Änderungen verlangt: Nimm sie vor und frage die Prüfung erneut an.",
+  "legalReview.advanceRefused.termsChanged":
+    "Betrag oder Angebot haben sich seit der Freigabe geändert. Frage die Prüfung erneut an und verschiebe den Deal danach.",
   "legalReview.packHistory": "Phasenverlauf",
   "legalReview.enteredStage": "{stage}, erreicht {date}",
   "legalReview.settingsTitle": "Rechtsprüfung",

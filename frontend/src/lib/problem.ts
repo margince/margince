@@ -15,6 +15,7 @@ import {
 } from "./problembody";
 import {
   heldByColleagueCopy,
+  legalReviewRefusalCopy,
   PROBLEM_CODE_COPY,
   roleCannotCaptureCopy,
 } from "./problemcodecopy";
@@ -44,6 +45,7 @@ function problemDetail(
   const copyKey =
     heldByColleagueCopy(problem) ??
     roleCannotCaptureCopy(problem) ??
+    legalReviewRefusalCopy(problem) ??
     PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ??
     fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);

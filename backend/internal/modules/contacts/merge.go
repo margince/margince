@@ -151,13 +151,12 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 		return crmcontracts.Contact{}, &MergeSelfError{}
 	}
 
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
 	var out crmcontracts.Contact
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		out, err = s.mergeContactTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})

@@ -38,13 +38,36 @@ type LegalReviewRequiredError struct {
 	TermsChanged bool
 }
 
-func (e *LegalReviewRequiredError) Error() string {
+// The review states a refusal names on the wire, as params.review_state.
+const (
+	reviewStateNone          = "none"
+	reviewStatePending       = "pending"
+	reviewStateChangesNeeded = "changes_needed"
+	reviewStateTermsChanged  = "terms_changed"
+)
+
+// reviewState is the step the refusal asks for. A withdrawn review reads as
+// none, because the next step is a new request.
+func (e *LegalReviewRequiredError) reviewState() string {
 	switch {
 	case e.TermsChanged:
-		return "the deal's amount or offer changed since legal approved it: request the review again"
+		return reviewStateTermsChanged
 	case e.ReviewStatus == ReviewRequested:
-		return "this stage needs legal's approval, and the review is still waiting for an answer"
+		return reviewStatePending
 	case e.ReviewStatus == ReviewChangesNeeded:
+		return reviewStateChangesNeeded
+	default:
+		return reviewStateNone
+	}
+}
+
+func (e *LegalReviewRequiredError) Error() string {
+	switch e.reviewState() {
+	case reviewStateTermsChanged:
+		return "the deal's amount or offer changed since legal approved it: request the review again"
+	case reviewStatePending:
+		return "this stage needs legal's approval, and the review is still waiting for an answer"
+	case reviewStateChangesNeeded:
 		return "this stage needs legal's approval, and legal asked for changes: make them and request the review again"
 	default:
 		return "this stage needs legal's approval before the deal can move on: request a legal review"
@@ -54,6 +77,12 @@ func (e *LegalReviewRequiredError) Error() string {
 // FieldFault names the target the caller asked for.
 func (e *LegalReviewRequiredError) FieldFault() (field, code, message string) {
 	return advanceTargetField, "legal_review_required", e.Error()
+}
+
+// FieldParams names the review state, so a screen words the next step in the
+// reader's language.
+func (e *LegalReviewRequiredError) FieldParams() map[string]string {
+	return map[string]string{"review_state": e.reviewState()}
 }
 
 // ensureLegalReviewed refuses a move onto a stage past a required

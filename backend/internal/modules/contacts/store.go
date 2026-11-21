@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // ownerIDColumn is the owner reference column contact and company
@@ -44,7 +43,7 @@ type Store struct {
 	db *database.DB
 	// catalog is the fieldcatalog seam (custom-field columns); nil means
 	// no catalog is wired and every read/write runs core-columns-only.
-	catalog fieldcatalog.Reader
+	catalog storekit.FieldCatalog
 	// geocodeEnqueue queues a coordinate lookup when an address is written.
 	// Nil is a real composition — a deployment with no geocoder writes the
 	// address and queues nothing; the coordinates are what an installation can
@@ -157,7 +156,7 @@ func (s *Store) consumerMailMatcher(ctx context.Context, tx pgx.Tx) (*freemail.M
 // (compose injects modules/customfields' Service here — ADR-0054: a
 // module never imports a sibling), making active cf_* columns
 // participate in person/company reads and writes.
-func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+func (s *Store) WithFieldCatalog(catalog storekit.FieldCatalog) *Store {
 	s.catalog = catalog
 	return s
 }

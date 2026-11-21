@@ -44,14 +44,13 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 	if sourceID == targetID {
 		return crmcontracts.Company{}, &MergeSelfError{}
 	}
-	active, err := s.activeColumns(ctx, "company")
-	if err != nil {
-		return crmcontracts.Company{}, err
-	}
 
 	var out crmcontracts.Company
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "company")
+		if err != nil {
+			return err
+		}
 		out, err = s.mergeCompanyTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
