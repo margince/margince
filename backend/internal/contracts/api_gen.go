@@ -50050,6 +50050,16 @@ type DirectCommunicationSendRequest struct {
 	// on a contract clause".
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
 
+	// ScheduledAt A future moment to send at instead of now. The decision is recorded now and spent when
+	// the message fires. Absent sends now.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
+	// ScheduledTz The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+	ScheduledTz *string `json:"scheduled_tz,omitempty"`
+
 	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
 	// review's refusals changed since then, the decision is refused with `instruction_stale`
 	// and the director opens the review again.
@@ -62667,9 +62677,10 @@ type RecordQualifyingEventRequest struct {
 	// a card handed over at a stand. `requested_by_subject` is the contact asking us to write
 	// to them away from every system: a phone call, a conversation at a counter.
 	//
-	// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-	// records the product already holds, and a hand-written one would be a second, unbacked
-	// answer to a question the data already settles.
+	// Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+	// product already holds, and a hand-written one would be a second, unbacked answer to a
+	// question the data already settles. `active_deal` is retired: nothing writes it, and the
+	// guard does not read it.
 	Kind RecordQualifyingEventRequestKind `json:"kind"`
 
 	// Note What happened, in the words of whoever was there. Required — it is the only evidence a hand-recorded exchange has.
@@ -62683,9 +62694,10 @@ type RecordQualifyingEventRequest struct {
 // a card handed over at a stand. `requested_by_subject` is the contact asking us to write
 // to them away from every system: a phone call, a conversation at a counter.
 //
-// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-// records the product already holds, and a hand-written one would be a second, unbacked
-// answer to a question the data already settles.
+// Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+// product already holds, and a hand-written one would be a second, unbacked answer to a
+// question the data already settles. `active_deal` is retired: nothing writes it, and the
+// guard does not read it.
 type RecordQualifyingEventRequestKind string
 
 // RecordReference defines model for RecordReference.

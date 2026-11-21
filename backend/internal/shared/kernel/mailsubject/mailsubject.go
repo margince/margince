@@ -19,14 +19,15 @@ import (
 )
 
 // ReplyPrefixes are the ways a client marks a subject as a reply, in the
-// languages this product writes. Lower case, colon included.
+// languages this product writes. Lower case, colon included. "antwort:" is
+// left out: adding it means rebuilding the answered-check index.
 func ReplyPrefixes() []string {
 	return []string{"re:", "aw:", "antw:"}
 }
 
 // ForwardPrefixes are the ways a client marks a subject as a forward.
 func ForwardPrefixes() []string {
-	return []string{"fwd:", "wg:"}
+	return []string{"fwd:", "fw:", "wg:"}
 }
 
 // ReplyPrefixPattern matches any run of reply prefixes at the start of a
@@ -44,10 +45,12 @@ func ReplyPrefixPattern() string {
 var (
 	replyPrefixes = regexp.MustCompile(`(?i)` + ReplyPrefixPattern())
 	innerSpaces   = regexp.MustCompile(`\s+`)
-	anyPrefixes   = regexp.MustCompile(`^(\s*(` + strings.Join(prefixWords(), "|") + `)\s*:)+\s*`)
+	anyPrefixes   = regexp.MustCompile(`^(\s*(` + strings.Join(PrefixWords(), "|") + `)\s*:)+\s*`)
 )
 
-func prefixWords() []string {
+// PrefixWords are the reply and forward prefixes without their colon, for a
+// reader that matches whole words rather than a subject's start.
+func PrefixWords() []string {
 	var words []string
 	for _, prefix := range append(ReplyPrefixes(), ForwardPrefixes()...) {
 		words = append(words, strings.TrimSuffix(prefix, ":"))

@@ -3830,7 +3830,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.reason.unconfirmed_double_opt_in":
     "Đã ghi nhận đồng ý nhưng chưa được xác nhận lần hai",
   "consent.reason.no_connection":
-    "Họ chưa từng viết cho bạn, và không có deal hay yêu cầu nào liên kết hai bên",
+    "Họ chưa viết cho bạn, chưa gặp bạn và chưa yêu cầu điều gì được ghi nhận",
   "consent.reason.qualifying_event":
     "Có một lần trao đổi đã ghi nhận giữa hai bên",
   "consent.reason.consent_confirmed": "Họ đã đồng ý, và đã có xác nhận",
@@ -3842,7 +3842,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Họ đã mua hàng của bạn và khi đó đã được báo rằng họ có thể từ chối quảng cáo",
   "consent.reason.qualifying.inbound_message": "Họ đã viết cho bạn ngày {date}",
   "consent.reason.qualifying.inquiry": "Họ đã gửi yêu cầu ngày {date}",
-  "consent.reason.qualifying.active_deal": "Có một deal đang mở giữa hai bên",
   "consent.reason.qualifying.in_person":
     "Trao đổi đã ghi nhận ngày {date}: {note}",
   "consent.reason.qualifying.meeting": "Có cuộc họp ngày {date} giữa hai bên",
@@ -8462,6 +8461,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "directSend.correctionFailed":
     "Chưa lưu được bản sửa. Mở lại phần kiểm tra để xem tin nhắn và phê duyệt hiện tại.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
+  "directSend.alreadySent": "Tin nhắn này đã được gửi.",
+  "directSend.when": "Thời điểm gửi",
+  "directSend.whenLater": "Vào lúc khác",
+  "directSend.whenLaterDetail":
+    "Quyết định của bạn được ghi nhận ngay. Các bước kiểm tra sẽ chạy lại khi tin nhắn được gửi.",
+  "directSend.scheduled": "Đã hẹn giờ gửi theo ngoại lệ đã ghi nhận.",
   "directSend.queued": "Đã xếp hàng gửi theo ngoại lệ đã ghi nhận.",
   "directSend.opening": "Đang mở…",
   "directSend.alreadySettled":
@@ -20331,8 +20336,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một địa chỉ nhận đã dừng nhận tiếp thị sau khi bạn lên lịch. Thư sẽ không gửi đến địa chỉ đó.",
   "sched.held.recipientReplied":
     "Có thư mới từ bên nhận sau khi bạn lên lịch thư theo dõi này. Hãy đọc thư đó trước khi gửi.",
-  "sched.held.confirmSendsNow":
-    "Khi bạn xác nhận, tin nhắn sẽ được gửi ngay bây giờ, không theo giờ đã hẹn.",
+  "sched.held.confirmChoosesWhen":
+    "Giờ đã hẹn đã qua. Khi xác nhận, bạn chọn gửi ngay hoặc vào một thời điểm mới.",
   "sched.held.sendRefused":
     "Một bước kiểm tra đã chặn tin nhắn này khi đến giờ gửi. Không có gì được gửi.",
   "sched.inZone": "theo giờ {zone}",
