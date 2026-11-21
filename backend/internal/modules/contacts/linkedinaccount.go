@@ -216,7 +216,7 @@ func normalizeMyLinkedInProfileURL(s string) (string, error) {
 	if err != nil {
 		return "", &values.ParseError{
 			Field: profileURLRequestField, Code: linkedInProfileURLInvalid,
-			Message: "Enter a LinkedIn profile address such as https://www.linkedin.com/in/your-name.",
+			Message: "This is not a LinkedIn profile address. Enter one such as https://www.linkedin.com/in/your-name.",
 		}
 	}
 	if len(normalized) > maxLinkedInProfileURLLength {
