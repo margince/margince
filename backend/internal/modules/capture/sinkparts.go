@@ -248,7 +248,7 @@ func (s *Sink) keepParts(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	rec connector.NormalizedRecord, fields ActivityFields,
 ) (connector.NormalizedRecord, []StagedFile, error) {
-	private, verdict, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	private, verdict, err := capturedMessageIsPrivateTx(ctx, tx, rec, fields)
 	if err != nil {
 		return rec, nil, err
 	}

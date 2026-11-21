@@ -194,7 +194,7 @@ func (s *Sink) decideMailSubject(ctx context.Context, tx pgx.Tx, rec connector.N
 		return decision, err
 	}
 	decision.subject = cp
-	private, _, err := threadIsPrivateTx(ctx, tx, rec)
+	private, err := capturedThreadIsPrivateTx(ctx, tx, rec)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}

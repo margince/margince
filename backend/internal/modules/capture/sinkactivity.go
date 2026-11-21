@@ -317,7 +317,7 @@ func (s *Sink) finishNewActivity(
 	// the audience limiter, which decides what a link-less record is born as.
 	derivedLinks := 0
 	// Mail private to this seat goes on no lead, as it creates no contact.
-	private, _, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	private, _, err := capturedMessageIsPrivateTx(ctx, tx, rec, fields)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
