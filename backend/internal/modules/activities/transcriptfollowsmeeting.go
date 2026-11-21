@@ -45,6 +45,9 @@ var transcriptReadersDriftSQL = `(t.audience IS DISTINCT FROM m.audience OR t.au
 
 // copyMeetingReadersTx gives transcript the readers of meeting.
 func copyMeetingReadersTx(ctx context.Context, tx pgx.Tx, transcript, meeting ids.ActivityID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, transcript.UUID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity t SET audience = f.audience, audience_reason = f.audience_reason
 		  FROM activity f WHERE t.id = $1 AND t.archived_at IS NULL AND f.id = $2`, transcript, meeting); err != nil {

@@ -69,6 +69,9 @@ func TurnBackColleagueCopyTx(ctx context.Context, tx pgx.Tx, stamp ColleagueStam
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
 	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, stamp.ID); err != nil {
+		return false, err
+	}
 	// An archived copy is turned back too: unarchived, it would open again.
 	if _, err := storekit.LockRow(ctx, tx, "activity", stamp.ID, storekit.IncludeArchived); err != nil {
 		return false, err

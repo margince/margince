@@ -92,6 +92,9 @@ func UndoMeetingCopyGuestsTx(ctx context.Context, tx pgx.Tx, copyID, survivor id
 	if len(guests) == 0 {
 		return nil
 	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, survivor.UUID); err != nil {
+		return err
+	}
 	tag, err := tx.Exec(ctx, `DELETE FROM activity_participant WHERE activity_id = $1 AND id = ANY($2)`, survivor, guests)
 	if err != nil {
 		return fmt.Errorf("activities: removing the guests a meeting copy handed on: %w", err)

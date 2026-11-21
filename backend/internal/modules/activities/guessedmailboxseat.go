@@ -68,6 +68,9 @@ func RetireGuessedMailboxSeatsTx(ctx context.Context, tx pgx.Tx, activityID, run
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
 	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID); err != nil {
+		return false, err
+	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID, storekit.IncludeArchived); err != nil {
 		return false, err
 	}

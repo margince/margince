@@ -63,6 +63,9 @@ func stampProvenSender(ctx context.Context, tx pgx.Tx, activityID, contact ids.U
 // of one message. Every writer that names a sender after the fact calls this;
 // the caller holds the activities and audits the change.
 func StampProvenSendersTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, contact ids.UUID) ([]ids.UUID, error) {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityIDs...); err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
 		WITH proven AS (SELECT a.id FROM activity a WHERE a.id = ANY($1) AND `+provenSenderSQL("$2::uuid")+`),
 		promoted AS (
@@ -129,6 +132,9 @@ func CountProvenSenderActivities(ctx context.Context, q datatask.Querier, maximu
 // is read again under the row lock, so a replay changes nothing.
 func StampProvenSenderTx(ctx context.Context, tx pgx.Tx, activityID, runID ids.UUID) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
+		return false, err
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID); err != nil {
 		return false, err
 	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID, storekit.LiveOnly); err != nil {

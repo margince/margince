@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -45,6 +46,9 @@ import (
 // invitation's own name onto the row it writes, so what is deleted here holds no
 // name the surviving row lacks.
 func RetireSupersededAttendeesTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant old
 		 WHERE old.activity_id = $1

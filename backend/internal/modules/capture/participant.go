@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -127,6 +128,9 @@ func RecordAttendeeNames(
 	activityID ids.ActivityID,
 	participants []connector.MessageParticipant,
 ) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
 	addresses := make([]string, 0, len(participants))
 	names := make([]string, 0, len(participants))
 	for _, p := range participants {
@@ -227,6 +231,9 @@ func stampParties(
 ) (int, error) {
 	if !relstrength.IsParticipantKind(kind) || len(participants) == 0 {
 		return 0, nil
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return 0, err
 	}
 	addresses := make([]string, 0, len(participants))
 	binds := make([]bool, 0, len(participants))
@@ -423,6 +430,9 @@ func insertParticipant(
 	// the composite FK would reject it — failing an ingest we have already
 	// read off the wire, over a participant row that is a nicety rather than
 	// the point of the write.
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, address_domain_folded)
 		SELECT $1, $2, $3, NULLIF($4, ''), NULLIF($6, ''), $5, $7

@@ -374,6 +374,9 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 // by ACCOUNT are the same story in the chat vocabulary, which is why the twin
 // test carries that arm too: without it a merge silently drops one of the two
 // group chats a contact was on.
+//
+// A sweep by contact names no meeting, so it takes no storekit.LockMeetingAttendeeWrites.
+// The hourly evidence pass corrects a judgement it makes stale.
 func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant ap

@@ -134,6 +134,9 @@ func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, surv
 // The survivor's guest list and the seats it holds busy stay whole. A party a
 // member relinked keeps that mark, so no roster on the survivor retires it.
 func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) ([]ids.UUID, error) {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, survivor.UUID); err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, address_domain_folded, channel_user_id,
 		                                  role, display_name, roster_seat, response, past_party_cap, relinked_at)

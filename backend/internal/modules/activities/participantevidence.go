@@ -43,6 +43,8 @@ func CountParticipantEvidence(ctx context.Context, q datatask.Querier, maximum i
 	return count, err
 }
 
+// A sweep by row id names no meeting, so it takes no storekit.LockMeetingAttendeeWrites.
+// The hourly evidence pass corrects a judgement it makes stale.
 func storeParticipantEvidenceRows(ctx context.Context, tx pgx.Tx, rows pgx.Rows) ([]ids.UUID, int, error) {
 	keys, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {

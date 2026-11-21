@@ -58,6 +58,9 @@ func scrubSubjectFromGraph(
 // untyped over-deletion this module refuses everywhere else. The participant
 // row carries no provider of its own, so the transport a scrub matches on is
 // the transport the message actually rode.
+//
+// A sweep by subject names no meeting, so it takes no storekit.LockMeetingAttendeeWrites.
+// The hourly evidence pass corrects a judgement it makes stale.
 func scrubSubjectFromParticipants(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	emails []string, identities []channelIdentity,
