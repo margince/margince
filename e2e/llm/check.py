@@ -22,9 +22,9 @@ Six things are checked per run, and all six must hold:
                    `tool~regex` asks, when the target is named in free text
                    rather than one argument's exact value.
   figures_from_results
-                   Is every money figure in the answer one Margince returned in
-                   this run? `true` checks each amount the answer states against
-                   the run's tool results, so a typed or invented figure fails.
+                   Is every money figure the run states one Margince returned in
+                   this run, or worked out from one? `true` checks each amount
+                   against the run's tool results, so an invented figure fails.
   judge            Does the answer do what this sentence says? Each entry is a
                    criterion in plain words, decided by a model (judge.py).
 
@@ -433,9 +433,12 @@ def read_transcript(path):
 
 
 def read_tool_results(path):
-    """The text of every tool result in a transcript, in order."""
+    """The text of every tool result in a transcript, in order, one entry per
+    text part, so a result's JSON is read whole."""
     results = []
-    for line in _open_checked(path):
+    with _open_checked(path) as handle:
+        lines = handle.readlines()
+    for line in lines:
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
@@ -447,15 +450,17 @@ def read_tool_results(path):
             if isinstance(block, dict) and block.get("type") == "tool_result":
                 body = block.get("content")
                 if isinstance(body, list):
-                    body = " ".join(part.get("text", "") for part in body if isinstance(part, dict))
-                results.append(str(body or ""))
+                    results += [str(part.get("text", "")) for part in body if isinstance(part, dict)]
+                else:
+                    results.append(str(body or ""))
     return results
 
 
 # A money figure as an answer writes it: a currency sign, code or word before or
-# after a number. A space groups thousands only before exactly three digits, so
-# "€5 6 deals" is €5 and a count, not €56.
-_DIGITS = r"\d{1,3}(?:[.,\u202f\u00a0 ]\d{3})+(?:[.,]\d{1,2})?(?!\d)|\d+(?:[.,]\d+)?"
+# after a number. A space or a Swiss apostrophe groups thousands only before
+# exactly three digits, so "€5 6 deals" is €5 and a count, not €56.
+_GROUPING = "\u202f\u00a0 '\u2019"
+_DIGITS = rf"\d{{1,3}}(?:[.,{_GROUPING}]\d{{3}})+(?:[.,]\d{{1,2}})?(?!\d)|\d+(?:[.,]\d+)?"
 _SCALE = r"(?:\s?(?:[kK]|[mM]|bn|Mio\.?|million|thousand)\b)?"
 _CURRENCY_WORD = r"(?:EUR|USD|GBP|CHF|euros?|dollars?|pounds?)\b"
 _MONEY = re.compile(
@@ -469,7 +474,7 @@ _SCALES = {"k": 1e3, "thousand": 1e3, "m": 1e6, "million": 1e6, "mio": 1e6, "mio
 
 def _amount(digits, scale):
     """A written amount as (value, the step its writing rounds to)."""
-    text = re.sub(r"[\u202f\u00a0 ]", "", digits)
+    text = re.sub(f"[{_GROUPING}]", "", digits)
     # One separator followed by exactly one or two digits is a decimal mark;
     # every other separator groups thousands.
     decimal = re.search(r"[.,](\d{1,2})$", text)
@@ -492,55 +497,134 @@ def _holds(value, step, held):
 # A figure no result holds may still be the model's own correct arithmetic over
 # figures that results do hold, such as a weighted total over several deals. The
 # judge decides that against the amounts the run read; an invented or wrong
-# figure still fails.
+# figure still fails, in the final answer or anywhere the run said it.
 WORKED_OUT = (
-    "Every money figure the answer states is correct against the data Margince returned in this run. "
-    "These figures are not themselves among the amounts the data holds: {figures}. "
-    "The data the run read held these amounts and rates: {held}. "
+    "Check these money figures the run stated: {figures}. "
+    "None of them appears as such in the data Margince returned in this run, "
+    "so each must be read from that data or correctly worked out from it. "
+    "A figure the final answer does not state is shown after the answer, in the line the run said it in. "
+    "The data the run read held these amounts and rates, each named by its field and its record; "
+    "a field ending in _minor is in the currency's minor units:\n{held}\n"
     "Answer yes if each of those figures is read from that data or correctly worked out from it, rounding aside. "
-    "Answer no if any of them is invented, or wrong against that data."
+    "Answer no if any of them is invented, or wrong against that data, wherever in the run it was said."
 )
-# The amounts listed to the judge, at most: enough for a page of deals, short
-# enough that the criterion stays a question and not a dump.
-WORKED_OUT_AMOUNTS = 200
+# Where the judge's answer shows the lines a figure was said in before the end.
+SAID_EARLIER = "\n\nSaid earlier in the run:\n"
+# Numbers that are neither money nor a rate, such as counts, listed after the
+# amounts. They are capped because a page of records carries many; no amount
+# or rate is ever cut.
+WORKED_OUT_OTHER_NUMBERS = 100
+_RATE_FIELD = re.compile(r"probability|rate|percent|pct|share", re.IGNORECASE)
+# The name shown for a record, on one line and short, so a record's name stays
+# a label inside the criterion.
+_RECORD_NAME_CHARS = 60
+
+# A figure the run stated that no tool result holds, and the line it was said in.
+Figure = collections.namedtuple("Figure", "text line")
+# figure_problems' answer: the figures no result holds, and a problem for each.
+Unheld = collections.namedtuple("Unheld", "figures problems")
+# The judge's question about the figures no result holds, the answer it reads,
+# and the problems it decides; criterion is None when every figure is held.
+WorkedOut = collections.namedtuple("WorkedOut", "criterion answer problems")
 
 
-def tools_called(paths):
-    """Every tool a call worked on in any of the runs, by its bare name. The
-    coverage page counts a tool a held run used as driven, whichever case
-    names it, since a case pins the outcome and not the tool."""
-    called = set()
+def tools_by_run(paths, passing):
+    """Each run's tools whose call worked, by bare name, and whether the run
+    passed. The coverage page counts only a passing run's tools as driven."""
+    runs = []
     for path in paths:
         if os.path.exists(path):
-            called |= {name.rsplit("__", 1)[-1] for name, _ in read_run(path).worked}
-    return sorted(called)
+            tools = sorted({name.rsplit("__", 1)[-1] for name, _ in read_run(path).worked})
+            runs.append({"passed": path in passing, "tools": tools})
+    return runs
 
 
-def worked_out_criterion(said, results):
-    """The question the judge is asked about the figures no result holds, and
-    those figures' problems; no question when every figure is a result's own."""
-    unheld = figure_problems(said, results)
-    if not unheld:
-        return None, []
-    figures = ", ".join(sorted({problem.split("'")[1] for problem in unheld}))
-    held = list(dict.fromkeys(token for text in results for token in _NUMBER.findall(text)))[:WORKED_OUT_AMOUNTS]
-    return WORKED_OUT.format(figures=figures, held=", ".join(held)), unheld
+def recorded_runs(args, passed):
+    """--record's transcripts and the passing ones among them, which follow
+    --passing; refused when they disagree with the count that passed."""
+    transcripts, passing = list(args), []
+    if "--passing" in transcripts:
+        at = transcripts.index("--passing")
+        transcripts, passing = transcripts[:at], transcripts[at + 1:]
+    if transcripts and (len(passing) != passed or not set(passing) <= set(transcripts)):
+        raise ValueError(f"--passing names {len(passing)} of the transcripts and {passed} runs passed; "
+                         "give every transcript, then --passing and each passing run's transcript once")
+    return transcripts, passing
 
 
-def worked_out_problems(said, final, results):
+def worked_out_question(run, results):
+    """The question the judge is asked about the figures no result holds, the
+    answer it reads, and those figures' problems."""
+    unheld = figure_problems(run.said, results)
+    if not unheld.figures:
+        return WorkedOut(None, run.final, [])
+    figures = ", ".join(dict.fromkeys(figure.text for figure in unheld.figures))
+    earlier = list(dict.fromkeys(figure.line for figure in unheld.figures if figure.text not in run.final))
+    # The earlier lines are the model's own words, so they reach the judge
+    # inside the answer's fence and never in the criterion.
+    answer = run.final + (SAID_EARLIER + "\n".join(earlier) if earlier else "")
+    held = "\n".join(f"- {entry}" for entry in labelled_amounts(results)) or "- nothing"
+    return WorkedOut(WORKED_OUT.format(figures=figures, held=held), answer, unheld.problems)
+
+
+def worked_out_problems(run, results):
     """The money figures the judge finds invented or wrong; none when every
     figure is a result's own or the judge finds each correctly worked out."""
-    criterion, unheld = worked_out_criterion(said, results)
-    if criterion is None:
+    question = worked_out_question(run, results)
+    if question.criterion is None:
         return []
-    correct, reason = judge.verdict(criterion, final)
+    correct, reason = judge.verdict(question.criterion, question.answer)
     if correct:
         return []
-    return unheld + [f"{JUDGED_NO} the figures are worked out from the data\n      the judge's reason: {reason}"]
+    return question.problems + [f"{JUDGED_NO} the figures are worked out from the data\n      the judge's reason: {reason}"]
+
+
+def labelled_amounts(results):
+    """The amounts and rates the run's tool results hold, each named by its
+    field and record, then other numbers; a result that is not JSON gives the
+    money figures its text writes."""
+    money, rates, other = [], [], []
+    for text in results:
+        try:
+            document = json.loads(text)
+        except json.JSONDecodeError:
+            money += [f"a result's text: {match.group(0).strip()}" for match in _MONEY.finditer(text)]
+            continue
+        _label(document, "", "", (money, rates, other))
+    other = list(dict.fromkeys(other))
+    return list(dict.fromkeys(money)) + list(dict.fromkeys(rates)) + other[:WORKED_OUT_OTHER_NUMBERS]
+
+
+def _label(value, path, record, found):
+    money, rates, other = found
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            _label(item, f"{path}[{index}]", record, found)
+        return
+    if not isinstance(value, dict):
+        return
+    name = next((value[key] for key in ("name", "title", "label") if isinstance(value.get(key), str)), None)
+    if name:
+        label = " ".join(name.replace('"', "'").split())[:_RECORD_NAME_CHARS]
+        record = f' ("{label}")'
+    for key, field in value.items():
+        where = f"{path}.{key}" if path else str(key)
+        if isinstance(field, (dict, list)):
+            _label(field, where, record, found)
+        elif isinstance(field, str):
+            money += [f"{where}{record}: {match.group(0).strip()}" for match in _MONEY.finditer(field)]
+        elif isinstance(field, bool) or not isinstance(field, (int, float)):
+            continue
+        elif key.endswith("_minor"):
+            currency = value.get(key[: -len("_minor")] + "_currency") or value.get("currency")
+            unit = f" {currency}" if isinstance(currency, str) else ""
+            money.append(f"{where}{record}: {field}{unit}")
+        else:
+            (rates if _RATE_FIELD.search(key) else other).append(f"{where}{record}: {field}")
 
 
 def figure_problems(said, results):
-    """Each money figure in the answer that no tool result of the run holds.
+    """Each money figure the run stated that no tool result of the run holds.
 
     A result may carry an amount in minor units, so each number there counts
     also as a hundredth of itself; an answer may round, so a figure holds when
@@ -561,13 +645,22 @@ def figure_problems(said, results):
     rates = {rate for rate in (_amount(token, "")[0] for token in _RATE.findall(said))
              if 0 < rate <= 100 and any(abs(rate - number) < 1e-9 for number in held)}
     held += [amount * rate / 100 for amount in list(held) for rate in rates]
-    problems = []
+    figures, problems = [], []
     for match in _MONEY.finditer(said):
         digits = match.group(1) or match.group(3)
         value, step = _amount(digits, match.group(2) or match.group(4) or "")
         if not _holds(value, step, held):
-            problems.append(f"stated {match.group(0).strip()!r}, which no tool result of this run holds")
-    return problems
+            text = match.group(0).strip()
+            figures.append(Figure(text, _line_at(said, match.start())))
+            problems.append(f"stated {text!r}, which no tool result of this run holds")
+    return Unheld(figures, problems)
+
+
+def _line_at(text, at):
+    """The whole line of text that holds position at."""
+    start = text.rfind("\n", 0, at) + 1
+    end = text.find("\n", at)
+    return text[start: end if end >= 0 else len(text)].strip()
 
 
 # The usage fields the terminal `result` event carries, and the ONLY ones read.
@@ -1152,7 +1245,7 @@ def check(scenario, transcript_path):
 
     figures = scenario.get("figures_from_results")
     if figures == "true":
-        problems.extend(worked_out_problems(said, run.final, read_tool_results(transcript_path)))
+        problems.extend(worked_out_problems(run, read_tool_results(transcript_path)))
     elif figures is not None:
         problems.append(f"figures_from_results is {figures!r}; the only value is true")
 
@@ -1199,8 +1292,10 @@ def main():
         # carries what the answer cost as well as whether it held. They are
         # optional: the offline harness records verdicts with no transcripts at
         # all, and a lane that refused to record without them would make the
-        # cheap path depend on the paid one.
-        usage = total_usage(sys.argv[5:]) if len(sys.argv) > 5 else None
+        # cheap path depend on the paid one. The ones after --passing are the
+        # runs that passed.
+        transcripts, passing = recorded_runs(sys.argv[5:], int(sys.argv[3]))
+        usage = total_usage(transcripts) if transcripts else None
         record = {
             "scenario": scenario.get("name"),
             "criteria": scenario.get("criteria", []),
@@ -1230,9 +1325,9 @@ def main():
             # sweep from one whose transcripts it could not read, which the
             # totals alone cannot say.
             record["usage"] = usage
-        if len(sys.argv) > 5:
-            record["tools_called"] = tools_called(sys.argv[5:])
-        measured = efficiency(sys.argv[5:], scenario.get("expected_calls")) if len(sys.argv) > 5 else None
+        if transcripts:
+            record["tools_by_run"] = tools_by_run(transcripts, passing)
+        measured = efficiency(transcripts, scenario.get("expected_calls")) if transcripts else None
         if measured is not None:
             if "slow" in measured:
                 record["slow"] = measured.pop("slow")

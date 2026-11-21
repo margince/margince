@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -46,8 +47,36 @@ type Verdict struct {
 	// Slow is its median calls past the case's `expected_calls`.
 	Efficiency *Efficiency `json:"efficiency"`
 	Slow       bool        `json:"slow"`
-	// ToolsCalled names the tools the runs called with success, by bare name.
-	ToolsCalled []string `json:"tools_called"`
+	// ToolsByRun is each run's tools that worked, by bare name, and whether
+	// that run passed. ToolsCalled is the older union over every run.
+	ToolsByRun  []RunTools `json:"tools_by_run"`
+	ToolsCalled []string   `json:"tools_called"`
+}
+
+// RunTools is one run's tools that worked, and whether the run passed.
+type RunTools struct {
+	Passed bool     `json:"passed"`
+	Tools  []string `json:"tools"`
+}
+
+// PassingTools names the tools a passing run used, sorted. An older verdict
+// holds only the union over every run, which is a passing run's only when
+// every run passed.
+func (v Verdict) PassingTools() []string {
+	if v.ToolsByRun == nil {
+		if v.Runs > 0 && v.Passed == v.Runs {
+			return v.ToolsCalled
+		}
+		return nil
+	}
+	var tools []string
+	for _, run := range v.ToolsByRun {
+		if run.Passed {
+			tools = append(tools, run.Tools...)
+		}
+	}
+	slices.Sort(tools)
+	return slices.Compact(tools)
 }
 
 // Unstamped is the reason a verdict made before the stamp existed gives.

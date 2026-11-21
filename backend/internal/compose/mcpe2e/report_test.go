@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -120,5 +121,25 @@ func TestAStampItCannotMakeSaysWhy(t *testing.T) {
 	}
 	if _, err := NewlyStale(t.TempDir(), tree(t)); err == nil {
 		t.Error("a base tree with nothing to stamp gave a list")
+	}
+}
+
+func TestOnlyAPassingRunDrivesATool(t *testing.T) {
+	v := Verdict{Passed: 1, Runs: 2, ToolsByRun: []RunTools{
+		{Passed: true, Tools: []string{"find_records"}},
+		{Passed: false, Tools: []string{"find_records", "read_tags"}},
+	}}
+	if got := v.PassingTools(); !slices.Equal(got, []string{"find_records"}) {
+		t.Errorf("PassingTools() = %v, want [find_records]: read_tags only worked in a failed run", got)
+	}
+}
+
+func TestAnOlderVerdictsToolsCountOnlyWhenEveryRunPassed(t *testing.T) {
+	tools := []string{"find_records"}
+	if got := (Verdict{Passed: 2, Runs: 2, ToolsCalled: tools}).PassingTools(); !slices.Equal(got, tools) {
+		t.Errorf("every run passed: PassingTools() = %v, want %v", got, tools)
+	}
+	if got := (Verdict{Passed: 2, Runs: 3, ToolsCalled: tools}).PassingTools(); got != nil {
+		t.Errorf("a run failed: PassingTools() = %v, want none, since the union may hold its tools", got)
 	}
 }

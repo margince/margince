@@ -1027,6 +1027,8 @@ judges "$c45" case45 moves-it-to-won 1 "the judge says NO to: Criterion 1."
 # the earlier weighted total plus the moved deal at its new rate. A figure the
 # model computed correctly holds; case20's invented one still fails.
 judges "$c45" case45 quotes-a-figure-no-reading-holds 0 "!stated 'EUR 26,025'"
+# EUR 31,000 is said before the answer and is wrong; the judge sees its line.
+judges "$c45" case45 invents-a-figure-before-the-answer 1 "stated 'EUR 31,000'" "the judge says NO to: the figures are worked out from the data" "!the judge says NO to: Criterion"
 c46="case46-get-us-in-a-room.yaml"
 judges "$c46" case46 keeps-record-and-invitation-apart 0 "!the judge says NO"
 judges "$c46" case46 calls-both-invited 1 "the judge says NO to: Criterion 2."
@@ -1171,11 +1173,16 @@ for path in sorted(glob.glob(os.path.join(root, "e2e/llm/scenarios/*.yaml"))):
             unscored.append(f"{case}/{name}")
         if re.search(rf"^held \S+ {case} {re.escape(name)} ", suite, re.MULTILINE):
             continue
-        _, said, _ = check.read_transcript(fixture)
-        # A figure no result holds is a question the judge is asked too.
-        worked_out, _ = check.worked_out_criterion(check.read_run(fixture).said, check.read_tool_results(fixture))
-        for criterion in criteria + ([worked_out] if worked_out and scenario.get("figures_from_results") == "true" else []):
-            key = judge._digest(criterion, said)
+        run = check.read_run(fixture)
+        asked = [(criterion, run.final) for criterion in criteria]
+        # A figure no result holds is a question the judge is asked too, of
+        # the answer with the lines that figure was said in.
+        if scenario.get("figures_from_results") == "true":
+            worked_out = check.worked_out_question(run, check.read_tool_results(fixture))
+            if worked_out.criterion:
+                asked.append((worked_out.criterion, worked_out.answer))
+        for criterion, answer in asked:
+            key = judge._digest(criterion, answer)
             referenced[key] = f"{case}/{os.path.basename(fixture)}"
             if not os.path.exists(os.path.join(root, "e2e/llm/testdata/judge", key + ".json")):
                 missing.append(f"{referenced[key]} :: {criterion[:60]}")

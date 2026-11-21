@@ -103,9 +103,10 @@ class EfficiencyTest(unittest.TestCase):
         scenario.write("name: case_slow\nprompt: p\nwrites: false\nruns: 2\npass_at: 2\nexpected_calls: 1\n")
         scenario.close()
         env = {key: value for key, value in os.environ.items() if not key.startswith("E2E_LLM_")}
+        runs = [cli_run(3, 4), cli_run(4, 5)]
         done = subprocess.run(
             [sys.executable, os.path.join(HERE, "check.py"), "--record", scenario.name, "2", "2",
-             cli_run(3, 4), cli_run(4, 5)],
+             *runs, "--passing", *runs],
             capture_output=True, text=True, env=env, check=False)
         self.assertEqual(done.returncode, 0, done.stderr)
         record = json.loads(done.stdout)
@@ -126,12 +127,42 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class ToolsCalledTest(unittest.TestCase):
-    def test_only_calls_that_worked_count_by_their_bare_name(self):
+class ToolsByRunTest(unittest.TestCase):
+    @staticmethod
+    def run_calling(*tools, refused=()):
         path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        names = list(tools) + list(refused)
         with transcript.Transcript(path) as out:
-            out.init("m", "claude:cli", "cli-default", "connected", ["find_records", "update_record"])
-            out.assistant("", [("c0", "find_records", {}), ("c1", "update_record", {})])
-            out.tool_results([("c0", "{}", False), ("c1", "refused", True)])
-            out.finish(False, "Done.", 2)
-        self.assertEqual(check.tools_called([path, "/nonexistent.jsonl"]), ["find_records"])
+            out.init("m", "claude:cli", "cli-default", "connected", names)
+            out.assistant("", [(f"c{n}", name, {}) for n, name in enumerate(names)])
+            out.tool_results([(f"c{n}", "{}" if name in tools else "refused", name not in tools)
+                              for n, name in enumerate(names)])
+            out.finish(False, "Done.", len(names))
+        return path
+
+    def test_only_calls_that_worked_count_by_their_bare_name(self):
+        path = self.run_calling("find_records", refused=["update_record"])
+        self.assertEqual(check.tools_by_run([path, "/nonexistent.jsonl"], [path]),
+                         [{"passed": True, "tools": ["find_records"]}])
+
+    def test_a_tool_used_only_in_a_failed_run_is_recorded_as_not_passing(self):
+        held, failed = self.run_calling("find_records"), self.run_calling("find_records", "read_tags")
+        self.assertEqual(check.tools_by_run([held, failed], [held]), [
+            {"passed": True, "tools": ["find_records"]},
+            {"passed": False, "tools": ["find_records", "read_tags"]},
+        ])
+
+    def test_record_marks_each_run_by_whether_it_passed(self):
+        held, failed = self.run_calling("find_records"), self.run_calling("read_tags")
+        scenario = tempfile.NamedTemporaryFile(suffix=".yaml", delete=False, mode="w", encoding="utf-8")
+        scenario.write("name: case_runs\nprompt: p\nwrites: false\nruns: 2\npass_at: 1\n")
+        scenario.close()
+        env = {key: value for key, value in os.environ.items() if not key.startswith("E2E_LLM_")}
+        argv = [sys.executable, os.path.join(HERE, "check.py"), "--record", scenario.name, "1", "2", held, failed]
+        done = subprocess.run(argv + ["--passing", held], capture_output=True, text=True, env=env, check=False)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual([run["passed"] for run in json.loads(done.stdout)["tools_by_run"]], [True, False])
+        # A passing list that disagrees with the count that passed is a harness stop.
+        done = subprocess.run(argv + ["--passing"], capture_output=True, text=True, env=env, check=False)
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("--passing names 0", done.stderr)
