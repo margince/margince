@@ -199,7 +199,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 - `finance_invoice_account_ix`: `btree (company_id, issued_at DESC)`
 - `finance_invoice_connection_id_external_id_key`: `unique, btree (connection_id, external_id)`
 - `finance_invoice_credit_owner_idx`: `btree (credits_invoice_id, connection_id, company_id)`
-- `finance_invoice_credits_ix`: `btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL)`
 - `finance_invoice_customer_owner_idx`: `btree (customer_link_id, connection_id, company_id)`
 - `finance_invoice_open_ix`: `btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL))`
 - `finance_invoice_owner_key`: `unique, btree (id, connection_id, company_id)`
