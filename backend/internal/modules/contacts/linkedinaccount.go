@@ -214,7 +214,7 @@ func normalizeMyLinkedInProfileURL(s string) (string, error) {
 	}
 	if len(s) > maxLinkedInProfileURLLength {
 		return "", &values.ParseError{
-			Field: profileURLRequestField, Code: "too_long",
+			Field: profileURLRequestField, Code: codeTooLong,
 			Message: "the profile URL is too long", Max: maxLinkedInProfileURLLength,
 		}
 	}

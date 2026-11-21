@@ -26,8 +26,8 @@ func TestOnlyALinkedInProfileIsRecordedAsTheMembersOwn(t *testing.T) {
 	}
 	for name, raw := range refused {
 		_, err := normalizeMyLinkedInProfileURL(raw)
-		var fault *values.ParseError
-		if !errors.As(err, &fault) {
+		fault, ok := errors.AsType[*values.ParseError](err)
+		if !ok {
 			t.Errorf("%s (%q): err = %v, want a field refusal", name, raw, err)
 			continue
 		}
@@ -65,8 +65,8 @@ func TestAnOverlongProfileIsRefusedWithItsLimit(t *testing.T) {
 	t.Parallel()
 	raw := "https://www.linkedin.com/in/" + strings.Repeat("a", maxLinkedInProfileURLLength)
 	_, err := normalizeMyLinkedInProfileURL(raw)
-	var fault *values.ParseError
-	if !errors.As(err, &fault) || fault.Code != "too_long" || fault.Max != maxLinkedInProfileURLLength {
+	fault, ok := errors.AsType[*values.ParseError](err)
+	if !ok || fault.Code != codeTooLong || fault.Max != maxLinkedInProfileURLLength {
 		t.Fatalf("err = %#v, want too_long naming max %d", err, maxLinkedInProfileURLLength)
 	}
 }
