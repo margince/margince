@@ -428,6 +428,27 @@ describe("column widths", () => {
     }
   });
 
+  it("stops a dragged column at the minimum that keeps a cell's badge whole", () => {
+    const { container } = render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    const grip = container.querySelector(".lt-grip");
+    if (!(grip instanceof HTMLElement)) {
+      throw new Error("no resizable header rendered");
+    }
+    grip.setPointerCapture = () => undefined;
+    grip.releasePointerCapture = () => undefined;
+    fireEvent.pointerDown(grip, { clientX: 500, pointerId: 1 });
+    fireEvent.pointerMove(grip, { clientX: 0, pointerId: 1 });
+    const first = container.querySelector(".lt-table col");
+    expect(first).toHaveStyle({ width: "96px" });
+  });
+
   // A drag that highlighted the rows it passed over answered "did I grab the
   // right thing" with "no". The whole grid wears the gesture until it ends,
   // and a cancelled pointer ends it as surely as a released one — otherwise
