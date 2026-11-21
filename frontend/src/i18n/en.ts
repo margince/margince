@@ -13367,14 +13367,14 @@ export const en = {
   "ob.conv.voice.reactionDocument":
     "Words counted: {words}. All words in this file are yours.",
   "ob.conv.voice.refusalUnattributed":
-    "This looks like a conversation, but I cannot tell which words are yours, so none were counted.",
+    "{name} looks like a conversation, but I cannot tell which words are yours, so none were counted.",
   "ob.conv.voice.refusalSpeaker":
-    "I could not find that speaker in the transcript. Nothing was counted.",
+    "I could not find that speaker in {name}. Nothing was counted.",
   "ob.conv.voice.refusalUnsupported":
-    "I could not parse that file as text or a transcript. Nothing was counted.",
+    "I could not read {name} as text or a transcript. Nothing was counted.",
   "ob.conv.voice.refusalTooLarge":
     "{name} is too large to add: a file can hold up to about {limit} of text. Split it into smaller files.",
-  "ob.conv.voice.ingestFailed": "I could not add that source: {detail}",
+  "ob.conv.voice.ingestFailed": "I could not add {name}: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "I could not add that source. Retry shortly.",
   "ob.conv.voice.pasteAdd": "Add to writing samples",

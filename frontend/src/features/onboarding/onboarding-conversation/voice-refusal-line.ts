@@ -1,5 +1,5 @@
 import { formatBytes } from "../../../format/format";
-import type { Locale } from "../../../i18n";
+import type { Locale, Translator } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { problemMessage } from "../../../lib/problem";
 import { problemCode } from "../../../lib/problembody";
@@ -34,6 +34,7 @@ export const skipKeys: Record<
 export function refusalEntry(
   outcome: Extract<IntakeOutcome, { kind: "refused" }>,
   locale: Locale,
+  t: Translator,
 ): Extract<ConversationEvent, { type: "NARRATION" }>["entry"] {
   const { ref, reason, problem } = outcome;
   if (reason !== null) {
@@ -50,13 +51,13 @@ export function refusalEntry(
   // A code the catalog words (a role refused the grant) is said in the
   // reader's language, never as the server's English detail.
   const codeKey = PROBLEM_CODE_COPY.get(problemCode(problem) ?? "");
-  if (codeKey !== undefined) {
-    return { kind: "narration", id: `refuse:${ref}`, i18nKey: codeKey };
-  }
   return {
     kind: "narration",
     id: `refuse:${ref}`,
     i18nKey: "ob.conv.voice.ingestFailed",
-    params: { detail: problemMessage(problem) },
+    params: {
+      name: outcome.label,
+      detail: codeKey === undefined ? problemMessage(problem) : t(codeKey),
+    },
   };
 }

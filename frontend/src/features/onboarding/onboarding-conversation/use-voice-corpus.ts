@@ -220,7 +220,7 @@ export function useVoiceCorpus({
         return;
       }
       if (outcome.kind === "refused") {
-        const entry = refusalEntry(outcome, locale);
+        const entry = refusalEntry(outcome, locale, t);
         dispatch({ type: "NARRATION", entry });
         noteFailure({
           id: entry.id,
@@ -245,7 +245,7 @@ export function useVoiceCorpus({
       }
       recordIngest(seq, outcome, reactionKey);
     },
-    [dispatch, locale, noteFailure, recordIngest, skip],
+    [dispatch, locale, noteFailure, recordIngest, skip, t],
   );
 
   // Each intake is stamped when its INGEST is issued, and only the

@@ -7,6 +7,7 @@ import {
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../../i18n/en";
 import {
   type ConversationEvent,
   initialConversationState,
@@ -115,9 +116,13 @@ describe("useVoiceCorpus — a role that may not create a voice profile", () => 
     });
 
     await waitFor(() => {
-      expect(result.current.failures[0]?.i18nKey).toBe(
-        "common.permissionDenied",
-      );
+      expect(result.current.failures[0]).toMatchObject({
+        i18nKey: "ob.conv.voice.ingestFailed",
+        params: {
+          name: "Pasted text – A paragraph I actually wrote.",
+          detail: en["common.permissionDenied"],
+        },
+      });
     });
     expect(
       dispatch.mock.calls.some(
@@ -148,6 +153,46 @@ describe("useVoiceCorpus — several files refused in one pick", () => {
     expect(result.current.failures.map((f) => f.params?.name)).toEqual([
       "two.png",
     ]);
+  });
+});
+
+describe("useVoiceCorpus — refusals with no reason of their own", () => {
+  it("names each file the server refused, whatever the cause", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/voice-profiles" && request.method === "GET") {
+          return Response.json({
+            data: [{ id: "vp-1" }],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return Response.json(
+          { code: "internal", detail: "The server failed." },
+          { status: 500 },
+        );
+      }),
+    );
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result } = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.addFiles([
+        new File(["first words"], "first.txt"),
+        new File(["second words"], "second.txt"),
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(result.current.failures).toHaveLength(2);
+    });
+    expect(
+      result.current.failures.map((failure) => failure.params?.name).sort(),
+    ).toEqual(["first.txt", "second.txt"]);
   });
 });
 

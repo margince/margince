@@ -13092,14 +13092,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.reactionDocument":
     "Số từ đã tính: {words}. Mọi từ trong tệp này đều là của bạn.",
   "ob.conv.voice.refusalUnattributed":
-    "Đây có vẻ là một cuộc hội thoại, nhưng tôi không thể xác định lời nào là của bạn, nên không tính từ nào.",
+    "{name} có vẻ là một cuộc hội thoại, nhưng tôi không thể xác định lời nào là của bạn, nên không tính từ nào.",
   "ob.conv.voice.refusalSpeaker":
-    "Tôi không tìm thấy người nói đó trong bản chép lời. Không có gì được tính.",
+    "Tôi không tìm thấy người nói đó trong {name}. Không có gì được tính.",
   "ob.conv.voice.refusalUnsupported":
-    "Tôi không thể đọc tệp đó dưới dạng văn bản hoặc bản chép lời. Không có gì được tính.",
+    "Tôi không thể đọc {name} dưới dạng văn bản hoặc bản chép lời. Không có gì được tính.",
   "ob.conv.voice.refusalTooLarge":
     "{name} quá lớn để thêm: mỗi tệp chỉ chứa tối đa khoảng {limit} văn bản. Hãy chia thành các tệp nhỏ hơn.",
-  "ob.conv.voice.ingestFailed": "Tôi không thể thêm nguồn đó: {detail}",
+  "ob.conv.voice.ingestFailed": "Tôi không thể thêm {name}: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "Tôi không thể thêm nguồn đó. Thử lại sau ít phút.",
   "ob.conv.voice.pasteAdd": "Thêm vào kho văn mẫu",

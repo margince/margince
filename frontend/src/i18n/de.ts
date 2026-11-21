@@ -13443,15 +13443,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.reactionDocument":
     "Gezählte Wörter: {words}. Alle Wörter in dieser Datei stammen von dir.",
   "ob.conv.voice.refusalUnattributed":
-    "Das sieht nach einem Gespräch aus. Es wurde nichts gezählt, da ich nicht erkennen kann, welche Wörter von dir stammen.",
+    "{name} sieht nach einem Gespräch aus. Es wurde nichts gezählt, da ich nicht erkennen kann, welche Wörter von dir stammen.",
   "ob.conv.voice.refusalSpeaker":
-    "Ich konnte diesen Namen im Transkript nicht finden. Es wurde nichts gezählt.",
+    "Ich konnte diesen Namen in {name} nicht finden. Es wurde nichts gezählt.",
   "ob.conv.voice.refusalUnsupported":
-    "Ich konnte diese Datei weder als Text noch als Transkript lesen. Es wurde nichts gezählt.",
+    "Ich konnte {name} weder als Text noch als Transkript lesen. Es wurde nichts gezählt.",
   "ob.conv.voice.refusalTooLarge":
     "{name} ist zu groß: Eine Datei darf bis zu etwa {limit} Text enthalten. Teile sie in kleinere Dateien auf.",
   "ob.conv.voice.ingestFailed":
-    "Die Quelle konnte nicht hinzugefügt werden: {detail}",
+    "{name} konnte nicht hinzugefügt werden: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "Die Quelle konnte nicht hinzugefügt werden. Bitte versuche es gleich erneut.",
   "ob.conv.voice.pasteAdd": "Zu den Schreibproben hinzufügen",
