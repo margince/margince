@@ -156,6 +156,21 @@ describe("the contract row menu", () => {
     );
   });
 
+  it("gives every menu its own name, a title already ending in a number included", async () => {
+    stub([
+      { ...ACTIVE, id: "c-1", title: "Agreement" },
+      { ...ACTIVE, id: "c-2", title: "Agreement" },
+      { ...ACTIVE, id: "c-3", title: "Agreement (1)" },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    await screen.findByRole("button", { name: "Actions for Agreement (1)" });
+    const names = screen
+      .getAllByRole("button", { name: /^Actions for Agreement/ })
+      .map((menu) => menu.getAttribute("aria-label"));
+    expect(new Set(names).size).toBe(3);
+  });
+
   it("withholds change-status and cancel from a terminal agreement, but not renew", async () => {
     stub([EXPIRED]);
     const user = userEvent.setup();

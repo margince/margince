@@ -129,10 +129,8 @@ export function CompanyContractsCard({
 
   return (
     <>
-      {/* A SIBLING of the panel, not a child: a panel draws its rows only when
-          the section has them, so a modal nested inside would never mount on an
-          account with no agreements — the account the add button most exists
-          for. */}
+      {/* Beside the panel, not in it: a panel without rows draws none, so a
+          nested form would never open on an account with no agreements. */}
       <ContractForm
         companyId={companyId}
         contract={editing}
@@ -214,20 +212,24 @@ export function CompanyContractsCard({
 }
 
 // A renewal starts with its predecessor's title. So a row's menu also names
-// its number or first day, then its place among the rows still named alike.
+// its number or first day, then the lowest "(n)" no other name holds.
 function menuNames(contracts: Contract[], locale: Locale, zone: string) {
-  const names = contracts.map((contract) => {
-    const day =
-      contract.starts_on && formatDate(contract.starts_on, locale, zone);
-    return [contract.title, contract.contract_number ?? day]
+  const day = (on?: string | null) => on && formatDate(on, locale, zone);
+  const names = contracts.map((row) =>
+    [row.title, row.contract_number ?? day(row.starts_on)]
       .filter(Boolean)
-      .join(", ");
-  });
-  const alike = (name: string, upTo = names.length) =>
-    names.slice(0, upTo).filter((other) => other === name).length;
-  return names.map((name, index) =>
-    alike(name) > 1 ? `${name} (${alike(name, index + 1)})` : name,
+      .join(", "),
   );
+  const shared = (name: string) =>
+    names.indexOf(name) !== names.lastIndexOf(name);
+  const taken = new Set(names.filter((name) => !shared(name)));
+  return names.map((name) => {
+    let place = 1;
+    while (shared(name) && taken.has(`${name} (${place})`)) place += 1;
+    const unique = shared(name) ? `${name} (${place})` : name;
+    taken.add(unique);
+    return unique;
+  });
 }
 
 function ContractRow({
@@ -345,9 +347,8 @@ function ContractRow({
               name: menuName,
             })}
           >
-            {/* Menu items are Buttons, like every other menu in the product.
-                A bare <button> here drew as centred unstyled text inside a
-                panel that was otherwise the design system's. */}
+            {/* Menu items are Buttons, as in every other menu: a bare <button>
+                drew as unstyled text. */}
             {mayWrite && (
               <Button onClick={onEdit}>{t("contracts.edit")}</Button>
             )}
