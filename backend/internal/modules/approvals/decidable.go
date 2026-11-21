@@ -202,7 +202,7 @@ func archivableWithoutDelete(ctx context.Context, tx pgx.Tx, table string, rowID
 	}
 	rule, ruled := auth.ArchiveRuleFor(table)
 	if !ruled {
-		return nil, nil
+		return map[ids.UUID]bool{}, nil
 	}
 	return auth.OwnedArchivableSubset(ctx, tx, rule, rowIDs)
 }

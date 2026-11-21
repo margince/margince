@@ -195,24 +195,42 @@ func TestTheDealSeatDetectorSeesWhatItClaimsTo(t *testing.T) {
 		fires bool
 		src   string
 	}{
-		{"a seat read that ignores the End date", true,
-			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder' AND r.archived_at IS NULL` + bt + ` }`},
-		{"a seat read that ends a seat on any End date", true,
-			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder' AND r.ended_at IS NULL` + bt + ` }`},
-		{"the kind inside an IN list", true,
-			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE r.kind IN ('works_with', 'deal_stakeholder')` + bt + ` }`},
-		{"the kind inside a formatter's argument", true,
-			`func read() string { return fmt.Sprintf(` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder' AND (%s)` + bt + `, scope) }`},
-		{"the kind inside a map value", true,
-			`var selectors = map[string]string{"x": ` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder'` + bt + `}`},
-		{"the kind through a constant", true,
-			"const seatKind = \"deal_stakeholder\"\nfunc read() string { return " + bt + `SELECT 1 FROM relationship r WHERE r.kind = '` + bt + ` + seatKind + ` + bt + `'` + bt + ` }`},
-		{"the kind bound as a parameter", true,
-			"const seatKind = \"deal_stakeholder\"\nfunc read(q func(string, ...any)) { q(" + bt + `SELECT 1 FROM relationship r WHERE r.kind = $1` + bt + `, seatKind) }`},
-		{"the helper", false,
-			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE ` + bt + ` + dealseat.CurrentSQL("r") }`},
-		{"another kind", false,
-			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'project_stakeholder' AND r.ended_at IS NULL` + bt + ` }`},
+		{
+			"a seat read that ignores the End date", true,
+			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder' AND r.archived_at IS NULL` + bt + ` }`,
+		},
+		{
+			"a seat read that ends a seat on any End date", true,
+			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder' AND r.ended_at IS NULL` + bt + ` }`,
+		},
+		{
+			"the kind inside an IN list", true,
+			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE r.kind IN ('works_with', 'deal_stakeholder')` + bt + ` }`,
+		},
+		{
+			"the kind inside a formatter's argument", true,
+			`func read() string { return fmt.Sprintf(` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder' AND (%s)` + bt + `, scope) }`,
+		},
+		{
+			"the kind inside a map value", true,
+			`var selectors = map[string]string{"x": ` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'deal_stakeholder'` + bt + `}`,
+		},
+		{
+			"the kind through a constant", true,
+			"const seatKind = \"deal_stakeholder\"\nfunc read() string { return " + bt + `SELECT 1 FROM relationship r WHERE r.kind = '` + bt + ` + seatKind + ` + bt + `'` + bt + ` }`,
+		},
+		{
+			"the kind bound as a parameter", true,
+			"const seatKind = \"deal_stakeholder\"\nfunc read(q func(string, ...any)) { q(" + bt + `SELECT 1 FROM relationship r WHERE r.kind = $1` + bt + `, seatKind) }`,
+		},
+		{
+			"the helper", false,
+			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE ` + bt + ` + dealseat.CurrentSQL("r") }`,
+		},
+		{
+			"another kind", false,
+			`func read() string { return ` + bt + `SELECT 1 FROM relationship r WHERE r.kind = 'project_stakeholder' AND r.ended_at IS NULL` + bt + ` }`,
+		},
 	}
 	head := "package probe\n\nimport (\n\t\"fmt\"\n\n\t\"" + dealSeatPackage + "\"\n)\n\nvar _ = fmt.Sprint\nvar _ = dealseat.CurrentSQL\nvar scope string\n\n"
 	for _, probe := range probes {
