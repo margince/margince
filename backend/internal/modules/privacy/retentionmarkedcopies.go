@@ -12,6 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// retryMarkedAuditCopies leaves a source whose lock is busy for the next
+// evaluation, which starts from the beginning, so later retention stages still run.
 func (s *RetentionService) retryMarkedAuditCopies(ctx context.Context) error {
 	const pageSize = MarkerAuditPageSize
 	until := ids.NewV7()
@@ -25,6 +27,9 @@ func (s *RetentionService) retryMarkedAuditCopies(ctx context.Context) error {
 					return err
 				})
 			})
+			if storekit.IsLockTimeout(err) {
+				break
+			}
 			if err != nil {
 				return err
 			}
