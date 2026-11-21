@@ -9410,7 +9410,7 @@ export const en = {
   "analytics.share.linkWarning":
     "The link is shown only once. Copy it now; it cannot be retrieved later.",
   "analytics.share.leaveWarning":
-    "Leaving without copying discards the link, and a new one must be created.",
+    "If you leave without copying, the link cannot be shown again. It stays open until it expires, you close it under Shared links, or you lose forecast access.",
   "analytics.share.copy": "Copy link",
   "analytics.share.copied": "Copied",
   "analytics.share.copyFailed": "Select the link above and copy it manually.",
