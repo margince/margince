@@ -262,8 +262,13 @@ type retractedField struct {
 // replaced (superseded_value, NULL when nothing). A phone is a row of its own:
 // the one this read added is archived, and the number it replaced comes back.
 func (f retractedField) withdrawValue(ctx context.Context, tx pgx.Tx) (bool, error) {
-	if f.Field == fieldPhone {
+	switch f.Field {
+	case fieldPhone:
 		return true, withdrawSignatureNumber(ctx, tx, f.ContactID, f.ValueKey)
+	case fieldEmail:
+		return true, withdrawSignatureEmail(ctx, tx, f.ContactID, f.ValueKey)
+	case fieldAddress:
+		return true, withdrawSignatureAddress(ctx, tx, f.ContactID, f.Value)
 	}
 	column, mirrored := observedFieldColumn(f.Field)
 	if !mirrored {

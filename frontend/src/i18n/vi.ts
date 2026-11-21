@@ -19086,6 +19086,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.field.company_name": "Công ty",
   "contact.enriched.field.address": "Địa chỉ",
   "contact.enriched.field.website": "Trang web",
+  "contact.enriched.field.email": "Email",
   "contact.enriched.readFrom": "Đọc từ {source} vào {when}",
   "contact.enriched.source.capture_enrich": "chữ ký email của họ",
   "contact.enriched.source.site_read": "trang web công ty",

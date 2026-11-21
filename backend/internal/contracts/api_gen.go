@@ -9254,6 +9254,7 @@ func (e ContactPhoneInputPhoneType) Valid() bool {
 const (
 	ContactProfileFieldFieldAddress     ContactProfileFieldField = "address"
 	ContactProfileFieldFieldCompanyName ContactProfileFieldField = "company_name"
+	ContactProfileFieldFieldEmail       ContactProfileFieldField = "email"
 	ContactProfileFieldFieldFirstName   ContactProfileFieldField = "first_name"
 	ContactProfileFieldFieldLastName    ContactProfileFieldField = "last_name"
 	ContactProfileFieldFieldLinkedin    ContactProfileFieldField = "linkedin"
@@ -9269,6 +9270,8 @@ func (e ContactProfileFieldField) Valid() bool {
 	case ContactProfileFieldFieldAddress:
 		return true
 	case ContactProfileFieldFieldCompanyName:
+		return true
+	case ContactProfileFieldFieldEmail:
 		return true
 	case ContactProfileFieldFieldFirstName:
 		return true
@@ -45991,9 +45994,9 @@ type ContactPhoneInput struct {
 type ContactPhoneInputPhoneType string
 
 // ContactProfileField One enriched field with the evidence it was read from. Evidence-or-omit: a row
-// exists only where a verbatim snippet was captured. A phone is a list, so a contact
-// has one `phone` row per number, told apart by `value_key`; every other field has at
-// most one row.
+// exists only where a verbatim snippet was captured. A phone and an email are lists,
+// so a contact has one `phone` row per number and one `email` row per further address,
+// told apart by `value_key`; every other field has at most one row.
 type ContactProfileField struct {
 	CapturedAt time.Time `json:"captured_at"`
 
@@ -46031,8 +46034,9 @@ type ContactProfileField struct {
 	SupersededValue *string `json:"superseded_value,omitempty"`
 	Value           string  `json:"value"`
 
-	// ValueKey What tells two rows of one field apart: the E.164 number for a `phone` row, empty
-	// for every other field. Pass it to the restore to name which number to undo.
+	// ValueKey What tells two rows of one field apart: the E.164 number for a `phone` row, the
+	// lowercased address for an `email` row, empty for every other field. Pass it to the
+	// restore to name which number to undo.
 	ValueKey *string `json:"value_key,omitempty"`
 
 	// Verdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.

@@ -53,7 +53,7 @@ var enrichFieldNames = nameSet(signatureFieldNames)
 // offers it. The name is not a field: the reading reports its parts under
 // "name", and contacts.MapSignatureName decides which becomes first_name and
 // last_name.
-var signatureFieldNames = []string{fieldTitle, fieldPhone, "linkedin", companyNameField, "address", "website"}
+var signatureFieldNames = []string{fieldTitle, fieldPhone, "linkedin", companyNameField, "address", "website", "email"}
 
 func nameSet(names []string) map[string]bool {
 	set := make(map[string]bool, len(names))
@@ -65,16 +65,17 @@ func nameSet(names []string) map[string]bool {
 
 // signatureRepeatedFields hold a list. A signature listing a German, a
 // Vietnamese and a Singapore number states three numbers, all current, and a
-// gate that kept the first would record one and lose two.
-var signatureRepeatedFields = map[string]bool{"phone": true}
+// gate that kept the first would record one and lose two. Addresses likewise.
+var signatureRepeatedFields = map[string]bool{"phone": true, "email": true}
 
 const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone,
-linkedin, company_name, address, website. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
+linkedin, company_name, address, website, email. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
 disclaimers, and marketing taglines. Phone numbers verbatim, never normalized. A signature
 often lists several numbers (desk, mobile, one per country): emit one phone entry for EVERY
 number, each with its own snippet; never merge them and never keep only one.
-Emit address as the single line the signature prints it on. Emit website only for the
+Emit address as the single line the signature prints it on. Emit one email entry for every
+email address the signature lists as the contact's own; never an address of a colleague, a team or a desk. Emit website only for the
 company's own site; a social profile is never a website, and linkedin carries that one.
 The signature must be THE NAMED CONTACT'S OWN. A block naming somebody else — a colleague,
 a forwarded sender, a correspondent quoted underneath — states nothing about them, so emit

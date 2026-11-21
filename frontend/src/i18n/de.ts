@@ -19607,6 +19607,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.field.company_name": "Unternehmen",
   "contact.enriched.field.address": "Adresse",
   "contact.enriched.field.website": "Website",
+  "contact.enriched.field.email": "E-Mail",
   "contact.enriched.readFrom": "Am {when} aus {source} gelesen",
   "contact.enriched.source.capture_enrich": "der E-Mail-Signatur",
   "contact.enriched.source.site_read": "der Unternehmenswebsite",

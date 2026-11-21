@@ -37268,17 +37268,18 @@ export interface components {
         };
         /**
          * @description One enriched field with the evidence it was read from. Evidence-or-omit: a row
-         *     exists only where a verbatim snippet was captured. A phone is a list, so a contact
-         *     has one `phone` row per number, told apart by `value_key`; every other field has at
-         *     most one row.
+         *     exists only where a verbatim snippet was captured. A phone and an email are lists,
+         *     so a contact has one `phone` row per number and one `email` row per further address,
+         *     told apart by `value_key`; every other field has at most one row.
          */
         ContactProfileField: {
             /** @enum {string} */
-            field: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
+            field: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website" | "email";
             value: string;
             /**
-             * @description What tells two rows of one field apart: the E.164 number for a `phone` row, empty
-             *     for every other field. Pass it to the restore to name which number to undo.
+             * @description What tells two rows of one field apart: the E.164 number for a `phone` row, the
+             *     lowercased address for an `email` row, empty for every other field. Pass it to the
+             *     restore to name which number to undo.
              */
             value_key?: string;
             /**

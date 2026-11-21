@@ -41,10 +41,10 @@ const enrichSource = "capture_enrich"
 // enrichCapturedBy is the acting identity on enrichment rows.
 const enrichCapturedBy = "agent:enrich"
 
-// SignatureField is one gated, evidence-carrying extraction. phone may appear
-// once per number the signature lists; every other field appears once.
+// SignatureField is one gated, evidence-carrying extraction. phone and email
+// may appear once per number or address listed; every other field appears once.
 type SignatureField struct {
-	Name       string // title | phone | role | linkedin | company_name | address | website
+	Name       string // title | phone | role | linkedin | company_name | address | website | email
 	Value      string
 	Evidence   string // verbatim snippet — the caller's gate already verified it
 	Confidence float64
@@ -199,6 +199,11 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 		if err != nil {
 			return err
 		}
+		if !corrected[fieldAddress] && !corrected[fieldCompanyName] {
+			if err := fillEmployerStreetTx(ctx, tx, contactID, sourceRef, fields); err != nil {
+				return err
+			}
+		}
 		if len(appliedFields) == 0 {
 			return nil
 		}
@@ -296,7 +301,7 @@ func olderMailMayFillTitleTx(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 // ruled on, and returns the names of those that landed.
 func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField, corrected map[string]bool, res *SignatureApplyResult) ([]string, []string, error) {
 	var appliedFields, confirmed []string
-	var numbers []SignatureField
+	var numbers, emails []SignatureField
 	for _, f := range fields {
 		if corrected[f.Name] {
 			// A human ruled on this field. Their answer stands until they
@@ -305,10 +310,13 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 			res.Skipped++
 			continue
 		}
-		if f.Name == fieldPhone {
-			// A signature lists several numbers, and they are applied as one
-			// set below.
+		// A signature lists several numbers and addresses, applied as sets below.
+		switch f.Name {
+		case fieldPhone:
 			numbers = append(numbers, f)
+			continue
+		case fieldEmail:
+			emails = append(emails, f)
 			continue
 		}
 		outcome, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
@@ -336,6 +344,20 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 	res.Skipped += len(numbers) - landed
 	if landed > 0 {
 		appliedFields = append(appliedFields, fieldPhone)
+	}
+	added, err := applySignatureEmails(ctx, tx, contactID, sourceRef, observedAt, emails)
+	if err != nil {
+		return nil, nil, err
+	}
+	res.Applied += added
+	res.Skipped += len(emails) - added
+	if added > 0 {
+		appliedFields = append(appliedFields, fieldEmail)
+	}
+	if slices.Contains(appliedFields, fieldAddress) {
+		if err := fillSignatureAddressTx(ctx, tx, contactID, signatureValue(fields, fieldAddress)); err != nil {
+			return nil, nil, err
+		}
 	}
 	return appliedFields, confirmed, nil
 }
