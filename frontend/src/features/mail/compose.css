@@ -134,25 +134,10 @@
   align-items: stretch;
   gap: var(--space-1);
 }
-.schedule-preset {
-  display: flex;
-  align-items: baseline;
+/* The Button's own face, with the moment pushed to the end edge. */
+.btn.schedule-preset {
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-radius: var(--r-sm);
-  background: none;
-  color: var(--textPrimary);
-  text-align: left;
-  cursor: pointer;
-}
-.schedule-preset:hover {
-  background: var(--groundHover);
-}
-.schedule-preset:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
 }
 /* The calendar beside the readout it fills in, because the month is the thing
    being read and the date and hour are what it produces. Stacked on a narrow
@@ -179,38 +164,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
 }
-.schedule-hours {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.schedule-hour {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgElevated);
-  color: var(--textPrimary);
-  cursor: pointer;
-}
-.schedule-hour:hover:not(:disabled) {
-  background: var(--bgHover);
-}
-.schedule-hour:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-.schedule-hour[aria-pressed="true"] {
-  border-color: var(--borderStrong);
-  background: var(--bgChip);
-}
-/* A past hour, drawn as the calendar draws a refused day beside it. */
-.schedule-hour:disabled {
-  color: var(--textSecondary);
-  text-decoration: line-through;
-  cursor: default;
-}
-
 /* The sentence the whole dialog produces, above the control that commits it. */
 .schedule-foot {
   padding-top: var(--space-3);

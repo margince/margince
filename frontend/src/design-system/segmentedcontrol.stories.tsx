@@ -125,6 +125,46 @@ export const MarkedOption: Story = {
   render: () => <MarkedTabsDemo />,
 };
 
+const HOURS = ["8", "9", "13", "17"] as const;
+type Hour = (typeof HOURS)[number];
+const HOUR_LABELS: Record<Hour, string> = {
+  "8": "08:00",
+  "9": "09:00",
+  "13": "13:00",
+  "17": "17:00",
+};
+
+function RefusedDemo() {
+  const [hour, setHour] = useState<Hour>("17");
+  return (
+    <div style={stack}>
+      <SegmentedControl
+        options={HOURS}
+        value={hour}
+        onChange={setHour}
+        labels={HOUR_LABELS}
+        label="Time"
+        refused={{ "8": true, "9": true, "13": true }}
+        reasonId="refused-hours"
+      />
+      <p id="refused-hours" className="t-caption">
+        Times that have passed cannot be chosen.
+      </p>
+    </div>
+  );
+}
+
+// Options the reader may not choose now stay in view, struck through, and
+// every one points at the single sentence that says why.
+export const RefusedOption: Story = {
+  render: () => <RefusedDemo />,
+  play: async ({ canvasElement }) => {
+    const [first] = canvasElement.querySelectorAll("button");
+    await expect(first?.disabled).toBe(true);
+    await expect(first?.getAttribute("aria-describedby")).toBe("refused-hours");
+  },
+};
+
 const PRESETS = ["readDraft", "full", "custom"] as const;
 type Preset = (typeof PRESETS)[number];
 const PRESET_LABELS: Record<Preset, string> = {

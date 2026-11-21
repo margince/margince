@@ -333,6 +333,7 @@ func toContractImportRun(run migration.Run) crmcontracts.ImportRun {
 		message := run.Error
 		out.Error = &message
 	}
+	out.ErrorRefusal = importwire.RunRefusal(run.ErrorRefusal)
 	applySession(&out, run)
 	applyProgress(&out, run)
 	return out

@@ -69,7 +69,7 @@ func TestAStaleUndoLeaseNeitherReversesNorFailsTheRun(t *testing.T) {
 	if _, err := s.UndoSlice(ctx, stale, w, Budget{}); !errors.Is(err, ErrSuperseded) {
 		t.Errorf("a stale undo slice = %v, want ErrSuperseded", err)
 	}
-	if err := s.FailLease(ctx, stale, CauseStopped); !errors.Is(err, ErrSuperseded) {
+	if err := s.FailLease(ctx, stale, stopWith(CauseStopped)); !errors.Is(err, ErrSuperseded) {
 		t.Errorf("a stale undo failing the run = %v, want ErrSuperseded", err)
 	}
 	got := mustGetStaged(ctx, t, s, current.Run)
@@ -85,7 +85,7 @@ func TestOnlyACommitOrAnUndoLeaseHasAFailedState(t *testing.T) {
 	run := completeCSVRun(ctx, t, s)
 	done := Lease{Run: run.ID, Status: StatusComplete, Attempt: run.JobAttempt}
 
-	if err := s.FailLease(ctx, done, CauseStopped); !errors.Is(err, apperrors.ErrConflict) {
+	if err := s.FailLease(ctx, done, stopWith(CauseStopped)); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("failing a complete lease = %v, want a conflict", err)
 	}
 	if got := mustGetStaged(ctx, t, s, run.ID); got.Status != StatusComplete || got.Error != "" {

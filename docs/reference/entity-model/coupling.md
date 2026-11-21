@@ -38,7 +38,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [integrations](integrations.md) | 5 | 61 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 39 | 0 | 0 | 0 |
-| [migration](migration.md) | 2 | 41 | 0 | 0 | 0 |
+| [migration](migration.md) | 2 | 42 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
 | [platform](platform.md) | 13 | 95 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |

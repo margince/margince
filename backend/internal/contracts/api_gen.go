@@ -53778,6 +53778,9 @@ type ImportRun struct {
 	// Error Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string `json:"error,omitempty"`
 
+	// ErrorRefusal `error` as the field error an upload refusal carries, for a draft whose test run refused its file: a screen words it in the reader's language and keeps `error` for a code it does not know. Absent for any other stop, and on a run stored before it was kept.
+	ErrorRefusal *ImportRunRefusal `json:"error_refusal,omitempty"`
+
 	// EtaScope `object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.
 	EtaScope *ImportRunEtaScope `json:"eta_scope,omitempty"`
 
@@ -54024,6 +54027,21 @@ type ImportRunProgress struct {
 		RowsDone  int    `json:"rows_done" minimum:"0"`
 		RowsTotal int    `json:"rows_total" minimum:"0"`
 	} `json:"objects"`
+}
+
+// ImportRunRefusal A refusal of a run's file by field and code, with the values its sentence names.
+type ImportRunRefusal struct {
+	// Code The refusal code, as in a 422 `errors` entry.
+	Code string `json:"code"`
+
+	// Field The field the refusal names, as in a 422 `errors` entry.
+	Field string `json:"field"`
+
+	// Max The limit the refusal names. Absent when it names none.
+	Max *int `json:"max,omitempty" minimum:"1"`
+
+	// Params The values the code's sentence names, by name. Absent when it names none.
+	Params *map[string]string `json:"params,omitempty"`
 }
 
 // ImportRunReport The same shape before and after approval: a dry run reports what the

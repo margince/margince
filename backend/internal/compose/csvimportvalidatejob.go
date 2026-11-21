@@ -168,7 +168,7 @@ func testRunRefusal(err error) error {
 	if !ok || fault.Status >= http.StatusInternalServerError {
 		return err
 	}
-	return migration.RunStop{Cause: fault.Detail, Err: err}
+	return importwire.StopOf(fault, err)
 }
 
 // testRunProgress records how far a test run has matched its rows against the

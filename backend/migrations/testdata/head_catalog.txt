@@ -6929,6 +6929,7 @@ public.import_run.connector text NOT NULL gen=- def=-
 public.import_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_run.draft_step text gen=- def=-
 public.import_run.error text gen=- def=-
+public.import_run.error_refusal jsonb gen=- def=-
 public.import_run.finished_at timestamp with time zone gen=- def=-
 public.import_run.heartbeat_at timestamp with time zone gen=- def=-
 public.import_run.id uuid NOT NULL gen=- def=uuidv7()

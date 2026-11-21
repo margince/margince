@@ -47984,6 +47984,19 @@ components:
               reason: { type: string, description: 'What kept it from reversing, in terms the operator can act on — never a database or driver message.' }
               reason_code: { $ref: '#/components/schemas/ImportReasonCode' }
 
+    ImportRunRefusal:
+      type: object
+      description: 'A refusal of a run''s file by field and code, with the values its sentence names.'
+      required: [field, code]
+      properties:
+        field: { type: string, description: 'The field the refusal names, as in a 422 `errors` entry.' }
+        code: { type: string, description: 'The refusal code, as in a 422 `errors` entry.' }
+        max: { type: integer, minimum: 1, description: 'The limit the refusal names. Absent when it names none.' }
+        params:
+          type: object
+          additionalProperties: { type: string }
+          description: 'The values the code''s sentence names, by name. Absent when it names none.'
+
     ImportRun:
       type: object
       required: [id, connector, status, checkpoint, version, source_released, source, captured_by, created_at, updated_at]
@@ -48008,6 +48021,14 @@ components:
         status:     { $ref: '#/components/schemas/ImportRunStatus' }
         checkpoint: { type: integer, minimum: 0, description: 'Absolute offset into the source''s rows for a forward run (`running`/`failed`), or into import_record_map''s rows once the run is `undoing`; 0 = not started either way. What a resume continues from.' }
         error:      { type: [string, 'null'], description: 'Why a failed run stopped, or why a draft''s last test stopped, in the uploader''s terms. Never a driver or SQL message.' }
+        error_refusal:
+          allOf: [ { $ref: '#/components/schemas/ImportRunRefusal' } ]
+          readOnly: true
+          description: >-
+            `error` as the field error an upload refusal carries, for a draft
+            whose test run refused its file: a screen words it in the reader's
+            language and keeps `error` for a code it does not know. Absent for
+            any other stop, and on a run stored before it was kept.
         version:    { type: integer, minimum: 1, description: 'Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another.' }
         draft_step: { $ref: '#/components/schemas/ImportDraftStep' }
         profile:

@@ -33824,6 +33824,19 @@ export interface components {
                 reason_code?: components["schemas"]["ImportReasonCode"];
             }[];
         };
+        /** @description A refusal of a run's file by field and code, with the values its sentence names. */
+        ImportRunRefusal: {
+            /** @description The field the refusal names, as in a 422 `errors` entry. */
+            field: string;
+            /** @description The refusal code, as in a 422 `errors` entry. */
+            code: string;
+            /** @description The limit the refusal names. Absent when it names none. */
+            max?: number;
+            /** @description The values the code's sentence names, by name. Absent when it names none. */
+            params?: {
+                [key: string]: string;
+            };
+        };
         ImportRun: {
             /** Format: uuid */
             id: string;
@@ -33849,6 +33862,8 @@ export interface components {
             checkpoint: number;
             /** @description Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message. */
             error?: string | null;
+            /** @description `error` as the field error an upload refusal carries, for a draft whose test run refused its file: a screen words it in the reader's language and keeps `error` for a code it does not know. Absent for any other stop, and on a run stored before it was kept. */
+            readonly error_refusal?: components["schemas"]["ImportRunRefusal"];
             /** @description Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another. */
             version: number;
             draft_step?: components["schemas"]["ImportDraftStep"];
