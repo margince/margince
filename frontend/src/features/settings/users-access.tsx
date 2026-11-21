@@ -29,6 +29,7 @@ import { useMe } from "../../lib/session";
 import { changeReach, readableKinds } from "./accessreach";
 import { useKindList } from "./accesswords";
 import {
+  isTeamSeat,
   membersOf,
   NewTeamAction,
   RenameTeamAction,
@@ -216,10 +217,7 @@ export function TeamsCard() {
     },
   });
   const colleagues = (users.data?.entries ?? []).flatMap((entry) =>
-    "email" in entry &&
-    (entry.status === "active" || entry.status === "invited")
-      ? [entry]
-      : [],
+    "email" in entry && isTeamSeat(entry) ? [entry] : [],
   );
   const verbs = { canRename, canArchive: canEditTeam };
   const rows = (teams.data ?? []).flatMap((entry) =>

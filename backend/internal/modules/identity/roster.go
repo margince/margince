@@ -335,11 +335,11 @@ type teamRow struct {
 	CreatedAt   time.Time
 }
 
-// teamMemberCountSQL counts a team's active and invited seats, so the count
+// teamMemberCountSQL counts a team's active and invited human seats, so the count
 // agrees with the Members page. Suspended and deactivated seats never count.
 // It reads the team as `t`.
 var teamMemberCountSQL = `(SELECT count(*) FROM team_membership tm
-	   JOIN app_user u ON u.id = tm.user_id AND ` + ActivatableMemberSQL("u") + `
+	   JOIN app_user u ON u.id = tm.user_id AND ` + TeamSeatSQL("u") + `
 	  WHERE tm.team_id = t.id)`
 
 var teamColumns = `t.id, t.name, ` + teamMemberCountSQL + ` AS member_count, t.created_at`

@@ -174,7 +174,15 @@ function backend(
       const body = path.endsWith("/users/access-preview")
         ? (opts.preview ?? { row_scope: "own" })
         : {
-            data: path.endsWith("/users") ? users : (opts.teams ?? []),
+            data: path.endsWith("/users")
+              ? // The server serves the active-only roster unless the wide
+                // management view is asked for.
+                users.filter(
+                  (user) =>
+                    url.searchParams.get("include_inactive") === "true" ||
+                    user.status === "active",
+                )
+              : (opts.teams ?? []),
             page: { next_cursor: null, has_more: false },
           };
       return new Response(JSON.stringify(body), {
@@ -713,6 +721,71 @@ describe("TeamsCard membership", () => {
         "/v1/teams/t-1/members/u-inv",
       ),
     );
+  });
+
+  it("adds an invited seat that is not yet on the team, asking for the wide roster", async () => {
+    const calls = mount({
+      teams: NORD,
+      users: [
+        ...ROSTER,
+        {
+          id: "u-inv2",
+          email: "later@acme.test",
+          display_name: "Fay Later",
+          status: "invited",
+          is_agent: false,
+          team_ids: [],
+        },
+      ],
+    });
+    const { user, dialog } = await openTeam();
+
+    await user.type(
+      within(dialog).getByRole("combobox", { name: en["users.teamAddMember"] }),
+      "Fay",
+    );
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: /Fay Later/,
+      }),
+    );
+
+    await waitFor(() =>
+      expect(calls.find((call) => call.method === "PUT")?.path).toBe(
+        "/v1/teams/t-1/members/u-inv2",
+      ),
+    );
+    expect(
+      calls.some(
+        (call) =>
+          call.path.endsWith("/users") &&
+          call.query?.include_inactive === "true",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not list an agent seat that is on the team", async () => {
+    mount({
+      teams: NORD,
+      users: [
+        ...ROSTER,
+        {
+          id: "u-bot",
+          email: "bot@acme.test",
+          display_name: "Dot Bot",
+          status: "active",
+          is_agent: true,
+          team_ids: ["t-1"],
+        },
+      ],
+    });
+    const { dialog } = await openTeam();
+
+    const list = within(dialog).getByRole("list", {
+      name: en["users.teamMembersLabel"],
+    });
+    expect(within(list).getByText("Ada Inside")).toBeTruthy();
+    expect(within(list).queryByText("Dot Bot")).toBeNull();
   });
 
   it("adds the colleague picked to the team the dialog names", async () => {
