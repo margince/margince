@@ -23576,6 +23576,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.docState.final": "Endfassung",
   "legalReview.advanceRefused":
     "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Frage eine Rechtsprüfung an und verschiebe den Deal danach.",
+  "legalReview.advanceRefused.pending":
+    "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Die Prüfung wartet noch auf eine Antwort der Rechtsabteilung.",
+  "legalReview.advanceRefused.changesNeeded":
+    "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Die Rechtsabteilung hat Änderungen verlangt: Nimm sie vor und frage die Prüfung erneut an.",
+  "legalReview.advanceRefused.termsChanged":
+    "Betrag oder Angebot haben sich seit der Freigabe geändert. Frage die Prüfung erneut an und verschiebe den Deal danach.",
   "legalReview.packHistory": "Phasenverlauf",
   "legalReview.enteredStage": "{stage}, erreicht {date}",
   "legalReview.settingsTitle": "Rechtsprüfung",

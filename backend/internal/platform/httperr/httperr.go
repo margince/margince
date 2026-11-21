@@ -215,7 +215,10 @@ func moduleDeclaredFault(err error) (error, bool) {
 		field, code, message := fieldFault.FieldFault()
 		refusal := Validation(boundFaultText(field), boundFaultText(code), boundFaultText(message))
 		if limited, ok := fieldFault.(fieldMaxer); ok {
-			return refusal.WithMax(limited.FieldMax()), true
+			refusal = refusal.WithMax(limited.FieldMax())
+		}
+		if named, ok := fieldFault.(fieldParamser); ok {
+			refusal = refusal.WithParams(named.FieldParams())
 		}
 		return refusal, true
 	}
@@ -470,12 +473,6 @@ type FieldError struct {
 	Max int `json:"max,omitempty"`
 	// Params are the other values the code's sentence names, as text.
 	Params map[string]string `json:"params,omitempty"`
-}
-
-// fieldMaxer is a FieldFault that also states the limit it refused at. It is
-// declared here rather than in apperrors because only this mapping reads it.
-type fieldMaxer interface {
-	FieldMax() int
 }
 
 // DetailedError carries a non-sentinel wire shape: validation errors

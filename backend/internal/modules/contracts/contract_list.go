@@ -8,6 +8,7 @@ package contracts
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -35,8 +36,10 @@ type ListContractsInput struct {
 	// column (CONTRACT-FORM-1). The two are different questions and a caller
 	// asking for one must not silently get the other.
 	UnderContractOnly bool
-	Cursor            *string
-	Limit             *int
+	// IDs narrows to these agreements. Empty means no narrowing.
+	IDs    []ids.ContractID
+	Cursor *string
+	Limit  *int
 }
 
 // ListCompanyContracts reads one account's agreements, newest term first.
@@ -73,6 +76,27 @@ var dealContractsLimit = 200
 // first. Naming the deal is a read of it, as naming the company is on the
 // account list.
 func (s *Store) ListDealContracts(ctx context.Context, dealID ids.DealID) (crmcontracts.ContractListResponse, error) {
+	return s.readDealContracts(ctx, dealID, nil)
+}
+
+// DealContractsByID reads these agreements of one deal, wherever they fall in
+// its term order. One archived, on another deal or outside the caller's scope
+// is absent.
+func (s *Store) DealContractsByID(ctx context.Context, dealID ids.DealID, contractIDs []ids.ContractID) ([]crmcontracts.Contract, error) {
+	var out []crmcontracts.Contract
+	for chunk := range slices.Chunk(contractIDs, dealContractsLimit) {
+		page, err := s.readDealContracts(ctx, dealID, chunk)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, page.Data...)
+	}
+	return out, nil
+}
+
+// readDealContracts reads one page of a deal's agreements, narrowed to
+// contractIDs when any are named.
+func (s *Store) readDealContracts(ctx context.Context, dealID ids.DealID, contractIDs []ids.ContractID) (crmcontracts.ContractListResponse, error) {
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
@@ -89,7 +113,7 @@ func (s *Store) ListDealContracts(ctx context.Context, dealID ids.DealID) (crmco
 		if err != nil {
 			return err
 		}
-		out, err = listContractsTx(ctx, tx, ListContractsInput{DealID: &dealID, Limit: &dealContractsLimit}, today, active)
+		out, err = listContractsTx(ctx, tx, ListContractsInput{DealID: &dealID, IDs: contractIDs, Limit: &dealContractsLimit}, today, active)
 		return err
 	})
 	return out, err
@@ -107,6 +131,9 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 		anchor = storekit.SQLf("company_id = $%d", arg(in.CompanyID))
 	}
 	where := []string{anchor, "archived_at IS NULL"}
+	if len(in.IDs) != 0 {
+		where = append(where, storekit.SQLf("id = ANY($%d::uuid[])", arg(in.IDs)))
+	}
 
 	scope, err := VisibleClause(ctx, "", arg)
 	if err != nil {

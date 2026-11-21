@@ -11,6 +11,8 @@ package integration
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -175,5 +177,51 @@ func TestTheLatestTouchesSkipAutomaticMailBeforeCounting(t *testing.T) {
 	touches, _, err := reader.ReviewActivity(e.Admin(), deal)
 	if err != nil || len(touches) != 1 || touches[0].ActivityID != note {
 		t.Fatalf("the latest touches were %+v (%v), want the one manual note", touches, err)
+	}
+}
+
+// The deal's list is one page, newest term first. A frozen agreement past it
+// still opens by id, and the read keeps the deal, archive and grant rules.
+func TestAFrozenAgreementOpensPastTheDealsNewestPage(t *testing.T) {
+	e := Setup(t)
+	reader := legalreviewrecords.New(e.Contracts, e.Activities)
+	pipeline, open, _ := DealFixture(t, e)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Paper Holdings", nil))
+	seedDeal := func(name string) ids.UUID {
+		created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: name, PipelineID: pipeline, StageID: open, CompanyID: &company,
+		})
+		if err != nil {
+			t.Fatalf("seeding %q: %v", name, err)
+		}
+		return ids.UUID(created.Id)
+	}
+	deal := seedDeal("Paper renewal")
+	agreement := func(title string, deal ids.UUID) ids.UUID {
+		return ids.UUID(seedContract(t, e, contracts.CreateContractInput{
+			CompanyID: company, DealID: dealIDPtr(deal), Title: title, ValueBasis: contracts.BasisTotal, Source: "manual",
+		}).UUID)
+	}
+	frozen := agreement("Master agreement", deal)
+	for i := range 200 {
+		agreement(fmt.Sprintf("Order form %d", i), deal)
+	}
+	archived := agreement("Withdrawn draft", deal)
+	if err := e.Contracts.ArchiveContract(e.Admin(), ids.From[ids.ContractKind](archived)); err != nil {
+		t.Fatalf("archiving the draft: %v", err)
+	}
+	elsewhere := agreement("The other deal's agreement", seedDeal("Paper side deal"))
+
+	page, err := reader.ReviewContracts(e.Admin(), deal)
+	if err != nil || len(page) != 200 || slices.ContainsFunc(page, func(c deals.PacketContract) bool { return c.ContractID == frozen }) {
+		t.Fatalf("the deal's page held %d agreements (%v), want 200 without the oldest", len(page), err)
+	}
+	named, err := reader.OpenableContracts(e.Admin(), deal, []ids.UUID{frozen, archived, elsewhere})
+	if err != nil || len(named) != 1 || named[frozen] != "Master agreement" {
+		t.Fatalf("the frozen agreements read as %d titles, frozen %q (%v), want the master agreement alone", len(named), named[frozen], err)
+	}
+	blind := e.As(e.AdminUser, nil, contractReaderPerms("contract"))
+	if named, err := reader.OpenableContracts(blind, deal, []ids.UUID{frozen}); err != nil || len(named) != 0 {
+		t.Fatalf("a seat without contract.read was handed %v (%v)", named, err)
 	}
 }
