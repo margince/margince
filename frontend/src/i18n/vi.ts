@@ -10723,11 +10723,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.field_inactive":
     "Không thể ghi “{value}”: trường này không còn hoạt động.",
   "import.reason.id_not_a_company_id":
-    "“{value}” không phải mã công ty. Hãy xuất danh sách công ty để lấy mã, hoặc để trống cột để nhập hàng này làm công ty mới.",
+    "“{value}” không phải mã bản ghi. Hãy xuất danh sách để lấy mã, hoặc để trống cột để nhập hàng này làm bản ghi mới.",
   "import.reason.id_not_visible":
-    "Không có công ty nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
+    "Không có bản ghi nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
   "import.reason.id_on_non_company":
-    "Chỉ hàng công ty mới có thể nêu “{column}”; hàng {object} được nhận diện bằng khóa riêng.",
+    "Chỉ hàng công ty, liên hệ, lead hoặc deal mới có thể nêu “{column}”; hàng {object} được nhận diện bằng khóa riêng.",
   "import.reason.link_ambiguous":
     "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này.",
   "import.reason.link_ambiguous_dropped":
@@ -10767,7 +10767,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.record_archived":
     "Bản ghi của hàng này đã được lưu trữ nên không được cập nhật. Hãy khôi phục bản ghi để cập nhật.",
   "import.reason.ref_taken_by_another_company":
-    "Tham chiếu “{ref}” đã đại diện cho một công ty khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho công ty này hoặc sửa cột mã.",
+    "Tham chiếu “{ref}” đã đại diện cho một bản ghi khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho hàng này hoặc sửa cột mã.",
   "import.reason.row_key_empty":
     "Cột “{column}” để trống nên không nhận diện được hàng này khi nhập lại hoặc hoàn tác.",
   "import.reason.row_key_repeated":

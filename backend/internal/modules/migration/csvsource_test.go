@@ -135,6 +135,26 @@ func TestCSVSourceSkipsARowWithNoSourceKey(t *testing.T) {
 	}
 }
 
+// An exported row that has no value in its key column still names its record
+// by the id column, so it is identified rather than skipped.
+func TestCSVSourceIdentifiesAKeylessRowByItsIDColumn(t *testing.T) {
+	const id = "0192f3a0-0000-7000-8000-000000000001"
+	mapping := map[string]string{"Email": "email", "Id": "id"}
+	body := "Email,Id\n," + id + "\nb@x.test,\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectContact, mapping, "Email")
+
+	rows, err := src.Rows(context.Background(), ObjectContact, 0, 10)
+	if err != nil {
+		t.Fatalf("Rows: %v", err)
+	}
+	if len(rows) != 2 || rows[0].ExternalID != id || rows[1].ExternalID != "b@x.test" {
+		t.Fatalf("rows = %+v, want the id for the keyless row and the email for the other", rows)
+	}
+	if got := src.Skipped(); len(got) != 0 {
+		t.Fatalf("skipped = %+v, want none", got)
+	}
+}
+
 func TestCSVSourceCountsRowsAndNamesItsObject(t *testing.T) {
 	mapping, sourceKey := leadMapping()
 	body := "Email,First Name\na@x.test,A\nb@x.test,B\nc@x.test,C\n"

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package recordexport
 
 import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -15,15 +15,15 @@ const (
 	exportPrimaryPhone = "primary_phone"
 )
 
-// derivedExportColumns lists, per table, the columns that follow its stored ones.
-var derivedExportColumns = map[string][]string{
-	string(recordTypeContact): {exportPrimaryEmail, exportPrimaryPhone},
+// DerivedColumns lists, per table, the columns that follow its stored ones.
+var DerivedColumns = map[string][]string{
+	"contact": {exportPrimaryEmail, exportPrimaryPhone},
 }
 
-// derivedColumnExpr is the expression for a derived column on a row aliased t.
+// DerivedColumnExpr is the expression for a derived column on a row aliased t.
 // It picks the address the record page prints, and never a retired one.
-func derivedColumnExpr(table, column string) (string, bool) {
-	if table != string(recordTypeContact) {
+func DerivedColumnExpr(table, column string) (string, bool) {
+	if table != "contact" {
 		return "", false
 	}
 	switch column {

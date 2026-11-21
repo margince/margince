@@ -17459,7 +17459,11 @@ paths:
         lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
         with a `filter` (the canonical §13.5 predicate), a `view_id`, or a `list_id` (while lists are
         switched on): a Live List exports the records its filter matches, a Shortlist its members, and
-        the export is then listed on the list as a use. Bulk record read
+        the export is then listed on the list as a use. The CSV of a contact, company, deal or lead is
+        the file Data import reads back: the import's own columns (owner by email, tags, company,
+        pipeline and stage by name, amounts in major units) with `id` last, a byte order mark for
+        Excel, and a file name made of the list or view name and the day. The JSON stays the raw
+        stored form. Bulk record read
         that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
         export writes one `audit_log` entry (who exported what slice, when — P7/P12).
         A CSV text cell beginning with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed

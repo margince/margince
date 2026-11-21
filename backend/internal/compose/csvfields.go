@@ -195,12 +195,14 @@ func hasCustomFields(object string) bool { return object != migration.ObjectActi
 
 // selectsByID reports whether an object's rows may name the record they are.
 //
-// Companies only, for now. A lead is identified by its email and the store's
-// own unique key refuses a second one, so a lead row has no ambiguity for an id
-// to resolve — and advertising a column that changes nothing would be worse than
-// not offering it.
+// Every object an export writes the id of: a corrected export names its records
+// by id, and an id names one record where a natural key can be empty or shared.
 func selectsByID(object string) bool {
-	return object == migration.ObjectCompany
+	switch object {
+	case migration.ObjectCompany, migration.ObjectContact, migration.ObjectLead, migration.ObjectDeal:
+		return true
+	}
+	return false
 }
 
 // linksEmployer reports whether an object's rows may name a company to be
