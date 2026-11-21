@@ -339,6 +339,16 @@ describe("the grid-line labels", () => {
     ];
     expect(tickLabelsShown(ticks, 300)).toEqual([true, false, true]);
   });
+
+  it("keep a plain label when the year label it gives way to cannot fit either", () => {
+    const ticks = [
+      { pct: 0, chars: 10, namesYear: true },
+      { pct: 44, chars: 12, namesYear: true },
+      { pct: 78, chars: 9 },
+      { pct: 95, chars: 12, namesYear: true },
+    ];
+    expect(tickLabelsShown(ticks, 300)).toEqual([true, true, true, false]);
+  });
 });
 
 describe("a label's width", () => {

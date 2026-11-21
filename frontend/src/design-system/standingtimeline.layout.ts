@@ -189,8 +189,8 @@ export function tickLabelsShown(
   canvasPx: number,
 ): boolean[] {
   const drawn: { index: number; span: Span; namesYear: boolean }[] = [];
-  const runsInto = (span: Span) => {
-    const last = drawn.at(-1);
+  const runsInto = (span: Span, upTo: number) => {
+    const last = drawn[upTo - 1];
     return last !== undefined && span[0] < last.span[1] + TICK_INSET_PX;
   };
   ticks.forEach((tick, index) => {
@@ -201,15 +201,22 @@ export function tickLabelsShown(
         ? [at - TICK_INSET_PX - width, at - TICK_INSET_PX]
         : [at + TICK_INSET_PX, at + TICK_INSET_PX + width];
     const namesYear = tick.namesYear === true;
-    while (namesYear && runsInto(span) && drawn.at(-1)?.namesYear === false) {
-      drawn.pop();
+    // The plain labels it would push out go only once the year label fits.
+    let kept = drawn.length;
+    while (
+      namesYear &&
+      runsInto(span, kept) &&
+      drawn[kept - 1]?.namesYear === false
+    ) {
+      kept -= 1;
     }
-    if (!runsInto(span)) {
+    if (!runsInto(span, kept)) {
+      drawn.splice(kept);
       drawn.push({ index, span, namesYear });
     }
   });
-  const kept = new Set(drawn.map((label) => label.index));
-  return ticks.map((_, index) => kept.has(index));
+  const shown = new Set(drawn.map((label) => label.index));
+  return ticks.map((_, index) => shown.has(index));
 }
 
 /** Whether the axis counts weeks rather than months. */
