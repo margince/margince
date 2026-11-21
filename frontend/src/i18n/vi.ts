@@ -10955,7 +10955,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.capture_backfill_reconcile": "Khôi phục lượt nhập thư cũ",
   "jobs.kind.capture_confidentiality_verdict": "Kiểm tra tính bảo mật của thư",
   "jobs.kind.capture_counterparty_verdict": "Kiểm tra bên gửi thư",
-  "jobs.kind.capture_digest": "Bản tổng hợp thư buổi sáng",
   "jobs.kind.capture_enrich": "Lấy thông tin liên hệ từ chữ ký thư",
   "jobs.kind.captured_deal_refile": "Gắn hoạt động đã thu thập vào cơ hội",
   "jobs.kind.captured_deal_refile_sweep":

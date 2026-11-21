@@ -496,12 +496,11 @@ Capture spans two process roles, api and worker (see [architecture.md](architect
 
 - **`api`** serves the surface users *act on*: `connect` (for both OAuth and IMAP), `callback`,
   `disconnect`, `list`, and backfill `preview`/`start` (which queues)/`status`/`cancel`. It also serves
-  the two mail push webhooks, the morning `digest` read, the capture settings switch, and the list of
-  consumer mail domains.
+  the two mail push webhooks, the capture settings switch, and the list of consumer mail domains.
 - **`worker`** runs *every background pull* as River jobs on a schedule.
   - Those are the sync dispatcher (`30s`) → `SyncOnce` per connection, and the backfill engine (one page
     per tick). They also include each vendor's scan for watch renewal (`6h`), and the capture jobs
-    (sort every hour, enrich + digest daily).
+    (sort every hour, enrich daily).
   - The agent runner of the night helpers shares the worker process, but is a *separate* scheduler; it does not
     run capture.
 
@@ -557,9 +556,7 @@ The pipeline is live; these were left out of scope:
   imported; there is no calendar `Backfiller` on either vendor.
 - **IMAP has no backfill and no push.** It syncs forward from connect time on the poll. Mail older than
   the connection is not imported, and there is no `Backfiller` to import it.
-- **No screen just for connector health.** The `connectors[]` health rows of the digest show up as a
-  single summary link on the home digest card. That link shows the error class of the worst connection,
-  and links to Settings. There is no health screen per connector.
+- **No screen just for connector health.** There is no health screen per connector.
 
 ## Where the code lives
 
@@ -583,11 +580,11 @@ The pipeline is live; these were left out of scope:
 | The shared meeting rules both calendars build on | `internal/modules/capture/meetingmap/` |
 | The shared OAuth handshake (`authorize_url`, code and refresh exchange) | `internal/modules/capture/oauthflow/oauthflow.go`, `capture/googleconn/`, `capture/graphconn/` |
 | Connect surface + state signing + CSRF (api) | `internal/compose/connectors.go`, `connectors_imap.go` |
-| Backfill + digest HTTP surface | `internal/compose/backfilltransport.go` |
+| Backfill HTTP surface | `internal/compose/backfilltransport.go` |
 | Gmail push webhook (token + OIDC) | `internal/compose/gmailpush.go`, `capture/push.go` |
-| Background jobs (dispatcher, sync, backfill, watch renewal, digest) | `internal/compose/jobs.go`, `capturejobs.go`; `backend/cmd/worker/main.go` |
-| The tables | `raw_capture, capture_connection, capture_sync_state, capture_backfill, workspace_email_domain, capture_digest, capture_freemail_domain, capture_pending_counterparty, capture_auto_enrich_state` (+ `company_domain_disposition` in contacts) |
-| The REST contract | `backend/api/crm.yaml` (`/connectors*`, `/capture/settings`, `/capture/consumer-mail-domains`, `/digest`) |
+| Background jobs (dispatcher, sync, backfill, watch renewal) | `internal/compose/jobs.go`, `capturejobs.go`; `backend/cmd/worker/main.go` |
+| The tables | `raw_capture, capture_connection, capture_sync_state, capture_backfill, workspace_email_domain, capture_freemail_domain, capture_pending_counterparty, capture_auto_enrich_state` (+ `company_domain_disposition` in contacts) |
+| The REST contract | `backend/api/crm.yaml` (`/connectors*`, `/capture/settings`, `/capture/consumer-mail-domains`) |
 | The connect UI (Settings + onboarding) | `frontend/src/features/capture/connectors.tsx`, `onboarding-connect-panels.tsx`, `onboarding-conversation/connect-act.tsx`, `backfill.tsx` |
 
 ## Where to go next

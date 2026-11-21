@@ -22864,6 +22864,9 @@ paths:
     get:
       tags: [Capture]
       operationId: getMorningDigest
+      deprecated: true
+      x-deprecated-reason: >
+        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       x-human-only-reason: security
@@ -22876,8 +22879,6 @@ paths:
         answers `404 no_digest_for_date`, which is a different state: digests exist, that day
         has none. An empty `date=` is refused as `422 invalid_date` rather than read as the
         year one. v1 delivery is in-app; email is delivery-only later, same object.
-      parameters:
-        - { name: date, in: query, schema: { type: string, format: date }, description: 'A specific digest day; default: the latest generated.' }
       responses:
         '200':
           description: The digest.

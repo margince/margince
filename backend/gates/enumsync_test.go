@@ -282,7 +282,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"site_read.phase":                              {"internal/contracts", "SiteReadReportPhase"},
 	"site_read.status":                             {"internal/contracts", "SiteReadReportStatus"},
 	"site_read.stopped_reason":                     {"internal/contracts", "SiteReadReportStoppedReason"},
-	"stage_progression_policy.mode":                {"internal/contracts", "TransitionPolicyMode"},
 	"system_log.actor_type":                        {"internal/shared/kernel/principal", "PrincipalType"},
 	"taggable.assigned_by_kind":                    {"internal/contracts", "RecordTagAssignerKind"},
 	"team_weekly_review_coverage.absent":           {"internal/contracts", "TeamWeeklyCoverageAbsent"},
