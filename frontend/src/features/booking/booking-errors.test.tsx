@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../../i18n";
+import { LocaleProvider, translate } from "../../i18n";
 import { de } from "../../i18n/de";
 import { bookingProfile } from "../../testing/book.testkit";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
@@ -67,3 +67,25 @@ it.each(["public", "reschedule"])(
     else expect(screen.getByLabelText(de["scheduling.date"])).toBeTruthy();
   },
 );
+
+it("tells a guest an unknown booking link is gone, with no Retry", async () => {
+  installFetchStub({
+    "GET /public/booking/nobody/profile": () =>
+      jsonResponse({ status: 404, detail: "not found" }, 404),
+  });
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <BookingGuestScreen hostSlug="nobody" />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByText(translate("en", "book.linkGone")),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+});

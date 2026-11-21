@@ -321,7 +321,11 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
   });
   return (
     <div className="wrap">
-      <QueryGate query={query} pendingLabel={t("analytics.sectionForecast")}>
+      <QueryGate
+        query={query}
+        pendingLabel={t("analytics.sectionForecast")}
+        goneKey="reporting.sharedForecastGone"
+      >
         {(view) => (
           <>
             <p className="t-caption">

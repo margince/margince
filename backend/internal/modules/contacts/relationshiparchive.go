@@ -18,20 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// requireAnyRemovalGrant refuses, before any read, a seat that may remove no
-// kind of edge at all.
-func requireAnyRemovalGrant(ctx context.Context) error {
-	return auth.RequireAny(ctx, "relationship", dealseat.AnyRemovalGrant()...)
-}
-
-// requireRemovalGrant is the relationship grant for removing one stored edge
-// of kind. The anchor's update grant and row authority are asked beside it.
-func requireRemovalGrant(ctx context.Context, kind string) error {
-	return auth.RequireAny(ctx, "relationship", dealseat.RemovalGrants(kind)...)
-}
-
 func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUID, ifVersion *int64, evidence map[string]any) (relationshipRow, error) {
-	if err := requireAnyRemovalGrant(ctx); err != nil {
+	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
 		return relationshipRow{}, err
 	}
 	var out relationshipRow
@@ -45,17 +33,7 @@ func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 	if err != nil {
 		return relationshipRow{}, err
 	}
-	if err := refuseGenericProjectCompany(current.Kind); err != nil {
-		return relationshipRow{}, err
-	}
-	if err := requireRemovalGrant(ctx, current.Kind); err != nil {
-		return relationshipRow{}, err
-	}
-	anchorObject, _ := relationshipAnchor(current.Kind)
-	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
-		return relationshipRow{}, err
-	}
-	if err := ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints()); err != nil {
+	if err := requireRelationshipArchive(ctx, tx, current); err != nil {
 		return relationshipRow{}, err
 	}
 	p := storekit.NewPatch()
@@ -80,4 +58,38 @@ func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 		return relationshipRow{}, err
 	}
 	return out, promoteThenFileEmployerTwins(ctx, tx, *out.ContactID, capturedBy)
+}
+
+// requireRelationshipArchive asks the authority questions of an edge removal,
+// shared by the archive and its stage-time refusal. A deal stakeholder seat is
+// removed by whoever may write its deal, as it is added; every other kind also
+// needs the relationship delete grant. dealseat.RemovalGrants names that grant,
+// so a staged archive and an undo ask the same.
+func requireRelationshipArchive(ctx context.Context, tx pgx.Tx, current relationshipRow) error {
+	if err := refuseGenericProjectCompany(current.Kind); err != nil {
+		return err
+	}
+	if err := auth.RequireAny(ctx, "relationship", dealseat.RemovalGrants(current.Kind)...); err != nil {
+		return err
+	}
+	anchorObject, _ := relationshipAnchor(current.Kind)
+	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
+		return err
+	}
+	return ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints())
+}
+
+// stampArchivable sets each listed edge's answer from requireRelationshipArchive.
+// A screen then offers Remove where the archive would be admitted.
+func stampArchivable(ctx context.Context, tx pgx.Tx, rows []relationshipRow) error {
+	for i := range rows {
+		err := requireRelationshipArchive(ctx, tx, rows[i])
+		var kindErr *RelationshipKindError
+		allowed := err == nil
+		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) && !errors.Is(err, apperrors.ErrNotFound) && !errors.As(err, &kindErr) {
+			return err
+		}
+		rows[i].CanArchive = &allowed
+	}
+	return nil
 }

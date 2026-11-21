@@ -32,6 +32,12 @@ func TestOnlyHomesOwnQuestionIsKeptAndItsSpellingsShareOneKey(t *testing.T) {
 		t.Errorf("the default spelling keys %q, Home's explicit one %q", other, key)
 	}
 
+	// A kept day is served for hours, so only the key keeps it off the next day.
+	now = now.Add(time.Hour)
+	if next, _, _ := svc.homeKey(context.Background(), home); next == key {
+		t.Errorf("past midnight Home still asks under %q, so yesterday's kept day would be served", key)
+	}
+
 	for name, q := range map[string]worklistQuestion{
 		"another view":       {view: "decisions", scope: "mine", filter: "all", omitRelationships: true},
 		"another scope":      {view: "today", scope: "team", filter: "all", omitRelationships: true},

@@ -3495,6 +3495,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.slotTaken":
     "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
+  "common.goneBackToAnalytics": "Quay lại Phân tích",
+  "reporting.sharedForecastGone":
+    "Liên kết này không còn dùng được. Hãy hỏi bên gửi để có liên kết mới.",
+  "reporting.reportGone":
+    "Báo cáo này không tồn tại, hoặc chưa được chia sẻ với bạn.",
+  "analytics.q.gone":
+    "Câu hỏi này không tồn tại, hoặc chưa được chia sẻ với bạn.",
+  "book.linkGone":
+    "Trang đặt lịch này không khả dụng. Hãy hỏi bên gửi để có liên kết mới.",
   "common.empty": "Chưa có gì ở đây.",
   "common.saving": "Đang lưu…",
   "common.loading": "Đang tải…",
@@ -5488,6 +5497,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.roleLabel.blocker": "Người cản trở",
   "co.roleLabel.influencer": "Người có ảnh hưởng",
   "co.roleLabel.user": "Người dùng cuối",
+  "co.roleLabel.decision_maker": "Người ra quyết định",
   "co.evidence.extractedUnconfirmed": "AI trích xuất · chưa xác nhận",
   "co.evidence.previous": "Thông tin trước",
   "co.evidence.next": "Thông tin sau",
@@ -20592,8 +20602,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Deal này chưa có công ty. Thêm công ty trong “Sửa chi tiết” để đặt lịch họp.",
   "deal.committee.card": "Hội đồng mua",
   "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
-  "deal.committee.changeOnly": "Sửa bên liên quan",
-  "deal.committee.removeOnly": "Gỡ bên liên quan",
   "deal.links.card": "Liên kết",
   "deal.links.add": "Thêm liên kết",
   "deal.links.none": "Deal này chưa liên kết với bản ghi nào khác.",

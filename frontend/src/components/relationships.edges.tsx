@@ -290,27 +290,3 @@ export function invalidateAfterEdge(
     queryClient.invalidateQueries({ queryKey: worklistKey });
   }
 }
-
-type RemovalGrant = "create" | "delete";
-
-// The relationship grants that admit removing an edge of a kind. A deal
-// stakeholder comes off with the grant that put it on; a kind not named here
-// needs delete. Held equal to dealseat.RemovalGrants by
-// backend/gates/frontendremovalgrants_test.go.
-const REMOVAL_GRANTS: Readonly<Record<string, readonly RemovalGrant[]>> = {
-  deal_stakeholder: ["delete", "create"],
-};
-const DEFAULT_REMOVAL_GRANTS: readonly RemovalGrant[] = ["delete"];
-
-/**
- * mayRemoveEdge is whether a seat may take an edge of this kind off. The
- * anchor's own refusal still disables the verb with its reason.
- */
-export function mayRemoveEdge(
-  kind: string,
-  grants: Readonly<Record<RemovalGrant, boolean>>,
-): boolean {
-  return (REMOVAL_GRANTS[kind] ?? DEFAULT_REMOVAL_GRANTS).some(
-    (grant) => grants[grant],
-  );
-}

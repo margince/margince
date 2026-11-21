@@ -111,7 +111,7 @@ var assuranceSubjectsSQL = `
 		          FROM relationship r
 		         WHERE %[12]s
 		           AND r.deal_id = d.id
-		           AND r.role = $3) AS has_economic_buyer,
+		           AND lower(trim(r.role)) = $3) AS has_economic_buyer,
 		       (SELECT count(*)
 		          FROM stage_exit_criterion c
 		         WHERE c.stage_id = d.stage_id

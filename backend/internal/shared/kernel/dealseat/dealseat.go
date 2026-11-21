@@ -49,14 +49,12 @@ func SeatSQL(alias string) string {
 }
 
 // RemovalGrants are the relationship grants that admit taking an edge of
-// edgeKind off. A deal seat comes off with the grant that put it on. Every
-// other kind needs delete.
-//
-// Held by: TestTheFrontendRemovalRuleMirrorsTheServers
-// (backend/gates/frontendremovalgrants_test.go).
+// edgeKind off. A deal seat needs no grant beyond reading it, because whoever
+// may write its deal may remove it; the anchor's write check decides that.
+// Every other kind needs delete.
 func RemovalGrants(edgeKind string) []principal.Action {
 	if edgeKind == kind {
-		return []principal.Action{principal.ActionDelete, principal.ActionCreate}
+		return []principal.Action{principal.ActionDelete, principal.ActionRead}
 	}
 	return []principal.Action{principal.ActionDelete}
 }

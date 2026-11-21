@@ -59,6 +59,7 @@ function held(
 
 // One stakeholder edge on the deal, as GET /relationships?deal_id answers it.
 const EDGE = {
+  can_archive: true,
   id: "rel-1",
   kind: "deal_stakeholder",
   deal_id: DEAL,
@@ -79,6 +80,7 @@ function stubFetch(
   ],
   team: readonly RecordAssignment[] = [],
   deleted: string[] = [],
+  edge: object = EDGE,
 ) {
   vi.stubGlobal(
     "fetch",
@@ -88,7 +90,7 @@ function stubFetch(
         return new Response(null, { status: 204 });
       }
       if (request.url.includes("/relationships")) {
-        return json({ data: [EDGE], page: { next_cursor: null } });
+        return json({ data: [edge], page: { next_cursor: null } });
       }
       if (request.url.endsWith("/v1/me")) {
         return json(meFixture({ allow: { relationship: grants } }));
@@ -128,7 +130,11 @@ const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
 
 function draw(
   view: DealCoverage | undefined,
-  state: Partial<{ withheld: boolean; pending: boolean }> = {},
+  state: Partial<{
+    withheld: boolean;
+    pending: boolean;
+    canWrite: boolean;
+  }> = {},
 ) {
   render(
     <QueryClientProvider
@@ -138,7 +144,7 @@ function draw(
     >
       <LocaleProvider initial="en">
         <DealCommitteeCard
-          canWrite
+          canWrite={state.canWrite ?? true}
           dealId={DEAL}
           ownerId={OWNER}
           coverage={view}
@@ -352,9 +358,9 @@ describe("the deal's committee card", () => {
     );
   });
 
-  // The Member role holds create and update but not delete. The seat that
-  // added a stakeholder takes it off again, and the fold names both verbs.
-  it("lets a seat that may add a stakeholder remove one without the delete grant", async () => {
+  // The default member holds no relationship delete grant. Writing the deal is
+  // what lets that seat take a stakeholder off, as the server admits.
+  it("offers Remove to a deal writer who holds no delete grant", async () => {
     const deleted: string[] = [];
     stubFetch(["read", "create", "update"], [], deleted);
     const user = userEvent.setup();
@@ -363,9 +369,8 @@ describe("the deal's committee card", () => {
       await screen.findByText(translate("en", "deal.committee.change")),
     );
     await user.click(await screen.findByTestId("remove-relationship"));
-    const dialog = await screen.findByRole("dialog");
     await user.click(
-      within(dialog).getByRole("button", {
+      within(await screen.findByRole("dialog")).getByRole("button", {
         name: translate("en", "rel.remove"),
       }),
     );
@@ -374,54 +379,32 @@ describe("the deal's committee card", () => {
     );
   });
 
-  // The fold promises only the verbs its rows offer.
-  it("names the fold for edit alone when the seat may not remove", async () => {
-    stubFetch(["read", "update"]);
+  // The list says per edge whether the caller may archive it. A stakeholder on
+  // a deal the seat cannot write gets no Remove, whatever the delete grant.
+  it("offers no Remove on an edge the server says the caller may not archive", async () => {
+    stubFetch(["read", "create", "update", "delete"], [], [], {
+      ...EDGE,
+      can_archive: false,
+    });
     const user = userEvent.setup();
     draw(coverage());
     await user.click(
-      await screen.findByText(translate("en", "deal.committee.changeOnly")),
+      await screen.findByText(translate("en", "deal.committee.change")),
     );
-    expect(
-      await screen.findByRole("button", {
-        name: translate("en", "rel.editStakeholder"),
-      }),
-    ).toBeInTheDocument();
+    await screen.findByRole("button", {
+      name: translate("en", "rel.editStakeholder"),
+    });
     expect(screen.queryByTestId("remove-relationship")).toBeNull();
+  });
+
+  // A reader who may not write the deal is offered no fold.
+  it("offers no change for a reader who cannot write the deal", async () => {
+    stubFetch(["read", "create", "update", "delete"]);
+    draw(coverage(), { canWrite: false });
+    await screen.findByText("Mai Trần");
     expect(
       screen.queryByText(translate("en", "deal.committee.change")),
     ).toBeNull();
-  });
-
-  it("names the fold for removal alone when the seat may not edit", async () => {
-    stubFetch(["read", "create"]);
-    const user = userEvent.setup();
-    draw(coverage());
-    await user.click(
-      await screen.findByText(translate("en", "deal.committee.removeOnly")),
-    );
-    expect(
-      await screen.findByTestId("remove-relationship"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", {
-        name: translate("en", "rel.editStakeholder"),
-      }),
-    ).toBeNull();
-  });
-
-  // A reader who may neither change nor remove an edge is offered no fold.
-  it("offers no change for a reader without the grants", async () => {
-    stubFetch(["read"]);
-    draw(coverage());
-    await screen.findByText("Mai Trần");
-    for (const key of [
-      "deal.committee.change",
-      "deal.committee.changeOnly",
-      "deal.committee.removeOnly",
-    ] as const) {
-      expect(screen.queryByText(translate("en", key))).toBeNull();
-    }
   });
 
   it("names who talks to which seat, and the seat nobody has reached", async () => {

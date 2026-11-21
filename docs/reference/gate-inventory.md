@@ -90,6 +90,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendcurrencies_test.go` | H3 | The currency picker must never offer a code the server refuses. |
 | `frontendcustomfieldtypes_test.go` | H3 | The custom-field types are one list on both sides of the wire. |
 | `frontenddatenotation_test.go` | H3 | A server-written brief and the app around it must write one day the same way, or the reader sees 16/11/2026 beside 2026-11-16 on one screen. |
+| `frontenddealroles_test.go` | H3 | A stored deal role is free text, and both sides decide the same question. |
 | `frontenddue_window_test.go` | H3 | The task due-date box offers days inside the window the server accepts. |
 | `frontendeffectfailures_test.go` | H2 | A failed approval's line reads in the reader's language when the browser has words for its code. |
 | `frontendemailtext_test.go` | H3 | The browser and the server split a mail body by the same rules, or a row's preview and the message it opens disagree about where the sender stopped writing. |
@@ -124,7 +125,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendproviders_test.go` | H3 | The routing form offers the adapters and profiles the server accepts, and no others. |
 | `frontendrelativedays_test.go` | H1 | The filter builder bounds a "days ago" count where the engine does. |
 | `frontendremoteimagebox_test.go` | H3 | The approval card offers the drawn signature only where the list's markup carries the box marker. |
-| `frontendremovalgrants_test.go` | H3 | The browser draws Remove on an edge from its own table of removal grants, and the server admits the archive from dealseat.RemovalGrants. |
 | `frontendretaindays_test.go` | H3 | The retention editor refuses a window past its ceiling before it sends one. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat may do rather than which role it holds. |
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one list row carries, or the chip strip's "+N" counts a number nobody has. |

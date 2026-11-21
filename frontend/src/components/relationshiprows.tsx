@@ -39,16 +39,13 @@ import {
   type Relationship,
   type RelationshipScope,
   relationshipEditFields,
+  roleEditable,
   roleSent,
   roleShown,
   scopeCopy,
   scopeQueryKey,
 } from "./relationships";
-import {
-  dateRangeParts,
-  mayRemoveEdge,
-  RANGE_DASH,
-} from "./relationships.edges";
+import { dateRangeParts, RANGE_DASH } from "./relationships.edges";
 
 // Each date is held whole, since an ISO date breaks at its hyphens, so the
 // range breaks only after its dash.
@@ -148,16 +145,13 @@ export function RelationshipRows({
   const datesOf = (rel: Relationship) =>
     dateRange(rel, t, locale, zone, employmentZone);
   // The object half of each verb's gate, asked as the server asks it
-  // (relationship:create on an add, :update on an edit, mayRemoveEdge on a
+  // (relationship:create on an add, :update on an edit, :delete on a
   // removal). A verb the role holds no grant for is withheld outright — there
   // is no fact about the record to report — where the anchor's refusal above
   // keeps the verb and says why.
   const canUpdate = useCanWrite("relationship", "update");
-  const grants = {
-    create: useCanWrite("relationship", "create"),
-    delete: useCanWrite("relationship", "delete"),
-  };
-  const canRemove = (rel: Relationship) => mayRemoveEdge(rel.kind, grants);
+  // The server answers per edge, by the rule the archive itself applies.
+  const mayRemove = (rel: Relationship) => rel.can_archive === true;
   const query = useQuery({
     queryKey: scopeQueryKey(scope),
     queryFn: () => fetchRelationships(scope),
@@ -221,7 +215,7 @@ export function RelationshipRows({
   // trailing cell and the stacked block's foot. Two copies would be two
   // versions of a hard DELETE the day either one is touched.
   const verbsFor = (rel: Relationship) =>
-    canUpdate || canRemove(rel) ? verbBar(rel) : null;
+    canUpdate || mayRemove(rel) ? verbBar(rel) : null;
   const verbBar = (rel: Relationship) => (
     <div
       className={
@@ -239,7 +233,7 @@ export function RelationshipRows({
           record={{
             id: rel.id,
             version: rel.version,
-            role: roleShown(rel, t),
+            role: roleEditable(rel, t),
             stored_role: rel.role ?? "",
             started_at: rel.started_at ?? "",
             ended_at: rel.ended_at ?? "",
@@ -273,7 +267,7 @@ export function RelationshipRows({
           recordKey="relationship"
         />
       )}
-      {canRemove(rel) && (
+      {mayRemove(rel) && (
         <Button
           variant="danger"
           reasonId={refusedReasonId}

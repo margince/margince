@@ -143,7 +143,7 @@ func championSeats(
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT r.deal_id,
-		       array_remove(array_agg(r.contact_id) FILTER (WHERE r.role = '%[2]s'), NULL)
+		       array_remove(array_agg(r.contact_id) FILTER (WHERE lower(trim(r.role)) = '%[2]s'), NULL)
 		  FROM relationship r
 		  JOIN contact p ON %[4]s
 		 WHERE %[5]s AND r.deal_id = ANY($%[1]d)

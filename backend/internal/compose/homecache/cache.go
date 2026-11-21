@@ -26,10 +26,10 @@ import (
 // for what colleagues and background work changed.
 const Life = 5 * time.Minute
 
-// StaleGrace is how long past Life an answer is still served while it is read
-// again behind it. Grant expiry, a snooze's end, the fence and a forget still
-// end it at once.
-const StaleGrace = 10 * time.Minute
+// StaleGrace is how long past Life a day answer is still served, flagged stale,
+// while it is read again behind it. Home's key names the day, which ends it
+// sooner. Grant expiry, a snooze's end, the fence and a forget end it at once.
+const StaleGrace = 24 * time.Hour
 
 // Read names one of Home's cached reads.
 type Read string
@@ -259,6 +259,10 @@ func Store[A Answer](
 		return fmt.Errorf("homecache: encoding a %s answer: %w", read, err)
 	}
 	err = database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+		// Nothing else deletes an answer that outlived its day, and it holds display text.
+		if _, err := tx.Exec(ctx, `DELETE FROM home_read_cache WHERE reader_id = $1 AND valid_until <= now()`, reader); err != nil {
+			return err
+		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO home_read_cache
 			       (reader_id, read, request_key, fence, computed_at, valid_until, walk_id, payload)

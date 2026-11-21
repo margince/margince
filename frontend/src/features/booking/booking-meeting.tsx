@@ -104,7 +104,11 @@ export function BookingMeetingScreen({
             </Button>
           </div>
         )}
-        <QueryGate pendingLabel={t("common.loading")} query={query}>
+        <QueryGate
+          pendingLabel={t("common.loading")}
+          query={query}
+          goneKey={host ? undefined : "book.linkGone"}
+        >
           {(meeting) => {
             const cancelable =
               meeting.status !== "canceled" && meeting.status !== "canceling";

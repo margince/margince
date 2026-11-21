@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -272,7 +273,9 @@ func (t companyCoverageTool) Handle(ctx context.Context, in json.RawMessage) (js
 	}
 	noteDerivedContent(ctx)
 	noteEvidence(ctx, datasource.EntityDeal, args.DealID)
-	for _, seat := range answer.Stakeholders {
+	for i, seat := range answer.Stakeholders {
+		// A typed role would read to the model as a buying role it repeats.
+		answer.Stakeholders[i].Role = dealrole.Recorded(seat.Role)
 		noteEvidence(ctx, datasource.EntityContact, seat.ContactID)
 	}
 	return json.Marshal(answer)

@@ -293,19 +293,20 @@ function Committee({ members }: Readonly<{ members: CommitteeMember[] }>) {
   return (
     <p className="t-caption ct-committee">
       <span>{t("contact.commercial.committee")}</span>
-      {members.map((member) => (
-        <span className="ct-seat" key={member.contact_id}>
-          <span className="ct-seat-name">{member.full_name}</span>
-          {member.role && (
-            <>
-              {" "}
-              <span className="ct-seat-role">
-                {dealRoleLabel(member.role, t)}
-              </span>
-            </>
-          )}
-        </span>
-      ))}
+      {members.map((member) => {
+        const role = dealRoleLabel(member.role ?? "", t);
+        return (
+          <span className="ct-seat" key={member.contact_id}>
+            <span className="ct-seat-name">{member.full_name}</span>
+            {role && (
+              <>
+                {" "}
+                <span className="ct-seat-role">{role}</span>
+              </>
+            )}
+          </span>
+        );
+      })}
     </p>
   );
 }

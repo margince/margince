@@ -325,11 +325,10 @@ func (said statusCopy) openingReason(seat Seat, seats int) string {
 		seats, said.seatWords(seat))
 }
 
-// roleWord is a stakeholder role as a sentence says it. An unknown role is
-// returned as it is stored rather than dropped: the card would otherwise write
-// "Open with Maria Schmidt, the ." for a role added after this build.
+// roleWord is a stakeholder role as a sentence says it. Seats reach it only
+// through bestSeat, so the role is always one of openingRoles and has a label.
 func (said statusCopy) roleWord(role string) string {
-	return dealrole.Word(role, string(said.Lang()))
+	return dealrole.Label(role, string(said.Lang()))
 }
 
 func move(action, reason string, args map[string]any, evidence ...crmcontracts.DealNextBestActionEvidence) crmcontracts.DealStatusCardMove {

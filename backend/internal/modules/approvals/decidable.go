@@ -132,7 +132,7 @@ func narrowToWrittenCoTargets(ctx context.Context, tx pgx.Tx, rows []row, out []
 }
 
 // decisionActions are the actions that admit one decision grant. An owner's
-// archive may use update, and a deal seat's archive the grant that seated it.
+// archive may use update, and a deal seat's archive its read grant.
 // narrowToOwnArchives then narrows a decider without delete to those rows.
 func decisionActions(kind string, grant DecisionGrant) []principal.Action {
 	if kind != kindArchiveRecord || grant.Action != principal.ActionDelete {
