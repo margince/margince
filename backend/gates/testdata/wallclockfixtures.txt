@@ -115,6 +115,7 @@ internal/compose/integration/channels/telegram_sinkerasure_integration_test.go 1
 internal/compose/integration/collections/listlive_integration_test.go 1
 internal/compose/integration/comms_send_integration_test.go 1
 internal/compose/integration/company360/company360_integration_test.go 1
+internal/compose/integration/company360/company360_querycount_integration_test.go 1
 internal/compose/integration/company_computed_integration_test.go 1
 internal/compose/integration/companylogo_integration_test.go 4
 internal/compose/integration/companyobjectgrant_integration_test.go 1
@@ -419,6 +420,7 @@ internal/modules/contacts/occurrenceimage_integration_test.go 1
 internal/modules/contacts/profilefieldprecedence_integration_test.go 1
 internal/modules/contacts/promoteconsent_integration_test.go 1
 internal/modules/contacts/strengthasof_integration_test.go 2
+internal/modules/contacts/strengthstored_integration_test.go 5
 internal/modules/contacts/vcardimport_integration_test.go 1
 internal/modules/deals/edgegrant_test.go 5
 internal/modules/deals/fxrates_integration_test.go 2
