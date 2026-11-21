@@ -76,14 +76,12 @@ It says nothing about a result that was only *missing* at merge time. A reposito
 past `ci` is a standing decision here, so a missing result is expected. A warning on the expected
 state gets turned off, and would hide the two findings above.
 
-It runs after the merge, so it cannot stop one. It shows a bad result at once, at push time, and names who caused
-it. That way the cost does not show up two hours later on the pull request of someone
-else. To stop such merges is a decision about branch rules
-([#2496](https://github.com/margince/margince/issues/2496)).
-[`scripts/check-merge-verdict.sh`](../../scripts/check-merge-verdict.sh) makes the call. It reads
-its evidence from the environment, so a fixture can drive every case (`make test-merge-verdict`).
-Each finding goes in one issue per pull request that caused it, through the same reporter the health check
-uses.
+It runs after the merge, so it cannot stop one. It shows a bad result at once, at push time, and
+names who caused it. Then the cost does not show up two hours later on the pull request of another.
+To stop such merges is a decision about branch rules ([#2496](https://github.com/margince/margince/issues/2496)).
+[`scripts/check-merge-verdict.sh`](../../scripts/check-merge-verdict.sh) makes the call. It reads its
+evidence from the environment, so a fixture can drive every case (`make test-merge-verdict`). Each
+finding goes in one issue per pull request that caused it, through the reporter the health check uses.
 
 ## `review-coverage.yml`
 
@@ -137,16 +135,14 @@ requests close no issue. Without a way to say so, the check would warn them, or 
 It does not decide whether a pull request fixes an issue it did not name. A machine cannot decide
 that; the declaration asks a human to answer it.
 
-It warns and never fails, because a job that failed on a finding would be a gate, no matter what its name
-said. `edited` is a trigger so the comment is deleted as soon as the author adds the line. The
-comment is deleted, not changed into a note that says it passed, so a finding that is fixed leaves nothing
-behind.
+It warns and never fails, because a job that failed on a finding would be a gate, no matter what its
+name said. `edited` is a trigger so the comment is deleted as soon as the author adds the line. The
+comment is deleted, not changed into a note that it passed, so a fixed finding leaves nothing behind.
 
 A failed query for the pull request data stops without a comment. To read it as an empty list
-would warn a pull request whose closing data is right. The check is made blocking only if it is measured
-that users do not read the warning.
-[`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh) makes the
-report. It reads its evidence from the environment, so a fixture can drive every case
+would warn a pull request whose closing data is right. The check is made blocking only if it is
+measured that users do not read the warning. [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh)
+makes the report. It reads its evidence from the environment, so a fixture can drive every case
 (`make test-closing-declaration`).
 
 ## `docs-describing.yml`
@@ -218,18 +214,16 @@ will keep happening. This workflow makes the delay shorter and names the cause. 
 finds a break when a pull request that has nothing to do with it goes red.
 
 On failure it files one issue per broken lane. The issue carries the commits that landed since the
-health check was last green, with their authors
-([`scripts/main-health-range.sh`](../../scripts/main-health-range.sh)). That range names more
-commits than the real cause, by design. A list of 12 commits that may have caused it helps,
-and a guess at one sends the wrong colleague looking.
+health check was last green, with their authors ([`scripts/main-health-range.sh`](../../scripts/main-health-range.sh)).
+That range names more commits than the real cause, by design. A list of 12 commits that may have
+caused it helps, and a guess at one sends the wrong colleague looking.
 
 As the only workflow that publishes the SonarCloud analysis of `main`, the scan job `needs` every
-coverage lane (backend, real-Postgres, SPA). It runs only when all three pass, because a scan
-missing a report would publish 0% for that tree. A stored analysis stays as it
-was while the nightly quality gate job keeps reporting it as current. So a red lane leaves the
-analysis old for two hours, and the report job files an issue about it. The report job also files
-an issue when the scan itself fails, because a failed publish leaves the last analysis looking
-current.
+coverage lane (backend, real-Postgres, SPA). It runs only when all three pass, because a scan missing
+a report would publish 0% for that tree. A stored analysis stays as it was while the nightly quality
+gate job keeps reporting it as current. So a red lane leaves the analysis old for two hours, and the
+report job files an issue about it. The report job also files an issue when the scan itself fails,
+because a failed publish leaves the last analysis looking current.
 
 How often it runs is the setting that matters. Every two hours costs ~15 jobs a run. At 8 merges
 an hour, it cuts the list of commits that may have caused a red to about 12.
