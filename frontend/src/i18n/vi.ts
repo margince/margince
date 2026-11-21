@@ -8314,7 +8314,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unprovenRefuses": "Không thể gửi cho đến khi ghi nhận lý do.",
   "sendPermission.missingContext": "Tin nhắn này còn thiếu một thông tin",
   "sendPermission.missingPermission": "Cần được phép gửi thư này",
-  "sendPermission.reason.chooseDeal": "Chọn giao dịch cho lần liên hệ lại này.",
+  "sendPermission.reason.dealFact":
+    "Không có giao dịch đang mở với bên nhận này để hỗ trợ việc theo dõi này.",
   "sendPermission.reason.footerIncomplete":
     "Đọc thông tin chân trang bên dưới. Bạn có thể gửi email này kèm lý do được ghi lại.",
   "sendPermission.footer.language": "{detail} bằng {language}",
@@ -22073,6 +22074,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.card.askedOpen": "Mở tin nhắn",
   "lead.card.qualified": "Nếu đủ điều kiện",
   "lead.card.qualifiedContact": "Liên hệ",
+  "lead.card.qualifiedCompany": "Công ty",
   "lead.card.qualifiedDeal": "Deal mới",
   "lead.card.qualifiedDealOptional": "Có thể mở deal ngay trong cùng bước",
   "lead.card.qualifiedNewContact": "Một liên hệ mới",
