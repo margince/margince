@@ -59,6 +59,153 @@
       "self_judged": false
     }
   ],
+  "rest_door": {
+    "models": [
+      {
+        "model": "claude-sonnet-5-5@claude-cli",
+        "name": "claude-sonnet-5-5",
+        "trust": "⚪ Not enough tested yet",
+        "cases_with_a_committed_run": 4,
+        "cases_that_reached_their_bar": 2,
+        "cases_below_their_bar": 2,
+        "runs": 8,
+        "passed": 4,
+        "reliability": 0.5,
+        "cases_below_their_bar_named": [
+          "case62_held_meetings_to_opportunities",
+          "case63_is_she_already_here"
+        ],
+        "route": "Claude Code CLI",
+        "self_judged": true
+      },
+      {
+        "model": "gpt-5.6-sol@codex-cli",
+        "name": "gpt-5.6-sol",
+        "trust": "⚪ Not enough tested yet",
+        "cases_with_a_committed_run": 1,
+        "cases_that_reached_their_bar": 1,
+        "cases_below_their_bar": 0,
+        "runs": 2,
+        "passed": 2,
+        "reliability": 1,
+        "cases_below_their_bar_named": [],
+        "route": "Codex CLI",
+        "self_judged": false
+      }
+    ],
+    "cases": [
+      {
+        "name": "case61_what_have_i_promised",
+        "title": "What have I promised",
+        "file": "case61-what-have-i-promised.yaml",
+        "criteria": [
+          1
+        ],
+        "requires": [
+          "review_commitments"
+        ],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true
+          },
+          {
+            "model": "gpt-5.6-sol@codex-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "gpt:cli",
+            "search": "semantic"
+          }
+        ]
+      },
+      {
+        "name": "case62_held_meetings_to_opportunities",
+        "title": "Held meetings that became opportunities",
+        "file": "case62-held-meetings-to-opportunities.yaml",
+        "criteria": [
+          1
+        ],
+        "requires": [],
+        "requires_one_of": [
+          [
+            "read_analytics",
+            "read_reports",
+            "run_report"
+          ]
+        ],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 0,
+            "pass_at": 2,
+            "held": false,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true
+          }
+        ]
+      },
+      {
+        "name": "case63_is_she_already_here",
+        "title": "Is she already here",
+        "file": "case63-is-she-already-here.yaml",
+        "criteria": [
+          1
+        ],
+        "requires": [
+          "resolve_entities"
+        ],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 0,
+            "pass_at": 2,
+            "held": false,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true
+          }
+        ]
+      },
+      {
+        "name": "case64_catch_me_up_and_the_brief",
+        "title": "Catch me up, and show me the brief",
+        "file": "case64-catch-me-up-and-the-brief.yaml",
+        "criteria": [
+          1
+        ],
+        "requires": [
+          "catch_me_up_on",
+          "read_brief"
+        ],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true
+          }
+        ]
+      }
+    ]
+  },
   "judges": [
     {
       "model": "claude-haiku-5-5",

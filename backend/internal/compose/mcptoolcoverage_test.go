@@ -54,6 +54,7 @@ const (
 	e2eLLMScenarioDir  = "../../../e2e/llm/scenarios"
 	e2eLLMCriteriaFile = "../../../e2e/llm/criteria.yaml"
 	e2eLLMRecordDir    = "aicert/records/mcp_e2e"
+	e2eLLMRESTDir      = "aicert/records/mcp_e2e_rest"
 	mcpDocsDir         = "../../../docs/reference"
 )
 
@@ -241,6 +242,9 @@ type mcpToolCoverage struct {
 	// Models is the lane per model that has run it. Empty until a paid sweep is
 	// committed, which the page says outright rather than implying nothing works.
 	Models []modelCoverage `json:"models"`
+	// REST is the same lane through the REST door, which the MCP models above
+	// never include: one assistant's two doors are two different results.
+	REST doorCoverage `json:"rest_door"`
 	// Judges is how well each candidate JUDGE reads the lane's criteria, scored
 	// against human-authored fixtures. It rides on this page rather than its own
 	// because a pass rate and the accuracy of whoever decided it are one fact: a
@@ -410,9 +414,7 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	judgeEvalHarnessArtifacts.AssertAllMatched(t)
 
 	ran := modelsThatRan(cases)
-	for _, model := range ran {
-		report.Models = append(report.Models, summariseModel(cases, model))
-	}
+	report.Models, report.REST = summariseDoors(t, cases, ran)
 	for _, c := range cases {
 		named, ok := catalog[c.Name]
 		if !ok {

@@ -88,3 +88,40 @@ func TestEveryScenarioNamesItsJob(t *testing.T) {
 		}
 	}
 }
+
+// A bridge verdict compares models and a CLI verdict does not, so the two never
+// share the main jobs table.
+func TestBridgeResultsAreKeptOutOfTheCLIJobsTable(t *testing.T) {
+	models := []modelCoverage{
+		{Model: "claude-sonnet-5-5@claude-cli"}, {Model: "claude-sonnet-5-5"}, {Model: "gpt-5.6-sol@codex-cli"},
+	}
+	cli, neutral := splitByHarness(models)
+	if len(cli) != 2 || len(neutral) != 1 || neutral[0].Model != "claude-sonnet-5-5" {
+		t.Errorf("split = %v / %v, want the two CLI folders apart from the bare one", cli, neutral)
+	}
+}
+
+func TestAJobNamesTheSeatItRunsAs(t *testing.T) {
+	for passport, want := range map[string]string{"": "an admin", "wide": "an admin", "rep": "a rep", "readonly": "read-only"} {
+		if got := whoAsks(passport); got != want {
+			t.Errorf("whoAsks(%q) = %q, want %q", passport, got, want)
+		}
+	}
+}
+
+// The REST door's verdicts are committed, so the page must read some. A reader
+// that found none would publish "not run yet" over results that exist.
+func TestTheRESTDoorIsReadFromItsOwnTree(t *testing.T) {
+	door, err := readDoor(e2eLLMScenarioDir, e2eLLMRESTDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(door.Models) == 0 || len(door.Cases) == 0 {
+		t.Fatalf("read %d models and %d cases from %s; its verdicts are committed", len(door.Models), len(door.Cases), e2eLLMRESTDir)
+	}
+	for _, m := range door.Models {
+		if onNeutralHarness(m.Model) {
+			t.Errorf("%s: a REST verdict comes from a CLI, and this folder names none", m.Model)
+		}
+	}
+}

@@ -25,6 +25,8 @@ func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
 	writeCoverageIntro(&p, r)
 	writeCoverageAssistants(&p, r)
 	writeCoverageJobs(&p, r)
+	writeCoverageNeutral(&p, r)
+	writeCoverageREST(&p, r)
 	p.WriteString("---\n\n## For engineers\n\nEverything below is the detail behind the two tables above: " +
 		"which tools each job requires, every run's numbers, and what no job tests yet.\n\n")
 	writeCoverageHowToRead(&p)

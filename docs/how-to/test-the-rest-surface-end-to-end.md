@@ -43,7 +43,8 @@ in REST mode when the assistant did the right thing. Read the transcript first.
 ## The verdicts
 
 The verdicts go to `backend/internal/compose/aicert/records/mcp_e2e_rest/<folder>/` and say
-`door: rest`. [mcp-tool-coverage.md](../reference/mcp-tool-coverage.md) does not read that folder yet.
+`door: rest`. [mcp-tool-coverage.md](../reference/mcp-tool-coverage.md) shows them in a table of
+their own, apart from the MCP results.
 
 ## What it costs
 

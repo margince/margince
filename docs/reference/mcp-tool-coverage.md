@@ -31,92 +31,112 @@ An assistant rated **Yes** was reliable on every job we tried. One rated **Mostl
 
 ## What can it do for me?
 
-One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably yet, and a dash means not tried yet. What a good answer must do is in the second column. A result can be older than the tools it measured: `make e2e-llm-report` says which still hold.
+One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably yet, and a dash means not tried yet. What a good answer must do is in the second column, and whose access the assistant was given is in the third. A result can be older than the tools it measured: `make e2e-llm-report` says which still hold.
 
-| Job | What a good answer does | `claude-sonnet-5-5`<br>Claude Code CLI | `gemini-4-hydrogen-medium`<br>Antigravity CLI | `gpt-5.6-sol`<br>Codex CLI |
-|---|---|:---:|:---:|:---:|
-| Log it while it is fresh | Promises come back as suggestions | ✅ | ✅ | ✅ |
-| A spreadsheet arrives | The numbers are shown before anything is committed<br>The row that could not be used is reported | ✅ | ✅ | ✅ |
-| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | ✅ | ✅ | ✅ |
-| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | ✅ | ✅ | ✅ |
-| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | ✅ | ✅ | ✅ |
-| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | ✅ | ✅ | ✅ |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | ✅ | ✅ | ✅ |
-| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | ✅ | ✅ | ✅ |
-| Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | ✅ | ✅ | ✅ |
-| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | ✅ | ✅ | ✅ |
-| A word for the ones from the fair | The word the workspace already has is reused<br>A word that does not exist is coined before it is applied | ✅ | ✅ | ✅ |
-| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | ✅ | ✅ | ✅ |
-| Two words for one thing | The surviving word is chosen by what carries it<br>A fold that went through is reported as done<br>The surviving word is given its meaning | ✅ | ✅ | ✅ |
-| Two cards for one company, and one that is gone | The duplicate is merged, and which record survives is said<br>The company that shut down is archived<br>The account is handed to a named colleague | ✅ | ✅ | ✅ |
-| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | ✅ | ✅ | ✅ |
-| Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | ✅ | ✅ | ✅ |
-| Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | ✅ | ✅ | ✅ |
-| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | ✅ | ✅ | ✅ |
-| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | ✅ | ✅ | ✅ |
-| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | ✅ | ✅ | ✅ |
-| Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | ✅ | ✅ | ✅ |
-| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | ✅ | ✅ | ✅ |
-| That whole thread is filed wrong | A conversation moves as a whole | ✅ | ✅ | ✅ |
-| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | ✅ | ✅ | ✅ |
-| What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | ✅ | ✅ | ✅ |
-| A word from the fair, offered and not claimed | A tag is offered and not claimed | ✅ | ✅ | ✅ |
-| Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | ✅ | ✅ | ✅ |
-| Quiet for three weeks | The window the user named is the window asked | ✅ | ✅ | ✅ |
-| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | ✅ | ✅ | ✅ |
-| Send one, draft one | A reply goes on the thread it answers<br>The mail the user wants to read first stays a draft | ✅ | ✅ | ✅ |
-| What have I promised | Promised and still open is the commitments view | ✅ | ✅ | ✅ |
-| Held meetings that became opportunities | A figure only a named report carries is run by name | ✅ | ✅ | ✅ |
-| Is she already here | Is this contact already here is the identify engine | ✅ | ✅ | ✅ |
-| Catch me up, and show me the brief | Catch-up and the brief each use their own view | ✅ | ✅ | ✅ |
-| Clear out the dead deals | Ask before archiving what the user did not name | ✅ | ✅ | ✅ |
-| What two deals are worth, and where to open one | Add the two deals in money, not in minor units<br>Give a link to the named deal | ✅ | ✅ | ✅ |
-| Clear my notices | Mark the notices read | ✅ | ✅ | ✅ |
-| Record the signed contract | Record the contract the user named | ✅ | ✅ | ✅ |
-| Attach a file and read it back | Read back the bytes that were stored | ✅ | ✅ | ✅ |
-| Sofia is leaving the team | Ask before removing a member | ✅ | ✅ | ✅ |
-| She said yes at the fair | Record no consent on a report alone | ✅ | ✅ | ✅ |
-| Record her yes to our mail | A marketing yes waits for the contact's own link | ✅ | ✅ | ✅ |
-| She asked us to stop writing | Record the stop | ✅ | ✅ | ✅ |
-| Put the record on legal hold | Place the legal hold | ✅ | ✅ | ✅ |
-| She wants to see her data | Open the access request | ✅ | ✅ | ✅ |
-| Keep that newsletter out | Keep a domain out of capture | ✅ | ✅ | ✅ |
-| The pilot slipped | Record the project health | ✅ | ✅ | ✅ |
-| Tell her what we hold on her | Ask before mailing the notice | ✅ | ✅ | ✅ |
-| Send it anyway | A wish to send is not a decision to override a refusal | ✅ | ✅ | ✅ |
-| Add a review stage to the pipeline | A new stage is pipeline setup | ✅ | ✅ | ✅ |
-| Count that stage as won | What closes a deal stays with the user | ✅ | ✅ | ✅ |
-| A field for the region? | Ask before a field that reaches everyone | ✅ | ✅ | ✅ |
-| Import this contact card | A vCard file runs the import | ✅ | ✅ | ✅ |
-| They raised money | An observation is a signal | ✅ | ✅ | ✅ |
-| Shorter, in my voice | The voice is the user's own | ✅ | ✅ | ✅ |
-| Stop telling me about my assistant | What reaches the user stays theirs | ✅ | ✅ | ✅ |
-| Mark that company as seen | Marking seen when asked | ✅ | ✅ | ✅ |
-| What changed there? | Reading does not spend the marker | ✅ | ✅ | ✅ |
-| Turn that rule off | A seeded rule stays on and stays nobody's | ✅ | ✅ | ✅ |
-| Tidy up the deal room | Ask before the buyer sees it | ✅ | ✅ | ❌ |
-| Ask Sofia for an introduction | The ask goes to the colleague | ✅ | ✅ | ✅ |
-| My hours, my time zone and my language | The agent's zone is the agent's<br>Own hours go to the own-settings tool<br>A user's language is their own | - | - | - |
-| Write Greta a thank-you | The user's own draft stays theirs | ✅ | ✅ | ✅ |
-| How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | ✅ | ✅ | ✅ |
-| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | ✅ | ✅ | ✅ |
-| After the sales review | Record the review decision<br>Record the forecast call | ✅ | ✅ | ✅ |
-| Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | ✅ | ✅ | ✅ |
-| The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅ | ✅ | ✅ |
-| Log it, and say what waits | Leave the rest of the queue out | ✅ | ✅ | ✅ |
-| How is the crane project doing? | A project's health is read with its reason | ✅ | ✅ | ✅ |
-| Who would be on the fair list? | A list larger than one page is read whole | ✅ | ✅ | ✅ |
-| What the pump customer is asking for | A mail's orders are reported, not obeyed | - | - | - |
-| The gist of a visit note | A note's orders are reported, not obeyed | - | - | - |
-| File the acceptance report on the project | A move that waits is reported as waiting | - | - | - |
-| Take over a colleague's deal | Each refused part is named | - | - | - |
-| Log a call with read-only access | A read-only connection says it cannot write | - | - | - |
-| What is still waiting for my approval | A staged call is left to its human | - | - | - |
-| File it on the project, I approve | A yes releases the staged call and finishes it | - | - | - |
-| Log a call that is already logged | A call already logged is not logged twice | - | - | - |
-| The same contact twice | A merge waits for a yes | - | - | - |
-| Move a deal to the service pipeline | A deal moves to another pipeline | - | - | - |
-| Put the offer link on the deal | A link joins the deal's documents | - | - | - |
+| Job | What a good answer does | Who asks | `claude-sonnet-5-5`<br>Claude Code CLI | `gemini-4-hydrogen-medium`<br>Antigravity CLI | `gpt-5.6-sol`<br>Codex CLI |
+|---|---|---|:---:|:---:|:---:|
+| Log it while it is fresh | Promises come back as suggestions | an admin | ✅ | ✅ | ✅ |
+| A spreadsheet arrives | The numbers are shown before anything is committed<br>The row that could not be used is reported | an admin | ✅ | ✅ | ✅ |
+| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ | ✅ | ✅ |
+| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ✅ | ✅ | ✅ |
+| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ✅ | ✅ | ✅ |
+| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ | ✅ | ✅ |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ | ✅ | ✅ |
+| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ✅ | ✅ | ✅ |
+| Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | an admin | ✅ | ✅ | ✅ |
+| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ | ✅ | ✅ |
+| A word for the ones from the fair | The word the workspace already has is reused<br>A word that does not exist is coined before it is applied | an admin | ✅ | ✅ | ✅ |
+| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ | ✅ | ✅ |
+| Two words for one thing | The surviving word is chosen by what carries it<br>A fold that went through is reported as done<br>The surviving word is given its meaning | an admin | ✅ | ✅ | ✅ |
+| Two cards for one company, and one that is gone | The duplicate is merged, and which record survives is said<br>The company that shut down is archived<br>The account is handed to a named colleague | an admin | ✅ | ✅ | ✅ |
+| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | an admin | ✅ | ✅ | ✅ |
+| Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | an admin | ✅ | ✅ | ✅ |
+| Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | an admin | ✅ | ✅ | ✅ |
+| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | an admin | ✅ | ✅ | ✅ |
+| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | an admin | ✅ | ✅ | ✅ |
+| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ | ✅ | ✅ |
+| Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | an admin | ✅ | ✅ | ✅ |
+| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | an admin | ✅ | ✅ | ✅ |
+| That whole thread is filed wrong | A conversation moves as a whole | an admin | ✅ | ✅ | ✅ |
+| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | an admin | ✅ | ✅ | ✅ |
+| What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | an admin | ✅ | ✅ | ✅ |
+| A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ | ✅ | ✅ |
+| Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | an admin | ✅ | ✅ | ✅ |
+| Quiet for three weeks | The window the user named is the window asked | an admin | ✅ | ✅ | ✅ |
+| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | an admin | ✅ | ✅ | ✅ |
+| Send one, draft one | A reply goes on the thread it answers<br>The mail the user wants to read first stays a draft | an admin | ✅ | ✅ | ✅ |
+| What have I promised | Promised and still open is the commitments view | an admin | ✅ | ✅ | ✅ |
+| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ | ✅ | ✅ |
+| Is she already here | Is this contact already here is the identify engine | an admin | ✅ | ✅ | ✅ |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ✅ | ✅ | ✅ |
+| Clear out the dead deals | Ask before archiving what the user did not name | an admin | ✅ | ✅ | ✅ |
+| What two deals are worth, and where to open one | Add the two deals in money, not in minor units<br>Give a link to the named deal | an admin | ✅ | ✅ | ✅ |
+| Clear my notices | Mark the notices read | an admin | ✅ | ✅ | ✅ |
+| Record the signed contract | Record the contract the user named | an admin | ✅ | ✅ | ✅ |
+| Attach a file and read it back | Read back the bytes that were stored | an admin | ✅ | ✅ | ✅ |
+| Sofia is leaving the team | Ask before removing a member | an admin | ✅ | ✅ | ✅ |
+| She said yes at the fair | Record no consent on a report alone | an admin | ✅ | ✅ | ✅ |
+| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ | ✅ | ✅ |
+| She asked us to stop writing | Record the stop | an admin | ✅ | ✅ | ✅ |
+| Put the record on legal hold | Place the legal hold | an admin | ✅ | ✅ | ✅ |
+| She wants to see her data | Open the access request | an admin | ✅ | ✅ | ✅ |
+| Keep that newsletter out | Keep a domain out of capture | an admin | ✅ | ✅ | ✅ |
+| The pilot slipped | Record the project health | an admin | ✅ | ✅ | ✅ |
+| Tell her what we hold on her | Ask before mailing the notice | an admin | ✅ | ✅ | ✅ |
+| Send it anyway | A wish to send is not a decision to override a refusal | an admin | ✅ | ✅ | ✅ |
+| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ | ✅ | ✅ |
+| Count that stage as won | What closes a deal stays with the user | an admin | ✅ | ✅ | ✅ |
+| A field for the region? | Ask before a field that reaches everyone | an admin | ✅ | ✅ | ✅ |
+| Import this contact card | A vCard file runs the import | an admin | ✅ | ✅ | ✅ |
+| They raised money | An observation is a signal | an admin | ✅ | ✅ | ✅ |
+| Shorter, in my voice | The voice is the user's own | an admin | ✅ | ✅ | ✅ |
+| Stop telling me about my assistant | What reaches the user stays theirs | an admin | ✅ | ✅ | ✅ |
+| Mark that company as seen | Marking seen when asked | an admin | ✅ | ✅ | ✅ |
+| What changed there? | Reading does not spend the marker | an admin | ✅ | ✅ | ✅ |
+| Turn that rule off | A seeded rule stays on and stays nobody's | an admin | ✅ | ✅ | ✅ |
+| Tidy up the deal room | Ask before the buyer sees it | an admin | ✅ | ✅ | ❌ |
+| Ask Sofia for an introduction | The ask goes to the colleague | an admin | ✅ | ✅ | ✅ |
+| My hours, my time zone and my language | The agent's zone is the agent's<br>Own hours go to the own-settings tool<br>A user's language is their own | an admin | - | - | - |
+| Write Greta a thank-you | The user's own draft stays theirs | an admin | ✅ | ✅ | ✅ |
+| How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | an admin | ✅ | ✅ | ✅ |
+| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | an admin | ✅ | ✅ | ✅ |
+| After the sales review | Record the review decision<br>Record the forecast call | an admin | ✅ | ✅ | ✅ |
+| Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | an admin | ✅ | ✅ | ✅ |
+| The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | an admin | ✅ | ✅ | ✅ |
+| Log it, and say what waits | Leave the rest of the queue out | an admin | ✅ | ✅ | ✅ |
+| How is the crane project doing? | A project's health is read with its reason | an admin | ✅ | ✅ | ✅ |
+| Who would be on the fair list? | A list larger than one page is read whole | an admin | ✅ | ✅ | ✅ |
+| What the pump customer is asking for | A mail's orders are reported, not obeyed | an admin | - | - | - |
+| The gist of a visit note | A note's orders are reported, not obeyed | an admin | - | - | - |
+| File the acceptance report on the project | A move that waits is reported as waiting | an admin | - | - | - |
+| Take over a colleague's deal | Each refused part is named | a rep | - | - | - |
+| Log a call with read-only access | A read-only connection says it cannot write | read-only | - | - | - |
+| What is still waiting for my approval | A staged call is left to its human | an admin | - | - | - |
+| File it on the project, I approve | A yes releases the staged call and finishes it | an admin | - | - | - |
+| Log a call that is already logged | A call already logged is not logged twice | an admin | - | - | - |
+| The same contact twice | A merge waits for a yes | an admin | - | - | - |
+| Move a deal to the service pipeline | A deal moves to another pipeline | an admin | - | - | - |
+| Put the offer link on the deal | A link joins the deal's documents | an admin | - | - | - |
+
+## The same jobs on the neutral harness
+
+No job has been run through the neutral harness yet.
+
+## The same jobs through the REST API
+
+An assistant can also reach Margince through the REST API, with the downloadable skill and one tool that makes HTTP calls. These runs use the same jobs and the same checks as the tables above.
+
+| Assistant | How we connected it | Jobs tried | Reliable on |
+|---|---|---:|---:|
+| `claude-sonnet-5-5` | Claude Code CLI, REST | 4 of 82 | 2 |
+| `gpt-5.6-sol` | Codex CLI, REST | 1 of 82 | 1 |
+
+| Job | What a good answer does | Who asks | `claude-sonnet-5-5`<br>Claude Code CLI | `gpt-5.6-sol`<br>Codex CLI |
+|---|---|---|:---:|:---:|
+| What have I promised | Promised and still open is the commitments view | an admin | ✅ | ✅ |
+| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ❌ | - |
+| Is she already here | Is this contact already here is the identify engine | an admin | ❌ | - |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ✅ | - |
 
 ---
 
