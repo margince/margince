@@ -339,8 +339,8 @@ What a run does, after the `version` job checks the tag:
    Linux platform, `build-archive` packs the bundle tree of `scripts/release-bundle.sh` with three SBOMs.
 4. `attach` waits for both, and adds the images and archives in one `add-artifacts --release <version>` call.
 5. `publish` publishes the release with `publish-release --release <version>`. The dist uploads use the target's dist
-   publisher token. Each job with a token runs in the target's environment, `dist-test` or `dist-production`.
-   Only `dist-production` holds the production tokens.
+   publisher token. Each job with a token runs in the target's environment, `dist-test` or `dist-production`,
+   which holds that target's tokens. A `dist-production` job waits for a reviewer to approve it.
 
 Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#where-the-patch-of-changes-starts).
 

@@ -110,11 +110,11 @@ jobs:
           fetch-depth: 0
       - name: The publisher tokens are set
         env:
-          # A missing production token reads as empty and never falls back to
-          # the test token: the expression only ends at the test secret for a
-          # test run.
-          DIST_TOKEN: ${{ inputs.target == 'production' && secrets.MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN || inputs.target != 'production' && secrets.MARGINCE_DIST_PUBLISHER_TOKEN || '' }}
-          AUTH_TOKEN: ${{ inputs.target == 'production' && secrets.MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN || inputs.target != 'production' && secrets.MARGINCE_AUTH_PUBLISHER_TOKEN || '' }}
+          # Each environment holds its own copy of both names, and the
+          # repository holds none, so a missing token reads as empty and never
+          # falls back to the other target's.
+          DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
+          AUTH_TOKEN: ${{ secrets.MARGINCE_AUTH_PUBLISHER_TOKEN }}
         run: |
           if [ -z "$DIST_TOKEN" ] || [ -z "$AUTH_TOKEN" ]; then
             echo "release: the $DIST_TARGET dist or registry publisher token is not set." >&2
@@ -137,7 +137,7 @@ jobs:
         env:
           AFTER: ${{ needs.version.outputs.revision }}
           version: ${{ needs.version.outputs.version }}
-          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ inputs.target == 'production' && secrets.MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN || inputs.target != 'production' && secrets.MARGINCE_DIST_PUBLISHER_TOKEN || '' }}
+          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
         run: |
           set -euo pipefail
           # The CLI picks the base; the script checks the record and fails
@@ -272,7 +272,7 @@ jobs:
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
       - name: Log in to the constellation registry
         env:
-          PUBLISHER_TOKEN: ${{ inputs.target == 'production' && secrets.MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN || inputs.target != 'production' && secrets.MARGINCE_AUTH_PUBLISHER_TOKEN || '' }}
+          PUBLISHER_TOKEN: ${{ secrets.MARGINCE_AUTH_PUBLISHER_TOKEN }}
         run: |
           if [ -z "$PUBLISHER_TOKEN" ]; then
             echo "release: the $DIST_TARGET registry publisher token is not set." >&2
@@ -373,7 +373,7 @@ jobs:
         env:
           VERSION: ${{ needs.version.outputs.version }}
           IMAGES: ${{ needs.docker-image.outputs.images }}
-          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ inputs.target == 'production' && secrets.MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN || inputs.target != 'production' && secrets.MARGINCE_DIST_PUBLISHER_TOKEN || '' }}
+          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
         run: |
           set -euo pipefail
           # A re-run of only the failed jobs drops the outputs of the jobs it skips.
@@ -425,7 +425,7 @@ jobs:
       - name: Publish the release
         env:
           VERSION: ${{ needs.version.outputs.version }}
-          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ inputs.target == 'production' && secrets.MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN || inputs.target != 'production' && secrets.MARGINCE_DIST_PUBLISHER_TOKEN || '' }}
+          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
         run: |
           set -euo pipefail
           : "${VERSION:?the version job reported no version; re-run all jobs}"
