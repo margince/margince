@@ -1,0 +1,92 @@
+{
+  "scenario": "case109_my_hours_zone_and_language",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "22e893a34cec9b84",
+    "tools": "53610ffe6c0a5b53",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:15:45Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T17:15:45Z"
+  },
+  "usage": {
+    "input_tokens": 33476,
+    "output_tokens": 5971,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 64712,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_my_settings",
+        "describe_router_actions",
+        "read_my_working_hours",
+        "read_workspace",
+        "save_my_locale",
+        "save_my_timezone",
+        "save_my_working_hours",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_my_settings",
+        "describe_router_actions",
+        "read_my_working_hours",
+        "read_workspace",
+        "save_my_locale",
+        "save_my_timezone",
+        "save_my_working_hours",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 49094,
+      "min": 49092,
+      "max": 49096
+    },
+    "output_tokens": {
+      "median": 2985.5,
+      "min": 2906,
+      "max": 3065
+    }
+  }
+}

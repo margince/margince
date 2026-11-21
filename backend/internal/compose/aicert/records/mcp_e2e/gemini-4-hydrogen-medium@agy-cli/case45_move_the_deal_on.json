@@ -14,13 +14,82 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "b8934ba17c77ac6e",
+    "tools": "e0dc9a3385adc523",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T18:21:08Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T18:21:08Z"
+  },
   "usage": {
-    "input_tokens": 71482,
-    "output_tokens": 16787,
+    "input_tokens": 60228,
+    "output_tokens": 14642,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 219832,
+    "cache_read_input_tokens": 171627,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "find_records",
+        "forecast_readings",
+        "list_pipelines",
+        "progress_deal",
+        "read_forecast",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "find_records",
+        "forecast_readings",
+        "list_pipelines",
+        "progress_deal",
+        "read_forecast",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 8,
+      "min": 8,
+      "max": 8
+    },
+    "turns": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 115927.5,
+      "min": 114553,
+      "max": 117302
+    },
+    "output_tokens": {
+      "median": 7321,
+      "min": 6539,
+      "max": 8103
+    }
   }
 }

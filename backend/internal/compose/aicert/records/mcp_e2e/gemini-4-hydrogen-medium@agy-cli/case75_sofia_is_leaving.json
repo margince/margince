@@ -11,13 +11,81 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "c18314eef9aea15e",
+    "tools": "6e82141203cec7ea",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T19:11:24Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T19:11:24Z"
+  },
   "usage": {
-    "input_tokens": 91785,
-    "output_tokens": 23457,
+    "input_tokens": 59494,
+    "output_tokens": 14468,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 324357,
+    "cache_read_input_tokens": 135965,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "get_member",
+        "get_user_handover",
+        "list_channel_connections",
+        "list_colleagues",
+        "list_records",
+        "read_workspace",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "get_member",
+        "get_user_handover",
+        "list_colleagues",
+        "list_records",
+        "read_workspace",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6.5,
+      "min": 6,
+      "max": 7
+    },
+    "turns": {
+      "median": 6.5,
+      "min": 6,
+      "max": 7
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 97729.5,
+      "min": 90539,
+      "max": 104920
+    },
+    "output_tokens": {
+      "median": 7234,
+      "min": 6641,
+      "max": 7827
+    }
   }
 }

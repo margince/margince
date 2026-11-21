@@ -13,13 +13,81 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "6eaae2f699ded1d3",
+    "tools": "ea8b2d582b2c7020",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:19:13Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T17:19:13Z"
+  },
   "usage": {
-    "input_tokens": 65753,
-    "output_tokens": 11158,
+    "input_tokens": 66478,
+    "output_tokens": 14283,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 105697,
+    "cache_read_input_tokens": 173184,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "get_ai_task_overrides",
+        "list_audit_log",
+        "read_ai_routing",
+        "read_details",
+        "read_job_health",
+        "read_job_health_history",
+        "read_system_health",
+        "read_workspace",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "get_ai_task_overrides",
+        "list_audit_log",
+        "read_ai_routing",
+        "read_details",
+        "read_job_health",
+        "read_job_health_history",
+        "read_system_health",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "turns": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 119831,
+      "min": 119445,
+      "max": 120217
+    },
+    "output_tokens": {
+      "median": 7141.5,
+      "min": 6791,
+      "max": 7492
+    }
   }
 }

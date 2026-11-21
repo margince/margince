@@ -13,13 +13,76 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "a762c5740ee12d9a",
+    "tools": "76d8c29c3b55be59",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T18:03:11Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T18:03:11Z"
+  },
   "usage": {
-    "input_tokens": 53705,
-    "output_tokens": 9975,
+    "input_tokens": 46609,
+    "output_tokens": 7680,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 124823,
+    "cache_read_input_tokens": 98149,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_tags",
+        "get_tag",
+        "list_tags",
+        "merge_tags",
+        "read_tags",
+        "update_tag"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_tags",
+        "get_tag",
+        "list_tags",
+        "merge_tags",
+        "read_tags",
+        "update_tag"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7,
+      "min": 7,
+      "max": 7
+    },
+    "turns": {
+      "median": 8,
+      "min": 8,
+      "max": 8
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 72379,
+      "min": 65103,
+      "max": 79655
+    },
+    "output_tokens": {
+      "median": 3840,
+      "min": 3801,
+      "max": 3879
+    }
   }
 }

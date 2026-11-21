@@ -11,13 +11,87 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "7d0dded48877cc77",
+    "tools": "609f93f8187483a3",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:00:20Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T17:00:20Z"
+  },
   "usage": {
-    "input_tokens": 117779,
-    "output_tokens": 28553,
+    "input_tokens": 91431,
+    "output_tokens": 24101,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 642128,
+    "cache_read_input_tokens": 368402,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_activities",
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "list_colleagues",
+        "list_pipelines",
+        "log_activity",
+        "read_workspace",
+        "resolve_entities",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_activities",
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "list_colleagues",
+        "list_pipelines",
+        "list_records",
+        "log_activity",
+        "read_workspace",
+        "resolve_entities",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 13,
+      "min": 12,
+      "max": 14
+    },
+    "turns": {
+      "median": 9.5,
+      "min": 9,
+      "max": 10
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 229916.5,
+      "min": 217043,
+      "max": 242790
+    },
+    "output_tokens": {
+      "median": 12050.5,
+      "min": 11357,
+      "max": 12744
+    }
   }
 }

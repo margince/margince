@@ -11,13 +11,85 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "64c7b268b90c0197",
+    "tools": "d3489e3d05911ae2",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T19:18:47Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T19:18:47Z"
+  },
   "usage": {
-    "input_tokens": 55156,
-    "output_tokens": 10395,
+    "input_tokens": 50420,
+    "output_tokens": 9275,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 169164,
+    "cache_read_input_tokens": 159682,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "list_legal_holds",
+        "place_legal_hold",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "list_legal_holds",
+        "place_legal_hold",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 8.5,
+      "min": 8,
+      "max": 9
+    },
+    "turns": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 105051,
+      "min": 95489,
+      "max": 114613
+    },
+    "output_tokens": {
+      "median": 4637.5,
+      "min": 4604,
+      "max": 4671
+    }
   }
 }

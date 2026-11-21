@@ -11,13 +11,70 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "05bf735b214ce609",
+    "tools": "be284dd70e030734",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T19:31:45Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T19:31:45Z"
+  },
   "usage": {
-    "input_tokens": 27744,
-    "output_tokens": 5995,
+    "input_tokens": 30411,
+    "output_tokens": 6277,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 26075,
+    "cache_read_input_tokens": 28317,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "list_pipelines",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "list_pipelines",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "turns": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 29364,
+      "min": 29080,
+      "max": 29648
+    },
+    "output_tokens": {
+      "median": 3138.5,
+      "min": 2871,
+      "max": 3406
+    }
   }
 }

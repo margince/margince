@@ -11,13 +11,86 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "35482c83ca29a353",
+    "tools": "14e49c68d088e7b0",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T18:45:16Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T18:45:16Z"
+  },
   "usage": {
-    "input_tokens": 63087,
-    "output_tokens": 14075,
+    "input_tokens": 63323,
+    "output_tokens": 14801,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 184917,
+    "cache_read_input_tokens": 177716,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "list_pipelines",
+        "list_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "read_view",
+        "read_workspace",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "list_pipelines",
+        "list_records",
+        "read_attention",
+        "read_context",
+        "read_workspace",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 8.5,
+      "min": 7,
+      "max": 10
+    },
+    "turns": {
+      "median": 6.5,
+      "min": 5,
+      "max": 8
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 120519.5,
+      "min": 85369,
+      "max": 155670
+    },
+    "output_tokens": {
+      "median": 7400.5,
+      "min": 6739,
+      "max": 8062
+    }
   }
 }

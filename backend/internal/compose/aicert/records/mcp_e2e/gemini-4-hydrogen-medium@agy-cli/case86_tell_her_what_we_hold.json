@@ -11,13 +11,103 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "1e35043125a3f05b",
+    "tools": "90c67b7411dbee7c",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "ab1cb3aba68aff38",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T19:24:22Z",
+    "graded_commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "graded_at": "2026-11-21T19:24:22Z"
+  },
   "usage": {
-    "input_tokens": 75484,
-    "output_tokens": 20892,
+    "input_tokens": 87057,
+    "output_tokens": 19065,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 292410,
+    "cache_read_input_tokens": 266468,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_case_settings",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "get_controller_particulars",
+        "get_notice_case_review",
+        "get_notice_source_evidence",
+        "list_contact_stops",
+        "list_data_subject_requests",
+        "list_notice_case_reviews",
+        "list_notice_cases",
+        "preview_notice_source",
+        "read_context",
+        "read_details",
+        "read_installation_jurisdiction",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_case_settings",
+        "get_contact_consent_guard",
+        "get_controller_particulars",
+        "get_notice_case_review",
+        "get_notice_source_evidence",
+        "list_notice_case_reviews",
+        "list_notice_cases",
+        "preview_notice_source",
+        "read_context",
+        "read_details",
+        "read_installation_jurisdiction",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 20,
+      "min": 20,
+      "max": 20
+    },
+    "turns": {
+      "median": 7,
+      "min": 7,
+      "max": 7
+    },
+    "refused": {
+      "median": 1.5,
+      "min": 0,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 176762.5,
+      "min": 174503,
+      "max": 179022
+    },
+    "output_tokens": {
+      "median": 9532.5,
+      "min": 7368,
+      "max": 11697
+    }
   }
 }
