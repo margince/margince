@@ -42,7 +42,7 @@ func NameBirthRosterTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID
 		   AND `+BirthRosterRowSQL("ap", "a")+` AND ap.address = ANY($3)
 		   AND (ap.contact_id IS NULL OR EXISTS (
 		         SELECT 1 FROM contact_email held
-		          WHERE held.contact_id = ap.contact_id AND lower(held.email) = ap.address))`,
+		          WHERE held.contact_id = ap.contact_id AND held.email = ap.address))`,
 		activityID, seat, addresses)
 	if err != nil {
 		return 0, fmt.Errorf("activities: naming the roster of a meeting's first guests: %w", err)
