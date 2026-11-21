@@ -87,7 +87,8 @@ function elicitationHandler(replies: readonly Reply[], out: TranscriptFile) {
 
 async function main(): Promise<number> {
   const server = required("server");
-  const token = process.env[required("token-env")] ?? "";
+  const tokenEnv = required("token-env");
+  const token = process.env[tokenEnv] ?? "";
   if (token === "") {
     throw new Error(`${values["token-env"]} is not set`);
   }
@@ -105,6 +106,8 @@ async function main(): Promise<number> {
         model: required("model"),
         pathToClaudeCodeExecutable: required("claude"),
         extraArgs: claudeArgs(values["claude-arg"] ?? []),
+        // The passport reaches claude in the server's header alone.
+        env: Object.fromEntries(Object.entries(process.env).filter(([name]) => name !== tokenEnv)),
         // The CLI route's own prompt, so the two routes differ only in who
         // answers the server's questions.
         systemPrompt: { type: "preset", preset: "claude_code" },
@@ -121,6 +124,10 @@ async function main(): Promise<number> {
     });
     for await (const message of run) {
       out.write(message);
+    }
+  } catch (stopped: unknown) {
+    if (!abort.signal.aborted) {
+      throw stopped;
     }
   } finally {
     clearTimeout(timer);
