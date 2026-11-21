@@ -287,6 +287,11 @@ def acceptance_mail_staged_for_the_project(admin):
         "action": "relink", "activity_id": mail, "entity_type": "project", "entity_id": project})
     if not (is_error and check.staged(text)):
         raise SetupFault(f"moving the mail onto the project was meant to wait for a human; it answered {text[:300]}")
+    # A staged answer is the tool's word; the case is about the queue, so the
+    # queue must hold the move before the run starts, or no model could pass.
+    queue = admin.call("GET", "/approvals?status=pending&kind=relink_activity").get("data", [])
+    if not any(mail in json.dumps(item) for item in queue):
+        raise SetupFault(f"the move was answered as staged, but no pending relink of the mail is in the queue: {queue}")
 
 
 def contact_without_history(admin):
