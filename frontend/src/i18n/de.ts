@@ -3745,6 +3745,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.sortBy": "Nach {column} sortieren",
   "table.noMatches": "Keine {unit} entsprechen diesen Filtern.",
   "table.clearFilters": "Filter zurücksetzen",
+  "table.dialsRefused":
+    "Mit diesen Filtern lässt sich die Liste nicht anzeigen.",
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
@@ -8784,6 +8786,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
 
   "tasks.complete": "Erledigt",
+  "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
   "tasks.log.action": "Ergebnis erfassen",
@@ -21002,6 +21005,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Archivieren entfernt dieses Projekt aus der aktiven Liste und gibt sein Kürzel frei. Das lässt sich hier nicht rückgängig machen.",
   "project.archivedReadOnly":
     "Dieses Projekt ist archiviert und lässt keine Änderungen zu.",
+  "project.page.notFound": "Projekt nicht gefunden",
+  "project.page.notFoundBody":
+    "Dieses Projekt gibt es nicht, oder du kannst es nicht sehen.",
+  "project.page.backToProjects": "Zurück zu den Projekten",
   "project.notYoursToChange":
     "Du kannst dieses Projekt nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "project.phaseLabel": "Phase",
