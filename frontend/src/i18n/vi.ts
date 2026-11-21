@@ -2560,6 +2560,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.reversal.undoneBy": "{undoer} đã hoàn tác",
   "history.reversal.unpaired": "Hoàn tác một thay đổi trước đó",
   "history.edge.marker": "Liên kết",
+  "history.edge.linked": "{subject} đã liên kết {name} với vai trò {role}",
+  "history.edge.roleChanged":
+    "{subject} đã đổi vai trò tại {name} từ {previous} thành {role}",
+  "history.edge.roleSet": "{subject} đã đổi vai trò tại {name} thành {role}",
+  "history.edge.changed": "{subject} đã thay đổi liên kết với {name}: {fields}",
+  "history.edge.unlinked": "{subject} đã hủy liên kết với {name}",
+  "history.edge.roleRemoved": "{subject} đã xóa vai trò {previous} tại {name}",
+  "history.edge.alsoChanged": "cũng đã đổi: {fields}",
   "history.subject.viaClient": "{name} (qua {client})",
   "history.subject.viaAgent": "{name} (qua trợ lý AI)",
   "history.subject.viaConnector": "{name} (qua trình kết nối)",
@@ -2697,6 +2705,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.stage_id": "Giai đoạn",
   "history.field.disqualify_reason_id": "Lý do loại",
   "history.field.trigger": "Xác nhận bởi",
+  "history.field.role": "Vai trò",
+  "history.field.is_current_primary": "Nơi làm việc chính",
+  "history.field.employment_status": "Tình trạng việc làm",
+  "history.field.started_precision": "Độ chính xác ngày bắt đầu",
+  "history.field.ended_precision": "Độ chính xác ngày kết thúc",
   "history.field.win_probability_override": "Xác suất đặt cho deal",
   "history.field.win_probability_set_by": "Xác suất do ai đặt",
   "history.field.fx_rate_date": "Ngày tỷ giá",
@@ -3501,6 +3514,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Máy chủ xử lý quá lâu nên đã dừng yêu cầu này. Hãy thử lại sau giây lát.",
   "common.individualPerformanceOff":
     "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên. Toàn bộ dự báo bị ẩn nếu một nhóm trong đó có thể cho thấy số liệu của riêng một đồng nghiệp.",
+  "common.ownerNotMeasurable":
+    "Bạn không được xem số liệu của người chịu trách nhiệm này. Hãy bỏ bộ lọc theo người chịu trách nhiệm, hoặc liên hệ quản trị viên để mở rộng phạm vi của bạn.",
   "common.permissionDenied":
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
@@ -4090,8 +4105,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.lastMetToday": "Đã họp hôm nay.",
   "co.health.reason.lastMet_one": "Lần họp gần nhất cách đây {days} ngày.",
   "co.health.reason.lastMet_other": "Lần họp gần nhất cách đây {days} ngày.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "Vẫn có liên lạc, nhưng toàn bộ quan hệ với công ty chỉ dựa vào một liên hệ.",
+  "co.health.reason.singleThreaded_other":
+    "Vẫn có liên lạc, nhưng toàn bộ quan hệ với công ty chỉ dựa vào {count} liên hệ.",
   "co.health.reason.severalContacts_one":
     "{count} liên hệ ở đây đang giữ liên lạc.",
   "co.health.reason.severalContacts_other":
@@ -14680,6 +14697,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.audit.footer":
     "Mọi lần thêm, sửa và chuyển vào kho lưu trữ đều được ghi vĩnh viễn vào nhật ký hoạt động.",
   "cf.retired": "Đã ngừng dùng",
+  "cf.retiredLabel": "{label} (đã ngừng dùng)",
   "cf.retire.title": "Chuyển “{label}” vào kho lưu trữ?",
   "cf.retire.body":
     "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ. Không thể hoàn tác việc lưu trữ.",
@@ -16695,6 +16713,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.pipelineBasisWhy.manager_call": "Đo theo nhận định của kỳ này.",
   "forecast.pipelineBasisWhy.historical_median":
     "Đo theo trung vị của 4 kỳ tương đương gần nhất.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} deal thắng trong các kỳ đó chưa có số tiền hoặc tỷ giá và không nằm trong trung vị.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} deal thắng trong các kỳ đó chưa có số tiền hoặc tỷ giá và không nằm trong trung vị.",
   "forecast.pipelineAbsentTitle": "Không có số liệu độ bao phủ cho kỳ này",
   "forecast.pipelineAbsent.call_withheld":
     "Nhận định của quản lý không hiển thị ở đây, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
@@ -20718,6 +20740,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mới có 1 liên hệ. Thêm liên hệ thứ hai.",
   "deal.committee.missing.secondEngaged":
     "Chưa tới 2 liên hệ đang tương tác. Tiếp cận thêm một liên hệ.",
+  "deal.committee.missing.anotherContact":
+    "Còn quá ít liên hệ. Thêm một liên hệ nữa.",
+  "deal.committee.missing.anotherEngaged":
+    "Còn quá ít liên hệ đang tương tác. Tiếp cận thêm một liên hệ.",
   "deal.committee.foot":
     "{named} người được nêu tên · {engaged}/{named} đang tương tác",
   "deal.brief.title": "Deal này là gì",
@@ -22272,6 +22298,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.archive_deal": "Đã chuyển deal vào kho lưu trữ",
   "magic.action.archive_lead": "Đã chuyển lead vào kho lưu trữ",
   "magic.action.archive_project": "Đã chuyển dự án vào kho lưu trữ",
+  "magic.action.create_offer": "Đã tạo báo giá cho",
+  "magic.action.update_offer": "Đã thay đổi báo giá của",
+  "magic.action.archive_offer": "Đã lưu trữ báo giá của",
+  "magic.action.create_contract": "Đã thêm hợp đồng vào",
+  "magic.action.update_contract": "Đã thay đổi hợp đồng của",
+  "magic.action.archive_contract": "Đã lưu trữ hợp đồng của",
+  "magic.action.create_deal_room": "Đã mở deal room cho",
+  "magic.action.update_deal_room": "Đã thay đổi deal room của",
+  "magic.action.archive_deal_room": "Đã lưu trữ deal room của",
+  "magic.action.create_stage_evidence": "Đã ghi nhận bằng chứng giai đoạn cho",
+  "magic.action.update_stage_evidence": "Đã thay đổi bằng chứng giai đoạn của",
+  "magic.action.archive_stage_evidence": "Đã rút bằng chứng giai đoạn của",
+  "magic.action.create_introduction": "Đã đề nghị giới thiệu tới",
+  "magic.action.update_introduction": "Đã thay đổi lượt giới thiệu tới",
+  "magic.action.archive_introduction": "Đã lưu trữ lượt giới thiệu tới",
+  "magic.action.create_assignment": "Đã giao vai trò trong",
+  "magic.action.update_assignment": "Đã thay đổi vai trò trong",
+  "magic.action.archive_assignment": "Đã gỡ vai trò trong",
+  "magic.action.create_attachment": "Đã thêm tệp vào",
+  "magic.action.update_attachment": "Đã thay đổi tệp của",
+  "magic.action.archive_attachment": "Đã lưu trữ tệp của",
   "magic.action.archive_activity":
     "Đã chuyển email hoặc cuộc họp vào kho lưu trữ",
   "magic.action.archive_activity_email": "Đã chuyển email vào kho lưu trữ",

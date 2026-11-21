@@ -393,12 +393,7 @@ func (h connectorHandlers) liveGrantorAuthority(ctx context.Context, st connectS
 	if h.authority == nil {
 		return authz.RBAC{}, "", errors.New("connector callback: no authority resolver wired — a grant cannot be checked against live authority")
 	}
-	rbac, err := h.authority.EffectiveRBAC(ctx, st.Workspace, st.User)
-	if err != nil {
-		return authz.RBAC{}, "", err
-	}
-	seat, err := h.authority.SeatType(ctx, st.Workspace, st.User)
-	return rbac, seat, err
+	return h.authority.AdmittedAuthority(ctx, st.Workspace, st.User, ids.Nil)
 }
 
 func (h connectorHandlers) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.DisconnectConnectorParams) {

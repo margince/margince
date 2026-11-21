@@ -32,7 +32,7 @@ import (
 // outside one.
 type demotedInTx struct{ fixtureAuthority }
 
-func (a demotedInTx) EffectiveAuthority(ctx context.Context, ws, user ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (a demotedInTx) AdmittedAuthority(ctx context.Context, ws, user, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	rbac, err := a.EffectiveRBAC(ctx, ws, user)
 	return rbac, principal.SeatFull, err
 }

@@ -56,11 +56,6 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 		return crmcontracts.CustomField{}, ErrStructural
 	}
 	slug := DeriveSlug(spec.Label)
-	column := ColumnName(slug)
-	ddl, err := BuildDDL(spec.Object, column, spec)
-	if err != nil {
-		return crmcontracts.CustomField{}, err
-	}
 	if s.schemaPool == nil {
 		return crmcontracts.CustomField{}, ErrSchemaChangesUnavailable
 	}
@@ -82,7 +77,7 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 	//craft:ignore swallowed-errors deferred rollback of a committed tx is a designed no-op; real failures already left through the operation error
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	out, err := s.createInTx(ctx, tx, spec, creator, slug, column, ddl)
+	out, err := s.createInTx(ctx, tx, spec, creator, slug)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
@@ -92,35 +87,13 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 	return out, nil
 }
 
-// createInTx is Create's transaction body: lock → collision pre-check →
-// ALTER → catalog INSERT + audit, all as the schema pool's owner role.
-func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, creator ids.UUID, slug, column, ddl string) (crmcontracts.CustomField, error) {
-	if err := serializeSchemaChange(ctx, tx, spec.Object); err != nil {
+// createInTx is Create's transaction body: add the column, then write the
+// catalog row and audit entry, all as the schema pool's owner role.
+func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, creator ids.UUID, slug string) (crmcontracts.CustomField, error) {
+	column, err := addColumn(ctx, tx, spec, slug)
+	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
-	if err := refuseTakenLabel(ctx, tx, spec.Object, ids.Nil, spec.Label); err != nil {
-		return crmcontracts.CustomField{}, err
-	}
-	if err := refuseTakenColumn(ctx, tx, spec.Object, column); err != nil {
-		return crmcontracts.CustomField{}, err
-	}
-
-	// The one statement that needs the owner role. 42701 can still fire
-	// despite the pre-check when the column arrived outside the engine's
-	// serialization (a fork migration) — the same honest answer applies.
-	// 55P03 is the bounded lock wait firing: the table is busy, the caller
-	// retries.
-	if _, err := tx.Exec(ctx, ddl); err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == pgDuplicateColumn {
-			return crmcontracts.CustomField{}, &ColumnTakenError{Column: column}
-		}
-		if lockTimedOut(err) {
-			return crmcontracts.CustomField{}, ErrTableBusy
-		}
-		return crmcontracts.CustomField{}, fmt.Errorf("customfields: adding column: %w", err)
-	}
-
 	var currency *string
 	if spec.Type == TypeCurrency {
 		currency = spec.Currency
@@ -152,6 +125,14 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: inserting catalog row: %w", err)
 	}
 
+	if err := auditCreate(ctx, tx, out, column, spec.Source); err != nil {
+		return crmcontracts.CustomField{}, err
+	}
+	return out, nil
+}
+
+// auditCreate writes the create's audit entry.
+func auditCreate(ctx context.Context, tx pgx.Tx, out crmcontracts.CustomField, column, source string) error {
 	after := map[string]any{
 		fieldObject: string(out.Object), fieldSlug: out.Slug, fieldLabel: out.Label,
 		fieldType: string(out.Type), fieldColumn: column, fieldStatus: string(out.Status),
@@ -172,10 +153,51 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	// cross-object catalog change has no single family stream to ride
 	// (the attachments precedent in writeshape_test.go).
 	if _, err := storekit.AuditWithEvidence(ctx, tx, "create", rbacObject, ids.UUID(out.Id),
-		nil, after, map[string]any{fieldSource: spec.Source}); err != nil {
-		return crmcontracts.CustomField{}, fmt.Errorf("customfields: audit write: %w", err)
+		nil, after, map[string]any{fieldSource: source}); err != nil {
+		return fmt.Errorf("customfields: audit write: %w", err)
 	}
-	return out, nil
+	return nil
+}
+
+// addColumn is the schema half of a create: lock → collision pre-check → column
+// allocation → ALTER. The column is allocated under the lock so two creates of
+// one name cannot pick the same one. It answers the column it added.
+func addColumn(ctx context.Context, tx pgx.Tx, spec FieldSpec, slug string) (string, error) {
+	if err := serializeSchemaChange(ctx, tx, spec.Object); err != nil {
+		return "", err
+	}
+	if err := refuseTakenLabel(ctx, tx, spec.Object, ids.Nil, spec.Label); err != nil {
+		return "", err
+	}
+	column, err := allocateColumn(ctx, tx, spec.Object, slug)
+	if err != nil {
+		return "", err
+	}
+	if err := refuseTakenColumn(ctx, tx, spec.Object, column); err != nil {
+		return "", err
+	}
+	ddl, err := BuildDDL(spec.Object, column, spec)
+	if err != nil {
+		return "", err
+	}
+
+	// The one statement that needs the owner role. 42701 can still fire
+	// despite the pre-check when the column arrived outside the engine's
+	// serialization (a fork migration), and answers the same conflict.
+	// 55P03 is the bounded lock wait firing: the table is busy, the caller
+	// retries.
+	if _, err := tx.Exec(ctx, ddl); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgDuplicateColumn {
+			return "", &ColumnTakenError{Column: column}
+		}
+		if lockTimedOut(err) {
+			return "", ErrTableBusy
+		}
+		return "", fmt.Errorf("customfields: adding column: %w", err)
+	}
+
+	return column, nil
 }
 
 // catalogBinding is one column of the catalog INSERT and its value. The column
@@ -263,23 +285,59 @@ func refuseTakenColumn(ctx context.Context, tx pgx.Tx, object, column string) er
 	return &ColumnTakenError{Column: column}
 }
 
+// maxColumnSuffix bounds allocateColumn so the longest generated identifier,
+// cf_<slug>_<n>_text_max_20000, stays under Postgres's 63-byte cap.
+const maxColumnSuffix = 999
+
+// allocateColumn picks the physical column for a new field of slug: cf_<slug>,
+// else the first cf_<slug>_<n> no catalog row of the object owns. A retired field
+// keeps its column, so a new field with its slug gets a different one. The pick
+// is deterministic and, under the schema lock, race-free.
+func allocateColumn(ctx context.Context, tx pgx.Tx, object, slug string) (string, error) {
+	base := ColumnName(slug)
+	rows, err := tx.Query(ctx,
+		`SELECT column_name FROM custom_field WHERE object = $1 AND starts_with(column_name, $2)`, object, base)
+	if err != nil {
+		return "", fmt.Errorf("customfields: reading claimed columns: %w", err)
+	}
+	owned, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return "", fmt.Errorf("customfields: reading claimed columns: %w", err)
+	}
+	claimed := make(map[string]bool, len(owned))
+	for _, name := range owned {
+		claimed[name] = true
+	}
+	for n := 1; n <= maxColumnSuffix; n++ {
+		candidate := base
+		if n > 1 {
+			candidate = fmt.Sprintf("%s_%d", base, n)
+		}
+		if !claimed[candidate] {
+			return candidate, nil
+		}
+	}
+	return "", &LabelTakenError{message: fmt.Sprintf(
+		"too many custom fields on %s were named %q; choose a different label", object, slug)}
+}
+
 // foldedLabel is a stored label as the collision test reads it: trimmed of any
 // whitespace, as strings.TrimSpace trims the label being written, and lower-cased.
 const foldedLabel = `lower(regexp_replace(label, '^\s+|\s+$', '', 'g'))`
 
-// refuseTakenLabel keeps one label from naming two fields of an object. A
-// label whose text another field holds reads the same in a picker, a column
-// header and a filter. A label whose slug another field holds would collide on
-// the unique key. Create and rename both ask it, and the caller holds the
-// schema advisory lock so two concurrent writes cannot both pass. A create
+// refuseTakenLabel keeps one label from naming two live fields of an object. A
+// label whose text another field holds reads the same in a picker and a filter.
+// A label whose slug another field holds would collide on the unique key.
+// A retired field holds neither, because every screen marks it retired.
+// Create and rename both ask it under the schema advisory lock. A create
 // passes ids.Nil, which no row has.
 func refuseTakenLabel(ctx context.Context, tx pgx.Tx, object string, id ids.UUID, label string) error {
 	var heldLabel, heldSlug string
 	err := tx.QueryRow(ctx,
 		`SELECT label, slug FROM custom_field
-		  WHERE object = $1 AND id <> $2 AND (slug = $3 OR `+foldedLabel+` = $4)
+		  WHERE object = $1 AND id <> $2 AND status <> $5 AND (slug = $3 OR `+foldedLabel+` = $4)
 		  ORDER BY (`+foldedLabel+` = $4) DESC LIMIT 1`,
-		object, id, DeriveSlug(label), strings.ToLower(strings.TrimSpace(label))).Scan(&heldLabel, &heldSlug)
+		object, id, DeriveSlug(label), strings.ToLower(strings.TrimSpace(label)), statusRetired).Scan(&heldLabel, &heldSlug)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

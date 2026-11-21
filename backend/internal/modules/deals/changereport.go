@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -219,6 +220,10 @@ type TeamChangeGroup struct {
 	// ValueBaseMinor sums the changed deals' value in the base currency over
 	// the deals that have one.
 	ValueBaseMinor int64
+	// ValueNoAmount, ValueNoRate and ValueMissingCurrencies say which changed
+	// deals that sum leaves out, and why.
+	ValueNoAmount, ValueNoRate int
+	ValueMissingCurrencies     string
 	// ValueMovedBaseMinor sums the size of each deal's net move in this kind.
 	ValueMovedBaseMinor int64
 	// Unvalued counts the deals whose move could not be valued.
@@ -265,35 +270,7 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 			}
 			return where, err
 		}
-		var countArgs []any
-		countArg := func(v any) int { countArgs = append(countArgs, v); return len(countArgs) }
-		where, err := filter(countArg)
-		if err != nil {
-			return err
-		}
-		value, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d",
-			BaseValueSQL("now()", fmt.Sprintf("$%d", countArg(base)), "d"), countArg)
-		if err != nil {
-			return err
-		}
-		// One row per deal and kind first, so a deal changed twice in one kind
-		// counts and sums once. A value the reader's mask withholds adds nothing.
-		groups, err := tx.Query(ctx, storekit.SQLf(`
-			SELECT owner_id, correction, count(*), count(*) FILTER (WHERE undone), coalesce(sum(value), 0)::bigint
-			  FROM (SELECT d.owner_id, c.correction, c.deal_id,
-			               bool_or(c.reversed_at IS NOT NULL) AS undone, max(%s) AS value
-			          FROM deal_correction c JOIN deal d ON d.id = c.deal_id%s
-			         GROUP BY d.owner_id, c.correction, c.deal_id) per_deal
-			 GROUP BY owner_id, correction
-			 ORDER BY owner_id, correction`, value, where), countArgs...)
-		if err != nil {
-			return fmt.Errorf("deals: counting the team's changes: %w", err)
-		}
-		out.Groups, err = pgx.CollectRows(groups, func(row pgx.CollectableRow) (TeamChangeGroup, error) {
-			var g TeamChangeGroup
-			return g, row.Scan(&g.OwnerID, &g.Kind, &g.Deals, &g.Undone, &g.ValueBaseMinor)
-		})
-		if err != nil {
+		if out.Groups, err = s.teamChangeGroups(ctx, tx, base, filter); err != nil {
 			return err
 		}
 		var rowArgs []any
@@ -302,7 +279,8 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 		if err != nil {
 			return err
 		}
-		if where, err = filter(rowArg); err != nil {
+		where, err := filter(rowArg)
+		if err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, selected+where+
@@ -322,6 +300,58 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 		out.Rows, out.Truncated = out.Rows[:teamRowCap], true
 	}
 	return out, nil
+}
+
+// teamChangeGroups counts, per owner and kind, the changed deals and what they
+// are worth in the base currency, with the deals that value leaves out.
+func (s *Store) teamChangeGroups(
+	ctx context.Context, tx pgx.Tx, base string, filter func(func(any) int) (string, error),
+) ([]TeamChangeGroup, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	var countArgs []any
+	countArg := func(v any) int { countArgs = append(countArgs, v); return len(countArgs) }
+	where, err := filter(countArg)
+	if err != nil {
+		return nil, err
+	}
+	value, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d",
+		BaseValueSQL("now()", fmt.Sprintf("$%d", countArg(base)), "d"), countArg)
+	if err != nil {
+		return nil, err
+	}
+	amount, err := auth.MaskedColumnSQL(ctx, maskObject, "amount_minor", "d", "amount_minor", countArg)
+	if err != nil {
+		return nil, err
+	}
+	currency, err := auth.MaskedColumnSQL(ctx, maskObject, "currency", "d", "currency", countArg)
+	if err != nil {
+		return nil, err
+	}
+	// One row per deal and kind first, so a deal changed twice in one kind
+	// counts and sums once. A value the reader's mask withholds adds nothing.
+	groups, err := tx.Query(ctx, storekit.SQLf(`
+		SELECT owner_id, correction, count(*), count(*) FILTER (WHERE undone), coalesce(sum(value), 0)::bigint, %s
+		  FROM (SELECT d.owner_id, c.correction, c.deal_id,
+		               bool_or(c.reversed_at IS NOT NULL) AS undone, max(%s) AS value,
+		               max(%s) AS amount, max(%s) AS currency
+		          FROM deal_correction c JOIN deal d ON d.id = c.deal_id%s
+		         GROUP BY d.owner_id, c.correction, c.deal_id) per_deal
+		 GROUP BY owner_id, correction
+		 ORDER BY owner_id, correction`, moneytotal.CoverageSQL("value", "amount", "currency"), value, amount, currency, where), countArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("deals: counting the team's changes: %w", err)
+	}
+	return pgx.CollectRows(groups, func(row pgx.CollectableRow) (TeamChangeGroup, error) {
+		var g TeamChangeGroup
+		var missing *string
+		err := row.Scan(&g.OwnerID, &g.Kind, &g.Deals, &g.Undone, &g.ValueBaseMinor, &g.ValueNoAmount, &g.ValueNoRate, &missing)
+		if missing != nil {
+			g.ValueMissingCurrencies = *missing
+		}
+		return g, err
+	})
 }
 
 // ReaderOf is the human reading, whom a reason may reach. An agent, even one

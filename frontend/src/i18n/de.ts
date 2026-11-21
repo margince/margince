@@ -2636,6 +2636,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.reversal.undoneBy": "Rückgängig gemacht von {undoer}",
   "history.reversal.unpaired": "Macht eine frühere Änderung rückgängig",
   "history.edge.marker": "Verknüpfung",
+  "history.edge.linked": "{subject} hat {name} als {role} verknüpft",
+  "history.edge.roleChanged":
+    "{subject} hat die Rolle bei {name} von {previous} zu {role} geändert",
+  "history.edge.roleSet":
+    "{subject} hat die Rolle bei {name} zu {role} geändert",
+  "history.edge.changed":
+    "{subject} hat die Verknüpfung mit {name} geändert: {fields}",
+  "history.edge.unlinked": "{subject} hat die Verknüpfung mit {name} gelöst",
+  "history.edge.roleRemoved":
+    "{subject} hat die Rolle {previous} bei {name} entfernt",
+  "history.edge.alsoChanged": "außerdem geändert: {fields}",
   "history.subject.viaClient": "{name} (über {client})",
   "history.subject.viaAgent": "{name} (über einen Agenten)",
   "history.subject.viaConnector": "{name} (über einen Connector)",
@@ -2787,6 +2798,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.stage_id": "Phase",
   "history.field.disqualify_reason_id": "Disqualifizierungsgrund",
   "history.field.trigger": "Qualifiziert durch",
+  "history.field.role": "Rolle",
+  "history.field.is_current_primary": "Hauptarbeitgeber",
+  "history.field.employment_status": "Beschäftigungsstatus",
+  "history.field.started_precision": "Genauigkeit des Startdatums",
+  "history.field.ended_precision": "Genauigkeit des Enddatums",
   "history.field.win_probability_override": "Abschlusschance am Deal",
   "history.field.win_probability_set_by": "Abschlusschance gesetzt von",
   "history.field.fx_rate_date": "Datum des Wechselkurses",
@@ -3607,6 +3623,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Server hat zu lange gebraucht und die Anfrage abgebrochen. Versuche es gleich noch einmal.",
   "common.individualPerformanceOff":
     "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben. Eine Prognose wird ganz zurückgehalten, wenn eine ihrer Teilgruppen die Zahlen eines einzelnen Mitglieds zeigen würde.",
+  "common.ownerNotMeasurable":
+    "Die Zahlen dieser verantwortlichen Person darfst du nicht auswerten. Entferne den Filter nach verantwortlicher Person, oder lass deine Reichweite von einem Admin erweitern.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
@@ -4219,8 +4237,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
   "co.health.reason.lastMet_other": "Zuletzt vor {days} Tagen getroffen.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "In Kontakt, aber ein einziger Kontakt trägt das ganze Unternehmen.",
+  "co.health.reason.singleThreaded_other":
+    "In Kontakt, aber nur {count} Kontakte tragen das ganze Unternehmen.",
   "co.health.reason.severalContacts_one":
     "{count} Kontakt hier steht in Verbindung.",
   "co.health.reason.severalContacts_other":
@@ -15094,6 +15114,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.audit.footer":
     "Jedes Hinzufügen, Bearbeiten und Archivieren wird dauerhaft im Audit-Log erfasst.",
   "cf.retired": "Stillgelegt",
+  "cf.retiredLabel": "{label} (stillgelegt)",
   "cf.retire.title": "„{label}“ archivieren?",
   "cf.retire.body":
     "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten. Das Archivieren lässt sich nicht rückgängig machen.",
@@ -17162,6 +17183,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gemessen an der Einschätzung für diesen Zeitraum.",
   "forecast.pipelineBasisWhy.historical_median":
     "Gemessen am Median der letzten 4 vergleichbaren Zeiträume.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} gewonnener Deal dieser Perioden hat keinen Betrag oder Wechselkurs und fehlt im Median.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} gewonnene Deals dieser Perioden haben keinen Betrag oder Wechselkurs und fehlen im Median.",
   "forecast.pipelineAbsentTitle":
     "Keine Pipeline-Abdeckung für diesen Zeitraum",
   "forecast.pipelineAbsent.call_withheld":
@@ -21269,6 +21294,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur ein Kontakt. Füge einen zweiten hinzu.",
   "deal.committee.missing.secondEngaged":
     "Weniger als zwei im Austausch. Erreiche einen zweiten Kontakt.",
+  "deal.committee.missing.anotherContact":
+    "Zu wenige Kontakte. Füge einen weiteren hinzu.",
+  "deal.committee.missing.anotherEngaged":
+    "Zu wenige im Austausch. Erreiche einen weiteren Kontakt.",
   "deal.committee.foot": "{named} benannt · {engaged} von {named} aktiv",
   "deal.brief.title": "Worum es geht",
   "deal.brief.byModel": "Von Margince aus der Mail des Kunden geschrieben",
@@ -22879,6 +22908,27 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.archive_deal": "Deal archiviert:",
   "magic.action.archive_lead": "Lead archiviert:",
   "magic.action.archive_project": "Projekt archiviert:",
+  "magic.action.create_offer": "Angebot erstellt zu:",
+  "magic.action.update_offer": "Angebot geändert zu:",
+  "magic.action.archive_offer": "Angebot archiviert zu:",
+  "magic.action.create_contract": "Vertrag hinzugefügt zu:",
+  "magic.action.update_contract": "Vertrag geändert zu:",
+  "magic.action.archive_contract": "Vertrag archiviert zu:",
+  "magic.action.create_deal_room": "Deal Room eröffnet zu:",
+  "magic.action.update_deal_room": "Deal Room geändert zu:",
+  "magic.action.archive_deal_room": "Deal Room archiviert zu:",
+  "magic.action.create_stage_evidence": "Phasenbeleg erfasst zu:",
+  "magic.action.update_stage_evidence": "Phasenbeleg geändert zu:",
+  "magic.action.archive_stage_evidence": "Phasenbeleg zurückgezogen zu:",
+  "magic.action.create_introduction": "Vorstellung angefragt zu:",
+  "magic.action.update_introduction": "Vorstellung geändert zu:",
+  "magic.action.archive_introduction": "Vorstellung archiviert zu:",
+  "magic.action.create_assignment": "Zuständigkeit vergeben zu:",
+  "magic.action.update_assignment": "Zuständigkeit geändert zu:",
+  "magic.action.archive_assignment": "Zuständigkeit entfernt zu:",
+  "magic.action.create_attachment": "Datei hinzugefügt zu:",
+  "magic.action.update_attachment": "Datei geändert zu:",
+  "magic.action.archive_attachment": "Datei archiviert zu:",
   "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
   "magic.action.archive_activity_email": "E-Mail archiviert:",
   "magic.action.archive_activity_meeting": "Termin archiviert:",

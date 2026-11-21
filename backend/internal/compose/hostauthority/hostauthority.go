@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // Context acts as the host, with the authority their seat holds now.
@@ -25,11 +26,11 @@ func Context(ctx context.Context, seats *identity.Service, host ids.UserID) (con
 	if !ok {
 		return nil, apperrors.ErrPermissionDenied
 	}
-	rbac, seat, err := seats.EffectiveAuthority(ctx, workspace, host.UUID)
+	member, err := authz.MemberPrincipal(ctx, seats, workspace, host.UUID)
 	if err != nil {
 		return nil, err
 	}
-	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + host.String(), UserID: host.UUID, SeatType: seat, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs}), nil
+	return principal.WithActor(ctx, member), nil
 }
 
 // WritableLiveBy says whether the host may change the live record now: it is

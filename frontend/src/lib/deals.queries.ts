@@ -23,7 +23,7 @@ import {
   pipelinesOptions,
   pipelinesWithArchivedOptions,
 } from "./pipelines.queries";
-import { throwProblem, unwrap } from "./problem";
+import { isOwnerNotMeasurable, throwProblem, unwrap } from "./problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
 import { bandOfDial } from "./winprobabilitybands";
@@ -246,8 +246,8 @@ export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
 }
 
 // The one reason the server decides: an owner dial naming somebody whose
-// totals this reader may not measure answers 403. The cards stay, because
-// reading a deal and measuring its owner are different permissions.
+// totals this reader may not measure answers owner_not_measurable. The cards
+// stay, because reading a deal and measuring its owner are different permissions.
 export function totalsRefusedBecause(
   totals: Map<string, StageTotals> | null | undefined,
 ): MessageKey | undefined {
@@ -284,7 +284,7 @@ export function useStageTotals(f: DealFilters, enabled = true) {
     // the column cannot explain a missing total by the wrong rule.
     enabled: enabled && scope !== undefined && withheld === undefined,
     queryFn: async ({ signal }): Promise<Map<string, StageTotals> | null> => {
-      const { data, error, response } = await api.POST("/reports/{report}", {
+      const { data, error } = await api.POST("/reports/{report}", {
         signal,
         params: { path: { report: "deals-by-stage" } },
         body: {
@@ -302,9 +302,7 @@ export function useStageTotals(f: DealFilters, enabled = true) {
         },
       });
       if (error) {
-        if (response.status === 403) {
-          return null;
-        }
+        if (isOwnerNotMeasurable(error)) return null;
         throwProblem(error);
       }
       return buildStageTotals(

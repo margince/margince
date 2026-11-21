@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CoverageNote, PartialMark } from "../../components/partialmark";
 import { StatCard } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Popover } from "../../design-system/popover";
@@ -32,12 +33,7 @@ import {
   type Stage,
 } from "./analytics.cells";
 import { CellExplain, rowDerivationUrl } from "./analytics.explain";
-import {
-  CoverageFootnote,
-  CoverageNote,
-  PartialMark,
-  withPartial,
-} from "./analytics.moneygap";
+import { CoverageFootnote, withPartial } from "./analytics.moneygap";
 
 // One row of the deals-by-stage table: a stage and a currency. A stage holding
 // deals in two currencies has two totals and no third one that means anything.
