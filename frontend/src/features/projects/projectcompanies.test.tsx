@@ -45,11 +45,6 @@ describe("the companies on a project", () => {
     display_name: "netcare",
     role: "customer",
   };
-  const relay = {
-    company_id: "01a02be9-2293-75d2-9dd2-3027d9b63dc3",
-    display_name: "relay",
-    role: "partner",
-  };
 
   it("links a company to an address the router answers", () => {
     renderSection([netcare]);
@@ -74,24 +69,13 @@ describe("the companies on a project", () => {
   // company it takes off.
   it("names the company on each card's detach item", async () => {
     const user = userEvent.setup();
-    renderSection([netcare, relay], false);
+    renderSection([netcare], false);
 
-    const [first] = screen.getAllByRole("button", { name: "More actions" });
-    await user.click(first);
+    await user.click(screen.getByRole("button", { name: "More actions" }));
 
     expect(
       screen.getByRole("button", { name: "Detach netcare" }),
     ).toBeInTheDocument();
-  });
-
-  // The server refuses to take off a project's last company, so its card
-  // offers no verb that could only end in that refusal.
-  it("offers no detach on the only company", () => {
-    renderSection([netcare], false);
-
-    expect(
-      screen.queryByRole("button", { name: "More actions" }),
-    ).not.toBeInTheDocument();
   });
 
   it("names each company's role in the reader's language", () => {

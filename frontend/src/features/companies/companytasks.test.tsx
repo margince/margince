@@ -183,9 +183,7 @@ describe("CompanyScreen — the Tasks tab", () => {
     await waitFor(() =>
       expect(screen.getByText(openTask.subject)).toBeTruthy(),
     );
-    await user.click(
-      screen.getByRole("checkbox", { name: `Mark ${openTask.subject} done` }),
-    );
+    await user.click(screen.getByRole("checkbox", { name: "Done" }));
 
     await waitFor(() => expect(patched).toEqual({ is_done: true }));
   });

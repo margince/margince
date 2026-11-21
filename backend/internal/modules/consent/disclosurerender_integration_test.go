@@ -422,9 +422,9 @@ func TestAFurtherEntityNamesItselfAsTheController(t *testing.T) {
 		LegalName: "Beispiel GmbH", PostalAddress: "Hauptstraße 1\n10115 Berlin", PrivacyContact: "privacy@beispiel.test",
 	})
 	branch := ids.NewV7()
-	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country,
+	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction,
 		  address_line1, address_postal_code, address_city, captured_by)
-		VALUES ($1, 'Branch', 'Branch Co Ltd', 'zk', '1 Le Loi', '700000', 'Saigon', 'human:x')`, branch)
+		VALUES ($1, 'Branch', 'Branch Co Ltd', 'zk', 'zk', '1 Le Loi', '700000', 'Saigon', 'human:x')`, branch)
 	textOf := func(entity ids.UUID) map[string]string {
 		t.Helper()
 		out := map[string]string{}

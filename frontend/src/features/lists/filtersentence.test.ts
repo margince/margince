@@ -18,7 +18,6 @@ import {
   filterSentence,
   type SentenceWords,
 } from "./filtersentence";
-import { referencedIdsOf } from "./filtersentence.names";
 
 // The one place a filter becomes words, so these read like the sentences a
 // reader sees under a Live List and on a saved view, clause by clause.
@@ -65,20 +64,6 @@ const FIELDS: VocabularyField[] = [
     operators: ["in"],
     custom: false,
     references: "app_user",
-  },
-  {
-    name: "company_id",
-    type: "id",
-    operators: ["in", "eq"],
-    custom: false,
-    references: "company",
-  },
-  {
-    name: "team_id",
-    type: "id",
-    operators: ["in"],
-    custom: false,
-    references: "team",
   },
   { name: "email", type: "text", operators: ["exists"], custom: false },
   { name: "city", type: "text", operators: ["eq"], custom: false },
@@ -408,57 +393,5 @@ describe("a filter read as one sentence", () => {
       ].join(" "),
     );
     expect(german).not.toMatch(/\b(is|and|days|ago)\b/);
-  });
-});
-
-describe("record references in a sentence", () => {
-  const named = {
-    ...en,
-    recordNames: new Map([
-      ["co-1", "Demo GmbH"],
-      ["u1", "Alice Meyer"],
-      ["tm-1", "Sales DACH"],
-    ]),
-  };
-
-  it.each([
-    [newLeaf("company_id", "eq", "co-1"), "Company is Demo GmbH"],
-    [newLeaf("owner_id", "in", ["u1"]), "Owner is Alice Meyer"],
-    [newLeaf("team_id", "in", ["tm-1"]), "team id is Sales DACH"],
-  ])("names the record a %#th clause points at", (leaf, sentence) => {
-    expect(read(newGroup("and", [leaf]), named)).toBe(sentence);
-  });
-
-  it("counts the records while any one has no name yet", () => {
-    expect(
-      read(
-        newGroup("and", [newLeaf("company_id", "in", ["co-1", "co-2"])]),
-        named,
-      ),
-    ).toBe("Company is any of 2 companies");
-    expect(read(newGroup("and", [newLeaf("company_id", "eq", "co-1")]))).toBe(
-      "Company is 1 company",
-    );
-  });
-
-  it("finds the ids to name in every clause of every tree, once each", () => {
-    const first = newGroup("and", [
-      newLeaf("company_id", "in", ["co-1", "co-2"]),
-      newLeaf("owner_id", "in", ["u1"]),
-    ]);
-    const second = newGroup("or", [
-      newLeaf("company_id", "eq", "co-1"),
-      newLeaf("team_id", "in", ["tm-1"]),
-      newLeaf("stage_id", "in", ["s1"]),
-    ]);
-    expect(referencedIdsOf([first, second], FIELDS)).toEqual({
-      company: ["co-1", "co-2"],
-      app_user: ["u1"],
-      team: ["tm-1"],
-      stage: ["s1"],
-      pipeline: [],
-      project: [],
-      product: [],
-    });
   });
 });

@@ -1,11 +1,5 @@
 /** @vitest-environment happy-dom */
-import {
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -14,13 +8,6 @@ import { ProblemError } from "../lib/problem";
 import { ProjectLinks, type ProjectLinksAdapter } from "./projectlinks";
 
 afterEach(cleanup);
-
-// The dialog's own confirm, not the section's verb of the same name behind it.
-function confirmAttach() {
-  return within(screen.getByRole("dialog")).getByRole("button", {
-    name: "Attach project",
-  });
-}
 
 function draw(adapter: Partial<ProjectLinksAdapter> = {}, bare = false) {
   const full: ProjectLinksAdapter = {
@@ -109,11 +96,6 @@ describe("ProjectLinks", () => {
     );
     await user.click(await screen.findByText("Warehouse rollout · WR-1"));
 
-    // The pick only selects: the role is still the reader's to choose, so
-    // nothing is written until the confirm.
-    expect(attach).not.toHaveBeenCalled();
-    await user.click(confirmAttach());
-
     // With a role picked, the attach carries it — the section never guesses a
     // role, because attaching re-roles an edge that already exists.
     await waitFor(() => expect(attach).toHaveBeenCalledWith("p9", "customer"));
@@ -122,34 +104,6 @@ describe("ProjectLinks", () => {
         screen.queryByRole("searchbox", { name: /Search projects/ }),
       ).toBeNull(),
     );
-  });
-
-  it("writes the role chosen after the pick, and confirms nothing unpicked", async () => {
-    const user = userEvent.setup();
-    const attach = vi.fn(async () => undefined);
-    draw({
-      search: async () => [{ id: "p9", name: "Warehouse rollout" }],
-      roles: [
-        { value: "customer", label: "Customer" },
-        { value: "partner", label: "Partner" },
-      ],
-      attach,
-    });
-
-    await user.click(screen.getByRole("button", { name: "Attach project" }));
-    expect(confirmAttach().hasAttribute("disabled")).toBe(true);
-    await user.type(
-      screen.getByRole("searchbox", { name: /Search projects/ }),
-      "ware",
-    );
-    await user.click(await screen.findByText("Warehouse rollout"));
-    expect(confirmAttach().hasAttribute("disabled")).toBe(false);
-
-    await user.click(screen.getByRole("combobox", { name: "As" }));
-    await user.click(await screen.findByRole("option", { name: "Partner" }));
-    await user.click(confirmAttach());
-
-    await waitFor(() => expect(attach).toHaveBeenCalledWith("p9", "partner"));
   });
 
   it("keeps the dialog open and shows what the server refused", async () => {
@@ -175,7 +129,6 @@ describe("ProjectLinks", () => {
       "ware",
     );
     await user.click(await screen.findByText("Warehouse rollout"));
-    await user.click(confirmAttach());
 
     // The refusal is the one moment the reader most needs to see what they
     // asked for, so the dialog stays.
@@ -209,7 +162,6 @@ describe("ProjectLinks", () => {
       "ware",
     );
     await user.click(await screen.findByText("Warehouse rollout"));
-    await user.click(confirmAttach());
     expect(await screen.findByText("not found")).toBeTruthy();
     await user.keyboard("{Escape}");
 
@@ -288,7 +240,6 @@ describe("ProjectLinks", () => {
       "ware",
     );
     await user.click(await screen.findByText("Warehouse rollout"));
-    await user.click(confirmAttach());
 
     // Escape while the write is in flight would lose the refusal it is about
     // to return, and the reader would see nothing at all.
@@ -363,7 +314,6 @@ describe("ProjectLinks", () => {
       "ware",
     );
     await user.click(await screen.findByText("Warehouse rollout"));
-    await user.click(confirmAttach());
 
     expect(await screen.findByText(/do not have permission/)).toBeTruthy();
     expect(screen.queryByText(/company\.link_project/)).toBeNull();

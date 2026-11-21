@@ -12,8 +12,6 @@ import type { components } from "../api/schema";
 //   - a deal lists its own uploads and the files of every message linked to it;
 //   - a company lists every upload stamped with it (its own and its deals') and
 //     the files of every message filed under it;
-//   - a project lists its own uploads and the files of every activity filed
-//     under it, on the project page;
 //   - a deal room shares files out of its deal's list.
 //
 // So a file's parent decides which lists hold it. A message's links are not
@@ -27,7 +25,6 @@ const CONTACT_FILES = ["attachments", "contact"] as const;
 const DEAL_FILES = ["deal-documents"] as const;
 const COMPANY_DOCUMENTS = ["companyDocuments"] as const;
 const ROOM_DOCUMENTS = ["deal-room-documents"] as const;
-const PROJECT_PAGE = ["project"] as const;
 
 /** One activity's own file list. */
 export const activityFilesKey = (activityId: string) =>
@@ -93,19 +90,16 @@ export function fileListKeys(
       return [own(COMPANY_DOCUMENTS, companyDocumentsKey)];
     case "deal":
       return [own(DEAL_FILES, dealFilesKey), ...stampedCompany(home), ...rooms];
-    case "project":
-      return [own(PROJECT_PAGE, (id) => [...PROJECT_PAGE, id])];
     case "activity":
       return [
         own(ACTIVITY_FILES, activityFilesKey),
         CONTACT_FILES,
         DEAL_FILES,
         COMPANY_DOCUMENTS,
-        PROJECT_PAGE,
         ...rooms,
       ];
     default:
-      // No Documents list reads a lead's own uploads.
+      // No Documents list reads a lead's or a project's own uploads.
       return [];
   }
 }

@@ -3,38 +3,38 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import {
   Button,
   Field,
   Modal,
   SegmentedControl,
   TextInput,
-} from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { ChoiceList } from "../design-system/choicelist";
-import { FileDropzone } from "../design-system/filedropzone";
-import { Heading } from "../design-system/heading";
+} from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
+import { ChoiceList } from "../../design-system/choicelist";
+import { FileDropzone } from "../../design-system/filedropzone";
+import { Heading } from "../../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
-} from "../design-system/recordpicker";
-import { Select } from "../design-system/select";
-import { searchWords } from "../format/collate";
-import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import { fileListKeys } from "../lib/attachmentkeys";
+} from "../../design-system/recordpicker";
+import { Select } from "../../design-system/select";
+import { searchWords } from "../../format/collate";
+import { formatNumber } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
   type AttachmentParent,
   uploadAttachment,
-} from "../lib/attachmentupload";
-import { useCanWrite } from "../lib/capability";
-import { useHealthScope } from "../lib/healthscope";
-import { labelFor } from "../lib/labelfor";
-import { problemMessageOf, unwrap } from "../lib/problem";
-import { formatUploadLimit, useMaxUploadBytes } from "../lib/uploadlimit";
+} from "../../lib/attachmentupload";
+import { useCanWrite } from "../../lib/capability";
+import { useHealthScope } from "../../lib/healthscope";
+import { labelFor } from "../../lib/labelfor";
+import { problemMessageOf, unwrap } from "../../lib/problem";
+import { formatUploadLimit, useMaxUploadBytes } from "../../lib/uploadlimit";
 import {
   CATEGORY_KEYS,
   type Choosable,
@@ -162,20 +162,17 @@ export function AddDocumentDialog({
   // state: the upload succeeded, and the row exists.
   const [partial, setPartial] = useState(false);
 
-  // One number per opening, null while shut. React Query finishes a mutation
-  // whoever left, so a result from an earlier opening leaves this draft alone.
+  // Read at the moment the request lands, not captured when it was sent. The
+  // mutation's callbacks close over the render that pressed the button, where
+  // the dialog was open by definition — so a plain `open` here would always be
+  // true and the guard below would never fire.
   //
   // Written in an EFFECT, not during render: React may discard a render, and a
   // ref assigned in one publishes a value that was never committed.
-  const openings = useRef(0);
-  const session = useRef<number | null>(null);
+  const openNow = useRef(open);
   useEffect(() => {
-    openings.current += open ? 1 : 0;
-    session.current = open ? openings.current : null;
+    openNow.current = open;
   }, [open]);
-  const pressedIn = () => session.current;
-  const inSession = (pressed: number | null | undefined) =>
-    pressed != null && pressed === session.current;
 
   // What this installation accepts, so an oversize file is refused here rather
   // than after every byte of it has crossed the wire.
@@ -288,17 +285,22 @@ export function AddDocumentDialog({
         return { filed: false, home };
       }
     },
-    onMutate: pressedIn,
-    onSuccess: async (result, _submitted, pressed) => {
+    onSuccess: async (result) => {
       // Closed before the refetch, so a dialog reopened meanwhile keeps its draft.
-      if (result.filed && inSession(pressed)) {
+      if (result.filed) {
         closeAndClear();
       }
       for (const queryKey of fileListKeys(result.home)) {
         await queryClient.invalidateQueries({ queryKey });
       }
-      // Asked again: the reader may have closed and reopened during the refetch.
-      if (result.filed || !inSession(pressed)) {
+      if (result.filed) {
+        return;
+      }
+      // Guarded on the dialog still being open. React Query runs a mutation to
+      // completion whoever started it, so a reader who closed mid-flight would
+      // otherwise be met on their NEXT visit by a warning about an upload from
+      // the previous one, with nothing on screen it refers to.
+      if (!openNow.current) {
         return;
       }
       // Kept open, with the draft cleared: the document is on the record, so
@@ -313,11 +315,8 @@ export function AddDocumentDialog({
       const row = await addLink(submitted);
       return { ...submitted.parent, companyId: row.company_id };
     },
-    onMutate: pressedIn,
-    onSuccess: async (home, _submitted, pressed) => {
-      if (inSession(pressed)) {
-        closeAndClear();
-      }
+    onSuccess: async (home) => {
+      closeAndClear();
       for (const queryKey of fileListKeys(home)) {
         await queryClient.invalidateQueries({ queryKey });
       }

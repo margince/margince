@@ -32,7 +32,7 @@ import {
 // phase ladder under it, three readings beside it, the dated axis and the
 // figures. A reading the health job wrote carries the agent tag, its reason and
 // an undo. That job judges from filed activity and tasks, so the sources pill
-// still reads from CRM records; a colleague's reading names its author instead.
+// still reads from CRM records.
 
 // The days under each rung ("9 days", "18 days · now") and a dash for a rung
 // the project has not reached. Closed is a way out, not a rung.
@@ -126,11 +126,6 @@ export function ProjectStanding({
   return (
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}
-      sources={
-        reading.kind === "assessed" && !reading.byAI
-          ? { by: "colleague" }
-          : { by: "records" }
-      }
       verdict={
         reading.kind === "assessed" && reading.byAI
           ? {

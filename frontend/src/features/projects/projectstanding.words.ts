@@ -5,7 +5,10 @@ import type {
   TimelineGap,
 } from "../../design-system/standingtimeline";
 import { formatMoney } from "../../format/format";
-import { formatDayMonthNearYear } from "../../format/format.dates";
+import {
+  formatDayMonth,
+  formatDayMonthNearYear,
+} from "../../format/format.dates";
 import type { Translator, Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
@@ -34,7 +37,11 @@ const STATE_WORD: Readonly<Record<ProjectHealthState, MessageKey>> = {
   off_track: "projectHealth.state.offTrack",
 };
 
-// A day in another year than the record's today says its year.
+function day(iso: string, ctx: Ctx): string {
+  return formatDayMonth(iso, ctx.locale, ctx.zone);
+}
+
+// A verdict's reason may name a day in another year, so it says the year then.
 function dayNearYear(iso: string, view: Project360, ctx: Ctx): string {
   return formatDayMonthNearYear(
     iso,
@@ -48,13 +55,14 @@ export function phaseName(phase: string, t: Translator): string {
   return isProjectPhase(phase) ? t(labelFor(PHASE_LABEL, phase)) : phase;
 }
 
-// Who judged it and when, so a reading weeks old does not pass for today's.
 function assessedSentence(
   reading: Extract<ProjectReading, { kind: "assessed" }>,
-  view: Project360,
   ctx: Ctx,
 ): string {
-  const date = dayNearYear(reading.assessedAt, view, ctx);
+  if (reading.note) {
+    return reading.note;
+  }
+  const date = day(reading.assessedAt, ctx);
   return reading.author
     ? ctx.t("project.standing.assessedBy", { date, author: reading.author })
     : ctx.t("project.standing.assessedOn", { date });
@@ -64,18 +72,12 @@ function assessedSentence(
 export function projectVerdict(view: Project360, ctx: Ctx): StandingVerdict {
   const reading = projectReading(view);
   switch (reading.kind) {
-    case "assessed": {
-      const word = ctx.t(labelFor(STATE_WORD, reading.state));
-      // The health job's note is its reason, the sentence its tag stands by.
-      return reading.byAI && reading.note
-        ? { word, sentence: reading.note, tone: reading.tone }
-        : {
-            word,
-            sentence: assessedSentence(reading, view, ctx),
-            note: reading.note,
-            tone: reading.tone,
-          };
-    }
+    case "assessed":
+      return {
+        word: ctx.t(labelFor(STATE_WORD, reading.state)),
+        sentence: assessedSentence(reading, ctx),
+        tone: reading.tone,
+      };
     case "withheld":
       return { word: ctx.t("state.withheld"), tone: "neutral" };
     default:
@@ -220,7 +222,7 @@ function timeDim(view: Project360, ctx: Ctx): StandingDim {
       value: ctx.t("project.standing.day", { day: String(used.day) }),
       sub: ctx.t("project.standing.ofDays", {
         total: String(used.total),
-        date: dayNearYear(used.endsOn, view, ctx),
+        date: day(used.endsOn, ctx),
       }),
       tone: used.tone,
     };
@@ -231,7 +233,7 @@ function timeDim(view: Project360, ctx: Ctx): StandingDim {
       label,
       value: ctx.t("project.standing.notStarted"),
       sub: ctx.t("project.standing.startsOn", {
-        date: dayNearYear(used.startsOn, view, ctx),
+        date: day(used.startsOn, ctx),
       }),
       tone: "neutral",
     };
@@ -301,8 +303,8 @@ function momentTitle(moment: ProjectMoment, ctx: Ctx): string {
   }
 }
 
-function momentSub(moment: ProjectMoment, view: Project360, ctx: Ctx): string {
-  const date = dayNearYear(moment.at, view, ctx);
+function momentSub(moment: ProjectMoment, ctx: Ctx): string {
+  const date = day(moment.at, ctx);
   switch (moment.what) {
     case "opened":
       return `${date} · ${phaseMoverSentence(moment.by, true, ctx.t)}`;
@@ -329,7 +331,7 @@ export function projectEvents(view: Project360, ctx: Ctx): TimelineEvent[] {
     at: moment.at,
     kind: moment.kind,
     title: momentTitle(moment, ctx),
-    sub: momentSub(moment, view, ctx),
+    sub: momentSub(moment, ctx),
     outcome: moment.what === "won" ? "won" : undefined,
     // The newest update is a filed activity, so its mark is not drawn twice.
     activityIds:

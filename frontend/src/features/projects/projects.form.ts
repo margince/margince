@@ -9,10 +9,7 @@ import {
   projectOwnerField,
 } from "../../components/projectownerfield";
 import { PHASE_LABEL } from "../../format/projectphase";
-import { trimServerSpace } from "../../format/servertrim";
 import type { MessageKey } from "../../i18n/en";
-import { faultSentenceFor } from "../../lib/problem";
-import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 // The project form's vocabulary and transport, with no React in it: what the
 // create and edit dialogs ask, and
@@ -43,26 +40,7 @@ export function projectFields(
   }>,
 ): CreateField[] {
   return [
-    {
-      key: "name",
-      label: "project.name",
-      required: true,
-      // No native `maxLength`: it counts UTF-16 units. The server trims, then
-      // counts characters, and so does this refusal, which holds Save.
-      validate: (value) =>
-        [...trimServerSpace(value)].length > TEXT_LIMITS.label
-          ? faultSentenceFor(
-              {
-                field: "name",
-                code: "too_long",
-                message: "",
-                max: TEXT_LIMITS.label,
-              },
-              t,
-              { name: t("project.name") },
-            )
-          : undefined,
-    },
+    { key: "name", label: "project.name", required: true },
     ...(opts.mode === "create"
       ? [
           {

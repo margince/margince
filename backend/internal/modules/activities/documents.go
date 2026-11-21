@@ -245,7 +245,7 @@ const scopeNothing = "FALSE"
 // clause over their own columns. `activity` is not one of them — its scope is
 // the link walk — so it gets its own arm in activityParentClause rather than
 // being forced into this shape, which would widen it.
-var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityContact, linkEntityProject}
+var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityContact}
 
 // activityParentClause is the arm for a file hanging off an activity. It uses
 // the link-walk scope every other activity read uses (ADR-0054 §8: scope policy

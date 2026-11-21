@@ -4,7 +4,6 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { AddDocumentDialog } from "../../components/adddocument";
 import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useFieldFaults } from "../../design-system/savepage";
@@ -18,6 +17,7 @@ import {
   refusalSentences,
   unwrap,
 } from "../../lib/problem";
+import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { roomBriefKey } from "./dealroombrief.key";
 import "./dealroomdocuments.css";
 import { dealFilesKey, roomDocumentsKey } from "../../lib/attachmentkeys";

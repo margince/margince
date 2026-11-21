@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 // here rather than in front of a user.
 const KEY_OWNERS = [
   {
-    page: "src/features/projects/project360.reads.ts",
+    page: "src/features/projects/project360.tsx",
     key: "project360Key(id)",
     writers: [
       "src/features/projects/projectcompanies.tsx",

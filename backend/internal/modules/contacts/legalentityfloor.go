@@ -4,9 +4,10 @@
 package contacts
 
 // A member's mail is kept under the floor of the legal entity they work for.
-// Moving a member, or changing an entity's country, can shorten that floor, so
-// the write carries the old one for mail already held. privacy owns the carry
-// and this module never imports it, so the composition root injects it.
+// Moving a member, or changing an entity's jurisdiction, can shorten that
+// floor, so the write carries the old one for mail already held. privacy owns
+// the carry and this module never imports it, so the composition root injects
+// it.
 
 import (
 	"context"
@@ -18,17 +19,17 @@ import (
 )
 
 // EntityJurisdiction is what decides an entity's floor: whether it is the
-// default entity, which follows the installation, and its own country.
+// default entity, which follows the installation, and its own jurisdiction.
 type EntityJurisdiction struct {
-	Default bool
-	Country string
+	Default      bool
+	Jurisdiction string
 }
 
 // FloorCarry keeps the floor that moving members from one jurisdiction to the
 // other would shorten, in the caller's transaction.
 type FloorCarry func(ctx context.Context, tx pgx.Tx, from, to EntityJurisdiction) error
 
-// WithFloorCarry wires the carry every entity move and country change owes.
+// WithFloorCarry wires the carry every entity move and jurisdiction change owes.
 func (s *Store) WithFloorCarry(carry FloorCarry) *Store {
 	s.floorCarry = carry
 	return s
@@ -66,8 +67,8 @@ func entityJurisdiction(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID) (E
 
 func jurisdictionOf(entity LegalEntity) EntityJurisdiction {
 	out := EntityJurisdiction{Default: entity.IsDefault}
-	if entity.Country != nil {
-		out.Country = *entity.Country
+	if entity.Jurisdiction != nil {
+		out.Jurisdiction = *entity.Jurisdiction
 	}
 	return out
 }

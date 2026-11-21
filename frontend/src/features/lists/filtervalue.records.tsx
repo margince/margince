@@ -7,7 +7,6 @@
 
 import { X } from "lucide-react";
 import { useState } from "react";
-import { useEntityName } from "../../components/entityref.queries";
 import {
   type SearchResult,
   useDebouncedSearch,
@@ -20,69 +19,42 @@ import type { LeafValue } from "../../lib/segmentpredicate";
 /**
  * The ids a list clause already names, and a way to drop one.
  *
- * Shown under the labels the caller holds, else under the company's name,
- * which a clause restored from a saved view needs. The id shows only while
- * that name loads or when the reader may not see the company.
+ * Shown as the labels they were picked under where this session knows them. A
+ * clause restored from a saved view carries ids and no names, so the id shows —
+ * a reader can still see which records the clause holds and remove one, where
+ * hiding them would leave a list they cannot inspect.
  */
 export function ChosenRecords({
   ids,
   labels,
   onRemove,
-  lookup,
 }: Readonly<{
   ids: readonly string[];
   labels: ReadonlyMap<string, string>;
   onRemove: (id: string) => void;
-  /** The kind of record the ids name, when the caller has no labels for them. */
-  lookup?: "company";
 }>) {
+  const t = useT();
   if (ids.length === 0) {
     return null;
   }
   return (
     <ul className="filter-chosen">
       {ids.map((id) => (
-        <ChosenRecord
-          key={id}
-          id={id}
-          label={labels.get(id)}
-          lookup={lookup}
-          onRemove={onRemove}
-        />
+        <li key={id}>
+          <span>{labels.get(id) ?? id}</span>
+          <button
+            type="button"
+            className="btn-link"
+            aria-label={t("filters.removeRecord", {
+              record: labels.get(id) ?? id,
+            })}
+            onClick={() => onRemove(id)}
+          >
+            <X aria-hidden="true" />
+          </button>
+        </li>
       ))}
     </ul>
-  );
-}
-
-function ChosenRecord({
-  id,
-  label,
-  lookup,
-  onRemove,
-}: Readonly<{
-  id: string;
-  label: string | undefined;
-  lookup: "company" | undefined;
-  onRemove: (id: string) => void;
-}>) {
-  const t = useT();
-  const named = useEntityName(
-    lookup ?? "company",
-    lookup && label === undefined ? id : null,
-  );
-  const shown = label ?? named.name ?? id;
-  return (
-    <li>
-      <span>{shown}</span>
-      <button
-        type="button"
-        className="btn-link"
-        aria-label={t("filters.removeRecord", { record: shown })}
-        onClick={() => onRemove(id)}
-      >
-        <X aria-hidden="true" />
-      </button>
-    </li>
   );
 }
 
@@ -126,7 +98,9 @@ export function SearchedRecordValue({
   const t = useT();
   const searchName = label ?? t("filters.searchRecords");
   const [query, setQuery] = useState("");
-  // Names the reader just picked, shown before the name lookup has answered.
+  // Names for the ids chosen in THIS session. A clause restored from a saved
+  // view carries ids and nothing else, so this stays empty for them and the id
+  // shows instead — see ChosenRecords.
   const [names, setNames] = useState<ReadonlyMap<string, string>>(new Map());
   const { results, pending, failed } = useDebouncedSearch(
     searchCompanies,
@@ -153,12 +127,7 @@ export function SearchedRecordValue({
 
   return (
     <div className="filter-value">
-      <ChosenRecords
-        ids={ids}
-        labels={names}
-        onRemove={drop}
-        lookup="company"
-      />
+      <ChosenRecords ids={ids} labels={names} onRemove={drop} />
       {closed ? (
         <button
           type="button"

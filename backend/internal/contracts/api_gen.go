@@ -47362,7 +47362,7 @@ type CreateLegalEntityRequest struct {
 	BankAccountHolder *string             `json:"bank_account_holder,omitempty"`
 	Bic               *string             `json:"bic,omitempty"`
 
-	// Country Lower-case ISO 3166-1 alpha-2, for example `de`.
+	// Country The address country, lower-case ISO 3166-1 alpha-2, for example `de`.
 	Country string `json:"country"`
 
 	// DefaultLanguage ISO 639-1, for example `de`.
@@ -47370,9 +47370,14 @@ type CreateLegalEntityRequest struct {
 	DisplayName     string  `json:"display_name" singleline:"true"`
 
 	// Iban Spaces are removed and letters upper-cased before the check.
-	Iban      *string `json:"iban,omitempty"`
-	Imprint   *string `json:"imprint,omitempty"`
-	LegalName string  `json:"legal_name" singleline:"true"`
+	Iban    *string `json:"iban,omitempty"`
+	Imprint *string `json:"imprint,omitempty"`
+
+	// Jurisdiction The jurisdiction pack whose law the entity follows, one of `available` of
+	// `/installation/jurisdiction`. Left out, it is the `country`, and a country no pack
+	// covers answers `invalid_jurisdiction`.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
+	LegalName    string  `json:"legal_name" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -56145,7 +56150,7 @@ type LegalEntity struct {
 	// Bic The BIC, upper case.
 	Bic *string `json:"bic,omitempty"`
 
-	// Country Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country.
+	// Country Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity.
 	Country   *string   `json:"country,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 
@@ -56164,6 +56169,12 @@ type LegalEntity struct {
 
 	// IsDefault The entity a user with no assignment works for. Exactly one exists, and it cannot be archived.
 	IsDefault bool `json:"is_default"`
+
+	// Jurisdiction The jurisdiction pack whose law the entity follows, as its lower-case code, for example
+	// `de`. It is one of the packs this build offers (`available` of
+	// `/installation/jurisdiction`). Null on the default entity, whose law is the
+	// installation's jurisdiction.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
 
 	// LegalName The registered name documents are issued under.
 	LegalName *string `json:"legal_name,omitempty"`
@@ -61081,7 +61092,7 @@ type Project360 struct {
 		Page PageInfo `json:"page"`
 	} `json:"deals,omitempty"`
 
-	// Documents The project's own uploads and the files of the activities filed under it, newest first.
+	// Documents The files attached to the project itself, newest first.
 	Documents *struct {
 		Data []Attachment `json:"data"`
 		Page PageInfo     `json:"page"`
@@ -70828,7 +70839,10 @@ type UpdateLegalEntityRequest struct {
 	DisplayName       *string             `json:"display_name,omitempty" singleline:"true"`
 	Iban              *string             `json:"iban,omitempty"`
 	Imprint           *string             `json:"imprint,omitempty"`
-	LegalName         *string             `json:"legal_name,omitempty" singleline:"true"`
+
+	// Jurisdiction One of `available` of `/installation/jurisdiction`. The default entity refuses it.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
+	LegalName    *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to

@@ -120,7 +120,6 @@ function TasksTabTable({ view }: Readonly<{ view: typeof tasks }>) {
       renderTick={(step) => (
         <TaskCompleteCheck
           activityId={step.activity_id}
-          subject={step.subject}
           version={step.version}
           update={update}
         />

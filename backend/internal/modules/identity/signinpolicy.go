@@ -94,26 +94,23 @@ func (s *InstallationSettingsStore) SSOEnforced(ctx context.Context) (bool, erro
 	return enforced, nil
 }
 
-// AdmissionSettings are the stored settings every authenticated request applies.
-type AdmissionSettings struct {
-	IndividualPerformance bool
-	RequireMFA            bool
-}
-
-// AdmissionSettings reads both in one statement, inside the admission
-// transaction. Its config carries the same boot locks IndividualPerformanceTx
-// reads through config.Bound().
-func (s *InstallationSettingsStore) AdmissionSettings(ctx context.Context, tx pgx.Tx) (AdmissionSettings, error) {
-	allowed, required, err := config.StoredApplyPairTx(ctx, tx, s.config, IndividualPerformance, RequireMFA)
+// MFARequired reports the password-session enrolment policy at admission, read
+// in the admission transaction.
+func (s *InstallationSettingsStore) MFARequired(ctx context.Context, tx pgx.Tx) (bool, error) {
+	required, err := config.StoredApplyTx(ctx, tx, s.config, RequireMFA)
 	if err != nil {
-		return AdmissionSettings{}, fmt.Errorf("identity: reading the admission settings: %w", err)
+		return false, fmt.Errorf("identity: reading the require-MFA policy: %w", err)
 	}
-	return AdmissionSettings{IndividualPerformance: allowed, RequireMFA: required}, nil
+	return required, nil
 }
 
-// GroupRoleMap reports the stored group→role grant map for the sign-in path.
-// Like SSOEnforced it gates on no caller, and a failed read propagates: "no
-// grants" would sign a member in without a role an admin mapped.
+// GroupRoleMap reports the stored group→role grant map for the sign-in path —
+// the third sibling of SSOEnforced and MFARequired, read on the same terms:
+// anonymous of any caller, because it runs while a federated login is deciding
+// what the arriving member holds and there is no principal yet to gate on. A
+// read that fails propagates rather than reading as empty, because answering a
+// policy outage as "no grants" would silently sign a member in without a role
+// an admin deliberately mapped.
 //
 // It reads INSIDE the caller's transaction — the one the grant itself commits
 // in — so the map an admin retires between a pre-transaction read and the

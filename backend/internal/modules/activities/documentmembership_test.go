@@ -20,7 +20,7 @@ func TestEveryHolderKindRendersTheSharedFileRules(t *testing.T) {
 		"mf.entity_type = 'activity'",
 		"UNION ALL",
 	}
-	for _, holder := range []string{holderDeal, holderContact, holderCompany, holderProject} {
+	for _, holder := range []string{holderDeal, holderContact, holderCompany} {
 		sql := documentMembership(holder, 1)
 		for _, rule := range rules {
 			if !strings.Contains(sql, rule) {
@@ -41,8 +41,5 @@ func TestOnlyTheCompanyReadsMailFilesThroughTheEmploymentWalk(t *testing.T) {
 	}
 	if !strings.Contains(documentMembership(holderContact, 1), "l.contact_id = $1") {
 		t.Error("the contact membership does not walk the mail's contact link")
-	}
-	if !strings.Contains(documentMembership(holderProject, 1), "l.project_id = $1") {
-		t.Error("the project membership does not walk the activity's project link")
 	}
 }

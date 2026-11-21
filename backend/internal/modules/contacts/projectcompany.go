@@ -383,7 +383,7 @@ func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectI
 type LastProjectCompanyError struct{}
 
 func (e *LastProjectCompanyError) Error() string {
-	return "A project keeps at least one company. Add another before you take this one off."
+	return "a project keeps at least one company; add another before taking this one off"
 }
 
 // FieldFault names the company the caller tried to remove.
@@ -408,14 +408,8 @@ func (p ProjectCompany) OnProjectAs() string { return p.Role }
 type CompanyHasDealsOnProjectError struct{ Deals int }
 
 func (e *CompanyHasDealsOnProjectError) Error() string {
-	// The count is of unarchived deals, so a won or lost deal still holds the
-	// company on. Moving or archiving it is what lifts the refusal.
-	if e.Deals == 1 {
-		return "This company still has 1 deal on the project. " +
-			"Move it to another project or archive it before you take the company off."
-	}
-	return fmt.Sprintf("This company still has %d deals on the project. "+
-		"Move them to another project or archive them before you take the company off.", e.Deals)
+	return fmt.Sprintf("this company still has %d deal(s) on the project; "+
+		"move or close them before taking the company off", e.Deals)
 }
 
 // FieldFault names the company the caller tried to take off.
