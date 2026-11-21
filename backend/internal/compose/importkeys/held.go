@@ -116,13 +116,16 @@ func DomainHeld(ctx context.Context, pool *pgxpool.Pool, domain string) (bool, e
 	return held, err
 }
 
-// EmailHeldByAnother answers which kinds of live record other than self hold
-// this address, through the lookup every contact and lead write asks. A record
-// moving an address onto itself is not its own holder.
-func EmailHeldByAnother(ctx context.Context, pool *pgxpool.Pool, email string, self ids.UUID) (contact, lead bool, err error) {
+// EmailHeldByAnother answers which kinds of record other than self hold this
+// address: an earlier row of the run, or a live record found through the lookup
+// every contact and lead write asks. A record moving an address onto itself is
+// not its own holder.
+func EmailHeldByAnother(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, email string, self ids.UUID) (contact, lead bool, err error) {
 	if email == "" {
 		return false, false, nil
 	}
+	contact = ledger.Held(Email, email, migration.ObjectContact)
+	lead = ledger.Held(Email, email, migration.ObjectLead)
 	err = probe(ctx, pool, fmt.Sprintf("%q", email), func(tx pgx.Tx) error {
 		holders, err := storekit.IdentityHoldersOf(ctx, tx, storekit.IdentityKeys{Emails: []string{email}})
 		for _, held := range holders.Contacts {
@@ -137,10 +140,10 @@ func EmailHeldByAnother(ctx context.Context, pool *pgxpool.Pool, email string, s
 }
 
 // CompanyLinkedInHeldByAnother is LinkedInHeld for a company that moves a URL
-// onto itself: its own URL is not a holder.
-func CompanyLinkedInHeldByAnother(ctx context.Context, pool *pgxpool.Pool, url string, self ids.UUID) (bool, error) {
-	if url == "" {
-		return false, nil
+// onto itself: its own URL is not a holder, and an earlier row of the run is.
+func CompanyLinkedInHeldByAnother(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, url string, self ids.UUID) (bool, error) {
+	if url == "" || ledger.Held(LinkedIn, url, migration.ObjectCompany) {
+		return url != "", nil
 	}
 	var held bool
 	err := probe(ctx, pool, fmt.Sprintf("%q", url), func(tx pgx.Tx) error {
@@ -151,11 +154,49 @@ func CompanyLinkedInHeldByAnother(ctx context.Context, pool *pgxpool.Pool, url s
 	return held, err
 }
 
+// Holder is the record type holding a key a row moves.
+type Holder struct {
+	Kind   Kind
+	Object string
+}
+
+// MovedKeyHeld asks, for each key kind a row moves in this order, whether
+// another record holds it, and names the first holder. A contact meets its
+// address held by a contact or a lead, a lead meets only a lead, and a company
+// meets its LinkedIn URL and domains.
+func MovedKeyHeld(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object string, self ids.UUID, keys map[Kind]string, moved []Kind) (Holder, bool, error) {
+	for _, kind := range moved {
+		switch {
+		case kind == Email && object != migration.ObjectCompany:
+			contact, lead, err := EmailHeldByAnother(ctx, pool, ledger, keys[Email], self)
+			switch {
+			case err != nil:
+				return Holder{}, false, err
+			case contact && object == migration.ObjectContact:
+				return Holder{Email, migration.ObjectContact}, true, nil
+			case lead:
+				return Holder{Email, migration.ObjectLead}, true, nil
+			}
+		case kind == LinkedIn && object == migration.ObjectCompany:
+			held, err := CompanyLinkedInHeldByAnother(ctx, pool, ledger, keys[LinkedIn], self)
+			if err != nil || held {
+				return Holder{LinkedIn, object}, held, err
+			}
+		case kind == Domain && object == migration.ObjectCompany:
+			held, err := DomainHeldByAnother(ctx, pool, ledger, keys[Domain], self)
+			if err != nil || held {
+				return Holder{Domain, object}, held, err
+			}
+		}
+	}
+	return Holder{}, false, nil
+}
+
 // DomainHeldByAnother is DomainHeld for a company that moves a domain onto
-// itself: its own live domains are not a holder.
-func DomainHeldByAnother(ctx context.Context, pool *pgxpool.Pool, domain string, self ids.UUID) (bool, error) {
-	if domain == "" {
-		return false, nil
+// itself: its own live domains are not a holder, and an earlier row of the run is.
+func DomainHeldByAnother(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, domain string, self ids.UUID) (bool, error) {
+	if domain == "" || ledger.Held(Domain, domain, migration.ObjectCompany) {
+		return domain != "", nil
 	}
 	var held bool
 	err := probe(ctx, pool, fmt.Sprintf("%q", domain), func(tx pgx.Tx) error {
