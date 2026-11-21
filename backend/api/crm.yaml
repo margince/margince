@@ -37591,19 +37591,26 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       x-human-only-reason: covered
-      summary: File a chat screenshot on its contact as one message activity, with the image attached.
+      summary: File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
       description: |
         The confirm step after a `chat_capture` reading of a screenshot uploaded to a
-        contact. It writes one `message` activity linked to that contact, on the channel
-        named, with `body` as its text, and moves the image from the contact onto the
-        activity. Nothing is written before this call: the reading never files anything.
+        contact, lead or deal. It writes one `message` activity linked to that record, on
+        the channel named, with `body` as its text, and moves the image from the record
+        onto the activity. Nothing is written before this call: the reading never files anything.
+
+        With a `chat_task_reading` model set up, the filed text is then read against the
+        caller's own open tasks on that record. A task the chat settles is marked done, or
+        moved to the day the chat names, by Margince on the caller's behalf, with the chat
+        line it rests on as evidence. The change shows in Done for you with Undo, and the
+        same chat never changes that task again. An unsure reading, or no model, changes
+        no task, and a failed reading never refuses the filing.
 
         When `body` is the reading's own text unchanged, the activity is written by the
         reader on behalf of the caller, which is how the product marks text a model
         read. A body the caller typed or changed is the caller's own. An empty body is
         allowed, so a screenshot the model could not read is still filed.
 
-        Requires UPDATE on the contact and CREATE on activities. The reading named must
+        Requires UPDATE on the record and CREATE on activities. The reading named must
         belong to this file, be a `chat_capture` reading, and be finished; otherwise
         422. `channel_provider` must be a registered provider (`GET /v1/channel-providers`).
         A second call with the same reading answers the activity the first one wrote.
@@ -37623,7 +37630,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set.
+          description: The chat's header shows someone other than the contact or lead, and `confirm_other_counterparty` was not set.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -61673,9 +61680,9 @@ components:
         other_counterparty:
           type: [string, 'null']
           description: |
-            For a finished `chat_capture` reading of a screenshot on a contact: the name or
-            number the chat header shows when neither agrees with that contact. Null when
-            they agree, when the header shows neither, and for every other reading.
+            For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+            name or number the chat header shows when neither agrees with that record. Null
+            when they agree, when the header shows neither, on a deal, and for every other reading.
             `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
 
     AttachmentReadRequest:
@@ -61706,7 +61713,7 @@ components:
           type: boolean
           default: false
           description: |
-            The caller confirms the chat belongs on this contact although its header shows
+            The caller confirms the chat belongs on this record although its header shows
             someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
             is refused with 409.
 
@@ -73353,6 +73360,7 @@ components:
         - capture_confidentiality_verdict
         - capture_counterparty_verdict
         - chat_summary
+        - chat_task_reading
         - cert_judge
         - cold_start
         - corpus_ask
@@ -73396,7 +73404,7 @@ components:
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
          request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
-         reader_rendering, deal_verdict, rewrite, chat_summary]
+         reader_rendering, deal_verdict, rewrite, chat_summary, chat_task_reading]
       x-extensible-enum: true
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,

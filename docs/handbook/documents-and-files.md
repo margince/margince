@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx frontend/src/features/projects/projectdocuments.tsx frontend/src/components/adddocument.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx frontend/src/features/projects/projectdocuments.tsx frontend/src/components/adddocument.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/components/chatcapture.tsx frontend/src/features/leads/leadhistory.tsx backend/internal/compose/chatcapturefile.go backend/internal/compose/chattasks -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
@@ -165,26 +165,36 @@ A field the file names but not clearly enough is left out and labelled
 name at all is labelled "omitted (not stated in this file)". Margince does
 not guess a missing value.
 
-## A chat on a contact
+## A chat on a contact, lead or deal
 
-### How do I save a chat from WhatsApp on a contact?
-To save a chat from a messaging app on a contact in Margince, open the contact's **Documents** tab and click **Capture a chat**.
+### How do I save a chat from WhatsApp on a contact, lead or deal?
+To save a chat from a messaging app in Margince, click **Capture a chat**. It is on a contact's **Documents** tab, on a lead's **History** tab, and in a deal's **Files** panel.
 1. Take a screenshot of the chat and paste it, drop it on **Screenshot**, or click to choose it.
 2. AI reads the messages into **What was said**, marked "Copied from the screenshot by AI". Check the text and change it if needed.
-3. Pick the **Chat app** and click **File on this contact**.
-Nothing is saved on the contact's history until you click **File on this contact**. **Discard** removes the screenshot again.
+3. Pick the **Chat app** and click **File on this contact**, **File on this lead** or **File on this deal**.
+Nothing is saved on the record's history until you click the file button. **Discard** removes the screenshot again.
 Also called: save a WhatsApp chat, log a Telegram message, add a chat screenshot.
 
-The chat is saved as one message on the contact, with the screenshot
+The chat is saved as one message on the record, with the screenshot
 attached to it. When the chat's header shows a name or number that is
-not this contact's, the panel says so. Tick the box to save it here all the same. When AI cannot read the screenshot, or no AI model is set up,
+not this contact's or lead's, the panel says so. Tick the box to save it here all the same. A deal has many contacts, so a chat on a deal gets no such warning. When AI cannot read the screenshot, or no AI model is set up,
 the panel says why and **What was said** stays empty. You can type the text
 yourself or save the screenshot alone.
 
 A message whose text you left as AI read it is recorded as written by AI for
 you. A text you typed or changed is recorded as yours.
 
-The screenshot and the text are part of the contact's data. Deleting the
+### Does a filed chat change my open task?
+Yes, when an AI model is set up. After you file a chat, AI reads it against your open tasks on the same record. It changes a task only when the chat clearly settles it:
+- The chat shows the task's work happened, for example "I booked a slot for Thursday". The task is marked done.
+- The chat shows the task waits, for example "ping me again next week". The task moves to that day.
+
+Every other task stays as it was. AI reads only tasks that are yours and that you may change. It skips tasks Margince made, and a task you opened again after Margince closed it.
+The change shows in **Done for you** with the chat line it rests on, and **Undo** puts the task back as it was. AI reads a chat once, when you first file it, so it never changes that task again.
+
+The receipt quotes the chat only while you may read it. A deleted, archived or private chat leaves the receipt without its words.
+
+The screenshot and the text are part of the record's data. Deleting a
 contact's data on request removes both.
 
 ## Files on a deal

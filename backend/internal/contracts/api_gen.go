@@ -1339,6 +1339,7 @@ const (
 	AiActivityKindCaptureCounterpartyVerdict    AiActivityKind = "capture_counterparty_verdict"
 	AiActivityKindCertJudge                     AiActivityKind = "cert_judge"
 	AiActivityKindChatSummary                   AiActivityKind = "chat_summary"
+	AiActivityKindChatTaskReading               AiActivityKind = "chat_task_reading"
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
@@ -1390,6 +1391,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCertJudge:
 		return true
 	case AiActivityKindChatSummary:
+		return true
+	case AiActivityKindChatTaskReading:
 		return true
 	case AiActivityKindColdStart:
 		return true
@@ -1940,6 +1943,7 @@ const (
 	AiTaskCaptureCounterpartyVerdict    AiTask = "capture_counterparty_verdict"
 	AiTaskCertJudge                     AiTask = "cert_judge"
 	AiTaskChatSummary                   AiTask = "chat_summary"
+	AiTaskChatTaskReading               AiTask = "chat_task_reading"
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
@@ -1990,6 +1994,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskCertJudge:
 		return true
 	case AiTaskChatSummary:
+		return true
+	case AiTaskChatTaskReading:
 		return true
 	case AiTaskColdStart:
 		return true
@@ -37061,9 +37067,9 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
-	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact: the name or
-	// number the chat header shows when neither agrees with that contact. Null when
-	// they agree, when the header shows neither, and for every other reading.
+	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+	// name or number the chat header shows when neither agrees with that record. Null
+	// when they agree, when the header shows neither, on a deal, and for every other reading.
 	// `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
 	OtherCounterparty *string `json:"other_counterparty,omitempty"`
 
@@ -51597,7 +51603,7 @@ type FileChatCaptureRequest struct {
 	// ChannelProvider The messaging app the chat happened in.
 	ChannelProvider ProviderRef `json:"channel_provider"`
 
-	// ConfirmOtherCounterparty The caller confirms the chat belongs on this contact although its header shows
+	// ConfirmOtherCounterparty The caller confirms the chat belongs on this record although its header shows
 	// someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
 	// is refused with 409.
 	ConfirmOtherCounterparty *bool `json:"confirm_other_counterparty,omitempty"`
@@ -100206,7 +100212,7 @@ type ServerInterface interface {
 	// Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 	// (POST /attachments/{id}/extraction:accept)
 	AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
-	// File a chat screenshot on its contact as one message activity, with the image attached.
+	// File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
 	// (POST /attachments/{id}/extraction:file-chat)
 	FileChatCapture(w http.ResponseWriter, r *http.Request, id Id)
 	// One named reading of this attachment, for a screen polling the reading it started.
@@ -104154,7 +104160,7 @@ func (_ Unimplemented) AcceptAttachmentExtraction(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// File a chat screenshot on its contact as one message activity, with the image attached.
+// File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
 // (POST /attachments/{id}/extraction:file-chat)
 func (_ Unimplemented) FileChatCapture(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)

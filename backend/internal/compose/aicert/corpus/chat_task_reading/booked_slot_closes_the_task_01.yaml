@@ -1,0 +1,22 @@
+name: booked_slot_closes_the_task
+task: chat_task_reading
+site: chat_tasks
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+# The customer says she booked a slot: the follow-up on the meeting request is
+# done, and the unrelated offer task stays as it is.
+fixture:
+  today: "2026-11-18"
+  chat: "Me: Hi Lena, did you find a time for our call?\nLena Hoffmann: Yes, I booked a slot for Thursday at 10.\nMe: Great, talk then!"
+  tasks:
+    - {subject: "Follow up on the meeting request", due_on: "2026-11-18"}
+    - {subject: "Send the revised offer for 40 seats", due_on: "2026-11-25"}
+expect:
+  outcome: accepted
+  answer:
+    actions: [done, none]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The meeting-request follow-up is done, quoting Lena's line about the booked slot. The offer task is none."
