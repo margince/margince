@@ -4218,8 +4218,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
   "co.health.reason.lastMet_other": "Zuletzt vor {days} Tagen getroffen.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "In Kontakt, aber ein einziger Kontakt trägt das ganze Unternehmen.",
+  "co.health.reason.singleThreaded_other":
+    "In Kontakt, aber nur {count} Kontakte tragen das ganze Unternehmen.",
   "co.health.reason.severalContacts_one":
     "{count} Kontakt hier steht in Verbindung.",
   "co.health.reason.severalContacts_other":

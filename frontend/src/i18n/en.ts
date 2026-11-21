@@ -4156,8 +4156,10 @@ export const en = {
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "In contact, but one contact carries the whole company relationship.",
+  "co.health.reason.singleThreaded_other":
+    "In contact, but only {count} contacts carry the whole company relationship.",
   "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
   "co.health.reason.severalContacts_other":
     "{count} contacts here are in touch.",

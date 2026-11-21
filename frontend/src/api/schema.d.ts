@@ -24639,8 +24639,8 @@ export interface paths {
          *     the same test the deal-health composite uses — one definition, so two screens
          *     cannot disagree about the same deal.
          *
-         *     Risk kinds and their sources: `single_threaded_theirs` is REPORT-PARAM-1
-         *     verbatim (fewer than two engaged contacts); `single_threaded_ours` is
+         *     Risk kinds and their sources: `single_threaded_theirs` is a touched deal
+         *     with at most `max_engaged_seats` engaged contacts; `single_threaded_ours` is
          *     GRAPH-RISK-1, a statement about OUR coverage rather than the customer's, which
          *     is why it carries its own id; `coverage_gap` is a deal with seats but no engaged
          *     champion — a well-threaded deal nobody inside is arguing for.
@@ -36449,7 +36449,8 @@ export interface components {
          *       `at`, the last of the two.
          *     - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
          *     - `last_met`: in touch through a meeting `days` days ago.
-         *     - `single_threaded`: in touch, but one contact carries the whole account.
+         *     - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+         *       the published `account_coverage.max_engaged_seats`.
          *     - `several_contacts`: `count` contacts here are in touch with us.
          *     - `deals_all_stalled`: all `count` open deals have stalled.
          *     - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -36498,7 +36499,7 @@ export interface components {
             last_meeting_precision?: components["schemas"]["OccurredPrecision"];
             /** @description How many contacts here have interacted at all — the account's real surface. */
             active_contacts?: number | null;
-            /** @description The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account. */
+            /** @description The relationship rests on no more contacts in touch than the published `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding follows too. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account. */
             single_threaded?: boolean | null;
             /** @description Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities. */
             open_commitments?: number | null;
@@ -60154,7 +60155,9 @@ export interface components {
              */
             open: number;
             /**
-             * @description Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+             * @description Open deals with more distinct contacts in the last 30 days than the published
+             *     `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+             *     more), as of when the week was frozen. Thirty rather than
              *     the review's own week: the risk measured is the single point of failure, and a deal
              *     worked steadily for a month is multi-threaded whether or not the second contact
              *     happened to appear in these seven days.

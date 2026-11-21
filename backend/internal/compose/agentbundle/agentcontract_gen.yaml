@@ -33985,7 +33985,7 @@ components:
         single_threaded:
           type: [boolean, 'null']
           description: >-
-            The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
+            The relationship rests on no more contacts in touch than the published `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding follows too. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
         open_commitments:
           type: [integer, 'null']
           description: >-
@@ -56016,7 +56016,9 @@ components:
           type: integer
           minimum: 0
           description: |-
-            Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+            Open deals with more distinct contacts in the last 30 days than the published
+            `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+            more), as of when the week was frozen. Thirty rather than
             the review's own week: the risk measured is the single point of failure, and a deal
             worked steadily for a month is multi-threaded whether or not the second contact
             happened to appear in these seven days.

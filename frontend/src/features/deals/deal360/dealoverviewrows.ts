@@ -128,10 +128,11 @@ export function committeeRows(
   // The committee dim counts gaps with the same predicate, so the rows and the
   // dim agree.
   const gaps = (coverage?.risks ?? []).filter(isGapRisk).map((risk, index) => {
+    // An older server judged at a floor of two and sends no threshold.
     const seat = missingSeat(
       risk.kind,
       contacts.length,
-      coverage?.max_engaged_seats,
+      coverage?.max_engaged_seats ?? 1,
     );
     return {
       key: `${risk.kind}-${index}`,
@@ -149,7 +150,7 @@ export function committeeRows(
 function missingSeat(
   kind: DealCoverageRisk["kind"],
   seatCount: number,
-  maxEngaged: number | undefined,
+  maxEngaged: number,
 ): Readonly<{ title: MessageKey; role?: string }> {
   if (kind === "coverage_gap") {
     return { title: "deal.committee.missing.champion", role: "champion" };
@@ -158,7 +159,7 @@ function missingSeat(
     return { title: "deal.committee.missing.firstContact" };
   }
   const second = maxEngaged === 1;
-  if (maxEngaged === undefined || seatCount > maxEngaged) {
+  if (seatCount > maxEngaged) {
     return {
       title: second
         ? "deal.committee.missing.secondEngaged"

@@ -4089,8 +4089,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.lastMetToday": "Đã họp hôm nay.",
   "co.health.reason.lastMet_one": "Lần họp gần nhất cách đây {days} ngày.",
   "co.health.reason.lastMet_other": "Lần họp gần nhất cách đây {days} ngày.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "Vẫn có liên lạc, nhưng toàn bộ quan hệ với công ty chỉ dựa vào một liên hệ.",
+  "co.health.reason.singleThreaded_other":
+    "Vẫn có liên lạc, nhưng toàn bộ quan hệ với công ty chỉ dựa vào {count} liên hệ.",
   "co.health.reason.severalContacts_one":
     "{count} liên hệ ở đây đang giữ liên lạc.",
   "co.health.reason.severalContacts_other":

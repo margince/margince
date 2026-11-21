@@ -61,6 +61,24 @@ describe("useHealthReason", () => {
     ).toBe("Last met them 1 day ago.");
   });
 
+  // A threshold above one can call two contacts too few, so the sentence
+  // says one contact only when one carries the account.
+  it("says how many contacts carry a single-threaded account", () => {
+    const en = renderHook(() => useHealthReason(), { wrapper: wrapper("en") });
+    const say = (count: number) =>
+      en.result.current({
+        reason: "In contact.",
+        reason_code: "single_threaded",
+        reason_params: { count },
+      });
+    expect(say(1)).toBe(
+      "In contact, but one contact carries the whole company relationship.",
+    );
+    expect(say(2)).toBe(
+      "In contact, but only 2 contacts carry the whole company relationship.",
+    );
+  });
+
   // The day is the record zone's, not UTC's: 17:30Z is already the next
   // morning in Ho Chi Minh City.
   it("names a booked meeting's day in the reader's zone", () => {

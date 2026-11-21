@@ -60,3 +60,20 @@ func singleThreadedCoverage() DealCoverage {
 		},
 	}
 }
+
+// At a threshold of two, a deal with two engaged contacts is single-threaded.
+// The sentence must not say it rests on one relationship or under two.
+func TestTheSingleThreadedSentenceHoldsAtAnyThreshold(t *testing.T) {
+	c := DealCoverage{DealID: ids.NewV7(), EverTouched: true, MaxEngagedSeats: 2, Stakeholders: []deals.DealStakeholder{
+		seat(true, roleChampion), seat(true, "user"),
+	}}
+	risks := foldRisks(c, testEnglish)
+	if len(risks) == 0 || risks[0].Kind != RiskSingleThreadedTheirs {
+		t.Fatalf("two engaged contacts at a threshold of two folded to %+v, want single-threaded first", risks)
+	}
+	for _, wrong := range []string{"two", "one relationship"} {
+		if strings.Contains(risks[0].Summary, wrong) {
+			t.Errorf("the summary %q says %q, which is false for two engaged contacts", risks[0].Summary, wrong)
+		}
+	}
+}

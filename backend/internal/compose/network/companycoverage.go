@@ -144,8 +144,8 @@ func CompanyCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (Com
 // The asymmetry is deliberate. Seeing ENOUGH is safe to report whatever is
 // hidden, because hidden contacts can only add to the count. Seeing too few is
 // only a finding when there is nothing left to hide behind — otherwise the
-// answer is that we do not know. The account's contacts are judged by
-// the deal's rule at the published threshold.
+// answer is that we do not know. The account's contacts are judged by the
+// deal's rule, at the published threshold.
 func threadingVerdict(visible int, incomplete bool, maxEngagedSeats int) ThreadingVerdict {
 	if !reporting.SingleThreaded(true, visible, maxEngagedSeats) {
 		return ThreadingMultiple
