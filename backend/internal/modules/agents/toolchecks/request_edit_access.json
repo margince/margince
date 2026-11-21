@@ -1,11 +1,8 @@
 {
   "verb": "request_edit_access",
   "checks": [
-    "activity.read",
     "contact.read",
     "contact.update",
-    "deal.read",
-    "relationship.read",
     "scope-narrower-than:all"
   ],
   "takes": [
