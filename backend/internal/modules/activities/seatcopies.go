@@ -41,29 +41,6 @@ func SeatCopyFrom(ctx context.Context, candidates, contentArm string, bound conn
 	return connector.MailCopyGroupBoundedFrom(ctx, "activity", "a", candidates, contentArm, bound, arg)
 }
 
-// foldRowsPerPageRow is how many candidates a bounded fold reads for each row
-// of the page. Copies of a mail rarely number eight, so one attempt fills a page.
-const foldRowsPerPageRow = 8
-
-// FoldBounds are the bounds a collapsed read tries in turn for a page of want
-// rows: a multiple of the page, then every candidate. Zero means unbounded.
-func FoldBounds(want int) []int { return []int{want * foldRowsPerPageRow, 0} }
-
-// FoldIncomplete reports whether a page of got rows, read under a bound, may be
-// short because the bound left candidates out. Then the read goes on to its
-// next bound. full is FoldedInFull of the rows. An empty page says nothing of
-// the candidates a bound cut: they may all share the oldest second it read.
-func FoldIncomplete(got, want int, full bool) bool {
-	switch {
-	case got >= want:
-		return false
-	case got == 0:
-		return true
-	default:
-		return !full
-	}
-}
-
 // FoldedInFull reports whether the fold behind these rows saw every candidate.
 func FoldedInFull(copies []SeatCopies) bool { return len(copies) > 0 && copies[0].foldFull }
 

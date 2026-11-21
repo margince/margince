@@ -232,7 +232,7 @@ func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
 	bounds := []int{0}
 	if order == byRecency {
-		bounds = activities.FoldBounds(sectionCap + 1)
+		bounds = connector.FoldBounds(sectionCap + 1)
 	}
 	for _, foldRows := range bounds {
 		out, hasMore, incomplete, err := s.readActivitiesAt(ctx, tx, contactID, opts, extra, order, foldRows)

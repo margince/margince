@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // ListActivitiesTx keeps a composite read inside its existing transaction.
@@ -186,7 +187,7 @@ func readTimelinePage(
 	case in.foldBounds != nil:
 		bounds = in.foldBounds
 	case in.CollapseSeatCopies:
-		bounds = FoldBounds(limit + 1)
+		bounds = connector.FoldBounds(limit + 1)
 	}
 	var (
 		sorted *storekit.ListSort
@@ -212,7 +213,7 @@ func readTimelinePage(
 		for i := range paged {
 			copies[i] = paged[i].copies
 		}
-		if !FoldIncomplete(len(copies), limit+1, FoldedInFull(copies)) {
+		if !connector.FoldIncomplete(len(copies), limit+1, FoldedInFull(copies)) {
 			break
 		}
 	}

@@ -46,6 +46,29 @@ type FoldBound struct {
 // bound only while this is false.
 const CopyFoldFullColumn = "copy_fold_full"
 
+// foldRowsPerPageRow is how many candidates a bounded fold reads for each row
+// of the page. Copies of a mail rarely number eight, so one attempt fills a page.
+const foldRowsPerPageRow = 8
+
+// FoldBounds are the bounds a read tries in turn for a page of want rows: a
+// multiple of the page, then every candidate. Zero means unbounded.
+func FoldBounds(want int) []int { return []int{want * foldRowsPerPageRow, 0} }
+
+// FoldIncomplete reports whether a page of got rows, read under a bound, may be
+// short because the bound left candidates out. Then the read goes on to its
+// next bound. full is the fold's CopyFoldFullColumn. An empty page says nothing
+// of the candidates a bound cut: they may all share the oldest second it read.
+func FoldIncomplete(got, want int, full bool) bool {
+	switch {
+	case got >= want:
+		return false
+	case got == 0:
+		return true
+	default:
+		return !full
+	}
+}
+
 // MailCopyGroupBoundedFrom is MailCopyGroupFrom over the candidates the bound
 // keeps. Every group it returns is whole. Every group it leaves out happened
 // before every group it returns, so the first rows of `ORDER BY occurred_at DESC`
@@ -83,7 +106,8 @@ func MailCopyGroupBoundedFrom(ctx context.Context, source, alias, candidates, co
 	    coalesce(` + alias + `.source_id = ` + shared + ` || '` + MailSeatMarker + `' || ` + reader + `, false) AS own_copy, ` + full + ` AS ` + CopyFoldFullColumn + `
 	  FROM ` + from + `) seat_copy
 	) grouped
-	WINDOW copy_group AS (PARTITION BY grouped.copy_key)
+	WINDOW copy_group AS (PARTITION BY grouped.copy_key ORDER BY grouped.copy_of
+	  ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
 	ORDER BY grouped.copy_key, grouped.own_copy DESC, grouped.created_at, grouped.copy_of
 	) copies JOIN activity ` + alias + ` ON ` + alias + `.id = copies.copy_of`
 }

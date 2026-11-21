@@ -11,6 +11,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // sectionQuery is one section statement. A collapsed one selects
@@ -53,7 +54,7 @@ func readSection(ctx context.Context, tx pgx.Tx, q sectionQuery, columns activit
 	if err := rows.Err(); err != nil {
 		return nil, false, false, err
 	}
-	if q.bounded && activities.FoldIncomplete(len(out), sectionCap+1, activities.FoldedInFull(copies)) {
+	if q.bounded && connector.FoldIncomplete(len(out), sectionCap+1, activities.FoldedInFull(copies)) {
 		return nil, false, true, nil
 	}
 	hasMore := len(out) > sectionCap

@@ -11,10 +11,7 @@ package activities
 import (
 	"context"
 	"reflect"
-	"slices"
 	"testing"
-
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -45,17 +42,6 @@ func (e *loadEnv) seedCopiedMail(t *testing.T, contact ids.UUID) {
 	e.exec(t, `ANALYZE activity_link`)
 }
 
-// sortedCopies puts each row's copy ids in order: the window that collects them
-// does not order its input, so the fold's input order decides theirs.
-func sortedCopies(rows []crmcontracts.Activity) []crmcontracts.Activity {
-	for _, row := range rows {
-		if row.CopyIds != nil {
-			slices.SortFunc(*row.CopyIds, func(a, b openapi_types.UUID) int { return slices.Compare(a[:], b[:]) })
-		}
-	}
-	return rows
-}
-
 func TestABoundedFoldPagesAContactLikeTheUnboundedFold(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
@@ -70,7 +56,7 @@ func TestABoundedFoldPagesAContactLikeTheUnboundedFold(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading a page: %v", err)
 		}
-		return sortedCopies(rows), page.NextCursor, page.HasMore
+		return rows, page.NextCursor, page.HasMore
 	}
 	var cursor *string
 	seen := map[ids.UUID]bool{}
@@ -117,7 +103,7 @@ func TestABoundedFoldWidensWhenCopiesFillItsCandidates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(sortedCopies(got), sortedCopies(want)) || len(got) != 3 {
+	if !reflect.DeepEqual(got, want) || len(got) != 3 {
 		t.Fatalf("a bound too small for the page returned %d rows, want the unbounded %d", len(got), len(want))
 	}
 }
@@ -152,5 +138,43 @@ func TestACollapsedPageFoldsOnlyTheCandidatesNearItsRows(t *testing.T) {
 	}
 	if bounded > 64 {
 		t.Errorf("the bounded fold windows %.0f rows, want at most the 64 it reads", bounded)
+	}
+}
+
+// seedInterleavedCopies files two three-copy mails in one second, their copies
+// alternating by the millisecond. Any bound that reads fewer than all six rows
+// reads a partial group from each.
+func (e *loadEnv) seedInterleavedCopies(t *testing.T, contact ids.UUID) {
+	t.Helper()
+	e.exec(t, `WITH seeded_copy AS (SELECT gen_random_uuid() id, g, k FROM generate_series(0, 1) g, generate_series(0, 2) k),
+		copies AS (INSERT INTO activity (id, kind, subject, body, direction, counterparty_email, occurred_at, created_at,
+		                      source_system, source_id, source, captured_by)
+		SELECT id, 'email', 'Offer ' || g, 'Body ' || g, 'inbound', 'buyer@customer.test',
+		       date_trunc('second', now()) - interval '1 day' + (2 * k + g) * interval '1 ms',
+		       now() - (3 - k) * interval '1 hour',
+		       'email', 'twin-' || g || '@customer.test' ||
+		         CASE k WHEN 0 THEN '' WHEN 1 THEN ' seat ' || $1::text ELSE ' seat ' || $2::text END,
+		       'seed', 'system'
+		FROM seeded_copy RETURNING id)
+		INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		SELECT gen_random_uuid(), id, 'contact', $3::uuid FROM copies`, e.rep.String(), e.other.String(), contact)
+}
+
+func TestABoundedFoldNeverShowsAPartialGroupOfTheOldestSecond(t *testing.T) {
+	e := setupLoad(t)
+	contact := e.buyer(t)
+	e.seedInterleavedCopies(t, contact)
+	read := func(bounds []int) []crmcontracts.Activity {
+		rows, _, err := handledStore(e).ListActivities(e.followUpReader(), ListActivitiesInput{
+			EntityType: new("contact"), EntityID: &contact, CollapseSeatCopies: true, Limit: new(1), foldBounds: bounds,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return rows
+	}
+	got, want := read([]int{4, 0}), read([]int{0})
+	if !reflect.DeepEqual(got, want) || len(got) != 1 || got[0].Copies == nil || *got[0].Copies != 3 {
+		t.Fatalf("a bound that cuts the second between two mails shows %+v, want the unbounded %+v", got, want)
 	}
 }

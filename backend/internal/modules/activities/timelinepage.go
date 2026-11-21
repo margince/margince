@@ -29,7 +29,7 @@ func (p timelinePage) copyDest(copies *SeatCopies) []any {
 
 // timelinePageSQL renders the first attempt at the page read: the bounded fold.
 func timelinePageSQL(ctx context.Context, in ListActivitiesInput, limit int) (timelinePage, error) {
-	return timelinePageAt(ctx, in, limit, FoldBounds(limit + 1)[0])
+	return timelinePageAt(ctx, in, limit, connector.FoldBounds(limit + 1)[0])
 }
 
 // timelinePageAt renders the page read with the fold bounded to foldRows

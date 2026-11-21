@@ -158,9 +158,9 @@ func (s *Service) readHistoryOf(
 	if len(contactIDs) == 0 {
 		return nil, nil
 	}
-	for _, foldRows := range activities.FoldBounds(limit) {
+	for _, foldRows := range connector.FoldBounds(limit) {
 		history, full, err := s.readHistoryAt(ctx, tx, room, project, now, contactIDs, limit, foldRows)
-		if err != nil || foldRows == 0 || !activities.FoldIncomplete(len(history), limit, full) {
+		if err != nil || foldRows == 0 || !connector.FoldIncomplete(len(history), limit, full) {
 			return history, err
 		}
 	}
