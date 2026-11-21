@@ -489,6 +489,8 @@ describe("restore into the conversational shell", () => {
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
+    // The write takes its version from the row the restore read.
+    expect(requestsTo(calls, "/onboarding/state", "GET")).toHaveLength(1);
     const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
       .clone()
       .json()) as Record<string, unknown>;

@@ -180,6 +180,12 @@ export function depthBackOutOf(
   return undefined;
 }
 
+/** Whether the entry just ahead of this one is `here`, as after a step back out of it. */
+export function steppedBackOutOf(here: (hash: string) => boolean): boolean {
+  const ahead = depth === undefined ? undefined : hashAt(depth + 1);
+  return ahead !== undefined && here(ahead);
+}
+
 /**
  * Move to the entry at `targetDepth`, one traversal at a time.
  *
