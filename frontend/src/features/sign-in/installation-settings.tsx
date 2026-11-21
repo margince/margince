@@ -23,13 +23,7 @@ import { useCanWrite } from "../../lib/capability";
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
-import {
-  type FieldLabels,
-  percentLimit,
-  type RefusalSentences,
-  refusalSentences,
-  unwrap,
-} from "../../lib/problem";
+import { type FieldLabels, percentLimit, unwrap } from "../../lib/problem";
 // Shared with every upload form, which reads the ceiling off this same record.
 // One query, one key: two hooks on one key would let whichever mounted first
 // decide how a failure behaves for the other.
@@ -51,6 +45,7 @@ import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
 } from "./installation-settings.profile";
+import { installationRefusal } from "./installation-settings.refusal";
 import { RegionalSettingsRows } from "./installation-settings.regional";
 
 export { fiscalYearStartSummary } from "./installation-settings.profile";
@@ -98,50 +93,6 @@ function factLabels(t: ReturnType<typeof useT>, locale: Locale): FieldLabels {
       label: t("installationSettings.likelyThreshold"),
       limit: percentLimit(locale),
     },
-  };
-}
-
-const FORECAST_FACTS: readonly EditedFact[] = [
-  "forecast_forward_measure",
-  "forecast_likely_threshold",
-];
-
-// The server names a refused setting by its key (`installation.timezone`) and
-// the form keys its fields by the patch name (`timezone`). Labels only for the
-// facts this dialog draws, so a refusal naming any other field reaches the foot.
-function drawnLabels(labels: FieldLabels, part: InstallationPart): FieldLabels {
-  const drawn = Object.entries(labels).filter(
-    ([fact]) =>
-      FORECAST_FACTS.some((forecast) => forecast === fact) ===
-      (part === "forecast"),
-  );
-  return Object.fromEntries(
-    drawn.flatMap(([fact, label]) => [
-      [fact, label],
-      [`installation.${fact}`, label],
-    ]),
-  );
-}
-
-function installationRefusal(
-  error: unknown,
-  t: ReturnType<typeof useT>,
-  labels: FieldLabels,
-  part: InstallationPart,
-): RefusalSentences {
-  const { byField, rest } = refusalSentences(
-    error,
-    t,
-    drawnLabels(labels, part),
-  );
-  return {
-    byField: new Map(
-      [...byField].map(([field, sentence]) => [
-        field.replace(/^installation\./, ""),
-        sentence,
-      ]),
-    ),
-    rest,
   };
 }
 
