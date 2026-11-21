@@ -430,6 +430,38 @@ func TestASecondPassSeedsNoSecondRunForTheSameSeat(t *testing.T) {
 	}
 }
 
+// TestALaterPassSkipsSeatsItSeededAndSeedsANewGrant holds the seeding memo.
+// A later pass inserts nothing for a seat it already seeded today. A seat that
+// granted since the last pass still gets today's occurrence.
+func TestALaterPassSkipsSeatsItSeededAndSeedsANewGrant(t *testing.T) {
+	re := setupRunner(t)
+	owner := integration.OwnerConn(t)
+
+	me := re.sessionUser(t)
+	if err := re.recordDecision(t, me, runner.GrantStateGranted, &re.passportID); err != nil {
+		t.Fatalf("record the grant for %s: %v", me, err)
+	}
+	now := afterEveryDueHour()
+	if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err != nil {
+		t.Fatalf("the first scheduling pass: %v", err)
+	}
+	assertSpecSeededFor(t, owner, grantedSpec(t), now, me)
+
+	// An insert for the seat seeded above now raises, so a second pass that
+	// tried it again reports the fault.
+	failRunnerJobInsertsFor(t, owner, grantedSpec(t).TriggerRef(now, me))
+	colleague := seedColleague(t, owner)
+	theirs := re.mintPassportForColleague(t, colleague)
+	if err := re.recordDecision(t, colleague, runner.GrantStateGranted, &theirs); err != nil {
+		t.Fatalf("record the grant for %s: %v", colleague, err)
+	}
+
+	if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err != nil {
+		t.Fatalf("the second pass inserted the occurrence it seeded on the first pass again: %v", err)
+	}
+	assertSpecSeededFor(t, owner, grantedSpec(t), now, colleague)
+}
+
 // seedColleague adds a second real seat to the workspace.
 func seedColleague(t *testing.T, owner *pgx.Conn) ids.UserID {
 	t.Helper()
