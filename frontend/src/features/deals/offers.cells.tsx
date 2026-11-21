@@ -12,30 +12,43 @@ import { useSavedDraft } from "../../lib/usesaveddraft";
 import type { OfferLineItem, UpdateOfferLineItemRequest } from "./offers";
 import { storedUnitOf, UnitPicker, unitChoiceOf } from "./productunit";
 
+// A save that answers when its request settles, so a cell can tell an answer
+// from the draft it carried.
+type LineSave<Value> = (value: Value) => Promise<unknown>;
+
+function NotSaved() {
+  const t = useT();
+  return <ErrorLine>{t("leadSources.notSaved")}</ErrorLine>;
+}
+
 export function DescriptionCell({
   line,
   onSave,
 }: Readonly<{
   line: OfferLineItem;
-  onSave: (patch: UpdateOfferLineItemRequest) => void;
+  onSave: LineSave<UpdateOfferLineItemRequest>;
 }>) {
-  const { draft, edit, leave } = useSavedDraft({
+  const { draft, edit, leave, unsaved } = useSavedDraft({
     saved: line.description,
     toDraft: (saved) => saved,
     submit: (text) => {
-      if (text !== line.description) {
-        onSave({ description: text });
-      }
+      return text === line.description
+        ? undefined
+        : onSave({ description: text });
     },
   });
   return (
-    <TextInput
-      data-testid={`line-description-${line.id}`}
-      className="offers-line-description"
-      value={draft}
-      onChange={(event) => edit(event.target.value)}
-      onBlur={() => leave()}
-    />
+    <>
+      <TextInput
+        data-testid={`line-description-${line.id}`}
+        className="offers-line-description"
+        value={draft}
+        aria-invalid={unsaved ? true : undefined}
+        onChange={(event) => edit(event.target.value)}
+        onBlur={() => leave()}
+      />
+      {unsaved && <NotSaved />}
+    </>
   );
 }
 
@@ -44,31 +57,32 @@ export function UnitCell({
   onSave,
 }: Readonly<{
   line: OfferLineItem;
-  onSave: (patch: UpdateOfferLineItemRequest) => void;
+  onSave: LineSave<UpdateOfferLineItemRequest>;
 }>) {
-  const { draft, edit, leave } = useSavedDraft({
+  const { draft, edit, leave, unsaved } = useSavedDraft({
     saved: line.unit,
     toDraft: unitChoiceOf,
     submit: (next) => {
       // An "Other" with nothing typed yet names no unit, and the server
       // refuses a blank one.
       const unit = storedUnitOf(next.choice, next.other);
-      if (unit !== "" && unit !== line.unit) {
-        onSave({ unit });
-      }
+      return unit !== "" && unit !== line.unit ? onSave({ unit }) : undefined;
     },
   });
   return (
-    <UnitPicker
-      testId={`line-unit-${line.id}`}
-      value={draft}
-      onChange={(next, settled) => {
-        edit(next);
-        if (settled) {
-          leave(next);
-        }
-      }}
-    />
+    <>
+      <UnitPicker
+        testId={`line-unit-${line.id}`}
+        value={draft}
+        onChange={(next, settled) => {
+          edit(next);
+          if (settled) {
+            leave(next);
+          }
+        }}
+      />
+      {unsaved && <NotSaved />}
+    </>
   );
 }
 
@@ -86,7 +100,7 @@ export function NumericCell({
   value: number;
   width: number;
   testId: string;
-  onSave: (num: number) => void;
+  onSave: LineSave<number>;
   // The field's own refusal of a typed text, bounds included. Absent, any
   // number passes.
   check?: (text: string) => string | undefined;
@@ -95,7 +109,7 @@ export function NumericCell({
   const { locale } = useLocale();
   const [fault, setFault] = useState<string | undefined>();
   const errorId = useId();
-  const { draft, edit, leave, restore } = useSavedDraft({
+  const { draft, edit, leave, restore, unsaved } = useSavedDraft({
     saved: savedValue,
     toDraft: (saved) => writtenDecimal(String(saved), locale),
     submit: (text) => {
@@ -105,9 +119,7 @@ export function NumericCell({
         return;
       }
       const num = typedNumberOrNaN(text, locale);
-      if (num !== savedValue) {
-        onSave(num);
-      }
+      return num === savedValue ? undefined : onSave(num);
     },
   });
   return (
@@ -119,8 +131,8 @@ export function NumericCell({
         style={{ width }}
         data-testid={testId}
         value={draft}
-        aria-invalid={fault ? true : undefined}
-        aria-describedby={fault ? errorId : undefined}
+        aria-invalid={fault || unsaved ? true : undefined}
+        aria-describedby={fault || unsaved ? errorId : undefined}
         onChange={(event) => {
           edit(event.target.value);
           setFault(undefined);
@@ -133,7 +145,9 @@ export function NumericCell({
           leave();
         }}
       />
-      {fault && <ErrorLine id={errorId}>{fault}</ErrorLine>}
+      {(fault || unsaved) && (
+        <ErrorLine id={errorId}>{fault ?? t("leadSources.notSaved")}</ErrorLine>
+      )}
     </>
   );
 }
@@ -145,25 +159,29 @@ export function UnitPriceCell({
 }: Readonly<{
   line: OfferLineItem;
   currency: string;
-  onSave: (patch: UpdateOfferLineItemRequest) => void;
+  onSave: LineSave<UpdateOfferLineItemRequest>;
 }>) {
-  const { draft, edit, leave } = useSavedDraft({
+  const { draft, edit, leave, unsaved } = useSavedDraft({
     saved: line.unit_price_minor,
     toDraft: (saved) => saved,
     submit: (minor) => {
-      if (minor !== line.unit_price_minor) {
-        onSave({ unit_price_minor: minor });
-      }
+      return minor === line.unit_price_minor
+        ? undefined
+        : onSave({ unit_price_minor: minor });
     },
   });
   return (
-    <MoneyInput
-      data-testid={`line-unit-price-${line.id}`}
-      className="offers-line-price"
-      currency={currency}
-      valueMinor={draft}
-      onChangeMinor={edit}
-      onBlur={() => leave()}
-    />
+    <>
+      <MoneyInput
+        data-testid={`line-unit-price-${line.id}`}
+        className="offers-line-price"
+        currency={currency}
+        valueMinor={draft}
+        aria-invalid={unsaved ? true : undefined}
+        onChangeMinor={edit}
+        onBlur={() => leave()}
+      />
+      {unsaved && <NotSaved />}
+    </>
   );
 }

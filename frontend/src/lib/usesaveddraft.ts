@@ -6,9 +6,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * The draft of an input that saves when the reader leaves it.
  *
- * The cell keeps one identity through a save, so a newer edit survives the
- * answer of an earlier one. The saved value replaces the draft only when the
- * reader has typed nothing past what was last sent.
+ * The cell keeps one identity through a save. The saved value replaces the
+ * draft only once every save it sent has settled and nothing newer was typed,
+ * so an earlier answer never erases a newer draft.
+ *
+ * MoneyInput formats the amount it is handed, and NumberSetting drops its
+ * draft on any change of the value under a settings bar. Neither decides which
+ * of draft and saved value wins, so this hook sits beside them, not over them.
  */
 export function useSavedDraft<Draft, Saved>({
   saved,
@@ -17,56 +21,98 @@ export function useSavedDraft<Draft, Saved>({
 }: Readonly<{
   saved: Saved;
   toDraft: (saved: Saved) => Draft;
-  // Sends the draft if it differs from the saved value; may refuse to.
-  submit: (draft: Draft) => void;
+  // Sends the draft when it differs from the saved value. The promise settles
+  // with the request; nothing is returned when nothing was sent.
+  submit: (draft: Draft) => Promise<unknown> | undefined;
 }>) {
   const [draft, setDraft] = useState(() => toDraft(saved));
+  const [unsaved, setUnsaved] = useState(false);
+  const [settled, setSettled] = useState(0);
   const edited = useRef(false);
   const left = useRef(false);
+  const failed = useRef(false);
+  const pending = useRef(0);
   const sent = useRef<Draft | undefined>(undefined);
+  const seen = useRef(saved);
+  const current = useRef(saved);
+  current.current = saved;
   const latest = useRef({ draft, toDraft, submit });
   latest.current = { draft, toDraft, submit };
-  const seen = useRef(saved);
 
-  useEffect(() => {
-    if (Object.is(seen.current, saved)) {
+  const send = useCallback((value: Draft) => {
+    const request = latest.current.submit(value);
+    if (request === undefined) {
       return;
     }
-    seen.current = saved;
+    sent.current = value;
+    pending.current += 1;
+    request.then(
+      () => {
+        pending.current -= 1;
+        failed.current = false;
+        setUnsaved(false);
+        setSettled((count) => count + 1);
+      },
+      () => {
+        pending.current -= 1;
+        failed.current = true;
+        setUnsaved(true);
+      },
+    );
+  }, []);
+
+  useEffect(() => {
+    // `settled` re-runs this once a save answers, with the saved value that
+    // answer wrote.
+    void settled;
+    if (pending.current > 0 || failed.current) {
+      return;
+    }
     const now = latest.current;
-    if (!edited.current || Object.is(now.draft, sent.current)) {
+    if (!edited.current) {
+      if (!Object.is(seen.current, saved)) {
+        seen.current = saved;
+        setDraft(now.toDraft(saved));
+      }
+      return;
+    }
+    if (Object.is(now.draft, sent.current)) {
       edited.current = false;
+      sent.current = undefined;
+      seen.current = saved;
       setDraft(now.toDraft(saved));
       return;
     }
-    // The reader already left the box with this newer text, and an earlier
-    // answer moved the saved value under it, so the text is still unsent.
+    // The reader left the box with newer text while an earlier save was
+    // pending, and that save has now moved the saved value under it.
     if (left.current) {
-      sent.current = now.draft;
-      now.submit(now.draft);
+      send(now.draft);
     }
-  }, [saved]);
+  }, [saved, settled, send]);
 
   const edit = useCallback((next: Draft) => {
     edited.current = true;
     left.current = false;
+    failed.current = false;
+    setUnsaved(false);
     setDraft(next);
   }, []);
 
-  const leave = useCallback((value?: Draft) => {
-    const now = latest.current;
-    const leaving = value === undefined ? now.draft : value;
-    left.current = true;
-    sent.current = leaving;
-    now.submit(leaving);
-  }, []);
+  const leave = useCallback(
+    (value?: Draft) => {
+      left.current = true;
+      send(value === undefined ? latest.current.draft : value);
+    },
+    [send],
+  );
 
   // Drops the draft for the saved value, for a box left empty.
   const restore = useCallback(() => {
-    const now = latest.current;
     edited.current = false;
-    setDraft(now.toDraft(seen.current));
+    failed.current = false;
+    setUnsaved(false);
+    setDraft(latest.current.toDraft(current.current));
   }, []);
 
-  return { draft, edit, leave, restore };
+  return { draft, edit, leave, restore, unsaved };
 }

@@ -21,7 +21,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const line = {
+const baseLine = {
   id: "li-1",
   position: 1,
   product_id: null,
@@ -56,7 +56,7 @@ const offer = {
   tax_minor: 19000,
   gross_minor: 119000,
   template_id: null,
-  line_items: [line],
+  line_items: [baseLine],
   source: "manual",
   captured_by: "human:u1",
   version: 3,
@@ -64,11 +64,19 @@ const offer = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-type Held = { patch: Record<string, unknown>; release: () => void };
+type Held = {
+  patch: Record<string, unknown>;
+  answer: (status?: number) => void;
+};
 
-// Every line PATCH waits for the test to release it, and answers with the
-// line as that PATCH wrote it.
-function stubHeldSaves(held: Held[]) {
+// A server that keeps the line as the PATCHes wrote it. Each PATCH waits until
+// the test answers it, and the most that were ever in flight together is
+// counted, because the line PATCH carries no version and the last request to
+// land wins.
+function stubServer(initial: Record<string, unknown>) {
+  const held: Held[] = [];
+  const state = { line: initial, inflight: 0, mostInflight: 0 };
+  const current = () => ({ ...offer, line_items: [state.line] });
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -79,18 +87,28 @@ function stubHeldSaves(held: Held[]) {
         const patch = request
           ? await request.json()
           : JSON.parse(String(init?.body));
-        await new Promise<void>((release) => held.push({ patch, release }));
-        return jsonResponse({
-          ...offer,
-          line_items: [{ ...line, ...patch, version: 2 }],
-        });
+        state.inflight += 1;
+        state.mostInflight = Math.max(state.mostInflight, state.inflight);
+        const status = await new Promise<number>((answer) =>
+          held.push({ patch, answer: (code = 200) => answer(code) }),
+        );
+        state.inflight -= 1;
+        if (status !== 200) {
+          return jsonResponse(
+            { title: "Unprocessable", status, detail: "refused" },
+            status,
+          );
+        }
+        state.line = { ...state.line, ...patch, version: 2 };
+        return jsonResponse(current());
       }
       if (url.includes("/offers/")) {
-        return jsonResponse(offer);
+        return jsonResponse(current());
       }
       return jsonResponse({ data: [], page: { has_more: false } });
     }),
   );
+  return { held, state };
 }
 
 function renderOffer() {
@@ -106,91 +124,173 @@ function renderOffer() {
   );
 }
 
-describe("an offer line cell whose earlier save is still on its way", () => {
-  it.each([
-    ["line-description-li-1", " plus", " travel", "Consulting plus travel"],
-    ["line-quantity-li-1", "0", "5", "1005"],
-  ])(
-    "%s keeps the text typed after the save started",
-    async (testId, first, second, expected) => {
-      const held: Held[] = [];
-      stubHeldSaves(held);
-      const user = userEvent.setup();
-      renderOffer();
-      await screen.findByText("ANG-2026-0007");
-      const cell = screen.getByTestId(testId) as HTMLInputElement;
+const answer = (held: Held, status?: number) =>
+  act(async () => {
+    held.answer(status);
+  });
 
-      await user.click(cell);
-      await user.type(cell, first);
+type Kind = {
+  testId: string;
+  line?: Record<string, unknown>;
+  clear?: boolean;
+  // The box shows a reformatted amount after a blur, so the second typing
+  // replaces it instead of extending it.
+  clearSecond?: boolean;
+  first: string;
+  second: string;
+  shown: string;
+  // How the box reads once left, where it differs from what was typed.
+  left?: string;
+  patches: [Record<string, unknown>, Record<string, unknown>];
+};
+
+const KINDS: Kind[] = [
+  {
+    testId: "line-description-li-1",
+    first: " plus",
+    second: " travel",
+    shown: "Consulting plus travel",
+    patches: [
+      { description: "Consulting plus" },
+      { description: "Consulting plus travel" },
+    ],
+  },
+  {
+    testId: "line-quantity-li-1",
+    first: "0",
+    second: "5",
+    shown: "1005",
+    patches: [{ quantity: 100 }, { quantity: 1005 }],
+  },
+  {
+    testId: "line-unit-price-li-1",
+    clear: true,
+    clearSecond: true,
+    first: "12",
+    second: "12.5",
+    shown: "12.5",
+    left: "12.50",
+    patches: [{ unit_price_minor: 1200 }, { unit_price_minor: 1250 }],
+  },
+  {
+    testId: "line-unit-li-1-other",
+    line: { unit: "crate" },
+    first: "s",
+    second: "!",
+    shown: "crates!",
+    patches: [{ unit: "crates" }, { unit: "crates!" }],
+  },
+  {
+    testId: "line-discount-li-1",
+    clear: true,
+    first: "7",
+    second: "5",
+    shown: "75",
+    patches: [{ discount_pct: 7 }, { discount_pct: 75 }],
+  },
+  {
+    testId: "line-tax-rate-li-1",
+    clear: true,
+    first: "7",
+    second: "5",
+    shown: "75",
+    patches: [{ tax_rate: 7 }, { tax_rate: 75 }],
+  },
+];
+
+async function typeInto(
+  user: ReturnType<typeof userEvent.setup>,
+  cell: HTMLInputElement,
+  text: string,
+  clear = false,
+) {
+  await user.click(cell);
+  if (clear) {
+    await user.clear(cell);
+  }
+  await user.type(cell, text);
+}
+
+async function setUp(kind: Kind) {
+  const server = stubServer({ ...baseLine, ...kind.line });
+  const user = userEvent.setup();
+  renderOffer();
+  await screen.findByText("ANG-2026-0007");
+  const cell = screen.getByTestId(kind.testId) as HTMLInputElement;
+  return { ...server, user, cell };
+}
+
+describe.each(KINDS)(
+  "the $testId cell while its earlier save is on its way",
+  (kind) => {
+    it("keeps the text typed after the save started, and saves it after", async () => {
+      const { held, state, user, cell } = await setUp(kind);
+      await typeInto(user, cell, kind.first, kind.clear);
       await user.tab();
       await waitFor(() => expect(held).toHaveLength(1));
+      expect(held[0].patch).toEqual(kind.patches[0]);
 
-      await user.click(cell);
-      await user.type(cell, second);
-      await act(async () => {
-        held[0].release();
-      });
-      expect(screen.getByTestId(testId)).toBe(cell);
-      expect(cell.value).toBe(expected);
+      await typeInto(user, cell, kind.second, kind.clearSecond);
+      await answer(held[0]);
+      expect(screen.getByTestId(kind.testId)).toBe(cell);
+      expect(cell.value).toBe(kind.shown);
       expect(document.activeElement).toBe(cell);
 
       await user.tab();
       await waitFor(() => expect(held).toHaveLength(2));
-      expect(Object.values(held[1].patch)[0]).toEqual(
-        testId.includes("quantity") ? Number(expected) : expected,
-      );
-      await act(async () => {
-        held[1].release();
-      });
-      await waitFor(() => expect(cell.value).toBe(expected));
-    },
-  );
-
-  it("saves newer text typed and left before the earlier answer arrives", async () => {
-    const held: Held[] = [];
-    stubHeldSaves(held);
-    const user = userEvent.setup();
-    renderOffer();
-    await screen.findByText("ANG-2026-0007");
-    const cell = screen.getByTestId(
-      "line-description-li-1",
-    ) as HTMLInputElement;
-
-    await user.click(cell);
-    await user.type(cell, "!");
-    await user.tab();
-    await waitFor(() => expect(held).toHaveLength(1));
-    await user.click(cell);
-    await user.type(cell, "?");
-    await user.tab();
-    await waitFor(() => expect(held).toHaveLength(2));
-    expect(held[1].patch).toEqual({ description: "Consulting!?" });
-
-    await act(async () => {
-      held[0].release();
-      held[1].release();
+      expect(held[1].patch).toEqual(kind.patches[1]);
+      await answer(held[1]);
+      await waitFor(() => expect(state.line).toMatchObject(kind.patches[1]));
+      expect(cell.value).toBe(kind.left ?? kind.shown);
+      expect(state.mostInflight).toBe(1);
     });
-    await waitFor(() => expect(cell.value).toBe("Consulting!?"));
-  });
 
+    it("sends newer text left before the first answer only after that answer", async () => {
+      const { held, state, user, cell } = await setUp(kind);
+      await typeInto(user, cell, kind.first, kind.clear);
+      await user.tab();
+      await waitFor(() => expect(held).toHaveLength(1));
+      await typeInto(user, cell, kind.second, kind.clearSecond);
+      await user.tab();
+
+      await act(async () => {});
+      expect(held).toHaveLength(1);
+      await answer(held[0]);
+      await waitFor(() => expect(held).toHaveLength(2));
+      expect(held[1].patch).toEqual(kind.patches[1]);
+      await answer(held[1]);
+      await waitFor(() => expect(state.line).toMatchObject(kind.patches[1]));
+      await waitFor(() => expect(cell.value).toBe(kind.left ?? kind.shown));
+      expect(state.mostInflight).toBe(1);
+    });
+
+    it("keeps a refused newer text and says it was not saved", async () => {
+      const { held, state, user, cell } = await setUp(kind);
+      await typeInto(user, cell, kind.first, kind.clear);
+      await user.tab();
+      await waitFor(() => expect(held).toHaveLength(1));
+      await typeInto(user, cell, kind.second, kind.clearSecond);
+      await user.tab();
+      await answer(held[0]);
+      await waitFor(() => expect(held).toHaveLength(2));
+      await answer(held[1], 422);
+
+      expect(await screen.findByText("Change was not saved")).toBeTruthy();
+      expect(cell.value).toBe(kind.left ?? kind.shown);
+      expect(state.line).toMatchObject(kind.patches[0]);
+    });
+  },
+);
+
+describe("an offer line cell", () => {
   it("takes the saved value when nothing newer was typed", async () => {
-    const held: Held[] = [];
-    stubHeldSaves(held);
-    const user = userEvent.setup();
-    renderOffer();
-    await screen.findByText("ANG-2026-0007");
-    const cell = screen.getByTestId(
-      "line-description-li-1",
-    ) as HTMLInputElement;
-
-    await user.click(cell);
-    await user.type(cell, "!");
+    const { held, user, cell } = await setUp(KINDS[0]);
+    await typeInto(user, cell, "!");
     await user.tab();
     await waitFor(() => expect(held).toHaveLength(1));
-    await act(async () => {
-      held[0].release();
-    });
+    await answer(held[0]);
     await waitFor(() => expect(cell.value).toBe("Consulting!"));
     expect(held).toHaveLength(1);
+    expect(screen.queryByText("Change was not saved")).toBeNull();
   });
 });
