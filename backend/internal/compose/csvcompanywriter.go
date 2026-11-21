@@ -159,7 +159,7 @@ func (w *csvWriters) landOnDomainHolder(ctx context.Context, row migration.Row, 
 // predictDomainHolder is landOnDomainHolder without writing.
 func (w *csvWriters) predictDomainHolder(ctx context.Context, row migration.Row, id ids.UUID, typed map[string]any) (predictedOutcome, migration.Reason, error) {
 	outcome, why, err := w.reconcilePrediction(ctx, id, row, typed)
-	if err != nil || outcome == predictUnwritable {
+	if err != nil || outcome == predictUnwritable || outcome == predictHeldKey {
 		return outcome, why, err
 	}
 	w.predictedWarnings = append(w.predictedWarnings, domainMatched(row))
