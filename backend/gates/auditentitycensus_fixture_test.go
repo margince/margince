@@ -27,11 +27,15 @@ const (
 	fixtureAppPkg  = modulePath + "/fixture/app"
 )
 
-// fixtureSeedSource is a storekit in miniature: one INSERT, a door that takes
-// no image and one that takes only an after-image.
+// fixtureSeedSource is a storekit in miniature. It has one INSERT, and doors
+// with no image, an after-image and both images. One writer fixes its verb,
+// and one reads it from data.
 const fixtureSeedSource = `package sk
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 type Tx interface {
 	Exec(ctx context.Context, sql string, args ...any) error
@@ -49,6 +53,18 @@ func Audit(ctx context.Context, tx Tx, action, entityType string) error {
 
 func AuditEvent(ctx context.Context, tx Tx, action, entityType string, id int, after any) error {
 	return insertRows(ctx, tx, action, entityType)
+}
+
+func Record(ctx context.Context, tx Tx, action, entityType string, before, after any) error {
+	return insertRows(ctx, tx, action, entityType)
+}
+
+func FromData(ctx context.Context, tx Tx, key, entityType string) error {
+	return insertRows(ctx, tx, strings.ToLower(key), entityType)
+}
+
+func Fixed(ctx context.Context, tx Tx, entityType string) error {
+	return insertRows(ctx, tx, "erase", entityType)
 }
 `
 

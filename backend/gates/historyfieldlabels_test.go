@@ -43,6 +43,7 @@ package gates
 import (
 	"fmt"
 	"go/ast"
+	"go/types"
 	"regexp"
 	"slices"
 	"strings"
@@ -277,6 +278,7 @@ func paramIndex(fn *ast.FuncDecl, name string) (int, bool) {
 type callIndex struct {
 	calls   map[string][]*ast.CallExpr
 	returns map[string][]*ast.CompositeLit
+	info    *types.Info
 }
 
 // returnedLiterals reads an image a small builder returns — `handleImage(…)`,
@@ -314,7 +316,7 @@ func (c callIndex) literalsAt(fn string, at int) ([]*ast.CompositeLit, bool) {
 		if at >= len(call.Args) {
 			return nil, false
 		}
-		if isNilExpr(call.Args[at]) {
+		if isNilExpr(c.info, call.Args[at]) {
 			continue
 		}
 		switch arg := call.Args[at].(type) {
@@ -337,7 +339,7 @@ func (c callIndex) literalsAt(fn string, at int) ([]*ast.CompositeLit, bool) {
 // The whole package, because a helper's callers sit wherever the writes are,
 // which is rarely the file that holds the audit door.
 func callsWithin(pkg *typedPackage) callIndex {
-	index := callIndex{calls: map[string][]*ast.CallExpr{}, returns: map[string][]*ast.CompositeLit{}}
+	index := callIndex{calls: map[string][]*ast.CallExpr{}, returns: map[string][]*ast.CompositeLit{}, info: pkg.info}
 	for _, file := range pkg.files {
 		ast.Inspect(file, func(n ast.Node) bool {
 			if call, isCall := n.(*ast.CallExpr); isCall {
@@ -380,7 +382,7 @@ func returnedComposites(body *ast.BlockStmt) []*ast.CompositeLit {
 func (s auditDoorSite) imageArgs() []ast.Expr {
 	var args []ast.Expr
 	for _, at := range []int{s.door.before, s.door.after} {
-		if image := s.argAt(at); at >= 0 && !isNilExpr(image) {
+		if image := s.argAt(at); at >= 0 && !isNilExpr(s.use.pkg.info, image) {
 			args = append(args, image)
 		}
 	}
@@ -396,11 +398,10 @@ func allElements(literals []*ast.CompositeLit) []ast.Expr {
 	return elements
 }
 
-// isNilExpr answers the literal `nil`, which every door admits for an image
+// isNilExpr answers the untyped nil, which every door admits for an image
 // that does not exist.
-func isNilExpr(expr ast.Expr) bool {
-	ident, isIdent := expr.(*ast.Ident)
-	return expr == nil || (isIdent && ident.Name == "nil")
+func isNilExpr(info *types.Info, expr ast.Expr) bool {
+	return expr == nil || info.Types[expr].IsNil()
 }
 
 // fieldHistoryProjection reads the two closed sets that decide whether an audit

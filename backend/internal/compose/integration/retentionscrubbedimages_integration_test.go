@@ -11,7 +11,6 @@ package integration
 // audit row through storekit, then the sweep the worker runs.
 
 import (
-	"context"
 	"io"
 	"log/slog"
 	"testing"
@@ -92,9 +91,9 @@ func assertImagesScrubbed(t *testing.T, e *Env, entityType string, id ids.UUID) 
 	if imaged != 0 {
 		t.Errorf("%d audit rows of the erased %s still hold an image", imaged, entityType)
 	}
-	ctx := context.Background()
+	ctx := e.Admin()
 	var evidence string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT coalesce(evidence::text, '') FROM audit_log
 			WHERE entity_type = $1 AND entity_id = $2 AND action = 'update'`, entityType, id).Scan(&evidence)
 	}); err != nil {

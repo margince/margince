@@ -97,24 +97,31 @@ func auditDoorSitesOf(t *testing.T) []auditDoorSite {
 	if !census.seedInserts {
 		t.Fatalf("%s no longer holds the INSERT into audit_log, so no door is derived from it", auditSeedFunc)
 	}
-	sites := census.doorSites()
+	sites, unjudged := census.doorSites()
+	for _, key := range unjudged {
+		t.Errorf("%s writes audit rows with a verb that reaches %s from no parameter and no constant, "+
+			"so no gate judges its callers.\n\tPass the verb as a parameter, or teach doors() how this writer chooses it.",
+			key, auditSeedFunc)
+	}
 	if len(sites) == 0 {
 		t.Fatal("the audit census found no call into a storekit door, so every gate reading them would pass on nothing")
 	}
 	return sites
 }
 
-func (c *auditEntityCensus) doorSites() []auditDoorSite {
-	var sites []auditDoorSite
+// doorSites are the calls into each door from outside the seed's package,
+// and the exported writers whose verb no door rule could place.
+func (c *auditEntityCensus) doorSites() (sites []auditDoorSite, unjudged []string) {
 	seedPkg := c.seedPackage()
-	for _, door := range c.doors() {
+	doors, unjudged := c.doors()
+	for _, door := range doors {
 		for _, use := range c.index.uses[door.key] {
 			if use.call != nil && use.pkg.path != seedPkg {
 				sites = append(sites, auditDoorSite{door: door, use: use, index: c.index})
 			}
 		}
 	}
-	return sites
+	return sites, unjudged
 }
 
 func (c *auditEntityCensus) seedPackage() string {
@@ -125,12 +132,13 @@ func (c *auditEntityCensus) seedPackage() string {
 	return c.index.declPkg[decl].path
 }
 
-// doors are the seed package's exported writers that take their verb from
-// the caller. A writer that fixes its own verb is held by storekit's refusal
-// alone.
-func (c *auditEntityCensus) doors() []auditStoreDoor {
+// doors are the seed package's exported writers whose verb is a parameter
+// the climb from the seed reaches. A writer that fixes its own verb is held by
+// storekit's refusal alone. One whose verb the climb cannot read is a door
+// only through an AuditTrail parameter, and is otherwise unjudged.
+func (c *auditEntityCensus) doors() (doors []auditStoreDoor, unjudged []string) {
 	seedPkg := c.seedPackage()
-	var doors []auditStoreDoor
+	params, fixed, unread := c.verbParams()
 	for key := range c.writers {
 		decl := c.index.decls[key]
 		if decl == nil || decl.Recv != nil || !decl.Name.IsExported() || c.index.declPkg[decl].path != seedPkg {
@@ -138,24 +146,97 @@ func (c *auditEntityCensus) doors() []auditStoreDoor {
 		}
 		info := c.index.declPkg[decl].info
 		door := auditStoreDoor{
-			key: key, name: decl.Name.Name,
-			verb: auditParamIndex(info, decl, "action"), entity: auditParamIndex(info, decl, auditSeedParam),
+			key: key, name: decl.Name.Name, verb: -1, entity: auditParamIndex(info, decl, auditSeedParam),
 			before: auditParamIndex(info, decl, "before"), after: auditParamIndex(info, decl, "after"),
 		}
-		if door.verb < 0 {
-			door.verb = auditParamOfType(info, decl, auditTrailType)
-			door.verbIsTrail = door.verb >= 0
+		if at, forwarded := params[key]; forwarded {
+			door.verb = at
+		} else if at := auditParamOfType(info, decl, auditTrailType); at >= 0 && unread[key] {
+			door.verb, door.verbIsTrail = at, true
 		}
-		if door.verb >= 0 {
+		switch {
+		case door.verb >= 0:
 			doors = append(doors, door)
+		case !fixed[key] || unread[key]:
+			unjudged = append(unjudged, key)
 		}
 	}
 	slices.SortFunc(doors, func(a, b auditStoreDoor) int { return strings.Compare(a.name, b.name) })
-	return doors
+	slices.Sort(unjudged)
+	return doors, unjudged
 }
 
-// auditParamOfType is the position of decl's parameter whose named type is
-// typeName, or -1.
+// verbParams climbs from the seed's action parameter through the seed's own
+// package. It answers where each writer takes the verb as a parameter, which
+// writers fix it, and which read it where the climb cannot follow.
+func (c *auditEntityCensus) verbParams() (params map[string]int, fixed, unread map[string]bool) {
+	params, fixed, unread = map[string]int{}, map[string]bool{}, map[string]bool{}
+	decl := c.index.decls[c.seed]
+	if decl == nil {
+		return params, fixed, unread
+	}
+	seedPkg := c.seedPackage()
+	queue := []auditDoor{{c.seed, auditParamIndex(c.index.declPkg[decl].info, decl, "action")}}
+	for len(queue) > 0 {
+		next := queue[0]
+		queue = queue[1:]
+		if next.param < 0 {
+			continue
+		}
+		for _, use := range c.index.uses[next.key] {
+			if use.call == nil || use.decl == nil || use.pkg.path != seedPkg {
+				continue
+			}
+			caller := auditFuncKey(use.pkg.info, use.decl)
+			var read auditResolved
+			ok := false
+			if at := next.param + use.shift; at < len(use.call.Args) {
+				read, ok = c.index.resolver(use).resolve(use.call.Args[at])
+			}
+			unread[caller] = unread[caller] || !ok
+			fixed[caller] = fixed[caller] || len(read.values) > 0
+			for _, forwarded := range read.params {
+				if _, seen := params[forwarded.key]; !seen {
+					params[forwarded.key] = forwarded.param
+					queue = append(queue, forwarded)
+				}
+			}
+		}
+	}
+	c.inheritVerbs(params, fixed, unread)
+	return params, fixed, unread
+}
+
+// inheritVerbs gives a writer that hands only its record type to another
+// writer that writer's verb: fixed or unread.
+func (c *auditEntityCensus) inheritVerbs(params map[string]int, fixed, unread map[string]bool) {
+	seedPkg := c.seedPackage()
+	type edge struct{ caller, callee string }
+	var edges []edge
+	for callee := range c.writers {
+		for _, use := range c.index.uses[callee] {
+			if use.call != nil && use.decl != nil && use.pkg.path == seedPkg {
+				edges = append(edges, edge{auditFuncKey(use.pkg.info, use.decl), callee})
+			}
+		}
+	}
+	for changed := true; changed; {
+		changed = false
+		for _, e := range edges {
+			if _, forwards := params[e.callee]; forwards {
+				continue
+			}
+			if fixed[e.callee] && !fixed[e.caller] || unread[e.callee] && !unread[e.caller] {
+				fixed[e.caller] = fixed[e.caller] || fixed[e.callee]
+				unread[e.caller] = unread[e.caller] || unread[e.callee]
+				changed = true
+			}
+		}
+	}
+}
+
+// auditParamOfType is the position of decl's parameter declared with the
+// named type or alias typeName, or -1.
 func auditParamOfType(info *types.Info, decl *ast.FuncDecl, typeName string) int {
 	obj, ok := info.Defs[decl.Name].(*types.Func)
 	if !ok {
@@ -163,8 +244,15 @@ func auditParamOfType(info *types.Info, decl *ast.FuncDecl, typeName string) int
 	}
 	params := obj.Signature().Params()
 	for i := range params.Len() {
-		if named, isNamed := types.Unalias(params.At(i).Type()).(*types.Named); isNamed && named.Obj().Name() == typeName {
-			return i
+		switch declared := params.At(i).Type().(type) {
+		case *types.Alias:
+			if declared.Obj().Name() == typeName {
+				return i
+			}
+		case *types.Named:
+			if declared.Obj().Name() == typeName {
+				return i
+			}
 		}
 	}
 	return -1

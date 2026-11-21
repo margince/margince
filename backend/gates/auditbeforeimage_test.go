@@ -23,10 +23,12 @@ package gates
 // is the authority. The sites come from the audit census (auditdoorsites_test.go):
 // every call into a storekit door, with its verb read by the type checker. A
 // verb built at runtime stays unread (privacy/retentionactions.go passes one
-// read from a database row). The census also reports any other writer of
-// audit_log, because the chokepoint binds only what goes through it. Between
-// them, the gate says who writes the table and the chokepoint says what a door
-// will accept.
+// read from a database row). A before-image read only at the door: a wrapper
+// that forwards it as a parameter is left to the refusal. The census also
+// reports any other writer of audit_log, including a direct INSERT. The
+// integration harness's tombstone seed in harnessseed.go carries the
+// integration build tag, so the census never reads it. Between them, the gate
+// says who writes the table and the chokepoint says what a door will accept.
 //
 // Only `update` is judged. `archive` sites also pass an absent before-image and
 // are deliberately left alone: un-archiving is not a before-image replay but
@@ -35,6 +37,7 @@ package gates
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -200,26 +203,23 @@ func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 	}
 	var withBefore, eventShaped, unresolvable int
 	for _, site := range auditDoorSitesOf(t) {
-		verbs, known := site.verbs()
-		switch {
-		case !known:
+		switch beforeImageVerdictOf(site) {
+		case verdictUnreadVerb:
 			unresolvable++
 			if !unresolvableAuditActions.Waived(t, site.key()) {
 				t.Errorf("%s: %s builds its audit verb at runtime, so this gate cannot judge it.\n"+
 					"\tRatify it in unresolvableAuditActions with the guarantee that holds it, "+
 					"or pass the verb as a constant.", site.key(), site.door.name)
 			}
-		case !slices.Contains(verbs, "update"):
-			// archive, create, erase and the rest: out of this gate's scope.
-		case site.door.before >= 0:
+		case verdictImaged:
 			withBefore++
-			if site.beforeIsAbsent() {
-				t.Errorf("%s: audits an update to %s with no before-image.\n"+
-					"\tRecord what the fields held (the row is readable in this transaction), "+
-					"or call storekit.AuditEvent and say here what this write has instead.",
-					site.key(), site.entityType())
-			}
-		default:
+		case verdictNoBeforeImage:
+			withBefore++
+			t.Errorf("%s: audits an update to %s with no before-image.\n"+
+				"\tRecord what the fields held (the row is readable in this transaction), "+
+				"or call storekit.AuditEvent and say here what this write has instead.",
+				site.key(), site.entityType())
+		case verdictOccurrence:
 			eventShaped++
 			if !eventShapedUpdates.Waived(t, site.key()) {
 				t.Errorf("%s: records an update to %s as an occurrence.\n"+
@@ -227,6 +227,7 @@ func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 					"prior state, or record the before-image and call storekit.Audit.",
 					site.key(), site.entityType())
 			}
+		case verdictNotAnUpdate:
 		}
 	}
 
@@ -236,5 +237,57 @@ func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 		t.Errorf("resolved %d image-carrying, %d occurrence-shaped and %d runtime-verb audit site(s), "+
 			"and the seed's INSERT read %v: one of the ways of finding a write has stopped working",
 			withBefore, eventShaped, unresolvable, census.seedInserts)
+	}
+}
+
+// beforeImageVerdict is what this gate concludes about one door site.
+type beforeImageVerdict int
+
+const (
+	verdictNotAnUpdate beforeImageVerdict = iota
+	verdictUnreadVerb
+	verdictImaged
+	verdictNoBeforeImage
+	verdictOccurrence
+)
+
+// beforeImageVerdictOf judges one site. archive, create, erase and the other
+// verbs are out of this gate's scope.
+func beforeImageVerdictOf(site auditDoorSite) beforeImageVerdict {
+	verbs, known := site.verbs()
+	switch {
+	case !known:
+		return verdictUnreadVerb
+	case !slices.Contains(verbs, "update"):
+		return verdictNotAnUpdate
+	case site.door.before < 0:
+		return verdictOccurrence
+	case site.beforeIsAbsent():
+		return verdictNoBeforeImage
+	}
+	return verdictImaged
+}
+
+func TestAnUpdateWithANilBeforeImageIsReportedAndOneWithAnImageIsNot(t *testing.T) {
+	t.Parallel()
+	census := fixtureCensus(t, fixtureSeed, map[string]string{"a.go": fixtureHeader +
+		"func absent() { _ = k.Record(ctx, tx, \"update\", \"alpha\", nil, map[string]any{\"a\": 1}) }\n" +
+		"func imaged() { _ = k.Record(ctx, tx, \"update\", \"alpha\", map[string]any{\"a\": 0}, map[string]any{\"a\": 1}) }\n"})
+	sites, _ := census.doorSites()
+	got := map[string]beforeImageVerdict{}
+	for _, site := range sites {
+		got[site.use.decl.Name.Name] = beforeImageVerdictOf(site)
+	}
+	if got["absent"] != verdictNoBeforeImage || got["imaged"] != verdictImaged {
+		t.Errorf("judged %v, want absent reported and imaged passed", got)
+	}
+}
+
+func TestAnExportedWriterWhoseVerbNoRuleReadsIsUnjudged(t *testing.T) {
+	t.Parallel()
+	census := fixtureCensus(t, fixtureSeed, map[string]string{"a.go": fixtureHeader})
+	_, unjudged := census.doorSites()
+	if len(unjudged) != 1 || !strings.HasSuffix(unjudged[0], ".FromData") {
+		t.Errorf("unjudged %v, want only the planted writer that reads its verb from data", unjudged)
 	}
 }

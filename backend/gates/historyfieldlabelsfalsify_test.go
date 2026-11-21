@@ -112,8 +112,9 @@ func TestEveryImageShapeTheTreeUsesIsFollowed(t *testing.T) {
 func keysOfPlantedWriter(t *testing.T, body string) []string {
 	t.Helper()
 	census := fixtureCensus(t, fixtureSeed, map[string]string{"a.go": fixtureHeader + body})
+	sites, _ := census.doorSites()
 	var keys []string
-	for _, site := range census.doorSites() {
+	for _, site := range sites {
 		keys = append(keys, site.imageKeys(t, callsWithin(site.use.pkg))...)
 	}
 	return keys

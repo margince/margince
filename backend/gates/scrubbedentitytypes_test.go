@@ -13,6 +13,11 @@ package gates
 // reader outside privacy has to decide whether the boundary is live for the
 // records it reads.
 //
+// The readers stop at the newest tombstone of the record they read. In
+// privacy they are field, record and edge history and the compliance log.
+// Through UnscrubbedImageSQL they are compose's export, undo, restore, task
+// history, automatic work, magic and weekly reads.
+//
 // The weekly review is such a reader. Its deal block reconstructs a deal's state
 // as of the week's closing instant by reverse-applying audit images, and it
 // stops at a scrub tombstone: the spine is append-only, so the images a scrub
@@ -37,6 +42,8 @@ package gates
 
 import (
 	"fmt"
+	"go/ast"
+	"go/constant"
 	"go/types"
 	"slices"
 	"strings"
@@ -139,12 +146,77 @@ var runtimeScrubVerbs = map[string]func(t *testing.T, scrub map[string]bool) []s
 	"backend/internal/compose/extledger.go:recordExtensionChange": func(*testing.T, map[string]bool) []string { return extensionTypes(nil) },
 	// Trail.Resolve admits update and restore, and neither is a scrub.
 	"backend/internal/platform/database/storekit/auditverb.go:AuditWithTrail": scrubsNothing,
-	// The verb is a commission decision word or `cancel`, and none is a scrub.
-	"backend/internal/modules/commissions/decide.go:decideTx": scrubsNothing,
-	"backend/internal/modules/commissions/decide.go:voidOne":  scrubsNothing,
+	// The verb is a commission decision word, or what auditVerb returns for one.
+	"backend/internal/modules/commissions/decide.go:decideTx": commissionScrubs,
+	"backend/internal/modules/commissions/decide.go:voidOne":  commissionScrubs,
 }
 
 func scrubsNothing(*testing.T, map[string]bool) []string { return nil }
+
+// commissionScrubs reads the commission verbs: each Decision constant and each
+// constant auditVerb returns. None may be a scrub, because no record type here
+// says which reader would then stop at it.
+func commissionScrubs(t *testing.T, scrub map[string]bool) []string {
+	t.Helper()
+	pkg := typedPackageOf(t, modulePath+"/internal/modules/commissions")
+	var verbs []string
+	for _, name := range pkg.types.Scope().Names() {
+		if constant, ok := pkg.types.Scope().Lookup(name).(*types.Const); ok && strings.HasPrefix(name, "Decision") {
+			verbs = append(verbs, typedConstString(constant))
+		}
+	}
+	verbs = append(verbs, returnedConstants(pkg, "auditVerb")...)
+	if len(verbs) < 2 {
+		t.Fatalf("read %v as the commission verbs, too few to be the decisions", verbs)
+	}
+	for _, verb := range verbs {
+		if scrub[verb] {
+			t.Errorf("the commission verb %q is a scrub: name the record type it scrubs in runtimeScrubVerbs", verb)
+		}
+	}
+	return nil
+}
+
+func typedPackageOf(t *testing.T, path string) *typedPackage {
+	t.Helper()
+	pkgs := typedModule(t)
+	for i := range pkgs {
+		if pkgs[i].path == path {
+			return &pkgs[i]
+		}
+	}
+	t.Fatalf("the module has no package %s", path)
+	return nil
+}
+
+func typedConstString(c *types.Const) string {
+	if c.Val().Kind() != constant.String {
+		return ""
+	}
+	return constant.StringVal(c.Val())
+}
+
+// returnedConstants are the string constants function name returns directly.
+func returnedConstants(pkg *typedPackage, name string) []string {
+	var values []string
+	for _, file := range pkg.files {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Name.Name != name || fn.Body == nil {
+				continue
+			}
+			ast.Inspect(fn.Body, func(n ast.Node) bool {
+				if ret, isReturn := n.(*ast.ReturnStmt); isReturn && len(ret.Results) == 1 {
+					if value, isConst := auditConstString(pkg.info, ret.Results[0]); isConst {
+						values = append(values, value)
+					}
+				}
+				return true
+			})
+		}
+	}
+	return values
+}
 
 func settingScrubbedObjects(_ *testing.T, scrub map[string]bool) []string {
 	var objects []string
@@ -157,10 +229,13 @@ func settingScrubbedObjects(_ *testing.T, scrub map[string]bool) []string {
 }
 
 // retentionScrubbedObjects reads the objects of retentionActions whose action
-// is a scrub, and the extension tables a policy may expire.
+// is a scrub, and the extension tables when extensionActions holds a scrub.
 func retentionScrubbedObjects(t *testing.T, scrub map[string]bool) []string {
 	t.Helper()
-	objects := []string{extensionRecordTypes}
+	var objects []string
+	if slices.ContainsFunc(privacyExtensionActions(t), func(action string) bool { return scrub[action] }) {
+		objects = append(objects, extensionRecordTypes)
+	}
 	for _, pair := range auditPackageMapKeys(t, modulePath+"/internal/modules/privacy", "retentionActions") {
 		object, action, _ := strings.Cut(pair, "/")
 		if scrub[action] {
@@ -168,6 +243,38 @@ func retentionScrubbedObjects(t *testing.T, scrub map[string]bool) []string {
 		}
 	}
 	return objects
+}
+
+// privacyExtensionActions reads what a retention policy may do to an
+// extension's row, from privacy's extensionActions.
+func privacyExtensionActions(t *testing.T) []string {
+	t.Helper()
+	pkg := typedPackageOf(t, modulePath+"/internal/modules/privacy")
+	list, ok := pkg.types.Scope().Lookup("extensionActions").(*types.Var)
+	if !ok {
+		t.Fatal("privacy declares no extensionActions, the list this gate reads for an extension's row")
+	}
+	var actions []string
+	for _, file := range pkg.files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			spec, ok := n.(*ast.ValueSpec)
+			if !ok || len(spec.Names) != 1 || pkg.info.Defs[spec.Names[0]] != list || len(spec.Values) != 1 {
+				return true
+			}
+			if lit, isLit := spec.Values[0].(*ast.CompositeLit); isLit {
+				for _, elt := range lit.Elts {
+					if value, isConst := auditConstString(pkg.info, elt); isConst {
+						actions = append(actions, value)
+					}
+				}
+			}
+			return false
+		})
+	}
+	if len(actions) == 0 {
+		t.Fatal("privacy's extensionActions is no list of constants this gate can read")
+	}
+	return actions
 }
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {
@@ -212,13 +319,16 @@ func TestTheTombstoneWalkCarriesTheVerbAndTypeUpTheirCallers(t *testing.T) {
 		"func viaInterface(e eraser) { _ = e.Erase(\"alpha\") }\n" +
 		"func write(verb, t string) error { return k.Audit(ctx, tx, verb, t) }\n" +
 		"func callers() { _ = write(\"erase\", \"beta\"); _ = write(\"update\", \"never\") }\n" +
+		"func eraseX(verb string) error { return k.Audit(ctx, tx, verb, \"delta\") }\n" +
+		"func erasesDelta() { _ = eraseX(\"erase\") }\n" +
 		"func fromData(verbs []string) { _ = k.Audit(ctx, tx, verbs[0], \"gamma\") }\n"})
 	walk := newTombstoneWalk(t, census, map[string]bool{"erase": true})
-	if got := sortedKeys(walk.found); !slices.Equal(got, []string{"alpha", "beta"}) {
-		t.Errorf("the walk found scrubs against %v, want alpha through the interface and beta through the wrapper", got)
+	if got := sortedKeys(walk.found); !slices.Equal(got, []string{"alpha", "beta", "delta"}) {
+		t.Errorf("the walk found scrubs against %v, want alpha through the interface, beta through the wrapper and delta through the verb alone", got)
 	}
-	if len(walk.unread) != 1 || !strings.Contains(walk.unread[0], "verbs[0]") {
-		t.Errorf("the walk reported %v, want the one verb read from data", walk.unread)
+	// The planted storekit's FromData reads its verb from data too.
+	if len(walk.unread) != 2 || !slices.ContainsFunc(walk.unread, func(finding string) bool { return strings.Contains(finding, "verbs[0]") }) {
+		t.Errorf("the walk reported %v, want the two verbs read from data", walk.unread)
 	}
 }
 
