@@ -150,11 +150,8 @@ func TestMarkerCorrectionReportsAReadLockOnARightsRequest(t *testing.T) {
 				return err
 			}
 			page, err := privacy.RedactRetiredRequestAuditPageTx(ctx, cleanup, ids.UUID{}, ids.NewV7(), privacy.MarkerAuditPageSize, nil)
-			if !storekit.IsLockTimeout(err) {
-				t.Fatalf("a busy record lock must return a lock timeout, got %v", err)
-			}
-			if page.Changed != 0 || len(page.Scanned) != 0 {
-				t.Fatalf("busy record lock moved the cursor over %d records and changed %d", len(page.Scanned), page.Changed)
+			if !storekit.IsLockTimeout(err) || page.Changed != 0 || len(page.Scanned) != 0 {
+				t.Fatalf("a busy record lock must return a lock timeout and no progress, got %v, %d scanned, %d changed", err, len(page.Scanned), page.Changed)
 			}
 			return nil
 		}); err != nil {

@@ -25,11 +25,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const (
-	markedTaskID     = "core/1794076293_marked_erased_audit_payloads"
+	markedTaskID     = "core/1_marked_audit_correction"
 	markedWeeklyStep = "marked_weekly_images"
 	markedReqStep    = "retired_request_images"
 )
@@ -39,7 +38,7 @@ func markedTask() datatask.Task {
 	weekly.Name, weekly.Limit = markedWeeklyStep, privacy.MarkerAuditPageSize
 	requests := privacyreview.AuditSteps(privacy.RedactRetiredRequestAuditPageTx)[0]
 	requests.Name, requests.Limit = markedReqStep, privacy.MarkerAuditPageSize
-	return datatask.Task{ID: markedTaskID, Version: 1, Title: systemtext.Literal("datatask.title.core.1794076293_marked_erased_audit_payloads"), Steps: []datatask.Step{weekly, requests}}
+	return datatask.Task{ID: markedTaskID, Version: 1, Title: "Marked audit correction", Steps: []datatask.Step{weekly, requests}}
 }
 
 func markedWeeklyCopies(t *testing.T, e *Env) ids.UUID {
