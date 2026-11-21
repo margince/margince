@@ -59,7 +59,9 @@ async function fillRows(fields: FieldSource, add: string, entries: string[]) {
     </QueryClientProvider>,
   );
   await userEvent.click(screen.getByText("Open"));
-  const name = document.querySelector<HTMLInputElement>("input[maxlength]");
+  const name = document.querySelector<HTMLInputElement>(
+    "input[data-character-limit]",
+  );
   if (!name) throw new Error("the form has no name input");
   await userEvent.type(name, "Probe");
   for (const entry of entries) {

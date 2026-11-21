@@ -193,7 +193,7 @@ export const ACCEPTED = new Map<string, string>([
   // Doors and targets. A full-width action owes every pointer 44px, above the
   // control height rather than a second answer to it.
   [
-    ".auth-actions .btn",
+    ".auth-actions .btn:not(.btn-link)",
     "the sign-in door: full width, its own 44+ floor, for the reason " +
       ".btn-federated beside it carries one",
   ],

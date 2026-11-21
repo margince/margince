@@ -1,10 +1,11 @@
-import { graphemeSegmenter } from "../format/formatters";
 // The map's geometry and its route arithmetic, as pure functions.
 //
 // Separate from the drawing so both can be tested for what they actually
 // promise: the same model must place the same nodes at the same coordinates on
 // every read, and the highlighted route must be the strongest one the edges
 // support rather than whichever the renderer happened to walk first.
+
+import { graphemes } from "../lib/charactercount";
 
 /** What a node stands for, which decides its shape rather than its colour. */
 export type MapNodeKind = "user" | "contact" | "company" | "deal" | "gap";
@@ -455,15 +456,6 @@ export function fitLabel(
     }
   }
   return cutAt(glyphs, fits);
-}
-
-// Graphemes, so a cut never splits a flag, a joined emoji or an accent.
-function graphemes(text: string): string[] {
-  // Not every supported browser has Intl.Segmenter; code points never throw.
-  if (typeof Intl.Segmenter !== "function") {
-    return Array.from(text);
-  }
-  return Array.from(graphemeSegmenter().segment(text), (part) => part.segment);
 }
 
 function cutAt(glyphs: readonly string[], count: number): string {

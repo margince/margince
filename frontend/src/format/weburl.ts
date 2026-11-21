@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { characterCount } from "../lib/charactercount";
 import { TEXT_LIMITS } from "../lib/textlimits_gen";
 
 // The one place that decides whether a string may become a link.
@@ -40,7 +41,7 @@ const WEB_ADDRESS_START = /^https?:\/\/[^/?#@\s]/i;
 export function isWebAddress(value: string): boolean {
   if (
     value !== value.trim() ||
-    value.length > TEXT_LIMITS.note ||
+    characterCount(value) > TEXT_LIMITS.note ||
     !WEB_ADDRESS_START.test(value)
   ) {
     return false;

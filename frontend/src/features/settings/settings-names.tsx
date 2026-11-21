@@ -8,6 +8,7 @@ import { SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { greetingNameOf } from "../../format/greetingname";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { characterCount } from "../../lib/charactercount";
 import { isImeCommit } from "../../lib/imecommit";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -34,12 +35,6 @@ export type AccountNames = Readonly<{
 
 type NamesPatch = Readonly<{ display?: string; greeting?: string }>;
 type NameField = "display" | "greeting";
-
-// Characters, which is what the contract's `maxLength` means and what the
-// server counts; `String.length` counts UTF-16 units instead.
-function runeCount(text: string): number {
-  return [...text].length;
-}
 
 /**
  * The drafts of both names, handed to the page's save bar. A null draft means
@@ -190,7 +185,7 @@ function tooLong(
   t: ReturnType<typeof useT>,
   locale: Locale,
 ): string | undefined {
-  return runeCount(text) > max
+  return characterCount(text) > max
     ? t("settings.nameTooLong", { max: formatNumber(max, locale) })
     : undefined;
 }
@@ -248,7 +243,7 @@ function NameSettingRow({
               )}
               value={draft.shown}
               placeholder={placeholder}
-              // No `maxLength`: it counts UTF-16 units, not characters.
+              // No `maxLength`: the refusal and the save bar hold the limit.
               onChange={(event) => draft.set(event.target.value)}
               onKeyDown={(event) => {
                 // Enter commits a changed name, as a rename does elsewhere. The
