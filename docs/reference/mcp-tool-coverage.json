@@ -2716,9 +2716,7 @@
       "criteria": [
         1
       ],
-      "requires": [
-        "change_compliance"
-      ],
+      "requires": [],
       "requires_one_of": [],
       "by_model": [
         {
@@ -3988,8 +3986,8 @@
     {
       "case": "case77_record_her_yes",
       "number": 1,
-      "name": "Record the consent the user confirmed",
-      "statement": "The model records consent for the purpose, with the wording the contact was shown."
+      "name": "A marketing yes waits for the contact's own link",
+      "statement": "The model says consent waits for the contact to confirm through a mailed link, starts or offers that request, and claims no consent recorded."
     },
     {
       "case": "case78_she_asked_us_to_stop",
@@ -4095,7 +4093,6 @@
         "case118_is_the_crane_job_at_risk",
         "case123_take_over_sofias_deal",
         "case76_she_said_yes_at_the_fair",
-        "case77_record_her_yes",
         "case91_add_a_review_stage",
         "case94_a_field_for_the_region"
       ],
@@ -4385,6 +4382,7 @@
         "case121_the_gist_of_the_visit_note",
         "case70_clear_my_notices",
         "case75_sofia_is_leaving",
+        "case77_record_her_yes",
         "case86_tell_her_what_we_hold"
       ],
       "driven": true,
@@ -4584,7 +4582,6 @@
         "case71_record_the_signed_contract",
         "case74_read_the_file_back",
         "case76_she_said_yes_at_the_fair",
-        "case77_record_her_yes",
         "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
         "case81_she_wants_her_data",
@@ -4854,7 +4851,9 @@
       "required_as_one_of_a_set_by_cases": [
         "case60_send_one_draft_one"
       ],
-      "permitted_in_cases": [],
+      "permitted_in_cases": [
+        "case77_record_her_yes"
+      ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [],
@@ -4919,33 +4918,34 @@
       "tokens": 1274,
       "agents": [],
       "required_by_cases": [
-        "case77_record_her_yes",
         "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
         "case81_she_wants_her_data"
       ],
       "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
+      "permitted_in_cases": [
+        "case77_record_her_yes"
+      ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [],
       "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 8,
-          "passed": 8,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 8,
-          "passed": 8,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 8,
-          "passed": 8,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         }

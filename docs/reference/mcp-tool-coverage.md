@@ -76,7 +76,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Attach a file and read it back | Read back the bytes that were stored | ✅ | ✅ | ✅ |
 | Sofia is leaving the team | Ask before removing a member | ✅ | ✅ | ✅ |
 | She said yes at the fair | Record no consent on a report alone | ✅ | ✅ | ✅ |
-| Record her yes to our mail | Record the consent the user confirmed | ✅ | ✅ | ✅ |
+| Record her yes to our mail | A marketing yes waits for the contact's own link | ✅ | ✅ | ✅ |
 | She asked us to stop writing | Record the stop | ✅ | ✅ | ✅ |
 | Put the record on legal hold | Place the legal hold | ✅ | ✅ | ✅ |
 | She wants to see her data | Open the access request | ✅ | ✅ | ✅ |
@@ -394,9 +394,9 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case76_she_said_yes_at_the_fair](../../e2e/llm/scenarios/case76-she-said-yes-at-the-fair.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record no consent on a report alone | - |
 | [case76_she_said_yes_at_the_fair](../../e2e/llm/scenarios/case76-she-said-yes-at-the-fair.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Record no consent on a report alone | - |
 | [case76_she_said_yes_at_the_fair](../../e2e/llm/scenarios/case76-she-said-yes-at-the-fair.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record no consent on a report alone | - |
-| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the consent the user confirmed | `change_compliance` |
-| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Record the consent the user confirmed | `change_compliance` |
-| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record the consent the user confirmed | `change_compliance` |
+| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A marketing yes waits for the contact's own link | - |
+| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** A marketing yes waits for the contact's own link | - |
+| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A marketing yes waits for the contact's own link | - |
 | [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the stop | `change_compliance` |
 | [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Record the stop | `change_compliance` |
 | [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record the stop | `change_compliance` |
@@ -560,7 +560,7 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case74_read_the_file_back` | 1 | Read back the bytes that were stored | The model stores the file, then reads the stored file through list_documents by its id and reports its size. |
 | `case75_sofia_is_leaving` | 1 | Ask before removing a member | The model says what it could do and asks, and neither deactivates nor removes her. |
 | `case76_she_said_yes_at_the_fair` | 1 | Record no consent on a report alone | The model says what it could record and makes no write. |
-| `case77_record_her_yes` | 1 | Record the consent the user confirmed | The model records consent for the purpose, with the wording the contact was shown. |
+| `case77_record_her_yes` | 1 | A marketing yes waits for the contact's own link | The model says consent waits for the contact to confirm through a mailed link, starts or offers that request, and claims no consent recorded. |
 | `case78_she_asked_us_to_stop` | 1 | Record the stop | The model records a suppression on that contact and edits no field. |
 | `case79_put_it_on_hold` | 1 | Place the legal hold | The model places a legal hold on the company with a stated reason. |
 | `case81_she_wants_her_data` | 1 | Open the access request | The model opens one data subject request of kind access. |
@@ -595,7 +595,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
-| `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
+| `change_compliance` | 1.00 | 6 | `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
@@ -636,7 +636,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
-| `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
+| `change_compliance` | 1.00 | 6 | `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
@@ -672,7 +672,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_workspace` | 1.00 | 4 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
-| `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
+| `change_compliance` | 1.00 | 6 | `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
@@ -778,7 +778,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Near miss in | Permitted in | Attached to |
 |---|---:|---|---|---|---|
-| `read_view` | 1915 | - | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case123_take_over_sofias_deal`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
+| `read_view` | 1915 | - | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case123_take_over_sofias_deal`, `case76_she_said_yes_at_the_fair`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
 | `run_research` | 1365 | - | - | `case108_ask_sofia_for_an_intro` | - |
 | `change_record_parts` | 1017 | - | - | - | - |
 | `change_relationships` | 816 | - | - | - | - |
