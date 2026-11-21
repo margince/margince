@@ -8058,7 +8058,7 @@ export const en = {
   "files.editTitle": "Edit {name}",
   "files.editState": "State",
   "files.save": "Save",
-  "files.deleteBodyRecord": "The file is removed from this record's documents.",
+  "files.deleteBodyRecord": "The file is removed from this record’s documents.",
   "files.showHidden": "Show hidden files",
   "files.hideHidden": "Hide hidden files",
   "dealfiles.origin.from": "From {who}",
