@@ -113,6 +113,26 @@ describe("the contract row menu", () => {
     ).toBeTruthy();
   });
 
+  // A renewal starts with its predecessor's title, so the menus need more.
+  it("tells two menus of one title apart by number, else by start day", async () => {
+    stub([
+      { ...ACTIVE, id: "c-1", contract_number: "MSA-7" },
+      { ...ACTIVE, id: "c-2", starts_on: "2025-03-01" },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024, MSA-7",
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: /^Actions for Framework agreement 2024, .*2025/,
+      }),
+    ).toBeTruthy();
+  });
+
   it("withholds change-status and cancel from a terminal agreement, but not renew", async () => {
     stub([EXPIRED]);
     const user = userEvent.setup();

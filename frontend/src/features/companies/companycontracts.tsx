@@ -222,6 +222,16 @@ export function CompanyContractsCard({
   );
 }
 
+// A renewal starts with its predecessor's title, so a row's menu also names
+// the contract's number, or its first day where it has none.
+function menuName(contract: Contract, locale: Locale, zone: string): string {
+  const day =
+    contract.starts_on && formatDate(contract.starts_on, locale, zone);
+  return [contract.title, contract.contract_number ?? day]
+    .filter(Boolean)
+    .join(", ");
+}
+
 function ContractRow({
   contract,
   companyId,
@@ -239,6 +249,7 @@ function ContractRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const readerZone = useViewerZone();
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState(false);
   const [renewing, setRenewing] = useState(false);
@@ -330,7 +341,11 @@ function ContractRow({
           </Badge>
         )}
         {(mayWrite || mayArchive || mayRenewThis) && (
-          <OverflowMenu label={t("table.rowActions", { name: contract.title })}>
+          <OverflowMenu
+            label={t("table.rowActions", {
+              name: menuName(contract, locale, readerZone),
+            })}
+          >
             {/* Menu items are Buttons, like every other menu in the product.
                 A bare <button> here drew as centred unstyled text inside a
                 panel that was otherwise the design system's. */}
