@@ -11,7 +11,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -73,4 +77,38 @@ func DayAfter(day string) (string, error) {
 		return "", fmt.Errorf("compose: commitment due date %q is not a date — write it as YYYY-MM-DD: %w", day, err)
 	}
 	return parsed.AddDate(0, 0, 1).Format(time.DateOnly), nil
+}
+
+// ComingDay turns a calendar day into the due clock of a task due when that day
+// ends. An empty zone means the installation's zone. A day already over
+// there is a validation error on field. Its task would be overdue at once.
+func ComingDay(ctx context.Context, tx pgx.Tx, field, day, zone string, now time.Time) (crmcontracts.IntentTime, error) {
+	end, err := EndOf(ctx, tx, day, zone)
+	if err != nil {
+		return crmcontracts.IntentTime{}, err
+	}
+	if zone == "" {
+		if zone, err = identity.TimezoneOf(ctx, tx); err != nil {
+			return crmcontracts.IntentTime{}, err
+		}
+	}
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return crmcontracts.IntentTime{}, fmt.Errorf("compose: due-date timezone %q: %w", zone, err)
+	}
+	if deadline.DayPassed(end, now, loc) {
+		return crmcontracts.IntentTime{}, httperr.Validation(field, "in_the_past", "choose today or a later day")
+	}
+	return crmcontracts.IntentTime{WallClock: day + "T" + values.DayOnlyClock, Timezone: zone}, nil
+}
+
+// InstallationZone is the zone the installation's calendar days end in.
+func InstallationZone(ctx context.Context, db *database.DB) (*time.Location, error) {
+	var loc *time.Location
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		loc, err = identity.ZoneAppliedTx(ctx, tx)
+		return err
+	})
+	return loc, err
 }
