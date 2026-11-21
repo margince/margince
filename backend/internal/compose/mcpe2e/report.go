@@ -46,7 +46,7 @@ type Verdict struct {
 	// Slow is its median calls past the case's `expected_calls`.
 	Efficiency *Efficiency `json:"efficiency"`
 	Slow       bool        `json:"slow"`
-	// ToolsCalled is every tool a call worked on in the runs, by bare name.
+	// ToolsCalled names the tools the runs called with success, by bare name.
 	ToolsCalled []string `json:"tools_called"`
 }
 

@@ -22,7 +22,7 @@ may_call:
 
 must_mention:
   - "Reply Deutschland"
-  # Only the records name these: the deal, the company's full name, its people
+  # Only the records name these: the deal, the company's full name, its contacts
   # and its latest activities. An answer that names none of them read nothing.
   - "(?i)Verlängerung|Betreuerwechsel|Sofia|Jonas|Katrin|Post-mortem|Nachfrage"
 
