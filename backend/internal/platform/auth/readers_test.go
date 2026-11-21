@@ -45,3 +45,37 @@ func TestAReadSharedWithAnotherPrincipalRequiresBothGrants(t *testing.T) {
 		})
 	}
 }
+
+// A clause grows with its readers, so it refuses more than one group and the
+// groups split any list into clauses that fit.
+func TestAReaderClauseTakesAtMostOneGroup(t *testing.T) {
+	reader := func() principal.Principal {
+		id := ids.NewV7()
+		return principal.Principal{
+			Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + id.String(), UserID: id,
+			Permissions: principal.Permissions{
+				RowScope: principal.RowScopeOwn,
+				Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
+			},
+		}
+	}
+	ctx := principal.WithActor(context.Background(), reader())
+	readers := make([]principal.Principal, 3*MaxReadersPerClause+1)
+	for i := range readers {
+		readers[i] = reader()
+	}
+	arg := func(any) int { return 1 }
+	if _, err := ScopeClauseForReaders(ctx, "contact", "p", arg, readers...); err == nil {
+		t.Fatalf("a clause over %d readers was built", len(readers))
+	}
+	judged := 0
+	for group := range ReaderGroups(readers) {
+		if _, err := ScopeClauseForReaders(ctx, "contact", "p", arg, group...); err != nil {
+			t.Fatalf("a group of %d readers: %v", len(group), err)
+		}
+		judged += len(group)
+	}
+	if judged != len(readers) {
+		t.Errorf("the groups judged %d readers, want all %d", judged, len(readers))
+	}
+}

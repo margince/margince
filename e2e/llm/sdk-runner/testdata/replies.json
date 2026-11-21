@@ -1,0 +1,31 @@
+{
+  "entries": [
+    "Give a new owner to => accept confirm=true",
+    "Which contact did you mean => accept record_id=01a1fca7-3197-722b-b22b-0d26bda1fb72",
+    "Undo the bulk change => decline",
+    "check => cancel",
+    "count it => accept count=12 tags=[\"fair\",\"lead\"]"
+  ],
+  "replies": [
+    {"match": "Give a new owner to", "action": "accept", "content": {"confirm": true}},
+    {"match": "Which contact did you mean", "action": "accept", "content": {"record_id": "01a1fca7-3197-722b-b22b-0d26bda1fb72"}},
+    {"match": "Undo the bulk change", "action": "decline"},
+    {"match": "check", "action": "cancel"},
+    {"match": "count it", "action": "accept", "content": {"count": 12, "tags": ["fair", "lead"]}}
+  ],
+  "refused_entries": [
+    "new owner => decline confirm=false",
+    "new owner => maybe",
+    "=> accept",
+    "pick => accept record={\"id\":1}",
+    "count it => accept count=1e309",
+    "count it => accept count=NaN",
+    "count it => accept count=-Infinity"
+  ],
+  "refused_replies": [
+    {"match": "new owner", "action": "decline", "content": {"confirm": false}},
+    {"match": "new owner", "action": "maybe"},
+    {"match": "", "action": "accept"},
+    {"match": "pick", "action": "accept", "content": {"record": {"id": 1}}}
+  ]
+}

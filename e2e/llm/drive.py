@@ -14,6 +14,7 @@ lane reads 3 as a harness stop: such a run is never scored.
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -262,6 +263,58 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
     return code
 
 
+# The Agent SDK host: the claude binary the CLI route runs, under a program
+# that answers the server's questions in the chat from the scenario's script.
+SDK_RUNNER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sdk-runner")
+
+
+def sdk_argv(route, mcp_url, token_env, prompt_file, replies_file, out_path, cwd, claude, flags):
+    """The runner's command line, with clean.py's launch flags passed on to claude.
+
+    The passport travels by the name of its variable; the runner writes it to a
+    file only this user can read.
+    """
+    return [
+        "node", os.path.join(SDK_RUNNER_DIR, "src", "run.ts"),
+        "--model", route.model, "--mcp-url", mcp_url, "--token-env", token_env,
+        "--server", transcript.SERVER, "--prompt-file", prompt_file, "--replies-file", replies_file,
+        "--out", out_path, "--cwd", cwd, "--claude", claude, "--max-turns", str(MAX_TURNS),
+        # `=` keeps a flag-shaped or empty value from being read as an option.
+        *(f"--claude-arg={flag}" for flag in flags),
+    ]
+
+
+def run_sdk(route, mcp_url, token_env, prompt_file, scenario, out_path):
+    """Drive one prompt through the Agent SDK runner, which writes the transcript itself.
+
+    It starts claude as clean.py starts the CLI route, so the two differ only
+    in the host: this one answers each question from the scenario's
+    `elicitation:` entries and records the question and the answer. Like the
+    CLI route it has no wall clock, only the turn cap.
+    """
+    # claude takes no effort flag on the CLI route either, so another effort
+    # would be filed under a label the run never used.
+    if route.effort != candidates.table()[route.candidate]["effort"]:
+        print(f"the SDK route runs claude at its own effort; it cannot run at {route.effort!r}", file=sys.stderr)
+        return HARNESS
+    claude = shutil.which("claude")
+    if not claude:
+        print("the claude CLI is not on PATH; the SDK route runs that binary", file=sys.stderr)
+        return HARNESS
+    if not os.path.isdir(os.path.join(SDK_RUNNER_DIR, "node_modules", "@anthropic-ai", "claude-agent-sdk")):
+        print("the SDK runner is not installed; scripts/e2e-llm.sh installs it and checks its "
+              "pins and registry signatures before it boots (E2E_LLM_VIA=sdk)", file=sys.stderr)
+        return HARNESS
+    entries = check.parse_scenario(scenario).get("elicitation", []) if scenario else []
+    with tempfile.TemporaryDirectory(prefix="e2e-llm-sdk.") as scratch, clean.claude_launch() as (flags, env, empty):
+        replies_file = os.path.join(scratch, "replies.json")
+        with open(replies_file, "w", encoding="utf-8") as handle:
+            json.dump(check.elicitation_replies(entries), handle)
+        argv = sdk_argv(route, mcp_url, token_env, prompt_file, replies_file, out_path, empty, claude, flags)
+        done = subprocess.run(argv, env=env, stdin=subprocess.DEVNULL, check=False)
+    return HARNESS if done.returncode else 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--candidate", required=True)
@@ -273,6 +326,7 @@ def main():
     parser.add_argument("--token-env", required=True, help="the variable holding the MCP passport")
     parser.add_argument("--prompt-file", required=True)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--scenario", default="", help="the scenario file, for the SDK route's scripted answers")
     parser.add_argument("--rest-skill-dir", default="", help="the REST door: the skill the candidate reads")
     parser.add_argument("--rest-base", default="", help="the REST door: the stack's /v1")
     args = parser.parse_args()
@@ -292,6 +346,11 @@ def main():
         if rest:
             os.environ["MARGINCE_REST_TOKEN"] = os.environ.get(args.token_env, "")
         return run_codex(route, args.mcp_url, args.token_env, prompt, args.out, rest=rest)
+    if route.wire == "claude-sdk":
+        if args.rest_skill_dir:
+            print("the SDK route has no REST door", file=sys.stderr)
+            return HARNESS
+        return run_sdk(route, args.mcp_url, args.token_env, args.prompt_file, args.scenario, args.out)
     if route.wire == "agy-cli":
         if args.rest_skill_dir:
             print("the agy route has no REST door", file=sys.stderr)

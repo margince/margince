@@ -17,13 +17,15 @@ import (
 )
 
 // routeOf names how the assistant was reached. A folder's @suffix is the CLI
-// route; a verdict with no driver predates routes, when only the claude CLI drove.
+// or Agent SDK route; a verdict with no driver predates routes, when only the claude CLI drove.
 func routeOf(folder, driver string) string {
 	switch {
 	case strings.HasSuffix(folder, "@codex-cli"):
 		return "Codex CLI"
 	case strings.HasSuffix(folder, "@agy-cli"):
 		return "Antigravity CLI"
+	case strings.HasSuffix(folder, "@claude-sdk"):
+		return "Claude Agent SDK"
 	case strings.HasSuffix(folder, "@claude-cli"), driver == "":
 		return "Claude Code CLI"
 	case strings.HasSuffix(driver, ":openrouter"):

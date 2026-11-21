@@ -98,6 +98,17 @@ jobs:
           tag_date="$(git for-each-ref --format='%(taggerdate:short)' "refs/tags/$TAG")"
           bash scripts/release-license-stamped.sh "$TAG" "$tag_date" LICENSE
 
+      - name: The policy packs were checked against their sources
+        env:
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ steps.v.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          # The LICENSE step fetched the annotated tag, so its date reads here.
+          # Dates in the tree only: a tag never waits on a publisher's host.
+          tag_date="$(git for-each-ref --format='%(taggerdate:short)' "refs/tags/$TAG")"
+          bash scripts/release-policy-sources-fresh.sh "$TAG" "$tag_date" "$PRERELEASE" extensions
+
       - name: VERSION names this release
         env:
           TAG: ${{ github.ref_name }}
