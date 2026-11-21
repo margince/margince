@@ -3337,6 +3337,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "share.revokeConfirm":
     "{access} auf {record} für {name} widerrufen? Der Zugriff endet mit der nächsten Anfrage und kann anschließend nicht mehr rückgängig gemacht werden.",
   "share.granted": "{name} hat jetzt {access} auf {record}.",
+  "share.limitedByRole":
+    "Mit Lesezugriff gespeichert. {name} kann {record} mit der eigenen Rolle nicht bearbeiten.",
+  "share.companyContactsLimitedByRole":
+    "Mit Lesezugriff gespeichert. {name} kann Kontakte mit der eigenen Rolle nicht bearbeiten.",
   "share.thisRecord": "diesen Datensatz",
   "share.until": "Bis {date}",
   "share.approvalRequired":

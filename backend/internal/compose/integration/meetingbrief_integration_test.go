@@ -594,6 +594,7 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 // the share Rep3 needs to file a meeting onto it.
 func shareContactForWriting(t *testing.T, e *Env, contact ids.UUID) {
 	t.Helper()
+	e.GrantRole(t, e.Rep3, "rep")
 	if _, err := identity.NewService(e.Pool).CreateRecordGrant(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms),
 		identity.CreateGrantInput{RecordType: "contact", RecordID: contact, SubjectType: "user", SubjectID: e.Rep3, Access: "write"}); err != nil {
 		t.Fatalf("share the contact: %v", err)
