@@ -378,7 +378,9 @@ func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, bu
 	writeOfferPDFLogo(pdf, issuer.Logo)
 	writeOfferPDFHeader(pdf, tr, o, buyerBlock, issuer, layout, labels)
 	writeOfferPDFIntro(pdf, tr, o)
-	writeOfferPDFLineItems(pdf, tr, lines, o.Currency, labels)
+	if err := writeOfferPDFLineItems(pdf, tr, lines, o.Currency, labels); err != nil {
+		return nil, err
+	}
 	writeOfferPDFTotals(pdf, tr, o, labels)
 	writeOfferPDFTerms(pdf, tr, o, labels)
 	writeOfferPDFFooter(pdf, tr, layout)

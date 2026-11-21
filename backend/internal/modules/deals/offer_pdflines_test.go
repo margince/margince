@@ -4,7 +4,9 @@
 package deals
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -132,5 +134,22 @@ func TestRenderOfferPDF_FormatsNumbersForTheDocumentsLanguage(t *testing.T) {
 				t.Errorf("%s: the PDF must print %q:\n%s", locale, needle, drawn)
 			}
 		}
+	}
+}
+
+// A committed figure too large to hold refuses the render, as the offer's own
+// totals do, rather than print the term without it.
+func TestRenderOfferPDF_RefusesACommittedFigureItCannotHold(t *testing.T) {
+	line := discountedTaxedLine()
+	monthly := crmcontracts.OfferLineItemBillingIntervalMonthsN1
+	model := crmcontracts.OfferLineItemBillingModelRecurring
+	net, periods := int64(math.MaxInt64/2), 3
+	line.BillingModel, line.BillingIntervalMonths = &model, &monthly
+	line.LineNetMinor, line.IntervalCount = &net, &periods
+
+	_, err := RenderOfferPDF(testRenderOffer(8749, 1662, 10411), []crmcontracts.OfferLineItem{line}, nil, issuedBy("Margince GmbH"), "en", nil)
+	var tooLarge *MoneyRangeError
+	if !errors.As(err, &tooLarge) {
+		t.Fatalf("RenderOfferPDF() error = %v, want a MoneyRangeError", err)
 	}
 }

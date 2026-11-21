@@ -18,13 +18,17 @@ import (
 // writeOfferPDFLineItems writes the line-items section: each line's
 // description, then its quantity, unit, unit price and discount, then its net,
 // tax and total.
-func writeOfferPDFLineItems(pdf *fpdf.Fpdf, tr pdfTranslator, lines []crmcontracts.OfferLineItem, currency string, labels pdfLabels) {
+func writeOfferPDFLineItems(pdf *fpdf.Fpdf, tr pdfTranslator, lines []crmcontracts.OfferLineItem, currency string, labels pdfLabels) error {
 	pdf.SetFont(offerFontFamily, "B", 12)
 	pdf.Cell(0, 6, tr(labels.lineItems))
 	pdf.Ln(7)
 	pdf.SetFont(offerFontFamily, "", 10)
 	for _, li := range lines {
-		texts := append([]string{fmt.Sprintf("%d. %s", li.Position, li.Description)}, pdfLineTexts(li, currency, labels)...)
+		figures, err := pdfLineTexts(li, currency, labels)
+		if err != nil {
+			return err
+		}
+		texts := append([]string{fmt.Sprintf("%d. %s", li.Position, li.Description)}, figures...)
 		for i := range texts {
 			texts[i] = tr(texts[i])
 		}
@@ -34,6 +38,7 @@ func writeOfferPDFLineItems(pdf *fpdf.Fpdf, tr pdfTranslator, lines []crmcontrac
 		}
 	}
 	pdf.Ln(2)
+	return nil
 }
 
 const pdfLineHeight = 5
@@ -58,10 +63,10 @@ func keepOnOnePage(pdf *fpdf.Fpdf, texts []string, lineHeight float64) {
 // pdfLineTexts are the lines printed under a line's description. A line whose
 // price could not be grounded prints its quantity alone: its zero price is a
 // sentinel, never an amount to show a buyer.
-func pdfLineTexts(li crmcontracts.OfferLineItem, currency string, labels pdfLabels) []string {
+func pdfLineTexts(li crmcontracts.OfferLineItem, currency string, labels pdfLabels) ([]string, error) {
 	quantity := strings.TrimSpace(pdfFormatQuantity(li.Quantity, labels) + " " + pdfUnitName(li.Unit, labels))
 	if li.PriceGrounded != nil && !*li.PriceGrounded {
-		return []string{quantity}
+		return []string{quantity}, nil
 	}
 	price := quantity + " x " + pdfFormatMinor(li.UnitPriceMinor, currency, labels)
 	if li.DiscountPct != 0 {
@@ -77,10 +82,11 @@ func pdfLineTexts(li crmcontracts.OfferLineItem, currency string, labels pdfLabe
 			labels.tax, pdfFormatPercent(li.TaxRate, labels), pdfFormatMinor(*li.LineTaxMinor, currency, labels),
 			labels.lineTotal, pdfFormatMinor(*li.LineTotalMinor, currency, labels)))
 	}
-	if commitment := pdfLineCommitment(li, currency, labels); commitment != "" {
+	commitment, err := pdfLineCommitment(li, currency, labels)
+	if commitment != "" {
 		texts = append(texts, commitment)
 	}
-	return texts
+	return texts, err
 }
 
 // pdfUnitName is a unit key in the document's language; a unit typed as free
@@ -118,20 +124,17 @@ func pdfLineCadence(li crmcontracts.OfferLineItem, labels pdfLabels) string {
 // long.
 //
 // The multiplication is CommittedNetMinor's, which is where the offer's own
-// total gets it, so this figure comes from one spelling of that arithmetic.
-//
-// A figure that cannot be computed prints the term alone. An offer handed to a
-// buyer with one line missing its total reads worse than one showing the term
-// by itself.
-func pdfLineCommitment(li crmcontracts.OfferLineItem, currency string, labels pdfLabels) string {
+// total gets it. A figure it cannot hold refuses the render, as it refuses
+// that total.
+func pdfLineCommitment(li crmcontracts.OfferLineItem, currency string, labels pdfLabels) (string, error) {
 	if pdfLineCadence(li, labels) == "" || li.IntervalCount == nil || li.LineNetMinor == nil {
-		return ""
+		return "", nil
 	}
 	term := fmt.Sprintf("%s: %d x %d %s", labels.periods, *li.IntervalCount,
 		int(*li.BillingIntervalMonths), labels.months)
 	committed, err := CommittedNetMinor(*li.LineNetMinor, *li.IntervalCount)
 	if err != nil {
-		return term
+		return "", err
 	}
-	return term + " | " + labels.committed + ": " + pdfFormatMinor(committed, currency, labels)
+	return term + " | " + labels.committed + ": " + pdfFormatMinor(committed, currency, labels), nil
 }
