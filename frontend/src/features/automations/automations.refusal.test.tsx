@@ -214,7 +214,7 @@ describe("a rule's name", () => {
     render(<AutomationsAdmin />);
     await screen.findByText(configured.name);
     expect(nameField(await openRowEditor())).toHaveAttribute(
-      "maxLength",
+      "data-character-limit",
       "120",
     );
   });

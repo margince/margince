@@ -422,14 +422,14 @@ function LocaleFooter() {
       {LOCALES.map((option, index) => (
         <Fragment key={option}>
           {index > 0 && <span aria-hidden>·</span>}
-          <button
+          <Button
             type="button"
-            className="auth-link"
+            variant="link"
             aria-pressed={option === locale}
             onClick={() => setLocale(option)}
           >
             <span lang={option}>{t(localeNameKey(option))}</span>
-          </button>
+          </Button>
         </Fragment>
       ))}
     </div>
