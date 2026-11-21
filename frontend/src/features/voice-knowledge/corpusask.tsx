@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   Badge,
   Button,
@@ -130,10 +123,10 @@ export function AskMarginceModal({
     setQuestion(carried);
   }, [open, carried]);
 
-  const runAsk = useCallback(() => {
+  const runAsk = () => {
     setOpenCite(null);
     ask.mutate({ corpusId, question: question.trim() });
-  }, [ask, corpusId, question]);
+  };
 
   // Only while it still belongs to the set on screen. useMutation keeps its
   // last result across a change of selection, so without this a reader who asks

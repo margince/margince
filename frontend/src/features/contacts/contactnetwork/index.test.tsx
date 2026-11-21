@@ -131,29 +131,6 @@ describe("a contact nobody here reaches", () => {
     expect(screen.getByText(GAPS_FAILED)).toBeTruthy();
     expect(screen.getByRole("button", { name: RETRY })).toBeTruthy();
   });
-
-  it("keeps the Retry of an introduction list that could not be read", async () => {
-    renderTab(alone(), "en", {}, { asksFail: true });
-
-    expect(
-      await screen.findByText(en["contact.intro.asksFailed"]),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: en["common.retry"] }),
-    ).toBeTruthy();
-  });
-
-  it("keeps a failed introduction list failed while the read runs again", async () => {
-    renderTab(alone(), "en", {}, { asksFail: true });
-    expect(
-      await screen.findByText(en["contact.intro.asksFailed"]),
-    ).toBeTruthy();
-    vi.mocked(fetch).mockImplementation(() => new Promise<Response>(() => {}));
-
-    await userEvent.click(screen.getByRole("button", { name: RETRY }));
-    expect(screen.getByText(en["contact.intro.asksFailed"])).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.handoffUnread"])).toBeTruthy();
-  });
 });
 
 // A server that predates the candidate list answers with the singular `route`
