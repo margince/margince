@@ -299,10 +299,13 @@ describe("PreferenceCenterScreen", () => {
       "GET /public/preferences/bad": () =>
         jsonResponse({ title: "not found", status: 404 }, 404),
     });
-    render(<PreferenceCenterScreen token="bad" />);
+    const view = render(<PreferenceCenterScreen token="bad" />);
     expect(
-      await screen.findByText(/link is no longer valid/i),
+      await screen.findByRole("heading", { name: /link is no longer valid/i }),
     ).toBeInTheDocument();
+    expect(document.title).toMatch(/no longer valid/i);
+    view.unmount();
+    expect(document.title).not.toMatch(/no longer valid/i);
   });
 
   it("explains a rate-limited edge instead of showing a raw 429", async () => {

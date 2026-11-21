@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../../i18n";
 import { ConfirmDetailsScreen } from "./confirm";
@@ -23,6 +24,45 @@ function stubEdge(status: number, body: unknown) {
     ),
   );
 }
+
+function stubSequence(routes: Record<string, [number, unknown]>) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = input instanceof Request ? input : null;
+      const url = new URL(
+        request ? request.url : String(input),
+        "https://t.local",
+      );
+      const method = request?.method ?? init?.method ?? "GET";
+      const [status, body] = routes[
+        `${method} ${url.pathname.replace(/^\/v1/, "")}`
+      ] ?? [500, {}];
+      return new Response(JSON.stringify(body), {
+        status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+  );
+}
+
+const RECORD = {
+  kind: "record_confirmation",
+  full_name: "Anna Müller",
+  title: "Head of Ops",
+  company: "Buyer GmbH",
+  email: "anna@example.test",
+  phone: "+49 30 111",
+  marketing_state: "unknown",
+  provenance: [],
+};
+
+const SUBSCRIPTION = {
+  kind: "subscription_confirmation",
+  purpose_key: "product_updates",
+  purpose_label: "Product updates",
+  state: "unknown",
+};
 
 function show(ui: React.ReactNode, locale: Locale = "en") {
   const client = new QueryClient({
@@ -71,6 +111,19 @@ describe("the unsubscribe page names the purpose in the reader's words", () => {
     expect(screen.queryByText(/marketing_email/)).not.toBeInTheDocument();
   });
 
+  it("shows no label for a localized purpose key the server did not return", async () => {
+    stubEdge(200, CENTER);
+    const { container } = show(
+      <UnsubscribeScreen token="t" purpose="transactional" />,
+      "de",
+    );
+    expect(
+      await screen.findByText("Dieser Link entspricht keinem E-Mail-Typ"),
+    ).toBeInTheDocument();
+    expect(container.textContent).not.toContain("Sicherheits");
+    expect(container.textContent).not.toContain("transactional");
+  });
+
   it("never echoes link text for a purpose the server does not know", async () => {
     stubEdge(200, CENTER);
     const { container } = show(
@@ -79,7 +132,45 @@ describe("the unsubscribe page names the purpose in the reader's words", () => {
     expect(
       await screen.findByText("This link matches no email type"),
     ).toBeInTheDocument();
-    expect(container.textContent).not.toContain("%3C");
+    for (const sentinel of ["%3C", "<b>x</b>", "b>x</b"]) {
+      expect(container.textContent).not.toContain(sentinel);
+      expect(document.title).not.toContain(sentinel);
+    }
+    for (const heading of screen.getAllByRole("heading")) {
+      expect(heading.textContent).not.toContain("<b>");
+    }
+  });
+});
+
+describe("a link that dies after the first read lands on the dead-link page", () => {
+  it("for a record confirmation answered 404 on the press", async () => {
+    stubSequence({
+      "GET /public/confirm/tok": [200, RECORD],
+      "POST /public/confirm/tok": [404, { title: "not found" }],
+    });
+    show(<ConfirmDetailsScreen token="tok" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Confirm" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "This link is no longer valid",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("for a subscription confirmation answered 404 on the press", async () => {
+    stubSequence({
+      "GET /public/confirm/tok": [200, SUBSCRIPTION],
+      "POST /public/confirm/tok": [404, { title: "not found" }],
+    });
+    show(<ConfirmDetailsScreen token="tok" />);
+    await userEvent.click(await screen.findByRole("button"));
+    expect(
+      await screen.findByRole("heading", {
+        name: "This link is no longer valid",
+      }),
+    ).toBeInTheDocument();
   });
 });
 

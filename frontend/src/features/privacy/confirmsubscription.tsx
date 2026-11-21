@@ -36,7 +36,7 @@ import {
 } from "../settings/preferences";
 import { ControllerCard } from "./confirmprivacyparts";
 import { privacyPageOf } from "./privacypage";
-import { PublicPage } from "./publicpage";
+import { DeadLinkPage, PublicPage } from "./publicpage";
 
 type SubscriptionPage = components["schemas"]["SubscriptionConfirmationPage"];
 
@@ -109,6 +109,9 @@ export function SubscriptionConfirm({
     onSuccess: () => setDone(true),
   });
 
+  if (submit.error instanceof LinkInvalidError) {
+    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
+  }
   return (
     <SubscriptionConfirmBody
       card={done ? { ...card, state: "granted" } : card}

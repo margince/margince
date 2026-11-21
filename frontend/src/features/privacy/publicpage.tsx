@@ -23,8 +23,9 @@ export function PublicPage({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-/** The page every dead public link lands on: the answer as the heading, the
- * reason under it. The tab title names the answer, not the product. */
+/** The page a dead link from a privacy mail lands on (unsubscribe, preferences,
+ * confirm): the answer as the heading, the reason under it. The tab title
+ * names the answer, not the product. */
 export function DeadLinkPage({ children }: Readonly<{ children: ReactNode }>) {
   const t = useT();
   const title = t("prefs.unsub.deadLinkTitle");

@@ -76,6 +76,27 @@ function marketingQuestion(
   };
 }
 
+// A link the server refused as unknown or spent, on the read or on the press.
+function isDeadLink(error: unknown): boolean {
+  return error instanceof LinkInvalidError;
+}
+
+function refusalOf(readError: unknown, pressError: unknown): unknown {
+  return readError ?? (isDeadLink(pressError) ? pressError : undefined);
+}
+
+function RefusedPage({ error }: Readonly<{ error: unknown }>) {
+  const t = useT();
+  if (isDeadLink(error)) {
+    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
+  }
+  return (
+    <PublicPage>
+      <EmptyState>{explainConfirmError(error, t)}</EmptyState>
+    </PublicPage>
+  );
+}
+
 function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -196,15 +217,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </PublicPage>
     );
   }
-  if (details.error instanceof LinkInvalidError) {
-    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
-  }
-  if (details.error || !card) {
-    return (
-      <PublicPage>
-        <EmptyState>{explainConfirmError(details.error, t)}</EmptyState>
-      </PublicPage>
-    );
+  const refusal = refusalOf(details.error, submit.error);
+  if (refusal || !card) {
+    return <RefusedPage error={refusal} />;
   }
   // THE DISCRIMINATOR, ASKED BEFORE ANY RECORD FIELD IS READ.
   //
