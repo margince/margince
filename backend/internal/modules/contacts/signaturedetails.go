@@ -54,6 +54,9 @@ func fillSignatureAddressTx(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	if !split {
 		return nil
 	}
+	if _, err := storekit.LockRow(ctx, tx, entityContact, contactID.UUID, storekit.LiveOnly); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, signatureAddressFillSQL, contactAddressArguments(contactID, address)...); err != nil {
 		return fmt.Errorf("contacts: filling the address a signature states: %w", err)
 	}
@@ -73,6 +76,12 @@ func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 	if !split {
 		return nil
 	}
+	if _, err := storekit.LockRow(ctx, tx, entityContact, contactID.UUID, storekit.LiveOnly); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
 	args := contactAddressArguments(contactID, address)
 	if _, err := tx.Exec(ctx, `UPDATE contact SET (`+addressColumnsSQL+`) = (NULL, NULL, NULL, NULL, NULL, NULL)
 		 WHERE id = $1 AND archived_at IS NULL
@@ -88,6 +97,16 @@ func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 // any contact or lead already holds, an erased one, a seat's or a machine's
 // stays out: a signature never moves an address between records.
 func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField) (int, error) {
+	if len(fields) == 0 {
+		return 0, nil
+	}
+	// The subject before the email row, the order Art. 17 erasure takes them in.
+	if err := auth.HoldWritableLive(ctx, tx, entityContact, contactID.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return 0, nil
+		}
+		return 0, err
+	}
 	landed := 0
 	for _, f := range fields {
 		address, free, err := freeSignatureEmail(ctx, tx, f.Value)

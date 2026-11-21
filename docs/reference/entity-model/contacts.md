@@ -964,14 +964,14 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `confidence` | `numeric(4,3)` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `evidence_snippet` | `text` | yes | The verbatim source text the value was read from, so the reader can check the claim against its own source. |
-| `field` | `text` | yes | One of `title`, `phone`, `role`, `linkedin`, `company_name`, `address` and 3 more. |
+| `field` | `text` | yes | One of `title`, `phone`, `role`, `linkedin`, `company_name`, `address` and 4 more. |
 | `observed_at` | `timestamp with time zone`, default `now()` | yes | When the source stated this value: the mail's own date, rather than when the pass read it. |
 | `source_ref` | `text` | yes | What was read, as `activity:<uuid>` for a signature or `site_read:<url>` for a page. |
 | `superseded_captured_by` | `text` |  |  |
 | `superseded_observed_at` | `timestamp with time zone` |  | When the replaced value was itself stated, so a reader can see which of the two is older. |
 | `superseded_value` | `text` |  | What this field held before a newer statement replaced it. |
 | `value` | `text` | yes |  |
-| `value_key` | `text`, default `''::text` | yes | What tells two rows of one field apart: the E.164 number for a `phone` row, empty for every other field. |
+| `value_key` | `text`, default `''::text` | yes | What tells two rows of one field apart: the E.164 number for a `phone` row, the lowercased address for an `email` row, empty for every other field. |
 | `captured_by` | `text` | yes | `agent:enrich` until a human edits the field, `human:<uuid>` after; this is how the page says "corrected by you". |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | The channel that produced it, e.g. `capture_enrich` or `site_read`. |
@@ -987,8 +987,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `contact_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))`
-- `contact_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website', 'first_name', 'last_name'])))`
-- `contact_profile_field_value_key_cardinality`: `CHECK (((field = 'phone') = (value_key <> '')))`
+- `contact_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website', 'first_name', 'last_name', 'email'])))`
+- `contact_profile_field_value_key_cardinality`: `CHECK (((field = ANY (ARRAY['phone', 'email'])) = (value_key <> '')))`
 - `contact_profile_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_contact_profile_field`: `UNIQUE (contact_id, field, value_key)`
 
