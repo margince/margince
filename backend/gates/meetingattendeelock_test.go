@@ -5,18 +5,16 @@
 
 package gates
 
-// A judge of a meeting's attendees holds storekit.LockMeetingAttendeeChecks.
-// A row lock does not hold off a new attendee row, so the judgement is steady
-// only while every writer of one meeting's attendees takes the exclusive form.
+// A judge of a meeting's attendees holds storekit.LockMeetingAttendeeChecks. A
+// row lock does not hold off a new attendee, so every writer takes the exclusive form.
 //
-// The census is every function that writes activity_participant, read from the
-// tree. A writer that takes the lock, or whose every in-package caller does,
-// passes. A sweep by subject or domain names no meeting, so it is listed below
-// with its reason.
+// The census is every function in the tree that writes activity_participant. A
+// writer passes when it, or every in-package caller, takes the lock.
 
 import (
 	"go/ast"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -35,9 +33,9 @@ var attendeeSweeps = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:scrubContactGraphTraces": "a retention pass clears an expired subject from every meeting it attended, " +
 		"so there is no one meeting to key the lock on",
 	"internal/modules/contacts:relinkParticipantRows": "a merge moves the source contact's rows on every activity it appeared in. " +
-		"The attendee stays the same person",
+		"The row keeps naming the same party",
 	"internal/modules/contacts:promoteParticipantsToContact": "binds a contact to the rows that carry an address it proves, " +
-		"on every activity of a cohort. The attendee stays the same person",
+		"on every activity of a cohort. The row keeps naming the same party",
 	"internal/modules/activities:storeParticipantDomains": "folds the domain of stored addresses by row id, over whatever " +
 		"activities a batch spans. It restates the address the row already carries",
 	"internal/modules/activities:storeParticipantEvidenceRows": "clears domain evidence by row id, across any activity a " +
@@ -48,7 +46,7 @@ var attendeeSweeps = gatekit.Waive(map[string]string{
 	"internal/compose/integration/apptest:ChannelConversation.SeedInboundMessage": "an integration fixture, written before any judge runs",
 })
 
-// attendeeWriteScope is every product file holding a write of the table.
+// attendeeWriteScope selects the product files holding a write of the table.
 var attendeeWriteScope = gatekit.Scope{
 	Roots: []string{"internal"},
 	Subject: func(_ string, file *ast.File) bool {
@@ -107,10 +105,5 @@ func TestEveryAttendeeWriterTakesTheMeetingLock(t *testing.T) {
 }
 
 func writesAttendees(entry *graphFunc) bool {
-	for _, statement := range entry.statements {
-		if participantWrite.MatchString(statement) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(entry.statements, participantWrite.MatchString)
 }

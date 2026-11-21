@@ -242,9 +242,8 @@ type ActivityAuthorship struct {
 // It takes the own-domain reader rather than leaving the caller to judge the
 // sides, because both judgements it makes need the same list and reading it
 // twice could answer differently mid-transaction. The seam stays an argument
-// so this module never imports the one that owns the domains.
-//
-// It reads under the shared attendee lock, so call it before any row lock.
+// so this module never imports the one that owns the domains. It takes the
+// shared attendee lock, so call it before any row lock.
 func ReadActivityAuthorship(
 	ctx context.Context, tx pgx.Tx, activityID ids.UUID, own OwnDomainReader,
 ) (ActivityAuthorship, error) {

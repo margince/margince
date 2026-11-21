@@ -113,11 +113,8 @@ func stampCaptureParticipants(
 // RecordAttendeeNames settles the display_name of every participant row on one
 // activity from what the invitation said, and marks the rest as unnamed.
 //
-// It lives here because capture owns no table either — activities does — but
-// this is the module that already writes activity_participant, and a second
-// spelling of that write in compose would be a second place for the column set
-// to drift. The recovery pass in compose reads stored originals and calls this,
-// exactly as it calls StampFurtherParticipants for the rows themselves.
+// It lives here because capture already writes activity_participant. A second
+// spelling in compose would let the column set drift. The compose recovery pass calls it.
 //
 // EVERY name-less row on the activity is settled, named or not. A row left NULL
 // because the invitation did not name its attendee would be offered to the

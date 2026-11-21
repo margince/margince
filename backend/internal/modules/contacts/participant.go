@@ -78,8 +78,7 @@ func promotableParticipantSQL(alias string) string {
 // one the ensure ran for, or the ones a cohort repair holds. Both paths share
 // this one statement, so both apply the same guards.
 // batch bounds a cohort pass; nil means unbounded, for the single activity.
-// A sweep by contact names no meeting, so it takes no storekit.LockMeetingAttendeeWrites.
-// The hourly evidence pass corrects a judgement it makes stale.
+// A sweep by contact takes no meeting's attendee lock; the hourly evidence pass corrects it.
 func promoteParticipantsToContact(
 	ctx context.Context, tx pgx.Tx, activities []ids.UUID, contactID ids.ContactID, batch *int,
 ) ([]ids.UUID, error) {

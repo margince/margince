@@ -22,13 +22,10 @@ func LockMeetingAttendeeChecks(ctx context.Context, tx pgx.Tx, activityIDs ...id
 	return lockMeetingAttendees(ctx, tx, `pg_advisory_xact_lock_shared`, activityIDs)
 }
 
-// LockMeetingAttendeeWrites is taken by every writer that changes the attendee
-// rows of named activities. It waits for every judgement of them in flight.
-// Take it before any row lock, so a judge holding the shared form never waits
-// on a row this writer holds.
-//
-// A writer that sweeps by subject or domain names no activity and does not take
-// it. TestEveryAttendeeWriterTakesTheMeetingLock lists each such sweep.
+// LockMeetingAttendeeWrites is taken by every writer of named activities'
+// attendee rows. Take it before any row lock, so a judge holding the shared form
+// never waits on a row this writer holds. TestEveryAttendeeWriterTakesTheMeetingLock
+// lists the sweeps that name no activity and skip it.
 func LockMeetingAttendeeWrites(ctx context.Context, tx pgx.Tx, activityIDs ...ids.UUID) error {
 	return lockMeetingAttendees(ctx, tx, `pg_advisory_xact_lock`, activityIDs)
 }
