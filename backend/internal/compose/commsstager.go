@@ -219,8 +219,8 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 }
 
 // RecordReviewForHoldTx opens the same review RecordPendingReview does, on the
-// transaction that holds a scheduled row. A failure to record is returned here.
-// The hold rolls back with it and the fire retries, so no held row lacks its review.
+// transaction that holds a scheduled row, or replaces a stale approval's review.
+// A failure rolls the hold back, so no held row lacks its review.
 func (s commsStager) RecordReviewForHoldTx(ctx context.Context, tx pgx.Tx, refusal error, intentID ids.UUID) error {
 	if _, stale := errors.AsType[*consent.InstructionStaleError](refusal); stale {
 		return consent.SupersedeStaleDecisionTx(ctx, tx, intentID)
