@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 2,
+  "passed": 3,
   "runs": 3,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -16,11 +16,11 @@
     "tools": "888deb9293370bf9",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "76380376098e0887",
+    "harness": "ae187a3b5da6dda2",
     "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
     "ran_at": "2026-11-21T22:05:28Z",
-    "graded_commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
-    "graded_at": "2026-11-21T22:05:28Z"
+    "graded_commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
+    "graded_at": "2026-11-21T22:44:33Z"
   },
   "usage": {
     "input_tokens": 71585,
@@ -33,7 +33,7 @@
   },
   "tools_by_run": [
     {
-      "passed": false,
+      "passed": true,
       "tools": [
         "catch_me_up_on",
         "find_records",
