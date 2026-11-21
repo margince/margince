@@ -925,13 +925,12 @@ describe("DealScreen offers panel", () => {
   // pending. It must not make a second draft and spend a second offer number.
   it("a double click on New offer posts one draft, under an idempotency key", async () => {
     const keys: (string | null)[] = [];
-    const { promise: answered, resolve: answer } =
-      Promise.withResolvers<void>();
+    const { promise, resolve } = Promise.withResolvers<void>();
     vi.stubGlobal(
       "fetch",
       stubDealBackend(deal({ currency: "EUR" }), [], (_body, headers) => {
         keys.push(headers.get("Idempotency-Key"));
-        return answered;
+        return promise;
       }),
     );
     render(<DealScreen id="d1" />);
@@ -941,7 +940,7 @@ describe("DealScreen offers panel", () => {
       await Promise.resolve();
     });
     fireEvent.click(newOffer);
-    answer();
+    resolve();
     await waitFor(() =>
       expect(window.location.hash).toBe("#/offers/new-offer"),
     );
@@ -960,12 +959,13 @@ describe("DealScreen offers panel", () => {
       }),
     );
     render(<DealScreen id="d1" />);
+    const user = userEvent.setup();
     const newOffer = await screen.findByRole("button", { name: "New offer" });
     const readsBefore = offerReads.count;
-    await userEvent.click(newOffer);
+    await user.click(newOffer);
     await screen.findByText(translate("en", "offer.writeUnsure"));
     await waitFor(() => expect(offerReads.count).toBeGreaterThan(readsBefore));
-    await userEvent.click(newOffer);
+    await user.click(newOffer);
     await waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[1]).not.toBe(keys[0]);
   });
