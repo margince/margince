@@ -6,6 +6,7 @@ package imagenorm
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"maps"
 	"regexp"
 	"strings"
@@ -16,6 +17,13 @@ import (
 // the mark draws as a browser draws it.
 
 const svgDefaultColor = "#000000"
+
+// svgMaxPaintBytes bounds one substituted value: it is copied into every use,
+// so its length multiplies into the rewritten document.
+const svgMaxPaintBytes = 64
+
+// svgPaintSlack is the growth allowed on top of twice the source.
+const svgPaintSlack = 64 << 10
 
 var (
 	svgCurrentColor = regexp.MustCompile(`(?i)currentcolor`)
@@ -38,14 +46,20 @@ type svgPaintScan struct {
 	css   strings.Builder
 }
 
+func svgPaintAllowed(value string) bool {
+	return len(value) <= svgMaxPaintBytes && svgSafePaint.MatchString(value)
+}
+
 // resolveSVGPaint returns src with currentColor replaced by the root's colour.
 // It also moves fill and stroke from tag and id selectors into the matching
-// elements' style. A document it cannot tokenize comes back unchanged.
-func resolveSVGPaint(src []byte) []byte {
+// elements' style. A document it cannot tokenize comes back unchanged, and one
+// that would grow past the size bound is refused.
+func resolveSVGPaint(src []byte) ([]byte, error) {
 	scan, ok := scanSVGPaint(src)
 	if !ok {
-		return src
+		return src, nil
 	}
+	bound := min(2*len(src)+svgPaintSlack, MaxMarkBytes)
 	rules := parseSVGSelectors(scan.css.String())
 	decoder := xml.NewDecoder(bytes.NewReader(src))
 	decoder.Strict = false
@@ -78,10 +92,16 @@ func resolveSVGPaint(src []byte) []byte {
 			out.Write(src[copied:start])
 			out.Write(replacement)
 			copied = end
+			if out.Len() > bound {
+				return nil, fmt.Errorf("%w: resolving the SVG's paint would grow it past %d bytes", ErrUnsupported, bound)
+			}
 		}
 	}
 	out.Write(src[copied:])
-	return out.Bytes()
+	if out.Len() > bound {
+		return nil, fmt.Errorf("%w: resolving the SVG's paint would grow it past %d bytes", ErrUnsupported, bound)
+	}
+	return out.Bytes(), nil
 }
 
 func scanSVGPaint(src []byte) (*svgPaintScan, bool) {
@@ -130,7 +150,7 @@ func svgRootColor(attrs []xml.Attr) string {
 			}
 		}
 	}
-	if color == "" || svgCurrentColor.MatchString(color) || !svgSafePaint.MatchString(color) || strings.EqualFold(color, "inherit") {
+	if color == "" || svgCurrentColor.MatchString(color) || !svgPaintAllowed(color) || strings.EqualFold(color, "inherit") {
 		return svgDefaultColor
 	}
 	return color
@@ -165,7 +185,7 @@ func parseSVGSelectors(css string) svgSelectorPaint {
 		}
 		paint := map[string]string{}
 		for key, value := range parseSVGDeclarations(block) {
-			if svgCascadedProps[key] && svgSafePaint.MatchString(value) {
+			if svgCascadedProps[key] && svgPaintAllowed(value) {
 				paint[key] = value
 			}
 		}

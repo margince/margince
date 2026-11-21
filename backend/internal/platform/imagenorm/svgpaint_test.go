@@ -4,7 +4,9 @@
 package imagenorm
 
 import (
+	"errors"
 	"image/color"
+	"strings"
 	"testing"
 )
 
@@ -77,14 +79,45 @@ func TestDecodeAppliesElementAndIdSelectorsToTheShapesTheyMatch(t *testing.T) {
 
 func TestResolveSVGPaintNeverWritesAnExternalReference(t *testing.T) {
 	doc := `<svg ` + paintOpen + `><style>circle{fill:url(https://evil.example/x.svg#a)}</style>` + wholeCanvasCircle + `/></svg>`
-	if got := string(resolveSVGPaint([]byte(doc))); got != doc {
-		t.Fatalf("a selector naming an external url was inlined: %s", got)
+	out, err := resolveSVGPaint([]byte(doc))
+	if err != nil || string(out) != doc {
+		t.Fatalf("a selector naming an external url was inlined: %s (err %v)", out, err)
 	}
 }
 
 func TestResolveSVGPaintLeavesAnUnstyledDocumentByteForByte(t *testing.T) {
 	doc := `<?xml version="1.0"?><svg ` + paintOpen + `><!-- c --><circle cx="1" cy="1" r="1" fill="#fff"/></svg>`
-	if got := string(resolveSVGPaint([]byte(doc))); got != doc {
-		t.Fatalf("rewrote a document with nothing to resolve: %s", got)
+	out, err := resolveSVGPaint([]byte(doc))
+	if err != nil || string(out) != doc {
+		t.Fatalf("rewrote a document with nothing to resolve: %s (err %v)", out, err)
+	}
+}
+
+func TestResolveSVGPaintDropsAPaintValueOverTheLengthCap(t *testing.T) {
+	long := strings.Repeat("a", 10_000)
+	uses := strings.Repeat(`<circle r="1" fill="currentColor"/>`, 200)
+	doc := `<svg ` + paintOpen + ` color="` + long + `">` + uses + `</svg>`
+	out, err := resolveSVGPaint([]byte(doc))
+	if err != nil {
+		t.Fatalf("a long root color should fall back to black, got %v", err)
+	}
+	if strings.Count(string(out), long) > 1 || len(out) > len(doc) {
+		t.Fatalf("the long colour was copied into the document (%d bytes from %d)", len(out), len(doc))
+	}
+	if !strings.Contains(string(out), svgDefaultColor) {
+		t.Fatal("the long root color did not fall back to black")
+	}
+}
+
+func TestResolveSVGPaintRefusesAnAmplifyingRewrite(t *testing.T) {
+	value := strings.Repeat("a", svgMaxPaintBytes)
+	shapes := strings.Repeat(`<circle r="1"/>`, 12_000)
+	doc := `<svg ` + paintOpen + `><style>circle{fill:` + value + `}</style>` + shapes + `</svg>`
+	out, err := resolveSVGPaint([]byte(doc))
+	if !errors.Is(err, ErrUnsupported) {
+		t.Fatalf("err = %v (%d bytes out), want ErrUnsupported for a rewrite past the bound", err, len(out))
+	}
+	if _, err := Decode([]byte(doc)); !errors.Is(err, ErrUnsupported) {
+		t.Fatalf("Decode err = %v, want ErrUnsupported", err)
 	}
 }
