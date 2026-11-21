@@ -389,25 +389,14 @@ dependency builds under them are shared:
 
 `ci.yml` only ever **loads** the cache. The writing of `plain` and `integration` lives in
 [`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml), and it **gates nothing**.
-It runs every three hours on `main` and on `develop`, plus `workflow_dispatch`. A red or cancelled run
-there costs time on the next lane, and nothing else.
-
-- GitHub runs a cron only on the default branch, and drops some of those runs. So `pace.yml` starts a run
-  from a push to `main` or `develop` once that branch's newest run is three hours old. That push is the
-  only thing that starts the `develop` run.
-- `integration` and `integration-timing` run on `main` only. A pull request into `develop` skips the
-  integration lane, so a `develop` entry would have no reader.
-- Its concurrency group holds the ref, so a `develop` run and a `main` run do not queue behind each other.
-- After the saves, its `prune` job runs `scripts/reap-build-caches.sh` for its own ref, so each branch keeps
-  one generation of each kind.
+It runs every three hours on `main` and on `develop` (`integration` on `main` only), started by
+`pace.yml` from a push. Which job runs where: [cache-warm.yml](../reference/ci-workflows.md#cache-warmyml).
 
 Three limits shaped that, and each rules out a choice that looks less hard:
 
-- **The writer cannot live on the merge queue.** `actions/cache` scopes an entry to the branch that wrote
-  it. A reader looks in its own ref, then its base branch, then the default branch. A `merge_group` run
-  lives on a `gh-readonly-queue/main/...` ref that is removed later. An entry saved there is hidden from
-  every PR lane, and dies with the ref. So the write runs on the two branches pull requests merge into.
-  A pull request into `develop` reads `develop`'s entry, and one into `main` reads `main`'s.
+- **The writer cannot live on the merge queue.** A reader looks in its own ref, then its base branch,
+  then the default branch. A `merge_group` ref is removed later, so an entry saved there reaches no PR
+  lane. So the write runs on `main` and `develop`, the branches pull requests merge into.
 - **The writer cannot run on each push.** Seeding a kind is a side effect of compiling. The `plain` job
   runs a full `make check-backend`, and the `integration` job builds the test binaries and runs a shard from them against a live Postgres. At
   about 80 merges a day, that pair would run about 80 times and mostly cancel itself. Paced to one run
@@ -417,20 +406,11 @@ Three limits shaped that, and each rules out a choice that looks less hard:
   because a stale load only misses the entries whose inputs changed. A cache three hours old is mostly
   warm. A cache from before a new dependency version is still better than an empty one.
 
-There is one writer per kind and branch. Each run of a kind compiles much the same set. So a second writer would add
-nothing but two writers on the same key. And every runner sending up about 550 MB would push out the entry
-they meant to seed. `cache-warm.yml` runs one job per kind it writes, and it and `lint-cache.yml` take
-`concurrency: cancel-in-progress: false`, because a cancelled run saves nothing.
-
-`scripts/reap-build-caches.sh` keeps the newest entry of each ref and key prefix, and deletes the older
-ones. It groups by ref, because a newer `develop` entry must not delete the `main` entry that pull
-requests into `main` and the merge queue read. `scheduled.yml` runs it daily over every ref, and
-`scripts/test-reap-build-caches.sh` holds both cases.
-
-A `develop` entry hides every `main` entry from a pull request into `develop`, even a newer one. If
-the `develop` writer stops, those pull requests stay on an ageing entry. The census does not run on a
-pull request into `develop`, so an undeclared test input can reach `develop`, and the `develop` writer
-then holds back its `plain` save until someone fixes it.
+There is one writer per kind and branch, because a second writer on the same key would push out the entry
+it meant to seed. `cache-warm.yml` and `lint-cache.yml` take `concurrency: cancel-in-progress: false`,
+because a cancelled run saves nothing. `scripts/reap-build-caches.sh` keeps the newest entry per ref and
+key prefix. A `develop` entry hides every `main` entry from a pull request into `develop`, so a stopped
+`develop` writer leaves those pull requests on an ageing entry.
 
 The refresh steps use `!cancelled()`, not `success()`. A red gate still compiled the tree, and that build
 output can be used again as well as a green run's.
@@ -457,8 +437,7 @@ and there it pushes out the `main` entries that every PR loads.
   from the entry of the push before. It also saves the `lint` build cache of that branch, compiled from empty. Lint
   compiles each package it loads before it reads its own cache. So a build cache hours behind cost minutes,
   even when every analysis was cached. The job then deletes the older entries.
-- **A new dependency or lint config lints cold.** The key prefix of such a PR matches no entry on
-  its base branch until `cache-warm` runs after the merge.
+- **A new dependency or lint config lints cold** until `cache-warm` runs after the merge.
 - **An old frontend entry is never wrong.** tsc checks the hash of each input against what it stored.
   The compiler lint checks the hash of each file and its own version, so the lockfile is in the key.
 
@@ -467,10 +446,7 @@ and there it pushes out the `main` entries that every PR loads.
 The build cache holds test results as well as compiled packages. **No job in `ci.yml` replays one.**
 `ci.yml` sets `TEST_SHUFFLE_SEED` for the whole workflow, `backend/Makefile` turns it into
 `-shuffle=<n>`, and Go caches no result of a run with `-shuffle`. So in `ci.yml` the cache saves compile
-time only. `main-health.yml` passes no seed, and there a package that no change reached replays its
-result. The rest of this section is about that replay.
-
-Go checks a cached result against every file the test opened at runtime: a migration, a fixture, its
+time only. `main-health.yml` and a local run pass no seed, and replay. Go checks a cached result against every file the test opened at runtime: a migration, a fixture, its
 own source. It checks by size, mode and
 **mtime**, never content. A new checkout stamps every file with the time of checkout. So without stable `mtime` values,
 every package whose tests read the tree would run again on every job, `internal/compose` and `identity`
@@ -480,8 +456,8 @@ among them.
 and in every reader. It sets each tracked file's `mtime` from a hash of its bytes, and each directory's
 from its tracked entries. So content that did not change reads as it did in the run that wrote the cache,
 and changed content reads as new. On a new checkout in a test, 121 of 163 unit packages replayed without
-it, and all 163 with it. `./gates` and the `ai` module still run with no cache by design;
-`UNCACHED_TEST_PKGS` in `backend/Makefile` says why.
+it, and all 163 with it. `./gates` still runs with no cache by design; `UNCACHED_TEST_PKGS` in
+`backend/Makefile` says why.
 
 Two kinds of input stay hidden from that check, and each is declared through `gatekit.DeclareInputs`:
 
