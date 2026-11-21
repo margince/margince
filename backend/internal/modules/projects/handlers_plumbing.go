@@ -5,7 +5,6 @@ package projects
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -15,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -131,19 +129,10 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 }
 
 // writeStoreErr maps a store error onto the wire the same way for every handler
-// in this package: the defence-in-depth net below, then the sentinel registry.
+// in this package. The store answers the project's own CHECKs by name
+// (projectCheckError); a custom picklist is answered here, the rest by Write.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
-	// A CHECK constraint is a business rule, so a breach that slipped past the
-	// per-path validations still answers a typed 422 — never an opaque 500. The
-	// constraint's NAME stays out of the body: it is schema, and the one a
-	// caller can reach here is a runtime `cf_*_check` behind a picklist custom
-	// field, whose name tells them our column and nothing they can act on. The
-	// operator's log gets the name instead.
-	if constraint, ok := storekit.CheckViolation(err); ok {
-		slog.WarnContext(r.Context(), "a schema rule with no message of its own refused a write",
-			"method", r.Method, "path", capabilitypath.Redact(r.URL.Path), "constraint", constraint)
-		httperr.Write(w, r, httperr.Validation("body", "value_not_allowed",
-			"a value violates a rule on this record; check the picklist options"))
+	if httperr.WritePicklistRefusal(w, r, err, nil) {
 		return
 	}
 	httperr.Write(w, r, err)

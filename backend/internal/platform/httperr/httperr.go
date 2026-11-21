@@ -269,6 +269,11 @@ type Fault struct {
 	RetryAfterSeconds int
 }
 
+// CallersToFix says the refusal is a 4xx, so its withheld cause logs as a warning.
+func (f Fault) CallersToFix() bool {
+	return f.Status < http.StatusInternalServerError
+}
+
 // Classify is the ONE decision tree behind the error taxonomy: what err means
 // to a caller, independent of the surface that caller reached us through. It
 // reports false only for an error outside the taxonomy — a genuine server
@@ -414,8 +419,12 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 		// failure, and a constraint the schema enforced — and the line says what
 		// is true of both: the caller got a sentence we wrote, and the operator
 		// gets the one the infrastructure wrote.
-		slog.ErrorContext(r.Context(), "infrastructure cause withheld from the caller",
-			"method", r.Method, "path", loggedPath(r), "err", fault.InfraCause)
+		logWithheld := slog.ErrorContext
+		if fault.CallersToFix() {
+			logWithheld = slog.WarnContext
+		}
+		logWithheld(r.Context(), "infrastructure cause withheld from the caller",
+			"method", r.Method, "path", loggedPath(r), "status", fault.Status, "err", fault.InfraCause)
 	}
 	// A refusal that masked a library's own sentence still owes the operator
 	// that sentence, exactly as the native body decode logs its unnamed shapes.
