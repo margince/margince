@@ -14,12 +14,8 @@ import { LIBRARY_TYPES } from "../../lib/filtersaddress";
 import { useLists } from "../../lib/lists.queries";
 import { useAllSavedViews } from "../../lib/savedviews.queries";
 import type { UrlParams } from "../../lib/urlstate";
-import {
-  filterSentence,
-  mergeReferencedIds,
-  referencedIdsOf,
-  useSentenceWords,
-} from "./filtersentence";
+import { filterSentence, useSentenceWords } from "./filtersentence";
+import { mergeReferencedIds, referencedIdsOf } from "./filtersentence.names";
 import {
   type LibraryCut,
   type LibraryGroup,

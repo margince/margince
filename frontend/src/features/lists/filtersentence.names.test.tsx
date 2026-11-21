@@ -15,11 +15,8 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import {
-  filterSentence,
-  referencedIdsOf,
-  useSentenceWords,
-} from "./filtersentence";
+import { filterSentence, useSentenceWords } from "./filtersentence";
+import { referencedIdsOf } from "./filtersentence.names";
 
 afterEach(cleanup);
 

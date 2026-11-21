@@ -33,11 +33,8 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { FocusedPending, FocusedState } from "./filterhead";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
-import {
-  filterSentence,
-  referencedIdsOf,
-  useSentenceWords,
-} from "./filtersentence";
+import { filterSentence, useSentenceWords } from "./filtersentence";
+import { referencedIdsOf } from "./filtersentence.names";
 import { ListChangeSummary } from "./listchanges";
 import { ListHistoryPanel } from "./listhistory";
 import {

@@ -16,9 +16,9 @@ import {
 import {
   clauseWords,
   filterSentence,
-  referencedIdsOf,
   type SentenceWords,
 } from "./filtersentence";
+import { referencedIdsOf } from "./filtersentence.names";
 
 // The one place a filter becomes words, so these read like the sentences a
 // reader sees under a Live List and on a saved view, clause by clause.

@@ -29,12 +29,8 @@ import type {
 import { useMemberNames } from "../../lib/membernames";
 import type { FilterOp } from "../../lib/segmentpredicate";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  clauseWords,
-  moneyText,
-  referencedIdsOfClauses,
-  useSentenceWords,
-} from "./filtersentence";
+import { clauseWords, moneyText, useSentenceWords } from "./filtersentence";
+import { referencedIdsOfClauses } from "./filtersentence.names";
 
 /** Whether a Live List selects the record, and each clause's verdict. */
 export function LiveExplanation({

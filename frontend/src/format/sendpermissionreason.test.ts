@@ -23,7 +23,9 @@ describe("a deal follow-up the server found no evidence for", () => {
     expect(en[key]).toBe(
       "No open deal with this recipient supports this follow-up.",
     );
-    expect(de[key]).not.toMatch(/Empfänger|Person|wähle/i);
+    expect(de[key]).toBe(
+      "Kein offener Deal mit diesem Kontakt stützt dieses Follow-up.",
+    );
   });
 
   it("keeps the generic sentence for any other category", () => {

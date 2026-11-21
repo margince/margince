@@ -49,11 +49,8 @@ import {
 import { FilterOutcome } from "./filtermatches";
 import { usePlainWords } from "./filterpropose";
 import { type SavedKind, SaveFilterModal, useLandOnSaved } from "./filtersave";
-import {
-  filterSentence,
-  referencedIdsOf,
-  useSentenceWords,
-} from "./filtersentence";
+import { filterSentence, useSentenceWords } from "./filtersentence";
+import { referencedIdsOf } from "./filtersentence.names";
 import { type Reread, useReload } from "./filterview.reload";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 import "./filters.css";

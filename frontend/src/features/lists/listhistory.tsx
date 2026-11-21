@@ -28,11 +28,8 @@ import {
 import { navigate } from "../../lib/router";
 import { decode } from "../../lib/segmentpredicate";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  filterSentence,
-  referencedIdsOf,
-  useSentenceWords,
-} from "./filtersentence";
+import { filterSentence, useSentenceWords } from "./filtersentence";
+import { referencedIdsOf } from "./filtersentence.names";
 
 const KIND_LABEL: Record<ListHistoryEntry["kind"], MessageKey> = {
   member_added: "lists.history.added",
