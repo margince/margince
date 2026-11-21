@@ -331,6 +331,13 @@ func (d *Deliverer) spendUncheckedAttempt(ctx context.Context, t attemptTarget, 
 // the answer has changed, reporting whether the caller should go on to attempt
 // it.
 //
+// This is the gate that PARKS a revoked delivery, before any connection is
+// built. It cannot be the only one: the send happens after a DNS, TCP and TLS
+// round trip, so the same question is asked a second time under the hold, right
+// before the body is written (sendVisibilityRecheck), which is what stops a
+// revocation that lands during that connect. A send withdrawn there records
+// nothing and is parked here on the next pass.
+//
 // A resolver or query failure is an outage, not a revocation. Parking the
 // delivery as revoked would discard it for good. So the error goes back to the
 // caller, which records it in its own terms.
@@ -406,8 +413,27 @@ func (d *Deliverer) deliverOnce(ctx context.Context, t attemptTarget) {
 // attempt sends t's body over a connection on which guard holds the row, and
 // decides the outcome from that check first (checkedOutcome).
 func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, guard sendHold) outcome {
-	check := &sendCheck{hold: guard}
+	check := &sendCheck{hold: guard, recheck: d.sendVisibilityRecheck(ctx, t)}
 	return checkedOutcome(check, d.post(withSendCheck(ctx, check), t))
+}
+
+// sendVisibilityRecheck is the owner-visibility question for the sendCheck to ask
+// again under the hold. It routes through stillVisible — the one spelling of "may
+// this owner still see this record" — so the last-moment check and the pre-send
+// one cannot drift (canseewriters_test.go). The refusal reason stillVisible
+// returns is dropped here: the hold needs only the yes/no, and a delivery the
+// recheck withdraws is parked as revoked by the next pass's own stillVisible.
+func (d *Deliverer) sendVisibilityRecheck(ctx context.Context, t attemptTarget) func() (bool, error) {
+	if d.resolver == nil {
+		// A replay-only deliverer re-sends an already-authorized delivery and has
+		// no resolver to re-derive the owner's live sight from (NewDeliverer); the
+		// hold is its only send gate, as it was before this second check existed.
+		return nil
+	}
+	return func() (bool, error) {
+		ok, _, err := d.stillVisible(ctx, t)
+		return ok, err
+	}
 }
 
 // post signs and POSTs the stored body, returning the outcome. A

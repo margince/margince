@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -126,6 +127,38 @@ func TestARefusedSendCheckWritesNoByteOfTheRequest(t *testing.T) {
 			}
 			if n := <-received; n != 0 {
 				t.Fatalf("the receiver read %d request bytes from a refused attempt, want 0", n)
+			}
+		})
+	}
+}
+
+// The visibility re-check runs under the hold, before the body is written. An
+// owner who can no longer see the record withdraws the attempt and nothing is
+// written; a re-check that cannot answer leaves it unchecked; a yes lets the
+// body through. This is the window the pre-send check leaves open across the
+// connection handshake.
+func TestTheUnderHoldRecheckGatesTheWrite(t *testing.T) {
+	for name, tc := range map[string]struct {
+		recheck   func() (bool, error)
+		wantWrite bool
+		wantState int32
+	}{
+		"owner lost sight":   {func() (bool, error) { return false, nil }, false, checkRefused},
+		"could not re-check": {func() (bool, error) { return false, errors.New("resolver unreachable") }, false, checkUnchecked},
+		"owner still sees":   {func() (bool, error) { return true, nil }, true, checkWritten},
+	} {
+		t.Run(name, func(t *testing.T) {
+			wrote := false
+			check := &sendCheck{hold: allowSend, recheck: tc.recheck}
+			err := check.writeHeld(func() error { wrote = true; return nil })
+			if wrote != tc.wantWrite {
+				t.Fatalf("write called = %v, want %v", wrote, tc.wantWrite)
+			}
+			if got := check.state.Load(); got != tc.wantState {
+				t.Fatalf("check state = %d, want %d", got, tc.wantState)
+			}
+			if tc.wantWrite != (err == nil) {
+				t.Fatalf("writeHeld err = %v, want error:%v", err, !tc.wantWrite)
 			}
 		})
 	}
