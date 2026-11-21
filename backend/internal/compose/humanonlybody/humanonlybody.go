@@ -58,7 +58,12 @@ func Refused(w http.ResponseWriter, r *http.Request, marks Marks, limit int64) b
 	return false
 }
 
+// codeAgentValue is the field code of a value an agent may not send.
+const codeAgentValue = "agent_value_refused"
+
 // valueRefusal is the answer to an agent sending member a value it may not, or nil.
+// It is a 422 on the member, not a 403: the agent fixes the argument, and no
+// grant it could ask for would admit the value.
 func valueRefusal(agentValues map[string][]string, key string, value json.RawMessage) error {
 	for member, allowed := range agentValues {
 		if !strings.EqualFold(key, member) {
@@ -68,7 +73,9 @@ func valueRefusal(agentValues map[string][]string, key string, value json.RawMes
 		if json.Unmarshal(value, &word) == nil && slices.Contains(allowed, word) {
 			return nil
 		}
-		return fmt.Errorf("an agent sends %s as one of %s: %w", member, strings.Join(allowed, ", "), apperrors.ErrPermissionDenied)
+		return httperr.Validation(member, codeAgentValue, fmt.Sprintf(
+			"an agent may send %[1]s only as %[2]s, so nothing was changed; call again with %[1]s %[2]s, or leave %[1]s to the user",
+			member, strings.Join(allowed, " or ")))
 	}
 	return nil
 }

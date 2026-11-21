@@ -61,8 +61,9 @@ func TestAValueTheAgentMayNotSendIsRefused(t *testing.T) {
 			t.Errorf("%s: refused = %v, want %v", body, got, refused)
 			continue
 		}
-		if refused && w.Code != http.StatusForbidden {
-			t.Errorf("%s: answered %d, want 403", body, w.Code)
+		if refused && (w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), codeAgentValue) ||
+			!strings.Contains(w.Body.String(), "call again with source agent")) {
+			t.Errorf("%s: answered %d %s, want 422 naming the member and the value to send", body, w.Code, w.Body)
 		}
 	}
 }
