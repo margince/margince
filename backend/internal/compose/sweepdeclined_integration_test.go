@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -170,6 +171,140 @@ func TestTheOwedPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
 	}
 	if verdictOf(t, e, hostile) != nil {
 		t.Error("the declined message was judged; it stays unjudged")
+	}
+}
+
+// unsureMarker is the subject text a scripted model answers below the floor,
+// in a batch and on its own.
+const unsureMarker = "UNSURE-ABOUT-THIS"
+
+// sentCarrying counts the user turns that carried text.
+func sentCarrying(prompts []string, text string) int {
+	n := 0
+	for _, p := range prompts {
+		if strings.Contains(p, text) {
+			n++
+		}
+	}
+	return n
+}
+
+// A message whose solo answer stays below the floor is asked in one batch and
+// once alone. It is not asked again under the same prompt.
+func TestTheClassifyPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
+	e := integration.Setup(t)
+	unsure := seedUnlabeledEmail(t, e, "Note "+unsureMarker)
+	ordinary := seedUnlabeledEmail(t, e, "please send the offer")
+	brain := &scriptedClassifyBrain{confidence: map[string]float64{"Note " + unsureMarker: 0.3}, soloStaysLow: true}
+	classifier, ctx := classifyPassFor(e, brain)
+	for pass := 1; pass <= 2; pass++ {
+		if err := classifier.RunWorkspace(ctx, 0); err != nil {
+			t.Fatalf("pass %d: %v", pass, err)
+		}
+		if sent := sentCarrying(brain.prompts, unsureMarker); sent != 2 {
+			t.Fatalf("after pass %d the unsure message had been sent %d times, want 2 — its batch and itself, once", pass, sent)
+		}
+	}
+	if labelOf(t, e, unsure) != nil {
+		t.Error("an answer below the floor was stored as a label")
+	}
+	if labelOf(t, e, ordinary) == nil {
+		t.Error("the message batched beside an unsure one was left unlabeled")
+	}
+}
+
+func TestTheOwedPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
+	e := integration.Setup(t)
+	unsure := seedWaitingMail(t, e, "Note "+unsureMarker)
+	ordinary := seedWaitingMail(t, e, "Monatsreporting Juli")
+	brain := &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: 0.95, doubtful: unsureMarker}
+	for pass := 1; pass <= 2; pass++ {
+		runOwedWorker(t, e, brain)
+		turns := make([]string, 0, len(brain.prompts))
+		for _, req := range brain.prompts {
+			turns = append(turns, req.Messages[0].Content)
+		}
+		if sent := sentCarrying(turns, unsureMarker); sent != 2 {
+			t.Fatalf("after pass %d the unsure message had been sent %d times, want 2 — its batch and itself, once", pass, sent)
+		}
+	}
+	if got := verdictOf(t, e, unsure); got != nil {
+		t.Errorf("an answer below the floor was stored as the verdict %q", *got)
+	}
+	if verdictOf(t, e, ordinary) == nil {
+		t.Error("the message batched beside an unsure one was left unjudged")
+	}
+}
+
+// A full batch of unsure messages at the head of the backlog does not end the
+// pass. Once they are stamped, the newer message behind them is labeled.
+func TestTenUnsureMessagesDoNotHoldBackANewerOne(t *testing.T) {
+	e := integration.Setup(t)
+	brain := &scriptedClassifyBrain{confidence: map[string]float64{}, soloStaysLow: true}
+	for i := range classifyBatchSize {
+		subject := fmt.Sprintf("Note %d %s", i, unsureMarker)
+		brain.confidence[subject] = 0.3
+		seedUnlabeledEmail(t, e, subject)
+	}
+	answerable := seedUnlabeledEmail(t, e, "please send the offer")
+	classifier, ctx := classifyPassFor(e, brain)
+	if err := classifier.RunWorkspace(ctx, 0); err != nil {
+		t.Fatalf("the pass failed: %v", err)
+	}
+	if labelOf(t, e, answerable) == nil {
+		t.Error("the message behind ten unsure ones was left unlabeled by the pass")
+	}
+}
+
+// A verdict reached under a retired prompt is re-judged once. An unsure answer
+// under the current one leaves the old verdict standing and is not asked again.
+func TestTheRejudgeSweepAsksAnUnsureMessageOnce(t *testing.T) {
+	e := integration.Setup(t)
+	stale := seedWaitingMail(t, e, "Note "+unsureMarker)
+	store := activities.NewStore(InstallationDB(e.Pool))
+	if applied, err := store.SetOwedVerdict(owedSweepContext(e), stale, activities.OwedVerdictInformsUs, retiredPrompt, clocktest.Now(t)); err != nil || !applied {
+		t.Fatalf("judging the message under the retired prompt: applied=%v err=%v", applied, err)
+	}
+	brain := &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: 0.95, doubtful: unsureMarker}
+	for pass := 1; pass <= 2; pass++ {
+		runOwedWorker(t, e, brain)
+		if sent := len(brain.prompts); sent != 2 {
+			t.Fatalf("after pass %d the re-judge sweep had sent the message %d times, want 2: its batch and itself, once", pass, sent)
+		}
+	}
+	if got := verdictOf(t, e, stale); got == nil || *got != activities.OwedVerdictInformsUs {
+		t.Errorf("the verdict under the retired prompt became %v; an unsure re-judge leaves it standing", got)
+	}
+}
+
+// A stamp answers for the text the model read. Once a member edits the
+// subject, both sweeps ask about the message again.
+func TestAnEditedMessageIsAskedAgainAfterAnUnsureAnswer(t *testing.T) {
+	e := integration.Setup(t)
+	unlabeled := seedUnlabeledEmail(t, e, "FYI "+unsureMarker)
+	waiting := seedWaitingMail(t, e, "FYI "+unsureMarker)
+	classifyBrain := &scriptedClassifyBrain{confidence: map[string]float64{"FYI " + unsureMarker: 0.3}, soloStaysLow: true}
+	classifier, ctx := classifyPassFor(e, classifyBrain)
+	owedBrain := &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: 0.95, doubtful: unsureMarker}
+	if err := classifier.RunWorkspace(ctx, 0); err != nil {
+		t.Fatalf("the classify pass failed: %v", err)
+	}
+	runOwedWorker(t, e, owedBrain)
+	for _, id := range []ids.UUID{unlabeled, waiting} {
+		if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](id),
+			activities.UpdateActivityInput{Subject: new("Please approve the contract today")}); err != nil {
+			t.Fatalf("editing the subject: %v", err)
+		}
+	}
+	if err := classifier.RunWorkspace(ctx, 0); err != nil {
+		t.Fatalf("the classify pass failed: %v", err)
+	}
+	runOwedWorker(t, e, owedBrain)
+	if labelOf(t, e, unlabeled) == nil {
+		t.Error("the edited message stayed out of the classify backlog")
+	}
+	if verdictOf(t, e, waiting) == nil {
+		t.Error("the edited message stayed out of the owed backlog")
 	}
 }
 

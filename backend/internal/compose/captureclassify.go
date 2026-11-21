@@ -98,9 +98,9 @@ type classifyPayload struct {
 // RunWorkspace drains up to cap backlog messages in the workspace already
 // bound in ctx. A budget stop, or no provider bound, ends the pass cleanly — the
 // remainder requeues implicitly (it is simply still unlabeled). A message the
-// models decline is recorded so and leaves the backlog (classifyEach); any
-// other failure fails the pass. The pass is bounded by the model calls it makes
-// as well as by labels written (sweepCalls).
+// models decline or stay unsure about is stamped and leaves the backlog
+// (classifyEach); any other failure fails the pass. The pass is bounded by the
+// model calls it makes as well as by rows settled (sweepCalls).
 //
 // The cap is PER WORKSPACE, matching capture_counterparty_verdict, whose own
 // counter is declared inside its workspace loop for a stated reason: a shared
@@ -111,8 +111,8 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 		maxLabels = classifyCatchUpCap
 	}
 	calls := newSweepCalls(maxLabels, classifyBatchSize)
-	labeled := 0
-	for labeled < maxLabels && calls.remain() {
+	settled := 0
+	for settled < maxLabels && calls.remain() {
 		batch, err := c.store.UnlabeledCaptureMessages(ctx, capturelabel.Ruleset, classifyBatchSize, classifyBodyLimit)
 		if err != nil {
 			return fmt.Errorf("classify: reading backlog: %w", err)
@@ -121,11 +121,11 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 			return nil
 		}
 		n, err := c.classifyBatch(ctx, batch, calls)
-		labeled += n
+		settled += n
 		if sweepPaused(err) {
 			// ≥100% band or no model: non-interactive work stops for this
 			// cycle; what is labeled is committed, the rest waits (§2.8).
-			c.log.InfoContext(ctx, "capture classify: stopping the pass", "labeled", labeled, "reason", err)
+			c.log.InfoContext(ctx, "capture classify: stopping the pass", "settled", settled, "reason", err)
 			return nil
 		}
 		if err != nil {
@@ -139,8 +139,8 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 			return fmt.Errorf("classify: draining the backlog: %w", err)
 		}
 		if n == 0 {
-			// Every verdict stayed below the floor: the same rows would be
-			// fetched again forever. They wait for the next cycle.
+			// Nothing was labeled or stamped, so the same rows would be read
+			// again: another pass labeled them first, or their text changed.
 			c.log.InfoContext(ctx, "capture classify: batch made no progress, moving on")
 			return nil
 		}
@@ -150,11 +150,9 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 
 // classifyBatch labels one batch with ONE model call and commits the
 // labels — the per-call commit IS the checkpoint (AIRT-PARAM-35). Items
-// below the confidence floor are re-asked solo; a solo re-ask that still
-// fails floors leaves the row unlabeled for the next cycle rather than
-// guessing. A batch the models decline is asked message by message, so the
-// one message they will not label is recorded declined and the rest proceed.
-// Returns how many rows were labeled.
+// below the confidence floor are re-asked solo. A batch the models decline is
+// asked message by message, so the one message they will not label is stamped
+// and the rest proceed. Returns how many rows were labeled or stamped.
 func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeledMessage, calls *sweepCalls) (int, error) {
 	if !calls.take() {
 		return 0, nil
@@ -166,7 +164,7 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 	if err != nil {
 		return 0, err
 	}
-	labeled := 0
+	settled := 0
 	var retry []unlabeledMessage
 	byID := indexByID(batch)
 	for _, v := range verdicts {
@@ -180,52 +178,55 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 		}
 		applied, err := c.commitLabel(ctx, msg, v, judge)
 		if err != nil {
-			return labeled, err
+			return settled, err
 		}
 		if applied {
-			labeled++
+			settled++
 		}
 	}
 	solo, err := c.classifyEach(ctx, retry, calls)
-	return labeled + solo, err
+	return settled + solo, err
 }
 
 // classifyEach asks about each message in its own call and commits a label
 // above the floor. A call starts at the first rung and moves up only after a
-// provider error or two refused answers. A message every rung declines is
-// that message's outcome. It is recorded declined, which takes it out of the
-// backlog for this pass and every later one. The next message is asked.
+// provider error or two refused answers. A message every rung declines stays
+// unlabeled and is stamped. So does one whose solo answer is still below the
+// floor. The stamp keeps it out of the backlog until the prompt changes.
 func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMessage, calls *sweepCalls) (int, error) {
-	labeled := 0
+	settled := 0
 	for _, msg := range msgs {
 		if !calls.take() {
-			return labeled, nil
+			return settled, nil
 		}
-		solo, soloJudge, err := c.ask(ctx, []unlabeledMessage{msg})
-		if declinedByTheModels(err) {
-			recorded, markErr := c.store.MarkCaptureLabelDeclined(ctx, msg.ID, capturelabel.Ruleset)
-			if markErr != nil {
-				return labeled, markErr
-			}
-			c.log.WarnContext(ctx, "capture classify: the models declined one message, which stays unlabeled",
-				"activity_id", msg.ID, "recorded", recorded, "err", err)
-			continue
-		}
+		applied, err := c.classifyOne(ctx, msg)
 		if err != nil {
-			return labeled, err
-		}
-		if len(solo) != 1 || solo[0].Confidence < classifyConfidenceFloor {
-			continue
-		}
-		applied, err := c.commitLabel(ctx, msg, solo[0], soloJudge)
-		if err != nil {
-			return labeled, err
+			return settled, err
 		}
 		if applied {
-			labeled++
+			settled++
 		}
 	}
-	return labeled, nil
+	return settled, nil
+}
+
+// classifyOne is one solo call and the one write its outcome takes. That is a
+// label, or the stamp for a decline or an answer below the floor.
+func (c *CaptureClassifier) classifyOne(ctx context.Context, msg unlabeledMessage) (bool, error) {
+	solo, soloJudge, err := c.ask(ctx, []unlabeledMessage{msg})
+	if declinedByTheModels(err) {
+		recorded, markErr := c.store.MarkCaptureLabelDeclined(ctx, msg.ID, capturelabel.Ruleset)
+		c.log.WarnContext(ctx, "capture classify: the models declined one message, which stays unlabeled",
+			"activity_id", msg.ID, "recorded", recorded, "err", err)
+		return recorded, markErr
+	}
+	if err != nil {
+		return false, err
+	}
+	if len(solo) != 1 || solo[0].Confidence < classifyConfidenceFloor {
+		return c.store.MarkCaptureLabelUnsure(ctx, msg.ID, capturelabel.Ruleset, msg.Version)
+	}
+	return c.commitLabel(ctx, msg, solo[0], soloJudge)
 }
 
 // commitLabel writes one label and the reply verdict this call also produced,

@@ -124,7 +124,7 @@ func maskRowTextTx(
 	// The caller holds the row lock; the old text guards against a writer that
 	// does not take it.
 	tag, err := tx.Exec(ctx, `
-		UPDATE activity SET subject = $2, body = $3
+		UPDATE activity SET subject = $2, body = $3, `+declineStampsClearedWhen("true")+`
 		 WHERE id = $1
 		   AND subject IS NOT DISTINCT FROM $4 AND body IS NOT DISTINCT FROM $5`,
 		id, maskedSubject, maskedBody, subject, body)

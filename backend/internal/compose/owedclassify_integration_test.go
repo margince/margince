@@ -38,7 +38,9 @@ import (
 type owedBrainStub struct {
 	verdict    string
 	confidence float64
-	prompts    []model.Request
+	// doubtful, when set, is a subject text answered below the floor every time.
+	doubtful string
+	prompts  []model.Request
 }
 
 func (b *owedBrainStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
@@ -47,10 +49,15 @@ func (b *owedBrainStub) Complete(_ context.Context, req model.Request) (model.Re
 	if len(fenced) == 0 {
 		return model.Response{}, fmt.Errorf("owed prompt fenced no message: %q", req.System)
 	}
+	subjects := fencedSubjects(req.System, req.Messages[0].Content, "source_id")
 	results := make([]map[string]any, 0, len(fenced))
 	for _, id := range fenced {
+		confidence := b.confidence
+		if b.doubtful != "" && strings.Contains(subjects[id], b.doubtful) {
+			confidence = 0.1
+		}
 		results = append(results, map[string]any{
-			"id": id, "verdict": b.verdict, "confidence": b.confidence,
+			"id": id, "verdict": b.verdict, "confidence": confidence,
 		})
 	}
 	payload, err := json.Marshal(map[string]any{"results": results})
@@ -207,13 +214,9 @@ func TestAnAnswerBelowTheFloorLeavesTheMessageUnjudged(t *testing.T) {
 
 // A backlog the model will not commit to ends the pass rather than spinning.
 //
-// An unjudged message stays in the backlog by design, so the next read returns
-// it again. A pass bounded only by verdicts WRITTEN therefore never advances on
-// a batch that mixes one confident row with nine abstentions: it re-asks the
-// same nine forever, and one stubborn tenant spends the whole model budget.
-//
 // The stub answers the FIRST message of each batch confidently and every other
-// below the floor, which is that mixture exactly.
+// below the floor. Most rows then cost a batch slot and a solo call each, and
+// the pass must stay inside its call bound.
 func TestABacklogTheModelWillNotCommitToStillEndsThePass(t *testing.T) {
 	e := integration.Setup(t)
 	for i := range owedBatchSize + 4 {
@@ -234,8 +237,7 @@ func TestABacklogTheModelWillNotCommitToStillEndsThePass(t *testing.T) {
 }
 
 // owedStubbornBrain judges the first message of every batch confidently and
-// abstains on the rest, so the backlog shrinks by one per call at best and the
-// abstained rows come back on the next read.
+// abstains on the rest.
 type owedStubbornBrain struct{ calls int }
 
 func (b *owedStubbornBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
