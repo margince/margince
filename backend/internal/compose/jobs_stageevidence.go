@@ -163,9 +163,10 @@ func queueStageEvidenceReread(ctx context.Context, tx pgx.Tx, domain string, rem
 func newStageEvidenceRereadWorker(
 	pool *pgxpool.Pool, lane bool, log *slog.Logger,
 ) *evidencereread.Worker[StageEvidenceRereadArgs] {
-	w := &evidencereread.Worker[StageEvidenceRereadArgs]{
-		Bind: workspaceJobCtx, Pool: pool, Log: log,
-		Own: ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))},
+	return &evidencereread.Worker[StageEvidenceRereadArgs]{
+		Bind: workspaceJobCtx, Pool: pool, Log: log, Reads: lane,
+		Queue: func() (evidencereread.Enqueuer, error) { return ownerChangeMail() },
+		Own:   ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))},
 		Reading: func(job StageEvidenceRereadArgs, deal ids.DealID, activity ids.UUID) (river.JobArgs, *river.InsertOpts) {
 			opts := stageEvidenceReadInsertOpts()
 			opts.Priority = stageEvidenceRereadPriority
@@ -178,8 +179,4 @@ func newStageEvidenceRereadWorker(
 			return job, stageEvidenceRereadOpts()
 		},
 	}
-	if queue, err := ownerChangeMail(); lane && err == nil {
-		w.Queue = queue
-	}
-	return w
 }

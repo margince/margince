@@ -55,8 +55,10 @@ type Worker[T Job] struct {
 	Bind func(context.Context, jobs.WorkspaceScoped) (context.Context, error)
 	Pool *pgxpool.Pool
 	Own  deals.OwnDomainReader
-	// Queue is nil on a role with no model lane, which reads nothing.
-	Queue Enqueuer
+	// Reads is false on a role with no model lane, which queues nothing.
+	Reads bool
+	// Queue answers the inserter, or why this role has none.
+	Queue func() (Enqueuer, error)
 	// Reading builds the queued reading of one activity for this removal.
 	Reading func(job T, deal ids.DealID, activity ids.UUID) (river.JobArgs, *river.InsertOpts)
 	// Next builds the run that continues after the given activity.
@@ -68,15 +70,19 @@ type Worker[T Job] struct {
 
 // Work implements River's worker for one page.
 func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
-	if w.Queue == nil {
-		return nil
-	}
 	bound, err := w.Bind(ctx, job.Args)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	if !w.Reads {
+		return nil
+	}
+	queue, err := w.Queue()
+	if err != nil {
+		return jobs.FaultContext(bound, err)
+	}
 	bound = principal.SystemActing(bound, actor)
-	judged, queued, err := w.readPage(bound, job.Args)
+	judged, queued, err := w.readPage(bound, queue, job.Args)
 	if err != nil {
 		return jobs.FaultContext(bound, err)
 	}
@@ -86,7 +92,7 @@ func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 
 // readPage answers how many activities the page held and how many readings it
 // queued.
-func (w *Worker[T]) readPage(ctx context.Context, job T) (int, int, error) {
+func (w *Worker[T]) readPage(ctx context.Context, queue Enqueuer, job T) (int, int, error) {
 	size := w.Page
 	if size <= 0 {
 		size = DefaultPage
@@ -100,7 +106,7 @@ func (w *Worker[T]) readPage(ctx context.Context, job T) (int, int, error) {
 		}
 		judged = len(sent)
 		for _, activity := range sent {
-			reads, err := w.queueReading(ctx, tx, job, activity)
+			reads, err := w.queueReading(ctx, tx, queue, job, activity)
 			if err != nil {
 				return err
 			}
@@ -112,7 +118,7 @@ func (w *Worker[T]) readPage(ctx context.Context, job T) (int, int, error) {
 			return nil
 		}
 		args, opts := w.Next(job, sent[len(sent)-1])
-		return w.Queue.EnqueueTx(ctx, tx, args, opts)
+		return queue.EnqueueTx(ctx, tx, args, opts)
 	})
 	return judged, queued, err
 }
@@ -122,7 +128,9 @@ func (w *Worker[T]) readPage(ctx context.Context, job T) (int, int, error) {
 // The activity is judged the way a first reading judges it. One the system
 // may not read, or one no longer on a deal, queues nothing. An author still on
 // our side would be refused again, so that reading is not spent.
-func (w *Worker[T]) queueReading(ctx context.Context, tx pgx.Tx, job T, activity ids.UUID) (bool, error) {
+func (w *Worker[T]) queueReading(
+	ctx context.Context, tx pgx.Tx, queue Enqueuer, job T, activity ids.UUID,
+) (bool, error) {
 	facts, err := deals.ReadActivityAuthorship(ctx, tx, activity, w.Own)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return false, nil
@@ -134,5 +142,5 @@ func (w *Worker[T]) queueReading(ctx context.Context, tx pgx.Tx, job T, activity
 		return false, nil
 	}
 	args, opts := w.Reading(job, facts.DealID, activity)
-	return true, w.Queue.EnqueueTx(ctx, tx, args, opts)
+	return true, queue.EnqueueTx(ctx, tx, args, opts)
 }
