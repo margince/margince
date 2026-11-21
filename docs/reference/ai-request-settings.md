@@ -42,8 +42,9 @@ what it reads, so the `p95` of short test input cannot bound it.
 
 The same calls also have a bound on the whole call. It covers every try: the steps up the ladder, the retry
 after an answer the check refused, and the step up after that. It counts from the first try, and is two
-calls at the task's limit, at most 300 seconds. A try starts only when at least 30 seconds of the bound are
-left, or the task's limit when that is lower.
+calls at the task's limit, at most 300 seconds. A try starts only when at least 15 seconds of the bound are
+left, or half the task's limit when that is less. So after one call stopped at the limit, the next still
+starts.
 
 When the bound runs out, no further call starts. If the last call failed, the call ends with the `timeout` sentinel, and the reader sees that the assistant did not
 answer. If the model answered and the check refused the answer, the call ends as a refused answer.

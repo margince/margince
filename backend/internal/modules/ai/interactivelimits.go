@@ -10,9 +10,12 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 const (
@@ -80,21 +83,24 @@ func WalkSpentError(task Task, bound time.Duration) error {
 	return fmt.Errorf("%w for %s: its %s walk bound is spent: %w", ErrAllTiersFailed, task, bound, context.DeadlineExceeded)
 }
 
-// startWalk fixes lc's per-try limit and walk bound at its first ladder try,
-// from the models that walk reaches. The bound counts from here, so a
-// decision call or a budget read before it spends none of it.
+// startWalk sets lc's per-try limit and walk bound for one walk, from the
+// models that walk reaches. A rebind mid-call can change them, so each walk
+// asks again. The bound counts from the first walk's first try, so a decision
+// call or a budget read before it spends none of it.
 func (r *Router) startWalk(lc *logicalCall, task Task, b *binding, rungs []Tier) {
-	if lc.walking {
-		return
-	}
 	models := make([]boundModel, 0, len(rungs))
 	for _, tier := range rungs {
 		meta := b.routeMeta[tier]
 		models = append(models, boundModel{provider: meta.provider, model: meta.model})
 	}
 	settings := r.settingsFor(r.callOverrides(lc, task), task, models)
+	if !lc.walking {
+		lc.walking, lc.started = true, r.now()
+	} else if lc.settings.WalkTimeout == 0 {
+		// Its earlier tries ran past any bound a later walk would set.
+		return
+	}
 	lc.settings.AttemptTimeout, lc.settings.WalkTimeout = settings.AttemptTimeout, settings.WalkTimeout
-	lc.walking, lc.started = true, r.now()
 }
 
 // tryTimeout is how long lc's next try may take: its per-try limit, cut to
@@ -109,13 +115,14 @@ func (r *Router) tryTimeout(lc *logicalCall, task Task) time.Duration {
 }
 
 // walkSpent says the walk has too little of its bound left for another try.
-// A try needs the floor, or the per-try limit when that is lower.
+// A try needs half its per-try limit, or half the floor when that is lower.
+// After one try timed out at the limit, a second still fits the bound.
 func (r *Router) walkSpent(lc *logicalCall, task Task) error {
 	settings := r.callSettings(lc, task)
 	if settings.WalkTimeout == 0 || !lc.walking {
 		return nil
 	}
-	if settings.WalkTimeout-r.now().Sub(lc.started) < min(InteractiveAttemptFloor, settings.AttemptTimeout) {
+	if settings.WalkTimeout-r.now().Sub(lc.started) < min(InteractiveAttemptFloor, settings.AttemptTimeout)/2 {
 		return WalkSpentError(task, settings.WalkTimeout)
 	}
 	return nil
@@ -129,11 +136,19 @@ func (r *Router) tryContext(ctx context.Context, timeout time.Duration) (context
 	return context.WithTimeout(ctx, timeout)
 }
 
-// stopped is why lc may make no further try: its caller stopped waiting, or
-// its walk bound is spent.
-func (r *Router) stopped(ctx context.Context, lc *logicalCall, task Task) error {
-	if err := ctx.Err(); err != nil {
-		return err
+// endWalk is why the walk ends after a rung failed with callErr, or nil to
+// walk on. A spent bound after a withheld or rejected answer ends on that
+// answer, since a model decided. Any other stop names the rung beside it.
+func (r *Router) endWalk(ctx context.Context, lc *logicalCall, task Task, callErr error) error {
+	stop := ctx.Err()
+	if stop == nil {
+		stop = r.walkSpent(lc, task)
+		if stop != nil && (errors.Is(callErr, model.ErrOutputWithheld) || errors.Is(callErr, model.ErrRequestRejected)) {
+			return callErr
+		}
 	}
-	return r.walkSpent(lc, task)
+	if stop != nil {
+		return fmt.Errorf("%w (the rung: %w)", stop, callErr)
+	}
+	return nil
 }

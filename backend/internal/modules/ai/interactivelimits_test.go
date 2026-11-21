@@ -124,13 +124,16 @@ type fakeClock struct{ at time.Time }
 type tryTimeoutKey struct{}
 
 // slowClient takes `takes` on the fake clock, or its whole timeout when that is
-// shorter, which it then reports as a deadline.
+// shorter, which it then reports as a deadline. overrun is bookkeeping time
+// after its answer, and err is what it answers instead of text.
 type slowClient struct {
 	stubClient
-	clock *fakeClock
-	takes time.Duration
-	text  string
-	calls *int
+	clock   *fakeClock
+	takes   time.Duration
+	overrun time.Duration
+	text    string
+	err     error
+	calls   *int
 }
 
 func (s slowClient) Complete(ctx context.Context, _ model.Request) (model.Response, error) {
@@ -140,10 +143,13 @@ func (s slowClient) Complete(ctx context.Context, _ model.Request) (model.Respon
 		return model.Response{}, errors.New("the router gave this try no timeout")
 	}
 	if s.takes > limit {
-		s.clock.at = s.clock.at.Add(limit)
+		s.clock.at = s.clock.at.Add(limit + s.overrun)
 		return model.Response{}, fmt.Errorf("provider: %w", context.DeadlineExceeded)
 	}
-	s.clock.at = s.clock.at.Add(s.takes)
+	s.clock.at = s.clock.at.Add(s.takes + s.overrun)
+	if s.err != nil {
+		return model.Response{}, s.err
+	}
 	return model.Response{Text: s.text, InputTokens: 1, OutputTokens: 1}, nil
 }
 
@@ -160,6 +166,17 @@ type walkResult struct {
 // refuses, on a router whose rungs reach walkRungs.
 func slowWalk(t *testing.T, task Task, clients map[Tier]slowClient) walkResult {
 	t.Helper()
+	got := walkOn(t, task, clients, 0)
+	if len(got.rows) != got.tries {
+		t.Fatalf("%s: %d tries left %d rows, want one row for each try", task, got.tries, len(got.rows))
+	}
+	return got
+}
+
+// walkOn is slowWalk where reading the budget, before each walk, takes
+// preparing on the fake clock.
+func walkOn(t *testing.T, task Task, clients map[Tier]slowClient, preparing time.Duration) walkResult {
+	t.Helper()
 	clock := &fakeClock{at: time.Unix(0, 0)}
 	calls := 0
 	bound, meta := map[Tier]model.Client{}, map[Tier]routeMeta{}
@@ -168,7 +185,8 @@ func slowWalk(t *testing.T, task Task, clients map[Tier]slowClient) walkResult {
 		bound[tier], meta[tier] = client, routeMeta{provider: "openai", model: string(tier)}
 	}
 	fcs := &fakeCallStore{}
-	r := assembleRouter(bound, stubClient{}, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs, meta, false, nil)
+	meter := slowMeter{clock: clock, takes: preparing}
+	r := assembleRouter(bound, stubClient{}, ProfileCloudFrontier, meter, unlimitedBudget{}, fcs, meta, false, nil)
 	r.now = func() time.Time { return clock.at }
 	r.tryDeadline = func(ctx context.Context, d time.Duration) (context.Context, context.CancelFunc) {
 		return context.WithCancel(context.WithValue(ctx, tryTimeoutKey{}, d))
@@ -178,10 +196,19 @@ func slowWalk(t *testing.T, task Task, clients map[Tier]slowClient) walkResult {
 	if err == nil {
 		t.Fatalf("%s: a walk the validator never accepts returned no error", task)
 	}
-	if len(fcs.recorded) != calls {
-		t.Fatalf("%s: %d tries left %d rows, want one row for each try", task, calls, len(fcs.recorded))
-	}
 	return walkResult{tries: calls, waited: clock.at.Sub(time.Unix(0, 0)), err: err, rows: fcs.recorded}
+}
+
+// slowMeter reads the month's spend in `takes` on the fake clock.
+type slowMeter struct {
+	stubMeter
+	clock *fakeClock
+	takes time.Duration
+}
+
+func (m slowMeter) MonthTokens(context.Context) (int64, error) {
+	m.clock.at = m.clock.at.Add(m.takes)
+	return 0, nil
 }
 
 // The walk that makes the most tries: cheap_cloud never answers, and premium
@@ -227,16 +254,77 @@ func TestARefusedAnswerThatSpendsTheBoundEndsAsARefusal(t *testing.T) {
 	}
 }
 
-// A try needs at least the floor; with less left of the bound none starts.
-func TestNoTryStartsOnLessThanTheFloor(t *testing.T) {
+// A try needs half its limit; with less left of the bound none starts.
+func TestNoTryStartsOnLessThanHalfItsLimit(t *testing.T) {
 	withLimits(t, time.Minute, walkRungs...)
 	clients := map[Tier]slowClient{
 		TierCheapCloud: {takes: time.Hour},
-		TierPremium:    {takes: 35 * time.Second, text: "not the schema"},
+		TierPremium:    {takes: 50 * time.Second, text: "not the schema"},
 	}
 	got := slowWalk(t, TaskColdStart, clients)
-	if got.tries != 2 || got.waited != 95*time.Second {
-		t.Fatalf("%d tries over %s, want 2 over 1m35s: 25 s was left, under the %s floor", got.tries, got.waited, InteractiveAttemptFloor)
+	if got.tries != 2 || got.waited != 110*time.Second {
+		t.Fatalf("%d tries over %s, want 2 over 1m50s: 10 s was left, under half the minute", got.tries, got.waited)
+	}
+}
+
+// A first try that timed out at a floor-sized limit, plus a moment of
+// bookkeeping, still leaves room for the rung above.
+func TestASecondTryFollowsAFloorSizedTimeout(t *testing.T) {
+	withLimits(t, InteractiveAttemptFloor, walkRungs...)
+	clients := map[Tier]slowClient{
+		TierCheapCloud: {takes: time.Hour, overrun: time.Millisecond},
+		TierPremium:    {takes: 20 * time.Second, text: "not the schema"},
+	}
+	got := slowWalk(t, TaskColdStart, clients)
+	if got.tries != 2 || !errors.Is(got.err, ErrOutputRejected) {
+		t.Fatalf("%d tries ending on %v, want the rung above tried and its refusal returned", got.tries, got.err)
+	}
+}
+
+// Time spent preparing a walk counts against the bound, and a walk whose first
+// rung would start on too little makes no call.
+func TestAWalkPreparedPastTheBoundMakesNoCall(t *testing.T) {
+	withLimits(t, time.Minute, walkRungs...)
+	got := walkOn(t, TaskColdStart, map[Tier]slowClient{TierPremium: {takes: 50 * time.Second, text: "not the schema"}}, time.Minute)
+	if got.tries != 1 || !errors.Is(got.err, ErrAllTiersFailed) || !isDeadline(got.err) {
+		t.Fatalf("%d tries over %s ending on %v, want the retry refused before its call", got.tries, got.waited, got.err)
+	}
+}
+
+// A withheld answer that spends the bound ends the walk as withheld: a model
+// decided, so the caller is not told none answered.
+func TestAWithheldAnswerThatSpendsTheBoundStaysWithheld(t *testing.T) {
+	withLimits(t, time.Minute, walkRungs...)
+	clients := map[Tier]slowClient{
+		TierCheapCloud: {takes: 55 * time.Second, err: fmt.Errorf("provider: %w", model.ErrOutputWithheld)},
+		TierPremium:    {takes: 10 * time.Second, text: "not the schema"},
+	}
+	got := slowWalk(t, TaskColdStart, clients)
+	if got.tries != 3 || !errors.Is(got.err, model.ErrOutputWithheld) || isDeadline(got.err) {
+		t.Fatalf("%d tries ending on %v, want the third, withheld, to end the call", got.tries, got.err)
+	}
+}
+
+// A rebind to a model no record measured lifts the limits for the rest of the
+// call, and a call that began unbounded stays so.
+func TestEachWalkAsksAgainWhetherItsModelsAreMeasured(t *testing.T) {
+	withLimits(t, time.Minute, cloudRung)
+	r := newTracingRouter(t, stubClient{}, &fakeCallStore{})
+	on := func(m boundModel) *binding {
+		return &binding{routeMeta: map[Tier]routeMeta{TierCheapCloud: {provider: m.provider, model: m.model}}}
+	}
+	rung := []Tier{TierCheapCloud}
+	bounded := newLogicalCall()
+	r.startWalk(bounded, TaskColdStart, on(cloudRung), rung)
+	r.startWalk(bounded, TaskColdStart, on(otherRung), rung)
+	if got := r.callSettings(bounded, TaskColdStart); got.WalkTimeout != 0 || got.AttemptTimeout != CallCeiling {
+		t.Errorf("a rebind to an unmeasured model kept %+v", got)
+	}
+	unbounded := newLogicalCall()
+	r.startWalk(unbounded, TaskColdStart, on(otherRung), rung)
+	r.startWalk(unbounded, TaskColdStart, on(cloudRung), rung)
+	if got := r.callSettings(unbounded, TaskColdStart); got.WalkTimeout != 0 {
+		t.Errorf("a call that began unbounded took a bound of %s mid-call", got.WalkTimeout)
 	}
 }
 
