@@ -24,6 +24,16 @@ func (r *Router) CapturesPayload(task Task) bool {
 	return r.capturePayloads && !NoPayload(task)
 }
 
+// storablePayload is what of c may reach ai_call_payload. CallMeter is the
+// table's one writer, so a no_payload task's content is dropped there, whatever
+// lane or package built the Call.
+func storablePayload(c Call) *Payload {
+	if NoPayload(c.Task) {
+		return nil
+	}
+	return c.Payload
+}
+
 // capturedMessage is the ai_call_payload wire shape of one request
 // message: model.Message with the lowercase JSON keys every payload
 // reader expects (the trace UI and the cert-scenario export).

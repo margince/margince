@@ -13,7 +13,7 @@ func TestDecisionGroupsFoldIntoOneLinePerTask(t *testing.T) {
 		{task: string(TaskSiteTriage), calls: 3, decided: 3},
 		{task: string(TaskSiteTriage), reason: attemptReasonDecisionBelowFloor, calls: 2},
 		{task: string(TaskSiteTriage), reason: attemptReasonDecisionError, calls: 1},
-		{task: "thread_verdict", reason: attemptReasonDecisionUncertified, calls: 4},
+		{task: "thread_verdict", reason: attemptReasonDecisionStateTooLarge, calls: 4},
 	})
 	if len(got) != 2 {
 		t.Fatalf("summaries = %+v, want one per task", got)
@@ -25,8 +25,8 @@ func TestDecisionGroupsFoldIntoOneLinePerTask(t *testing.T) {
 	if want := map[string]int{attemptReasonDecisionBelowFloor: 2, attemptReasonDecisionError: 1}; !maps.Equal(triage.Fallbacks, want) {
 		t.Errorf("triage fallbacks = %v, want %v", triage.Fallbacks, want)
 	}
-	if verdict.Asked != 4 || verdict.Decided != 0 || verdict.Fallbacks[attemptReasonDecisionUncertified] != 4 {
-		t.Errorf("verdict = %+v, want four uncertified refusals and nothing decided", verdict)
+	if verdict.Asked != 4 || verdict.Decided != 0 || verdict.Fallbacks[attemptReasonDecisionStateTooLarge] != 4 {
+		t.Errorf("verdict = %+v, want four oversized states and nothing decided", verdict)
 	}
 }
 
@@ -42,7 +42,7 @@ func TestADecisionSummaryWithNoFallbackCarriesAnEmptyMap(t *testing.T) {
 func TestWireDecisionSummariesCarriesEveryCount(t *testing.T) {
 	wire := wireDecisionSummaries([]DecisionSummary{{
 		Task: string(TaskSiteTriage), Asked: 4, Decided: 1,
-		Fallbacks: map[string]int{attemptReasonDecisionBelowFloor: 1, attemptReasonDecisionError: 1, attemptReasonDecisionUncertified: 1},
+		Fallbacks: map[string]int{attemptReasonDecisionBelowFloor: 1, attemptReasonDecisionError: 1, attemptReasonDecisionStateTooLarge: 1},
 	}})
 	if wire == nil || len(*wire) != 1 {
 		t.Fatalf("wire = %v, want one summary", wire)

@@ -242,10 +242,19 @@ func TestAnAnswerPastItsLifeIsServedStaleUntilItsGraceEnds(t *testing.T) {
 		t.Fatalf("read again %d times behind the stale answer, want once", reads)
 	}
 
+	// Back from a long break on the same day: the kept day shows at once.
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
+	age(6 * time.Hour)
+	if got, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk); err != nil || !stale ||
+		got.View == nil || *got.View != "decisions" {
+		t.Fatalf("serve six hours on = %+v (stale %v, err %v), want the kept answer, stale", got, stale, err)
+	}
+	c.Settle()
+
 	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
 	age(homecache.Life + homecache.StaleGrace + time.Second)
 	if got, stale, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk); err != nil || stale ||
-		got.View == nil || *got.View != crmcontracts.WorklistViewToday || reads != 2 {
+		got.View == nil || *got.View != crmcontracts.WorklistViewToday || reads != 3 {
 		t.Errorf("serve past its grace = %+v (stale %v, reads %d, err %v), want a fresh read", got, stale, reads, err)
 	}
 }
@@ -488,5 +497,36 @@ func TestAMemberChangeByAnotherUserNeverLeavesTheKeptDayServed(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// An answer under another day's key is never asked for again, and it holds
+// display text, so the reader's next kept answer removes it.
+func TestKeepingAnAnswerRemovesTheReadersAnswersThatCanNoLongerBeServed(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	other := e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms)
+	stamp, err := c.Stamp(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"yesterday", "earlier today"} {
+		if err := homecache.Store(ctx, c, e.Rep1, homecache.Worklist, key, stamp, nil, crmcontracts.Worklist{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	keep(other, t, c, e.Rep2, homecache.Worklist, nil, "decisions")
+	e.WsExec(t, `UPDATE home_read_cache SET valid_until = now() - interval '1 second'
+	              WHERE request_key = 'yesterday' OR reader_id = $1`, e.Rep2)
+
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
+	mine := e.WsScalar(t, `SELECT string_agg(request_key, ', ' ORDER BY request_key)
+	                         FROM home_read_cache WHERE reader_id = $1`, e.Rep1)
+	if mine != "earlier today, home" {
+		t.Errorf("the reader's kept answers = %q, want the ended one gone and the rest kept", mine)
+	}
+	if e.WsCount(t, `SELECT count(*) FROM home_read_cache WHERE reader_id = $1`, e.Rep2) != 1 {
+		t.Error("keeping one reader's answer removed another reader's")
 	}
 }

@@ -62,11 +62,16 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `voice_build` | `cheap_cloud` → `premium` | no | no | none | shipped |
 | `weekly_learnings` | `cheap_cloud` → `premium` | no | no | none | shipped |
 | `weekly_review` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `embed` | `embed` | no | yes | none | shipped |
 
 ## Reading this against a data-protection question
 
 Mail-reading tasks send text to the providers configured for their ladder and
 any bound decision lane. The `sovereign` profile refuses cloud providers.
+
+The `embed` row is the search index, not a task. It sends each indexed
+record's text, a mail's subject and body among them, to the bound embeddings
+provider, and keeps none of it in `ai_call_payload`.
 
 `voice_build` reads mail too, but only a user's own sent mail, and only after that
 user chose **Learn from sent mail** on their Writing voice page. Its text then goes

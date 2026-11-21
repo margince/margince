@@ -235,10 +235,11 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// provider and model: only then is the identical request re-sent to
 			// the API that refused it. Any other rung may accept it.
 			if errors.Is(callErr, ErrProviderQuota) || rejectedAgainAbove(b, callErr, boundRungs[i:]) {
-				lc.append(r.traceForFailedRung(ctx, b, *trace, t, callErr, start))
 				// Not an exhausted ladder — the rungs above were never tried.
 				// Reported as the refusal alone so a caller cannot read "every
-				// tier failed" off a walk that stopped at the first one.
+				// tier failed" off a walk that stopped at the first one. The
+				// refusing rung is the terminal, so serveAttempt's deferred
+				// trace is its one row.
 				return model.Response{}, t, false, callErr
 			}
 			// A withheld answer walks on: a different model may answer what this

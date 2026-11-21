@@ -2132,8 +2132,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
   "aiAdmin.decisionSkip.unbound":
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
-  "aiAdmin.decisionSkip.uncertified":
-    "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -16873,7 +16871,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aicalls.reason.decision_state_too_large":
     "Eingabe zu groß für das Entscheidungsmodell",
   "aicalls.reason.decision_uncertified":
-    "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
+    "Entscheidungsmodell für diese Aufgabe nicht zertifiziert (nur ältere Aufrufe)",
   "aicalls.reason.timeout":
     "Beim vorherigen Versuch wurde das Zeitlimit überschritten",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
@@ -17731,7 +17729,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Höhere lokale Modellstufe. Prüfe den konfigurierten Endpunkt.",
   "aiRouting.lane.embeddings": "Suche und Abruf über Datensätze hinweg",
   "aiRouting.lane.decisions":
-    "Typisierte Fragen, die vor den Modellstufen gestellt werden, sofern zertifiziert",
+    "Typisierte Fragen, die vor den Modellstufen gestellt werden",
   "aiRouting.decisions.add": "Entscheidungsmodell hinzufügen",
   "aiRouting.decisions.remove": "Entscheidungsmodell entfernen",
   "aiRouting.decisions.preset.openrouter": "Vorlage: OpenRouter",

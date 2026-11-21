@@ -28054,8 +28054,9 @@ components:
       description: |-
         The decision-model lane: a model that answers a typed question with calibrated
         probabilities, asked before a decision site's ladder. Absent means no task uses
-        one. It serves a task only when certified for that site and when its endpoint
-        reaches no further than the task's own bindings.
+        one. Bound, it answers every task that declares a decision form, with or without
+        a certification record; each site keeps an answer only at its own floor and
+        otherwise falls back to its ladder.
       properties:
         provider:
           type: string
@@ -30382,7 +30383,7 @@ components:
         decision_first: {type: boolean, description: 'The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor.'}
         decision_skip_reason:
           type: string
-          enum: [unbound, uncertified]
+          enum: [unbound]
           description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
         decision_candidate:
           $ref: '#/components/schemas/AiRouteCandidate'
@@ -30669,7 +30670,7 @@ components:
       properties:
         attempt: {type: integer}
         is_terminal: {type: boolean}
-        attempt_reason: {type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.'}
+        attempt_reason: {type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, or decision_uncertified on a row stored before the decision lane stopped reading certification — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.'}
         kind: {type: string, enum: [completion, embedding, decision], description: 'What this attempt asked: a chat completion, an embedding, or a decision model.'}
         tier: {type: string, description: 'The tier this attempt ran on; decide for the decision lane.'}
         provider: {type: string}
@@ -38708,6 +38709,7 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+        can_archive: {type: boolean, readOnly: true, description: 'List reads only. Whether the caller may archive this edge, answered by the rule the archive itself applies.'}
     CreateRelationshipRequest:
       type: object
       required: [kind, source]

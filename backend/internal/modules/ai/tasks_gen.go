@@ -191,7 +191,7 @@ const (
 	ExecutionModeBackground  ExecutionMode = "background"
 )
 
-// Tier is a capability tier (§1.1); ai-routing.yaml binds each to a
+// Tier is a capability tier (§1.1); the routing setting binds each to a
 // provider+model per deployment.
 type Tier string
 
@@ -206,7 +206,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "5d30d17a769bbf512511de4a6f575c2f172db1ddf807ff2c158ec6d114e7ce1d"
+const TaskContractHash = "b85a81adb73f27df2ab2debff44a1d318ae062af4783bff29b3336b4b125bef3"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -609,7 +609,7 @@ var taskAgents = map[Task][]Agent{
 // task that schedules none returns none.
 func AgentsFor(t Task) []Agent { return taskAgents[t] }
 
-// noPayloadTasks are the tasks whose content must NEVER reach
+// noPayloadTasks are the tasks, and the embed workload, whose content must NEVER reach
 // ai_call_payload, whatever the deployment's capture posture says. The
 // contract pins the prohibition as a hard property, not a default.
 var noPayloadTasks = map[Task]bool{
@@ -627,6 +627,7 @@ var noPayloadTasks = map[Task]bool{
 	TaskSignalExtract:                 true,
 	TaskStageEvidenceExtract:          true,
 	TaskTagSuggest:                    true,
+	TaskEmbeddings:                    true,
 }
 
 // NoPayload reports the contract's payload prohibition for a task.

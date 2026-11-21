@@ -542,7 +542,7 @@ const decisionUsage = {
       fallbacks: {
         decision_below_floor: 1,
         decision_error: 1,
-        decision_uncertified: 1,
+        decision_state_too_large: 1,
       },
     },
   ],
@@ -589,7 +589,7 @@ it("shows the decision model's pass rate and a fallback rate that opens its reas
   ).toEqual([
     "Decision model below its confidence floor: 1",
     "Decision model failed: 1",
-    "Decision model not certified for this task: 1",
+    "Input too large for the decision model: 1",
   ]);
   expect(screen.queryByText(/ · /)).toBeNull();
 
