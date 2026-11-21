@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -180,6 +181,34 @@ func (c *syncCheckpointer) NarrowSyncAnchor(ctx context.Context, from, to time.T
 			return errSyncSuperseded
 		}
 		recorded, err := recordUnreadPeriod(ctx, tx, c.snapshot.id, c.snapshot.generation, from, to)
+		if err != nil {
+			return err
+		}
+		if !recorded {
+			return errSyncSuperseded
+		}
+		return nil
+	})
+}
+
+// RecordLostCursor records as unread the mail between the connection's last
+// successful sync and readFrom, where a sync that lost its cursor read again.
+// The lost cursor was good at that success, so nothing later was read through it.
+func (c *syncCheckpointer) RecordLostCursor(ctx context.Context, readFrom time.Time) error {
+	if readFrom.IsZero() {
+		readFrom = c.registry.now()
+	}
+	return c.registry.db.Tx(ctx, func(tx pgx.Tx) error {
+		var lastGood *time.Time
+		err := tx.QueryRow(ctx, `SELECT last_success_at FROM capture_sync_state WHERE connection_id = $1`,
+			c.snapshot.id).Scan(&lastGood)
+		if errors.Is(err, pgx.ErrNoRows) || (err == nil && (lastGood == nil || !lastGood.Before(readFrom))) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("capture: reading when a lost cursor was last good: %w", err)
+		}
+		recorded, err := recordUnreadPeriod(ctx, tx, c.snapshot.id, c.snapshot.generation, *lastGood, readFrom)
 		if err != nil {
 			return err
 		}
