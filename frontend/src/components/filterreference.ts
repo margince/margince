@@ -107,7 +107,10 @@ function rosterKindOf(reference: Reference | undefined): RosterKind | null {
  * `partner_company_id` would, if companies were bounded, and `owner_id` on five
  * resources already does.
  */
-export function useReferenceOptions(reference: Reference | undefined) {
+export function useReferenceOptions(
+  reference: Reference | undefined,
+  wanted = true,
+) {
   const { locale } = useLocale();
   const kind = rosterKindOf(reference);
   // `enabled` is what decides whether either read runs, so the kind handed over
@@ -115,15 +118,18 @@ export function useReferenceOptions(reference: Reference | undefined) {
   // nothing, and the branch below never looks at its result.
   // A member is filtered from the list that includes those who left, so their
   // records can still be found; a team from the team roster.
-  const members = useMemberFilterOptions(kind === "user");
-  const roster = useRoster("team", kind === "team");
-  const rosterPartial = useRosterPartial("team", kind === "team");
+  const members = useMemberFilterOptions(wanted && kind === "user");
+  const roster = useRoster("team", wanted && kind === "team");
+  const rosterPartial = useRosterPartial("team", wanted && kind === "team");
   // Projects are records the reader's row scope narrows.
   const readerScope = useHealthScope();
   const query = useQuery({
     queryKey: ["filter-reference", reference, locale, readerScope ?? ""],
     enabled:
-      boundedReference(reference) && kind === null && readerScope !== undefined,
+      wanted &&
+      boundedReference(reference) &&
+      kind === null &&
+      readerScope !== undefined,
     // Configuration changes rarely and a builder reads it on every clause, so a
     // minute of staleness saves a request per keystroke-adjacent render.
     staleTime: 60_000,
@@ -203,6 +209,24 @@ async function readOptions(
       return data.data.map((project) => ({
         value: project.id,
         label: project.name,
+      }));
+    }
+    case "product": {
+      // Archived products stay named, so a view saved against one still reads.
+      const data = unwrap(
+        await api.GET("/products", {
+          params: {
+            query: {
+              limit: PROJECT_LIMIT,
+              sort: "name",
+              include_archived: true,
+            },
+          },
+        }),
+      );
+      return data.data.map((product) => ({
+        value: product.id,
+        label: product.name,
       }));
     }
     default:

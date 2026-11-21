@@ -337,7 +337,7 @@ export function JurisdictionField({
       label={t("legalEntities.jurisdiction")}
       hint={t("legalEntities.jurisdictionHint")}
       required
-      error={error}
+      error={query.isError ? t("common.error") : error}
     >
       {(control) => (
         <Select

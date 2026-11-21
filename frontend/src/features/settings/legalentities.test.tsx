@@ -176,6 +176,21 @@ it("shows an admin a further entity that names no jurisdiction, and not the defa
   expect(within(vienna).getByText("AT")).toBeInTheDocument();
 });
 
+it("flags a jurisdiction the build offers no pack for, as a copied address country can be", async () => {
+  vi.stubGlobal(
+    "fetch",
+    backend(READER, [
+      ...DEFAULT_ONLY,
+      entity("le-paris", { display_name: "Acme Paris", jurisdiction: "fr" }),
+    ]),
+  );
+  render(<LegalEntitiesCard />);
+  const paris = await screen.findByTestId("legal-entity-le-paris");
+  expect(
+    await within(paris).findByText(en["legalEntities.jurisdictionMissing"]),
+  ).toBeInTheDocument();
+});
+
 it("lists each entity's jurisdiction beside its country, the default's being the installation's", async () => {
   vi.stubGlobal(
     "fetch",

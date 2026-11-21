@@ -17,7 +17,7 @@ import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entryDepth } from "../lib/historydepth";
-import { problemMessageOf } from "../lib/problem";
+import { problemMessageOf, problemStatus } from "../lib/problem";
 import {
   navigate,
   type Route,
@@ -346,14 +346,34 @@ export function ListTable<Row>({
   // Neither state replaces the surface. The header, the dials and the primary
   // action belong to the screen rather than to the response. So they stay put,
   // and only the body reports what happened.
+  // A 422 refuses the list's own dials, a sort or filter from an old link or
+  // saved view. A retry asks the same thing again; clearing them does not.
+  const refusedDials = isError && problemStatus(error) === 422;
+  const clearDials = () => {
+    committed.current = "";
+    typed.current = "";
+    setLocalSearch("");
+    setQuery((prev) => ({
+      ...prev,
+      q: "",
+      sort: state.initialSort ?? "",
+      filters: { ...state.initialFilters },
+    }));
+  };
   const problem = isError ? (
     <>
-      <p>{t("common.error")}</p>
+      <p>{t(refusedDials ? "table.dialsRefused" : "common.error")}</p>
       {/* ds:ignore the cause under a headline with its own Retry, a composite */}
       <p className="listquery-cause">{problemMessageOf(error, t)}</p>
-      <Button className="listquery-retry" onClick={() => refetch()}>
-        {t("common.retry")}
-      </Button>
+      {refusedDials ? (
+        <Button className="listquery-retry" onClick={clearDials}>
+          {t("table.clearFilters")}
+        </Button>
+      ) : (
+        <Button className="listquery-retry" onClick={() => refetch()}>
+          {t("common.retry")}
+        </Button>
+      )}
     </>
   ) : undefined;
 

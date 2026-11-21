@@ -74,7 +74,7 @@ func (f entityFloorFixture) member(ctx context.Context, t *testing.T, country ju
 	}
 	entity := ids.NewV7()
 	mustExec(ctx, t, f.tx, `INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
-		VALUES ($1, $2, 'Further Entity GmbH', $3, $3, 'system:test')`, entity, "Further "+entity.String(), string(country))
+		VALUES ($1, $2, 'Further Entity GmbH', 'zz', $3, 'system:test')`, entity, "Further "+entity.String(), string(country))
 	mustExec(ctx, t, f.tx, `INSERT INTO legal_entity_member (user_id, legal_entity_id, assigned_by) VALUES ($1, $2, 'system:test')`,
 		user, entity)
 	return user

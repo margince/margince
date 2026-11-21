@@ -75,7 +75,12 @@ export function LegalEntitiesCard() {
           fold
           label={t("legalEntities.title")}
           columns={entityColumns(
-            { t, locale, installationLaw: installation.data?.selected ?? null },
+            {
+              t,
+              locale,
+              installationLaw: installation.data?.selected ?? null,
+              offered: installation.data?.available.map((unit) => unit.code),
+            },
             { ...verbs, onEdit: setEditing, onArchive: setArchiving },
           )}
           rows={entities}
@@ -113,16 +118,20 @@ type LawContext = Readonly<{
   locale: Locale;
   // The installation's jurisdiction, which the default entity follows.
   installationLaw: string | null;
+  // The packs this build offers; undefined until they load.
+  offered: readonly string[] | undefined;
 }>;
 
 // A further entity with no jurisdiction sends under the installation's, which
 // may be the wrong law for it. The list shows an admin the gap.
 function jurisdictionCell(
   entity: LegalEntity,
-  { t, locale, installationLaw }: LawContext,
+  { t, locale, installationLaw, offered }: LawContext,
 ) {
+  if (!offered) return null;
   const law = entity.is_default ? installationLaw : entity.jurisdiction;
-  if (law) return jurisdictionName(law, locale);
+  // A copied address country that no pack covers is flagged, not named.
+  if (law && offered.includes(law)) return jurisdictionName(law, locale);
   if (entity.is_default) return t("jurisdiction.entities.none");
   return <Badge tone="warning">{t("legalEntities.jurisdictionMissing")}</Badge>;
 }

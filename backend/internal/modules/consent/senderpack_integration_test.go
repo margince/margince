@@ -11,6 +11,7 @@ package consent
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -81,7 +82,7 @@ func TestTheWarningCanBeConfirmedForAStricterEntityThanTheDefault(t *testing.T) 
 	branch := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', $2, $2, 'human:x')`, branch, string(p.recipient)); err != nil {
+		VALUES ($1, 'Branch', 'Branch Ltd', 'zz', $2, 'human:x')`, branch, string(p.recipient)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `
@@ -125,5 +126,34 @@ func TestTransmitJudgesUnderTheSenderCountryStagingRecorded(t *testing.T) {
 	}
 	if len(countries) != 1 || countries[0].Sender != "de" {
 		t.Errorf("transmit judged under sender %+v, want the staged de", countries)
+	}
+}
+
+// TestTheLawsInForceAreTheEntitiesJurisdictionsNotTheirAddresses: a further
+// entity registered at an address no pack covers still puts its jurisdiction's
+// pack in force for the particulars.
+func TestTheLawsInForceAreTheEntitiesJurisdictionsNotTheirAddresses(t *testing.T) {
+	p := registerPackPair(t)
+	e := setupResolve(t)
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'zz', $2, 'human:x')`, ids.NewV7(), string(p.recipient)); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := e.owner.Begin(e.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil {
+			t.Error(err)
+		}
+	}()
+	codes, err := e.store.countriesInForceTx(e.ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(codes, p.recipient) || slices.Contains(codes, "zz") {
+		t.Errorf("laws in force = %v, want the branch's jurisdiction %q and not its address country", codes, p.recipient)
 	}
 }

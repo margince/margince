@@ -70,7 +70,7 @@ func TestACreateWithoutAJurisdictionTakesTheCountry(t *testing.T) {
 func TestTheFloorCarryFollowsTheJurisdictionNotTheAddress(t *testing.T) {
 	t.Parallel()
 	entity := func(country, law string) LegalEntity {
-		return LegalEntity{EntityIdentity: EntityIdentity{Country: &country, Jurisdiction: &law}}
+		return LegalEntity{Country: &country, Jurisdiction: &law}
 	}
 	var carried []EntityJurisdiction
 	s := (&Store{}).WithFloorCarry(func(_ context.Context, _ pgx.Tx, from, to EntityJurisdiction) error {
