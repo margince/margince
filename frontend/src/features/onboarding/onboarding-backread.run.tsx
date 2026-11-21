@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { RunCourseNote } from "../../components/runcoursenote";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -68,6 +69,7 @@ export function BackreadRun({
         </Heading>
       )}
       {live && <BackreadProgress run={run} />}
+      <RunCourseNote run={run} />
       <BackreadTallies counts={run.counts} />
       <BackreadOutcome run={run} />
       {cancelProblem !== null && (

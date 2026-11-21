@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/backfillwire"
 	"github.com/margince/margince/backend/internal/compose/costestimate"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -430,8 +431,7 @@ func backfillStatusPayload(run *capture.BackfillRun) crmcontracts.BackfillStatus
 		ContactsCreated: &run.Contacts, CompaniesCreated: &run.Companies,
 	}
 	st.LastErrorClass = run.ErrorClass
-	resumable := run.Resumable
-	st.Resumable = &resumable
+	backfillwire.Course(&st, run)
 	return st
 }
 
