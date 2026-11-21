@@ -22,7 +22,12 @@ const page = { next_cursor: null, has_more: false };
 
 function task(
   id: string,
-  overrides: Partial<{ due_at: string | null; overdue: boolean }> = {},
+  overrides: Partial<{
+    due_at: string | null;
+    overdue: boolean;
+    due_has_time: boolean;
+    due_intent: { wall_clock: string; timezone: string };
+  }> = {},
 ) {
   return {
     activity_id: id,
