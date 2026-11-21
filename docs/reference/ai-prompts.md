@@ -4644,18 +4644,19 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `enrich` / `signature`
 
-`system 2,410 B (~602 tok)`: rules 2,136 B · boundary 274 B · after boundary 0 B · **cacheable 88%**
+`system 2,555 B (~638 tok)`: rules 2,281 B · boundary 274 B · after boundary 0 B · **cacheable 89%**
 
 <details><summary>system prompt</summary>
 
 ```
 You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone,
-linkedin, company_name, address, website. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
+linkedin, company_name, address, website, email. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
 disclaimers, and marketing taglines. Phone numbers verbatim, never normalized. A signature
 often lists several numbers (desk, mobile, one per country): emit one phone entry for EVERY
 number, each with its own snippet; never merge them and never keep only one.
-Emit address as the single line the signature prints it on. Emit website only for the
+Emit address as the single line the signature prints it on. Emit one email entry for every
+email address the signature lists as the contact's own; never an address of a colleague, a team or a desk. Emit website only for the
 company's own site; a social profile is never a website, and linkedin carries that one.
 The signature must be THE NAMED CONTACT'S OWN. A block naming somebody else — a colleague,
 a forwarded sender, a correspondent quoted underneath — states nothing about them, so emit
@@ -4695,14 +4696,15 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "string"
           },
           "field": {
-            "description": "phone once per number the signature lists; every other field at most once",
+            "description": "phone once per number and email once per address the signature lists; every other field at most once",
             "enum": [
               "title",
               "phone",
               "linkedin",
               "company_name",
               "address",
-              "website"
+              "website",
+              "email"
             ],
             "type": "string"
           },
