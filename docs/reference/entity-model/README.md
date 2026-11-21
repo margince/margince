@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 358 |
-| Columns | 4457 |
+| Columns | 4431 |
 | Foreign keys | 622 |
 | Owning areas | 40 |
 
@@ -166,10 +166,10 @@ erDiagram
 | [`agent_run`](agents.md#agent_run) | agents | 17 | 1 |
 | [`agent_standing_grant`](agents.md#agent_standing_grant) | agents | 8 | 0 |
 | [`agent_task`](compose.md#agent_task) | compose | 14 | 0 |
-| [`ai_call`](ai.md#ai_call) | ai | 40 | 1 |
+| [`ai_call`](ai.md#ai_call) | ai | 32 | 1 |
 | [`ai_call_config`](ai.md#ai_call_config) | ai | 6 | 1 |
 | [`ai_call_payload`](ai.md#ai_call_payload) | ai | 5 | 0 |
-| [`ai_feedback`](ai.md#ai_feedback) | ai | 15 | 0 |
+| [`ai_feedback`](ai.md#ai_feedback) | ai | 14 | 0 |
 | [`ai_model_rate`](ai.md#ai_model_rate) | ai | 16 | 0 |
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 22 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 7 | 0 |
@@ -178,14 +178,14 @@ erDiagram
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
-| [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
-| [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 18 | 0 |
-| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 22 | 3 |
-| [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 6 | 0 |
+| [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 4 | 1 |
+| [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 13 | 0 |
+| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 20 | 3 |
+| [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 4 | 0 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
-| [`assurance_run`](assurance.md#assurance_run) | assurance | 17 | 3 |
-| [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 4 | 0 |
-| [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 8 | 0 |
+| [`assurance_run`](assurance.md#assurance_run) | assurance | 14 | 3 |
+| [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 3 | 0 |
+| [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 6 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 12 | 0 |
 | [`attachment`](activities.md#attachment) | activities | 28 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |

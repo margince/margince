@@ -500,7 +500,7 @@ func oneFinishedInputCheck(ctx context.Context, t *testing.T, e *Env) {
 	store := assurance.NewStore(compose.InstallationDB(e.Pool))
 	asOf := time.Now().UTC()
 	if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		run, err := store.StartRun(ctx, tx, asOf, nil)
+		run, err := store.StartRun(ctx, tx, asOf)
 		if err != nil {
 			return err
 		}

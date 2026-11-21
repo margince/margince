@@ -38,7 +38,7 @@ func answerTrace(answer decision.Answer) *DecisionAnswer {
 func (r *Router) newDecisionTrace(ctx context.Context, task Task, lane routeMeta) Call {
 	trace := Call{
 		Task: task, Kind: callKindDecision, Tier: TierDecideLane,
-		Provider: lane.provider, ModelID: lane.model, CacheOff: r.cacheOff,
+		Provider: lane.provider, ModelID: lane.model,
 	}
 	withAmbientIdentity(ctx, &trace)
 	return trace

@@ -127,10 +127,10 @@ func (e *rateEnv) insertCall(ctx context.Context, t *testing.T, c callFixture) {
 	// wants a single-attempt logical call mints its own id, the same as a
 	// pre-0100 row backfilled to logical_call_id = id.
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint,
+		INSERT INTO ai_call (task, tier, provider, model_id,
 		  tokens_in, tokens_out, cached_tokens, cache_write_tokens, cache_hit, occurred_at, logical_call_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-		string(c.task), string(c.tier), c.provider, c.model, "fp-"+ids.NewV7().String(),
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		string(c.task), string(c.tier), c.provider, c.model,
 		c.tokensIn, c.tokensOut, c.cachedTokens, c.cacheWriteTokens, c.cacheHit, c.occurredAt, ids.NewV7()); err != nil {
 		t.Fatalf("insert call %+v: %v", c, err)
 	}

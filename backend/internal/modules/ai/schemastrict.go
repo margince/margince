@@ -3,11 +3,7 @@
 
 package ai
 
-import (
-	"encoding/json"
-
-	"github.com/margince/margince/backend/internal/shared/ports/model"
-)
+import "encoding/json"
 
 // schemaNode is a decoded JSON Schema object — the only shape this walk
 // recurses into. Named rather than spelled inline so the recursion reads as
@@ -32,18 +28,6 @@ var strictKeywords = map[string]bool{
 	kwType: true, kwProperties: true, "required": true, kwAdditionalProperties: true,
 	kwItems: true, kwAnyOf: true, "enum": true, "const": true,
 	kwDescription: true, "title": true,
-}
-
-// strictDowngrade is the downgrade an OpenAI-wire request goes under: a
-// schema schemaAllowsStrict refuses is still sent, with strict false, which
-// leaves enforcing it to the endpoint — model.SchemaUnenforced.
-// The openai and openai_compatible wires both report it from this predicate,
-// which is the one that decides the flag they send.
-func strictDowngrade(raw json.RawMessage) string {
-	if len(raw) == 0 || schemaAllowsStrict(raw) {
-		return ""
-	}
-	return model.SchemaUnenforced
 }
 
 // schemaAllowsStrict reports whether a response schema already satisfies the

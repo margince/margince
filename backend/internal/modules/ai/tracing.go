@@ -70,18 +70,15 @@ func servedIdentity(provider, configuredModel, respServedModel string) (servedMo
 	return respServedModel, source
 }
 
-// newAttemptTrace opens the ai_call row for one completion attempt with
-// everything known before the route is walked: the request-level identity
-// (task, fingerprint, company-context binding), the ambient correlation and
-// agent-run ids the trace is joined on, and the reason this attempt exists.
-// ContextScopes is copied because the trace outlives the caller's request
-// and must record the scopes as they were at attempt time.
-func (r *Router) newAttemptTrace(ctx context.Context, task Task, key, reason string, req model.Request) Call {
+// newAttemptTrace opens the ai_call row for one completion attempt with what
+// is known before the route is walked. ContextScopes is copied because the
+// trace outlives the caller's request.
+func newAttemptTrace(ctx context.Context, task Task, reason string, req model.Request) Call {
 	trace := Call{
-		Task: task, Kind: callKindCompletion, RequestFingerprint: key,
+		Task: task, Kind: callKindCompletion,
 		ContextScopes: append([]string(nil), req.ContextScopes...), ContextFingerprint: req.ContextFingerprint,
 		ContextBytes: req.ContextBytes, ContextTokensEstimate: req.ContextTokensEstimate,
-		AttemptReason: reason, CacheOff: r.cacheOff,
+		AttemptReason: reason,
 	}
 	withAmbientIdentity(ctx, &trace)
 	return trace
@@ -119,7 +116,6 @@ func (r *Router) finalizeAttempt(ctx context.Context, b *binding, lc *logicalCal
 	// means no broker named an upstream, and substituting the configured
 	// provider would turn "nobody told us" into a claim about who served.
 	trace.ServedProvider, trace.FinishReason = resp.ServedProvider, finishReasonFor(resp.FinishReason, callErr)
-	trace.SchemaDowngrade = schemaDowngradeFor(resp.SchemaDowngrade, callErr)
 	// Payload capture is best-effort and, like the trace write itself, must
 	// not become a new way for a working model call to fail (contrast the
 	// meter, which fails loudly to protect the budget guardrail). flush()
@@ -375,11 +371,9 @@ func (r *Router) meterWithheld(ctx context.Context, task Task, tier Tier, callEr
 	return nil
 }
 
-// traceForFailedRung builds the non-terminal Call for a ladder rung the
-// walk moved past — cloning base's request-level fields (task,
-// correlation, fingerprint, cache-off, and the reason this rung ran) and
-// filling in this rung's own tier, provider/model, latency-so-far, and error
-// sentinel.
+// traceForFailedRung builds the non-terminal Call for a ladder rung the walk
+// moved past. It keeps base's request-level fields and fills in this rung's
+// own tier, route, latency so far and error sentinel.
 func (r *Router) traceForFailedRung(ctx context.Context, b *binding, base Call, t Tier, callErr error, start time.Time) Call {
 	c := base
 	c.Tier = t
@@ -395,41 +389,13 @@ func (r *Router) traceForFailedRung(ctx context.Context, b *binding, base Call, 
 	// to the next rung. There is no Response on this path at all: the rung
 	// failed, so the reason can only have come from the error.
 	c.FinishReason = finishReasonFor("", callErr)
-	c.SchemaDowngrade = schemaDowngradeFor("", callErr)
 	return c
 }
 
-// schemaDowngradeFor is finishReasonFor's rule for the schema downgrade: what
-// the Response reported, else what a failed call's error carries
-// (reportSchemaDowngrade), else "" — the schema went as written, or there was
-// none. One function because both trace writers record it.
-func schemaDowngradeFor(reported string, callErr error) string {
-	if reported != "" {
-		return reported
-	}
-	var downgraded interface{ SchemaDowngrade() string }
-	if errors.As(callErr, &downgraded) {
-		return downgraded.SchemaDowngrade()
-	}
-	return ""
-}
-
-// finishReasonFor derives the terminal for one stored attempt, and is the ONE
-// place it is derived because both writers above record one — a finalized
-// attempt and a rung the walk fell back from — and two derivations of the
-// same field would drift.
-//
-// `reported` is what the Response said, and it wins whenever it is set: a
-// provider that stated its terminal outranks anything inferred from an error
-// value, and it is how a truncation arrives: a cut-off reply is a Response
-// carrying model.FinishReasonLength on every wire, never a failure. A failed
-// attempt has no Response to read, so a withholding terminal arrives on the
-// error instead (withheldError, truncatedError).
-//
-// Without this the stored row is blank on exactly the calls finish_reason
-// exists to describe: SAFETY and RECITATION both classify to the single
-// `provider_error` sentinel and are separable only by this field, though they
-// call for different responses.
+// finishReasonFor derives the terminal for one traced attempt, in one place
+// for both writers above. What the Response reported wins. A failed attempt
+// has no Response, so a withholding terminal arrives on its error instead.
+// SAFETY and RECITATION share one sentinel and are told apart only by this.
 func finishReasonFor(reported string, callErr error) string {
 	if reported != "" {
 		return reported
