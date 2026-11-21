@@ -139,10 +139,14 @@ func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, an
 			configured, err := m.mailAppConfigured(ctx, mailbox.Provider)
 			return configured && slices.Contains(mailbox.ProviderScopes, scope), err
 		})
-	if errors.Is(err, capture.ErrNoConnection) {
+	switch {
+	case errors.Is(err, capture.ErrNoConnection):
 		return "", ids.Nil, &activities.MailboxNotConnectedError{}
+	case err != nil:
+		// A lookup fault names no mailbox, even one it reached before failing.
+		return "", ids.Nil, err
 	}
-	return chosen.Provider, chosen.ID, err
+	return chosen.Provider, chosen.ID, nil
 }
 
 func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (bool, error) {
