@@ -93,13 +93,6 @@ func (e *Engine) Activate(ctx context.Context, taskID, stepName string, version 
 }
 
 func (e *Engine) replaceManualRun(ctx context.Context, tx pgx.Tx, task Task, step Step, p Progress, activation Activation) error {
-	if p.Activation != nil {
-		if _, err := tx.Exec(ctx, `INSERT INTO data_task_run_history(run_id,task_id,step,progress,preserved_at)
- SELECT run_id,task_id,step,to_jsonb(data_task_run),@now FROM data_task_run
- WHERE task_id=@task AND step=@step`, pgx.NamedArgs{paramNow: e.now(), paramTask: task.ID, paramStep: step.Name}); err != nil {
-			return err
-		}
-	}
 	runID := ids.NewV7()
 	_, err := tx.Exec(ctx, `UPDATE data_task_run SET run_id=@run,task_version=@revision,status='pending',
  cursor=NULL,batch_limit=@limit,scanned=0,changed=0,batches=0,estimate=NULL,estimate_capped=false,

@@ -72,7 +72,6 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 		calendar: utcDay,
 		why:      "the provider window's lower bound, handed to Graph and Gmail as a UTC instant; it is a fetch boundary, never a business day",
 	},
-	"capture_digest.digest_date":           {calendar: installationDay},
 	"close_date_run.as_of":                 {calendar: installationDay},
 	"contract.cancellation_effective_on":   {calendar: installationDay},
 	"contract.cancellation_notice_on":      {calendar: installationDay},

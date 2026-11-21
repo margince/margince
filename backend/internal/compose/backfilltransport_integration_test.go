@@ -183,8 +183,7 @@ func setupBackfillWire(t *testing.T) *backfillWireEnv {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory()).
-		WithDigestProjects(digestProjectsSource)
+	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory())
 	gm := &backfillFakeConnector{name: "gmail", messages: 25, pageSize: 10}
 	registry.Register(gm)
 	registry.Register(plainSyncConnector{name: "graph"})
@@ -462,9 +461,6 @@ func assertUnwiredAndAnonymousOpsAreRefused(t *testing.T, b *backfillWireEnv) {
 			},
 			"cancel": func(w http.ResponseWriter, r *http.Request) {
 				unwired.CancelConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.CancelConnectorBackfillParams{})
-			},
-			"digest": func(w http.ResponseWriter, r *http.Request) {
-				unwired.GetMorningDigest(w, r, crmcontracts.GetMorningDigestParams{})
 			},
 		} {
 			if code, _ := b.do(b.human, t, invoke, "", nil); code != http.StatusNotImplemented {

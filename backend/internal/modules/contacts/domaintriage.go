@@ -183,9 +183,6 @@ func recordPendingDispositionTx(
 	if err != nil {
 		return false, fmt.Errorf("contacts: opening the disposition question for %s: %w", domain, err)
 	}
-	if err := recordDomainQuestionReader(ctx, tx, domain, ownerID, evidenceAt); err != nil {
-		return false, err
-	}
 	return tag.RowsAffected() > 0, nil
 }
 

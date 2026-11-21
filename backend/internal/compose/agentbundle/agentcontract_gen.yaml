@@ -32,6 +32,9 @@ info:
     GET /v1/deals/{id}/viability:
       release: ""
       announced_at: ""
+    GET /v1/digest:
+      release: ""
+      announced_at: ""
     GET /v1/forecast/assurance/enforcement:
       release: ""
       announced_at: ""

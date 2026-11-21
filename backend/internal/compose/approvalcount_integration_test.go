@@ -63,8 +63,4 @@ func TestHomeAndDigestApprovalCountsAreExactPastTheScanCap(t *testing.T) {
 	if rows, complete, err := (attentionApprovals{svc: svc}).ListWire(e.Admin(), lanePage); err != nil || complete || len(rows) != 9 {
 		t.Fatalf("a lane page of 9 from %d proposals is %d rows, complete %v (%v); want 9 and incomplete", paged, len(rows), complete, err)
 	}
-	digest, err := newDigestReviewSource(e.Pool, svc)(e.Admin())
-	if err != nil || digest.ApprovalsPending != paged {
-		t.Fatalf("digest count %d, pages hold %d: %v", digest.ApprovalsPending, paged, err)
-	}
 }
