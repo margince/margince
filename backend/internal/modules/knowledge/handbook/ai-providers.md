@@ -220,7 +220,7 @@ The same users who may change a provider may change these.
 
   A task that runs in the background has 300 seconds by default.
   A task you wait on has a shorter default, set from how long its slowest tested model took. The sheet shows it.
-  It applies only when every tier of the task uses a cloud model that was tested for it. A local model keeps 300 seconds.
+  It applies only when every tier of the task uses a model that was tested for it. A local model keeps 300 seconds.
   All the calls of one answer to a task you wait on also stop after twice the timeout.
 
 **Save settings** applies to the whole installation within a minute. **Reset to defaults** removes the task's own values.

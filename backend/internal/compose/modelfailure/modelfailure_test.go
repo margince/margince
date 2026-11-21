@@ -178,7 +178,7 @@ func TestABudgetStopIsAnsweredAsTheAllowanceUsedUp(t *testing.T) {
 }
 
 // A walk that spent its bound left the reader with no draft, as an exhausted
-// ladder does, so it reaches the same 503 and not a 500 or a gateway timeout.
+// ladder does. So it reaches the same 503, not a 500 or a gateway timeout.
 func TestASpentWalkBoundAnswersAssistantUnavailable(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()

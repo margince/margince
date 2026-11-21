@@ -660,8 +660,8 @@ func TestADecisionTaskMustShipAndRunInTheBackground(t *testing.T) {
 	}
 }
 
-// Only a task a user waits on is held to a limit from certified latency, so
-// only one may say its latency scales with input; the emitted table lists it.
+// Only a task a user waits on is held to a limit from certified latency. So
+// only such a task may say its latency scales with input, and the table lists it.
 func TestOnlyAWaitedTaskMayDeclareLatencyThatScalesWithInput(t *testing.T) {
 	background := "execution_mode: background\n    status: shipped\n    subject_restriction: honour\n    latency_scales_with_input: true"
 	if _, err := parseContract([]byte(contractWith(background))); err == nil || !strings.Contains(err.Error(), "latency_scales_with_input") {

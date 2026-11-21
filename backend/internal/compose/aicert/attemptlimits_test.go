@@ -151,7 +151,11 @@ func TestTheLaneMeasuresAWaitedTaskWithoutItsLimit(t *testing.T) {
 	scenario := testScenario("basic", wideBands)
 	scenario.Task = string(row.Task)
 	candidate := &deadlineSpy{FakeClient: ai.NewFakeClient().Script("the widget is blue")}
-	before := time.Now()
+	// A deadline set before the run, a second short of the ceiling: any try sent
+	// at the ceiling ends after it, and one held to the row's limit before it.
+	reference, cancel := context.WithTimeout(context.Background(), ai.CallCeiling-time.Second)
+	defer cancel()
+	referenceDeadline, _ := reference.Deadline()
 	_, err = certifyTask(wsContext(t), row.Task, []Scenario{scenario}, censusOfSites(t, site),
 		ai.ProviderConfig{Provider: row.Slowest.Provider, Model: row.Slowest.Model}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
 		ai.ProfileCloudFrontier, 1, quietLogger(),
@@ -162,9 +166,8 @@ func TestTheLaneMeasuresAWaitedTaskWithoutItsLimit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
-	// Measured from before the run, so a slow machine only makes the margin larger.
-	if len(candidate.deadlines) == 0 || candidate.deadlines[0].Sub(before) < ai.CallCeiling {
-		t.Fatalf("%s on %s was sent deadlines %v after %s, want the %s ceiling over its %s limit",
-			row.Task, row.Slowest.Model, candidate.deadlines, before, ai.CallCeiling, row.Limit)
+	if len(candidate.deadlines) == 0 || !candidate.deadlines[0].After(referenceDeadline) {
+		t.Fatalf("%s on %s was sent deadlines %v, want the %s ceiling over its %s limit",
+			row.Task, row.Slowest.Model, candidate.deadlines, ai.CallCeiling, row.Limit)
 	}
 }

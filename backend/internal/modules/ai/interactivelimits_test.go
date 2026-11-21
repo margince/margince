@@ -22,12 +22,12 @@ var (
 	walkRungs = []boundModel{{provider: "openai", model: string(TierCheapCloud)}, {provider: "openai", model: string(TierPremium)}}
 )
 
-// withLimits swaps the generated table for one row, so a test reads the rule
+// withLimits swaps the generated table for one cold_start row, so a test reads the rule
 // rather than today's records. These tests never run in parallel.
-func withLimits(t *testing.T, task Task, limit time.Duration, measured ...boundModel) {
+func withLimits(t *testing.T, limit time.Duration, measured ...boundModel) {
 	t.Helper()
 	was := certifiedAttemptTimeouts
-	certifiedAttemptTimeouts = map[Task]certifiedLimit{task: {limit: limit, measured: measured}}
+	certifiedAttemptTimeouts = map[Task]certifiedLimit{TaskColdStart: {limit: limit, measured: measured}}
 	t.Cleanup(func() { certifiedAttemptTimeouts = was })
 }
 
@@ -45,7 +45,7 @@ func TestTheInteractiveLimitIsHalfAgainTheP95WithinTheFloorAndTheCap(t *testing.
 }
 
 func TestOnlyAWalkOfMeasuredCloudModelsGetsTheLimit(t *testing.T) {
-	withLimits(t, TaskColdStart, time.Minute, cloudRung, boundModel{provider: providerOllama, model: "listed"})
+	withLimits(t, time.Minute, cloudRung, boundModel{provider: providerOllama, model: "listed"})
 	today := EffectiveTask{DecisionTimeout: DecisionCallTimeout, AttemptTimeout: CallCeiling}
 	cases := map[string]struct {
 		rungs []boundModel
@@ -61,14 +61,14 @@ func TestOnlyAWalkOfMeasuredCloudModelsGetsTheLimit(t *testing.T) {
 			t.Errorf("%s: %+v, want %+v", name, got, c.want)
 		}
 	}
-	withLimits(t, TaskColdStart, 200*time.Second, cloudRung)
+	withLimits(t, 200*time.Second, cloudRung)
 	if got := TaskDefaults(TaskColdStart, []boundModel{cloudRung}).WalkTimeout; got != CallCeiling {
 		t.Errorf("a 200 s limit bounds the walk at %s, want the %s cap", got, CallCeiling)
 	}
 }
 
 func TestATaskNoRowCoversKeepsTodaysDefaults(t *testing.T) {
-	withLimits(t, TaskColdStart, time.Minute, cloudRung)
+	withLimits(t, time.Minute, cloudRung)
 	want := EffectiveTask{AttemptTimeout: CallCeiling, DecisionTimeout: DecisionCallTimeout}
 	for _, task := range []Task{TaskTranscript, TaskAccountScan} {
 		if got := TaskDefaults(task, []boundModel{cloudRung}); got != want {
@@ -78,7 +78,7 @@ func TestATaskNoRowCoversKeepsTodaysDefaults(t *testing.T) {
 }
 
 func TestTheAdminOverrideWinsAndTheWalkBoundFollowsItUncapped(t *testing.T) {
-	withLimits(t, TaskColdStart, time.Minute, cloudRung)
+	withLimits(t, time.Minute, cloudRung)
 	measured := []boundModel{cloudRung}
 	cases := map[string]struct {
 		override TaskOverrides
@@ -158,7 +158,7 @@ type walkResult struct {
 
 // slowWalk drives one structured call of task whose every answer the validator
 // refuses, on a router whose rungs reach walkRungs.
-func slowWalk(t *testing.T, task Task, overrides TaskOverrides, clients map[Tier]slowClient) walkResult {
+func slowWalk(t *testing.T, task Task, clients map[Tier]slowClient) walkResult {
 	t.Helper()
 	clock := &fakeClock{at: time.Unix(0, 0)}
 	calls := 0
@@ -174,7 +174,6 @@ func slowWalk(t *testing.T, task Task, overrides TaskOverrides, clients map[Tier
 		return context.WithCancel(context.WithValue(ctx, tryTimeoutKey{}, d))
 	}
 	r.cacheOff = true
-	r.SetTaskOverrides(overrides)
 	_, _, err := r.CompleteStructured(wsCtx(), task, model.Request{}, func(string) error { return errors.New("refused") })
 	if err == nil {
 		t.Fatalf("%s: a walk the validator never accepts returned no error", task)
@@ -193,8 +192,8 @@ var hungThenRefused = map[Tier]slowClient{
 }
 
 func TestTheWalkBoundStopsASlowInteractiveCallAsAnUnansweredWalk(t *testing.T) {
-	withLimits(t, TaskColdStart, 89*time.Second, walkRungs...)
-	got := slowWalk(t, TaskColdStart, nil, hungThenRefused)
+	withLimits(t, 89*time.Second, walkRungs...)
+	got := slowWalk(t, TaskColdStart, hungThenRefused)
 	if got.tries != 3 || got.waited != 178*time.Second {
 		t.Fatalf("cold_start made %d tries over %s, want 3 over its 2m58s walk bound", got.tries, got.waited)
 	}
@@ -209,13 +208,13 @@ func TestTheWalkBoundStopsASlowInteractiveCallAsAnUnansweredWalk(t *testing.T) {
 // A refused answer that lands as the bound runs out leaves no further walk, and
 // the call ends as the refusal: the model did answer.
 func TestARefusedAnswerThatSpendsTheBoundEndsAsARefusal(t *testing.T) {
-	withLimits(t, TaskColdStart, time.Minute, walkRungs...)
+	withLimits(t, time.Minute, walkRungs...)
 	refused := slowClient{takes: time.Minute, text: "not the schema"}
 	for name, clients := range map[string]map[Tier]slowClient{
 		"after the first walk": {TierCheapCloud: {takes: time.Hour}, TierPremium: refused},
 		"after the retry":      {TierPremium: refused},
 	} {
-		got := slowWalk(t, TaskColdStart, nil, clients)
+		got := slowWalk(t, TaskColdStart, clients)
 		if got.tries != 2 || got.waited != 2*time.Minute {
 			t.Errorf("%s: %d tries over %s, want 2 over the 2m0s walk bound", name, got.tries, got.waited)
 		}
@@ -230,12 +229,12 @@ func TestARefusedAnswerThatSpendsTheBoundEndsAsARefusal(t *testing.T) {
 
 // A try needs at least the floor; with less left of the bound none starts.
 func TestNoTryStartsOnLessThanTheFloor(t *testing.T) {
-	withLimits(t, TaskColdStart, time.Minute, walkRungs...)
+	withLimits(t, time.Minute, walkRungs...)
 	clients := map[Tier]slowClient{
 		TierCheapCloud: {takes: time.Hour},
 		TierPremium:    {takes: 35 * time.Second, text: "not the schema"},
 	}
-	got := slowWalk(t, TaskColdStart, nil, clients)
+	got := slowWalk(t, TaskColdStart, clients)
 	if got.tries != 2 || got.waited != 95*time.Second {
 		t.Fatalf("%d tries over %s, want 2 over 1m35s: 25 s was left, under the %s floor", got.tries, got.waited, InteractiveAttemptFloor)
 	}
@@ -244,9 +243,9 @@ func TestNoTryStartsOnLessThanTheFloor(t *testing.T) {
 // Five tries at today's limits: the walk a background task, a task no row
 // covers, and a walk with an unmeasured rung all still make.
 func TestAnUnboundedWalkMakesEveryTry(t *testing.T) {
-	withLimits(t, TaskColdStart, time.Minute, walkRungs[1])
+	withLimits(t, time.Minute, walkRungs[1])
 	for _, task := range []Task{TaskAccountScan, TaskTranscript, TaskColdStart} {
-		got := slowWalk(t, task, nil, hungThenRefused)
+		got := slowWalk(t, task, hungThenRefused)
 		if want := 2*CallCeiling + 3*30*time.Second; got.tries != 5 || got.waited != want {
 			t.Errorf("%s made %d tries over %s, want 5 over %s", task, got.tries, got.waited, want)
 		}
@@ -255,7 +254,7 @@ func TestAnUnboundedWalkMakesEveryTry(t *testing.T) {
 
 // The bound counts from the first ladder try, so time before it spends none.
 func TestTheWalkBoundStartsAtTheFirstTry(t *testing.T) {
-	withLimits(t, TaskColdStart, time.Minute, walkRungs...)
+	withLimits(t, time.Minute, walkRungs...)
 	clock := &fakeClock{at: time.Unix(0, 0)}
 	r := newTracingRouter(t, stubClient{}, &fakeCallStore{})
 	r.now = func() time.Time { return clock.at }
@@ -271,7 +270,7 @@ func TestTheWalkBoundStartsAtTheFirstTry(t *testing.T) {
 // The call page reads each try's limit and the walk bound off the snapshot.
 func TestTheSnapshotRecordsTheTryLimitAndTheWalkBound(t *testing.T) {
 	// twoRungRouter's cheap_cloud rung reaches openai/gpt-x.
-	withLimits(t, TaskColdStart, time.Minute, boundModel{provider: "openai", model: "gpt-x"})
+	withLimits(t, time.Minute, boundModel{provider: "openai", model: "gpt-x"})
 	fcs := &fakeCallStore{}
 	r := twoRungRouter(t, stubClient{}, stubClient{resp: model.Response{Text: "ok", InputTokens: 1, OutputTokens: 1}}, fcs)
 	lane := ProviderConfig{Provider: providerOpenAICompatible, BaseURL: "https://openrouter.ai/api", Model: "m"}

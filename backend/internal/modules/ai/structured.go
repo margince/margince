@@ -144,8 +144,8 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 }
 
 // stopAfterRefusal is why no walk follows a refused answer. A caller that
-// stopped waiting ends the call on its own error, and the refused answer stays
-// the terminal, so it says why the call ended. A spent walk bound ends it as
+// stopped waiting ends the call on its own error. The refused answer stays the
+// terminal, so it says why the call ended. A spent walk bound ends the call as
 // the last refusal would, because the model did answer.
 func (r *Router) stopAfterRefusal(ctx context.Context, lc *logicalCall, task Task, info RouteInfo, resp model.Response, refusal error) error {
 	if err := ctx.Err(); err != nil {
