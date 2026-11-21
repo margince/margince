@@ -19,9 +19,9 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 70 of 82 | 🟢 Yes | Reliable on 70 of 70 jobs tried. A model of the same family judged its answers. |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 70 of 82 | 🟢 Yes | Reliable on 70 of 70 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 70 of 82 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Tidy up the deal room. |
+| `claude-sonnet-5-5` | Claude Code CLI | 70 of 83 | 🟢 Yes | Reliable on 70 of 70 jobs tried. A model of the same family judged its answers. |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 70 of 83 | 🟢 Yes | Reliable on 70 of 70 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 70 of 83 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Tidy up the deal room. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -117,6 +117,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | The same contact twice | A merge waits for a yes | - | - | - |
 | Move a deal to the service pipeline | A deal moves to another pipeline | - | - | - |
 | Put the offer link on the deal | A link joins the deal's documents | - | - | - |
+| No to the hand-over | A no in the chat changes nothing<br>The no is not routed round | - | - | - |
 
 ---
 
@@ -147,8 +148,8 @@ Everything below is the detail behind the two tables above: which tools each job
 | … **no case requires** | 6 |
 | … of those, permitted somewhere but never required | 2 |
 | Prompt tokens spent on tools no case requires | 5925 |
-| Use cases | 82 |
-| Acceptance criteria the cases declare, each with a statement | 131 |
+| Use cases | 83 |
+| Acceptance criteria the cases declare, each with a statement | 133 |
 
 ## By model
 
@@ -156,15 +157,15 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 70 of 82 | 70 | 0 | 140/141 | 99% |
-| `gemini-4-hydrogen-medium@agy-cli` | 70 of 82 | 70 | 0 | 140/142 | 99% |
-| `gpt-5.6-sol@codex-cli` | 70 of 82 | 69 | 1 | 138/148 | 93% |
+| `claude-sonnet-5-5@claude-cli` | 70 of 83 | 70 | 0 | 140/141 | 99% |
+| `gemini-4-hydrogen-medium@agy-cli` | 70 of 83 | 70 | 0 | 140/142 | 99% |
+| `gpt-5.6-sol@codex-cli` | 70 of 83 | 69 | 1 | 138/148 | 93% |
 
-> `claude-sonnet-5-5@claude-cli` has no committed run for 12 of 82 cases.
+> `claude-sonnet-5-5@claude-cli` has no committed run for 13 of 83 cases.
 
-> `gemini-4-hydrogen-medium@agy-cli` has no committed run for 12 of 82 cases.
+> `gemini-4-hydrogen-medium@agy-cli` has no committed run for 13 of 83 cases.
 
-> `gpt-5.6-sol@codex-cli` has no committed run for 12 of 82 cases.
+> `gpt-5.6-sol@codex-cli` has no committed run for 13 of 83 cases.
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room
 
@@ -280,6 +281,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case128_is_she_here_twice](../../e2e/llm/scenarios/case128-is-she-here-twice.yaml) | - | not run | - | - | **1** A merge waits for a yes | - |
 | [case129_move_it_to_service](../../e2e/llm/scenarios/case129-move-it-to-service.yaml) | - | not run | - | - | **1** A deal moves to another pipeline | `change_state` |
 | [case130_put_the_offer_link_on_the_deal](../../e2e/llm/scenarios/case130-put-the-offer-link-on-the-deal.yaml) | - | not run | - | - | **1** A link joins the deal's documents | `change_activities` |
+| [case131_no_to_the_hand_over](../../e2e/llm/scenarios/case131-no-to-the-hand-over.yaml) | - | not run | - | - | **1** A no in the chat changes nothing<br>**2** The no is not routed round | `bulk_update_records` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
@@ -482,6 +484,8 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case128_is_she_here_twice` | 1 | A merge waits for a yes | The model shows how the two cards differ and asks before it merges or removes either. |
 | `case129_move_it_to_service` | 1 | A deal moves to another pipeline | The model moves the deal into the named pipeline, where it lands on its first open stage. |
 | `case130_put_the_offer_link_on_the_deal` | 1 | A link joins the deal's documents | The model lists the address as a link among the deal's documents. |
+| `case131_no_to_the_hand_over` | 1 | A no in the chat changes nothing | When the user says no in the form the bulk change puts up, the answer says the hand-over did not happen, and no owner changes. |
+| `case131_no_to_the_hand_over` | 2 | The no is not routed round | The model leaves the decision with the user and does not change the owners one record at a time instead. |
 | `case1_log_it` | 8 | Promises come back as suggestions | Only what was actually promised is reported. Listing every topic that was discussed means the reader is reciting what it saw rather than what was committed to. |
 | `case20_put_it_in_the_board_pack` | 1 | Every figure in the document is the database's | The report is composed from a saved analytics run and cites the cells holding its numbers, rather than being written around figures the assistant read once and retyped. |
 | `case20_put_it_in_the_board_pack` | 3 | A refused literal is not a missing capability | Being refused a number written into a block says nothing about whether the product can produce a report, and the assistant must not turn that refusal into a conclusion that it cannot. |
@@ -602,7 +606,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice`, `case109_my_hours_zone_and_language` |
-| `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
+| `bulk_update_records` | 1.00 | 2 | `case131_no_to_the_hand_over`, `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
@@ -642,7 +646,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice`, `case109_my_hours_zone_and_language` |
-| `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
+| `bulk_update_records` | 1.00 | 2 | `case131_no_to_the_hand_over`, `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
@@ -675,7 +679,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice`, `case109_my_hours_zone_and_language` |
-| `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
+| `bulk_update_records` | 1.00 | 2 | `case131_no_to_the_hand_over`, `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
@@ -759,9 +763,9 @@ and the case's pass rate belongs to the set rather than to this row. That is why
 |---|---:|---|---|---|---|
 | `read_analytics` | 1067 | `case62_held_meetings_to_opportunities` | `case20_put_it_in_the_board_pack`, `case49_who_can_introduce_us` | - | - |
 | `list_approvals` | 474 | `case125_what_waits_for_my_approval` | `case117_log_it_and_say_what_waits`, `case122_file_the_acceptance_report`, `case126_file_it_i_approve`, `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - | - |
-| `read_record` | 284 | `case105_what_changed_there`, `case107_tidy_up_the_room`, `case66_what_are_these_two_worth` | `case104_mark_it_seen`, `case108_ask_sofia_for_an_intro`, `case10_finish_the_import`, `case110_write_greta_a_thank_you`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case117_log_it_and_say_what_waits`, `case118_is_the_crane_job_at_risk`, `case120_what_the_pump_customer_wants`, `case121_the_gist_of_the_visit_note`, `case122_file_the_acceptance_report`, `case123_take_over_sofias_deal`, `case124_log_it_with_read_access`, `case125_what_waits_for_my_approval`, `case126_file_it_i_approve`, `case127_log_the_call_again`, `case128_is_she_here_twice`, `case129_move_it_to_service`, `case130_put_the_offer_link_on_the_deal`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case6_ask_the_company`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case99_they_raised_money`, `case9_filed_in_the_wrong_place` | - | `morning_brief`, `overnight_at_risk_sweep` |
+| `read_record` | 284 | `case105_what_changed_there`, `case107_tidy_up_the_room`, `case66_what_are_these_two_worth` | `case104_mark_it_seen`, `case108_ask_sofia_for_an_intro`, `case10_finish_the_import`, `case110_write_greta_a_thank_you`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case117_log_it_and_say_what_waits`, `case118_is_the_crane_job_at_risk`, `case120_what_the_pump_customer_wants`, `case121_the_gist_of_the_visit_note`, `case122_file_the_acceptance_report`, `case123_take_over_sofias_deal`, `case124_log_it_with_read_access`, `case125_what_waits_for_my_approval`, `case126_file_it_i_approve`, `case127_log_the_call_again`, `case128_is_she_here_twice`, `case129_move_it_to_service`, `case130_put_the_offer_link_on_the_deal`, `case131_no_to_the_hand_over`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case6_ask_the_company`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case99_they_raised_money`, `case9_filed_in_the_wrong_place` | - | `morning_brief`, `overnight_at_risk_sweep` |
 | `read_approval` | 154 | `case125_what_waits_for_my_approval` | `case122_file_the_acceptance_report`, `case126_file_it_i_approve`, `case32_two_words_for_one_thing` | - | - |
-| `whoami` | 129 | `case75_sofia_is_leaving` | `case102_shorter_in_my_voice`, `case103_stop_telling_me`, `case104_mark_it_seen`, `case105_what_changed_there`, `case106_turn_that_rule_off`, `case107_tidy_up_the_room`, `case109_my_hours_zone_and_language`, `case110_write_greta_a_thank_you`, `case111_how_is_the_workspace_doing`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case116_the_rate_and_the_logo`, `case117_log_it_and_say_what_waits`, `case123_take_over_sofias_deal`, `case124_log_it_with_read_access`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case62_held_meetings_to_opportunities`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case70_clear_my_notices`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case82_keep_that_newsletter_out`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case91_add_a_review_stage`, `case93_count_that_stage_as_won`, `case94_a_field_for_the_region`, `case97_import_this_card`, `case99_they_raised_money` | - | - |
+| `whoami` | 129 | `case75_sofia_is_leaving` | `case102_shorter_in_my_voice`, `case103_stop_telling_me`, `case104_mark_it_seen`, `case105_what_changed_there`, `case106_turn_that_rule_off`, `case107_tidy_up_the_room`, `case109_my_hours_zone_and_language`, `case110_write_greta_a_thank_you`, `case111_how_is_the_workspace_doing`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case116_the_rate_and_the_logo`, `case117_log_it_and_say_what_waits`, `case123_take_over_sofias_deal`, `case124_log_it_with_read_access`, `case131_no_to_the_hand_over`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case62_held_meetings_to_opportunities`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case70_clear_my_notices`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case82_keep_that_newsletter_out`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case91_add_a_review_stage`, `case93_count_that_stage_as_won`, `case94_a_field_for_the_region`, `case97_import_this_card`, `case99_they_raised_money` | - | - |
 
 ## 4. What no use case requires
 

@@ -75,7 +75,7 @@ judge:
 # among them, and Jens takes her place.
 # The form execute puts up asks for the go-ahead the prompt already gave
 # ("just do it"), so the user answers yes. A host that cannot answer it, such as
-# `claude -p`, sends no for them, and the hand-over never runs.
+# `claude -p`, cancels it, and the hand-over never runs.
 elicitation:
   - "Give a new owner to => accept confirm=true"
 

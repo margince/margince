@@ -8,6 +8,7 @@ import "testing"
 func TestARouteIsNamedForHowTheAssistantWasReached(t *testing.T) {
 	for _, tc := range []struct{ folder, driver, want string }{
 		{"claude-sonnet-5-5@claude-cli", "claude:cli", "Claude Code CLI"},
+		{"claude-sonnet-5-5@claude-sdk", "claude:sdk", "Claude Agent SDK"},
 		{"gpt-5.6-sol@codex-cli", "gpt:cli", "Codex CLI"},
 		{"gemini-4-hydrogen-medium@agy-cli", "gemini:cli", "Antigravity CLI"},
 		{"mistral-medium-3-5", "mistral:openrouter", "neutral harness, via OpenRouter"},

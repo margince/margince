@@ -76,7 +76,7 @@ function elicitationHandler(replies: readonly Reply[], out: TranscriptFile) {
       type: "elicitation",
       server: request.serverName,
       mode: request.mode ?? "form",
-      message: request.message,
+      question: request.message,
       requested_schema: request.requestedSchema ?? null,
       reply: result,
       scripted_by: reply.scriptedBy,
