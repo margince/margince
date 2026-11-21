@@ -15,12 +15,22 @@ import {
   resolveRelative,
 } from "./source-tree.ts";
 
-export function essentialKeys(root: string): ReadonlySet<string> {
-  const src = join(root, "src");
-  const tree = new Map(
-    filesUnder(src).map((file) => [file, readFileSync(file, "utf8")]),
+function sourceTree(root: string): ReadonlyMap<string, string> {
+  return new Map(
+    filesUnder(join(root, "src")).map((file) => [
+      file,
+      readFileSync(file, "utf8"),
+    ]),
   );
-  const modules = initialModules(root, tree);
+}
+
+/** The modules whose copy the essential catalog carries. */
+export function essentialModules(root: string): ReadonlySet<string> {
+  return new Set(initialModules(root, sourceTree(root)).keys());
+}
+
+export function essentialKeys(root: string): ReadonlySet<string> {
+  const modules = initialModules(root, sourceTree(root));
 
   const literals = new Set(
     [...modules.values()].flatMap((module) => module.literals),

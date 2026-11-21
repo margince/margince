@@ -118,17 +118,26 @@ type EffectiveTask struct {
 	Thinking        string
 	DecisionTimeout time.Duration
 	AttemptTimeout  time.Duration
+	// WalkTimeout bounds every try of one logical call together; zero leaves
+	// the walk unbounded.
+	WalkTimeout time.Duration
 }
 
-// TaskDefaults is what a task's calls are sent with when nothing overrides it.
-func TaskDefaults() EffectiveTask {
-	return EffectiveTask{DecisionTimeout: DecisionCallTimeout, AttemptTimeout: CallCeiling}
+// TaskDefaults is what task's calls on rungs are sent with when nothing
+// overrides it. That is the limits its certified models measured
+// (interactiveLimit). Otherwise it is CallCeiling on each try and no walk bound.
+func TaskDefaults(task Task, rungs []boundModel) EffectiveTask {
+	out := EffectiveTask{DecisionTimeout: DecisionCallTimeout, AttemptTimeout: CallCeiling}
+	if limit, ok := interactiveLimit(task, rungs); ok {
+		out.AttemptTimeout, out.WalkTimeout = limit, walkBound(limit)
+	}
+	return out
 }
 
-// Effective is what task's calls are sent with. An override stored for a task
-// the contract no longer declares is ignored (Stale lists it).
-func (v TaskOverrides) Effective(task Task) EffectiveTask {
-	out := TaskDefaults()
+// Effective is what task's calls on rungs are sent with. An override stored for
+// a task the contract no longer declares is ignored (Stale lists it).
+func (v TaskOverrides) Effective(task Task, rungs []boundModel) EffectiveTask {
+	out := TaskDefaults(task, rungs)
 	o := v[task]
 	if _, known := taskLadders[task]; !known {
 		return out
@@ -139,6 +148,11 @@ func (v TaskOverrides) Effective(task Task) EffectiveTask {
 	}
 	if o.AttemptTimeoutMs != 0 {
 		out.AttemptTimeout = time.Duration(o.AttemptTimeoutMs) * time.Millisecond
+		// The bound follows the admin's limit uncapped, so raising the limit
+		// also restores room for a retry.
+		if out.WalkTimeout != 0 {
+			out.WalkTimeout = interactiveWalkTries * out.AttemptTimeout
+		}
 	}
 	return out
 }
@@ -182,18 +196,36 @@ func (r *Router) taskOverrides() TaskOverrides {
 	return TaskOverrides{}
 }
 
-// taskSettings is what task's calls are sent with right now.
+// taskSettings is what task's calls are sent with right now, before a walk
+// names the models it reaches.
 func (r *Router) taskSettings(task Task) EffectiveTask {
-	return r.taskOverrides().Effective(task)
+	return r.settingsFor(r.taskOverrides(), task, nil)
+}
+
+// settingsFor is what task's calls on rungs are sent with under overrides.
+func (r *Router) settingsFor(overrides TaskOverrides, task Task, rungs []boundModel) EffectiveTask {
+	settings := overrides.Effective(task, rungs)
+	if r.unlimited {
+		settings.AttemptTimeout, settings.WalkTimeout = CallCeiling, 0
+	}
+	return settings
 }
 
 // callSettings is what one logical call's task is sent with, read on first use
 // and kept, so a save mid-call cannot give two of its attempts different
 // deadlines or record one it was not sent under.
 func (r *Router) callSettings(lc *logicalCall, task Task) EffectiveTask {
+	r.callOverrides(lc, task)
+	return *lc.settings
+}
+
+// callOverrides is the overrides lc read on first use, which its walk's limits
+// are later worked out from (startWalk).
+func (r *Router) callOverrides(lc *logicalCall, task Task) TaskOverrides {
 	if lc.settings == nil {
-		settings := r.taskSettings(task)
+		lc.overrides = r.taskOverrides()
+		settings := r.settingsFor(lc.overrides, task, nil)
 		lc.settings = &settings
 	}
-	return *lc.settings
+	return lc.overrides
 }

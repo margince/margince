@@ -40,7 +40,7 @@ it("keeps the page usable after an optional chunk fails and reloads on Retry", a
     CardBoundary,
   );
   render(
-    <LocaleProvider initial="en" initialEssential>
+    <LocaleProvider initial="en">
       <p>Opening figures</p>
       <Suspense fallback={<p>Waiting for panel</p>}>
         <Panel />
@@ -65,7 +65,7 @@ it("omits failed optional chrome while leaving its page and navigation usable", 
     SilentCardBoundary,
   );
   render(
-    <LocaleProvider initial="en" initialEssential>
+    <LocaleProvider initial="en">
       <a href="#/deals">Deals</a>
       <p>Opening figures</p>
       <Suspense fallback={<p>Waiting for chrome</p>}>

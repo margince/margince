@@ -36,6 +36,7 @@ describe("the de copy checks, over planted catalogs", () => {
     ["has no double space", "Speichern  jetzt"],
     ["uses no exclamation mark", "Fertig!"],
     ["keeps the -e of a du imperative", "Schreib zuerst einen Grund."],
+    ["keeps the -e of a du imperative", "Versuch es erneut."],
     ["says bitte once, to open a recovery step in a sentence", "Bitte warten"],
     ["uses no abbreviation", "Kontakte usw. laden."],
     ["uses no apostrophe contraction", "Lars’s Deals"],
