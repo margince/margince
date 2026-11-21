@@ -244,19 +244,6 @@ func (w *csvWriters) consumerMailList(ctx context.Context, tx pgx.Tx) (*freemail
 	return w.consumerMail, nil
 }
 
-// leadKeyHeld names the skip for a row refused over a key a live lead holds.
-// That is a lead row with another lead's address, or a contact row with a
-// lead's. An import never converts, so the lead keeps its address.
-func leadKeyHeld(err error) (migration.Reason, bool) {
-	if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
-		return naturalKeyTakenWhy, true
-	}
-	if _, ok := errors.AsType[*contacts.LeadHoldsIdentityError](err); ok {
-		return contactEmailClaimedWhy, true
-	}
-	return migration.Reason{}, false
-}
-
 func importedContactChannelWarning(in contacts.CreateContactInput) *migration.SkippedRow {
 	if contacts.HasContactChannel(in) {
 		return nil
