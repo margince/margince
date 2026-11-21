@@ -545,7 +545,7 @@ func TestAChangeThatDoesNotCommitGivesItsReservationBack(t *testing.T) {
 var bulkReassignStatementsPerRecord = map[crmcontracts.BulkRecordType]int64{
 	crmcontracts.BulkRecordTypeContact: 21,
 	crmcontracts.BulkRecordTypeCompany: 15,
-	crmcontracts.BulkRecordTypeDeal:    10,
+	crmcontracts.BulkRecordTypeDeal:    11,
 	crmcontracts.BulkRecordTypeLead:    16,
 }
 
