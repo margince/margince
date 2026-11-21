@@ -153,5 +153,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
 		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))),
+		strengthDatesDataTask(),
 	}
 }

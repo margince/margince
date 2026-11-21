@@ -233,6 +233,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `singlelinecontract_test.go` | H3 | Every text field the contract declares `x-single-line: true` must reach the request decoders as a generated field carrying the tag datasource.RejectUnsafeSingleLine reads. |
 | `sitereadstops_test.go` | H3 | A website read that stopped is classified twice, and both answers reach the same reader. |
 | `statedreasonbound_test.go` | H2 | The written reason on a decision that narrows what the installation keeps is bounded by one number. |
+| `storedstrengthdates_test.go` | H2 | The strength dates a contact row stores are the live recency read folded at now(). |
 | `summarytiermarks_test.go` | H2 | A 🟢 or 🟡 in an operation's summary is a claim about that operation's autonomy tier, and it has to be the tier the operation actually declares. |
 | `systemrolekeys_test.go` | H3 | A unit declares default grants per system role, and generation refuses a key that names none. |
 | `teamoutlookmirror_test.go` | H3 | The team's frozen outlook and the rep's are the same fact over different books, so they must have the same shape. |

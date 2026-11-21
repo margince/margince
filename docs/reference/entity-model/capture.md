@@ -491,6 +491,9 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `capture_import_clocks`: `AFTER INSERT OR DELETE FOR EACH ROW EXECUTE FUNCTION trg_capture_import_clocks()`
+- `capture_import_strength_dates_added`: `AFTER INSERT REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_import_strength_dates_added()`
+- `capture_import_strength_dates_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_import_strength_dates_moved()`
+- `capture_import_strength_dates_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_import_strength_dates_removed()`
 - `home_read_fence_capture_import`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR (old.connection_id IS DISTINCT FROM new.connection_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_capture_import_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"delivered_by": 20000, "verdict_reason": 2000, "verdict_status": 20000, "verdict_reasons": 2000, "posture_at_import": 20000, "provider_message_ids": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"delivered_by":20000,"posture_at_import":20000,"provider_message_ids":20000,"verdict_reason":2000,"verdict_reasons":2000,"verdict_status":20000}')`
@@ -906,6 +909,9 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `capture_thread_verdict_clocks`: `AFTER INSERT OR DELETE OR UPDATE OF kind, status, thread_key, user_id FOR EACH ROW EXECUTE FUNCTION trg_thread_verdict_clocks()`
+- `capture_thread_verdict_strength_dates_added`: `AFTER INSERT REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_thread_verdict_strength_dates_added()`
+- `capture_thread_verdict_strength_dates_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_thread_verdict_strength_dates_moved()`
+- `capture_thread_verdict_strength_dates_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_capture_thread_verdict_strength_dates_removed()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}')`
 
