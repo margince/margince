@@ -83,14 +83,18 @@ the team act does the same for a creator who will not work in Margince.
 
 A member invited later walks the personal stops. Their company and its basis are already settled: the
 server refuses every new seat with 409 `company_not_described` until the company is saved. Their rail
-reads Voice · Connect, and the plan that brings them back puts them in the voice act.
+reads Voice · Connect, and a first visit starts in the voice act. A member who comes back resumes where
+their wizard state says, so a saved Connect checkpoint or a recorded voice skip reopens Connect.
 
 A seat whose role may not create a voice profile has no Voice stop, creator and member alike. A member
 starts at Connect. A creator goes on from the invite question to Connect, and resumes there.
 
-The app's onboarding gate sends here every human whose wizard state is missing or not finished. It does not send a read seat (it cannot
-write the checkpoint the journey ends on). A member invited later sets up their voice and connects their
-mailbox, as the creator did.
+For a described installation, the app's onboarding gate sends a human here while their wizard state is
+missing or not finished. It asks only where the `onboarding` rollout stage is on, and only for a seat
+that may create a voice profile or an activity. So a read seat is never sent here, since it cannot write
+the checkpoint the journey ends on. A failed read of the wizard state holds nobody: the shell renders,
+and the next load asks again. A member invited later sets up their voice and connects their mailbox, as
+the creator did.
 
 When a user finishes, the browser keeps that fact for them until sign-out. On the next load the app
 then shows without waiting for the wizard state. The read still runs, and a state that is not
