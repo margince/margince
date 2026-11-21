@@ -53,7 +53,7 @@ var (
 	// overdue. One pass counts both, so the statement carries the caller's
 	// activity content clause once.
 	joinProjectCommitments = "LEFT JOIN LATERAL (SELECT count(*) AS open_tasks," +
-		" count(*) FILTER (WHERE " + storekit.TaskDueSQL("a") + " < now()) AS overdue_tasks" +
+		" count(*) FILTER (WHERE " + storekit.TaskDueBeforeSQL("a", "now()") + ") AS overdue_tasks" +
 		" FROM activity a JOIN activity_link al ON al.activity_id = a.id" +
 		" AND al.entity_type = 'project' AND al.project_id = t.id" +
 		" WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND " + reportActivityScopeToken + ") commitments ON true"

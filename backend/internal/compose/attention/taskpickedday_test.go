@@ -12,7 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A task with a date and no time is due on the date the person picked, in
+// A task with a date and no time is due on the date chosen for it, in
 // every reader's and company's zone.
 func TestADateOnlyTaskIsGroupedByThePickedDate(t *testing.T) {
 	berlin, err := time.LoadLocation("Europe/Berlin")

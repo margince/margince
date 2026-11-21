@@ -266,6 +266,19 @@ export function isoWeekBefore(day: string): number {
 }
 
 /**
+ * The zone whose calendar counts a task's due day. A task with a time reads on
+ * the reader's own clock. A task with only a date reads on the company's, the
+ * calendar the Worklist groups it by, so every page calls it overdue together.
+ */
+export function taskDueZone(
+  hasTime: boolean | undefined,
+  readerZone: string,
+  companyZone: string,
+): string {
+  return hasTime === true ? readerZone : companyZone;
+}
+
+/**
  * The instant to read a task's due day from, in `zone`. A task with a date and
  * no time is due on the date its chosen clock names. It returns that day's end
  * in `zone`, so every reader prints and counts the chosen date. A timed task,

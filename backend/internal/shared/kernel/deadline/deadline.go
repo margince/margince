@@ -88,3 +88,16 @@ func WallDayOffset(wallClock string, now time.Time, loc *time.Location) (int, bo
 	noon := time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, loc)
 	return elapsed.Days(now, noon, loc), true
 }
+
+// TaskPassed is Passed for a task. A task with a chosen date and no time is
+// late once that date is behind today in loc, whatever instant the date
+// resolves to. Any other task is late by its instant. wallClock is the chosen
+// clock's text, empty when the task has none.
+func TaskPassed(due *time.Time, hasTime bool, wallClock string, now time.Time, loc *time.Location) bool {
+	if due != nil && !hasTime && wallClock != "" {
+		if days, ok := WallDayOffset(wallClock, now, loc); ok {
+			return days < 0
+		}
+	}
+	return Passed(due, now)
+}

@@ -3,7 +3,7 @@
 
 import { readFileSync } from "node:fs";
 import { afterEach, expect, it } from "vitest";
-import { calendarDay, taskDueOnDay } from "./calendarday";
+import { calendarDay, taskDueOnDay, taskDueZone } from "./calendarday";
 import {
   calendarDaysBetween,
   formatDue,
@@ -92,4 +92,14 @@ it("counts the picked day from today the way the backend does", () => {
     );
     expect(days, `${wall_clock} at ${now} in ${zone}`).toBe(offset);
   }
+});
+
+it("counts a dated task on the company's calendar and a timed one on the reader's", () => {
+  expect(taskDueZone(false, "Asia/Tokyo", "Europe/Berlin")).toBe(
+    "Europe/Berlin",
+  );
+  expect(taskDueZone(undefined, "Asia/Tokyo", "Europe/Berlin")).toBe(
+    "Europe/Berlin",
+  );
+  expect(taskDueZone(true, "Asia/Tokyo", "Europe/Berlin")).toBe("Asia/Tokyo");
 });

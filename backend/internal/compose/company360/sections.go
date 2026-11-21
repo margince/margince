@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -221,6 +220,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	if promisesOnly {
 		extra += " AND " + activities.NotSystemMinted("a")
 	}
+	nowPos := arg(now)
 	query := fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, ''), a.system_text, a.body, `+storekit.TaskDueSQL("a")+`, a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
 		       a.source_activity_id, coalesce(a.source_system, ''),
@@ -229,7 +229,8 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		         ORDER BY dl.id LIMIT 1),
 		       (SELECT pl.contact_id FROM activity_link pl
 		         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact' AND %[4]s
-		         ORDER BY pl.id LIMIT 1), `+storekit.IntentWireSQL("a", "due")+`
+		         ORDER BY pl.id LIMIT 1), `+storekit.IntentWireSQL("a", "due")+`,
+		       coalesce(`+storekit.TaskDueBeforeSQL("a", "$%[9]d")+`, false)
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id AND %[8]s
 		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
@@ -237,7 +238,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		ORDER BY (`+storekit.TaskDueSQL("a")+` IS NULL), `+storekit.TaskDueSQL("a")+`, a.occurred_at, a.id
 		LIMIT %[5]d`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), linkVisible, contactVisible, limit+1,
-		opts.projectScope(arg)+opts.recipientTaskScope(arg), extra, identity.LiveMemberSQL("u"))
+		opts.projectScope(arg)+opts.recipientTaskScope(arg), extra, identity.LiveMemberSQL("u"), nowPos)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, nil, err
@@ -246,7 +247,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	var filed []time.Time
 	var sources []taskSource
 	steps, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.Company360NextStep, error) {
-		step, occurredAt, source, err := scanNextStep(row, now, reader)
+		step, occurredAt, source, err := scanNextStep(row, reader)
 		filed = append(filed, occurredAt)
 		sources = append(sources, source)
 		return step, err
@@ -280,7 +281,7 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 
 // scanNextStep reads one task row of the account's next steps: the row the wire
 // carries, when it was filed, and where its promise came from.
-func scanNextStep(row pgx.CollectableRow, now time.Time, reader textlang.Lang) (crmcontracts.Company360NextStep, time.Time, taskSource, error) {
+func scanNextStep(row pgx.CollectableRow, reader textlang.Lang) (crmcontracts.Company360NextStep, time.Time, taskSource, error) {
 	var step crmcontracts.Company360NextStep
 	var written *systemtext.Message
 	var id ids.UUID
@@ -297,7 +298,7 @@ func scanNextStep(row pgx.CollectableRow, now time.Time, reader textlang.Lang) (
 	var source taskSource
 	var dueHasTime bool
 	if err := row.Scan(&id, &step.Subject, &written, &step.Body, &step.DueAt, &dueHasTime, &assignee, &assigneeName, &occurredAt, &version,
-		&source.activity, &source.system, &dealID, &contactID, &step.DueIntent); err != nil {
+		&source.activity, &source.system, &dealID, &contactID, &step.DueIntent, &step.Overdue); err != nil {
 		return step, occurredAt, source, err
 	}
 	step.Subject = written.SubjectIn(step.Subject, reader)
@@ -308,6 +309,5 @@ func scanNextStep(row pgx.CollectableRow, now time.Time, reader textlang.Lang) (
 	step.AssigneeName = namedOrNobody(assigneeName)
 	step.LinkedDealId = uuidPtr(dealID)
 	step.LinkedContactId = uuidPtr(contactID)
-	step.Overdue = deadline.Passed(step.DueAt, now)
 	return step, occurredAt, source, nil
 }
