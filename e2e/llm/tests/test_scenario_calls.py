@@ -69,9 +69,15 @@ class AgentParityCasesTest(unittest.TestCase):
     def test_research_during_a_read_of_the_plan_fails(self):
         name = "case112-my-plan-and-the-dossier.yaml"
         reads = [("read_details", {"action": "weekly_plan"}), ("read_details", {"action": "dossier", "id": "c"})]
-        answer = "Your plan has three things, and the Nordholz dossier lists 40 plants."
+        answer = "You have no plan open this week, and the Nordholz dossier lists 40 plants."
         self.assertEqual(self.problems(name, reads, answer), [])
         self.assertTrue(self.problems(name, reads + [("run_research", {"action": "morning_brief"})], answer))
+
+    def test_a_plan_the_workspace_does_not_hold_is_not_reported(self):
+        name = "case112-my-plan-and-the-dossier.yaml"
+        reads = [("read_details", {"action": "weekly_plan"}), ("read_details", {"action": "dossier", "id": "c"})]
+        problems = self.problems(name, reads, "Your plan has three things, and the Nordholz dossier lists 40 plants.")
+        self.assertTrue(any("never said" in p for p in problems), problems)
 
     def test_a_handover_during_a_question_about_access_fails(self):
         guards = scenario("case75-sofia-is-leaving.yaml")

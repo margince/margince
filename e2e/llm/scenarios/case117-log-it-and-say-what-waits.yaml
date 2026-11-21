@@ -29,8 +29,10 @@ writes: true
 
 # The deadline is not judged here. A weekday name reads two ways when the run
 # falls on that weekday, and a run spent deciding which one never reaches the queue.
+# Yesterday, never this morning: the lane runs at any hour, and a meeting held at
+# 9:30 today is still in the future when it runs before then, so logging it is refused.
 prompt: |
-  Had coffee with Jannik Feddersen from Husumer Windservice this morning at
+  Had coffee with Jannik Feddersen from Husumer Windservice yesterday morning at
   9:30 at their office. They want a quote for the gearbox inspection on their six
   turbines in Q1. Please log the meeting in the CRM and add a follow-up task for
   me to send him the quote within a week.

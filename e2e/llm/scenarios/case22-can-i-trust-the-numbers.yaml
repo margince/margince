@@ -45,6 +45,12 @@ prompt: |
 must_call:
   - data_coverage
 
+# No input check has run on the seeded workspace, and the coverage read answers
+# that with no_input_check_yet by design. That refusal is the finding the
+# criteria grade, so it counts as the call.
+counts_when_refused:
+  - data_coverage
+
 may_call:
   # The nightly run's own record and its open findings, both legitimate
   # neighbours of this question and neither a substitute for it.

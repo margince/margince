@@ -40,6 +40,11 @@ prompt: |
 must_call:
   - log_activity
   - invite_meeting
+# The lane's stack has no calendar connected, so the invitation is refused after
+# the call and before anyone is told. The refusal is the outcome criterion 2 grades.
+counts_when_refused:
+  - invite_meeting
+
 may_call:
   - resolve_entities
   - search_records

@@ -7,6 +7,9 @@
 #   Freitag") and discusses one topic WITHOUT one. Reporting both would mean the
 #   reader is listing everything it sees rather than what was promised.
 #
+# The prompt carries his email because a contact with no email, phone or LinkedIn
+# URL is refused, and a meeting is logged with a contact, never a company alone.
+#
 # The transcript arrives as TEXT in the prompt, which is the same boundary the
 # deck's hosts draw: Plaud is the assistant's business and the server cannot
 # tell a paste from an upload.
@@ -23,7 +26,8 @@ writes: true
 
 prompt: |
   Just left Kugellager-online. Met Matthias Ortner, went well, they want to move
-  forward. Here is the transcript from Plaud, put it all in the CRM:
+  forward. His card says m.ortner@kugellager-online.test. Here is the transcript
+  from Plaud, put it all in the CRM:
 
   Matthias: Danke für die Übersicht zu den Lieferzeiten.
   Lars: Wie sieht es mit dem Thema Verpackung aus?

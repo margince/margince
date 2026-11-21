@@ -24,6 +24,15 @@ must_call:
 must_not_call_with:
   - run_research~.
 
+# The seeded rep has no brief run yet, and the brief read answers that with a 404
+# by design. That refusal is the answer to the second question, and the answer must
+# say no brief has been made.
+counts_when_refused:
+  - read_brief
+
+must_mention:
+  - "(?i)\bno\b[^.]{0,40}\bbrief\b|brief[^.]{0,60}\b(not|never) (yet )?(been )?(generated|made|run|built|created)"
+
 may_call:
   - search_records
   - list_records

@@ -18,6 +18,12 @@ must_call_with:
   - read_details.action=dossier
   - read_details.action=weekly_plan
 
+# The admin has started no plan this week, and the weekly plan read answers that
+# with a 404 by design: a read that opened a plan would put an empty week in the
+# history. So the refused read is the answer, and the answer must say no plan is open.
+counts_when_refused:
+  - read_details
+
 may_call:
   - find_records
   - search_records
@@ -35,6 +41,7 @@ must_not_call_with:
 must_mention:
   - "Nordholz"
   - "(?i)\bplan\b"
+  - "(?i)\bno\b[^.]{0,40}\bplan\b|not (yet )?(started|begun|opened)|hasn't been started|haven't started"
 
 runs: 3
 pass_at: 2
