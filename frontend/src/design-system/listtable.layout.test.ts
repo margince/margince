@@ -124,6 +124,26 @@ describe("columnLayout", () => {
     expect(layout.floor).toBeCloseTo(1000);
   });
 
+  it("keeps a badge column at 80px on any page, and the rest take the width", () => {
+    const leads: SizedColumn[] = [
+      { key: "name", fixed: true },
+      { key: "score", numeric: true, holds: "badge" },
+      { key: "status" },
+    ];
+    for (const available of [300, 900, 1800]) {
+      const layout = columnLayout(leads, {}, available);
+      expect(layout.widthOf(leads[1])).toBe("80px");
+    }
+    const wide = columnLayout(leads, {}, 900);
+    expect(wide.floor).toBeCloseTo(900);
+  });
+
+  it("widens a badge column to a figure wider than its badge", () => {
+    const score: SizedColumn = { key: "price", numeric: true, holds: "badge" };
+    const layout = columnLayout([score], {}, 900, figures(96));
+    expect(layout.widthOf(score)).toBe("96px");
+  });
+
   // "₫450,000,000,000" is wider than a numeric column's share; cut short, it
   // reads as a different number.
   it("never sets a numeric column narrower than the widest figure it holds", () => {

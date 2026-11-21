@@ -98,6 +98,7 @@ export function leadColumns(
       ),
       sort: "score",
       numeric: true,
+      holds: "badge",
     },
     {
       key: "status",

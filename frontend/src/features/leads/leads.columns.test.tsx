@@ -326,6 +326,8 @@ describe("the lead table's default columns", () => {
       "Owner",
       "Created",
     ]);
+    const score = document.querySelectorAll(".lt-table col")[2];
+    expect(score).toHaveStyle({ width: "80px" });
     const step = within(await openViewStep(user, "Columns"));
     for (const offered of [
       "Last activity",

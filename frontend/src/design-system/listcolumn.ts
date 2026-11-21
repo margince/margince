@@ -43,9 +43,10 @@ export type ListColumn<Row> = PhonePlacement & {
   verbs?: boolean | "menu";
   /**
    * A value whose length hardly changes: a date, or a colleague's name beside
-   * their avatar. The column stops growing at a preset width.
+   * their avatar. The column stops growing at a preset width. A "badge" column
+   * (a score) keeps the width of its badge and header.
    */
-  holds?: "date" | "colleague";
+  holds?: "date" | "colleague" | "badge";
   /** Starts unticked in the Display menu: offered rather than drawn. */
   initiallyHidden?: boolean;
   /**
