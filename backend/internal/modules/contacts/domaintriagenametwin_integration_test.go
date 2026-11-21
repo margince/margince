@@ -167,9 +167,10 @@ func imageDomains(t *testing.T, image map[string]any) []string {
 	}
 	out := make([]string, 0, len(list))
 	for _, v := range list {
-		domain, ok := v.(string)
-		if !ok {
-			t.Fatalf("audit image domain %v is not a string", v)
+		row, ok := v.(map[string]any)
+		domain, named := row["domain"].(string)
+		if !ok || !named {
+			t.Fatalf("audit image domain %v is not a domain row", v)
 		}
 		out = append(out, domain)
 	}

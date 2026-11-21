@@ -144,6 +144,8 @@ func (s *Store) updateCompanyInTx(
 // writeCompanyInTx is the edit itself: the locks it owes, the patch it stages,
 // the write, and the record of what the write did. It reads nothing back for a
 // caller.
+//
+//gate:parent-version-door
 func (s *Store) writeCompanyInTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, active []fieldcatalog.Column,
 ) (recordEdit[crmcontracts.Company], error) {
@@ -396,6 +398,10 @@ func (s *Store) stageCompanyDomains(ctx context.Context, tx pgx.Tx, id ids.Compa
 
 // reconcileCompanyReplaceSets lands the two replace-sets on the row the patch just
 // wrote and records each transition in the audit images the caller commits.
+//
+// Its callers have already applied the patch, which moved the version.
+//
+//gate:parent-version-door
 func reconcileCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID, by string,
 	in UpdateCompanyInput, before, after map[string]any,
 ) error {
@@ -404,8 +410,7 @@ func reconcileCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 		if err != nil {
 			return err
 		}
-		before["domains"] = domainsBefore
-		after["domains"] = domainSummaries(*in.Domains)
+		recordDomains(before, after, domainsBefore, domainSummaries(*in.Domains))
 	}
 	if in.RelationshipTypes != nil {
 		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, id, "manual", by, *in.RelationshipTypes, false)
