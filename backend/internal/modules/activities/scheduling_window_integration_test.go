@@ -142,3 +142,17 @@ func TestTheWindowSaysWhatItWasReadFromRatherThanWhatTheHostHasConnected(t *test
 		})
 	}
 }
+
+// A host with no calendar connected is told to connect one, not refused as if
+// a grant were missing. The answer is what an assistant tells its user.
+func TestReliableAvailabilityWithNoCalendarAsksForOne(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	now := time.Date(2026, 9, 27, 6, 0, 0, 0, time.UTC)
+	store := e.store(nil).WithClock(func() time.Time { return now })
+	_, _, err := store.ReliableAvailability(ctx, ids.UserID{UUID: e.rep}, now, now.AddDate(0, 0, 7), 30*time.Minute)
+	var refusal *SchedulingArgumentError
+	if !errors.As(err, &refusal) || refusal.Field != "provider" || refusal.Message != "Connect a calendar first" {
+		t.Fatalf("no calendar answered %v, want the connect-a-calendar refusal", err)
+	}
+}

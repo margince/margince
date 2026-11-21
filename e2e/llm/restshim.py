@@ -60,6 +60,23 @@ TOOLS = [
 ]
 
 
+# A found line is shown this long. A longer one is shown from its start and
+# around the match, so the word searched for is always in what comes back.
+HIT_CHARS = 200
+
+
+def _hit(line, needle):
+    """One found line, short enough to list, with the match in it."""
+    if len(line) <= HIT_CHARS:
+        return line
+    at = line.lower().find(needle)
+    if at + len(needle) <= HIT_CHARS:
+        return line[:HIT_CHARS] + " …"
+    head = HIT_CHARS // 2
+    start = max(at - (HIT_CHARS - head) // 2, head)
+    return line[:head] + " … " + line[start:start + HIT_CHARS - head] + " …"
+
+
 def read_skill_file(root, path, start, end, find=None):
     """The lines asked of one file of the skill, or why it cannot be read."""
     if not path:
@@ -71,7 +88,7 @@ def read_skill_file(root, path, start, end, find=None):
         lines = handle.read().splitlines()
     if find:
         needle = str(find).lower()
-        hits = [f"{number}: {line[:200]}" for number, line in enumerate(lines, 1) if needle in line.lower()]
+        hits = [f"{number}: {_hit(line, needle)}" for number, line in enumerate(lines, 1) if needle in line.lower()]
         more = f"\n[{len(hits) - MAX_MATCHES} more: narrow the search]" if len(hits) > MAX_MATCHES else ""
         return f"{path}: {len(hits)} line(s) hold {find!r}\n" + "\n".join(hits[:MAX_MATCHES]) + more, False
     first = max(_whole(start, 1), 1)

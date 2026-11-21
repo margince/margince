@@ -68,8 +68,9 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 			}
 			// Before the passes below: a tool's in-process call lands here too,
 			// and an area is held to the route whichever door reached it.
-			humanOnly := routeVerbShapes[r.Method+" "+chi.RouteContext(ctx).RoutePattern()].HumanOnly
-			if refusedOutsideAreas(w, r, reg) || humanonlybody.Refused(w, r, humanOnly, maxGatedBody) {
+			shape := routeVerbShapes[r.Method+" "+chi.RouteContext(ctx).RoutePattern()]
+			marks := humanonlybody.Marks{HumanOnly: shape.HumanOnly, AgentValues: shape.AgentValues}
+			if refusedOutsideAreas(w, r, reg) || humanonlybody.Refused(w, r, marks, maxGatedBody) {
 				return
 			}
 			if servedByTheRegistry(r) || admittedByTheTool(r) {

@@ -3,6 +3,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
@@ -74,11 +75,28 @@ class FiguresFromResultsFieldTest(unittest.TestCase):
             out.write("\n".join(json.dumps(event) for event in events))
         return path
 
-    def test_the_field_checks_the_answer_against_the_runs_own_results(self):
+    @staticmethod
+    def judged(verdict):
+        """A planted judge that answers verdict to every question."""
+        reply = '{"verdict":"' + verdict + '","reason":"planted"}'
+        return mock.patch.dict(os.environ, {"E2E_LLM_JUDGE": "cmd:printf '" + reply + "'"})
+
+    def test_a_figure_no_result_holds_fails_when_the_judge_finds_it_wrong(self):
         path = self.transcript("Won €97,600, open €180,000.", RESULTS[0])
-        problems = check.check({"figures_from_results": "true"}, path)
-        self.assertEqual(len(problems), 1)
+        with self.judged("no"):
+            problems = check.check({"figures_from_results": "true"}, path)
         self.assertIn("€180,000", problems[0])
+        self.assertTrue(any("worked out from the data" in problem for problem in problems))
+
+    def test_a_figure_the_model_worked_out_right_holds(self):
+        path = self.transcript("Won €97,600, open €180,000.", RESULTS[0])
+        with self.judged("yes"):
+            self.assertEqual(check.check({"figures_from_results": "true"}, path), [])
+
+    def test_every_figure_a_result_holds_asks_the_judge_nothing(self):
+        path = self.transcript("Won €97,600.", RESULTS[0])
+        with mock.patch.dict(os.environ, {"E2E_LLM_JUDGE": "replay:/nonexistent"}):
+            self.assertEqual(check.check({"figures_from_results": "true"}, path), [])
 
     def test_any_other_value_is_refused_rather_than_ignored(self):
         path = self.transcript("Won €97,600.", RESULTS[0])

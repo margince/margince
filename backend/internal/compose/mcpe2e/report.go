@@ -42,6 +42,12 @@ type Verdict struct {
 	Search     string         `json:"search"`
 	SelfJudged bool           `json:"self_judged"`
 	Stamp      *RecordedStamp `json:"stamp"`
+	// Efficiency is nil on a verdict recorded before the lane measured it.
+	// Slow is its median calls past the case's `expected_calls`.
+	Efficiency *Efficiency `json:"efficiency"`
+	Slow       bool        `json:"slow"`
+	// ToolsCalled names the tools the runs called with success, by bare name.
+	ToolsCalled []string `json:"tools_called"`
 }
 
 // Unstamped is the reason a verdict made before the stamp existed gives.

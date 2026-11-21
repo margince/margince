@@ -77,6 +77,7 @@ import json
 import os
 import re
 import shlex
+import statistics
 import sys
 import tempfile
 
@@ -134,7 +135,12 @@ _SCHEMA = {
     "criteria": "list", "must_call": "list", "may_call": "list", "must_call_with": "list",
     "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
     "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
+    "mcp_only": "list", "expected_calls": "count",
 }
+# The checks an mcp_only entry may name: the ones that pin an MCP call's name or
+# argument, which a REST door spells by route. Every other check reads the
+# answer or the records and holds on both doors.
+_DOOR_SCOPED = ("must_call", "must_call_with", "must_call_matching")
 _REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
 # The credentials scripts/e2e-llm.sh mints, by the `passport:` value that picks
 # one; absent is the narrow one.
@@ -236,7 +242,31 @@ def lint(path):
 
         if data["setup"] not in casesetup.STEPS:
             problems.append(f"setup {data['setup']!r} is no step in casesetup.py")
-    return problems + _entry_problems(data)
+    return problems + _entry_problems(data) + _door_problems(data)
+
+
+def _door_problems(data):
+    """An mcp_only entry must repeat a door-scoped check of the same file exactly,
+    or a typo in it would switch nothing off and read as if it had."""
+    carried = {entry for key in _DOOR_SCOPED for entry in data.get(key, [])}
+    return [f"mcp_only names {entry!r}, which no {', '.join(_DOOR_SCOPED)} entry of this scenario carries"
+            for entry in data.get("mcp_only", []) if entry not in carried]
+
+
+def for_door(scenario, path):
+    """The scenario as the run's door grades it. A REST run is not held to the
+    checks mcp_only names: they pin an MCP argument that no REST route takes."""
+    if run_door(path) != "rest":
+        return scenario
+    skipped = set(scenario.get("mcp_only", []))
+    return {key: [entry for entry in value if entry not in skipped] if key in _DOOR_SCOPED else value
+            for key, value in scenario.items()}
+
+
+def run_door(path):
+    """The door the transcript's system line names; a run made over MCP names none."""
+    init = _events(path, "init")
+    return (init[0].get("door") if init else None) or "mcp"
 
 
 def _entry_problems(data):
@@ -459,6 +489,56 @@ def _holds(value, step, held):
     return any(near(value, a + b) or near(value, abs(a - b)) for i, a in enumerate(held) for b in held[i + 1:])
 
 
+# A figure no result holds may still be the model's own correct arithmetic over
+# figures that results do hold, such as a weighted total over several deals. The
+# judge decides that against the amounts the run read; an invented or wrong
+# figure still fails.
+WORKED_OUT = (
+    "Every money figure the answer states is correct against the data Margince returned in this run. "
+    "These figures are not themselves among the amounts the data holds: {figures}. "
+    "The data the run read held these amounts and rates: {held}. "
+    "Answer yes if each of those figures is read from that data or correctly worked out from it, rounding aside. "
+    "Answer no if any of them is invented, or wrong against that data."
+)
+# The amounts listed to the judge, at most: enough for a page of deals, short
+# enough that the criterion stays a question and not a dump.
+WORKED_OUT_AMOUNTS = 200
+
+
+def tools_called(paths):
+    """Every tool a call worked on in any of the runs, by its bare name. The
+    coverage page counts a tool a held run used as driven, whichever case
+    names it, since a case pins the outcome and not the tool."""
+    called = set()
+    for path in paths:
+        if os.path.exists(path):
+            called |= {name.rsplit("__", 1)[-1] for name, _ in read_run(path).worked}
+    return sorted(called)
+
+
+def worked_out_criterion(said, results):
+    """The question the judge is asked about the figures no result holds, and
+    those figures' problems; no question when every figure is a result's own."""
+    unheld = figure_problems(said, results)
+    if not unheld:
+        return None, []
+    figures = ", ".join(sorted({problem.split("'")[1] for problem in unheld}))
+    held = list(dict.fromkeys(token for text in results for token in _NUMBER.findall(text)))[:WORKED_OUT_AMOUNTS]
+    return WORKED_OUT.format(figures=figures, held=", ".join(held)), unheld
+
+
+def worked_out_problems(said, final, results):
+    """The money figures the judge finds invented or wrong; none when every
+    figure is a result's own or the judge finds each correctly worked out."""
+    criterion, unheld = worked_out_criterion(said, results)
+    if criterion is None:
+        return []
+    correct, reason = judge.verdict(criterion, final)
+    if correct:
+        return []
+    return unheld + [f"{JUDGED_NO} the figures are worked out from the data\n      the judge's reason: {reason}"]
+
+
 def figure_problems(said, results):
     """Each money figure in the answer that no tool result of the run holds.
 
@@ -636,6 +716,103 @@ def usage_line(expected, usage):
     )
 
 
+# A call the CLI turned away before any server saw it: a bare tool name the
+# model made up, which it then retries under the real one.
+_NO_SUCH_TOOL = re.compile(r"No such tool available", re.IGNORECASE)
+
+
+def read_effort(path):
+    """How directly one run finished: its calls, refused calls, turns, tokens
+    and wall time, or None when the run never reached its terminal `result`.
+
+    An unfinished run is left out rather than counted short, because its few
+    calls would read as the most direct run of all. A key the transcript does
+    not carry is absent, never 0.
+    """
+    calls, refused, result = 0, 0, None
+    with _open_checked(path) as handle:
+        for line in handle:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("type") == "result":
+                result = event
+            for block in (event.get("message") or {}).get("content") or []:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "tool_use":
+                    calls += 1
+                elif block.get("type") == "tool_result" and _refused_result(block):
+                    refused += 1
+    if result is None:
+        return None
+    effort = {"calls": calls, "refused": refused}
+    for field in ("num_turns", "duration_ms"):
+        if isinstance(result.get(field), int):
+            effort["turns" if field == "num_turns" else field] = result[field]
+    usage = read_usage(path)
+    if usage is not None:
+        counted = usage[0]
+        effort["prompt_tokens"] = sum(counted[field] for field in _USAGE_FIELDS if field != "output_tokens")
+        effort["output_tokens"] = counted["output_tokens"]
+    return effort
+
+
+def _refused_result(block):
+    if block.get("is_error") and not staged(block.get("content")):
+        return True
+    return bool(_NO_SUCH_TOOL.search(_tool_result_text(block)))
+
+
+_EFFORT_METRICS = ("calls", "turns", "refused", "prompt_tokens", "output_tokens", "duration_ms")
+
+
+def _spread(values):
+    median = statistics.median(values)
+    return {"median": int(median) if median == int(median) else median, "min": min(values), "max": max(values)}
+
+
+def efficiency(paths, expected_calls=None):
+    """The median and spread of each effort metric over the finished runs, or
+    None when no run finished.
+
+    A metric is reported only when every finished run carries it, so all of
+    them share the one denominator `runs`. It is a score and never a verdict:
+    nothing here moves PASS, FAIL or the exit code.
+    """
+    efforts = [effort for effort in map(read_effort, paths) if effort is not None]
+    if not efforts:
+        return None
+    out = {"runs": len(efforts)}
+    for metric in _EFFORT_METRICS:
+        if all(metric in effort for effort in efforts):
+            out[metric] = _spread([effort[metric] for effort in efforts])
+    if expected_calls is not None:
+        out["expected_calls"] = expected_calls
+        out["slow"] = out["calls"]["median"] > expected_calls
+    return out
+
+
+def efficiency_line(measured):
+    """The report's one line for how directly a scenario's runs finished."""
+    if measured is None:
+        return "  efficiency: no run finished, nothing measured"
+    parts = [f"{measured['runs']} run(s) finished"]
+    for metric in ("calls", "turns", "refused"):
+        if metric in measured:
+            spread = measured[metric]
+            parts.append(f"{metric} {spread['median']} ({spread['min']}-{spread['max']})")
+    if "duration_ms" in measured:
+        parts.append(f"{measured['duration_ms']['median'] / 1000:.1f}s median")
+    slow = ""
+    if measured.get("slow"):
+        slow = f"  <-- slow: median {measured['calls']['median']} calls, {measured['expected_calls']} expected"
+    return "  efficiency: " + ", ".join(parts) + slow
+
+
 # The failures that mean the model was never reached, rather than that it
 # answered badly. Matched on the message because the transport reports both the
 # same way — `is_error` on the terminal result — and only the message says which
@@ -664,6 +841,19 @@ _REFUSALS = re.compile(
 # it had called before.
 _MODEL_API_FAILED = re.compile(r"^(?:Failed to authenticate\.\s*)?API Error:", re.IGNORECASE)
 
+# The server's answer when the client declined a question it put in the chat
+# (backend/internal/modules/agents/inputrequired.go, errDeclinedInChat). Nobody
+# sits at a lane run to answer one: a CLI that can show the form declines it by
+# itself, so the run could not have done what the user asked.
+_DECLINED_IN_CHAT = re.compile(r"the user said no in the chat", re.IGNORECASE)
+
+
+def _tool_result_text(block):
+    content = block.get("content")
+    if isinstance(content, list):
+        return " ".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
+    return str(content or "")
+
 
 def unrun(path):
     """Why this run never happened, or "" when it did.
@@ -683,7 +873,7 @@ def unrun(path):
     a real answer thrown away as a harness fault, and the rest of the lane
     abandoned with it.
     """
-    saw_assistant, called_tool, saw_result = False, False, False
+    saw_assistant, called_tool, saw_result, declined = False, False, False, False
     failure = ""
     for line in _open_checked(path):
         line = line.strip()
@@ -698,6 +888,11 @@ def unrun(path):
             for block in (event.get("message") or {}).get("content") or []:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
                     called_tool = True
+        if event.get("type") == "user":
+            for block in (event.get("message") or {}).get("content") or []:
+                if isinstance(block, dict) and block.get("type") == "tool_result" \
+                        and _DECLINED_IN_CHAT.search(_tool_result_text(block)):
+                    declined = True
         if event.get("type") == "result":
             saw_result = True
             if event.get("is_error"):
@@ -718,6 +913,9 @@ def unrun(path):
         return failure
     if _MODEL_API_FAILED.match(failure):
         return "the model's API stopped answering mid-run: " + failure
+    if declined:
+        return ("the client declined a question the server asked in the chat, and no one in "
+                "the lane can answer one, so the run could not do what was asked")
     return ""
 
 
@@ -774,6 +972,7 @@ def offered_problem(scenario, path):
     that attached nothing — so the lane stops rather than scoring it. The
     tools are the ones the transcript's system line says were offered.
     """
+    scenario = for_door(scenario, path)
     init = _events(path, "init")
     if not init:
         return "the transcript carries no system line, so what was offered is unknown"
@@ -894,6 +1093,7 @@ def check(scenario, transcript_path):
     """The problem lines of one run. The positive checks read the final answer
     and the calls that worked; the forbidding checks read every word and every
     attempt, because a wrong claim or a forbidden call counts wherever it is."""
+    scenario = for_door(scenario, transcript_path)
     run = read_run(transcript_path)
     # A send the lane's stack cannot deliver is refused by design, and the
     # scenario grades what the answer says about it: there the call is the
@@ -952,7 +1152,7 @@ def check(scenario, transcript_path):
 
     figures = scenario.get("figures_from_results")
     if figures == "true":
-        problems.extend(figure_problems(said, read_tool_results(transcript_path)))
+        problems.extend(worked_out_problems(said, run.final, read_tool_results(transcript_path)))
     elif figures is not None:
         problems.append(f"figures_from_results is {figures!r}; the only value is true")
 
@@ -1030,6 +1230,13 @@ def main():
             # sweep from one whose transcripts it could not read, which the
             # totals alone cannot say.
             record["usage"] = usage
+        if len(sys.argv) > 5:
+            record["tools_called"] = tools_called(sys.argv[5:])
+        measured = efficiency(sys.argv[5:], scenario.get("expected_calls")) if len(sys.argv) > 5 else None
+        if measured is not None:
+            if "slow" in measured:
+                record["slow"] = measured.pop("slow")
+            record["efficiency"] = measured
         print(json.dumps(record, indent=2))
         return 0
 
@@ -1042,6 +1249,11 @@ def main():
         # file owns what a usage total means — the shell would otherwise parse
         # the JSON and spell the same shape a second time.
         print(usage_line(int(sys.argv[2]), total_usage(sys.argv[3:])))
+        return 0
+
+    if sys.argv[1] == "--efficiency":
+        scenario = parse_scenario(sys.argv[2])
+        print(efficiency_line(efficiency(sys.argv[3:], scenario.get("expected_calls"))))
         return 0
 
     if sys.argv[1] == "--ran":

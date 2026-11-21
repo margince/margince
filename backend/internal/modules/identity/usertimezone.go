@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -43,6 +44,11 @@ const (
 	fieldTimezoneSource = "source"
 )
 
+// AgentTimezoneSources are the sources an agent may send. The contract's
+// x-agent-values on the source member must name the same, and a compose test
+// holds the two equal.
+var AgentTimezoneSources = []TimezoneSource{TimezoneFromAgent}
+
 // SaveMyTimezone stores the CALLER's own time zone.
 //
 // Self-scoped from the authenticated principal. An agent sets the zone its user
@@ -56,7 +62,7 @@ func (s *Service) SaveMyTimezone(ctx context.Context, zone string, source Timezo
 		return Seat{}, &WorkingHoursError{Field: fieldTimezoneSource, Message: "a source is browser, chosen or agent"}
 	}
 	_, isAgent := callingAgent(ctx)
-	if isAgent && source != TimezoneFromAgent {
+	if isAgent && !slices.Contains(AgentTimezoneSources, source) {
 		return Seat{}, agentLimit("an agent does not choose a time zone for its user or pass as the browser; send source agent once they have asked for it")
 	}
 	if !isAgent && source == TimezoneFromAgent {

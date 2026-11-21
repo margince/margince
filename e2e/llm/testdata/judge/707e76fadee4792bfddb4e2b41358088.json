@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The criterion lists the data's amounts and rates as empty, so neither EUR 1,284,500 nor EUR 430,000 can be checked as read from or derived from that data, and the answer shows no working.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Every money figure the answer states is correct against the data Margince returned in this run. These figures are not themselves among the amounts the data holds: EUR 1,284,500, EUR 430,000. The data the run read held these amounts and rates: . Answer yes if each of those figures is read from that data or correctly worked out from it, rounding aside. Answer no if any of them is invented, or wrong against that data.",
+  "answer": "Got the figures: EUR 1,284,500 open across 7 deals, EUR 430,000 won so far this year.\n\nI could not put them into a document, so here they are as text for you to format yourself."
+}

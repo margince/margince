@@ -897,6 +897,10 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # than assembled here out of JSON the shell would have to parse.
   python3 "$ROOT/e2e/llm/check.py" --usage "$made" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
+  # How directly the runs finished, flagged slow past `expected_calls`; a score
+  # beside the verdict, never a part of it.
+  python3 "$ROOT/e2e/llm/check.py" --efficiency "$scenario" \
+    ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
   # A settled scenario makes fewer runs than an earlier lane may have kept.
   rm -f "$RECORD_DIR/$name".run*.jsonl

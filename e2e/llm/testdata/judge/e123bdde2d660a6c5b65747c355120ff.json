@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer's weighted pipeline figure of 1,420,000 EUR does not match the run data, which holds 1,240,000.00, and no derivation from the other figures yields 1,420,000.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Every money figure the answer states is correct against the data Margince returned in this run. These figures are not themselves among the amounts the data holds: 1,420,000 EUR. The data the run read held these amounts and rates: 420000000, 37, 1,240,000.00. Answer yes if each of those figures is read from that data or correctly worked out from it, rounding aside. Answer no if any of them is invented, or wrong against that data.",
+  "answer": "Board pack section composed off the saved run.\n\nOpen pipeline is EUR 4.2m across 37 open deals; weighted, that is 1,420,000 EUR."
+}

@@ -147,8 +147,8 @@ These numbers come from a full sweep of the test data on one machine, with no ca
 Most of the time of a case goes to the start and seed of its stack, not to the model. `usage:` under each scenario, and `sweep total:` at the end, print what a run used. The committed verdict keeps the same totals.
 
 1. **Run a few scenarios first** (section 3), and read their transcripts. A harness error then costs a few cases.
-2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case that names a tool in `must_call`.
-   Generate the coverage page again (section 8): its count of tools that no case requires must not grow.
+2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case whose runs use a tool.
+   Generate the coverage page again (section 8): its count of tools no case drives must not grow. A case drives a tool when it requires it, or when a run that reached its bar called it.
 3. **Run a discovery pass.** Fix all that it finds ([improve-mcp-quality.md](improve-mcp-quality.md)).
 4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on every target ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
 5. **Read the stamps.** Each verdict carries a `stamp` of what it measured (section 8).
@@ -196,6 +196,22 @@ line it cannot place, a pattern that does not compile and a value of the wrong s
 A scenario that fails lists what failed to hold. That can be a tool it never called,
 a fact it never said, or something it must not say. It can be a judged criterion, with the
 reason of the judge in one sentence. It can also be a record that the run put in the wrong state.
+
+### How directly a run finished
+
+A good model needs fewer rounds, so the lane counts them. After each scenario it prints an
+`efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle
+value of the runs, with the least and the most.
+
+The counts are tool calls, model turns, refused calls, prompt tokens and output tokens. How long a
+run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool
+name that the CLI turned away. A run with no last result is left out, and `runs` says how many runs
+are behind the numbers.
+
+These numbers never fail a case and never change the exit code. A scenario can set
+`expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true`
+and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and
+model, and the calls per case for each model. A verdict from before this measure shows `-`.
 
 ### The end state
 
@@ -249,6 +265,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
 | `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
+| `the client declined a question the server asked in the chat` | The server asked the user to confirm a change in the chat, and the CLI said no by itself: in print mode nobody can answer the form | A harness stop, never a score. The case cannot be measured on that CLI until the lane can answer a question in the chat |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a bug: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) ended part of the way through a run. A CLI that exits with an error code, under a result that reports no error, stops the lane in the same way | A harness stop, never a score. Every driver writes a last result when the model ends the run, at the turn cap too. The stop prints the last lines the driver wrote to stderr |
 
@@ -281,7 +298,8 @@ cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished
 ```
 
 Each verdict carries a `stamp` of what it measured. It holds a short hash of the scenario file and
-of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). It also holds
+of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). For a
+router, that entry includes the bodies `read_workspace topic=actions` serves. It also holds
 a hash of the server instructions and of the grading harness, the judge model, the commit and the
 time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
 
