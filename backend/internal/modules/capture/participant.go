@@ -95,6 +95,14 @@ func stampCaptureParticipants(
 	// put the owner at both ends of their own message. A seat's address
 	// is no outside party either. The caller read it under the claim lock the ladder takes.
 	if us.self.Covers(address) {
+		// Any seat that receives at a shared address may have written its mail.
+		// The address is kept as the sender, and the row names no seat.
+		if theirRole == roleFrom && us.self.SharedWithAnotherSeat(address) {
+			if err := insertParticipant(ctx, tx, activityID, roleFrom, nil, nil, address, ""); err != nil {
+				return fmt.Errorf("capture: stamping a shared address as the sender: %w", err)
+			}
+			return nil
+		}
 		address = ""
 	}
 	var channelUserID string
