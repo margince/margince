@@ -194,3 +194,5 @@
 1795243929_the_legal_entity_jurisdiction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795246461_four_features_nobody_can_reach_are_removed.up.sql | * | the procedural body deletes the queued jobs of one retired kind, at most one a day; the rest drops five tables nothing reads
 1795246461_four_features_nobody_can_reach_are_removed.down.sql | * | runs only on a rollback and creates five empty tables; no row is read or written
+1795247581_address_columns_hold_their_canonical_form.up.sql | app_user, capture_pending_counterparty, capture_sender_override, communication_suppression | only a row whose address is not already lowercased and trimmed is written, and every writer has folded the value for many releases, so the set is at most a handful of old rows
+1795247585_the_canonical_address_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

@@ -648,6 +648,43 @@ describe("the LinkedIn row", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
+  // The server names a value that is not a LinkedIn profile by a code. The
+  // dialog says it as a sentence in the reader's language.
+  it("says what a LinkedIn profile address looks like when the value is not one", async () => {
+    stub({
+      "GET /connectors": roster(),
+      "PUT /me/linkedin-account": () =>
+        jsonResponse(
+          {
+            code: "validation_error",
+            detail: "profile_url: not a profile",
+            details: {
+              errors: [
+                {
+                  field: "profile_url",
+                  code: "linkedin_profile_url_invalid",
+                  message: "not a profile",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+    });
+    const user = userEvent.setup();
+    renderConnectAct();
+    await user.click(screen.getByRole("button", { name: "Add profile" }));
+    await user.type(
+      screen.getByLabelText("Your LinkedIn profile URL"),
+      "https://example.com/in/qa",
+    );
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
+
+    expect(
+      await screen.findByText(en["common.linkedinProfileInvalid"]),
+    ).toBeInTheDocument();
+  });
+
   // The skip and the save answer one question: a PUT landing after a skip
   // already dispatched would leave two answers stored.
   it("holds every dismissal while the save is in flight", async () => {

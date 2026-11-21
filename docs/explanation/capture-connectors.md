@@ -317,8 +317,10 @@ picture until it is connected again.
 
 The sync of new mail walks the **history API** from a `historyId` watermark. A stale watermark
 (`ErrHistoryGone`; Gmail ends it about once a week) falls back to a bounded list again, not a full
-scan. It implements both optional seam types. Its `Watcher` is the 7 day Pub/Sub push watch, which the worker
-renews every `6h`, `48h` before it expires. Its `Backfiller` offers the windows above, which can only grow.
+scan. A full list means older mail was left out, and `RecordLostCursor` records those dates as not
+read, for the owner to import. It implements both optional seam types. Its `Watcher` is the 7 day
+Pub/Sub push watch, which the worker renews every `6h`, `48h` before it expires. Its `Backfiller`
+offers the windows above, which can only grow.
 
 **To run:** a Google OAuth app + the vault key. A Pub/Sub topic is optional (without it, capture runs on
 the 2 minute poll).

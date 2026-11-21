@@ -1347,6 +1347,7 @@ public.app_user.app_user_avatar_names_its_origin CHECK (((avatar_object_key IS N
 public.app_user.app_user_avatar_origin_check CHECK ((avatar_origin = ANY (ARRAY['upload'::text, 'google'::text])))
 public.app_user.app_user_delivery_hour_check CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))
 public.app_user.app_user_does_not_merge_into_itself CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))
+public.app_user.app_user_email_is_canonical CHECK ((email = lower(btrim(email))))
 public.app_user.app_user_failed_login_count_check CHECK ((failed_login_count >= 0))
 public.app_user.app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL))))
 public.app_user.app_user_forget_weekly_plan_responses CREATE TRIGGER app_user_forget_weekly_plan_responses BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()
@@ -2607,6 +2608,7 @@ public.capture_pending_counterparty.backfill_id uuid gen=- def=-
 public.capture_pending_counterparty.capture_pending_counterparty_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES capture_backfill(id) ON DELETE SET NULL
 public.capture_pending_counterparty.capture_pending_counterparty_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
+public.capture_pending_counterparty.capture_pending_counterparty_email_is_canonical CHECK ((email = lower(btrim(email))))
 public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact'::text, 'role_mailbox'::text, 'company_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text, 'vendor_pitch'::text]))))
 public.capture_pending_counterparty.capture_pending_counterparty_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_pkey PRIMARY KEY (id)
@@ -2638,6 +2640,7 @@ public.capture_pending_counterparty_email_ix CREATE INDEX capture_pending_counte
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
 public.capture_sender_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sender_override.address text NOT NULL gen=- def=-
+public.capture_sender_override.capture_sender_override_address_is_canonical CHECK ((address = lower(btrim(address))))
 public.capture_sender_override.capture_sender_override_decision_check CHECK ((decision = ANY (ARRAY['business'::text, 'keep_out'::text])))
 public.capture_sender_override.capture_sender_override_pkey PRIMARY KEY (id)
 public.capture_sender_override.capture_sender_override_user_address_key UNIQUE (user_id, address)
@@ -3296,6 +3299,7 @@ public.communication_suppression.address_hash text gen=- def=-
 public.communication_suppression.address_key_id text gen=- def=-
 public.communication_suppression.captured_by text NOT NULL gen=- def=-
 public.communication_suppression.carried_from uuid gen=- def=-
+public.communication_suppression.communication_suppression_address_is_canonical CHECK ((address = lower(btrim(address))))
 public.communication_suppression.communication_suppression_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_suppression(id) ON DELETE SET NULL
 public.communication_suppression.communication_suppression_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.communication_suppression.communication_suppression_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['machine'::text, 'user'::text, 'admin'::text, 'subject'::text])))

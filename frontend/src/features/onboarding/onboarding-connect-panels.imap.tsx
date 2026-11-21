@@ -1,20 +1,5 @@
-import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
 import { ImapMailboxForm } from "../capture/imap-connect-form";
-
-/** A leg that did not land. A refusal the reader gave is theirs to answer
- *  again (amber); anything else broke (red). */
-export function ReturnWarn({
-  title,
-  body,
-  tone = "danger",
-}: Readonly<{ title: string; body: string; tone?: "warning" | "danger" }>) {
-  return (
-    <Callout tone={tone} kind="outcome" title={title}>
-      <p>{body}</p>
-    </Callout>
-  );
-}
 
 // IMAP: the mailbox form Settings shows (imap-connect-form.tsx), with the
 // step's own dismissal and action row, so the two cannot drift apart.
