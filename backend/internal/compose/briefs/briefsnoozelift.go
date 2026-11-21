@@ -98,6 +98,8 @@ func NextSnoozeEndSQL(user, asOf string) string {
 // LiftedSnoozesDigestSQL is a digest of user's reply and meeting snoozes that
 // have lifted by asOf, or NULL when none has. A lift writes nothing, so a
 // changed digest is the only sign that an answer which hid the item is behind.
+// It reads every snooze the user ever set, the same set as SnoozedDeals. That
+// keeps a cache hit cheaper than a miss, which reads the queue itself.
 func LiftedSnoozesDigestSQL(user, asOf string) string {
 	return fmt.Sprintf(`(SELECT decode(md5(string_agg(bi.id::text, ',' ORDER BY bi.id)), 'hex') FROM brief_item bi
 		JOIN brief_run br ON br.id = bi.brief_run_id

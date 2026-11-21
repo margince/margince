@@ -34,6 +34,9 @@ type snoozedDeal struct {
 	rep2   context.Context
 	deal   ids.UUID
 	item   ids.UUID
+	stage  ids.StageID
+	// pipeline holds every deal the fixture seeds; a second one would clash by name.
+	pipeline ids.PipelineID
 	// now is the database clock, which the cache judges validity by.
 	now time.Time
 }
@@ -45,20 +48,26 @@ func briefItemOnADeal(t *testing.T) snoozedDeal {
 		e: e, cache: homecache.New(e.Pool), engine: briefs.NewBriefEngine(e.Pool, e.Contacts),
 		rep1: e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms), rep2: e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms),
 	}
-	pipeline, open, _ := DealFixture(t, e)
-	owner := OwnerConn(t)
-	if err := owner.QueryRow(context.Background(), `
-		INSERT INTO deal (pipeline_id, stage_id, name, owner_id, status, source, captured_by, amount_minor, currency, expected_close_date)
-		VALUES ($1, $2, 'Waiting deal', $3, 'open', 'manual', 'test', 6000000, 'EUR', now() + interval '5 days')
-		RETURNING id, now()`, pipeline, open, e.Rep1).Scan(&s.deal, &s.now); err != nil {
-		t.Fatal(err)
-	}
+	s.pipeline, s.stage, _ = DealFixture(t, e)
+	s.deal, s.now = s.seedDeal(t)
 	run, err := s.engine.SnapshotRun(s.rep1, s.now)
 	if err != nil || len(run.Items) == 0 {
 		t.Fatalf("a run to snooze from: items=%d err=%v", len(run.Items), err)
 	}
 	s.item = run.Items[0].ID
 	return s
+}
+
+// seedDeal adds an open deal of Rep1's and answers it with the database clock.
+func (s snoozedDeal) seedDeal(t *testing.T) (deal ids.UUID, now time.Time) {
+	t.Helper()
+	if err := OwnerConn(t).QueryRow(context.Background(), `
+		INSERT INTO deal (pipeline_id, stage_id, name, owner_id, status, source, captured_by, amount_minor, currency, expected_close_date)
+		VALUES ($1, $2, 'Waiting deal', $3, 'open', 'manual', 'test', 6000000, 'EUR', now() + interval '5 days')
+		RETURNING id, now()`, s.pipeline, s.stage, s.e.Rep1).Scan(&deal, &now); err != nil {
+		t.Fatal(err)
+	}
+	return deal, now
 }
 
 // snooze sets the item down ten minutes ago and keeps both reps' answers now.
@@ -76,7 +85,7 @@ func (s snoozedDeal) snooze(t *testing.T, on values.ReopenCondition, meeting *id
 
 // captureMail lands a mail on the deal as a mailbox sync does. It is dated
 // before the answer was kept, as most captured mail is: it was sent earlier.
-func (s snoozedDeal) captureMail(t *testing.T, id, direction string) {
+func (s snoozedDeal) captureMail(t *testing.T, id, direction string, deal ids.UUID) {
 	t.Helper()
 	address := "buyer@waiting-customer.test"
 	_, err := capture.NewSink(s.e.DB()).Upsert(s.e.ConnectorOwnerCtx(s.e.Rep1, "gmail"), connector.NormalizedRecord{
@@ -86,7 +95,7 @@ func (s snoozedDeal) captureMail(t *testing.T, id, direction string) {
 			Kind: "email", Subject: "About the rollout", Body: "Here is our answer.",
 			Direction: direction, OccurredAt: s.now.Add(-5 * time.Minute),
 		},
-		Links:  []datasource.EntityRef{{Type: datasource.EntityDeal, ID: s.deal}},
+		Links:  []datasource.EntityRef{{Type: datasource.EntityDeal, ID: deal}},
 		Source: "gmail:" + id, CapturedBy: "connector:gmail",
 		Raw:          []byte("From: " + address + "\r\nSubject: About the rollout\r\n\r\nHere is our answer."),
 		Counterparty: connector.Counterparty{Email: address, Domain: "waiting-customer.test", Direction: direction},
@@ -127,10 +136,11 @@ func (s snoozedDeal) assertOwnerReadsTheItemAgain(t *testing.T) {
 func TestACapturedReplyEndsTheSnoozeOwnersKeptHomeAnswer(t *testing.T) {
 	s := briefItemOnADeal(t)
 	s.snooze(t, values.ReopenOnReply, nil)
-	s.captureMail(t, "reply", connector.DirectionInbound)
+	s.captureMail(t, "reply", connector.DirectionInbound, s.deal)
 	s.assertOwnerReadsTheItemAgain(t)
 }
 
+// A meeting that ends by the clock alone is not tested: the database clock cannot move between keep and lookup.
 func TestACalendarCancellationEndsTheMeetingSnoozeOwnersKeptHomeAnswer(t *testing.T) {
 	s := briefItemOnADeal(t)
 	meeting := CalendarMeeting{Event: "demo", At: s.now.AddDate(0, 0, 2)}
@@ -144,7 +154,7 @@ func TestACalendarCancellationEndsTheMeetingSnoozeOwnersKeptHomeAnswer(t *testin
 func TestAMailThatLiftsNoSnoozeLeavesTheKeptHomeAnswer(t *testing.T) {
 	s := briefItemOnADeal(t)
 	s.snooze(t, values.ReopenOnReply, nil)
-	s.captureMail(t, "chaser", connector.DirectionOutbound)
+	s.captureMail(t, "chaser", connector.DirectionOutbound, s.deal)
 	if !served(s.rep1, t, s.cache, s.e.Rep1, homecache.Worklist) {
 		t.Error("a mail that lifted no snooze ended the kept answer")
 	}
@@ -155,9 +165,20 @@ func TestAMailThatLiftsNoSnoozeLeavesTheKeptHomeAnswer(t *testing.T) {
 func TestAnAnswerReadAfterTheLiftIsKept(t *testing.T) {
 	s := briefItemOnADeal(t)
 	s.snooze(t, values.ReopenOnReply, nil)
-	s.captureMail(t, "reply", connector.DirectionInbound)
+	s.captureMail(t, "reply", connector.DirectionInbound, s.deal)
 	keep(s.rep1, t, s.cache, s.e.Rep1, homecache.Worklist, nil, "today")
 	if !served(s.rep1, t, s.cache, s.e.Rep1, homecache.Worklist) {
 		t.Error("an answer read after the snooze lifted was never served")
+	}
+}
+
+// A reply on another deal of the owner's lifts nothing on this one.
+func TestAReplyOnAnotherDealLeavesTheKeptHomeAnswer(t *testing.T) {
+	s := briefItemOnADeal(t)
+	other, _ := s.seedDeal(t)
+	s.snooze(t, values.ReopenOnReply, nil)
+	s.captureMail(t, "elsewhere", connector.DirectionInbound, other)
+	if !served(s.rep1, t, s.cache, s.e.Rep1, homecache.Worklist) {
+		t.Error("a reply on another deal ended the kept answer")
 	}
 }
