@@ -73,6 +73,12 @@ judge:
 # Sofia's. Her contact row is gone once the conversion is undone, so no name
 # finds it: the count says she left. The seed puts twelve on the list, Mara
 # among them, and Jens takes her place.
+# The form execute puts up asks for the go-ahead the prompt already gave
+# ("just do it"), so the user answers yes. A host that cannot answer it, such as
+# `claude -p`, sends no for them, and the hand-over never runs.
+elicitation:
+  - "Give a new owner to => accept confirm=true"
+
 must_end_with:
   - list "Messe Hannover 2026" member=Jens Falk
   - list "Messe Hannover 2026" members=12

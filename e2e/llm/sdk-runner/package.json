@@ -1,0 +1,22 @@
+{
+  "name": "e2e-llm-sdk-runner",
+  "private": true,
+  "description": "Drives one e2e-llm scenario through the Claude Agent SDK, answering the MCP server's in-chat questions from the scenario. Not a workspace member: only the opt-in E2E_LLM_VIA=sdk lane installs it, with npm ci against the lockfile beside this file.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "node --test 'src/*.test.ts'"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.325",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3"
+  }
+}

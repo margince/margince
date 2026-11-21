@@ -134,6 +134,7 @@ _SCHEMA = {
     "criteria": "list", "must_call": "list", "may_call": "list", "must_call_with": "list",
     "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
     "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
+    "elicitation": "list",
 }
 _REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
 # The credentials scripts/e2e-llm.sh mints, by the `passport:` value that picks
@@ -239,8 +240,53 @@ def lint(path):
     return problems + _entry_problems(data)
 
 
+# ELICITATION is what the user answers when the server asks in the chat:
+# `<text the question holds> => accept|decline|cancel [field=value ...]`. Only a
+# host that can answer reads it (E2E_LLM_VIA=sdk); a value is JSON when it
+# parses as JSON, and a bare word otherwise.
+_ELICITATION = re.compile(
+    r"^(?P<match>\S.*?)\s*=>\s*(?P<action>accept|decline|cancel)(?P<fields>(?:\s+[A-Za-z_][A-Za-z0-9_]*=\S+)*)\s*$"
+)
+
+
+def _form_value(text):
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return text
+    if isinstance(value, (str, bool, int, float)) or (
+        isinstance(value, list) and all(isinstance(item, str) for item in value)
+    ):
+        return value
+    raise ValueError(f"{text} is not a value a form field holds")
+
+
+def elicitation_replies(entries):
+    """The scripted answers as the SDK runner reads them, in the scenario's order."""
+    replies = []
+    for entry in entries:
+        found = _ELICITATION.match(str(entry))
+        if not found:
+            raise ValueError(f"elicitation entry {entry!r} is not `<text> => accept|decline|cancel [field=value ...]`")
+        reply = {"match": found.group("match"), "action": found.group("action")}
+        fields = found.group("fields").split()
+        if fields and reply["action"] != "accept":
+            raise ValueError(f"elicitation entry {entry!r} gives fields to a {reply['action']}, which sends none")
+        if reply["action"] == "accept":
+            reply["content"] = {}
+            for field in fields:
+                key, _, value = field.partition("=")
+                reply["content"][key] = _form_value(value)
+        replies.append(reply)
+    return replies
+
+
 def _entry_problems(data):
     problems = []
+    try:
+        elicitation_replies(data.get("elicitation", []))
+    except ValueError as malformed:
+        problems.append(str(malformed))
     for key in ("must_mention", "must_not_mention"):
         problems += [p for p in (_compiles(key, str(pattern)) for pattern in data.get(key, [])) if p]
     for entry in data.get("must_not_call_with", []):
@@ -974,6 +1020,10 @@ def main():
         scenario = parse_scenario(sys.argv[3])
         value = scenario.get(sys.argv[2], "")
         print(value if not isinstance(value, list) else "\n".join(map(str, value)))
+        return 0
+
+    if sys.argv[1] == "--elicitation":
+        print(json.dumps(elicitation_replies(parse_scenario(sys.argv[2]).get("elicitation", []))))
         return 0
 
     if sys.argv[1] == "--candidate":
