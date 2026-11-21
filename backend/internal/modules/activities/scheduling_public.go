@@ -241,7 +241,7 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 	}
 	profile = bookingLength(profile, params.L)
 	duration := time.Duration(profile.DurationMinutes) * time.Minute
-	slots, truncated, err := h.store.ReliableAvailability(r.Context(), page.HostUserID, params.From, params.To, duration)
+	slots, truncated, err := h.store.PageAvailability(r.Context(), page.HostUserID, params.From, params.To, duration)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -327,7 +327,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writePublicInvitation(w, *recovered, intent.Marketing)
 		return
 	}
-	if _, err := h.store.validateInvitationTime(r.Context(), page.HostUserID, req.Start, req.End); err != nil {
+	if err := h.store.validatePageTime(r.Context(), page.HostUserID, profile, req.Start, req.End); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}

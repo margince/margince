@@ -22672,6 +22672,31 @@ export const en = {
   "scheduling.replaceAliasHelp":
     "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
+  "scheduling.team.title": "Colleagues on this link",
+  "scheduling.team.foot":
+    "Guests see only the times when you and every colleague here are free, in each colleague’s own working hours. Each booking invites every colleague.",
+  "scheduling.team.add": "Add a colleague",
+  "scheduling.team.addHelp":
+    "Only colleagues with a connected calendar are offered. Each one confirms before the link takes bookings.",
+  "scheduling.team.full":
+    "This link names five colleagues, which is the most it can hold.",
+  "scheduling.team.choose": "Choose a colleague",
+  "scheduling.team.noneToAdd": "No other colleague has a connected calendar",
+  "scheduling.team.remove": "Remove",
+  "scheduling.team.pending": "Waiting for confirmation",
+  "scheduling.team.confirmed": "Confirmed",
+  "scheduling.team.left": "Left the link",
+  "scheduling.team.unavailable": "Calendar not readable",
+  "scheduling.team.requestsTitle": "Colleagues’ links that name you",
+  "scheduling.team.requestLabel": "{title} with {name}",
+  "scheduling.team.requestPending":
+    "Confirm to let guests book times when you are free. You are invited to every meeting booked through this link.",
+  "scheduling.team.requestConfirmed":
+    "Guests book times when you are free. You are invited to every meeting booked through this link.",
+  "scheduling.team.confirm": "Confirm",
+  "scheduling.team.leave": "Leave",
+  "worklist.untitled.booking_health_team_not_ready":
+    "Your booking page is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",
   "scheduling.liveNoInvitesTitle": "Guests can book, but no invitations go out",

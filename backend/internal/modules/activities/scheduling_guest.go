@@ -135,6 +135,12 @@ func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request
 	if booking.Public != nil {
 		booking.Public.Marketing = marketing
 	}
+	team, err := h.store.pageTeam(r.Context(), profile)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return crmcontracts.MeetingInvitation{}, false
+	}
+	booking.Team = team
 	out, err := h.store.reserveAndQueueInvitation(r.Context(), page.HostUserID, in, booking)
 	if err != nil {
 		writeStoreErr(w, r, err)

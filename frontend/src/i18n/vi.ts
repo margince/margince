@@ -22382,6 +22382,30 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Địa chỉ ngắn {url} của bạn cũng ngừng hoạt động. Bạn có thể chọn lại sau đó.",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
+  "scheduling.team.title": "Đồng nghiệp trên liên kết này",
+  "scheduling.team.foot":
+    "Khách chỉ thấy những khung giờ mà bạn và mọi đồng nghiệp ở đây đều rảnh, theo giờ làm việc riêng của từng đồng nghiệp. Mỗi lượt đặt lịch đều mời tất cả đồng nghiệp.",
+  "scheduling.team.add": "Thêm đồng nghiệp",
+  "scheduling.team.addHelp":
+    "Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
+  "scheduling.team.full": "Liên kết này đã có năm đồng nghiệp, là số tối đa.",
+  "scheduling.team.choose": "Chọn đồng nghiệp",
+  "scheduling.team.noneToAdd": "Không có đồng nghiệp nào khác đã kết nối lịch",
+  "scheduling.team.remove": "Gỡ",
+  "scheduling.team.pending": "Đang chờ xác nhận",
+  "scheduling.team.confirmed": "Đã xác nhận",
+  "scheduling.team.left": "Đã rời liên kết",
+  "scheduling.team.unavailable": "Không đọc được lịch",
+  "scheduling.team.requestsTitle": "Liên kết của đồng nghiệp có tên bạn",
+  "scheduling.team.requestLabel": "{title} với {name}",
+  "scheduling.team.requestPending":
+    "Xác nhận để khách đặt được những khung giờ bạn rảnh. Bạn được mời vào mọi cuộc họp đặt qua liên kết này.",
+  "scheduling.team.requestConfirmed":
+    "Khách đặt những khung giờ bạn rảnh. Bạn được mời vào mọi cuộc họp đặt qua liên kết này.",
+  "scheduling.team.confirm": "Xác nhận",
+  "scheduling.team.leave": "Rời",
+  "worklist.untitled.booking_health_team_not_ready":
+    "Trang đặt lịch của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
   "scheduling.personalLinksFoot":
     "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",
   "scheduling.liveNoInvitesTitle":

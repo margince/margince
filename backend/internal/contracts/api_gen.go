@@ -23260,6 +23260,7 @@ const (
 	SchedulingProfileBlockerCalendarUnavailable SchedulingProfileBlocker = "calendar_unavailable"
 	SchedulingProfileBlockerNoCalendar          SchedulingProfileBlocker = "no_calendar"
 	SchedulingProfileBlockerNone                SchedulingProfileBlocker = "none"
+	SchedulingProfileBlockerTeamNotReady        SchedulingProfileBlocker = "team_not_ready"
 )
 
 // Valid indicates whether the value is a known member of the SchedulingProfileBlocker enum.
@@ -23272,6 +23273,8 @@ func (e SchedulingProfileBlocker) Valid() bool {
 	case SchedulingProfileBlockerNoCalendar:
 		return true
 	case SchedulingProfileBlockerNone:
+		return true
+	case SchedulingProfileBlockerTeamNotReady:
 		return true
 	default:
 		return false
@@ -23293,6 +23296,66 @@ func (e SchedulingProfileProvider) Valid() bool {
 	case SchedulingProfileProviderGcal:
 		return true
 	case SchedulingProfileProviderGraphcal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamAnswerState.
+const (
+	SchedulingTeamAnswerStateConfirmed SchedulingTeamAnswerState = "confirmed"
+	SchedulingTeamAnswerStateLeft      SchedulingTeamAnswerState = "left"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamAnswerState enum.
+func (e SchedulingTeamAnswerState) Valid() bool {
+	switch e {
+	case SchedulingTeamAnswerStateConfirmed:
+		return true
+	case SchedulingTeamAnswerStateLeft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamMemberState.
+const (
+	SchedulingTeamMemberStateConfirmed   SchedulingTeamMemberState = "confirmed"
+	SchedulingTeamMemberStateLeft        SchedulingTeamMemberState = "left"
+	SchedulingTeamMemberStatePending     SchedulingTeamMemberState = "pending"
+	SchedulingTeamMemberStateUnavailable SchedulingTeamMemberState = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamMemberState enum.
+func (e SchedulingTeamMemberState) Valid() bool {
+	switch e {
+	case SchedulingTeamMemberStateConfirmed:
+		return true
+	case SchedulingTeamMemberStateLeft:
+		return true
+	case SchedulingTeamMemberStatePending:
+		return true
+	case SchedulingTeamMemberStateUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamRequestState.
+const (
+	SchedulingTeamRequestStateConfirmed SchedulingTeamRequestState = "confirmed"
+	SchedulingTeamRequestStatePending   SchedulingTeamRequestState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamRequestState enum.
+func (e SchedulingTeamRequestState) Valid() bool {
+	switch e {
+	case SchedulingTeamRequestStateConfirmed:
+		return true
+	case SchedulingTeamRequestStatePending:
 		return true
 	default:
 		return false
@@ -66148,7 +66211,9 @@ type SchedulingProfile struct {
 	// Blocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
 	// the page names no calendar (a page saved before the profile existed reads this way).
 	// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-	// the connection is gone or refused. Answered on the host's own profile read only.
+	// the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+	// left, or has no calendar Margince can read; `team_members` says which. Answered on the
+	// host's own profile read only.
 	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
 	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int                       `json:"buffer_minutes" maximum:"120" minimum:"0"`
@@ -66179,7 +66244,14 @@ type SchedulingProfile struct {
 	PublicUrl   *string `json:"public_url,omitempty"`
 	ReplaceLink *bool   `json:"replace_link,omitempty"`
 	Slug        *string `json:"slug,omitempty"`
-	Title       string  `json:"title"`
+
+	// TeamMembers Colleagues who must attend every meeting booked through this page. Guests see only the
+	// times when the host and every member are free, inside each one's own working hours, and
+	// each booking invites every member. A member named here starts as `pending` and the page
+	// takes no bookings until every member has confirmed. Only `user_id` is read from a
+	// request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+	TeamMembers *[]SchedulingTeamMember `json:"team_members,omitempty"`
+	Title       string                  `json:"title"`
 
 	// UseDefaultTitle Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording.
 	UseDefaultTitle *bool `json:"use_default_title,omitempty"`
@@ -66191,11 +66263,56 @@ type SchedulingProfile struct {
 // SchedulingProfileBlocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
 // the page names no calendar (a page saved before the profile existed reads this way).
 // `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-// the connection is gone or refused. Answered on the host's own profile read only.
+// the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+// left, or has no calendar Margince can read; `team_members` says which. Answered on the
+// host's own profile read only.
 type SchedulingProfileBlocker string
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
+
+// SchedulingTeamAnswer defines model for SchedulingTeamAnswer.
+type SchedulingTeamAnswer struct {
+	State SchedulingTeamAnswerState `json:"state"`
+}
+
+// SchedulingTeamAnswerState defines model for SchedulingTeamAnswer.State.
+type SchedulingTeamAnswerState string
+
+// SchedulingTeamCandidate defines model for SchedulingTeamCandidate.
+type SchedulingTeamCandidate struct {
+	Name   string             `json:"name"`
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// SchedulingTeamMember defines model for SchedulingTeamMember.
+type SchedulingTeamMember struct {
+	Name *string `json:"name,omitempty"`
+
+	// State `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+	// `left`: the member left the link; remove them to take bookings again. `unavailable`:
+	// the member left the workspace or Margince cannot read their calendar.
+	State  *SchedulingTeamMemberState `json:"state,omitempty"`
+	UserId openapi_types.UUID         `json:"user_id"`
+}
+
+// SchedulingTeamMemberState `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+// `left`: the member left the link; remove them to take bookings again. `unavailable`:
+// the member left the workspace or Margince cannot read their calendar.
+type SchedulingTeamMemberState string
+
+// SchedulingTeamRequest defines model for SchedulingTeamRequest.
+type SchedulingTeamRequest struct {
+	HostName   string                     `json:"host_name"`
+	HostUserId openapi_types.UUID         `json:"host_user_id"`
+	State      SchedulingTeamRequestState `json:"state"`
+
+	// Title The meeting title the link offers.
+	Title string `json:"title"`
+}
+
+// SchedulingTeamRequestState defines model for SchedulingTeamRequest.State.
+type SchedulingTeamRequestState string
 
 // SdrHandoffCohort defines model for SdrHandoffCohort.
 type SdrHandoffCohort struct {
@@ -85769,6 +85886,9 @@ type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
+// AnswerSchedulingTeamRequestJSONRequestBody defines body for AnswerSchedulingTeamRequest for application/json ContentType.
+type AnswerSchedulingTeamRequestJSONRequestBody = SchedulingTeamAnswer
+
 // ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
 type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
 
@@ -102448,6 +102568,15 @@ type ServerInterface interface {
 	// Create a personal, expiring invitation without reserving time or sending mail.
 	// (POST /scheduling/proposals)
 	CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams)
+	// List the colleagues the caller may name on their booking link.
+	// (GET /scheduling/team-candidates)
+	ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request)
+	// List the colleagues' booking links that name the caller.
+	// (GET /scheduling/team-requests)
+	ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request)
+	// Confirm or leave a colleague's booking link that names the caller.
+	// (PUT /scheduling/team-requests/{host_user_id})
+	AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID)
 	// Read the current receiver and reassignment version of a prospect handoff.
 	// (GET /sdr-handoffs/{id}/assignee)
 	GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id Id)
@@ -108730,6 +108859,24 @@ func (_ Unimplemented) ListMeetingProposals(w http.ResponseWriter, r *http.Reque
 // Create a personal, expiring invitation without reserving time or sending mail.
 // (POST /scheduling/proposals)
 func (_ Unimplemented) CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the colleagues the caller may name on their booking link.
+// (GET /scheduling/team-candidates)
+func (_ Unimplemented) ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the colleagues' booking links that name the caller.
+// (GET /scheduling/team-requests)
+func (_ Unimplemented) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm or leave a colleague's booking link that names the caller.
+// (PUT /scheduling/team-requests/{host_user_id})
+func (_ Unimplemented) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -152741,6 +152888,82 @@ func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ListSchedulingTeamCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchedulingTeamCandidates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSchedulingTeamRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchedulingTeamRequests(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerSchedulingTeamRequest operation middleware
+func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_user_id" -------------
+	var hostUserId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_user_id", chi.URLParam(r, "host_user_id"), &hostUserId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_user_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerSchedulingTeamRequest(w, r, hostUserId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetHandoffAssignee operation middleware
 func (siw *ServerInterfaceWrapper) GetHandoffAssignee(w http.ResponseWriter, r *http.Request) {
 
@@ -162138,6 +162361,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/scheduling/proposals", wrapper.CreateMeetingProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/team-candidates", wrapper.ListSchedulingTeamCandidates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/team-requests", wrapper.ListSchedulingTeamRequests)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/team-requests/{host_user_id}", wrapper.AnswerSchedulingTeamRequest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/sdr-handoffs/{id}/assignee", wrapper.GetHandoffAssignee)

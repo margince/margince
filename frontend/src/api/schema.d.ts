@@ -8107,6 +8107,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scheduling/team-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the colleagues the caller may name on their booking link.
+         * @description A colleague is offered when they are a live member other than the caller and their own
+         *     booking settings name a calendar connection Margince can read. A colleague without one is
+         *     left out, so a time a team link offers is free for everyone on it.
+         */
+        get: operations["listSchedulingTeamCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/team-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the colleagues' booking links that name the caller.
+         * @description Each live booking link that names the caller as a team member, with whether the caller
+         *     confirmed it. A link that the caller left is not listed.
+         */
+        get: operations["listSchedulingTeamRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/team-requests/{host_user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_user_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Confirm or leave a colleague's booking link that names the caller.
+         * @description `confirmed` lets the link read the caller's free time and put the caller on each meeting
+         *     booked through it. `left` takes the caller off: the link stops taking bookings until its
+         *     owner removes the caller, and the owner sees why. Answers 404 when no live link of that
+         *     colleague names the caller.
+         */
+        put: operations["answerSchedulingTeamRequest"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scheduling/invitations": {
         parameters: {
             query?: never;
@@ -43206,10 +43274,50 @@ export interface components {
              * @description Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
              *     the page names no calendar (a page saved before the profile existed reads this way).
              *     `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-             *     the connection is gone or refused. Answered on the host's own profile read only.
+             *     the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+             *     left, or has no calendar Margince can read; `team_members` says which. Answered on the
+             *     host's own profile read only.
              * @enum {string}
              */
-            readonly blocker?: "none" | "no_calendar" | "calendar_read_only" | "calendar_unavailable";
+            readonly blocker?: "none" | "no_calendar" | "calendar_read_only" | "calendar_unavailable" | "team_not_ready";
+            /**
+             * @description Colleagues who must attend every meeting booked through this page. Guests see only the
+             *     times when the host and every member are free, inside each one's own working hours, and
+             *     each booking invites every member. A member named here starts as `pending` and the page
+             *     takes no bookings until every member has confirmed. Only `user_id` is read from a
+             *     request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+             */
+            team_members?: components["schemas"]["SchedulingTeamMember"][];
+        };
+        SchedulingTeamMember: {
+            /** Format: uuid */
+            user_id: string;
+            readonly name?: string;
+            /**
+             * @description `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+             *     `left`: the member left the link; remove them to take bookings again. `unavailable`:
+             *     the member left the workspace or Margince cannot read their calendar.
+             * @enum {string}
+             */
+            readonly state?: "pending" | "confirmed" | "left" | "unavailable";
+        };
+        SchedulingTeamCandidate: {
+            /** Format: uuid */
+            user_id: string;
+            name: string;
+        };
+        SchedulingTeamRequest: {
+            /** Format: uuid */
+            host_user_id: string;
+            host_name: string;
+            /** @description The meeting title the link offers. */
+            title: string;
+            /** @enum {string} */
+            state: "pending" | "confirmed";
+        };
+        SchedulingTeamAnswer: {
+            /** @enum {string} */
+            state: "confirmed" | "left";
         };
         SchedulingAliasRequest: {
             /** @description The friendly address to claim; empty clears it. Validated and normalized by the server. */
@@ -77213,6 +77321,99 @@ export interface operations {
                 content?: never;
             };
             404: components["responses"]["NotFound"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listSchedulingTeamCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The colleagues who may be named, by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamCandidate"][];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listSchedulingTeamRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The links that name the caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamRequest"][];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    answerSchedulingTeamRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingTeamAnswer"];
+            };
+        };
+        responses: {
+            /** @description The answer is recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {

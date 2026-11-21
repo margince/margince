@@ -92,17 +92,35 @@ func (s *Store) reliableBusy(ctx context.Context, host ids.UserID, p crmcontract
 
 // ReliableAvailability combines provider occupancy with pending local reservations.
 func (s *Store) ReliableAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration) ([]slot, bool, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+	if err := mayReadLiveCalendar(ctx, host); err != nil {
 		return nil, false, err
+	}
+	return s.hostReliableAvailability(ctx, host, from, to, duration, false)
+}
+
+// PageAvailability is the free time a standing booking page offers. It is the
+// host's free time, cut down to the times each team member is free.
+func (s *Store) PageAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration) ([]slot, bool, error) {
+	if err := mayReadLiveCalendar(ctx, host); err != nil {
+		return nil, false, err
+	}
+	return s.hostReliableAvailability(ctx, host, from, to, duration, true)
+}
+
+// mayReadLiveCalendar admits the host and the system principal the public page
+// runs as. A team page reads its members only through that page.
+func mayReadLiveCalendar(ctx context.Context, host ids.UserID) error {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || (actor.Type != principal.PrincipalSystem && actor.UserID != host.UUID) {
-		return nil, false, apperrors.ErrPermissionDenied
+		return apperrors.ErrPermissionDenied
 	}
-	return s.hostReliableAvailability(ctx, host, from, to, duration)
+	return nil
 }
 
-func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration) ([]slot, bool, error) {
+func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration, withTeam bool) ([]slot, bool, error) {
 	profile, err := s.hostSchedulingProfile(ctx, host)
 	if err != nil {
 		return nil, false, err
@@ -126,7 +144,19 @@ func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, f
 	if err != nil {
 		return nil, false, err
 	}
+	return s.freeTime(ctx, host, profile, from, to, duration, withTeam)
+}
 
+// freeTime walks the window for the host, and with withTeam for the page's
+// team as well: their busy time and their working hours.
+func (s *Store) freeTime(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile, from, to time.Time, duration time.Duration, withTeam bool) ([]slot, bool, error) {
+	var team []teamCalendar
+	if withTeam {
+		var err error
+		if team, err = s.pageTeam(ctx, profile); err != nil {
+			return nil, false, err
+		}
+	}
 	hours, err := s.strictHours(ctx, host)
 	if err != nil {
 		return nil, false, err
@@ -135,7 +165,11 @@ func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, f
 	if err != nil {
 		return nil, false, err
 	}
-	free, truncated := policySlots(from, to, duration, busy, hours)
+	teamBusy, teamHours, err := s.teamOccupancy(ctx, team, profile, from, to, ids.Nil, "")
+	if err != nil {
+		return nil, false, err
+	}
+	free, truncated := policySlots(from, to, duration, append(busy, teamBusy...), hours, teamHours...)
 	return free, truncated, nil
 }
 
@@ -161,7 +195,9 @@ func (s *Store) bookingWindow(profile crmcontracts.SchedulingProfile, from, to t
 	return from, to, nil
 }
 
-func policySlots(from, to time.Time, duration time.Duration, busy []slot, hours WorkingHours) ([]slot, bool) {
+// policySlots walks the host's grid. A slot must also lie in each of the
+// members' working hours, each read in that member's own zone.
+func policySlots(from, to time.Time, duration time.Duration, busy []slot, hours WorkingHours, members ...WorkingHours) ([]slot, bool) {
 	free := []slot{}
 	local := from.In(hours.Location)
 	cursor := time.Date(local.Year(), local.Month(), local.Day(), local.Hour(), local.Minute()/15*15, 0, 0, hours.Location)
@@ -170,7 +206,7 @@ func policySlots(from, to time.Time, duration time.Duration, busy []slot, hours 
 	}
 	for ; !cursor.Add(duration).After(to); cursor = cursor.Add(15 * time.Minute) {
 		candidate := slot{Start: cursor.UTC(), End: cursor.Add(duration).UTC()}
-		if !hours.covers(candidate.Start, candidate.End) || overlapsAny(candidate, busy) {
+		if !hours.covers(candidate.Start, candidate.End) || !allCover(members, candidate) || overlapsAny(candidate, busy) {
 			continue
 		}
 		free = append(free, candidate)
@@ -227,4 +263,13 @@ func validateActivityDuration(seconds *int) error {
 		return &SchedulingArgumentError{Field: fieldDurationSeconds, Code: "out_of_range", Message: "Duration must be between zero and 31 days"}
 	}
 	return nil
+}
+
+func allCover(members []WorkingHours, candidate slot) bool {
+	for _, hours := range members {
+		if !hours.covers(candidate.Start, candidate.End) {
+			return false
+		}
+	}
+	return true
 }

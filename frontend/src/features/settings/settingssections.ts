@@ -34,6 +34,8 @@ export const SETTINGS_SECTIONS = {
       "scheduling.linksTitle",
       "scheduling.setup.title",
       "scheduling.acceptBookings",
+      "scheduling.team.title",
+      "scheduling.team.add",
     ],
     availability: [
       "settings.part.meetings.availability",

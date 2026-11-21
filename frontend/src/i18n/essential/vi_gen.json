@@ -5310,6 +5310,7 @@
   "magic.consequence.capture_not_collecting": "Đã dừng thu thập.",
   "magic.consequence.capture_may_be_incomplete": "Dữ liệu thu thập gần đây có thể chưa đầy đủ.",
   "magic.consequence.capture_history_incomplete": "Nhập lịch sử chưa hoàn tất.",
+  "worklist.untitled.booking_health_team_not_ready": "Trang đặt lịch của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
   "checklist.stepDone": "Đã xong",
   "checklist.stepOpen": "Chưa xong",
   "checklist.stepWaiting": "Đang chờ",

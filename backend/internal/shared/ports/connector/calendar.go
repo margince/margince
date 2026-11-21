@@ -82,6 +82,9 @@ type CalendarAppointment struct {
 	// VideoCall asks the provider for a conference on create only; an update
 	// keeps whatever conference the event already has.
 	VideoCall bool `json:"VideoCall"`
+	// Team names the colleagues of a team booking link whose time this
+	// meeting holds, beside its host. Empty on every other booking.
+	Team []ids.UUID `json:"Team,omitempty"`
 }
 
 // The bases an invited address can resolve to, in the order they are tried.

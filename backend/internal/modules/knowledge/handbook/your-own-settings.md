@@ -172,6 +172,7 @@ Also called: turn off keys, keyboard shortcuts, single key.
 
 The Meetings page in Settings is where customers book time with you. It has three tabs: **Booking links**, with your links and the calendar, **Availability**, with **When people can book**, and **Guest page**, with **What guests see**.
 While no Google or Microsoft 365 calendar is connected, a card **Connect a calendar to take bookings** comes first on **Booking links**.
+**Booking links** also holds **Colleagues on this link**, where you name the colleagues who join each meeting booked through your link. A colleague confirms under **Colleagues’ links that name you**; see [Meetings and booking](meetings-and-booking.md#how-do-i-offer-times-when-several-colleagues-are-free).
 
 ### How do I set up bookings?
 <!-- opens: settings/meetings -->

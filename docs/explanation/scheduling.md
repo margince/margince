@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go backend/internal/modules/activities/activityintent.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_team.go backend/internal/modules/activities/scheduling_teamtime.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go backend/internal/modules/activities/activityintent.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -33,6 +33,29 @@ The host's own profile carries `blocker`. It is read from the connection row and
 authority, never from a provider call. `no_calendar` is a page that names none, `calendar_read_only`
 a connection without the write grant, and `calendar_unavailable` a connection that is gone or
 refused.
+
+## A team link waits for every member
+
+A booking page may name up to five colleagues in `team_members`, stored in the page's
+`scheduling_policy`. Each member's answer is their own. The owner's save keeps it, and starts a new
+member as `pending`. Only the member writes `confirmed` or `left`.
+
+Confirming is a consent to share free time with a public page, so an agent cannot give it. Until every member has confirmed
+and has a calendar Margince can read, the page's `blocker` is `team_not_ready` and the page is
+paused. Home tells the owner through the same booking card a broken calendar raises.
+
+A member's calendar is read through the calendars of their own booking settings. The page keeps
+the same free time around their meetings as around the host's. A read-only grant is enough, because a member's
+calendar is only read. A free time is free for the host and for every member. It must also fall in
+each member's own working hours, read in their own zone.
+
+A booking names the members in the `Team` field it stores. That holds their time the way a hosted
+meeting does. The local hold check (`localMeetingSlots`) counts it for each member. The booking
+takes the host lock of the host and of every member, always in one order. So two links cannot book
+one member twice, and each member's own page stops offering the time.
+
+Each member is invited on the one event, and the booking closes each member's own open tasks on the
+booked record. A move checks every member again who can still be read.
 
 ## Free times are read live, and a failed read shows no times
 

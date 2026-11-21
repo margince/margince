@@ -169,6 +169,9 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
+	if err := s.validateTeamTime(ctx, intent.Team, profile, in.Start, in.End, ""); err != nil {
+		return crmcontracts.MeetingInvitation{}, err
+	}
 	// A lead booker was found by this very address on this request, and the
 	// provider save checks the lead again (compose schedulingCalendar.Save).
 	if intent.Lead.IsZero() {
@@ -176,7 +179,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 			return crmcontracts.MeetingInvitation{}, err
 		}
 	}
-	roster, err := s.resolveRoster(ctx, host, in, intent)
+	roster, err := s.resolveRoster(ctx, host, withTeamAttendees(in, intent.Team), intent)
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
@@ -191,6 +194,9 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	row := invitationRow{PublicIntent: intent.Public, ManagementRef: ref, Host: host, Provider: string(profile.Provider), Calendar: profile.CalendarId, ReminderStatus: "off", Status: invitationPending, Version: 1, Command: "create"}
 	row.Appointment = invitationAppointment(profile, in)
 	row.Appointment.LeadID = intent.Lead.UUID
+	if len(intent.Team) > 0 {
+		row.Appointment.Team = teamIDs(intent.Team)
+	}
 	row.Appointment.Attendees, row.Appointment.Roster = rosterAddresses(roster), roster
 	if intent.DescriptionFromBooker {
 		row.Appointment.Description = ""
@@ -294,13 +300,13 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 				return err
 			}
 		}
-		if err := storekit.LockWriteIdentity(ctx, tx, "meeting_host", host.String()); err != nil {
+		if err := lockSlotHolders(ctx, tx, host, row.Appointment.Team); err != nil {
 			return err
 		}
 		if err := admitPublicBookingIntent(ctx, tx, row.PublicIntent); err != nil {
 			return err
 		}
-		if err := reserveInvitation(ctx, tx, host, in.Start, in.End, buffer, ids.Nil); err != nil {
+		if err := reserveSlotHolders(ctx, tx, host, row.Appointment.Team, in.Start, in.End, buffer, ids.Nil); err != nil {
 			return err
 		}
 		seconds := int(in.End.Sub(in.Start) / time.Second)
@@ -318,8 +324,10 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 			return err
 		}
 		if invitationSource(ctx) == publicBookingSource {
-			if _, err := s.CloseTasksAnsweredByBookingTx(ctx, tx, ids.From[ids.ActivityKind](row.ID), host, invitationLinks(in, intent)); err != nil {
-				return err
+			for _, holder := range slotHolders(host, row.Appointment.Team) {
+				if _, err := s.CloseTasksAnsweredByBookingTx(ctx, tx, ids.From[ids.ActivityKind](row.ID), holder, invitationLinks(in, intent)); err != nil {
+					return err
+				}
 			}
 		}
 		if !intent.Lead.IsZero() {

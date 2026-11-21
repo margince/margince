@@ -65,7 +65,11 @@ func (s *Store) validateInvitationMove(ctx context.Context, host ids.UserID, id 
 	if overlapsAny(slot{Start: start, End: end}, busy) {
 		return 0, &SlotTakenError{Start: start}
 	}
-	return profile.BufferMinutes, nil
+	team, err := s.teamOf(ctx, row.Appointment.Team)
+	if err != nil {
+		return 0, err
+	}
+	return profile.BufferMinutes, s.validateTeamTime(ctx, team, profile, start, end, receiptEvent(row))
 }
 
 func (s *Store) deliverInvitation(ctx context.Context, row invitationRow, in connector.CalendarAppointment) (*connector.CalendarReceipt, error) {
@@ -139,6 +143,14 @@ func (s *Store) invitationAvailability(ctx context.Context, host ids.UserID, id 
 	if err != nil {
 		return nil, false, err
 	}
-	free, truncated := policySlots(from, to, row.Appointment.End.Sub(row.Appointment.Start), busy, hours)
+	team, err := s.teamOf(ctx, row.Appointment.Team)
+	if err != nil {
+		return nil, false, err
+	}
+	teamBusy, teamHours, err := s.teamOccupancy(ctx, team, profile, from, to, id, receiptEvent(row))
+	if err != nil {
+		return nil, false, err
+	}
+	free, truncated := policySlots(from, to, row.Appointment.End.Sub(row.Appointment.Start), append(busy, teamBusy...), hours, teamHours...)
 	return free, truncated, nil
 }
