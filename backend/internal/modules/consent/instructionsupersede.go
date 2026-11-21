@@ -32,7 +32,7 @@ func SupersedeStaleDecisionTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", "communication_instruction", inst.ID,
 		map[string]any{fieldStatus: InstructionDirected},
-		map[string]any{fieldStatus: InstructionExpired, "review_id": inst.ReviewID}); err != nil {
+		map[string]any{fieldStatus: InstructionExpired, fieldReviewID: inst.ReviewID}); err != nil {
 		return err
 	}
 	var state string

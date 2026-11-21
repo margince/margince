@@ -50,6 +50,7 @@ func (s *stubGrants) ChooseSendingMailbox(ctx context.Context, user ids.UserID, 
 func (s *stubGrants) SendingMailboxes(context.Context, ids.UserID, []string) ([]capture.SendingMailbox, error) {
 	return make([]capture.SendingMailbox, len(s.granted)+len(s.grantedFor)), s.err
 }
+
 func (s *stubGrants) GrantedScopesFor(_ context.Context, _ ids.UserID, provider string) ([]string, error) {
 	s.calls++
 	// Per provider when the case says so, which is what a choice BETWEEN
@@ -265,9 +266,8 @@ func TestSendCapableAsksTheUnitRatherThanTheWorkspaceBotTable(t *testing.T) {
 	}
 }
 
-// Which mailbox a send goes out through — the question this pre-flight was
-// extended to answer, and the one a hard-coded provider got wrong for every rep
-// whose only mailbox is the other vendor.
+// Which mailbox a send goes out through, a question a hard-coded provider got
+// wrong for every rep whose only mailbox is the other vendor.
 func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testing.T) {
 	human := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
