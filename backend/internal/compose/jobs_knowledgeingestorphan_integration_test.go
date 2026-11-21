@@ -13,7 +13,9 @@ package compose
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -64,23 +66,18 @@ func (e *gatedEmbedder) Embed(_ context.Context, req model.EmbedRequest) (model.
 type orphanIngest struct {
 	e        *integration.Env
 	worker   *knowledgeIngestWorker
-	embedder *gatedEmbedder
 	doc      ids.UUID
 	passages int
 	blob     blobstore.Store
+	attempt  int
 }
 
 func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
 	t.Helper()
 	e := integration.Setup(t)
-	uploader := e.As(e.Rep1, nil, principal.Permissions{
-		RoleKeys: []string{"admin"},
-		Objects: map[string]principal.ObjectGrant{
-			"knowledge_corpus":   {Create: true, Read: true, Update: true, Delete: true},
-			"knowledge_document": {Create: true, Read: true, Update: true, Delete: true},
-		},
-		RowScope: principal.RowScopeAll,
-	})
+	all := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	grants := map[string]principal.ObjectGrant{"knowledge_corpus": all, "knowledge_document": all}
+	uploader := e.As(e.Rep1, nil, principal.Permissions{RoleKeys: []string{"admin"}, Objects: grants, RowScope: principal.RowScopeAll})
 	blob := blobstore.NewMemory()
 	worker := newKnowledgeIngestWorker(e.Pool, blob, embedder, slog.Default())
 	corpus, err := worker.store.CreateCorpus(uploader, knowledge.NewCorpus{Name: "How-to", TopicStatement: "How this product is operated."})
@@ -88,22 +85,18 @@ func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
 		t.Fatalf("create corpus: %v", err)
 	}
 	body := strings.Repeat(strings.Repeat("The corpus answers only from what a workspace filed in it. ", 12)+"\n\n", 3)
-	doc, err := worker.store.UploadDocument(uploader, knowledge.NewDocument{
-		CorpusID:    ids.UUID(corpus.Id),
-		Filename:    "operating.md",
-		ContentType: "text/markdown",
-		Content:     strings.NewReader(body),
-	}, func(context.Context, pgx.Tx, ids.UUID) error { return nil })
+	upload := knowledge.NewDocument{CorpusID: ids.UUID(corpus.Id), Filename: "operating.md", ContentType: "text/markdown", Content: strings.NewReader(body)}
+	doc, err := worker.store.UploadDocument(uploader, upload, func(context.Context, pgx.Tx, ids.UUID) error { return nil })
 	if err != nil {
 		t.Fatalf("upload: %v", err)
 	}
-	return &orphanIngest{e: e, worker: worker, embedder: embedder, doc: ids.UUID(doc.Id), passages: len(knowledge.ChunkText(body)), blob: blob}
+	return &orphanIngest{e: e, worker: worker, doc: ids.UUID(doc.Id), passages: len(knowledge.ChunkText(body)), blob: blob}
 }
 
 func (o *orphanIngest) work(t *testing.T) error {
 	t.Helper()
 	return o.worker.Work(context.Background(), &river.Job[KnowledgeIngestArgs]{
-		JobRow: &rivertype.JobRow{CreatedAt: clocktest.Now(t), Attempt: 1},
+		JobRow: &rivertype.JobRow{CreatedAt: clocktest.Now(t), Attempt: max(o.attempt, 1)},
 		Args:   KnowledgeIngestArgs{Workspace: o.e.WS, DocumentID: o.doc},
 	})
 }
@@ -119,68 +112,96 @@ func (o *orphanIngest) state(t *testing.T) (status string, chunks int) {
 	return status, chunks
 }
 
-func TestAHandbookPageLeftRunningByAKilledWorkerIsReadAgainAtTheNextBoot(t *testing.T) {
+func newHandbookIngest(t *testing.T) *orphanIngest {
+	t.Helper()
 	e := integration.Setup(t)
-	worker := newKnowledgeIngestWorker(e.Pool, blobstore.NewMemory(), &gatedEmbedder{}, slog.Default())
-	ctx := context.Background()
-	boot := principal.SystemActing(principal.WithWorkspaceID(ctx, e.WS), "system:handbook-corpus")
-	noSerialize := func(context.Context, pgx.Tx) error { return nil }
+	o := &orphanIngest{e: e, worker: newKnowledgeIngestWorker(e.Pool, blobstore.NewMemory(), &gatedEmbedder{}, slog.Default())}
+	o.doc = o.boot(t, nil)[0]
+	return o
+}
 
-	var filed []ids.UUID
-	if _, err := worker.store.ReconcileHandbook(boot, noSerialize, func(_ context.Context, _ pgx.Tx, id ids.UUID) error {
-		filed = append(filed, id)
-		return nil
-	}); err != nil || len(filed) == 0 {
-		t.Fatalf("the first boot: filed=%d err=%v", len(filed), err)
+func (o *orphanIngest) boot(t *testing.T, queue knowledge.QueueIngest) (queued []ids.UUID) {
+	t.Helper()
+	if queue == nil {
+		queue = func(_ context.Context, _ pgx.Tx, id ids.UUID) error { queued = append(queued, id); return nil }
 	}
-	killed := filed[0]
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), o.e.WS), "system:handbook-corpus")
+	if _, err := o.worker.store.ReconcileHandbook(ctx, func(context.Context, pgx.Tx) error { return nil }, queue); err != nil {
+		t.Fatalf("reconcile the handbook: %v", err)
+	}
+	return queued
+}
 
-	// What a kill mid-ingest leaves: the job running under a client that is gone,
-	// and the page opened by the attempt that never finished.
-	inserter, err := jobs.NewInserter(e.Pool, slog.Default())
+func (o *orphanIngest) mustIngest(t *testing.T) {
+	t.Helper()
+	if err := o.work(t); err != nil {
+		t.Fatalf("the ingest: %v", err)
+	}
+	if status, chunks := o.state(t); status != "done" || chunks == 0 {
+		t.Fatalf("the document is %q with %d passages, want done with its passages", status, chunks)
+	}
+}
+
+func (o *orphanIngest) setChecksum(t *testing.T, sum string) (was string) {
+	t.Helper()
+	if err := o.e.Pool.QueryRow(context.Background(),
+		`UPDATE knowledge_document d SET checksum = $2 FROM knowledge_document p WHERE d.id = p.id AND d.id = $1 RETURNING p.checksum`, o.doc, sum).Scan(&was); err != nil {
+		t.Fatalf("set the checksum: %v", err)
+	}
+	return was
+}
+
+func TestAHandbookPageLeftRunningByAKilledWorkerIsReadAgainAtTheNextBoot(t *testing.T) {
+	o := newHandbookIngest(t)
+	ctx := context.Background()
+	inserter, err := jobs.NewInserter(o.e.Pool, slog.Default())
 	if err != nil {
 		t.Fatalf("NewInserter: %v", err)
 	}
-	args := KnowledgeIngestArgs{Workspace: e.WS, DocumentID: killed}
+	args := KnowledgeIngestArgs{Workspace: o.e.WS, DocumentID: o.doc}
 	if err := inserter.Enqueue(ctx, args, knowledgeIngestInsertOpts()); err != nil {
 		t.Fatalf("the killed worker's job: %v", err)
 	}
-	if _, err := e.Pool.Exec(ctx, `
+	if _, err := o.e.Pool.Exec(ctx, `
 		UPDATE river_job SET state = 'running', attempt = 1,
 		       attempted_at = now() - interval '2 minutes', attempted_by = ARRAY['a_worker_that_was_killed']
 		WHERE kind = $1`, args.Kind()); err != nil {
 		t.Fatalf("orphaning the job: %v", err)
 	}
-	if _, err := e.Pool.Exec(ctx, `UPDATE knowledge_document SET ingest_status = 'running' WHERE id = $1`, killed); err != nil {
+	if _, err := o.e.Pool.Exec(ctx, `UPDATE knowledge_document SET ingest_status = 'running' WHERE id = $1`, o.doc); err != nil {
 		t.Fatalf("opening the dead attempt's page: %v", err)
 	}
-
-	// The next boot: the page's bytes have not moved, but its ingest never ended.
-	if _, err := worker.store.ReconcileHandbook(boot, noSerialize, knowledgeIngestEnqueue(inserter)); err != nil {
-		t.Fatalf("the next boot: %v", err)
-	}
+	o.boot(t, knowledgeIngestEnqueue(inserter))
 	var total, waiting int
-	if err := e.Pool.QueryRow(ctx, `
-		SELECT count(*), count(*) FILTER (WHERE state = 'available') FROM river_job WHERE kind = $1`, args.Kind()).Scan(&total, &waiting); err != nil {
-		t.Fatalf("counting the jobs: %v", err)
+	if err := o.e.Pool.QueryRow(ctx, `
+		SELECT count(*), count(*) FILTER (WHERE state = 'available') FROM river_job WHERE kind = $1`, args.Kind()).Scan(&total, &waiting); err != nil || total != 2 || waiting != 1 {
+		t.Fatalf("%d ingest jobs, %d waiting after the next boot, want the dead one and one new one (err %v)", total, waiting, err)
 	}
-	if total != 2 || waiting != 1 {
-		t.Fatalf("%d ingest jobs, %d waiting after the next boot, want the dead one and exactly one new one for the unfinished page", total, waiting)
-	}
+	o.mustIngest(t)
+}
 
-	err = worker.Work(ctx, &river.Job[KnowledgeIngestArgs]{JobRow: &rivertype.JobRow{CreatedAt: clocktest.Now(t), Attempt: 1}, Args: args})
-	if err != nil {
-		t.Fatalf("the new ingest: %v", err)
-	}
-	var status string
-	var chunks int
-	if err := e.Pool.QueryRow(ctx, `
-		SELECT d.ingest_status, (SELECT count(*) FROM knowledge_chunk c WHERE c.document_id = d.id AND c.archived_at IS NULL)
-		  FROM knowledge_document d WHERE d.id = $1`, killed).Scan(&status, &chunks); err != nil {
-		t.Fatalf("reading the page: %v", err)
-	}
-	if status != "done" || chunks == 0 {
-		t.Fatalf("after the next boot's ingest the page is %q with %d passages, want done with its passages", status, chunks)
+// Older bytes than the row names wait, never ingest; a failed page is queued by the next boot.
+func TestAWorkerHoldingOlderHandbookBytesThanTheRowNamesNeverIngestsThem(t *testing.T) {
+	for _, age := range []time.Duration{time.Minute, 2 * knowledgeIngestSnoozeWindow} {
+		t.Run(age.String(), func(t *testing.T) {
+			o := newHandbookIngest(t)
+			inWindow := age < knowledgeIngestSnoozeWindow
+			if !inWindow {
+				o.attempt = knowledgeIngestMaxAttempts
+			}
+			o.worker.now = func() time.Time { return clocktest.Now(t).Add(age) }
+			current := o.setChecksum(t, "sha256:a-newer-release")
+			err := o.work(t)
+			_, snoozed := errors.AsType[*rivertype.JobSnoozeError](err)
+			if status, chunks := o.state(t); snoozed != inWindow || err == nil || status == "done" || chunks != 0 {
+				t.Fatalf("older bytes: err=%v status=%q passages=%d", err, status, chunks)
+			}
+			o.setChecksum(t, current)
+			if status, _ := o.state(t); status == "failed" && !slices.Contains(o.boot(t, nil), o.doc) {
+				t.Fatal("the next boot did not queue the failed page again although its checksum is unchanged")
+			}
+			o.mustIngest(t)
+		})
 	}
 }
 
@@ -282,11 +303,9 @@ func TestAnIngestThatCannotTakeItsLockFailsAndLeavesTheDocument(t *testing.T) {
 	if _, held, err := holdIngest(cancelled, o.e.Pool, o.doc, slog.Default()); err == nil || held {
 		t.Fatalf("holdIngest on a cancelled context = held %v, err %v; want a refusal", held, err)
 	}
-	err := o.worker.Work(cancelled, &river.Job[KnowledgeIngestArgs]{
-		JobRow: &rivertype.JobRow{CreatedAt: clocktest.Now(t), Attempt: 1},
-		Args:   KnowledgeIngestArgs{Workspace: o.e.WS, DocumentID: o.doc},
-	})
-	if err == nil {
+	row := &rivertype.JobRow{CreatedAt: clocktest.Now(t), Attempt: 1}
+	job := &river.Job[KnowledgeIngestArgs]{JobRow: row, Args: KnowledgeIngestArgs{Workspace: o.e.WS, DocumentID: o.doc}}
+	if err := o.worker.Work(cancelled, job); err == nil {
 		t.Fatal("a run that could not take its lock reported success")
 	}
 	if status, _ := o.state(t); status == "ready" {
