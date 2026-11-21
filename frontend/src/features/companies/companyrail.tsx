@@ -12,6 +12,7 @@ import {
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { type RailEdit, RailField } from "../../components/railfield";
 import { useSectionEdit } from "../../components/sectionedit";
 import { Badge } from "../../design-system/atoms";
@@ -131,7 +132,14 @@ function RailBody({
     <>
       <RecordDetails
         sections={sections}
-        footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
+        footnote={
+          refusal && (
+            <>
+              <span id={refusal.id}>{refusal.text}</span>
+              <EditAccessRequest kind="company" record={company} />
+            </>
+          )
+        }
       />
       {about.element}
       {address.element}

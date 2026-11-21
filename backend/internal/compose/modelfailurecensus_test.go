@@ -28,31 +28,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// modelHandlersThatDegrade are the functions that catch a model call's error
-// and deliberately answer without the model, so the failure never reaches
-// modelfailure.Write. An entry names the function that drops the error — the
-// handler when it drops it inline, the helper when a helper does — so the two
-// shapes need the same entry and one helper several handlers share needs one.
+// modelHandlersThatDegrade catch a model call's error and answer without the
+// model, so the failure never reaches modelfailure.Write. An entry names the
+// function that drops the error: the handler inline, or the shared helper.
 var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
 	"(*compose.OwedClassifier).reviewedVerdictPredictions": "budget deferral or an unbound lane ends the bounded preview; unattempted messages remain human-review rows with classification_not_attempted, and all other errors propagate to modelfailure.Write",
+	"(*compose.OwedClassifier).predictOne":                 "a decline by every model is that message's outcome and goes to the sink, which stamps it or, in a review, marks it declined; other errors propagate to modelfailure.Write",
 	"(*compose.OwedClassifier).predictBatch":               "a declined batch retries the same messages individually through the ordinary classifier; declined or uncertain outcomes stay review-only, while other errors propagate to modelfailure.Write",
-
-	"(compose.Server).RegenerateOffer":               "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
-	"compose.writeCorpusAnswer":                      "a failed lane serves the retrieved passages with their citations as unreviewed, never as answered, and logs which lane failed",
-	"(*compose.onboardingCompanyAssistant).converse": "a clicked option was proved against the read before any model was asked, so it is recorded and confirmed in a server-written sentence; with no option clicked the error is returned",
-	"(compose/briefs.briefL2Ranker).reorder":         "the model re-rank is advisory over the deterministic composite order, which the brief keeps when the lane fails, with a warning logged",
-	"compose/company360.writeIntroRequest":           "the template floor states every fact of the ask honestly, so the reader gets a sendable message and generated_by says the floor wrote it",
-	"(*compose.salesAssessments).write":              "the floor is an assessment with no sentences and generated_by deterministic, which the page fills with its own written summary; the lane's error is logged",
-	"compose/companybrief.Answer":                    "the deterministic answer is the interactive degrade posture; generated_by tells the reader the floor answered",
-	"compose/companybrief.Write":                     "the deterministic card is the interactive degrade posture; generated_by tells the reader the floor wrote it",
-	"compose/companydossier.WriteDossier":            "the floor dossier is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a written dossier",
-	"compose/companydossier.WriteGrowthFit":          "the floor's abstention is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a real assessment",
-	"compose/contactbrief.Write":                     "the deterministic card is the interactive degrade posture; generated_by tells the reader the floor wrote it",
-	"(*compose/dealstatus.Service).write":            "the deterministic card is the declared degrade, and a warning names the lane that failed so the fallback is not silent",
-	"compose/roombrief.Write":                        "the deterministic brief is the interactive degrade posture; generated_by tells the reader the floor wrote it",
-	"compose/meetingbrief.Write":                     "the floor brief is the interactive degrade posture; generated_by tells the reader the floor wrote it",
-	"compose/meetingbrief.WritePlan":                 "the floor plan is the interactive degrade posture; generated_by tells the reader the floor wrote it",
-	"compose/network.writeIntroNote":                 "the template floor states every fact of the introduction honestly, and generated_by says the floor wrote it",
+	"(*compose.ChatCaptureFile).File":                      "the chat is filed before the reading; a failed reading is logged and changes no task, which is the decided answer without a model",
+	"(compose.chatCaptureHandlers).FileChatCapture":        "File drops the reading's error itself, so every error the handler writes is the filing's own and never a model's",
+	"(compose.Server).RegenerateOffer":                     "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
+	"compose.writeCorpusAnswer":                            "a failed lane serves the retrieved passages with their citations as unreviewed, never as answered, and logs which lane failed",
+	"(*compose.onboardingCompanyAssistant).converse":       "a clicked option was proved against the read before any model was asked, so it is recorded and confirmed in a server-written sentence; with no option clicked the error is returned",
+	"(compose/briefs.briefL2Ranker).reorder":               "the model re-rank is advisory over the deterministic composite order, which the brief keeps when the lane fails, with a warning logged",
+	"compose/company360.writeIntroRequest":                 "the template floor states every fact of the ask honestly, so the reader gets a sendable message and generated_by says the floor wrote it",
+	"(*compose.salesAssessments).write":                    "the floor is an assessment with no sentences and generated_by deterministic, which the page fills with its own written summary; the lane's error is logged",
+	"compose/companybrief.Answer":                          "the deterministic answer is the interactive degrade posture; generated_by tells the reader the floor answered",
+	"compose/companybrief.Write":                           "the deterministic card is the interactive degrade posture; generated_by tells the reader the floor wrote it",
+	"compose/companydossier.WriteDossier":                  "the floor dossier is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a written dossier",
+	"compose/companydossier.WriteGrowthFit":                "the floor's abstention is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a real assessment",
+	"compose/contactbrief.Write":                           "the deterministic card is the interactive degrade posture; generated_by tells the reader the floor wrote it",
+	"(*compose/dealstatus.Service).write":                  "the deterministic card is the declared degrade, and a warning names the lane that failed so the fallback is not silent",
+	"compose/roombrief.Write":                              "the deterministic brief is the interactive degrade posture; generated_by tells the reader the floor wrote it",
+	"compose/meetingbrief.Write":                           "the floor brief is the interactive degrade posture; generated_by tells the reader the floor wrote it",
+	"compose/meetingbrief.WritePlan":                       "the floor plan is the interactive degrade posture; generated_by tells the reader the floor wrote it",
+	"compose/network.writeIntroNote":                       "the template floor states every fact of the introduction honestly, and generated_by says the floor wrote it",
 })
 
 func TestEveryHandlerReachingAModelAnswersThroughModelFailure(t *testing.T) {

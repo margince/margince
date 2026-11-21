@@ -107,7 +107,7 @@ func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedLead(t *testing.T) {
 	actor, _ := principal.Actor(f.ctx)
 	actor.Permissions.Objects["lead"] = principal.ObjectGrant{Read: true}
 	receipts, err := f.store.RecentTaskCompletions(principal.WithActor(f.ctx, actor), clocktest.Now(t).Add(-time.Hour), 10)
-	if err != nil || len(receipts) != 1 || receipts[0].ID != mine || !receipts[0].Booking || receipts[0].Contact != "Lead A" || receipts[0].EmailID != ids.UUID(meeting.Id) {
+	if err != nil || len(receipts) != 1 || receipts[0].ID != mine || receipts[0].Evidence != EvidenceBooking || receipts[0].Contact != "Lead A" || receipts[0].EvidenceID != ids.UUID(meeting.Id) {
 		t.Fatalf("receipts=%+v, %v", receipts, err)
 	}
 
@@ -248,7 +248,7 @@ func TestACanceledBookingLeavesATaskALaterAnswerClosedAgain(t *testing.T) {
 		t.Fatalf("the cancel reopened %d tasks: %v", n, err)
 	}
 	if err := f.store.tx(f.systemCtx(), func(tx pgx.Tx) error {
-		_, err := f.store.closeAnsweredTasksTx(f.systemCtx(), tx, ids.From[ids.ActivityKind](ids.NewV7()), []ids.UUID{mine})
+		_, err := f.store.closeAnsweredTasksTx(f.systemCtx(), tx, ids.From[ids.ActivityKind](ids.NewV7()), []ids.UUID{mine}, nil)
 		return err
 	}); err != nil {
 		t.Fatal(err)

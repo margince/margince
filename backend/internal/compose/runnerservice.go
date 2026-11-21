@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -27,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
@@ -429,4 +431,30 @@ func (s *RunnerService) seedGrounding(ctx context.Context, spec runner.AgentSpec
 // lexically-ranked seed is a less RELEVANT seed, not a less trustworthy one.
 func retrievedSeed(source, snippet string) runner.Grounding {
 	return runner.Grounding{SourceID: source, TrustTier: "T2", Content: snippet}
+}
+
+// agentBrain adapts the router into the runner's Brain seam. It hands the
+// served model identity back as runner.Meta, so the trace records what
+// answered each step without calling the model again (RUNNER-AC-4). The
+// direct-call lanes use routerBrain.
+type agentBrain struct {
+	router         *ai.Router
+	companyContext *companyContextProvider
+}
+
+func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Response, runner.Meta, error) {
+	prepared, err := prepareOrAnnounce(ctx, b.router, b.companyContext, ai.TaskAgentLoop, req)
+	if err != nil {
+		return model.Response{}, runner.Meta{}, err
+	}
+	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
+	meta := runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier), Reject: func() { b.router.Reject(info) }}
+	return resp, meta, agentStepRefusal(err)
+}
+
+// PromptWindow is the window of the agent loop's own ladder, read fresh on
+// every step. A routing rebind or a budget demotion partway through a run is
+// then seen by the next step, not at the next restart.
+func (b agentBrain) PromptWindow() int {
+	return b.router.PromptWindow(ai.TaskAgentLoop)
 }

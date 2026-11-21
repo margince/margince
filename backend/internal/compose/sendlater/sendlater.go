@@ -135,13 +135,14 @@ func (s Service) DecideAndSchedule(
 	if err != nil {
 		return crmcontracts.ScheduledSend{}, err
 	}
+	// Another tab may send the message after Admit, so its sender hears that.
 	move, err := s.Sends.PlanHeldMove(ctx, admitted.Intent, sched, s.Timer)
 	if err != nil {
-		return crmcontracts.ScheduledSend{}, err
+		return crmcontracts.ScheduledSend{}, s.Consent.SentInstead(ctx, reviewID, err)
 	}
 	set, err := s.assess(ctx, admitted.Intent)
 	if err != nil {
-		return crmcontracts.ScheduledSend{}, err
+		return crmcontracts.ScheduledSend{}, s.Consent.SentInstead(ctx, reviewID, err)
 	}
 	refused := len(consent.BlockingRefusals(set)) > 0
 	if refused {
@@ -150,6 +151,10 @@ func (s Service) DecideAndSchedule(
 		}
 	}
 	err = s.DB.Tx(ctx, func(tx pgx.Tx) error {
+		// The message row before the review, the order cancel and the fire take.
+		if err := s.Sends.LockHeldTx(ctx, tx, move); err != nil {
+			return err
+		}
 		if refused {
 			if _, err := consent.DirectSendTx(ctx, tx, reviewID, admitted.In); err != nil &&
 				!errors.Is(err, consent.ErrDecisionAlreadyRecorded) {

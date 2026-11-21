@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { throwProblem } from "../../lib/problem";
-
-// The shell gate and checkpoint writer share live state; restore keeps its mount snapshot.
-export const ONBOARDING_PROGRESS_KEY = ["onboarding-progress"] as const;
+import { signInShowsRefusal } from "../../lib/session.read";
 
 export async function loadWizardState(): Promise<
   components["schemas"]["OnboardingState"] | null
@@ -20,10 +18,13 @@ export async function loadWizardState(): Promise<
   return data;
 }
 
+// The shell gate and checkpoint writer share live state; restore keeps its mount snapshot.
+export const onboardingProgressOptions = queryOptions({
+  queryKey: ["onboarding-progress"],
+  meta: signInShowsRefusal,
+  queryFn: loadWizardState,
+});
+
 export function useOnboardingProgress(enabled: boolean) {
-  return useQuery({
-    queryKey: ONBOARDING_PROGRESS_KEY,
-    enabled,
-    queryFn: loadWizardState,
-  });
+  return useQuery({ ...onboardingProgressOptions, enabled });
 }

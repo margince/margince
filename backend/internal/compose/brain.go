@@ -82,11 +82,12 @@ type ModelPath struct {
 	// company-view lane whose absence changes the ANSWER rather than the prose:
 	// its floor abstains, because grading is not a restatement of recorded
 	// values (DOSS-PARAM-7).
-	GrowthFit   completer
-	DraftReply  completer // activity-anchored email reply drafting
-	Rewrite     completer // the rewrite verbs over a rep's own words, premium first
-	ChatSummary completer // judges and summarises a linked chat channel's talk
-	OfferDraft  completer // the offer regenerate-from-signal drafting call
+	GrowthFit       completer
+	DraftReply      completer // activity-anchored email reply drafting
+	Rewrite         completer // the rewrite verbs over a rep's own words, premium first
+	ChatSummary     completer // judges and summarises a linked chat channel's talk
+	ChatTaskReading completer // reads a filed chat screenshot against its record's open tasks
+	OfferDraft      completer // the offer regenerate-from-signal drafting call
 	// CaptureClassify is the §2.8 batched mail-label lane (ADR-0063) —
 	// the highest-volume, cheapest task, routed L-S with the C-C solo
 	// re-ask riding the same ladder.
@@ -359,6 +360,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		DraftReply:                    brain(ai.TaskDraftReply),
 		Rewrite:                       brain(ai.TaskRewrite),
 		ChatSummary:                   brain(ai.TaskChatSummary),
+		ChatTaskReading:               brain(ai.TaskChatTaskReading),
 		OfferDraft:                    brain(ai.TaskOfferDraft),
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),
@@ -393,7 +395,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 // arch_test.go's TestNoModelClientOutsideTheGate enforces — rather than
 // aicert becoming a second, ungated construction site.
 func NewLocalRouterForCert(cfg ai.RoutingConfig, opts ...ai.LocalOption) (*ai.Router, error) {
-	return ai.NewLocalRouter(cfg, opts...)
+	return ai.NewLocalRouter(cfg, append([]ai.LocalOption{ai.WithoutInteractiveLimits()}, opts...)...)
 }
 
 // Router exposes the model path's underlying router — the same one every model
@@ -442,33 +444,6 @@ func prepareOrAnnounce(ctx context.Context, router *ai.Router, cc *companyContex
 		return model.Request{}, err
 	}
 	return prepared, nil
-}
-
-// agentBrain adapts the router into the runner's Brain seam: it surfaces
-// the served model identity from RouteInfo as runner.Meta so the
-// Surface-B trace records what answered each step WITHOUT re-calling the
-// model (RUNNER-AC-4). The runner lane is the only consumer that needs
-// this — the direct-call lanes use routerBrain.
-type agentBrain struct {
-	router         *ai.Router
-	companyContext *companyContextProvider
-}
-
-func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Response, runner.Meta, error) {
-	prepared, err := prepareOrAnnounce(ctx, b.router, b.companyContext, ai.TaskAgentLoop, req)
-	if err != nil {
-		return model.Response{}, runner.Meta{}, err
-	}
-	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
-	meta := runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier), Reject: func() { b.router.Reject(info) }}
-	return resp, meta, agentStepRefusal(err)
-}
-
-// PromptWindow is the window of the agent loop's own ladder, read fresh on
-// every step so a routing rebind or a budget demotion partway through a run is
-// seen by the step after it rather than at the next restart.
-func (b agentBrain) PromptWindow() int {
-	return b.router.PromptWindow(ai.TaskAgentLoop)
 }
 
 // CompleteValidated exposes the §5.2 structured-output pipeline

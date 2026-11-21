@@ -3,6 +3,7 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import { type ReactNode, Suspense } from "react";
+import { EmptyState } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
@@ -29,6 +30,7 @@ const QuarterTrajectory = lazy(async () => ({
 // The review's figures on its sheet: the headline readings with the
 // trajectory, then the stock. An address the server refused says why instead.
 export function SalesFigures({
+  dated,
   query,
   invalid,
   forecastHref,
@@ -37,6 +39,9 @@ export function SalesFigures({
   onEvidence,
   targetSetup,
 }: Readonly<{
+  // False while a custom interval lacks a day: no read is asked, so the
+  // query would sit pending forever.
+  dated: boolean;
   query: UseQueryResult<ReportingEvaluation>;
   invalid: boolean;
   forecastHref: string;
@@ -49,6 +54,7 @@ export function SalesFigures({
   targetSetup: ReactNode;
 }>) {
   const t = useT();
+  if (!dated) return <EmptyState>{t("reporting.chooseDates")}</EmptyState>;
   if (invalid) return <ErrorLine error={query.error} />;
   const chartsRead = charts?.isError ? undefined : charts?.data;
   return (

@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
-import { PendingBody } from "../../design-system/atoms";
+import { EmptyState, PendingBody } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
@@ -168,11 +168,7 @@ export function MyProspecting({
             scope={scopeKey(self)}
           />
         }
-        caption={
-          validDates
-            ? periodCaption(query.data, locale, t)
-            : t("reporting.chooseDates")
-        }
+        caption={validDates ? periodCaption(query.data, locale, t) : undefined}
       >
         {switcher}
         <ReportingFilters
@@ -201,34 +197,38 @@ export function MyProspecting({
         railLabel={t("analytics.board.rail")}
         main={
           <AnalyticsSheet>
-            <QueryGate
-              query={query}
-              pendingLabel={t("analytics.overview.prospecting")}
-            >
-              {(evaluation) => (
-                <>
-                  <ProspectingResults
-                    evaluation={evaluation}
-                    outcome={outcome}
-                    workflowState={known ? "known" : workflow}
-                    weeks={weeks}
-                    onEvidence={openFrom}
-                    onRetryWorkflow={retryWorkflow}
-                    aside={
-                      <MonthlyTargets
-                        evaluation={evaluation}
-                        ownScope={scopeKey(self)}
-                      />
-                    }
-                  />
-                  <ProspectingReadings
-                    evaluation={evaluation}
-                    summary={summary}
-                    onEvidence={openFrom}
-                  />
-                </>
-              )}
-            </QueryGate>
+            {validDates ? (
+              <QueryGate
+                query={query}
+                pendingLabel={t("analytics.overview.prospecting")}
+              >
+                {(evaluation) => (
+                  <>
+                    <ProspectingResults
+                      evaluation={evaluation}
+                      outcome={outcome}
+                      workflowState={known ? "known" : workflow}
+                      weeks={weeks}
+                      onEvidence={openFrom}
+                      onRetryWorkflow={retryWorkflow}
+                      aside={
+                        <MonthlyTargets
+                          evaluation={evaluation}
+                          ownScope={scopeKey(self)}
+                        />
+                      }
+                    />
+                    <ProspectingReadings
+                      evaluation={evaluation}
+                      summary={summary}
+                      onEvidence={openFrom}
+                    />
+                  </>
+                )}
+              </QueryGate>
+            ) : (
+              <EmptyState>{t("reporting.chooseDates")}</EmptyState>
+            )}
             <ProspectingWork
               self={self.id}
               workflow={workflow}

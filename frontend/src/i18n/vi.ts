@@ -2417,6 +2417,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.rbac_defaults": "Quyền khởi đầu của tiện ích mở rộng",
   "systemJob.release_version": "Kiểm tra bản phát hành",
   "systemJob.report_schedule": "Báo cáo theo lịch",
+  "systemJob.chat_task_reader": "Cuộc trò chuyện và việc cần làm đang mở",
   "systemJob.request_settlement": "Hoàn tất yêu cầu",
   "systemJob.restore_drill": "Bản ghi diễn tập khôi phục",
   "systemJob.risk_verdict": "Kiểm tra rủi ro deal",
@@ -3830,7 +3831,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.reason.unconfirmed_double_opt_in":
     "Đã ghi nhận đồng ý nhưng chưa được xác nhận lần hai",
   "consent.reason.no_connection":
-    "Họ chưa viết cho bạn, chưa gặp bạn và chưa yêu cầu điều gì được ghi nhận",
+    "Không có tin nhắn, cuộc gặp hay yêu cầu nào đã ghi nhận kết nối hai bên",
   "consent.reason.qualifying_event":
     "Có một lần trao đổi đã ghi nhận giữa hai bên",
   "consent.reason.consent_confirmed": "Họ đã đồng ý, và đã có xác nhận",
@@ -4795,6 +4796,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
+  "approval.kind.edit_access": "Cấp quyền chỉnh sửa",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.legal_review_request": "Yêu cầu rà soát pháp lý",
   "approval.kind.task_due_date": "Kiểm tra hạn",
@@ -6325,22 +6327,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.colName": "Tên",
   "legalEntities.colLegalName": "Tên pháp lý",
   "legalEntities.colCountry": "Quốc gia",
-  "legalEntities.countryMissing": "Chưa đặt: áp dụng quốc gia của bản cài đặt",
+  "legalEntities.colJurisdiction": "Khu vực pháp lý",
+  "legalEntities.jurisdictionMissing":
+    "Chưa đặt: áp dụng khu vực pháp lý của hệ thống",
   "legalEntities.defaultBadge": "Mặc định",
   "legalEntities.defaultUnnamed": "Công ty của bạn",
   "legalEntities.displayName": "Tên",
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
-  "legalEntities.defaultCountry":
-    "Quốc gia: {country}. Công ty mặc định theo khu vực pháp lý của hệ thống.",
-  "legalEntities.defaultCountryNone":
-    "Chưa đặt quốc gia. Công ty mặc định theo khu vực pháp lý của hệ thống.",
-  "legalEntities.defaultCountryLink": "Đổi ở mục Khu vực pháp lý",
+  "legalEntities.countryHint": "Quốc gia của địa chỉ đăng ký.",
+  "legalEntities.jurisdiction": "Khu vực pháp lý",
+  "legalEntities.jurisdictionHint":
+    "Luật của khu vực này áp dụng cho thư nhân viên công ty gửi và hồ sơ họ phụ trách.",
+  "legalEntities.defaultJurisdiction":
+    "Khu vực pháp lý: {jurisdiction}. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultJurisdictionNone":
+    "Chưa đặt khu vực pháp lý. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultJurisdictionLink": "Đổi ở mục Khu vực pháp lý",
   "jurisdiction.entities.title": "Pháp nhân",
-  "jurisdiction.entities.lead":
-    "Quốc gia của mỗi công ty quyết định luật áp dụng cho thư nhân viên gửi và hồ sơ họ phụ trách.",
-  "jurisdiction.entities.default": "{country}, theo lựa chọn ở trên",
-  "jurisdiction.entities.none": "Chưa đặt quốc gia",
+  "jurisdiction.entities.default": "{jurisdiction}, theo lựa chọn ở trên",
+  "jurisdiction.entities.none": "Chưa đặt khu vực pháp lý",
   "jurisdiction.entities.edit": "Đổi pháp nhân",
   "legalEntities.edit": "Sửa",
   "legalEntities.archive": "Lưu trữ",
@@ -7718,6 +7724,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "chatCapture.readBadge": "AI sao chép từ ảnh chụp màn hình",
   "chatCapture.channel": "Ứng dụng chat",
   "chatCapture.file": "Lưu vào liên hệ này",
+  "chatCapture.fileOnLead": "Lưu vào lead này",
+  "chatCapture.fileOnDeal": "Lưu vào deal này",
   "chatCapture.fileFailed": "Không lưu được cuộc trò chuyện",
 
   // Thêm một tài liệu. Câu hỏi "Thuộc về đâu" mới là quyết định thật: chỉ tài
@@ -7979,6 +7987,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "handover.withdraw": "Rút lại đề nghị",
   "handover.sent": "Đã gửi đề nghị tới {owner}",
   "handover.withdrawn": "Đã rút lại đề nghị",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "Xin {owner} quyền chỉnh sửa",
+  "editAccess.requested":
+    "Bạn đã xin {owner} quyền chỉnh sửa. Yêu cầu còn hiệu lực đến {date}.",
+  "editAccess.withdraw": "Rút yêu cầu quyền chỉnh sửa",
+  "editAccess.sent": "Đã xin {owner} quyền chỉnh sửa",
+  "editAccess.withdrawn": "Đã rút yêu cầu quyền chỉnh sửa",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Chuyển giao cho…",
   "handover.offerTo": "Giao cho",
@@ -14701,6 +14716,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.scopeAriaMixed":
     "Các cài đặt trên trang này ảnh hưởng đến những đối tượng khác nhau; mỗi cài đặt ghi rõ đối tượng.",
   "settings.readOnlyPageTitle": "Cài đặt chỉ đọc",
+  "settings.pageLoading": "Đang tải {page}…",
   "settings.readOnlyPage":
     "Vai trò hiện tại không có quyền thay đổi các cài đặt này.",
   "settings.seatRefused":
@@ -22987,6 +23003,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
   "aiTask.name.rewrite": "Viết lại",
   "aiTask.name.chat_summary": "Tóm tắt kênh chat",
+  "aiTask.name.chat_task_reading": "Cuộc trò chuyện và việc cần làm đang mở",
   "aiTask.name.signal_extract": "Trích xuất tín hiệu từ cuộc trao đổi",
   "aiTask.name.site_extract": "Phân tích chuyên sâu trang web",
   "aiTask.name.site_fact_extract": "Trích xuất thông tin từ trang web",

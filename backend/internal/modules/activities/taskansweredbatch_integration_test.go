@@ -138,7 +138,7 @@ func TestStoredMailClosesTheTasksItAnsweredOnce(t *testing.T) {
 	receipts, err := f.store.RecentTaskCompletions(f.rep, created.Add(-time.Hour), 10)
 	cited := map[ids.UUID]ids.UUID{}
 	for _, receipt := range receipts {
-		cited[receipt.ID] = receipt.EmailID
+		cited[receipt.ID] = receipt.EvidenceID
 	}
 	if err != nil || len(receipts) != 2 || cited[answered] != newest {
 		t.Fatalf("receipts=%+v, %v; want one per closed task, citing the newest mail", receipts, err)

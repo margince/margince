@@ -112,10 +112,7 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 		return resp, info, nil
 	}
 	r.refused(ctx, lc, task, info, firstErr)
-	// No retry and no escalation for a caller that stopped waiting. The
-	// refused answer stays the terminal, so it says why the call ended.
-	if err := ctx.Err(); err != nil {
-		lc.markTerminal(sentinelFor(ctx, err))
+	if err := r.stopAfterRefusal(ctx, lc, task, info, resp, firstErr); err != nil {
 		return model.Response{}, info, err
 	}
 
@@ -129,8 +126,7 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 		return resp, info, nil
 	}
 	r.refused(ctx, lc, task, info, secondErr)
-	if err := ctx.Err(); err != nil {
-		lc.markTerminal(sentinelFor(ctx, err))
+	if err := r.stopAfterRefusal(ctx, lc, task, info, resp, secondErr); err != nil {
 		return model.Response{}, info, err
 	}
 
@@ -142,10 +138,32 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 	if finalErr := validate(resp.Text); finalErr != nil {
 		r.refused(ctx, lc, task, info, finalErr)
 		lc.markTerminal(sentinelOutputRejected)
-		return model.Response{}, info, rejected(task, info, finalErr, truncated(resp))
+		return model.Response{}, info, rejected(task, info, rejectedAfterEscalation, finalErr, truncated(resp))
 	}
 	return resp, info, nil
 }
+
+// stopAfterRefusal is why no walk follows a refused answer. A caller that
+// stopped waiting ends the call on its own error. The refused answer stays the
+// terminal, so it says why the call ended. A spent walk bound ends the call as
+// the last refusal would, because the model did answer.
+func (r *Router) stopAfterRefusal(ctx context.Context, lc *logicalCall, task Task, info RouteInfo, resp model.Response, refusal error) error {
+	if err := ctx.Err(); err != nil {
+		lc.markTerminal(sentinelFor(ctx, err))
+		return err
+	}
+	if r.walkSpent(lc, task) != nil {
+		lc.markTerminal(sentinelOutputRejected)
+		return rejected(task, info, rejectedOnceTheWalkWasSpent, refusal, truncated(resp))
+	}
+	return nil
+}
+
+// Why a structured call ended on a refused answer, as rejected says it.
+const (
+	rejectedAfterEscalation     = "after retry and escalation"
+	rejectedOnceTheWalkWasSpent = "once its walk bound was spent"
+)
 
 // quotedSpan is a Go-quoted string. Validators echo model output through %q,
 // and the model read a correspondent's text, so those spans never reach a log.
@@ -172,15 +190,15 @@ func refusalReason(ctx context.Context, cause error) string {
 // unconfigured installation and gets its own sentinel on top of the terminal
 // one — the caller then has the choice between "your model misbehaved" and
 // "you have no model", which is the difference between a retry and a setting.
-func rejected(task Task, info RouteInfo, finalErr error, wasTruncated bool) error {
+func rejected(task Task, info RouteInfo, when string, finalErr error, wasTruncated bool) error {
 	// The truncation is said BEFORE the validator's complaint, because the
 	// complaint is a consequence: a document cut mid-value is invalid for a
 	// reason that has nothing to do with how it was written. An operator reading
 	// this is owed the output ceiling and not the schema — and the task, which
 	// an earlier spelling of this branch dropped by rebuilding the error.
-	reason := "after retry and escalation"
+	reason := when
 	if wasTruncated {
-		reason = "after retry and escalation, and the last answer was cut off at the output " +
+		reason = when + ", and the last answer was cut off at the output " +
 			"limit rather than finishing, so what the validator refused was an incomplete document"
 	}
 	err := fmt.Errorf("%w: %s %s: %w", ErrOutputRejected, task, reason, finalErr)

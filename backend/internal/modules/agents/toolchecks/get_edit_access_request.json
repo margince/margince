@@ -1,0 +1,8 @@
+{
+  "verb": "get_edit_access_request",
+  "checks": [],
+  "takes": [
+    "company",
+    "edit_asked_company"
+  ]
+}

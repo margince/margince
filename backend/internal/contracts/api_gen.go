@@ -1339,6 +1339,7 @@ const (
 	AiActivityKindCaptureCounterpartyVerdict    AiActivityKind = "capture_counterparty_verdict"
 	AiActivityKindCertJudge                     AiActivityKind = "cert_judge"
 	AiActivityKindChatSummary                   AiActivityKind = "chat_summary"
+	AiActivityKindChatTaskReading               AiActivityKind = "chat_task_reading"
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
@@ -1390,6 +1391,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCertJudge:
 		return true
 	case AiActivityKindChatSummary:
+		return true
+	case AiActivityKindChatTaskReading:
 		return true
 	case AiActivityKindColdStart:
 		return true
@@ -1940,6 +1943,7 @@ const (
 	AiTaskCaptureCounterpartyVerdict    AiTask = "capture_counterparty_verdict"
 	AiTaskCertJudge                     AiTask = "cert_judge"
 	AiTaskChatSummary                   AiTask = "chat_summary"
+	AiTaskChatTaskReading               AiTask = "chat_task_reading"
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
@@ -1990,6 +1994,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskCertJudge:
 		return true
 	case AiTaskChatSummary:
+		return true
+	case AiTaskChatTaskReading:
 		return true
 	case AiTaskColdStart:
 		return true
@@ -12610,6 +12616,48 @@ func (e DraftSteeringLanguage) Valid() bool {
 	case DraftSteeringLanguageEn:
 		return true
 	case DraftSteeringLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EditAccessRequestRecordType.
+const (
+	EditAccessRequestRecordTypeCompany EditAccessRequestRecordType = "company"
+	EditAccessRequestRecordTypeContact EditAccessRequestRecordType = "contact"
+	EditAccessRequestRecordTypeDeal    EditAccessRequestRecordType = "deal"
+	EditAccessRequestRecordTypeLead    EditAccessRequestRecordType = "lead"
+	EditAccessRequestRecordTypeProject EditAccessRequestRecordType = "project"
+)
+
+// Valid indicates whether the value is a known member of the EditAccessRequestRecordType enum.
+func (e EditAccessRequestRecordType) Valid() bool {
+	switch e {
+	case EditAccessRequestRecordTypeCompany:
+		return true
+	case EditAccessRequestRecordTypeContact:
+		return true
+	case EditAccessRequestRecordTypeDeal:
+		return true
+	case EditAccessRequestRecordTypeLead:
+		return true
+	case EditAccessRequestRecordTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EditAccessRequestStatus.
+const (
+	EditAccessRequestStatusPending EditAccessRequestStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the EditAccessRequestStatus enum.
+func (e EditAccessRequestStatus) Valid() bool {
+	switch e {
+	case EditAccessRequestStatusPending:
 		return true
 	default:
 		return false
@@ -37082,9 +37130,9 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
-	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact: the name or
-	// number the chat header shows when neither agrees with that contact. Null when
-	// they agree, when the header shows neither, and for every other reading.
+	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+	// name or number the chat header shows when neither agrees with that record. Null
+	// when they agree, when the header shows neither, on a deal, and for every other reading.
 	// `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
 	OtherCounterparty *string `json:"other_counterparty,omitempty"`
 
@@ -47425,7 +47473,7 @@ type CreateLegalEntityRequest struct {
 	BankAccountHolder *string             `json:"bank_account_holder,omitempty"`
 	Bic               *string             `json:"bic,omitempty"`
 
-	// Country Lower-case ISO 3166-1 alpha-2, for example `de`.
+	// Country The address country, lower-case ISO 3166-1 alpha-2, for example `de`.
 	Country string `json:"country"`
 
 	// DefaultLanguage ISO 639-1, for example `de`.
@@ -47433,9 +47481,14 @@ type CreateLegalEntityRequest struct {
 	DisplayName     string  `json:"display_name" singleline:"true"`
 
 	// Iban Spaces are removed and letters upper-cased before the check.
-	Iban      *string `json:"iban,omitempty"`
-	Imprint   *string `json:"imprint,omitempty"`
-	LegalName string  `json:"legal_name" singleline:"true"`
+	Iban    *string `json:"iban,omitempty"`
+	Imprint *string `json:"imprint,omitempty"`
+
+	// Jurisdiction The jurisdiction pack whose law the entity follows, one of `available` of
+	// `/installation/jurisdiction`. Left out, it is the `country`, and a country no pack
+	// covers answers `invalid_jurisdiction`.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
+	LegalName    string  `json:"legal_name" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -50114,7 +50167,8 @@ type DirectCommunicationSendRequest struct {
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
 
 	// ScheduledAt A future moment to send at instead of now. The decision is recorded now and spent when
-	// the message fires. Absent sends now.
+	// the message fires. It sends now only when `scheduled_at`, `scheduled_tz` and
+	// `scheduled_intent` are all absent.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
 
 	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
@@ -50477,6 +50531,24 @@ type DraftSteering struct {
 
 // DraftSteeringLanguage The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
 type DraftSteeringLanguage string
+
+// EditAccessRequest defines model for EditAccessRequest.
+type EditAccessRequest struct {
+	ApprovalId openapi_types.UUID `json:"approval_id"`
+	ExpiresAt  time.Time          `json:"expires_at"`
+
+	// OwnerId The owner the request is put to.
+	OwnerId    openapi_types.UUID          `json:"owner_id"`
+	RecordId   openapi_types.UUID          `json:"record_id"`
+	RecordType EditAccessRequestRecordType `json:"record_type"`
+	Status     EditAccessRequestStatus     `json:"status"`
+}
+
+// EditAccessRequestRecordType defines model for EditAccessRequest.RecordType.
+type EditAccessRequestRecordType string
+
+// EditAccessRequestStatus defines model for EditAccessRequest.Status.
+type EditAccessRequestStatus string
 
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
 // `change_mode` are decided by the same authority that would execute the write, so a
@@ -51594,7 +51666,7 @@ type FileChatCaptureRequest struct {
 	// ChannelProvider The messaging app the chat happened in.
 	ChannelProvider ProviderRef `json:"channel_provider"`
 
-	// ConfirmOtherCounterparty The caller confirms the chat belongs on this contact although its header shows
+	// ConfirmOtherCounterparty The caller confirms the chat belongs on this record although its header shows
 	// someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
 	// is refused with 409.
 	ConfirmOtherCounterparty *bool `json:"confirm_other_counterparty,omitempty"`
@@ -56208,7 +56280,7 @@ type LegalEntity struct {
 	// Bic The BIC, upper case.
 	Bic *string `json:"bic,omitempty"`
 
-	// Country Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country.
+	// Country Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity.
 	Country   *string   `json:"country,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 
@@ -56227,6 +56299,12 @@ type LegalEntity struct {
 
 	// IsDefault The entity a user with no assignment works for. Exactly one exists, and it cannot be archived.
 	IsDefault bool `json:"is_default"`
+
+	// Jurisdiction The jurisdiction pack whose law the entity follows, as its lower-case code, for example
+	// `de`. It is one of the packs this build offers (`available` of
+	// `/installation/jurisdiction`). Null on the default entity, whose law is the
+	// installation's jurisdiction.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
 
 	// LegalName The registered name documents are issued under.
 	LegalName *string `json:"legal_name,omitempty"`
@@ -70945,7 +71023,10 @@ type UpdateLegalEntityRequest struct {
 	DisplayName       *string             `json:"display_name,omitempty" singleline:"true"`
 	Iban              *string             `json:"iban,omitempty"`
 	Imprint           *string             `json:"imprint,omitempty"`
-	LegalName         *string             `json:"legal_name,omitempty" singleline:"true"`
+
+	// Jurisdiction One of `available` of `/installation/jurisdiction`. The default entity refuses it.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
+	LegalName    *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -82870,6 +82951,35 @@ type ClaimRecordParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// RequestEditAccessParams defines parameters for RequestEditAccess.
+type RequestEditAccessParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // OfferOwnershipTransferParams defines parameters for OfferOwnershipTransfer.
@@ -100222,7 +100332,7 @@ type ServerInterface interface {
 	// Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 	// (POST /attachments/{id}/extraction:accept)
 	AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
-	// File a chat screenshot on its contact as one message activity, with the image attached.
+	// File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
 	// (POST /attachments/{id}/extraction:file-chat)
 	FileChatCapture(w http.ResponseWriter, r *http.Request, id Id)
 	// One named reading of this attachment, for a screen polling the reading it started.
@@ -102409,6 +102519,15 @@ type ServerInterface interface {
 	// Take ownership of a customer record.
 	// (POST /records/{record_type}/{id}/claim)
 	ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams)
+	// Withdraw the caller's open request for edit access to this record.
+	// (DELETE /records/{record_type}/{id}/edit-access-request)
+	WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// The caller's open request for edit access to this record.
+	// (GET /records/{record_type}/{id}/edit-access-request)
+	GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// Ask a record's owner for edit access.
+	// (POST /records/{record_type}/{id}/edit-access-request)
+	RequestEditAccess(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestEditAccessParams)
 	// Withdraw the caller's open offer of this record.
 	// (DELETE /records/{record_type}/{id}/ownership-offer)
 	WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
@@ -104170,7 +104289,7 @@ func (_ Unimplemented) AcceptAttachmentExtraction(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// File a chat screenshot on its contact as one message activity, with the image attached.
+// File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
 // (POST /attachments/{id}/extraction:file-chat)
 func (_ Unimplemented) FileChatCapture(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108541,6 +108660,24 @@ func (_ Unimplemented) RestoreRecordChange(w http.ResponseWriter, r *http.Reques
 // Take ownership of a customer record.
 // (POST /records/{record_type}/{id}/claim)
 func (_ Unimplemented) ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw the caller's open request for edit access to this record.
+// (DELETE /records/{record_type}/{id}/edit-access-request)
+func (_ Unimplemented) WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's open request for edit access to this record.
+// (GET /records/{record_type}/{id}/edit-access-request)
+func (_ Unimplemented) GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask a record's owner for edit access.
+// (POST /records/{record_type}/{id}/edit-access-request)
+func (_ Unimplemented) RequestEditAccess(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestEditAccessParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -150431,6 +150568,159 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// WithdrawEditAccessRequest operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawEditAccessRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEditAccessRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetEditAccessRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEditAccessRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestEditAccess operation middleware
+func (siw *ServerInterfaceWrapper) RequestEditAccess(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RequestEditAccessParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestEditAccess(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // WithdrawOwnershipOffer operation middleware
 func (siw *ServerInterfaceWrapper) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request) {
 
@@ -162202,6 +162492,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/claim", wrapper.ClaimRecord)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/records/{record_type}/{id}/edit-access-request", wrapper.WithdrawEditAccessRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/edit-access-request", wrapper.GetEditAccessRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{record_type}/{id}/edit-access-request", wrapper.RequestEditAccess)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.WithdrawOwnershipOffer)

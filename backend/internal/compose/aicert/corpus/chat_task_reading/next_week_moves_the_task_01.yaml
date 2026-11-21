@@ -1,0 +1,22 @@
+name: next_week_moves_the_task
+task: chat_task_reading
+site: chat_tasks
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+# The customer asks to talk next week: the follow-up still waits and moves to
+# the Monday of next week.
+fixture:
+  today: "2026-11-18"
+  chat: "Me: Hi Jonas, can we go through the proposal this week?\nJonas Reiter: This week is full, please ping me again next week."
+  tasks:
+    - {subject: "Call Jonas about the proposal", due_on: "2026-11-18"}
+expect:
+  outcome: accepted
+  answer:
+    actions: [new_date]
+    due_on: ["2026-11-23"]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The call task moves to Monday 2026-11-23, quoting Jonas's line asking to be pinged next week."

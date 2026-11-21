@@ -27,6 +27,7 @@
 import { join } from "node:path";
 import ts from "typescript";
 import { resolveRelative } from "../../scripts/lib/source-tree";
+import { importMapEntries } from "../../scripts/vite-screen-chunks";
 import { stable } from "../../src/format/collate";
 import {
   type CensusFile,
@@ -118,7 +119,8 @@ type Binding = { file: string; exported: string };
  * Which module each name in a file comes from. The sources are static imports,
  * `export … from` re-exports, and one lazy form. Every routed screen in
  * App.screens.tsx is declared with that form: `lazy(routed(() =>
- * import("./x").then((m) => ({ default: m.Y }))))`.
+ * CODE.x().then((m) => ({ default: m.Y }))))`, or with `import("./x")` in place
+ * of `CODE.x()`, where `CODE` maps `x` to its own `import()`.
  */
 function bindingsOf(
   walk: Walk,
@@ -134,7 +136,11 @@ function bindingsOf(
       readImport(walk, file, statement, out);
     } else if (ts.isExportDeclaration(statement)) {
       readReExport(walk, file, statement, out);
-    } else if (ts.isVariableStatement(statement)) {
+    }
+  }
+  // After the imports: a lazy screen may name a code map imported below it.
+  for (const statement of file.statements) {
+    if (ts.isVariableStatement(statement)) {
       readLazyImport(walk, file, statement, out);
     }
   }
@@ -217,7 +223,7 @@ function readLazyImport(
     const specifier = dynamicImportSpecifier(declaration.initializer);
     const target = specifier
       ? resolveRelative(file.fileName, specifier, walk.exists)
-      : null;
+      : codeMapTarget(walk, declaration.initializer, out);
     if (!target) {
       continue;
     }
@@ -226,6 +232,36 @@ function readLazyImport(
       exported: lazyExportName(declaration.initializer) ?? "default",
     });
   }
+}
+
+/** The module `CODE.x()` names, read from the `x` entry of the imported map. */
+function codeMapTarget(
+  walk: Walk,
+  node: ts.Node,
+  imported: ReadonlyMap<string, Binding>,
+): string | null {
+  let target: string | null = null;
+  const visit = (child: ts.Node) => {
+    if (
+      target === null &&
+      ts.isCallExpression(child) &&
+      ts.isPropertyAccessExpression(child.expression) &&
+      ts.isIdentifier(child.expression.expression)
+    ) {
+      const binding = imported.get(child.expression.expression.text);
+      const map = binding && walk.at(binding.file);
+      const specifier =
+        map &&
+        importMapEntries(ts, map, binding.exported)?.get(
+          child.expression.name.text,
+        );
+      if (map && specifier)
+        target = resolveRelative(map.fileName, specifier, walk.exists);
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return target;
 }
 
 function dynamicImportSpecifier(node: ts.Node): string | undefined {

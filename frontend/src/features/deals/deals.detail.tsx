@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -141,7 +142,12 @@ function dealBand({
   if (deal.archived_at) {
     return <ArchivedDealBand deal={deal} reason={reason} reasonId={reasonId} />;
   }
-  return <p id={reasonId}>{reason}</p>;
+  return (
+    <>
+      <p id={reasonId}>{reason}</p>
+      <EditAccessRequest kind="deal" record={deal} />
+    </>
+  );
 }
 
 // The pills under the deal's name. They say whose move it is and when a buyer

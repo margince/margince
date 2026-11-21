@@ -284,6 +284,7 @@ export function vocabularyNeverColumn(): string {
 // The du imperative keeps its -e (lege, prüfe, sage). These are the short
 // forms a translation reaches for. A verb whose stem changes its vowel (gib,
 // nimm, lies) has no -e form, nor has "lass", so none of them is listed.
+// "Versuch" alone is a noun, so the verb is listed with the "es" it takes.
 const SHORT_IMPERATIVE = word(
   [
     "leg",
@@ -301,6 +302,7 @@ const SHORT_IMPERATIVE = word(
     "verschieb",
     "setz",
     "bleib",
+    "versuch es",
   ]
     .flatMap((verb) => [verb, verb[0].toUpperCase() + verb.slice(1)])
     .join("|"),

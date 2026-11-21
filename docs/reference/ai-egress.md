@@ -32,6 +32,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `capture_counterparty_verdict` | `local_small` | yes | yes | the bound decision model | shipped |
 | `cert_judge` | `premium` → `cheap_cloud` | no | no | none | shipped |
 | `chat_summary` | `cheap_cloud` → `premium` | no | yes | none | shipped |
+| `chat_task_reading` | `local_small` → `cheap_cloud` | no | yes | none | shipped |
 | `cold_start` | `cheap_cloud` → `premium` | no | no | none | shipped |
 | `corpus_ask` | `premium` | no | no | none | shipped |
 | `deal_health` | `cheap_cloud` → `premium` | no | no | none | shipped |

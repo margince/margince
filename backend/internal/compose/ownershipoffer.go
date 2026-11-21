@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/recordowner"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
@@ -70,11 +71,11 @@ func (t ownershipTransfers) Offer(ctx context.Context, recordType string, id, to
 		if err := refuseBesideOpenTransfer(ctx, tx, recordType, id); err != nil {
 			return err
 		}
-		err := t.stageTx(ctx, tx, approvalsubject.OwnershipTransfer{
+		err := t.fileTx(ctx, tx, approvalsubject.OwnershipTransfer{
 			RecordType: recordType, RecordID: id, FromID: giver, ToID: to,
 			RequestedBy: giver, DeciderID: to, Note: note,
 		})
-		if errors.Is(err, approvals.ErrNoDecider) {
+		if errors.Is(err, recordowner.ErrOwnerCannotBeAsked) {
 			return errOfferNoSeat
 		}
 		if err != nil {
@@ -178,11 +179,11 @@ func refuseOpenTransfer(ctx context.Context, tx pgx.Tx, recordType string, id id
 		if message == "" {
 			continue
 		}
-		name, err := colleagueName(ctx, tx, named)
+		name, err := recordowner.ColleagueNameTx(ctx, tx, named)
 		if err != nil {
 			return err
 		}
-		return &contacts.TransferRefusal{Code: "transfer_pending", Message: fmt.Sprintf(message, name)}
+		return &contacts.OwnerAskRefusal{Code: "transfer_pending", Message: fmt.Sprintf(message, name)}
 	}
 	return nil
 }

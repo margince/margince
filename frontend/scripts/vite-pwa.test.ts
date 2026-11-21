@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -248,20 +247,16 @@ describe("the build", () => {
 
   it("ships every font of app.css as a file, which the CSP's font-src 'self' admits and a data: URL is not", async () => {
     const appCss = readFileSync(join(FRONTEND, "src/app.css"), "utf8");
-    const resolveSheet = createRequire(join(FRONTEND, "package.json")).resolve;
-    const sheets = [...appCss.matchAll(/@import "(@fontsource\/[^"]+)";/g)].map(
-      ([, sheet]) => resolveSheet(sheet),
-    );
+    const sheets = [...appCss.matchAll(/@import "(\.[^"]+)";/g)]
+      .map(([, sheet]) => join(FRONTEND, "src", sheet))
+      .filter((sheet) => readFileSync(sheet, "utf8").includes("@font-face"));
     expect(sheets.length).toBeGreaterThan(0);
     const root = mkdtempSync(join(tmpdir(), "margince-fonts-"));
     try {
+      // Imported from a script, so each sheet resolves its font URLs from its own folder.
       writeFileSync(
-        join(root, "fonts.css"),
-        sheets.map((sheet) => `@import ${JSON.stringify(sheet)};`).join("\n"),
-      );
-      writeFileSync(
-        join(root, "index.html"),
-        '<!doctype html><link rel="stylesheet" href="./fonts.css">',
+        join(root, "entry.js"),
+        sheets.map((sheet) => `import ${JSON.stringify(sheet)};`).join("\n"),
       );
       const files = await bundled({
         configFile: false,
@@ -270,7 +265,7 @@ describe("the build", () => {
         build: {
           write: false,
           assetsInlineLimit: spaConfig.build?.assetsInlineLimit,
-          rolldownOptions: { input: join(root, "index.html") },
+          rolldownOptions: { input: join(root, "entry.js") },
         },
       });
       const inlined = [...files]
@@ -280,8 +275,11 @@ describe("the build", () => {
         )
         .map(([name]) => name);
       expect(
-        [...files.keys()].filter((name) => /\.woff2?$/.test(name)),
+        [...files.keys()].filter((name) => /\.woff2$/.test(name)),
       ).not.toEqual([]);
+      expect([...files.keys()].filter((name) => /\.woff$/.test(name))).toEqual(
+        [],
+      );
       expect(inlined).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });

@@ -12,6 +12,7 @@ import {
   AttachmentGrid,
   AttachmentTile,
 } from "../../components/attachmenttile";
+import { ChatCapture } from "../../components/chatcapture";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useFocusHandoff } from "../../design-system/focushandoff";
@@ -88,6 +89,7 @@ export function DealFiles({
   // deal and refused the upload once the bytes were chosen.
   const mayWrite = useCanWriteRecord("deal", deal);
   const [adding, setAdding] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const listRegion = useRef<HTMLDivElement | null>(null);
   const focusLanding = useCallback(() => listRegion.current, []);
@@ -104,49 +106,66 @@ export function DealFiles({
   }
 
   return (
-    <Panel
-      title={t("files.title")}
-      titleAction={
-        mayWrite ? (
-          <Button onClick={() => setAdding(true)}>
-            {t("docs.add.action")}
+    <>
+      {capturing && (
+        <ChatCapture
+          record={{ type: "deal", id: dealId, name: deal.name }}
+          onClose={() => setCapturing(false)}
+        />
+      )}
+      <Panel
+        title={t("files.title")}
+        titleAction={
+          mayWrite ? (
+            <>
+              <Button
+                variant="ai"
+                disabled={capturing}
+                onClick={() => setCapturing(true)}
+              >
+                {t("chatCapture.action")}
+              </Button>
+              <Button onClick={() => setAdding(true)}>
+                {t("docs.add.action")}
+              </Button>
+            </>
+          ) : undefined
+        }
+        footer={
+          <Button variant="ghost" onClick={() => setShowHidden((s) => !s)}>
+            {showHidden ? t("files.hideHidden") : t("files.showHidden")}
           </Button>
-        ) : undefined
-      }
-      footer={
-        <Button variant="ghost" onClick={() => setShowHidden((s) => !s)}>
-          {showHidden ? t("files.hideHidden") : t("files.showHidden")}
-        </Button>
-      }
-    >
-      <AddDocumentDialog
-        anchor={{ record: "deal", id: dealId }}
-        open={adding}
-        onClose={() => setAdding(false)}
-      />
-      <PanelBody>
-        <div ref={listRegion} tabIndex={-1}>
-          <SurfaceState
-            loadingLabel={t("files.title")}
-            state={state}
-            emptyLabel={t("files.empty")}
-            detail={
-              state === "failed"
-                ? { onRetry: () => void query.refetch() }
-                : undefined
-            }
-          >
-            <FilesGrid
-              dealId={dealId}
-              files={files}
-              mayWrite={mayWrite}
-              focusLanding={focusLanding}
-              onOpenEmail={onOpenEmail}
-            />
-          </SurfaceState>
-        </div>
-      </PanelBody>
-    </Panel>
+        }
+      >
+        <AddDocumentDialog
+          anchor={{ record: "deal", id: dealId }}
+          open={adding}
+          onClose={() => setAdding(false)}
+        />
+        <PanelBody>
+          <div ref={listRegion} tabIndex={-1}>
+            <SurfaceState
+              loadingLabel={t("files.title")}
+              state={state}
+              emptyLabel={t("files.empty")}
+              detail={
+                state === "failed"
+                  ? { onRetry: () => void query.refetch() }
+                  : undefined
+              }
+            >
+              <FilesGrid
+                dealId={dealId}
+                files={files}
+                mayWrite={mayWrite}
+                focusLanding={focusLanding}
+                onOpenEmail={onOpenEmail}
+              />
+            </SurfaceState>
+          </div>
+        </PanelBody>
+      </Panel>
+    </>
   );
 }
 

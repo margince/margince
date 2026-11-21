@@ -36,6 +36,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import {
   JURISDICTION_QUERY_KEY,
   JurisdictionEntitiesPanel,
+  jurisdictionOptions,
   useInstallationJurisdiction,
 } from "./jurisdictionentities";
 
@@ -192,10 +193,7 @@ function ChangeJurisdiction({
   };
   const target = choice === NO_PACK ? "" : choice;
   const options = [
-    ...jurisdiction.available.map((unit) => ({
-      value: unit.code,
-      label: jurisdictionName(unit.code, locale),
-    })),
+    ...jurisdictionOptions(jurisdiction.available, locale),
     { value: NO_PACK, label: t("jurisdiction.option.none") },
   ].filter(
     (option) => (option.value === NO_PACK ? "" : option.value) !== current,

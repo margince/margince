@@ -93,8 +93,7 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 		       capture_label = NULL, capture_labeled_at = NULL,
 		       -- A decline was given to the old text, and its stamp keeps the row
 		       -- out of the backlog the cleared label returns it to.
-		       capture_label_declined_at = NULL, capture_label_declined_ruleset = NULL,
-		       owed_verdict_declined_at = NULL, owed_verdict_declined_ruleset = NULL,
+		       `+declineStampsClearedWhen("true")+`,
 		       -- The classifier's reply verdict judged the old text and is written
 		       -- once, so it is cleared for the pass to judge again. A human's stays.
 		       reply_verdict = CASE WHEN `+humanJudgedReplySQL+` THEN a.reply_verdict END,

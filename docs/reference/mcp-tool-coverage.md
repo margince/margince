@@ -596,8 +596,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_compliance` | 1.00 | 6 | `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
-| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
+| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
@@ -636,8 +636,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_compliance` | 1.00 | 6 | `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
-| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
+| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |

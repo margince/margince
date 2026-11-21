@@ -110,6 +110,7 @@ var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
 	// because the name heuristic above cannot tell the two apart, and narrowing
 	// the heuristic to exclude it would risk excluding a real body.
 	"OwnershipRequest":      "not a request body — a handover request as the server answers it; every id is read from the stored request",
+	"EditAccessRequest":     "not a request body — an edit access request as the server answers it; every id is read from the stored request",
 	"DataSubjectRequest":    "not a request body — the DSR entity; `id` is its own key, not a caller-supplied reference",
 	"SchedulingTeamRequest": "not a request body — a colleague's link that names the caller, as the server answers it",
 	// Multipart never decodes into this generated type. The handler

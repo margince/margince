@@ -36,6 +36,10 @@ import (
 //
 // Only a declared text bound exposes a field. Other schema details stay in InfraCause.
 func constraintFault(err error) (Fault, bool) {
+	// First: a name on a row the caller never wrote must not become a field.
+	if fault, ok := sideEffectFault(err); ok {
+		return fault, true
+	}
 	if fault, ok := textBoundFault(err); ok {
 		return fault, true
 	}
@@ -44,9 +48,6 @@ func constraintFault(err error) (Fault, bool) {
 	}
 
 	if fault, ok := retentionHoldFault(err); ok {
-		return fault, true
-	}
-	if fault, ok := sideEffectFault(err); ok {
 		return fault, true
 	}
 	switch {

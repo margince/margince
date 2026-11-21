@@ -31,6 +31,13 @@ func Passed(due *time.Time, now time.Time) bool {
 	return due != nil && due.Before(now)
 }
 
+// DayPassed reports whether the calendar day of a due moment, read in loc, is
+// before today's calendar day in loc. A day-level promise is late only once
+// its whole day is over, so the last fractional second of today still counts.
+func DayPassed(due, now time.Time, loc *time.Location) bool {
+	return due.In(loc).Format(time.DateOnly) < now.In(loc).Format(time.DateOnly)
+}
+
 // DaysPast is how many WHOLE days a due moment is behind now, and whether it is
 // behind at all.
 //

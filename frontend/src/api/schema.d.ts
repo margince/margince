@@ -19861,6 +19861,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/records/{record_type}/{id}/edit-access-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company" | "deal" | "lead" | "project";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** The caller's open request for edit access to this record. */
+        get: operations["getEditAccessRequest"];
+        put?: never;
+        /**
+         * Ask a record's owner for edit access.
+         * @description For a record the caller can see but not change, because a colleague owns it. The request is an
+         *     `edit_access` approval in the owner's inbox; only the owner can decide it, and it stays open for
+         *     7 days. Only the owner can approve it, in person; their agent may decline it. When the owner
+         *     approves, the caller gets a write share on the record and the owner stays its owner. The caller is
+         *     told when it is declined or expires, or closed because the record changed owner. A second press
+         *     while a request is open answers that request with `200`; a new request answers `201`. `409` names
+         *     why nothing can be asked for: `unowned`, `already_yours_to_change`, `owner_unavailable` (the owner
+         *     is suspended or has left; ask an administrator), or `declined` (this owner declined the same
+         *     request before).
+         */
+        post: operations["requestEditAccess"];
+        /**
+         * Withdraw the caller's open request for edit access to this record.
+         * @description The card leaves the owner's inbox. `404` when the caller has no open request.
+         */
+        delete: operations["withdrawEditAccessRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/ownership-offer": {
         parameters: {
             query?: never;
@@ -25751,18 +25788,25 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * File a chat screenshot on its contact as one message activity, with the image attached.
+         * File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
          * @description The confirm step after a `chat_capture` reading of a screenshot uploaded to a
-         *     contact. It writes one `message` activity linked to that contact, on the channel
-         *     named, with `body` as its text, and moves the image from the contact onto the
-         *     activity. Nothing is written before this call: the reading never files anything.
+         *     contact, lead or deal. It writes one `message` activity linked to that record, on
+         *     the channel named, with `body` as its text, and moves the image from the record
+         *     onto the activity. Nothing is written before this call: the reading never files anything.
+         *
+         *     With a `chat_task_reading` model set up, the filed text is then read against the
+         *     caller's own open tasks on that record. A task the chat settles is marked done, or
+         *     moved to the day the chat names, by Margince on the caller's behalf, with the chat
+         *     line it rests on as evidence. The change shows in Done for you with Undo, and the
+         *     same chat never changes that task again. An unsure reading, or no model, changes
+         *     no task, and a failed reading never refuses the filing.
          *
          *     When `body` is the reading's own text unchanged, the activity is written by the
          *     reader on behalf of the caller, which is how the product marks text a model
          *     read. A body the caller typed or changed is the caller's own. An empty body is
          *     allowed, so a screenshot the model could not read is still filed.
          *
-         *     Requires UPDATE on the contact and CREATE on activities. The reading named must
+         *     Requires UPDATE on the record and CREATE on activities. The reading named must
          *     belong to this file, be a `chat_capture` reading, and be finished; otherwise
          *     422. `channel_provider` must be a registered provider (`GET /v1/channel-providers`).
          *     A second call with the same reading answers the activity the first one wrote.
@@ -44839,9 +44883,9 @@ export interface components {
             /** Format: date-time */
             finished_at?: string | null;
             /**
-             * @description For a finished `chat_capture` reading of a screenshot on a contact: the name or
-             *     number the chat header shows when neither agrees with that contact. Null when
-             *     they agree, when the header shows neither, and for every other reading.
+             * @description For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+             *     name or number the chat header shows when neither agrees with that record. Null
+             *     when they agree, when the header shows neither, on a deal, and for every other reading.
              *     `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
              */
             other_counterparty?: string | null;
@@ -44865,7 +44909,7 @@ export interface components {
             /** @description The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone. */
             body?: string | null;
             /**
-             * @description The caller confirms the chat belongs on this contact although its header shows
+             * @description The caller confirms the chat belongs on this record although its header shows
              *     someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
              *     is refused with 409.
              * @default false
@@ -53408,7 +53452,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "chat_task_reading" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -53434,7 +53478,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary" | "chat_task_reading";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -53785,8 +53829,15 @@ export interface components {
             register_court?: string | null;
             /** @description The entity's commercial register number. */
             register_number?: string | null;
-            /** @description Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country. */
+            /** @description Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity. */
             country?: string | null;
+            /**
+             * @description The jurisdiction pack whose law the entity follows, as its lower-case code, for example
+             *     `de`. It is one of the packs this build offers (`available` of
+             *     `/installation/jurisdiction`). Null on the default entity, whose law is the
+             *     installation's jurisdiction.
+             */
+            jurisdiction?: string | null;
             /** @description The ISO 639-1 language the entity's documents default to. Null means the base text. */
             default_language?: string | null;
             /** @description The name the entity's bank account is held in. */
@@ -53845,8 +53896,14 @@ export interface components {
         CreateLegalEntityRequest: {
             display_name: string;
             legal_name: string;
-            /** @description Lower-case ISO 3166-1 alpha-2, for example `de`. */
+            /** @description The address country, lower-case ISO 3166-1 alpha-2, for example `de`. */
             country: string;
+            /**
+             * @description The jurisdiction pack whose law the entity follows, one of `available` of
+             *     `/installation/jurisdiction`. Left out, it is the `country`, and a country no pack
+             *     covers answers `invalid_jurisdiction`.
+             */
+            jurisdiction?: string;
             address?: components["schemas"]["LegalEntityAddress"];
             vat_id?: string;
             register_court?: string;
@@ -53866,6 +53923,8 @@ export interface components {
             display_name?: string;
             legal_name?: string;
             country?: string;
+            /** @description One of `available` of `/installation/jurisdiction`. The default entity refuses it. */
+            jurisdiction?: string;
             address?: components["schemas"]["LegalEntityAddress"];
             vat_id?: string;
             register_court?: string;
@@ -55863,6 +55922,23 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
+        EditAccessRequest: {
+            /** Format: uuid */
+            approval_id: string;
+            /** @enum {string} */
+            record_type: "contact" | "company" | "deal" | "lead" | "project";
+            /** Format: uuid */
+            record_id: string;
+            /**
+             * Format: uuid
+             * @description The owner the request is put to.
+             */
+            owner_id: string;
+            /** @enum {string} */
+            status: "pending";
+            /** Format: date-time */
+            expires_at: string;
+        };
         OwnershipRequest: {
             /** Format: uuid */
             approval_id: string;
@@ -56330,7 +56406,8 @@ export interface components {
             /**
              * Format: date-time
              * @description A future moment to send at instead of now. The decision is recorded now and spent when
-             *     the message fires. Absent sends now.
+             *     the message fires. It sends now only when `scheduled_at`, `scheduled_tz` and
+             *     `scheduled_intent` are all absent.
              */
             scheduled_at?: string;
             /** @description The IANA zone `scheduled_at` was picked in. Present exactly when it is. */
@@ -95186,6 +95263,131 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getEditAccessRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company" | "deal" | "lead" | "project";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's open request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditAccessRequest"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    requestEditAccess: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                record_type: "contact" | "company" | "deal" | "lead" | "project";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request already open for this record and caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditAccessRequest"];
+                };
+            };
+            /** @description The request is in the owner's inbox. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditAccessRequest"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `declined`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    withdrawEditAccessRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company" | "deal" | "lead" | "project";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request is withdrawn. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getOwnershipOffer: {
         parameters: {
             query?: never;
@@ -104186,7 +104388,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set. */
+            /** @description The chat's header shows someone other than the contact or lead, and `confirm_other_counterparty` was not set. */
             409: {
                 headers: {
                     [name: string]: unknown;

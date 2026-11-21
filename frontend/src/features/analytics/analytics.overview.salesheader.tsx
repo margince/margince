@@ -43,7 +43,7 @@ export function SalesHeader({
   switcher: ReactNode;
   scopeControl: ReactNode;
   dates: Parameters<typeof ReportingFilters>[0]["dates"];
-  caption: ReactNode;
+  caption?: ReactNode;
   // The answered evaluation, once there is one to save or export.
   evaluation: ReportingEvaluation | undefined;
   // The chart read, whose chart rows the export carries after the figures.
@@ -80,8 +80,12 @@ export function SalesHeader({
             {t("analytics.overview.chipClose", {
               window: t(`reporting.${selection.close_window}`),
             })}
-            {" · "}
-            {caption}
+            {caption != null && (
+              <>
+                {" · "}
+                {caption}
+              </>
+            )}
           </span>
         </span>
       }

@@ -1,11 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
-import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
-import { throwProblem } from "../../../lib/problem";
 import type { CompanyForm } from "../onboarding";
 import { wizardStateBody, writeWizardState } from "../onboarding";
-import { ONBOARDING_PROGRESS_KEY } from "../onboarding-progress";
+import {
+  loadWizardState,
+  onboardingProgressOptions,
+} from "../onboarding-progress";
 import { isCompanyField } from "./company-proposal";
 
 // Minimal wizard-state persistence for the conversational shell: the server
@@ -68,15 +69,9 @@ function fromServerState(data: OnboardingState): SavedState {
 }
 
 async function loadSavedState(): Promise<SavedState> {
-  const { data, error, response } = await api.GET("/onboarding/state");
-  if (error) {
-    if (response.status !== 404) {
-      throwProblem(error);
-    }
-    // 404 = nothing persisted yet: the first write starts at version 0.
-    return FRESH_STATE;
-  }
-  return fromServerState(data);
+  const data = await loadWizardState();
+  // Nothing persisted yet: the first write starts at version 0.
+  return data ? fromServerState(data) : FRESH_STATE;
 }
 
 // A blank conversational field never clobbers a value an earlier session
@@ -141,7 +136,7 @@ export function useWizardStatePersist() {
           saved.current = fromServerState(written);
           // The app shell gates on this same entry: a completion it never
           // learned of would send the finished journey straight back here.
-          client.setQueryData(ONBOARDING_PROGRESS_KEY, written);
+          client.setQueryData(onboardingProgressOptions.queryKey, written);
           return true;
         } catch {
           // Best-effort by design: the act must never stall on state

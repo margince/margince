@@ -29151,6 +29151,78 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /records/{record_type}/{id}/edit-access-request:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company, deal, lead, project] }
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: requestEditAccess
+      x-mcp-tool: { verb: request_edit_access, router: change_access, action: request_edit_access, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Ask a record's owner for edit access.
+      description: |
+        For a record the caller can see but not change, because a colleague owns it. The request is an
+        `edit_access` approval in the owner's inbox; only the owner can decide it, and it stays open for
+        7 days. Only the owner can approve it, in person; their agent may decline it. When the owner
+        approves, the caller gets a write share on the record and the owner stays its owner. The caller is
+        told when it is declined or expires, or closed because the record changed owner. A second press
+        while a request is open answers that request with `200`; a new request answers `201`. `409` names
+        why nothing can be asked for: `unowned`, `already_yours_to_change`, `owner_unavailable` (the owner
+        is suspended or has left; ask an administrator), or `declined` (this owner declined the same
+        request before).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The request already open for this record and caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '201':
+          description: The request is in the owner's inbox.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `declined`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Identity]
+      operationId: getEditAccessRequest
+      x-mcp-tool: { verb: get_edit_access_request, router: read_details, action: edit_access_request, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The caller's open request for edit access to this record.
+      responses:
+        '200':
+          description: The caller's open request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: withdrawEditAccessRequest
+      x-mcp-tool: { verb: withdraw_edit_access_request, router: change_access, action: withdraw_edit_access_request, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Withdraw the caller's open request for edit access to this record.
+      description: The card leaves the owner's inbox. `404` when the caller has no open request.
+      responses:
+        '204': { description: The request is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /records/{record_type}/{id}/ownership-offer:
     parameters:
       - name: record_type
@@ -37595,19 +37667,26 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       x-human-only-reason: covered
-      summary: File a chat screenshot on its contact as one message activity, with the image attached.
+      summary: File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
       description: |
         The confirm step after a `chat_capture` reading of a screenshot uploaded to a
-        contact. It writes one `message` activity linked to that contact, on the channel
-        named, with `body` as its text, and moves the image from the contact onto the
-        activity. Nothing is written before this call: the reading never files anything.
+        contact, lead or deal. It writes one `message` activity linked to that record, on
+        the channel named, with `body` as its text, and moves the image from the record
+        onto the activity. Nothing is written before this call: the reading never files anything.
+
+        With a `chat_task_reading` model set up, the filed text is then read against the
+        caller's own open tasks on that record. A task the chat settles is marked done, or
+        moved to the day the chat names, by Margince on the caller's behalf, with the chat
+        line it rests on as evidence. The change shows in Done for you with Undo, and the
+        same chat never changes that task again. An unsure reading, or no model, changes
+        no task, and a failed reading never refuses the filing.
 
         When `body` is the reading's own text unchanged, the activity is written by the
         reader on behalf of the caller, which is how the product marks text a model
         read. A body the caller typed or changed is the caller's own. An empty body is
         allowed, so a screenshot the model could not read is still filed.
 
-        Requires UPDATE on the contact and CREATE on activities. The reading named must
+        Requires UPDATE on the record and CREATE on activities. The reading named must
         belong to this file, be a `chat_capture` reading, and be finished; otherwise
         422. `channel_provider` must be a registered provider (`GET /v1/channel-providers`).
         A second call with the same reading answers the activity the first one wrote.
@@ -37627,7 +37706,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set.
+          description: The chat's header shows someone other than the contact or lead, and `confirm_other_counterparty` was not set.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -61724,9 +61803,9 @@ components:
         other_counterparty:
           type: [string, 'null']
           description: |
-            For a finished `chat_capture` reading of a screenshot on a contact: the name or
-            number the chat header shows when neither agrees with that contact. Null when
-            they agree, when the header shows neither, and for every other reading.
+            For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+            name or number the chat header shows when neither agrees with that record. Null
+            when they agree, when the header shows neither, on a deal, and for every other reading.
             `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
 
     AttachmentReadRequest:
@@ -61757,7 +61836,7 @@ components:
           type: boolean
           default: false
           description: |
-            The caller confirms the chat belongs on this contact although its header shows
+            The caller confirms the chat belongs on this record although its header shows
             someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
             is refused with 409.
 
@@ -73404,6 +73483,7 @@ components:
         - capture_confidentiality_verdict
         - capture_counterparty_verdict
         - chat_summary
+        - chat_task_reading
         - cert_judge
         - cold_start
         - corpus_ask
@@ -73447,7 +73527,7 @@ components:
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
          request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
-         reader_rendering, deal_verdict, rewrite, chat_summary]
+         reader_rendering, deal_verdict, rewrite, chat_summary, chat_task_reading]
       x-extensible-enum: true
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
@@ -73906,7 +73986,14 @@ components:
         country:
           type: string
           nullable: true
-          description: Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country.
+          description: Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity.
+        jurisdiction:
+          type: [string, 'null']
+          description: |
+            The jurisdiction pack whose law the entity follows, as its lower-case code, for example
+            `de`. It is one of the packs this build offers (`available` of
+            `/installation/jurisdiction`). Null on the default entity, whose law is the
+            installation's jurisdiction.
         default_language:
           type: string
           nullable: true
@@ -73974,7 +74061,13 @@ components:
       properties:
         display_name: { x-single-line: true, type: string, maxLength: 120 }
         legal_name: { x-single-line: true, type: string, maxLength: 500 }
-        country: { type: string, description: 'Lower-case ISO 3166-1 alpha-2, for example `de`.' }
+        country: { type: string, description: 'The address country, lower-case ISO 3166-1 alpha-2, for example `de`.' }
+        jurisdiction:
+          type: string
+          description: |
+            The jurisdiction pack whose law the entity follows, one of `available` of
+            `/installation/jurisdiction`. Left out, it is the `country`, and a country no pack
+            covers answers `invalid_jurisdiction`.
         address: { $ref: '#/components/schemas/LegalEntityAddress' }
         vat_id: { type: string, maxLength: 200 }
         register_court: { type: string, maxLength: 200 }
@@ -73993,6 +74086,7 @@ components:
         display_name: { x-single-line: true, type: string, maxLength: 120 }
         legal_name: { x-single-line: true, type: string, maxLength: 500 }
         country: { type: string }
+        jurisdiction: { type: string, description: 'One of `available` of `/installation/jurisdiction`. The default entity refuses it.' }
         address: { $ref: '#/components/schemas/LegalEntityAddress' }
         vat_id: { type: string, maxLength: 200 }
         register_court: { type: string, maxLength: 200 }
@@ -76390,6 +76484,16 @@ components:
         to_id: { type: string, format: uuid, description: The colleague the offer is put to. }
         status: { type: string, enum: [pending], x-extensible-enum: true }
         expires_at: { type: string, format: date-time }
+    EditAccessRequest:
+      type: object
+      required: [approval_id, record_type, record_id, owner_id, status, expires_at]
+      properties:
+        approval_id: { type: string, format: uuid }
+        record_type: { type: string, enum: [contact, company, deal, lead, project], x-extensible-enum: true }
+        record_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid, description: The owner the request is put to. }
+        status: { type: string, enum: [pending], x-extensible-enum: true }
+        expires_at: { type: string, format: date-time }
     OwnershipRequest:
       type: object
       required: [approval_id, record_type, record_id, owner_id, status, expires_at]
@@ -76935,7 +77039,8 @@ components:
           format: date-time
           description: |
             A future moment to send at instead of now. The decision is recorded now and spent when
-            the message fires. Absent sends now.
+            the message fires. It sends now only when `scheduled_at`, `scheduled_tz` and
+            `scheduled_intent` are all absent.
         scheduled_tz:
           type: string
           description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.

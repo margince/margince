@@ -23,7 +23,7 @@ import (
 )
 
 // ownRequestKinds are the kinds a user or their agent stages for a colleague to answer.
-var ownRequestKinds = map[string]bool{approvalsubject.KindOwnershipTransfer: true}
+var ownRequestKinds = map[string]bool{approvalsubject.KindOwnershipTransfer: true, approvalsubject.KindEditAccess: true}
 
 // OwnRequest is one open request the caller or their agent staged.
 type OwnRequest struct {

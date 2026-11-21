@@ -80,10 +80,12 @@ func (c *OwedClassifier) reviewedVerdictPredictions(ctx context.Context, candida
 			predictions[msg.ID] = result.Verdict
 			return true, nil
 		},
-		decline: func(_ context.Context, msg owedCandidate, _ error) error {
+		decline: func(_ context.Context, msg owedCandidate, _ error) (bool, error) {
 			predictions[msg.ID] = reviewPredictionDeclined
-			return nil
+			return true, nil
 		},
+		// assessed has already marked it uncertain; a review writes no stamp.
+		unsure: func(context.Context, owedCandidate) (bool, error) { return false, nil },
 	}
 	calls := newSweepCalls(max(len(eligible), owedBatchSize), owedBatchSize)
 	for start := 0; start < len(eligible) && calls.remain(); start += owedBatchSize {

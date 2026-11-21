@@ -2394,6 +2394,7 @@ export const en = {
   "systemJob.rbac_defaults": "Extension starting permissions",
   "systemJob.release_version": "Release check",
   "systemJob.report_schedule": "Scheduled reports",
+  "systemJob.chat_task_reader": "Chat and open tasks",
   "systemJob.request_settlement": "Request settlement",
   "systemJob.restore_drill": "Restore drill record",
   "systemJob.risk_verdict": "Deal risk check",
@@ -3884,7 +3885,7 @@ export const en = {
   "consent.reason.unconfirmed_double_opt_in":
     "Consent was recorded but never confirmed by the double opt-in",
   "consent.reason.no_connection":
-    "They have not written to you, met you or asked you for anything that is on file",
+    "No message, meeting or request on file connects you",
   "consent.reason.qualifying_event": "A recorded exchange connects you",
   "consent.reason.consent_confirmed":
     "They gave consent, with the confirmation on file",
@@ -4867,6 +4868,7 @@ export const en = {
   "approval.kind.site_lead": "Add contact from website",
   "approval.kind.capture_counterparty": "Add contact from mail",
   "approval.kind.ownership_transfer": "Hand over a record",
+  "approval.kind.edit_access": "Give edit access",
   "approval.kind.contact_share": "Share a contact",
   "approval.kind.legal_review_request": "Legal review requested",
   "approval.kind.task_due_date": "Check a due date",
@@ -6460,22 +6462,26 @@ export const en = {
   "legalEntities.colName": "Name",
   "legalEntities.colLegalName": "Legal name",
   "legalEntities.colCountry": "Country",
-  "legalEntities.countryMissing": "Not set: the installation’s country applies",
+  "legalEntities.colJurisdiction": "Jurisdiction",
+  "legalEntities.jurisdictionMissing":
+    "Not set: the installation’s jurisdiction applies",
   "legalEntities.defaultBadge": "Default",
   "legalEntities.defaultUnnamed": "Your company",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
-  "legalEntities.defaultCountry":
-    "Country: {country}. The default company follows the installation’s jurisdiction.",
-  "legalEntities.defaultCountryNone":
-    "No country set. The default company follows the installation’s jurisdiction.",
-  "legalEntities.defaultCountryLink": "Change it under Jurisdiction",
+  "legalEntities.countryHint": "The country of the registered address.",
+  "legalEntities.jurisdiction": "Jurisdiction",
+  "legalEntities.jurisdictionHint":
+    "Its law applies to the mail this company’s team sends and the contacts it owns.",
+  "legalEntities.defaultJurisdiction":
+    "Jurisdiction: {jurisdiction}. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultJurisdictionNone":
+    "No jurisdiction set. The default company follows the installation’s jurisdiction.",
+  "legalEntities.defaultJurisdictionLink": "Change it under Jurisdiction",
   "jurisdiction.entities.title": "Legal entities",
-  "jurisdiction.entities.lead":
-    "Each company’s country sets the law for the mail its team sends and the contacts it owns.",
-  "jurisdiction.entities.default": "{country}, the selection above",
-  "jurisdiction.entities.none": "No country set",
+  "jurisdiction.entities.default": "{jurisdiction}, the selection above",
+  "jurisdiction.entities.none": "No jurisdiction set",
   "jurisdiction.entities.edit": "Change legal entities",
   "legalEntities.edit": "Edit",
   "legalEntities.archive": "Archive",
@@ -7912,6 +7918,8 @@ export const en = {
   "chatCapture.readBadge": "Copied from the screenshot by AI",
   "chatCapture.channel": "Chat app",
   "chatCapture.file": "File on this contact",
+  "chatCapture.fileOnLead": "File on this lead",
+  "chatCapture.fileOnDeal": "File on this deal",
   "chatCapture.fileFailed": "The chat could not be filed",
 
   // Adding one. The "About" wording is doing real work: it decides whether the
@@ -8179,6 +8187,13 @@ export const en = {
   "handover.withdraw": "Withdraw request",
   "handover.sent": "Request sent to {owner}",
   "handover.withdrawn": "Request withdrawn",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "Ask {owner} for edit access",
+  "editAccess.requested":
+    "You asked {owner} for edit access. The request stays open until {date}.",
+  "editAccess.withdraw": "Withdraw edit access request",
+  "editAccess.sent": "Edit access requested from {owner}",
+  "editAccess.withdrawn": "Edit access request withdrawn",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Hand over to…",
   "handover.offerTo": "Hand over to",
@@ -15034,6 +15049,7 @@ export const en = {
   "settings.scopeAriaMixed":
     "Settings on this page affect different people; each one states which.",
   "settings.readOnlyPageTitle": "Read-only settings",
+  "settings.pageLoading": "Loading {page}…",
   "settings.readOnlyPage": "Your role cannot change these settings.",
   "settings.seatRefused":
     "Your seat is read-only. Ask an admin for a full seat.",
@@ -23277,6 +23293,7 @@ export const en = {
     "Checking whether the reply answered the request",
   "aiTask.name.rewrite": "Rewriting",
   "aiTask.name.chat_summary": "Chat channel summary",
+  "aiTask.name.chat_task_reading": "Chat and open tasks",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",

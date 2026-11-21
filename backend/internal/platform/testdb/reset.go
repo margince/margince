@@ -249,7 +249,7 @@ func resetWithin(ctx context.Context, tx execQuerier) error {
 // here, and the default's own fields go back to the seeded NULLs.
 func restoreSeededLegalEntity(ctx context.Context, tx execQuerier) error {
 	if _, err := tx.Exec(ctx, `DELETE FROM legal_entity WHERE NOT is_default;
-		UPDATE legal_entity SET country = NULL, default_language = NULL, bank_account_holder = NULL,
+		UPDATE legal_entity SET country = NULL, jurisdiction = NULL, default_language = NULL, bank_account_holder = NULL,
 		       iban = NULL, bic = NULL, imprint = NULL, archived_at = NULL, version = 1
 		 WHERE is_default;`); err != nil {
 		return fmt.Errorf("restoring the seeded legal entity: %w", err)
