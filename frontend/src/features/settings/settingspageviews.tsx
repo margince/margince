@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, Suspense, useState } from "react";
+import { type ReactNode, Suspense } from "react";
 import { PendingBody } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { useT } from "../../i18n";
@@ -11,30 +11,32 @@ import type { SettingsPageId } from "../../lib/settingscatalog";
 
 type PageAt = Readonly<{ tab: string; route?: Route }>;
 
-/** A lazy view inside a CardBoundary whose Retry loads its code again. */
-export function renewable<Props extends object>(
+// An import the browser refused. It keeps a refused module, so only a reload
+// loads the code again; a card that threw while drawing retries in place.
+class RefusedPageCode extends Error {}
+
+const refusedCode = (error: unknown) => error instanceof RefusedPageCode;
+
+function PageBoundary({ children }: Readonly<{ children: ReactNode }>) {
+  return <CardBoundary reloadsOn={refusedCode}>{children}</CardBoundary>;
+}
+
+/** A lazy settings view whose refused import Retry answers with a reload. */
+export function lazyPageCode<Props extends object>(
   load: () => Promise<{ default: (props: Props) => ReactNode }>,
 ) {
-  // React keeps a refused import on its lazy component for good, so a refusal
-  // leaves a fresh one for the next mount and for Retry.
-  const fresh = () =>
-    lazy(async () => {
-      try {
-        return await load();
-      } catch (error) {
-        current = fresh();
-        throw error;
-      }
-    });
-  let current = fresh();
-  return function RenewableView(props: Props) {
-    const [View, setView] = useState(() => current);
-    return (
-      <CardBoundary onRetry={() => setView(() => current)}>
-        <View {...props} />
-      </CardBoundary>
-    );
-  };
+  return lazy(
+    () =>
+      load().catch((error: unknown) => {
+        // The browser's words stay, so a stale build is still told apart.
+        throw new RefusedPageCode(
+          error instanceof Error ? error.message : String(error),
+          { cause: error },
+        );
+      }),
+    "complete",
+    PageBoundary,
+  );
 }
 
 /** One settings page whose code loads on its first visit, every tab at once. */
@@ -42,7 +44,7 @@ export function page<Parts>(
   load: () => Promise<Parts>,
   draw: (parts: Parts, at: PageAt) => ReactNode,
 ) {
-  const View = renewable(async () => {
+  const View = lazyPageCode(async () => {
     const parts = await load();
     return { default: (at: PageAt) => draw(parts, at) };
   });

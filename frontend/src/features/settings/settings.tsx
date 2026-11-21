@@ -9,10 +9,10 @@ import "./settings.css";
 import { SettingsPage } from "./settingspage";
 import {
   FOLDER_PAGE_VIEWS,
+  lazyPageCode,
   PageLoading,
   page,
   pick,
-  renewable,
 } from "./settingspageviews";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
@@ -420,7 +420,7 @@ export const SETTINGS_PAGE_VIEWS = {
   ),
 } satisfies Record<SettingsPageId, ReturnType<typeof page>>;
 
-const VoiceIntakeHost = renewable(async () => ({
+const VoiceIntakeHost = lazyPageCode(async () => ({
   default: (await import("../voice-knowledge/voice-dna")).VoiceIntakeHost,
 }));
 

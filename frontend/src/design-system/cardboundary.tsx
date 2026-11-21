@@ -5,7 +5,7 @@ import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { Component, type ReactNode } from "react";
 import { useT } from "../i18n";
 import { resetLocaleFailures } from "../i18n/catalogs";
-import { retryStaleChunk } from "../lib/stalebuild";
+import { reloadForNewBuild, retryStaleChunk } from "../lib/stalebuild";
 import { Button, EmptyState } from "./atoms";
 import "./cardboundary.css";
 
@@ -59,6 +59,7 @@ type BoundaryProps = Readonly<{
   retryLabel: string;
   children: ReactNode;
   fallback?: ReactNode;
+  reloadsOn?: (error: unknown) => boolean;
 }>;
 type BoundaryState = Readonly<{ failed: boolean; error?: unknown }>;
 
@@ -74,6 +75,7 @@ class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
 
   private readonly retry = () => {
     if (retryStaleChunk(this.state.error)) return;
+    if (this.props.reloadsOn?.(this.state.error) && reloadForNewBuild()) return;
     // The cache is reset BEFORE the re-render: a query that threw keeps its
     // failed result, so a boundary that only cleared its own state would hand
     // the same error straight back and the button would do nothing visible.
@@ -110,13 +112,13 @@ class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
 export function CardBoundary({
   children,
   fallback,
-  onRetry,
+  reloadsOn,
 }: Readonly<{
   children: ReactNode;
   fallback?: ReactNode;
-  /** Runs on Retry before the card draws again, so a caller can renew what
-   *  the failed render held, such as a rejected lazy import. */
-  onRetry?: () => void;
+  /** The failures Retry answers with a page reload, such as an import the
+   *  browser refused: it keeps a refused module, so drawing again fails again. */
+  reloadsOn?: (error: unknown) => boolean;
 }>) {
   const t = useT();
   return (
@@ -126,8 +128,8 @@ export function CardBoundary({
           onReset={() => {
             resetLocaleFailures();
             reset();
-            onRetry?.();
           }}
+          reloadsOn={reloadsOn}
           fallback={fallback}
           title={t("card.errorTitle")}
           retryLabel={t("card.errorRetry")}
