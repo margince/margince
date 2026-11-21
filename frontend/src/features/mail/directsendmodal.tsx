@@ -33,6 +33,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { communicationContextLabel } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { ScheduleFields } from "./composeschedule";
 import { DirectSendWhen, useSendAnywayWhen } from "./directsendwhen";
 import { refusalCountryText } from "./refusalcountry";
@@ -149,7 +150,8 @@ export function DirectSendModal({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const when = useSendAnywayWhen(laterZone ?? "UTC");
+  const viewerZone = useViewerZone();
+  const when = useSendAnywayWhen(laterZone ?? viewerZone);
   const [review, setReview] = useState(initialReview);
   const correction = review.wording_correction;
   const prior = correction ?? {
