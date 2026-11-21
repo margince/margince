@@ -18,20 +18,20 @@
     "tools": "8b653e7a3d01b493",
     "instructions": "933a67b45ed0a6ae",
     "judge": "claude-haiku-5-5",
-    "harness": "d904305f3d25fa7b",
-    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
-    "ran_at": "2026-11-21T14:58:07Z",
-    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
-    "graded_at": "2026-11-21T14:58:07Z"
+    "harness": "ab1cb3aba68aff38",
+    "commit": "f4d391894aeb4882801ee53eebea2f2960c0d62b",
+    "ran_at": "2026-11-21T17:48:18Z",
+    "graded_commit": "f4d391894aeb4882801ee53eebea2f2960c0d62b",
+    "graded_at": "2026-11-21T17:48:18Z"
   },
   "usage": {
-    "input_tokens": 30,
-    "output_tokens": 3879,
-    "cache_creation_input_tokens": 17152,
-    "cache_read_input_tokens": 94687,
+    "input_tokens": 38,
+    "output_tokens": 4480,
+    "cache_creation_input_tokens": 20185,
+    "cache_read_input_tokens": 140539,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1169
+    "cost_usd": 0.1397
   },
   "tools_by_run": [
     {
@@ -50,6 +50,7 @@
         "check_availability",
         "find_records",
         "list_records",
+        "read_view",
         "skill_file"
       ]
     }
@@ -57,14 +58,14 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 11,
+      "median": 13,
       "min": 11,
-      "max": 11
+      "max": 15
     },
     "turns": {
-      "median": 12,
+      "median": 14,
       "min": 12,
-      "max": 12
+      "max": 16
     },
     "refused": {
       "median": 2.5,
@@ -72,19 +73,19 @@
       "max": 3
     },
     "prompt_tokens": {
-      "median": 55934.5,
-      "min": 53867,
-      "max": 58002
+      "median": 80381,
+      "min": 53234,
+      "max": 107528
     },
     "output_tokens": {
-      "median": 1939.5,
-      "min": 1822,
-      "max": 2057
+      "median": 2240,
+      "min": 1776,
+      "max": 2704
     },
     "duration_ms": {
-      "median": 20487,
-      "min": 18524,
-      "max": 22450
+      "median": 23237,
+      "min": 17786,
+      "max": 28688
     }
   }
 }

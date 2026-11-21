@@ -17,20 +17,20 @@
     "tools": "8b653e7a3d01b493",
     "instructions": "933a67b45ed0a6ae",
     "judge": "claude-haiku-5-5",
-    "harness": "d904305f3d25fa7b",
-    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
-    "ran_at": "2026-11-21T14:50:51Z",
-    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
-    "graded_at": "2026-11-21T14:50:51Z"
+    "harness": "ab1cb3aba68aff38",
+    "commit": "f4d391894aeb4882801ee53eebea2f2960c0d62b",
+    "ran_at": "2026-11-21T17:44:50Z",
+    "graded_commit": "f4d391894aeb4882801ee53eebea2f2960c0d62b",
+    "graded_at": "2026-11-21T17:44:50Z"
   },
   "usage": {
-    "input_tokens": 56,
-    "output_tokens": 8015,
-    "cache_creation_input_tokens": 47916,
-    "cache_read_input_tokens": 401604,
+    "input_tokens": 54,
+    "output_tokens": 8639,
+    "cache_creation_input_tokens": 49631,
+    "cache_read_input_tokens": 380309,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.3121
+    "cost_usd": 0.3231
   },
   "tools_by_run": [
     {
@@ -50,6 +50,7 @@
       "tools": [
         "change_activities",
         "create_record",
+        "create_task",
         "find_records",
         "list_approvals",
         "list_records",
@@ -61,14 +62,14 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 24.5,
+      "median": 26,
       "min": 24,
-      "max": 25
+      "max": 28
     },
     "turns": {
-      "median": 25.5,
+      "median": 27,
       "min": 25,
-      "max": 26
+      "max": 29
     },
     "refused": {
       "median": 1,
@@ -76,19 +77,19 @@
       "max": 1
     },
     "prompt_tokens": {
-      "median": 224788,
-      "min": 187766,
-      "max": 261810
+      "median": 214997,
+      "min": 193846,
+      "max": 236148
     },
     "output_tokens": {
-      "median": 4007.5,
-      "min": 3975,
-      "max": 4040
+      "median": 4319.5,
+      "min": 4000,
+      "max": 4639
     },
     "duration_ms": {
-      "median": 44651.5,
-      "min": 42393,
-      "max": 46910
+      "median": 40012,
+      "min": 39494,
+      "max": 40530
     }
   }
 }

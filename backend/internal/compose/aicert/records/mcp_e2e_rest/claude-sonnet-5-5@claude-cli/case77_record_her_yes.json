@@ -17,20 +17,20 @@
     "tools": "8b653e7a3d01b493",
     "instructions": "933a67b45ed0a6ae",
     "judge": "claude-haiku-5-5",
-    "harness": "d904305f3d25fa7b",
-    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
-    "ran_at": "2026-11-21T15:17:49Z",
-    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
-    "graded_at": "2026-11-21T15:17:49Z"
+    "harness": "ab1cb3aba68aff38",
+    "commit": "f4d391894aeb4882801ee53eebea2f2960c0d62b",
+    "ran_at": "2026-11-21T18:08:59Z",
+    "graded_commit": "f4d391894aeb4882801ee53eebea2f2960c0d62b",
+    "graded_at": "2026-11-21T18:08:59Z"
   },
   "usage": {
     "input_tokens": 30,
-    "output_tokens": 3081,
-    "cache_creation_input_tokens": 19392,
-    "cache_read_input_tokens": 111142,
+    "output_tokens": 3172,
+    "cache_creation_input_tokens": 17996,
+    "cache_read_input_tokens": 109403,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1196
+    "cost_usd": 0.1147
   },
   "tools_by_run": [
     {
@@ -41,6 +41,7 @@
         "list_approvals",
         "list_records",
         "read_details",
+        "read_view",
         "skill_file"
       ]
     },
@@ -48,9 +49,10 @@
       "passed": true,
       "tools": [
         "find_records",
+        "get_contact_consent",
         "list_approvals",
         "list_records",
-        "read_view",
+        "read_details",
         "skill_file"
       ]
     }
@@ -73,19 +75,19 @@
       "max": 1
     },
     "prompt_tokens": {
-      "median": 65282,
-      "min": 60182,
-      "max": 70382
+      "median": 63714.5,
+      "min": 57105,
+      "max": 70324
     },
     "output_tokens": {
-      "median": 1540.5,
-      "min": 1476,
-      "max": 1605
+      "median": 1586,
+      "min": 1560,
+      "max": 1612
     },
     "duration_ms": {
-      "median": 18609.5,
-      "min": 17471,
-      "max": 19748
+      "median": 18616.5,
+      "min": 17714,
+      "max": 19519
     }
   }
 }
