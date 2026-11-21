@@ -294,6 +294,24 @@ def acceptance_mail_staged_for_the_project(admin):
         raise SetupFault(f"the move was answered as staged, but no pending relink of the mail is in the queue: {queue}")
 
 
+def katrin_is_the_callers(admin):
+    """Katrin Sommer and her company, owned by the admin who asks about them.
+
+    The seed gives both to a colleague, and a colleague's record is theirs to
+    contact, so a case about the user's own send past a refusal needs her as
+    the user's own.
+    """
+    users = admin.call("GET", f"/users?q={ADMIN_EMAIL}").get("data", [])
+    if not users:
+        raise SetupFault(f"no user answers to {ADMIN_EMAIL}, so Katrin Sommer has no owner to move to")
+    me = users[0]["id"]
+    for path, field, name in (("/contacts", "full_name", "Katrin Sommer"),
+                              ("/companies", "display_name", "Reply Deutschland Betreuerwechsel")):
+        moved = admin.call("PATCH", f"{path}/{_one_named(admin, path, field, name)}", {"owner_id": me})
+        if moved.get("owner_id") != me:
+            raise SetupFault(f"giving {name} to {ADMIN_EMAIL} answered {moved}")
+
+
 def contact_without_history(admin):
     """A contact nothing is logged on, so one activity there is the run's own."""
     _create(admin, "/contacts", {"full_name": "Tjark Ohlsen", "emails": [
@@ -336,6 +354,7 @@ STEPS = {
     "call_already_logged": call_already_logged,
     "card_reviews_and_recap": card_reviews_and_recap,
     "contact_without_history": contact_without_history,
+    "katrin_is_the_callers": katrin_is_the_callers,
     "fair_guests_tagged": fair_guests_tagged,
     "planted_mail": planted_mail,
     "planted_note": planted_note,
