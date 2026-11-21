@@ -1,7 +1,10 @@
 import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 import { Logomark } from "../../design-system/logomark";
 import { usePrefersReducedMotion } from "../../design-system/motion";
+import { Card } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
+import { useBookingTitle } from "../booking/booking-common";
 import { usePublicLocale } from "./publiclocale";
 import "../settings/preferences.css";
 
@@ -18,6 +21,23 @@ export function PublicPage({ children }: Readonly<{ children: ReactNode }>) {
         <PublicFooter />
       </div>
     </div>
+  );
+}
+
+/** The page every dead public link lands on: the answer as the heading, the
+ * reason under it, and a tab title that names the answer instead of the product. */
+export function DeadLinkPage({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  useBookingTitle(t("prefs.unsub.deadLinkTitle"));
+  return (
+    <PublicPage>
+      <Heading size="xlarge" className="t-display">
+        {t("prefs.unsub.deadLinkTitle")}
+      </Heading>
+      <Card>
+        <p>{children}</p>
+      </Card>
+    </PublicPage>
   );
 }
 

@@ -18,7 +18,7 @@ import {
   toChoices,
 } from "../../lib/preferences.logic";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { PublicPage } from "../privacy/publicpage";
+import { DeadLinkPage, PublicPage } from "../privacy/publicpage";
 import { PreferenceRow } from "./preferencerow";
 import { type ChoiceOutcome, PendingConfirmations } from "./preferencespending";
 import "./preferences.css";
@@ -46,9 +46,7 @@ export function PreferenceCenterScreen({
   const t = useT();
   if (!token) {
     return (
-      <PublicPage>
-        <EmptyState>{t("prefs.invalidLink")}</EmptyState>
-      </PublicPage>
+      <DeadLinkPage>{t("prefs.unsub.deadLinkBody")}</DeadLinkPage>
     );
   }
   return <PreferenceCenterBody token={token} />;
@@ -294,6 +292,9 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
     );
   }
 
+  if (center.error instanceof LinkInvalidError) {
+    return <DeadLinkPage>{t("prefs.unsub.deadLinkBody")}</DeadLinkPage>;
+  }
   if (center.isError) {
     return (
       <PublicPage>

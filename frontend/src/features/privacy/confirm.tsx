@@ -29,7 +29,7 @@ import {
   SubscriptionConfirm,
 } from "./confirmsubscription";
 import { useMailLanguage } from "./publiclocale";
-import { PublicPage } from "./publicpage";
+import { DeadLinkPage, PublicPage } from "./publicpage";
 import "./confirm.css";
 
 // The public, anonymous confirm-your-details page: what a contact lands on from
@@ -48,9 +48,7 @@ export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
   const t = useT();
   if (!token) {
     return (
-      <PublicPage>
-        <EmptyState>{t("confirm.invalidLink")}</EmptyState>
-      </PublicPage>
+      <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>
     );
   }
   return <ConfirmDetailsBody token={token} />;
@@ -199,6 +197,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         <Skeleton width="100%" />
       </PublicPage>
     );
+  }
+  if (details.error instanceof LinkInvalidError) {
+    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
   }
   if (details.error || !card) {
     return (
