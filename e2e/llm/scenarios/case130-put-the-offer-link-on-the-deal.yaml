@@ -1,0 +1,33 @@
+# CASE 130 — List a document that lives elsewhere on a deal.
+#
+# A web link joins the deal's documents as a row with the address and no bytes.
+# A note that pastes the address, or a file made from it, is not that row. The
+# end state finds the one listed link by its whole address.
+name: case130_put_the_offer_link_on_the_deal
+title: Put the offer link on the deal
+criteria: [1]
+
+writes: true
+
+prompt: |
+  Our offer for the Dom Digital framework agreement is in the shared drive at
+  https://docs.example.com/angebot-dom-digital-2027. Put that link on the Dom
+  Digital Rahmenvertrag deal so the team finds it with the deal's documents.
+
+must_call:
+  - attach_link
+
+may_call:
+  - find_records
+  - read_record
+  - list_documents
+
+must_mention:
+  - "Dom Digital"
+
+must_end_with:
+  - deal "Dom Digital Rahmenvertrag" link=https://docs.example.com/angebot-dom-digital-2027
+  - deal "Dom Digital Rahmenvertrag" documents=1
+
+runs: 3
+pass_at: 2
