@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The order a reader put a list table's columns in, and which ones they hid.
-// Stored per table under the name its widths use, so both hold between visits.
+// The order a reader put a list table's columns in, which ones they hid, and
+// how tight the rows are. Stored per table under the name its widths use.
 
 import { useMemo, useState } from "react";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
@@ -76,9 +76,13 @@ function choicesIn(value: unknown): Record<string, boolean> | null {
   );
 }
 
+function denseIn(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
 /**
  * The presentation dials of the Display menu: which optional columns stand,
- * and how tight the rows are. Local state, unlike the query dials.
+ * and how tight the rows are. Kept per table, unlike the query dials.
  */
 export function useColumnDisplay(
   columns: readonly Readonly<{ key: string; initiallyHidden?: boolean }>[],
@@ -102,7 +106,15 @@ export function useColumnDisplay(
       ),
     [columns, choices],
   );
-  const [dense, setDense] = useState(false);
+  const [dense, setDense] = useState(
+    () =>
+      (widthsKey
+        ? readStoredJson(
+            { family: STORAGE_KEYS.tableDense, member: widthsKey },
+            denseIn,
+          )
+        : null) ?? false,
+  );
   return {
     hidden,
     onToggleColumn: (key: string) => {
@@ -116,6 +128,14 @@ export function useColumnDisplay(
       }
     },
     dense,
-    onDense: () => setDense(!dense),
+    onDense: () => {
+      setDense(!dense);
+      if (widthsKey) {
+        writeStored(
+          { family: STORAGE_KEYS.tableDense, member: widthsKey },
+          JSON.stringify(!dense),
+        );
+      }
+    },
   };
 }

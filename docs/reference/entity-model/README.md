@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 363 |
-| Columns | 4497 |
+| Columns | 4481 |
 | Foreign keys | 623 |
 | Owning areas | 40 |
 
@@ -183,13 +183,13 @@ erDiagram
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
 | [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 18 | 0 |
-| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 24 | 3 |
+| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 22 | 3 |
 | [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 6 | 0 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
-| [`assurance_run`](assurance.md#assurance_run) | assurance | 18 | 3 |
+| [`assurance_run`](assurance.md#assurance_run) | assurance | 17 | 3 |
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 4 | 0 |
-| [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 9 | 0 |
-| [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 13 | 0 |
+| [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 8 | 0 |
+| [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 12 | 0 |
 | [`attachment`](activities.md#attachment) | activities | 28 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 15 | 2 |
@@ -222,7 +222,7 @@ erDiagram
 | [`capture_pending_counterparty`](capture.md#capture_pending_counterparty) | capture | 22 | 0 |
 | [`capture_sender_override`](capture.md#capture_sender_override) | capture | 8 | 0 |
 | [`capture_sweep_run`](capture.md#capture_sweep_run) | capture | 8 | 0 |
-| [`capture_sync_state`](capture.md#capture_sync_state) | capture | 11 | 0 |
+| [`capture_sync_state`](capture.md#capture_sync_state) | capture | 10 | 0 |
 | [`capture_test_mailbox_sent`](capture.md#capture_test_mailbox_sent) | capture | 8 | 0 |
 | [`capture_thread_verdict`](capture.md#capture_thread_verdict) | capture | 16 | 0 |
 | [`capture_trace`](capture.md#capture_trace) | capture | 12 | 0 |
@@ -230,7 +230,7 @@ erDiagram
 | [`channel_provider`](compose.md#channel_provider) | compose | 5 | 2 |
 | [`chat_link`](chatlinks.md#chat_link) | chatlinks | 20 | 1 |
 | [`chat_post_item`](chatlinks.md#chat_post_item) | chatlinks | 16 | 0 |
-| [`close_date_run`](deals.md#close_date_run) | deals | 15 | 2 |
+| [`close_date_run`](deals.md#close_date_run) | deals | 14 | 2 |
 | [`close_date_run_member`](deals.md#close_date_run_member) | deals | 5 | 0 |
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
 | [`comms_outbound`](comms.md#comms_outbound) | comms | 47 | 5 |
@@ -323,14 +323,14 @@ erDiagram
 | [`federated_identity`](identity.md#federated_identity) | identity | 6 | 0 |
 | [`field_mask`](identity.md#field_mask) | identity | 6 | 0 |
 | [`field_provenance`](platform.md#field_provenance) | platform | 9 | 0 |
-| [`finance_connection`](finance.md#finance_connection) | finance | 15 | 4 |
+| [`finance_connection`](finance.md#finance_connection) | finance | 13 | 4 |
 | [`finance_customer_link`](finance.md#finance_customer_link) | finance | 12 | 2 |
 | [`finance_external_customer`](finance.md#finance_external_customer) | finance | 12 | 1 |
 | [`finance_invoice`](finance.md#finance_invoice) | finance | 31 | 4 |
 | [`finance_payment`](finance.md#finance_payment) | finance | 17 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
-| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 40 | 0 |
+| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 34 | 0 |
 | [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 41 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 6 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
@@ -497,7 +497,7 @@ erDiagram
 | [`weekly_review_outlook`](compose.md#weekly_review_outlook) | compose | 15 | 0 |
 | [`weekly_review_scorecard`](compose.md#weekly_review_scorecard) | compose | 26 | 0 |
 | [`withdrawal_credential`](consent.md#withdrawal_credential) | consent | 12 | 0 |
-| [`workflow_run`](automation.md#workflow_run) | automation | 10 | 0 |
+| [`workflow_run`](automation.md#workflow_run) | automation | 9 | 0 |
 | [`worklist_done`](activities.md#worklist_done) | activities | 5 | 0 |
 | [`worklist_pin`](activities.md#worklist_pin) | activities | 5 | 0 |
 | [`worklist_snapshot`](compose.md#worklist_snapshot) | compose | 8 | 0 |

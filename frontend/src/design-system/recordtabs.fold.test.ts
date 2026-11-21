@@ -6,7 +6,12 @@ import { foldToFit } from "./recordtabs.fold";
 
 const tabs = ["overview", "deals", "history", "files", "finance"] as const;
 const width = () => 100;
-const space = (room: number, inset = 0) => ({ room, more: 60, inset });
+const space = (room: number, inset = 0, gap = 0) => ({
+  room,
+  more: 60,
+  inset,
+  gap,
+});
 
 describe("foldToFit", () => {
   it("folds nothing when every tab fits", () => {
@@ -45,5 +50,20 @@ describe("foldToFit", () => {
     expect(foldToFit(three, "overview", widthOf, space(379, 12))).toEqual([
       "files",
     ]);
+  });
+
+  it("counts the gaps between tabs, so tabs that fit by width alone fold", () => {
+    expect(foldToFit(tabs, "overview", width, space(500, 0, 0))).toEqual([]);
+    expect(foldToFit(tabs, "overview", width, space(500, 0, 20))).toEqual([
+      "files",
+      "finance",
+    ]);
+  });
+
+  it("fits every tab when the room covers widths plus gaps", () => {
+    expect(foldToFit(tabs, "overview", width, space(580, 0, 20))).toEqual([]);
+    expect(foldToFit(tabs, "overview", width, space(579, 0, 20))).not.toEqual(
+      [],
+    );
   });
 });

@@ -110,6 +110,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["fx_rate_currency", "settings.rates.fromNotCurrency"],
   ["fx_rate_positive", "settings.rates.rateNotPositive"],
   ["fx_rate_past", "settings.rates.pastDate"],
+  // A member's own profile that is not a LinkedIn profile.
+  ["linkedin_profile_url_invalid", "common.linkedinProfileInvalid"],
 ]);
 
 // The held refusal names no record; its words depend only on whether the

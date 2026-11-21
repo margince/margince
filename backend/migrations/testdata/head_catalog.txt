@@ -1346,6 +1346,7 @@ public.app_user.app_user_avatar_names_its_origin CHECK (((avatar_object_key IS N
 public.app_user.app_user_avatar_origin_check CHECK ((avatar_origin = ANY (ARRAY['upload'::text, 'google'::text])))
 public.app_user.app_user_delivery_hour_check CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))
 public.app_user.app_user_does_not_merge_into_itself CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))
+public.app_user.app_user_email_is_canonical CHECK ((email = lower(btrim(email))))
 public.app_user.app_user_failed_login_count_check CHECK ((failed_login_count >= 0))
 public.app_user.app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL))))
 public.app_user.app_user_forget_weekly_plan_responses CREATE TRIGGER app_user_forget_weekly_plan_responses BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()
@@ -1578,7 +1579,6 @@ public.assurance_exception.assurance_exception_severity_check CHECK ((severity =
 public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text, 'subject_departed'::text])))
 public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text, 'forecast_call'::text])))
 public.assurance_exception.assurance_exception_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE SET NULL
-public.assurance_exception.assurance_exception_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_exception.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1587,7 +1587,6 @@ public.assurance_exception.delivered_assignee_id uuid gen=- def=-
 public.assurance_exception.delivery_attempts integer NOT NULL gen=- def=0
 public.assurance_exception.delivery_state text gen=- def=-
 public.assurance_exception.episode integer NOT NULL gen=- def=1
-public.assurance_exception.evidence_refs jsonb NOT NULL gen=- def='[]'::jsonb
 public.assurance_exception.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_exception.last_seen_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1604,7 +1603,6 @@ public.assurance_exception.text_bound_update CREATE TRIGGER text_bound_update AF
 public.assurance_exception.type text NOT NULL gen=- def=-
 public.assurance_exception.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.uq_assurance_exception_logical_key UNIQUE (logical_key)
-public.assurance_exception.version bigint NOT NULL gen=- def=1
 public.assurance_exception_pkey CREATE UNIQUE INDEX assurance_exception_pkey ON public.assurance_exception USING btree (id)
 public.assurance_input_change acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_input_change.assurance_input_change_pkey PRIMARY KEY (subject_kind, subject_id)
@@ -1652,7 +1650,6 @@ public.assurance_run.assurance_run_readiness_check CHECK (((readiness IS NULL) O
 public.assurance_run.assurance_run_readiness_matches_status CHECK (((status = 'running'::text) = (readiness IS NULL)))
 public.assurance_run.assurance_run_requester_is_named CHECK (((requested_by IS NULL) OR (length(btrim(requested_by)) > 0)))
 public.assurance_run.assurance_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'complete'::text, 'incomplete'::text])))
-public.assurance_run.assurance_run_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_run.captured_by text NOT NULL gen=- def=-
 public.assurance_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run.digest text gen=- def=-
@@ -1671,7 +1668,6 @@ public.assurance_run.subject_deal_id uuid gen=- def=-
 public.assurance_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}')
 public.assurance_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}')
 public.assurance_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.assurance_run.version bigint NOT NULL gen=- def=1
 public.assurance_run_finding acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_run_finding.assurance_run_finding_exception_id_fkey FOREIGN KEY (exception_id) REFERENCES assurance_exception(id) ON DELETE CASCADE
 public.assurance_run_finding.assurance_run_finding_pkey PRIMARY KEY (run_id, exception_id)
@@ -1689,7 +1685,6 @@ public.assurance_source_coverage.assurance_source_coverage_pkey PRIMARY KEY (id)
 public.assurance_source_coverage.assurance_source_coverage_run_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
 public.assurance_source_coverage.assurance_source_coverage_source_check CHECK ((source = ANY (ARRAY['mail'::text, 'calendar'::text, 'documents'::text, 'contracts'::text, 'offers'::text, 'incumbent'::text])))
 public.assurance_source_coverage.assurance_source_coverage_state_check CHECK ((state = ANY (ARRAY['checked'::text, 'stale'::text, 'unavailable'::text, 'permission_limited'::text, 'not_connected'::text])))
-public.assurance_source_coverage.assurance_source_coverage_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_source_coverage.captured_by text NOT NULL gen=- def=-
 public.assurance_source_coverage.checked_through timestamp with time zone gen=- def=-
 public.assurance_source_coverage.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1701,7 +1696,6 @@ public.assurance_source_coverage.text_bound_insert CREATE TRIGGER text_bound_ins
 public.assurance_source_coverage.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_source_coverage FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}')
 public.assurance_source_coverage.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_source_coverage.uq_assurance_source_coverage_run_source UNIQUE (run_id, source)
-public.assurance_source_coverage.version bigint NOT NULL gen=- def=1
 public.assurance_source_coverage_pkey CREATE UNIQUE INDEX assurance_source_coverage_pkey ON public.assurance_source_coverage USING btree (id)
 public.assurance_task_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_task_item.assurance_task_item_cycle_id_fkey FOREIGN KEY (cycle_id) REFERENCES assurance_cycle(id) ON DELETE CASCADE
@@ -1709,7 +1703,6 @@ public.assurance_task_item.assurance_task_item_exception_id_fkey FOREIGN KEY (ex
 public.assurance_task_item.assurance_task_item_once UNIQUE (exception_id, cycle_id)
 public.assurance_task_item.assurance_task_item_one_task_per_subject EXCLUDE USING gist (cycle_id WITH =, subject_kind WITH =, subject_id WITH =, task_activity_id WITH <>)
 public.assurance_task_item.assurance_task_item_pkey PRIMARY KEY (id)
-public.assurance_task_item.assurance_task_item_state CHECK ((state = ANY (ARRAY['open'::text, 'resolved'::text, 'dismissed'::text])))
 public.assurance_task_item.assurance_task_item_subject_contract_id_bound CHECK ((subject_unkeyed OR (NOT (subject_contract_id IS DISTINCT FROM
 CASE
     WHEN (subject_kind = 'contract'::text) THEN subject_id
@@ -1741,7 +1734,6 @@ public.assurance_task_item.created_at timestamp with time zone NOT NULL gen=- de
 public.assurance_task_item.cycle_id uuid NOT NULL gen=- def=-
 public.assurance_task_item.exception_id uuid NOT NULL gen=- def=-
 public.assurance_task_item.id uuid NOT NULL gen=- def=uuidv7()
-public.assurance_task_item.state text NOT NULL gen=- def='open'::text
 public.assurance_task_item.subject_contract_id uuid gen=- def=-
 public.assurance_task_item.subject_deal_id uuid gen=- def=-
 public.assurance_task_item.subject_id uuid NOT NULL gen=- def=-
@@ -1750,8 +1742,8 @@ public.assurance_task_item.subject_offer_id uuid gen=- def=-
 public.assurance_task_item.subject_signal_id uuid gen=- def=-
 public.assurance_task_item.subject_unkeyed boolean NOT NULL gen=- def=false
 public.assurance_task_item.task_activity_id uuid NOT NULL gen=- def=-
-public.assurance_task_item.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_task_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"state":20000,"subject_kind":20000}')
-public.assurance_task_item.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_task_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"state":20000,"subject_kind":20000}')
+public.assurance_task_item.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_task_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"subject_kind":20000}')
+public.assurance_task_item.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_task_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"subject_kind":20000}')
 public.assurance_task_item.trg_assurance_task_item_subject_keys CREATE TRIGGER trg_assurance_task_item_subject_keys BEFORE INSERT OR UPDATE ON public.assurance_task_item FOR EACH ROW EXECUTE FUNCTION trg_assurance_task_item_subject_keys()
 public.assurance_task_item_by_task CREATE INDEX assurance_task_item_by_task ON public.assurance_task_item USING btree (task_activity_id)
 public.assurance_task_item_once CREATE UNIQUE INDEX assurance_task_item_once ON public.assurance_task_item USING btree (exception_id, cycle_id)
@@ -2607,6 +2599,7 @@ public.capture_pending_counterparty.backfill_id uuid gen=- def=-
 public.capture_pending_counterparty.capture_pending_counterparty_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES capture_backfill(id) ON DELETE SET NULL
 public.capture_pending_counterparty.capture_pending_counterparty_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
+public.capture_pending_counterparty.capture_pending_counterparty_email_is_canonical CHECK ((email = lower(btrim(email))))
 public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact'::text, 'role_mailbox'::text, 'company_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text, 'vendor_pitch'::text]))))
 public.capture_pending_counterparty.capture_pending_counterparty_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_pkey PRIMARY KEY (id)
@@ -2638,6 +2631,7 @@ public.capture_pending_counterparty_email_ix CREATE INDEX capture_pending_counte
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
 public.capture_sender_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sender_override.address text NOT NULL gen=- def=-
+public.capture_sender_override.capture_sender_override_address_is_canonical CHECK ((address = lower(btrim(address))))
 public.capture_sender_override.capture_sender_override_decision_check CHECK ((decision = ANY (ARRAY['business'::text, 'keep_out'::text])))
 public.capture_sender_override.capture_sender_override_pkey PRIMARY KEY (id)
 public.capture_sender_override.capture_sender_override_user_address_key UNIQUE (user_id, address)
@@ -2676,7 +2670,6 @@ public.capture_sweep_run.text_bound_update CREATE TRIGGER text_bound_update AFTE
 public.capture_sweep_run_latest CREATE INDEX capture_sweep_run_latest ON public.capture_sweep_run USING btree (sweep, finished_at DESC, id DESC)
 public.capture_sweep_run_pkey CREATE UNIQUE INDEX capture_sweep_run_pkey ON public.capture_sweep_run USING btree (id)
 public.capture_sync_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.capture_sync_state.backfill_active boolean NOT NULL gen=- def=false
 public.capture_sync_state.capture_sync_state_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
 public.capture_sync_state.capture_sync_state_last_error_class_check CHECK (((last_error_class IS NULL) OR (last_error_class = ANY (ARRAY['rate_limited'::text, 'unreachable'::text, 'auth'::text, 'history_gone'::text, 'forbidden'::text, 'internal'::text]))))
 public.capture_sync_state.capture_sync_state_pkey PRIMARY KEY (connection_id)
@@ -2896,7 +2889,6 @@ public.close_date_run.close_date_run_cursor_is_whole CHECK (((cursor_created_at 
 public.close_date_run.close_date_run_finish_matches_status CHECK (((status = 'running'::text) = (finished_at IS NULL)))
 public.close_date_run.close_date_run_pkey PRIMARY KEY (id)
 public.close_date_run.close_date_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'complete'::text, 'incomplete'::text])))
-public.close_date_run.close_date_run_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.close_date_run.corrected integer NOT NULL gen=- def=0
 public.close_date_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.close_date_run.cursor_created_at timestamp with time zone gen=- def=-
@@ -2910,7 +2902,6 @@ public.close_date_run.status text NOT NULL gen=- def='running'::text
 public.close_date_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.close_date_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"status":20000}')
 public.close_date_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.close_date_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"status":20000}')
 public.close_date_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.close_date_run.version bigint NOT NULL gen=- def=1
 public.close_date_run_member acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.close_date_run_member.close_date_run_member_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.close_date_run_member.close_date_run_member_outcome_check CHECK ((outcome = ANY (ARRAY['pending'::text, 'checked'::text, 'changed'::text, 'staged'::text, 'skipped'::text, 'failed'::text])))
@@ -3296,6 +3287,7 @@ public.communication_suppression.address_hash text gen=- def=-
 public.communication_suppression.address_key_id text gen=- def=-
 public.communication_suppression.captured_by text NOT NULL gen=- def=-
 public.communication_suppression.carried_from uuid gen=- def=-
+public.communication_suppression.communication_suppression_address_is_canonical CHECK ((address = lower(btrim(address))))
 public.communication_suppression.communication_suppression_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_suppression(id) ON DELETE SET NULL
 public.communication_suppression.communication_suppression_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.communication_suppression.communication_suppression_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['machine'::text, 'user'::text, 'admin'::text, 'subject'::text])))
@@ -5626,7 +5618,6 @@ public.field_provenance.text_bound_update CREATE TRIGGER text_bound_update AFTER
 public.field_provenance_pkey CREATE UNIQUE INDEX field_provenance_pkey ON public.field_provenance USING btree (id)
 public.finance_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.finance_connection.archived_at timestamp with time zone gen=- def=-
-public.finance_connection.capabilities jsonb NOT NULL gen=- def='{}'::jsonb
 public.finance_connection.captured_by text NOT NULL gen=- def=-
 public.finance_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_connection.credential_ref text NOT NULL gen=- def=-
@@ -5640,9 +5631,8 @@ public.finance_connection.last_success_at timestamp with time zone gen=- def=-
 public.finance_connection.provider text NOT NULL gen=- def=-
 public.finance_connection.source text NOT NULL gen=- def=-
 public.finance_connection.status text NOT NULL gen=- def='connecting'::text
-public.finance_connection.sync_cursor text gen=- def=-
-public.finance_connection.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.finance_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "sync_cursor": 20000, "credential_ref": 20000, "last_error_code": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000,"sync_cursor":20000}')
-public.finance_connection.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.finance_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "sync_cursor": 20000, "credential_ref": 20000, "last_error_code": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000,"sync_cursor":20000}')
+public.finance_connection.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.finance_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "credential_ref": 20000, "last_error_code": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000}')
+public.finance_connection.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.finance_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "credential_ref": 20000, "last_error_code": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000}')
 public.finance_connection.trg_finance_connection_updated CREATE TRIGGER trg_finance_connection_updated BEFORE UPDATE ON public.finance_connection FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.finance_connection.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_connection.version bigint NOT NULL gen=- def=1
@@ -5842,7 +5832,6 @@ public.forecast_contribution.approval_id uuid gen=- def=-
 public.forecast_contribution.audit_id uuid gen=- def=-
 public.forecast_contribution.base_minor bigint gen=- def=-
 public.forecast_contribution.captured_by text NOT NULL gen=- def=-
-public.forecast_contribution.category text gen=- def=-
 public.forecast_contribution.close_provisional boolean NOT NULL gen=- def=false
 public.forecast_contribution.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_contribution.currency currency_code gen=- def=-
@@ -5873,13 +5862,11 @@ public.forecast_contribution.forecast_contribution_risk_signals_known CHECK (((r
 public.forecast_contribution.forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
 public.forecast_contribution.forecast_contribution_typed_probability_is_a_percent CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))
 public.forecast_contribution.forecast_contribution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.forecast_contribution.forecast_contribution_viability_disposition_known CHECK (((viability_disposition IS NULL) OR (viability_disposition = ANY (ARRAY['none'::text, 'open_review'::text, 'override'::text, 'unsupported'::text]))))
 public.forecast_contribution.forecast_contribution_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_weighted_needs_a_base CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))
 public.forecast_contribution.fx_date date gen=- def=-
 public.forecast_contribution.fx_rate numeric(20,10) gen=- def=-
 public.forecast_contribution.id uuid NOT NULL gen=- def=uuidv7()
-public.forecast_contribution.in_best_case boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_evidence boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_lost boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
@@ -5887,22 +5874,18 @@ public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
 public.forecast_contribution.probability_source text gen=- def=-
 public.forecast_contribution.qualification text gen=- def=-
-public.forecast_contribution.qualification_complete boolean gen=- def=-
-public.forecast_contribution.qualified_policy_version text gen=- def=-
 public.forecast_contribution.risk_effect numeric gen=- def=-
 public.forecast_contribution.risk_signal_facts jsonb gen=- def=-
 public.forecast_contribution.risk_signals text[] gen=- def=-
 public.forecast_contribution.snapshot_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.stage_id uuid gen=- def=-
 public.forecast_contribution.stage_probability integer gen=- def=-
-public.forecast_contribution.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.forecast_contribution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"category": 20000, "captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000, "viability_disposition": 20000, "qualified_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"qualified_policy_version":20000,"risk_signals":20000,"viability_disposition":20000}')
-public.forecast_contribution.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.forecast_contribution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"category": 20000, "captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000, "viability_disposition": 20000, "qualified_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"qualified_policy_version":20000,"risk_signals":20000,"viability_disposition":20000}')
+public.forecast_contribution.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.forecast_contribution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"risk_signals":20000}')
+public.forecast_contribution.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.forecast_contribution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"risk_signals":20000}')
 public.forecast_contribution.typed_probability integer gen=- def=-
 public.forecast_contribution.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_contribution.uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id)
 public.forecast_contribution.version bigint NOT NULL gen=- def=1
-public.forecast_contribution.viability_assessed_at timestamp with time zone gen=- def=-
-public.forecast_contribution.viability_disposition text gen=- def=-
 public.forecast_contribution.weighted_minor bigint gen=- def=-
 public.forecast_contribution_is_frozen() secdef=false cfg=- acl=- 
 BEGIN
@@ -11588,14 +11571,13 @@ public.workflow_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/
 public.workflow_run.applied jsonb gen=- def=-
 public.workflow_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.workflow_run.detail jsonb gen=- def=-
-public.workflow_run.error text gen=- def=-
 public.workflow_run.handler text NOT NULL gen=- def=-
 public.workflow_run.id uuid NOT NULL gen=- def=uuidv7()
 public.workflow_run.idempotency_key text NOT NULL gen=- def=-
 public.workflow_run.planned jsonb NOT NULL gen=- def=-
 public.workflow_run.status text NOT NULL gen=- def='applied'::text
-public.workflow_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.workflow_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"error": 20000, "status": 20000, "handler": 20000, "idempotency_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"error":20000,"handler":20000,"idempotency_key":20000,"status":20000}')
-public.workflow_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.workflow_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "status": 20000, "handler": 20000, "idempotency_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"error":20000,"handler":20000,"idempotency_key":20000,"status":20000}')
+public.workflow_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.workflow_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "handler": 20000, "idempotency_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"handler":20000,"idempotency_key":20000,"status":20000}')
+public.workflow_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.workflow_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "handler": 20000, "idempotency_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"handler":20000,"idempotency_key":20000,"status":20000}')
 public.workflow_run.trigger_event uuid NOT NULL gen=- def=-
 public.workflow_run.workflow_run_pkey PRIMARY KEY (id)
 public.workflow_run.workflow_run_status_check CHECK ((status = ANY (ARRAY['applied'::text, 'skipped'::text, 'failed'::text, 'requires_approval'::text, 'blocked'::text])))

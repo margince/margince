@@ -8,7 +8,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
@@ -37,16 +37,10 @@ function render(ui: ReactNode, client?: QueryClient) {
   );
 }
 
-async function fillValidForm() {
-  await userEvent.type(
-    screen.getByLabelText("IMAP server *"),
-    "mail.example.org",
-  );
-  await userEvent.type(
-    screen.getByLabelText("Email address *"),
-    "lars@example.org",
-  );
-  await userEvent.type(screen.getByLabelText("App password *"), "app-password");
+async function fillValidForm(user: Pick<UserEvent, "type"> = userEvent) {
+  await user.type(screen.getByLabelText("IMAP server *"), "mail.example.org");
+  await user.type(screen.getByLabelText("Email address *"), "lars@example.org");
+  await user.type(screen.getByLabelText("App password *"), "app-password");
 }
 
 afterEach(() => {
@@ -98,6 +92,50 @@ describe("ImapConnectPanel", () => {
     });
 
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+  });
+
+  // The card is for hosts other than Google's, so no real server is filled in
+  // for the reader to send a password to by accident.
+  it("starts with an empty host", () => {
+    installFetchStub({});
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
+    expect(screen.getByLabelText("IMAP server *")).toHaveValue("");
+  });
+
+  it("names an out-of-range port on its field instead of greying the button", async () => {
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /connectors/imap/connect": (body) => {
+        calls.push(body);
+        return jsonResponse({}, 500);
+      },
+    });
+    const user = userEvent.setup();
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
+    await fillValidForm(user);
+    const port = screen.getByLabelText("Port");
+    await user.clear(port);
+    await user.type(port, "99999");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+
+    expect(screen.getByText("From 1 to 65535")).toBeInTheDocument();
+    expect(screen.getByText("Out of range: Port")).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("drops a failure once the reader changes what was sent", async () => {
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
+    });
+    const user = userEvent.setup();
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await screen.findByText(/could not be reached/i);
+
+    await user.type(screen.getByLabelText("IMAP server *"), "x");
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
   });
 
   // "Not now" closes THIS dialog without deciding anything — it never
@@ -289,7 +327,7 @@ describe("OAuthReturnPanel reading a reader-typed outcome", () => {
       await screen.findByText("The connection could not be confirmed."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Connect again in Settings under Connections."),
+      screen.getByText("Select the account again below."),
     ).toBeInTheDocument();
   });
 });

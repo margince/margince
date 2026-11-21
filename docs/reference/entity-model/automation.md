@@ -83,14 +83,13 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 ## workflow_run
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `applied` | `jsonb` |  |  |
 | `detail` | `jsonb` |  |  |
-| `error` | `text` |  |  |
 | `handler` | `text` | yes |  |
 | `idempotency_key` | `text` | yes |  |
 | `planned` | `jsonb` | yes |  |
@@ -113,5 +112,5 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"error": 20000, "status": 20000, "handler": 20000, "idempotency_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"error":20000,"handler":20000,"idempotency_key":20000,"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "status": 20000, "handler": 20000, "idempotency_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"error":20000,"handler":20000,"idempotency_key":20000,"status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "handler": 20000, "idempotency_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"handler":20000,"idempotency_key":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "handler": 20000, "idempotency_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"handler":20000,"idempotency_key":20000,"status":20000}')`

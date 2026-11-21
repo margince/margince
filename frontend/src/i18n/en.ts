@@ -3530,6 +3530,8 @@ export const en = {
     "Another company already has this domain, so it was not saved here.",
   "common.duplicate.linkedinUrl":
     "Another lead already has this LinkedIn profile, so it was not saved here.",
+  "common.linkedinProfileInvalid":
+    "This is not a LinkedIn profile address. Enter one such as https://www.linkedin.com/in/your-name.",
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
@@ -12558,7 +12560,7 @@ export const en = {
   "ob.s4.microsoftFailed": "Microsoft connection not completed",
   "ob.s4.connectVerifying": "Confirming connection…",
   "ob.s4.connectConfirmFailed": "The connection could not be confirmed.",
-  "ob.s4.connectRetry": "Connect again in Settings under Connections.",
+  "ob.s4.connectRetry": "Select the account again below.",
   "ob.s4.connectDenied": "Access was declined. Nothing was connected.",
   "ob.s4.googleUnverified":
     "If Google warns about an “unverified app”, select Advanced, then Continue. Google’s screen lists exactly what is granted.",
@@ -17490,6 +17492,8 @@ export const en = {
   "setup.caption.calendarSkipped": "Skipped during setup.",
   "setup.caption.calendarNeedsVendor": "Needs Google or Microsoft.",
   "setup.caption.waitsAdmin": "Waits on an administrator.",
+  "setup.caption.registerApp": "Needs your company’s Google or Microsoft app.",
+  "setup.action.registerApp": "Set up app",
   "setup.caption.mailReconnect": "Connection expired.",
   "setup.caption.calendarReconnect": "Expired or cannot add bookings.",
   "setup.caption.voice": "Needs about {n} more words you wrote.",

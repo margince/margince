@@ -65,6 +65,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_avatar_origin_check`: `CHECK ((avatar_origin = ANY (ARRAY['upload', 'google'])))`
 - `app_user_delivery_hour_check`: `CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))`
 - `app_user_does_not_merge_into_itself`: `CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))`
+- `app_user_email_is_canonical`: `CHECK ((email = lower(btrim(email))))`
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
 - `app_user_forced_rotation_needs_a_password`: `CHECK ((NOT (must_change_password AND (password_hash IS NULL))))`
 - `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 120))))`
