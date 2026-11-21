@@ -16,6 +16,7 @@ import {
   formatBytes,
   formatDate,
   formatDateTime,
+  formatDue,
   formatMoneyOrAbsent,
   formatNumber,
   ordinalNumber,
@@ -459,7 +460,13 @@ function PackTasks({ packet }: Readonly<{ packet: Packet }>) {
           {task.due_at && (
             <span className="meta-row-line t-caption">
               {t("legalReview.taskDue", {
-                date: formatDateTime(task.due_at, locale, zone),
+                date: formatDue(
+                  task.due_at,
+                  task.due_has_time,
+                  locale,
+                  zone,
+                  task.due_intent,
+                ),
               })}
             </span>
           )}

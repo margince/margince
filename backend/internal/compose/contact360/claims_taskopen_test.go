@@ -6,6 +6,7 @@ package contact360
 import (
 	"slices"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -40,7 +41,7 @@ func TestAClaimIsOwedThroughItsTaskOrByItself(t *testing.T) {
 	}
 
 	var got []string
-	for _, item := range owedPromises(page) {
+	for _, item := range owedPromises(page, nil) {
 		if c, ok := item.Ref.(crmcontracts.ConversationClaim); ok && item.Source == owedwork.FromClaim {
 			got = append(got, c.Body)
 		}
@@ -48,5 +49,26 @@ func TestAClaimIsOwedThroughItsTaskOrByItself(t *testing.T) {
 
 	if want := []string{"no task", "task past the cap"}; !slices.Equal(got, want) {
 		t.Errorf("owed claims = %q, want %q", got, want)
+	}
+}
+
+// The contact page ranks a task with only a date by its picked date on the
+// company's calendar. The instant that date resolves to elsewhere does not rank it.
+func TestADateOnlyTaskOnTheContactPageIsLateByItsPickedDate(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	due := time.Date(2026, 11, 17, 7, 59, 59, 0, time.UTC)
+	page := &crmcontracts.Contact360{NextSteps: &struct {
+		Data []crmcontracts.Activity `json:"data"`
+		Page crmcontracts.PageInfo   `json:"page"`
+	}{Data: []crmcontracts.Activity{{
+		Id: openapi_types.UUID(ids.NewV7()), Subject: new("Send the contract"), DueAt: &due, DueHasTime: new(false),
+		DueIntent: &crmcontracts.IntentTime{WallClock: "2026-11-16T23:59:59", Timezone: "America/Los_Angeles"},
+	}}}}
+	now := time.Date(2026, 11, 17, 7, 0, 0, 0, time.UTC)
+	if _, late := owedwork.MostRecentlySlipped(owedPromises(page, berlin), now); !late {
+		t.Error("a task picked for the 16th is not late at 08:00 Berlin on the 17th")
 	}
 }

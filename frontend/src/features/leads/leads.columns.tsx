@@ -12,6 +12,7 @@ import {
 } from "../../components/recordlist";
 import { Avatar, Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
+import { taskDueOnDay } from "../../format/calendarday";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import type { useLocale, useT } from "../../i18n";
 import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
@@ -120,7 +121,7 @@ export function leadColumns(
             ? ` · ${openTaskCountLabel(locale, lead.open_task_count)}`
             : ""}
           {lead.next_task_due_at
-            ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, recordZone)}`
+            ? ` · ${formatDateAbbrev(nextTaskDueOn(lead, recordZone), locale, recordZone)}`
             : ""}
         </span>
       ),
@@ -132,7 +133,11 @@ export function leadColumns(
       header: t("log.dueAt"),
       cell: (lead: Lead) =>
         lead.next_task_subject && lead.next_task_due_at
-          ? formatDateAbbrev(lead.next_task_due_at, locale, recordZone)
+          ? formatDateAbbrev(
+              nextTaskDueOn(lead, recordZone),
+              locale,
+              recordZone,
+            )
           : null,
       phone: "caption",
       phoneOnly: true,
@@ -178,4 +183,14 @@ function partnerColumns(
         ),
     },
   ];
+}
+
+/** The instant that reads as the lead's next task's due day in the record's zone. */
+function nextTaskDueOn(lead: Lead, zone: string): string {
+  return taskDueOnDay(
+    lead.next_task_due_at ?? "",
+    lead.next_task_due_has_time,
+    lead.next_task_due_intent,
+    zone,
+  );
 }

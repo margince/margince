@@ -55829,6 +55829,12 @@ type Lead struct {
 	// NextTaskDueAt Due time of the earliest open task linked to this lead; undated tasks follow dated ones.
 	NextTaskDueAt *time.Time `json:"next_task_due_at,omitempty"`
 
+	// NextTaskDueHasTime True when next_task_due_at names a time of day; false when the next task is due on a date with no time.
+	NextTaskDueHasTime *bool `json:"next_task_due_has_time,omitempty"`
+
+	// NextTaskDueIntent The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader.
+	NextTaskDueIntent *IntentTime `json:"next_task_due_intent,omitempty"`
+
 	// NextTaskSubject Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written.
 	NextTaskSubject *string `json:"next_task_subject,omitempty"`
 
@@ -56620,7 +56626,13 @@ type LegalReviewPacketStage struct {
 type LegalReviewPacketTask struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 	DueAt      *time.Time         `json:"due_at,omitempty"`
-	Subject    *string            `json:"subject,omitempty"`
+
+	// DueHasTime True when due_at names a time of day; false when the task was due on a date with no time.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   *string     `json:"subject,omitempty"`
 }
 
 // LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
@@ -65952,7 +65964,13 @@ type SalesProgressNextTask struct {
 	// AssigneeId Who the task is for. It may differ from the deal's owner.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
-	Subject    string              `json:"subject"`
+
+	// DueHasTime True when due_at names a time of day; false when the task is due on a date with no time.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   string      `json:"subject"`
 }
 
 // SalesProgressScenario defines model for SalesProgressScenario.
@@ -94868,6 +94886,22 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "next_task_due_at")
 	}
 
+	if raw, found := object["next_task_due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.NextTaskDueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'next_task_due_has_time': %w", err)
+		}
+		delete(object, "next_task_due_has_time")
+	}
+
+	if raw, found := object["next_task_due_intent"]; found {
+		err = json.Unmarshal(raw, &a.NextTaskDueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'next_task_due_intent': %w", err)
+		}
+		delete(object, "next_task_due_intent")
+	}
+
 	if raw, found := object["next_task_subject"]; found {
 		err = json.Unmarshal(raw, &a.NextTaskSubject)
 		if err != nil {
@@ -95348,6 +95382,20 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["next_task_due_at"], err = json.Marshal(a.NextTaskDueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'next_task_due_at': %w", err)
+		}
+	}
+
+	if a.NextTaskDueHasTime != nil {
+		object["next_task_due_has_time"], err = json.Marshal(a.NextTaskDueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'next_task_due_has_time': %w", err)
+		}
+	}
+
+	if a.NextTaskDueIntent != nil {
+		object["next_task_due_intent"], err = json.Marshal(a.NextTaskDueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'next_task_due_intent': %w", err)
 		}
 	}
 

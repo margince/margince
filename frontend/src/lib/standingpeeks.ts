@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
 import type { PeekContent, PeekItem } from "../design-system/peek";
+import { taskDueOnDay, taskDueZone } from "../format/calendarday";
 import { formatNumber } from "../format/format";
 import { formatDayMonth } from "../format/format.dates";
 import type { Locale, PluralTranslator, Translator } from "../i18n";
@@ -12,7 +14,28 @@ export type PeekWords = Readonly<{
   plural: PluralTranslator;
   locale: Locale;
   zone: string;
+  /** The company's zone, which counts a task that has only a date. */
+  companyZone?: string;
 }>;
+
+/**
+ * A task's due day on a record page, as the instant to read and the zone to
+ * read it in. A timed task reads on the reader's clock. A task with only a date
+ * reads as its picked day on the company's calendar.
+ */
+export function dueOnDay(
+  words: Readonly<{ zone: string; companyZone?: string }>,
+  due: string,
+  hasTime: boolean | undefined,
+  intent: components["schemas"]["IntentTime"] | undefined,
+): { at: string; zone: string } {
+  const zone = taskDueZone(
+    hasTime,
+    words.zone,
+    words.companyZone ?? words.zone,
+  );
+  return { at: taskDueOnDay(due, hasTime, intent, zone), zone };
+}
 
 /**
  * The closing line of a card whose rows are a page of a longer list. It stops
@@ -37,6 +60,9 @@ export type PeekTask = Readonly<{
   id: string;
   subject: string;
   dueAt?: string | null;
+  /** A task with only a date prints that date in every zone. */
+  dueHasTime?: boolean;
+  dueIntent?: components["schemas"]["IntentTime"];
   overdue?: boolean;
 }>;
 
@@ -67,13 +93,12 @@ export function tasksPeek(
   };
 }
 
-function taskDue(
-  task: PeekTask,
-  { t, locale, zone }: PeekWords,
-): string | undefined {
+function taskDue(task: PeekTask, words: PeekWords): string | undefined {
+  const { t, locale } = words;
   if (!task.dueAt) {
     return t("standing.next.peek.undated");
   }
-  const day = formatDayMonth(task.dueAt, locale, zone);
+  const due = dueOnDay(words, task.dueAt, task.dueHasTime, task.dueIntent);
+  const day = formatDayMonth(due.at, locale, due.zone);
   return task.overdue ? t("standing.next.peek.overdue", { date: day }) : day;
 }

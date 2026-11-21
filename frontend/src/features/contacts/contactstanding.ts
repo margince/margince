@@ -12,6 +12,7 @@ import {
 } from "../../i18n";
 import { bucketLabel } from "../../lib/bucketlabel";
 import { valueFor } from "../../lib/labelfor";
+import { dueOnDay } from "../../lib/standingpeeks";
 import { omitted } from "./contact360";
 import { lastTaskBeforeCap, owedPromises } from "./contactpromises";
 import { directionSentence } from "./contactrail";
@@ -159,9 +160,10 @@ export function contactDims(
   view: Contact360,
   t: Translator,
   locale: Locale,
+  words?: Readonly<{ zone: string; companyZone?: string }>,
 ): StandingDim[] {
   return [
-    promisesDim(view, t, locale),
+    promisesDim(view, t, locale, words),
     exchangeDim(view, t, locale),
     reachDim(view, t, locale),
   ].filter((dim): dim is StandingDim => dim !== null);
@@ -171,8 +173,9 @@ function promisesDim(
   view: Contact360,
   t: Translator,
   locale: Locale,
+  words?: Readonly<{ zone: string; companyZone?: string }>,
 ): StandingDim | null {
-  const open = owedPromises(view, t);
+  const open = owedPromises(view, t, words);
   if (!open) {
     return null;
   }
@@ -185,7 +188,15 @@ function promisesDim(
   // task can hide there only if the last listed task is overdue itself.
   const last = lastTaskBeforeCap(view);
   const lastLate =
-    last?.due_at != null && daysPast(Date.parse(last.due_at), asOf).late;
+    last?.due_at != null &&
+    daysPast(
+      Date.parse(
+        words
+          ? dueOnDay(words, last.due_at, last.due_has_time, last.due_intent).at
+          : last.due_at,
+      ),
+      asOf,
+    ).late;
   const count = (base: PluralBase, n: number, floor: boolean) =>
     translatePlural(locale, base, n, {
       count: `${formatNumber(n, locale)}${floor ? "+" : ""}`,

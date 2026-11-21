@@ -100,7 +100,7 @@ describe("a Live List's field columns", () => {
     });
 
     expect(
-      await screen.findByRole("columnheader", { name: "Last Touch" }),
+      await screen.findByRole("columnheader", { name: "Last Touch (retired)" }),
     ).toBeInTheDocument();
   });
 

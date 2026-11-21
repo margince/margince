@@ -7,6 +7,7 @@ import { useTaskUpdate } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { OverviewCard, OverviewList } from "../../design-system/overviewcard";
 import { useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { worklistKey } from "../../lib/workkeys";
 import { omitted } from "./contact360";
 import { nextBarChoice } from "./contacttoday";
@@ -25,6 +26,7 @@ export function ContactOpenTasks({
   onAllTasks: () => void;
 }>) {
   const t = useT();
+  const companyZone = useCompanyZone();
   const contactId = view.contact.id;
   const taskUpdate = useTaskUpdate([["contact360", contactId], worklistKey]);
   const withheld = omitted(view, "next_steps");
@@ -49,7 +51,12 @@ export function ContactOpenTasks({
           {rows.map((task) => (
             <OpenTaskRow
               key={task.id}
-              task={openTaskOf(task, view.as_of, t("task.untitled"))}
+              task={openTaskOf(
+                task,
+                view.as_of,
+                t("task.untitled"),
+                companyZone,
+              )}
               asOf={view.as_of}
               taskUpdate={taskUpdate}
             />

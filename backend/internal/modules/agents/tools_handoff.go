@@ -43,7 +43,9 @@ import (
 type HandoffFacts struct {
 	// AsOf is the instant the commitments below were judged against, stamped
 	// by the seam for the reason CommitmentSweep gives.
-	AsOf         time.Time
+	AsOf time.Time
+	// TimeZone is the installation's zone, where a due date is a day.
+	TimeZone     string
 	Project      HandoffProject
 	Deals        []HandoffDeal
 	Stakeholders []HandoffStakeholder
@@ -153,9 +155,13 @@ func (t prepareHandoff) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	for _, s := range facts.Stakeholders {
 		noteEvidence(ctx, datasource.EntityContact, s.ContactID)
 	}
+	loc, err := loadSweepZone(facts.TimeZone)
+	if err != nil {
+		return nil, err
+	}
 	commitments := make([]CommitmentItem, 0, len(facts.OpenCommitments))
 	for _, c := range facts.OpenCommitments {
-		item := c.wire(facts.AsOf)
+		item := c.wire(facts.AsOf, loc)
 		noteCommitmentEvidence(ctx, item)
 		commitments = append(commitments, item)
 	}

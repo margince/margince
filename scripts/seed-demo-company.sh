@@ -26,6 +26,8 @@ set -euo pipefail
 # different databases. Explicit values still win.
 # shellcheck source=scripts/lib-devstate.sh
 . "$(git rev-parse --show-toplevel)/scripts/lib-devstate.sh"
+# shellcheck source=scripts/lib-devready.sh
+. "$(git rev-parse --show-toplevel)/scripts/lib-devready.sh"
 API_BASE="${API_BASE:-$(dev_app_base_url)}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
@@ -55,8 +57,7 @@ api() { # api <method> <path> [json-body] — prints the status, body in $workdi
 # prints its "INSERT 0 1" status line, and the caller captures both as one id.
 psql_one() { psql -q -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tAc "$1"; }
 
-curl -fsS --max-time 10 "$API_BASE/readyz" >/dev/null 2>&1 \
-  || fail "$API_BASE/readyz is not answering — start the stack first (make dev)"
+dev_require_app "$API_BASE" || exit 1
 
 status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
 [[ "$status" = "200" ]] || fail "login returned HTTP $status"

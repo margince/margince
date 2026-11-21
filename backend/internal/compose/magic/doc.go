@@ -34,6 +34,8 @@
 //   - activity through auth.ActivityContentClause, because an activity's
 //     audience is not an owner question and a row-scope clause would miss it.
 //   - approval through the approvals service, which holds its own reader rule.
+//   - a child with no page of its own (an offer, a contract, a file) through
+//     the record it belongs to, under both records' gates (placement.go).
 //
 // AN ENTITY TYPE THIS BUILD CANNOT PLACE IS NOT SHOWN. It is counted in
 // not_shown instead. Serving a row this read cannot scope would be serving a row
