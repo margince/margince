@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 363 |
-| Columns | 4480 |
+| Columns | 4474 |
 | Foreign keys | 623 |
 | Owning areas | 40 |
 
@@ -174,8 +174,8 @@ erDiagram
 | [`ai_call_payload`](ai.md#ai_call_payload) | ai | 5 | 0 |
 | [`ai_feedback`](ai.md#ai_feedback) | ai | 15 | 0 |
 | [`ai_model_rate`](ai.md#ai_model_rate) | ai | 16 | 0 |
-| [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
-| [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
+| [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 22 | 0 |
+| [`ai_usage`](ai.md#ai_usage) | ai | 7 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
 | [`app_user`](identity.md#app_user) | identity | 39 | 155 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
