@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
-import { ADDRESS_FIELDS } from "../../components/companyform";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import { rosterOwnerName } from "../../components/entityref";
 import { leadHeldNoticeFor } from "../../components/leadheldnotice";
@@ -29,6 +28,7 @@ import { formatDateAbbrev } from "../../format/format";
 import { industryWords } from "../../format/industry";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
+import { ADDRESS_KEYS } from "../../lib/addresscolumns";
 import { useCanWriteRecord } from "../../lib/capability";
 import {
   currentEmployer,
@@ -224,7 +224,7 @@ function useSectionEdits(
   });
   const address = useSectionEdit(edit, {
     label: t("co.address.summary"),
-    keys: ADDRESS_FIELDS.map((entry) => entry.key),
+    keys: ADDRESS_KEYS,
   });
   const ownership = useSectionEdit(edit, {
     label: t("record.details.ownership"),
@@ -426,7 +426,7 @@ export function ContactDetails({
         groups={[
           {
             label: t("co.address.summary"),
-            keys: ADDRESS_FIELDS.map((field) => field.key),
+            keys: ADDRESS_KEYS,
           },
         ]}
         record={edit.record}

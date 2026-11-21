@@ -19,6 +19,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
+import { countryOptions } from "../format/assignedcountries";
 import { industryOptions } from "../format/industry";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -204,13 +205,24 @@ export function mapCompanyUpdate(
 // The six columns behind Address, flattened into form fields. The wire shape is
 // one nested object; the form channel is flat string values, so the two are
 // mapped at the boundary (addressFrom / addressPatch) rather than teaching the
-// form about nesting for one record type.
-export const ADDRESS_FIELDS: CreateField[] = ADDRESS_COLUMN_LABELS.map(
-  ([key, label]) =>
+// form about nesting for one record type. The country is chosen by name in the
+// reader's language and stored as its code.
+export function addressFields(locale: Locale): CreateField[] {
+  return ADDRESS_COLUMN_LABELS.map(([key, label]) =>
     key === "address_country"
-      ? { key, label, wireField: "address.country" }
+      ? {
+          key,
+          label,
+          wireField: "address.country",
+          type: "select",
+          options: countryOptions(locale).map(({ value, label: name }) => ({
+            value,
+            label: name,
+          })),
+        }
       : { key, label },
-);
+  );
+}
 
 // addressFrom prefills the six flat fields from the record's nested address.
 export function addressFrom(
@@ -222,7 +234,7 @@ export function addressFrom(
     address_postal_code: address?.postal_code ?? "",
     address_city: address?.city ?? "",
     address_region: address?.region ?? "",
-    address_country: address?.country ?? "",
+    address_country: address?.country?.toUpperCase() ?? "",
   };
 }
 
@@ -401,7 +413,7 @@ export function companyEditFields(
     // Where the company actually is. It has been in the API since the record
     // existed and reachable from no form on this page, so a rep who knew the
     // address had nowhere to put it.
-    ...ADDRESS_FIELDS,
+    ...addressFields(locale),
     {
       key: "domains",
       label: "company.domains",
