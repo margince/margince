@@ -175,30 +175,72 @@ function noteSessionSeen(data: unknown, error: unknown): boolean {
   return refused;
 }
 
+type HomeReadState = Readonly<{
+  screen: Screen;
+  homeAvailable: boolean;
+  signedIn: boolean;
+  sessionSeen: boolean;
+  refused: boolean;
+  confined: boolean;
+  heldForOnboarding: boolean;
+  journeyPending: boolean;
+}>;
+
 // On a browser that had a session, Home's reads start with the session probe.
 // Waiting for the gates it opens costs two round trips. An answer that sends the
 // reader elsewhere stops them, and the cleanup aborts them.
-function homeMayRead(
-  state: Readonly<{
-    screen: Screen;
-    homeAvailable: boolean;
-    signedIn: boolean;
-    sessionSeen: boolean;
-    refused: boolean;
-    confined: boolean;
-    described: boolean | undefined;
-    unfinished: boolean;
-  }>,
-): boolean {
+function homeMayRead(state: HomeReadState): boolean {
   return (
     state.screen === "home" &&
     state.homeAvailable &&
     (state.signedIn || state.sessionSeen) &&
     !state.refused &&
     !state.confined &&
-    state.described !== false &&
-    !state.unfinished
+    !state.heldForOnboarding &&
+    !state.journeyPending
   );
+}
+
+// Reads not yet out wait for the journey's answer, which may hold the reader on
+// onboarding; reads already out keep going until it does.
+function useHomeOpens(state: HomeReadState): boolean {
+  const [asked, setAsked] = useState(false);
+  const opens = homeMayRead({
+    ...state,
+    journeyPending: state.journeyPending && !asked,
+  });
+  if (opens !== asked) {
+    setAsked(opens);
+  }
+  return opens;
+}
+
+type OnboardingHold = Readonly<{ held: boolean; turnedAway: boolean }>;
+
+// The route is a dependency so the gate holds on every navigation. Otherwise
+// the palette or a typed hash walks past onboarding.
+// passesOnboardingGate's screens are exempt, or this effect would fight its
+// own destination (onboarding) or destroy a request that cannot survive the
+// rewrite (oauth-consent).
+function useOnboardingHold(
+  authed: boolean,
+  described: boolean | undefined,
+  unfinished: boolean,
+  route: ReturnType<typeof useRoute>,
+): OnboardingHold {
+  const held = authed && described !== undefined && (!described || unfinished);
+  const { screen, id, id2 } = route;
+  const { navigateReplacing } = useAddressWriters();
+  useEffect(() => {
+    if (held && !passesOnboardingGate({ screen, id, id2 })) {
+      // Replacing, not pushing: this is a redirect. The address it sends the
+      // reader away from answers by sending them here again. Pushed, Back
+      // lands on that address and the effect fires. The one key meant for
+      // getting out of things then returns the reader to onboarding.
+      navigateReplacing({ screen: "onboarding", id: "company" });
+    }
+  }, [held, screen, id, id2, navigateReplacing]);
+  return { held, turnedAway: held && !passesOnboardingGate(route) };
 }
 
 // AuthGate: everything behind the session probes GET /v1/me, and the
@@ -272,35 +314,7 @@ function AuthedApp({
     [storedZone],
   );
 
-  // The route is a dependency so the gate holds on every navigation. Otherwise
-  // the palette or a typed hash walks past onboarding.
-  // passesOnboardingGate's screens are exempt, or this effect would fight its
-  // own destination (onboarding) or destroy a request that cannot survive the
-  // rewrite (oauth-consent).
-  const { screen: gateScreen, id: gateId, id2: gateId2 } = route;
-  const { navigateReplacing } = useAddressWriters();
-  useEffect(() => {
-    if (
-      authed &&
-      described !== undefined &&
-      (!described || progress.unfinished) &&
-      !passesOnboardingGate({ screen: gateScreen, id: gateId, id2: gateId2 })
-    ) {
-      // Replacing, not pushing: this is a redirect, and the address it sends
-      // the reader away from answers by sending them here again. Pushed, Back
-      // lands on that address, the effect fires, and the reader is returned to
-      // onboarding by the one key that exists for getting out of things.
-      navigateReplacing({ screen: "onboarding", id: "company" });
-    }
-  }, [
-    authed,
-    described,
-    progress.unfinished,
-    gateScreen,
-    gateId,
-    gateId2,
-    navigateReplacing,
-  ]);
+  const hold = useOnboardingHold(authed, described, progress.unfinished, route);
 
   const { refusal, confinement } = useProbeAnswer(me);
   const sessionSeen = useSyncExternalStore(
@@ -312,15 +326,15 @@ function AuthedApp({
   const gatesPending =
     companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
-  const opensHome = homeMayRead({
+  const opensHome = useHomeOpens({
     homeAvailable: screenEnabled("home", disabled),
     screen: route.screen,
     signedIn: me.data !== undefined,
     sessionSeen,
     refused: me.isError,
     confined: confinement !== null,
-    described,
-    unfinished: progress.unfinished,
+    heldForOnboarding: hold.held,
+    journeyPending: progress.pending,
   });
   useEffect(() => {
     if (shellReady) {
@@ -409,7 +423,10 @@ function AuthedApp({
                 <ApprovalHost>
                   {/* Sign out in the shell's account menu asks the page's guard. */}
                   <UnsavedExits>
-                    <AuthedShell onOpenSearch={() => palette.show("all")}>
+                    <AuthedShell
+                      hold={hold}
+                      onOpenSearch={() => palette.show("all")}
+                    >
                       <ScreenView
                         screen={route.screen}
                         id={route.id}
@@ -440,10 +457,24 @@ function AuthedApp({
 
 function AuthedShell({
   children,
+  hold,
   onOpenSearch,
-}: Readonly<{ children: ReactNode; onOpenSearch: () => void }>) {
+}: Readonly<{
+  children: ReactNode;
+  hold: OnboardingHold;
+  onOpenSearch: () => void;
+}>) {
   useWarmRouteChunks();
-  useWarmProgressName();
+  useWarmProgressName(!hold.held);
+  // The gate is replacing this address, and its shell would only start the
+  // full app's reads.
+  if (hold.turnedAway) {
+    return (
+      <RaillessFrame>
+        <AuthSplash />
+      </RaillessFrame>
+    );
+  }
   return <Shell onOpenSearch={onOpenSearch}>{children}</Shell>;
 }
 

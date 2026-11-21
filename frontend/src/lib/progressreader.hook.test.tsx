@@ -34,7 +34,7 @@ describe("useWarmProgressName", () => {
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
-    renderHook(() => useWarmProgressName(), { wrapper });
+    renderHook(() => useWarmProgressName(true), { wrapper });
 
     await act(() => vi.advanceTimersByTimeAsync(2_000));
     expect(get).not.toHaveBeenCalled();
