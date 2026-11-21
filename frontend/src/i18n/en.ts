@@ -5478,6 +5478,12 @@ export const en = {
   "co.domainContacts.changed":
     "The list changed while it was open. Check the ticks and link again.",
   "co.domainContacts.dismiss": "Not now",
+  "company.duplicates.entry_one": "Possible duplicate ({count})",
+  "company.duplicates.entry_other": "Possible duplicates ({count})",
+  "company.duplicates.title": "Possible duplicates",
+  "company.duplicates.lead":
+    "These companies look like this one. Open one to compare.",
+  "company.duplicates.created": "A company with this name already exists.",
   "co.domainContacts.link_one": "Link {count} contact",
   "co.domainContacts.link_other": "Link {count} contacts",
   "co.domainContacts.linkNone": "Link contacts",

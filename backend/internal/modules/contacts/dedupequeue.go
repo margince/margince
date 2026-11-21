@@ -103,8 +103,12 @@ type DedupeQueueInput struct {
 	// EntityTypes narrows an unfiltered read to these types, in the query, so
 	// a page and the count beside it answer the same set.
 	EntityTypes []string
-	Cursor      string
-	Limit       int
+	// Owners keeps the pairs those owners decide. See dedupePairOwnerClause.
+	Owners *storekit.OwnerSet
+	// RecordID keeps the pairs naming that record, of the one EntityType.
+	RecordID *ids.UUID
+	Cursor   string
+	Limit    int
 }
 
 const (
@@ -260,6 +264,16 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	if len(in.EntityTypes) > 0 {
 		query += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(in.EntityTypes))
 	}
+	if clause := dedupePairOwnerClause(in.Owners, arg); clause != "" {
+		query += " AND " + clause
+	}
+	if in.RecordID != nil {
+		clause, err := dedupeRecordClause(in.EntityType, *in.RecordID, arg)
+		if err != nil {
+			return nil, "", err
+		}
+		query += " AND " + clause
+	}
 	if in.Cursor != "" {
 		cur, err := decodeDedupeCursor(in.Cursor)
 		if err != nil {
@@ -316,6 +330,12 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 //
 // Entity types narrow it as they narrow the list; none counts every type.
 func (s *Store) CountOpenDedupeCandidates(ctx context.Context, entityTypes ...string) (int, error) {
+	return s.CountOpenDedupePairsOf(ctx, nil, entityTypes...)
+}
+
+// CountOpenDedupePairsOf is CountOpenDedupeCandidates for the pairs an owner
+// set decides, or every visible pair when owners is nil.
+func (s *Store) CountOpenDedupePairsOf(ctx context.Context, owners *storekit.OwnerSet, entityTypes ...string) (int, error) {
 	if err := requireDedupeReadOf(ctx, entityTypes); err != nil {
 		return 0, err
 	}
@@ -331,6 +351,9 @@ func (s *Store) CountOpenDedupeCandidates(ctx context.Context, entityTypes ...st
 	}
 	if len(entityTypes) > 0 {
 		query += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(entityTypes))
+	}
+	if clause := dedupePairOwnerClause(owners, arg); clause != "" {
+		query += " AND " + clause
 	}
 	var open int
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {

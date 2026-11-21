@@ -45,7 +45,7 @@ func newDigestReviewSource(pool *pgxpool.Pool, svc *approvals.Service) capture.D
 	return func(ctx context.Context) (capture.DigestReviewCounts, error) {
 		// Company and lead pairs, and contact cases, over the same visible
 		// set the wider queue pages.
-		pairs, err := countOrNoneVisible(duplicates.CountOpen(ctx))
+		pairs, err := countOrNoneVisible(duplicates.CountOpen(ctx, nil))
 		if err != nil {
 			return capture.DigestReviewCounts{}, err
 		}

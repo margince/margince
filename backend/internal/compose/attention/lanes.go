@@ -8,6 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -82,8 +83,8 @@ type ApprovalQuery struct {
 // side's write authority has no verb to be offered — and the card is where they
 // should learn that, rather than from a refusal after the press.
 type Duplicates interface {
-	OpenCandidates(ctx context.Context, limit int) ([]DuplicatePair, error)
-	CountOpen(ctx context.Context) (int, error)
+	OpenCandidates(ctx context.Context, limit int, owners *storekit.OwnerSet) ([]DuplicatePair, error)
+	CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error)
 	DescribeMany(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]RecordFace, error)
 	DecidableSubset(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]bool, error)
 	// SettleablePairs asks the PAIR's own question, which authority cannot:

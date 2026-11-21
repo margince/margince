@@ -26,7 +26,7 @@ func TestUnassignedDecisionFloodCannotConsumeAPersonalDecisionPage(t *testing.T)
 	}
 	for _, scope := range []TaskScope{TasksMine, TasksOwnedBy, TasksVisible, TasksUnassigned} {
 		t.Run(scopeNames[scope], func(t *testing.T) {
-			service := decisionsService(stubApprovals{rows: approvals}, stubDuplicates{pairs: pairs, open: len(pairs)}).
+			service := decisionsService(stubApprovals{rows: approvals}, stubDuplicates{pairs: pairs, open: len(pairs), ownerless: true}).
 				WithTagSuggestions(&stubTagSuggestions{rows: tags})
 			service.taskScope = scope
 			service.taskOwner = ids.NewV7()
@@ -108,7 +108,7 @@ func TestSuggestionReadsReceiveTheScopeOwners(t *testing.T) {
 func TestPersonalDecisionsDoNotDependOnUnassignedProducerReads(t *testing.T) {
 	unavailable := errors.New("unassigned source unavailable")
 	for _, scope := range []TaskScope{TasksMine, TasksOwnedBy} {
-		service := decisionsService(stubApprovals{rows: []crmcontracts.Approval{approval("A requested decision")}}, stubDuplicates{err: unavailable, settleErr: unavailable}).
+		service := decisionsService(stubApprovals{rows: []crmcontracts.Approval{approval("A requested decision")}}, stubDuplicates{ownerless: true, err: unavailable, settleErr: unavailable}).
 			WithDealSuggestions(&stubSuggestions{err: unavailable}).
 			WithTagSuggestions(&stubTagSuggestions{err: unavailable})
 		service.taskScope = scope
@@ -121,5 +121,44 @@ func TestPersonalDecisionsDoNotDependOnUnassignedProducerReads(t *testing.T) {
 		if len(count.failed) != 1 || count.failed[0].Source != sourceDealSuggestion {
 			t.Fatalf("sources unavailable = %+v, want only deal_suggestion", count.failed)
 		}
+	}
+}
+
+// A duplicate pair is its owners' decision: each scope reads the pairs
+// narrowed to the owners it is for, list and count alike, and the team view
+// reads them all.
+func TestPairReadsReceiveTheScopeOwners(t *testing.T) {
+	named := ids.NewV7()
+	reader := pageReader()
+	actor, ok := principal.Actor(reader)
+	if !ok {
+		t.Fatal("the page reader carries no actor")
+	}
+	for _, tc := range []struct {
+		name   string
+		scope  TaskScope
+		owners *storekit.OwnerSet
+	}{
+		{"mine", TasksMine, &storekit.OwnerSet{IDs: []ids.UUID{actor.UserID}}},
+		{"named member", TasksOwnedBy, &storekit.OwnerSet{IDs: []ids.UUID{named}}},
+		{"unassigned", TasksUnassigned, &storekit.OwnerSet{Unassigned: true}},
+		{"team", TasksVisible, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var asked []*storekit.OwnerSet
+			service := decisionsService(stubApprovals{}, stubDuplicates{owners: &asked})
+			service.taskScope, service.taskOwner = tc.scope, named
+			if _, _, err := service.decisionsToDepth(reader, needsYouPage); err != nil {
+				t.Fatal(err)
+			}
+			if len(asked) != 2 {
+				t.Fatalf("the pair store was read %d times, want a list and a count", len(asked))
+			}
+			for _, got := range asked {
+				if !reflect.DeepEqual(got, tc.owners) {
+					t.Fatalf("pairs were read narrowed to %+v, want %+v", got, tc.owners)
+				}
+			}
+		})
 	}
 }

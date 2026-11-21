@@ -117,13 +117,13 @@ func TestAnAddressedCaseIsOnItsOwnersPersonalPage(t *testing.T) {
 	}
 }
 
-// The personal case read still runs when the pair store fails, and the pair
-// store is not asked.
+// The personal case read still runs when the pair store fails, because a
+// personal page holds no ownerless pair for it to read.
 func TestAPersonalPagesCasesDoNotDependOnThePairStore(t *testing.T) {
 	reader := readerOf(pageReader())
 	unavailable := errors.New("the pair store is down")
 	cases := &stubContactCases{cases: []ContactCase{aContactCase(reader)}}
-	svc := decisionsService(stubApprovals{}, stubDuplicates{err: unavailable, settleErr: unavailable})
+	svc := decisionsService(stubApprovals{}, stubDuplicates{ownerless: true, err: unavailable, settleErr: unavailable})
 	svc.contactCases = cases
 	svc.taskScope = TasksMine
 	rows, count, err := svc.decisionsToDepth(pageReader(), needsYouPage)
@@ -144,7 +144,7 @@ func TestACaseIsReachedBeforeAFloodOfStrongerPairs(t *testing.T) {
 	}
 	mine := aContactCase(reader)
 	for _, scope := range []TaskScope{TasksMine, TasksVisible} {
-		svc := decisionsService(stubApprovals{}, stubDuplicates{pairs: flood, open: len(flood)})
+		svc := decisionsService(stubApprovals{}, stubDuplicates{pairs: flood, open: len(flood), ownerless: true})
 		svc.contactCases = &stubContactCases{cases: []ContactCase{mine}}
 		svc.taskScope = scope
 		rows, count, err := svc.decisionsToDepth(pageReader(), needsYouPage)
