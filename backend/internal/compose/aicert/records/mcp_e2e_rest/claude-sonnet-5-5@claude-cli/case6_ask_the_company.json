@@ -5,8 +5,8 @@
     3,
     5
   ],
-  "passed": 3,
-  "runs": 3,
+  "passed": 0,
+  "runs": 2,
   "pass_at": 2,
   "driver": "claude:cli",
   "effort": "thinking off",
@@ -17,88 +17,78 @@
   "stamp": {
     "scenario": "3cb0eb37172e4699",
     "tools": "8b653e7a3d01b493",
-    "instructions": "933a67b45ed0a6ae",
+    "instructions": "a0e5174113e30161",
     "judge": "claude-haiku-5-5",
-    "harness": "76380376098e0887",
-    "commit": "f4d391894aeb4882801ee53eebea2f2960c0d62b",
-    "ran_at": "2026-11-21T18:05:10Z",
-    "graded_commit": "862bc9c3ef69c0ba3c2bb708e991b1dd2b183d64",
-    "graded_at": "2026-11-21T20:03:46Z"
+    "harness": "ae187a3b5da6dda2",
+    "commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
+    "ran_at": "2026-11-21T22:59:18Z",
+    "graded_commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
+    "graded_at": "2026-11-21T22:59:18Z"
   },
   "usage": {
-    "input_tokens": 54,
-    "output_tokens": 8083,
-    "cache_creation_input_tokens": 78079,
-    "cache_read_input_tokens": 315957,
-    "runs_measured": 3,
-    "runs_costed": 3,
-    "cost_usd": 0.4248
+    "input_tokens": 44,
+    "output_tokens": 7514,
+    "cache_creation_input_tokens": 39545,
+    "cache_read_input_tokens": 234122,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.2568
   },
   "tools_by_run": [
     {
-      "passed": true,
+      "passed": false,
       "tools": [
         "find_records",
         "list_records",
-        "search_context",
+        "read_record",
+        "read_view",
         "search_records",
         "skill_file"
       ]
     },
     {
-      "passed": true,
+      "passed": false,
       "tools": [
         "find_records",
         "list_records",
         "read_record",
-        "search_context",
-        "search_records",
-        "skill_file"
-      ]
-    },
-    {
-      "passed": true,
-      "tools": [
-        "find_records",
-        "list_records",
-        "read_record",
-        "search_context",
+        "read_view",
         "search_records",
         "skill_file"
       ]
     }
   ],
   "efficiency": {
-    "runs": 3,
+    "runs": 2,
     "calls": {
-      "median": 15,
-      "min": 14,
-      "max": 16
+      "median": 24.5,
+      "min": 22,
+      "max": 27
     },
     "turns": {
-      "median": 16,
-      "min": 15,
-      "max": 17
+      "median": 25.5,
+      "min": 23,
+      "max": 28
     },
     "refused": {
       "median": 1,
-      "min": 0,
+      "min": 1,
       "max": 1
     },
     "prompt_tokens": {
-      "median": 116915,
-      "min": 84261,
-      "max": 192914
+      "median": 136855.5,
+      "min": 133306,
+      "max": 140405
     },
     "output_tokens": {
-      "median": 2662,
-      "min": 2488,
-      "max": 2933
+      "median": 3757,
+      "min": 3537,
+      "max": 3977
     },
     "duration_ms": {
-      "median": 26197,
-      "min": 22887,
-      "max": 31186
+      "median": 32634.5,
+      "min": 31706,
+      "max": 33563
     }
   }
 }

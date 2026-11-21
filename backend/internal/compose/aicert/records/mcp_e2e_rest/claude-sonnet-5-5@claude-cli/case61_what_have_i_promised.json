@@ -15,22 +15,22 @@
   "stamp": {
     "scenario": "4a3a4db6731eeacd",
     "tools": "8b653e7a3d01b493",
-    "instructions": "933a67b45ed0a6ae",
+    "instructions": "a0e5174113e30161",
     "judge": "",
-    "harness": "76380376098e0887",
-    "commit": "f4d391894aeb4882801ee53eebea2f2960c0d62b",
-    "ran_at": "2026-11-21T18:05:47Z",
-    "graded_commit": "862bc9c3ef69c0ba3c2bb708e991b1dd2b183d64",
-    "graded_at": "2026-11-21T20:03:02Z"
+    "harness": "ae187a3b5da6dda2",
+    "commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
+    "ran_at": "2026-11-21T22:59:57Z",
+    "graded_commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
+    "graded_at": "2026-11-21T22:59:57Z"
   },
   "usage": {
-    "input_tokens": 24,
-    "output_tokens": 2160,
-    "cache_creation_input_tokens": 13931,
-    "cache_read_input_tokens": 70062,
+    "input_tokens": 30,
+    "output_tokens": 2095,
+    "cache_creation_input_tokens": 14403,
+    "cache_read_input_tokens": 86754,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0844
+    "cost_usd": 0.0873
   },
   "tools_by_run": [
     {
@@ -68,19 +68,19 @@
       "max": 0
     },
     "prompt_tokens": {
-      "median": 42008.5,
-      "min": 40465,
-      "max": 43552
+      "median": 50593.5,
+      "min": 42660,
+      "max": 58527
     },
     "output_tokens": {
-      "median": 1080,
-      "min": 1051,
+      "median": 1047.5,
+      "min": 986,
       "max": 1109
     },
     "duration_ms": {
-      "median": 13874.5,
-      "min": 12858,
-      "max": 14891
+      "median": 13925,
+      "min": 13461,
+      "max": 14389
     }
   }
 }
