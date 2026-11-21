@@ -15,6 +15,7 @@ import {
   useState,
 } from "react";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { MIN_COLUMN_WIDTH } from "./listheader";
 import { useNumericFloors } from "./listtable.floors";
 
 /**
@@ -206,8 +207,13 @@ export function columnLayout(
     const resized = widths[column.key];
     // A width the reader set is theirs. A figure on screen raises it, since a
     // figure cut short reads as a different number.
+    // A width stored before the minimum rose is clamped here, on every read.
     if (resized) {
-      return Math.max(resized, floors.onScreen[column.key] ?? 0);
+      return Math.max(
+        resized,
+        MIN_COLUMN_WIDTH,
+        floors.onScreen[column.key] ?? 0,
+      );
     }
     const { share, min } = sizeOf(column);
     return share === null ? min : undefined;

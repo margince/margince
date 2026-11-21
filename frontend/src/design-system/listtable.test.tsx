@@ -6,6 +6,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { openView, openViewStep } from "../testing/listview.testkit";
+import { MIN_COLUMN_WIDTH } from "./listheader";
 import { type ListChip, ListTable } from "./listtable";
 import { columns, render, testRows } from "./listtable.testkit";
 
@@ -426,6 +427,27 @@ describe("column widths", () => {
         index < columns.length - 1,
       );
     }
+  });
+
+  it("stops a dragged column at the minimum that keeps a cell's badge whole", () => {
+    const { container } = render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    const grip = container.querySelector(".lt-grip");
+    if (!(grip instanceof HTMLElement)) {
+      throw new Error("no resizable header rendered");
+    }
+    grip.setPointerCapture = () => undefined;
+    grip.releasePointerCapture = () => undefined;
+    fireEvent.pointerDown(grip, { clientX: 500, pointerId: 1 });
+    fireEvent.pointerMove(grip, { clientX: 0, pointerId: 1 });
+    const first = container.querySelector(".lt-table col");
+    expect(first).toHaveStyle({ width: `${MIN_COLUMN_WIDTH}px` });
   });
 
   // A drag that highlighted the rows it passed over answered "did I grab the
