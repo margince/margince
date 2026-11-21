@@ -926,7 +926,7 @@ export const en = {
   "reporting.arrivedOn": "Arrived on",
   "reporting.enteredOn": "Entered the stage on",
   "reporting.accruedOn": "Earned on",
-  "reporting.introducedOn": "Introduced on",
+  "reporting.introductionCountedOn": "Made or recorded on",
   "reporting.bookedOn": "Booked on",
   "reporting.commissionAmount": "Commission",
   "reporting.hoursUnit": "Hours",
