@@ -13,6 +13,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isLiveRun } from "../../lib/backfill-run";
 import { errorClassKey } from "../../lib/connector-status";
+import { RunCourseNote } from "../capture/runcoursenote";
 import "./onboarding-backread.css";
 
 // A started import as onboarding draws it: progress, what it found, and how it
@@ -68,6 +69,7 @@ export function BackreadRun({
         </Heading>
       )}
       {live && <BackreadProgress run={run} />}
+      <RunCourseNote run={run} />
       <BackreadTallies counts={run.counts} />
       <BackreadOutcome run={run} />
       {cancelProblem !== null && (

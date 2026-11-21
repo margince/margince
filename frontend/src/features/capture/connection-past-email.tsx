@@ -21,6 +21,7 @@ import {
 } from "../../mail-history/window-picker";
 import { EstimateCard } from "./backfill";
 import { canResume, runReading } from "./backfillrunview";
+import { RunCourseNote } from "./runcoursenote";
 
 // The Past email service of a connected mailbox: the import of mail from before
 // it was connected. A connect asks for a window. A small one starts on its own.
@@ -258,6 +259,7 @@ function RunBody({
           <span className="t-caption">{progress}</span>
         </div>
       )}
+      <RunCourseNote run={run} />
       <span className="connection-service-facts">
         {STATS.map((stat) => (
           <span key={stat.key}>
