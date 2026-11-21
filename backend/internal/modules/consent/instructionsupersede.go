@@ -33,7 +33,7 @@ func SupersedeStaleDecisionTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID)
 		return fmt.Errorf("consent: expiring the approval that no longer fits its message: %w", err)
 	}
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("consent: the approval was no longer live to expire: %w", apperrors.ErrConflict)
+		return fmt.Errorf("the approval was no longer live when its message was held: %w", apperrors.ErrConflict)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", "communication_instruction", inst.ID,
 		map[string]any{fieldStatus: InstructionDirected},
