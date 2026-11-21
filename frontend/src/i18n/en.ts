@@ -12660,7 +12660,7 @@ export const en = {
     "It cannot read or annotate your Morning brief. Your records, Worklist and scheduled weekly review remain available.",
   "overnightGrant.saveFailedTitle": "Answer was not saved",
   "overnightGrant.saveFailed":
-    "Everything else is connected. After signing in, set this in Settings under Connections.",
+    "Everything else is connected. After signing in, set this in Settings under Account.",
   "overnightGrant.renewTitle": "Overnight authority expired",
   "overnightGrant.renew":
     "Turn this off and on again to renew it. Until then, your Morning brief is not prepared.",
@@ -13343,21 +13343,21 @@ export const en = {
   "ob.conv.company.confirmed":
     "Company profile confirmed. Every stored value records its source.",
   "ob.conv.manual.chosen": "I will enter it manually.",
-  "ob.conv.voice.skipped": "Skip voice for now.",
+  "ob.conv.voice.skipped": "Skip for now",
   "ob.conv.voice.uploadAdded": "Added {name}.",
   "ob.conv.voice.speakerQuestion":
-    "This transcript has several speakers. Which one is you? Only your own words count.",
+    "“{name}” has several speakers. Which one is you? Only your own words count.",
+  "ob.conv.voice.speakerSkip": "Skip this file",
   "ob.conv.voice.speakerOptionDetail": "words: {words} · turns: {turns}",
   "ob.conv.voice.speakerFoot": "Your choice applies to this file only.",
   "ob.conv.voice.speakerContinue": "Use this speaker",
-  "ob.conv.voice.continueSkippedStatus": "Skipped. Add it later in Settings.",
   "ob.conv.voice.continueFailedStatus":
     "Your material is kept. Retry now, or continue and finish this later.",
   "ob.conv.voice.continueDeferredStatus":
     "No action needed. Continue; the build finishes automatically.",
   "ob.conv.voice.composer": "Paste the text you wrote here",
   "ob.conv.voice.dropHint":
-    "You can also drop files anywhere in this conversation: .txt, .md, .pdf, .docx or a .vtt, .srt or .json transcript.",
+    "You can also drop files anywhere in this conversation: .txt, .md, .pdf, .docx or a .vtt, .srt or .json transcript. Each file must stay just under {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
   "ob.conv.voice.fileSkipped":
     "I cannot read {name}. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "ob.conv.voice.fileUnreadable":
@@ -13369,12 +13369,14 @@ export const en = {
   "ob.conv.voice.reactionDocument":
     "Words counted: {words}. All words in this file are yours.",
   "ob.conv.voice.refusalUnattributed":
-    "This looks like a conversation, but I cannot tell which words are yours, so none were counted.",
+    "{name} looks like a conversation, but I cannot tell which words are yours, so none were counted.",
   "ob.conv.voice.refusalSpeaker":
-    "I could not find that speaker in the transcript. Nothing was counted.",
+    "I could not find that speaker in {name}. Nothing was counted.",
   "ob.conv.voice.refusalUnsupported":
-    "I could not parse that file as text or a transcript. Nothing was counted.",
-  "ob.conv.voice.ingestFailed": "I could not add that source: {detail}",
+    "I could not read {name} as text or a transcript. Nothing was counted.",
+  "ob.conv.voice.refusalTooLarge":
+    "{name} is too large to add. A file must stay just under {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
+  "ob.conv.voice.ingestFailed": "I could not add {name}: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "I could not add that source. Retry shortly.",
   "ob.conv.voice.pasteAdd": "Add to writing samples",
@@ -13398,8 +13400,13 @@ export const en = {
     "Nothing collected yet. Attach a transcript or a text you wrote.",
   "ob.conv.voice.meterWords": "Own words: {words} of {target}",
   "ob.conv.voice.meterBand": "Quality: {band}",
-  "ob.conv.voice.manifestKept": "Kept {kept} of {total} words",
-  "ob.conv.voice.manifestWords": "{words} words",
+  "ob.conv.voice.manifestKept_one": "Kept {kept} of {total} word",
+  "ob.conv.voice.manifestKept_other": "Kept {kept} of {total} words",
+  "ob.conv.voice.manifestWords_one": "{words} word",
+  "ob.conv.voice.manifestWords_other": "{words} words",
+  "ob.conv.voice.floorShort_one": "Add {words} more word to build.",
+  "ob.conv.voice.floorShort_other": "Add {words} more words to build.",
+  "ob.conv.voice.waitForSamples": "Wait until your samples are added.",
   "ob.conv.voice.registerMix": "Registers: {mix}",
   "ob.conv.voice.stageTitle": "Build progress",
   "ob.conv.corpus.words": "Own words in your corpus now: {words}.",
@@ -13515,6 +13522,9 @@ export const en = {
   "ob.conv.voice.browse": "Browse files",
   "ob.conv.voice.pasteInstead": "Paste text instead",
   "ob.conv.voice.sourcesTitle": "Sources",
+  "ob.conv.voice.removeSource": "Remove",
+  "ob.conv.voice.removeSourceNamed": "Remove {name}",
+  "ob.conv.voice.removeFailed": "I could not remove {name}: {detail}",
   "ob.conv.voice.printLabel": "Your voiceprint",
   "voice.kinds.label": "What works best",
   "voice.kinds.best": "Best start",
@@ -13526,6 +13536,8 @@ export const en = {
   "voice.kinds.docBody": "Any text you wrote yourself",
   "ob.conv.voice.meterLabel": "Progress toward the {min}-word minimum",
   "ob.conv.voice.meterProgress": "{words} of {min} words",
+  "ob.conv.voice.meterUnknown":
+    "Word count unavailable. It updates when you add the next sample.",
   "ob.conv.voice.meterReady":
     "{words} words: enough to build. More words improve it.",
   "ob.conv.voice.footReady":
@@ -15968,7 +15980,7 @@ export const en = {
   "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":
-    "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once.",
+    "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once. Each file must stay just under {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
   "settings.voice.dropLabel": "Upload files",
   "settings.voice.dropEmpty": "Drop files here, or click to choose",
   "settings.voice.pasteLabel": "Paste text",
@@ -16014,6 +16026,8 @@ export const en = {
   "settings.voice.refusalSpeaker":
     "That speaker was not found in {name}, so nothing was added.",
   "settings.voice.refusalUnsupported": "{name} is in an unsupported format.",
+  "settings.voice.refusalTooLarge":
+    "{name} is too large to add. A file must stay just under {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
   "settings.voice.buildsTitle": "Builds",
   "settings.voice.buildRowLabel": "Build from samples",
   "settings.voice.building": "Building…",
@@ -17407,6 +17421,8 @@ export const en = {
   "ob.conv.connect.useImap": "Use another mail provider",
   "ob.conv.connect.skipCaptionWaiting":
     "Your setup checklist reminds you to connect once {vendor} is ready.",
+  "ob.conv.connect.skipCaptionNotConfigured":
+    "No mailbox can be connected on this installation, so go on without one.",
   "ob.conv.connect.connectedTitle": "{vendor} is connected",
   "ob.conv.connect.calendarNotConnected":
     "Not connected. Connect it now, or later from your setup checklist.",
@@ -17426,6 +17442,7 @@ export const en = {
     "Optional. All of these can be changed later in Settings.",
   "ob.conv.connect.linkedinRow": "Your LinkedIn profile",
   "ob.conv.connect.linkedinAdd": "Add profile",
+  "ob.conv.connect.linkedinChange": "Change",
   "setup.reminder.trigger": "Finish setup",
   "setup.reminder.count": "{done} of {total}",
   "setup.reminder.title": "Finish setting up",

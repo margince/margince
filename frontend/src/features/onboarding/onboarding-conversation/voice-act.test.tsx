@@ -1,376 +1,46 @@
 /** @vitest-environment happy-dom */
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { join } from "node:path";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
-import { useReducer } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
 } from "../../../../vitest.budget";
-import type { components } from "../../../api/schema";
-import { LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import type { ConversationState } from "./conversation-machine";
 import {
   conversationReducer,
   initialConversationState,
 } from "./conversation-machine";
 import { run } from "./test-fixtures";
 import { VoiceAct } from "./voice-act";
+import {
+  BUILD_IDS,
+  collectingState,
+  conversationalPreview,
+  documentPreview,
+  documentStats,
+  dropOnWindow,
+  gate,
+  INGEST_WAITER_MS,
+  POLL_WAITER_MS,
+  render,
+  requestsTo,
+  richVersion,
+  stubApi,
+  summaryOf,
+  testdata,
+  transcriptStats,
+  UNCONFIGURED_DETAIL,
+  unattributedPreview,
+  uploadFile,
+  VoiceHarness,
+} from "./voice-act.testkit";
 
-type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
-type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
-type IngestStats = components["schemas"]["VoiceIngestStats"];
-
-// The two build cases below narrate a poll, so each raises two of its waiters
-// to 4000ms to outlast it. A test may spend the SUM of its waiters' budgets
-// without any one of them failing, and the heavier of the two spends 12000ms —
-// past the suite's own ceiling, which is derived for tests that wait at the
-// default. So they state their own, the way read-conclusion.test.tsx and
-// onboarding-restore.test.tsx already do: the raised waiters, the defaults
-// beside them, and the SAME measured allowance for the work between them that
-// the suite ceiling uses, so the two rest on one measurement rather than on a
-// round number picked here. Without it the test fails while every waiter in it
-// is still inside its budget, and the failure names the test rather than the
-// poll that was slow (issue 1144).
-const POLL_WAITER_MS = 4000;
-// The count a dropped file produces is rendered at the END of a chain — read
-// the file, parse it, POST /sources, take the summary back, re-render — and
-// the default async-util timeout covers a render, not a round trip. Under the
-// sharded suite that chain outran 1000ms and the failure read as "Unable to
-// find an element with the text: 900 words", which is the count being late
-// rather than wrong: the panel is mounted in the dump, the number is simply
-// not there yet. Given the poll's allowance for the same reason the polls have
-// it — the assertion is about the VALUE, and what it waits on is somebody
-// else's latency.
-const INGEST_WAITER_MS = POLL_WAITER_MS;
+// Stated here, not in the testkit: the budget reader follows one import hop.
 const BUILD_TEST_MS =
   POLL_WAITER_MS * 2 + ASYNC_UTIL_TIMEOUT_MS * 4 + SLOWEST_MEASURED_TEST_MS;
-
-const PROFILE_ID = "018f3a1b-0000-7000-8000-0000000000d1";
-const BUILD_IDS = [
-  "018f3a1b-0000-7000-8000-0000000000e1",
-  "018f3a1b-0000-7000-8000-0000000000e2",
-];
-
-function summaryOf(totalWords: number): CorpusSummary {
-  return {
-    total_words: totalWords,
-    target_words: 30000,
-    maturity: "collecting",
-    quality_band: totalWords >= 800 ? "good" : "thin",
-    source_count: 1,
-    register_words: { spoken: totalWords },
-  };
-}
-
-const conversationalPreview: CorpusPreview = {
-  detected_format: "vtt",
-  total_words: 5400,
-  speakers: [
-    { label: "Speaker 1", turns: 12, words: 1240 },
-    { label: "Speaker 2", turns: 14, words: 4160 },
-  ],
-  unattributed_words: 0,
-  ingestible_as_transcript: true,
-};
-
-const unattributedPreview: CorpusPreview = {
-  detected_format: "vtt",
-  total_words: 5400,
-  speakers: [],
-  unattributed_words: 5400,
-  ingestible_as_transcript: false,
-};
-
-const documentPreview: CorpusPreview = {
-  detected_format: "txt",
-  total_words: 900,
-  speakers: [],
-  unattributed_words: 900,
-  ingestible_as_transcript: false,
-};
-
-const transcriptStats: IngestStats = {
-  input_words: 5400,
-  kept_words: 1240,
-  kept_turns: 12,
-  discarded_turns: 14,
-  speakers_seen: ["Speaker 1", "Speaker 2"],
-};
-
-const documentStats: IngestStats = {
-  input_words: 900,
-  kept_words: 900,
-  kept_turns: 1,
-  discarded_turns: 0,
-  speakers_seen: [],
-};
-
-// Build poll rows: only the fields the hook reads; the stub serves them as
-// plain JSON exactly like the server would.
-// What the server sends when an installation has no AI provider bound: the
-// one sentence that separates "open a setting" from "try again", and the
-// reason a reader retried a build that could never succeed.
-const UNCONFIGURED_DETAIL =
-  "Voice building is unavailable until an AI provider is configured: the offline stand-in model answered instead. Open Settings → AI, bind each tier to a vendor and add that vendor's key under AI models → Providers, then build again.";
-
-type BuildRow = {
-  id: string;
-  status: string;
-  stage: string | null;
-  /** The server's own words about a terminal outcome. Optional here exactly
-   * as it is on the wire — absent is what a build with nothing to add sends,
-   * and the screen must read correctly either way. */
-  status_detail?: string;
-};
-
-const candidateVersion = {
-  profile_version: 3,
-  status: "candidate",
-  model_name: "test-model",
-  profile_json: {
-    inference: { identity_summary: "Direct, concrete, writes as I." },
-  },
-  stats_json: { word_count: 1240 },
-};
-
-// A version carrying every optional field parseVoiceInsights reads — the
-// result scene's own structure (the sample card, the measured dimensions,
-// the reading) is pinned against this, independent of the parser's own
-// tests.
-const richVersion = {
-  profile_version: 5,
-  status: "active",
-  model_name: "test-model",
-  profile_json: {
-    inference: {
-      identity_summary: "Direct and warm.",
-      thinking_pattern: "Leads with the ask, then the context.",
-      signature_moves: [
-        { move: "Opens with 'Hey'", quote: "Hey Jordan," },
-        { move: "Closes with Cheers", quote: "Cheers, Alex" },
-      ],
-      avoid: ["Corporate jargon", "Em dashes"],
-    },
-    sample_drafts: [
-      {
-        subject: "Following up on Tuesday",
-        body: "Hey Jordan, just circling back on this.",
-        voice_score: 0.9,
-      },
-      {
-        subject: "Quick nudge",
-        body: "Hey Jordan, any update on your end?",
-        voice_score: 0.8,
-      },
-    ],
-    guidance: { next_best: "Add two more sent emails." },
-  },
-  stats_json: { word_count: 4200, mean_sentence_words: 9.5, sample_count: 4 },
-};
-
-type IngestFixture = {
-  stats: IngestStats;
-  summary: CorpusSummary;
-  /** Response latency, to force out-of-order settlement in tests. */
-  delayMs?: number;
-};
-
-type StubOptions = {
-  preview?: CorpusPreview;
-  /** Ingest responses in order: each carries its stats + resulting summary. */
-  ingests?: readonly IngestFixture[];
-  /** Ingest responses keyed by source_label; wins over the ordered list. */
-  ingestsBySource?: Readonly<Record<string, IngestFixture>>;
-  /** Poll snapshots per build id, consumed one per GET (last one repeats). */
-  builds?: Readonly<Record<string, BuildRow[]>>;
-  /** Error status for the build poll GET (resilience tests). */
-  buildPollStatus?: number;
-  /** RFC 7807 body + status the build POST is refused with, for the cases
-   * about what a refused start is allowed to say on the collect scene. */
-  buildStartRefusal?: Readonly<{ body: unknown; status: number }>;
-  /** The built version the versions GET returns; defaults to the thin
-   * candidateVersion fixture most tests never look past. */
-  version?: unknown;
-};
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    globalThis.setTimeout(resolve, ms);
-  });
-}
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function stubApi(options: StubOptions = {}) {
-  const calls: Request[] = [];
-  let ingestIndex = 0;
-  let buildIndex = 0;
-  const buildPolls = new Map<string, BuildRow[]>(
-    Object.entries(options.builds ?? {}),
-  );
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (request: Request) => {
-      calls.push(request);
-      const path = new URL(request.url).pathname;
-      if (path.endsWith("/ai/profile")) {
-        return jsonResponse({
-          name: "Margince",
-          kind: "ai",
-          state: "configured",
-          inference_mode: "cloud",
-          providers: ["gemini"],
-          configured_models: [
-            {
-              tier: "cheap_cloud",
-              provider: "gemini",
-              model: "gemini-3.5-flash",
-            },
-          ],
-        });
-      }
-      if (path.endsWith("/voice-profiles") && request.method === "GET") {
-        return jsonResponse({
-          data: [{ id: PROFILE_ID }],
-          page: { next_cursor: null },
-        });
-      }
-      if (path.endsWith("/sources/preview")) {
-        return jsonResponse(options.preview ?? documentPreview);
-      }
-      if (path.endsWith("/sources") && request.method === "POST") {
-        const body = (await request.clone().json()) as Record<string, unknown>;
-        const label =
-          typeof body.source_label === "string" ? body.source_label : "";
-        const bySource = options.ingestsBySource?.[label];
-        const ingest = bySource ?? (options.ingests ?? [])[ingestIndex];
-        if (!ingest) {
-          throw new Error("unexpected ingest: no fixture left");
-        }
-        ingestIndex += 1;
-        if (ingest.delayMs !== undefined) {
-          await delay(ingest.delayMs);
-        }
-        return jsonResponse(
-          {
-            source: { id: `source-${ingestIndex}` },
-            summary: ingest.summary,
-            ingest_stats: ingest.stats,
-          },
-          201,
-        );
-      }
-      if (path.endsWith("/builds") && request.method === "POST") {
-        const refusal = options.buildStartRefusal;
-        if (refusal !== undefined) {
-          return jsonResponse(refusal.body, refusal.status);
-        }
-        const id = BUILD_IDS[buildIndex];
-        buildIndex += 1;
-        return jsonResponse({ id, status: "queued", stage: null }, 202);
-      }
-      if (path.includes("/builds/") && request.method === "GET") {
-        if (options.buildPollStatus !== undefined) {
-          return jsonResponse(
-            { detail: "build fetch failed" },
-            options.buildPollStatus,
-          );
-        }
-        const buildId = path.slice(path.lastIndexOf("/") + 1);
-        const polls = buildPolls.get(buildId) ?? [];
-        const row = polls.length > 1 ? polls.shift() : polls[0];
-        if (!row) {
-          throw new Error(`unstubbed build poll: ${buildId}`);
-        }
-        return jsonResponse(row);
-      }
-      if (path.endsWith("/versions") && request.method === "GET") {
-        return jsonResponse({
-          data: [options.version ?? candidateVersion],
-          page: { next_cursor: null },
-        });
-      }
-      throw new Error(`unstubbed request: ${request.method} ${request.url}`);
-    }),
-  );
-  return calls;
-}
-
-function collectingState(): ConversationState {
-  return { ...initialConversationState, act: "voice", phase: "vo.collecting" };
-}
-
-function VoiceHarness({ initial }: Readonly<{ initial: ConversationState }>) {
-  const [state, dispatch] = useReducer(conversationReducer, initial);
-  return <VoiceAct state={state} dispatch={dispatch} />;
-}
-
-function render(ui: ReactNode) {
-  return rtlRender(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-async function uploadFile(name: string, content: string) {
-  const input = document.querySelector<HTMLInputElement>('input[type="file"]');
-  expect(input).not.toBeNull();
-  if (input) {
-    await userEvent.upload(
-      input,
-      new File([content], name, { type: "text/plain" }),
-    );
-  }
-}
-
-const testdata = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "testing",
-  "testdata",
-);
-
-// A drop on the window itself, where the hint promises one lands anywhere.
-function dropOnWindow(files: File[]) {
-  const drop = new Event("drop", { bubbles: true, cancelable: true });
-  Object.defineProperty(drop, "dataTransfer", {
-    value: { types: ["Files"], files },
-  });
-  window.dispatchEvent(drop);
-}
-
-// Path-suffix matching so "/sources" never also counts "/sources/preview".
-function requestsTo(calls: Request[], path: string, method: string) {
-  return calls.filter(
-    (request) =>
-      new URL(request.url).pathname.endsWith(path) && request.method === method,
-  );
-}
 
 beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
@@ -419,6 +89,27 @@ describe("the conversational voice act", () => {
     // Both figures are word COUNTS, so they carry the reader's own grouping
     // (en-GB here) rather than a bare digit run.
     expect(await screen.findByText(/Kept 1,240 of 5,400 words/)).toBeTruthy();
+  });
+
+  it("names the file it asks about, and lets the reader skip that file", async () => {
+    const calls = stubApi({ preview: conversationalPreview });
+    render(<VoiceHarness initial={collectingState()} />);
+    const user = userEvent.setup();
+
+    await uploadFile("call.vtt", "WEBVTT transcript content");
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /“call\.vtt” has several speakers/,
+      }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Skip this file" }));
+
+    expect(
+      await screen.findByRole("button", { name: en["ob.conv.voice.browse"] }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(requestsTo(calls, "/sources", "POST")).toHaveLength(0);
   });
 
   it("ingests a document directly and reacts with the server word count", async () => {
@@ -490,7 +181,8 @@ describe("the conversational voice act", () => {
         initial={{
           ...initialConversationState,
           act: "voice",
-          phase: "vo.skipped",
+          phase: "vo.result",
+          lastBuildStatus: "deferred",
         }}
       />,
     );
@@ -518,8 +210,50 @@ describe("the conversational voice act", () => {
     expect(alert.textContent).toBe(
       "I cannot read photo.png. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
     );
+    // Under the buttons that took the file, not at the foot of the board.
+    expect(alert.closest(".ob-voice-drop")).not.toBeNull();
     expect(requestsTo(calls, "/sources/preview", "POST").length).toBe(0);
     expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
+  });
+
+  it("names every file of one drop it could not take, one line each", async () => {
+    stubApi({});
+    render(<VoiceHarness initial={collectingState()} />);
+
+    dropOnWindow([
+      new File(["binary"], "photo.png", { type: "image/png" }),
+      new File(["a,b"], "sheet.csv", { type: "text/csv" }),
+      new File(["  "], "blank.txt", { type: "text/plain" }),
+    ]);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("alert")).toHaveLength(3);
+    });
+    expect(
+      screen.getAllByRole("alert").map((line) => line.textContent),
+    ).toEqual([
+      "I cannot read photo.png. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
+      "I cannot read sheet.csv. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
+      "There are no words in blank.txt, so nothing was counted.",
+    ]);
+  });
+
+  it("keeps a file it could not take in sight while it asks about a transcript", async () => {
+    stubApi({ preview: conversationalPreview });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    dropOnWindow([
+      new File(["binary"], "photo.png", { type: "image/png" }),
+      new File(["WEBVTT"], "call.vtt", { type: "text/vtt" }),
+    ]);
+
+    await screen.findByRole("radiogroup");
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toBe(
+      "I cannot read photo.png. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
+    );
+    // On the question's own scene, above its foot line.
+    expect(alert.closest(".ob-voice-scene")).not.toBeNull();
   });
 
   it("takes a dropped PDF in as its text, on the same wire a text file uses", async () => {
@@ -561,6 +295,39 @@ describe("the conversational voice act", () => {
     expect(screen.queryByText(/words kept/)).toBeNull();
   });
 
+  it("says before any sample that no AI is connected, and holds the build", async () => {
+    const calls = stubApi({
+      modelReady: false,
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(820) }],
+    });
+    const user = userEvent.setup();
+    render(<VoiceHarness initial={collectingState()} />);
+
+    expect(
+      await screen.findByRole("link", { name: en["connectAi.link"] }),
+    ).toBeTruthy();
+    await uploadFile("one.md", "First document.");
+    expect(
+      await screen.findAllByText(
+        /820 words/,
+        {},
+        { timeout: INGEST_WAITER_MS },
+      ),
+    ).not.toHaveLength(0);
+    // Samples are still taken; only the build waits for a provider.
+    await user.click(
+      screen.getByRole("button", { name: /Build my voice profile/ }),
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      en["connectAi.first"],
+    );
+    expect(requestsTo(calls, "/builds", "POST")).toHaveLength(0);
+    expect(
+      screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
+    ).toHaveProperty("disabled", false);
+  });
+
   // The scene shows the build action from the start and states its
   // precondition beside it: an affordance that appears out of nowhere at 800
   // words is one nobody could plan for. Enabled is what the floor gates.
@@ -572,6 +339,7 @@ describe("the conversational voice act", () => {
         { stats: documentStats, summary: summaryOf(820) },
       ],
     });
+    const user = userEvent.setup();
     render(<VoiceHarness initial={collectingState()} />);
 
     await uploadFile("one.md", "First document.");
@@ -582,12 +350,14 @@ describe("the conversational voice act", () => {
         { timeout: INGEST_WAITER_MS },
       ),
     ).toBeTruthy();
-    // Below the floor the button still presses: the press names the floor
-    // on the rail and starts nothing.
-    await userEvent.click(
+    // Below the floor the button still presses: the press names the words
+    // still missing and starts nothing.
+    await user.click(
       screen.getByRole("button", { name: /Build my voice profile/ }),
     );
-    expect((await screen.findByRole("alert")).textContent).toContain("800");
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Add 300 more words to build.",
+    );
 
     await uploadFile("two.md", "Second document.");
     // At the floor the reason is gone with the block it named.
@@ -692,7 +462,8 @@ describe("the conversational voice act", () => {
   );
 
   it("keeps the newest-by-request-order summary when ingest responses settle out of order", async () => {
-    stubApi({
+    const first = gate();
+    const calls = stubApi({
       preview: documentPreview,
       // The first upload's response is held back past the second's: the
       // stale 500-word summary settles last and must not roll the meter
@@ -701,15 +472,20 @@ describe("the conversational voice act", () => {
         "one.md": {
           stats: documentStats,
           summary: summaryOf(500),
-          delayMs: 150,
+          release: first.held,
         },
         "two.md": { stats: documentStats, summary: summaryOf(820) },
       },
     });
+    const user = userEvent.setup();
     render(<VoiceHarness initial={collectingState()} />);
 
     await uploadFile("one.md", "First document.");
     await uploadFile("two.md", "Second document.");
+    await waitFor(() => {
+      expect(screen.getAllByText("900 words").length).toBe(1);
+    });
+    first.open();
 
     // Both sources land in the scene's own list regardless of settlement
     // order — the rail carries neither reaction.
@@ -729,6 +505,11 @@ describe("the conversational voice act", () => {
     ).toBeTruthy();
     expect(screen.queryByText(/I need at least 800/)).toBeNull();
     expect(screen.queryByText("500 of 800 words")).toBeNull();
+    // Each file keeps the source the server gave it, whatever the order.
+    await user.click(screen.getByRole("button", { name: "Remove one.md" }));
+    await waitFor(() =>
+      expect(requestsTo(calls, "/sources/source-1", "DELETE")).toHaveLength(1),
+    );
   });
 
   it("concludes as failed with the retry chip when the build poll keeps erroring", async () => {
@@ -859,23 +640,17 @@ describe("the voice act's surface/rail split", () => {
     expect(screen.getAllByRole("radio").length).toBeGreaterThan(0);
   });
 
-  it("renders a skipped voice act's Continue action on the surface's own pinned bar", () => {
+  it("leaves the step in one press of Skip, with no second screen to pass", async () => {
     stubApi({});
-    render(
-      <VoiceHarness
-        initial={{
-          ...initialConversationState,
-          act: "voice",
-          phase: "vo.skipped",
-        }}
-      />,
+    const dispatch = vi.fn();
+    const user = userEvent.setup();
+    render(<VoiceAct state={collectingState()} dispatch={dispatch} />);
+
+    await user.click(
+      screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
 
-    const bar = document.querySelector(".ob-stage-acts");
-    expect(bar).not.toBeNull();
-    expect(
-      within(bar as HTMLElement).getByRole("button", { name: "Continue" }),
-    ).toBeTruthy();
+    expect(dispatch.mock.calls).toEqual([[{ type: "VOICE_SKIPPED" }]]);
   });
 
   it("renders the succeeded result as structured sections, each from the same parsed data", async () => {

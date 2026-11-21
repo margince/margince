@@ -124,13 +124,10 @@ describe("presenceFor: voice, results, connect", () => {
     );
   });
 
-  it("rests while collecting and after a skip", () => {
+  it("rests while collecting", () => {
     expect(
       presenceFor(state({ act: "voice", phase: "vo.collecting" })).core,
     ).toBe("idle");
-    expect(presenceFor(state({ act: "voice", phase: "vo.skipped" })).core).toBe(
-      "idle",
-    );
   });
 
   it("rests on the invite, and through consent and done", () => {

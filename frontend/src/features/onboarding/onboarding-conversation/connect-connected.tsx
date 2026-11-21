@@ -6,6 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import type { components } from "../../../api/schema";
 import { Badge, Button } from "../../../design-system/atoms";
 import { Callout } from "../../../design-system/callout";
+import { ErrorLine } from "../../../design-system/errorline";
 import { StageActions } from "../../../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { ProviderMark } from "../../../design-system/provider-mark";
@@ -58,6 +59,7 @@ export function ConnectedStep({
   mailbox,
   also,
   finishing,
+  finishFailed,
   onFinish,
 }: Readonly<{
   account: ConnectionAccount;
@@ -66,6 +68,7 @@ export function ConnectedStep({
   /** The optional extras, drawn between the import and the footer. */
   also: ReactNode;
   finishing: boolean;
+  finishFailed: boolean;
   /** Leaves the step with a mailbox connected. */
   onFinish: () => void;
 }>) {
@@ -83,6 +86,7 @@ export function ConnectedStep({
         : t("ob.conv.connect.connectedCaptionMailOnly"),
     held: postureSaving || calendarBusy,
     finishing,
+    finishFailed,
     onFinish,
   };
 
@@ -118,6 +122,8 @@ type WayProps = Readonly<{
   /** A decision about this account is still being written or redirected. */
   held: boolean;
   finishing: boolean;
+  /** The last finish could not be saved; said where the caption stands. */
+  finishFailed: boolean;
   onFinish: () => void;
 }>;
 
@@ -364,13 +370,15 @@ export function ConnectedWayOnward({
   caption,
   held,
   finishing,
+  finishFailed,
   onFinish,
 }: WayProps & Readonly<{ choice: BackreadChoice | null }>) {
   const t = useT();
+  const said = <WayCaption caption={caption} finishFailed={finishFailed} />;
   if (choice === null || !offersImport(choice)) {
     return (
       <StageActions>
-        <span className="t-caption">{caption}</span>
+        {said}
         <Button
           variant="primary"
           pending={finishing}
@@ -384,7 +392,7 @@ export function ConnectedWayOnward({
   }
   return (
     <StageActions>
-      <span className="t-caption">{caption}</span>
+      {said}
       <Button
         variant="ghost"
         disabled={held || choice.start.isPending || finishing}
@@ -403,5 +411,19 @@ export function ConnectedWayOnward({
         })}
       </Button>
     </StageActions>
+  );
+}
+
+/** The rail's caption, or in its place a finish that could not be saved: the
+ *  rail holds the button just pressed, and the board may be scrolled away. */
+export function WayCaption({
+  caption,
+  finishFailed,
+}: Readonly<{ caption: string; finishFailed: boolean }>) {
+  const t = useT();
+  return finishFailed ? (
+    <ErrorLine inline>{t("ob.conv.connect.persistFailed")}</ErrorLine>
+  ) : (
+    <span className="t-caption">{caption}</span>
   );
 }

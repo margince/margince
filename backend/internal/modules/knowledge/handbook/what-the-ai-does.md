@@ -118,8 +118,8 @@ An agent can ask a document set for you if its passport has **Use AI and buy dat
 
 **The brief during the night.** The Morning brief looks at your companies during
 the night and ranks what most needs your first hour. If it found nothing, it
-says so. It runs only if you turned on **Let Margince prepare the Morning brief
-overnight** in **Settings → Connections**. It can read and write but never send.
+says so. It runs only if you turned on **Prepare my Morning brief overnight** in
+**Settings → Account**. It can read and write but never send.
 
 When the night pass has something to say about a ranked deal, it writes it on
 the item itself, beside the rank. Every finding names a deal that is already in

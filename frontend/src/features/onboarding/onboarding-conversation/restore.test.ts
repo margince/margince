@@ -70,7 +70,7 @@ const profile: CompanyProfile = {
   display_name: "Gradion",
 };
 
-const emptyVoice = { built: false, summary: null };
+const emptyVoice = { built: false, summary: null, sources: [] };
 
 function words(total: number) {
   return {
@@ -83,6 +83,7 @@ function words(total: number) {
       source_count: 1,
       register_words: {},
     },
+    sources: [],
   };
 }
 
@@ -94,6 +95,7 @@ describe("restorePlan", () => {
         profile: null,
         described: false,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: null,
         read: null,
         routeConnect: false,
@@ -102,6 +104,7 @@ describe("restorePlan", () => {
     ).toEqual({
       kind: "start",
       memberPath: false,
+      voiceStep: true,
       companyConfirmed: false,
       resumeTarget: null,
       adoptRead: null,
@@ -119,6 +122,7 @@ describe("restorePlan", () => {
         profile,
         described: true,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -127,6 +131,7 @@ describe("restorePlan", () => {
     ).toEqual({
       kind: "start",
       memberPath: true,
+      voiceStep: true,
       companyConfirmed: true,
       resumeTarget: "vo.collecting",
       adoptRead: null,
@@ -140,6 +145,7 @@ describe("restorePlan", () => {
         profile,
         described: true,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -155,6 +161,7 @@ describe("restorePlan", () => {
         profile,
         described: true,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: null,
         read: null,
         routeConnect: false,
@@ -162,6 +169,7 @@ describe("restorePlan", () => {
       }),
     ).toMatchObject({
       memberPath: true,
+      voiceStep: true,
       companyConfirmed: true,
       resumeTarget: "cn.consent",
     });
@@ -173,6 +181,7 @@ describe("restorePlan", () => {
       profile,
       described: true,
       mayDescribe: true,
+      mayTrainVoice: true,
       voice: emptyVoice,
       read: null,
       routeConnect: false,
@@ -180,7 +189,8 @@ describe("restorePlan", () => {
     });
     expect(plan).toMatchObject({
       memberPath: true,
-      resumeTarget: "vo.skipped",
+      voiceStep: true,
+      resumeTarget: "cn.consent",
     });
     if (plan.kind !== "start") {
       throw new Error("expected a start plan");
@@ -197,6 +207,7 @@ describe("restorePlan", () => {
         profile,
         described: true,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -213,6 +224,7 @@ describe("restorePlan", () => {
           profile: null,
           described: false,
           mayDescribe: true,
+          mayTrainVoice: true,
           voice: null,
           read: null,
           routeConnect: false,
@@ -232,6 +244,7 @@ describe("restorePlan", () => {
       profile,
       described: true,
       mayDescribe: true,
+      mayTrainVoice: true,
       voice: words(1240),
       read: null,
       routeConnect: false,
@@ -256,18 +269,20 @@ describe("restorePlan", () => {
         profile,
         described: true,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
         locale: "en",
       }),
-    ).toMatchObject({ resumeTarget: "vo.skipped" });
+    ).toMatchObject({ resumeTarget: "cn.consent" });
     expect(
       restorePlan({
         state: stateRow({ step: "team", voice_skipped: true }),
         profile,
         described: true,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: emptyVoice,
         read: null,
         routeConnect: false,
@@ -282,6 +297,7 @@ describe("restorePlan", () => {
       profile,
       described: true,
       mayDescribe: true,
+      mayTrainVoice: true,
       voice: emptyVoice,
       read: null,
       routeConnect: false,
@@ -302,6 +318,7 @@ describe("restorePlan", () => {
       profile: null,
       described: false,
       mayDescribe: true,
+      mayTrainVoice: true,
       voice: { ...words(2000), built: true },
       read: null,
       routeConnect: false,
@@ -325,6 +342,7 @@ describe("restorePlan", () => {
         profile,
         described: true,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: emptyVoice,
         read: null,
         routeConnect: true,
@@ -340,6 +358,7 @@ describe("restorePlan", () => {
         profile: null,
         described: false,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: null,
         read: readRow(status),
         routeConnect: false,
@@ -367,6 +386,7 @@ describe("restorePlan", () => {
       profile: null,
       described: false,
       mayDescribe: true,
+      mayTrainVoice: true,
       voice: null,
       read: readRow("reading"),
       routeConnect: false,
@@ -394,6 +414,7 @@ describe("restorePlan", () => {
         profile: null,
         described: false,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: null,
         read: readRow(status),
         routeConnect: false,
@@ -416,6 +437,7 @@ describe("restorePlan", () => {
         profile,
         described: true,
         mayDescribe: true,
+        mayTrainVoice: true,
         voice: null,
         read: null,
         routeConnect: false,
@@ -435,6 +457,7 @@ describe("restorePlan", () => {
       profile: null,
       described: false,
       mayDescribe: true,
+      mayTrainVoice: true,
       voice: null,
       read: null,
       routeConnect: false,
@@ -456,6 +479,7 @@ describe("restorePlan", () => {
       profile: null,
       described: true,
       mayDescribe: false,
+      mayTrainVoice: true,
       voice: emptyVoice,
       read: null,
       routeConnect: false,
@@ -466,6 +490,7 @@ describe("restorePlan", () => {
       expect(restorePlan({ ...seat, state: null })).toEqual({
         kind: "start",
         memberPath: true,
+        voiceStep: true,
         companyConfirmed: true,
         resumeTarget: "vo.collecting",
         adoptRead: null,
@@ -504,6 +529,29 @@ describe("restorePlan", () => {
         expect(plan.companyConfirmed).toBe(true);
         expect(plan.resumeTarget).toBe("vo.collecting");
         expect(plan.adoptRead).toBeNull();
+      },
+    );
+
+    // The voice step mints a profile on the first sample, which a role
+    // without voice_profile.create is refused: it is left out, not offered.
+    it.each([
+      ["a first visit", null],
+      ["a row at voice", stateRow({ path: "member", step: "voice" })],
+      [
+        "a recorded voice skip",
+        stateRow({ path: "member", step: "voice", voice_skipped: true }),
+      ],
+    ])(
+      "opens %s at connect for a role that may not train a voice",
+      (_, state) => {
+        const plan = restorePlan({ ...seat, mayTrainVoice: false, state });
+        if (plan.kind !== "start") {
+          throw new Error("expected a start plan");
+        }
+        expect(plan.resumeTarget).toBe("cn.consent");
+        expect(plan.voiceStep).toBe(false);
+        const keys = plan.recap.map((entry) => entry.i18nKey);
+        expect(keys).not.toContain("ob.conv.recap.corpus");
       },
     );
 

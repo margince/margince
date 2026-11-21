@@ -41,6 +41,7 @@ export const initialConversationState: ConversationState = {
   act: "welcome",
   phase: "co.intro",
   memberPath: false,
+  voiceStep: true,
   pendingQuestion: null,
   thread: [],
   seq: 0,
@@ -88,7 +89,6 @@ const resumeActs: Record<ResumePoint, ConversationAct> = {
   "in.ask": "invite",
   "tm.ask": "team",
   "vo.collecting": "voice",
-  "vo.skipped": "voice",
   "cn.consent": "connect",
 };
 
@@ -205,6 +205,9 @@ function applyResume(
   if (state.memberPath && creatorOnlyResume.has(phase)) {
     phase = "vo.collecting";
   }
+  if (!state.voiceStep && resumeActs[phase] === "voice") {
+    phase = "cn.consent";
+  }
   return withEntries(state, { act: resumeActs[phase], phase });
 }
 
@@ -263,6 +266,7 @@ function applyEvent(
           act: "company",
           phase: event.companyConfirmed === true ? "co.confirmed" : "co.intro",
           memberPath: event.memberPath,
+          voiceStep: event.voiceStep ?? true,
         },
         event.recap ?? [],
       );
@@ -363,10 +367,11 @@ function applyEvent(
           tone: "success",
         },
       ]);
+    // One press leaves the step; connect's Back is the way to train it after all.
     case "VOICE_SKIPPED":
       return withEntries(
         state,
-        { phase: "vo.skipped", pendingQuestion: null },
+        { act: "connect", phase: "cn.consent", pendingQuestion: null },
         [
           {
             kind: "user",
@@ -442,17 +447,25 @@ function applyEvent(
       );
     case "VOICE_DONE":
       return withEntries(state, { act: "connect", phase: "cn.consent" });
-    case "VOICE_REVISE":
-      // The corpus is kept; only the verdict on the build is withdrawn, so
-      // the next build starts from everything already in hand plus what the
-      // reader adds now.
-      return withEntries(state, { phase: "vo.collecting" }, [
+    case "VOICE_REVISE": {
+      // The corpus is kept and only the build's verdict is withdrawn, so the
+      // next build starts from everything in hand plus what the reader adds.
+      const withdrawn = { ...state, lastBuildStatus: null };
+      return withEntries(withdrawn, { phase: "vo.collecting" }, [
         {
           kind: "user",
           id: "voice:revise",
           i18nKey: "ob.conv.voice.revise",
         },
       ]);
+    }
+    case "CONNECT_BACK":
+      return withEntries(state, {
+        act: "voice",
+        phase:
+          state.lastBuildStatus === "succeeded" ? "vo.result" : "vo.collecting",
+        pendingQuestion: null,
+      });
     // Neither resolution moves the act: both sections of the connect screen
     // stay on the same phase, and only mail's own consent gates CONNECT_DONE.
     case "LINKEDIN_SAVED":

@@ -855,6 +855,7 @@
   width: 16px;
   height: 16px;
   flex: none;
+  margin-inline-start: auto;
   color: var(--successText);
 }
 
