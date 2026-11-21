@@ -41,7 +41,11 @@ import { assignedRecord } from "./recordassignments.queries";
 import { TaskTypeField } from "./tasktype";
 import "./logactivity.css";
 import { useViewerZone } from "../lib/viewerzone";
-import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
+import {
+  dueDayChange,
+  FollowUpTaskFields,
+  TaskTimeField,
+} from "./followuptaskfields";
 import { CallOutcomeField } from "./logactivity.calloutcome";
 import { MessageChannelField, useMessageChannel } from "./logactivity.channel";
 import { useActivityCustomFields } from "./logactivity.custom";
@@ -314,7 +318,7 @@ export function LogActivityForm({
               max={latestDayOf(draft.kind, recordZone)}
               {...dueBoundsOf(draft.kind, recordZone)}
               today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}
-              onChange={(event) => setField({ day: event.target.value })}
+              onChange={(event) => setField(dueDayChange(event.target.value))}
             />
           )}
         </Field>

@@ -174,7 +174,9 @@ func TestTheListSaysWhichStakeholdersTheCallerMayRemove(t *testing.T) {
 		}
 		got[row.ID] = *row.CanArchive
 	}
-	if !got[mine.ID] || got[theirs.ID] {
-		t.Errorf("can_archive = %v, want true for %s and false for %s", got, mine.ID, theirs.ID)
+	mineAnswer, mineListed := got[mine.ID]
+	theirAnswer, theirListed := got[theirs.ID]
+	if !mineListed || !theirListed || !mineAnswer || theirAnswer {
+		t.Errorf("can_archive = %v, want true for %s and false for %s, both listed", got, mine.ID, theirs.ID)
 	}
 }

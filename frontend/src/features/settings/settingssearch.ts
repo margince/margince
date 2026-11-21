@@ -50,6 +50,9 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "profile",
     "theme",
     "appearance",
+    "dark mode",
+    "light mode",
+    "timezone",
     "install",
   ],
   meetings: [

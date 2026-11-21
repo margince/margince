@@ -43,7 +43,6 @@ A role that cannot record activities cannot connect a mailbox or calendar. Read-
 When you pick such a role for a member, the dialog says how many of their mailboxes will stop. A stopped mailbox shows as a role problem in System health. It starts again by itself once their role can record activities. Also called: cannot connect Gmail, cannot connect Outlook, mailbox stopped, capture paused.
 
 ### How do I find and edit a colleague?
-
 Open **Settings → Members**. The list loads every member, including invited and deactivated colleagues. Use **Search members** to find a name or email address.
 
 Open the colleague's actions menu and choose **Edit member**. Change their name, email, role or teams, then choose **Save member**. You can correct an email before the account has been used to sign in. Used sign-in addresses are protected. Team membership changes require an Admin.
@@ -51,7 +50,6 @@ Open the colleague's actions menu and choose **Edit member**. Change their name,
 If another administrator changed the account while you were editing, choose **Reload member**, review the current values and apply your changes again.
 
 ### How do I remove a user from Margince?
-
 To stop a colleague signing in while keeping their account in the list, choose **Deactivate** in their actions menu. You can bring it back, and it frees their seat.
 
 To remove the account from the member list, deactivate it first, then choose **Remove member**. Choose a colleague to receive any remaining CRM work and review the preview. Resolve the listed items before confirming. Private lists move to that colleague too. That member’s personal saved views are archived when the account is removed.
@@ -232,7 +230,9 @@ In German, the owner is **Verantwortlich** and the responsibility roles are **Zu
 ## Seeing and sharing records
 
 ### Why can't I see a record?
-When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. The full record answers all three with **not found**. A contact, company or deal link can still show its name and short context in a [public preview](sharing-record-links.md). The preview gives no access to the full record. **Share** on such a record says "This record does not exist, or it is not shared with you."
+When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. A private or missing contact, company, lead, deal, project or offer shows one page. Its sentence names the kind: "This deal is not there, or it is not shared with you." A link leads back to the list, and the top bar says **Not found** when it has no name for the record.
+
+Mail without you says "This message is not shared with you". A meeting without you shows "Content for participants only" in place of its subject. A contact, company or deal link can still show a short [public preview](sharing-record-links.md), which gives no access to the full record. **Share** on such a record says "This record does not exist, or it is not shared with you."
 
 Ask the record's owner to share it with you (**Share** on the record). Or ask them to choose **All users in the company** behind the access chip under the record's name. An admin's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.

@@ -8,6 +8,7 @@ import { EntityRef } from "../../components/entityref";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
+import { ErrorLine } from "../../design-system/errorline";
 import { FactList } from "../../design-system/factlist";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
@@ -19,7 +20,7 @@ import {
   openAnalyticsSection,
   openSavedQuestion,
 } from "../../lib/analytics.address";
-import { unwrap } from "../../lib/problem";
+import { isGone, unwrap } from "../../lib/problem";
 import { routeHash, useRoute } from "../../lib/router";
 import {
   type AnalyticsContext,
@@ -336,7 +337,11 @@ function SavedQuestion({
   if (run.isError) {
     return (
       <Stack gap="3">
-        <QuestionFailure error={run.error} />
+        {isGone(run.error) ? (
+          <ErrorLine>{t("analytics.q.gone")}</ErrorLine>
+        ) : (
+          <QuestionFailure error={run.error} />
+        )}
         <div>
           <Button onClick={() => openAnalyticsSection("questions")}>
             {t("analytics.q.newQuestion")}

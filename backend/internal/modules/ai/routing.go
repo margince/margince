@@ -54,9 +54,9 @@ type EmbeddingsConfig struct {
 	Dimensions int `yaml:"dimensions" json:"dimensions"`
 }
 
-// RoutingConfig is the parsed ai-routing.yaml: the ONLY place vendor
-// names appear (§1.4). A malformed binding fails at startup, not on the
-// first model call at 3am.
+// RoutingConfig is the parsed routing setting, stored in the database and
+// changed through Settings -> AI. It is the only place vendor names appear.
+// A malformed binding fails at startup, not on the first model call at 3am.
 type RoutingConfig struct {
 	Tiers      map[Tier]ProviderConfig `yaml:"tiers" json:"tiers"`
 	Embeddings EmbeddingsConfig        `yaml:"embeddings" json:"embeddings"`

@@ -367,6 +367,17 @@
 .brief-triage-lead p.worklist-row-title > * {
   min-width: 0;
 }
+/* A state badge keeps its word; the name beside it gives way instead. */
+.brief-triage-lead p.worklist-row-title > .badge {
+  flex: none;
+}
+/* A phone has no room for name, badge and way on in one line: the badge and
+   Next task go under the name. */
+@media (max-width: 480px) {
+  .brief-triage-lead p.worklist-row-title {
+    flex-wrap: wrap;
+  }
+}
 .brief-triage-lead p.worklist-row-title,
 .brief-triage-lead-head > .heading {
   white-space: normal;

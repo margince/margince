@@ -3,7 +3,6 @@
 
 import {
   ChevronRight,
-  Clock,
   CornerDownLeft,
   FileText,
   type LucideIcon,
@@ -123,7 +122,7 @@ function commandIcon(command: Command): LucideIcon {
   if (command.icon) return command.icon;
   if (command.kind) return KIND_ICON[command.kind] ?? CornerDownLeft;
   if (command.recent?.kind === "query" || command.id === "search:all") {
-    return command.recent ? Clock : Search;
+    return Search;
   }
   if (command.type === "setting") return Settings;
   return command.id.startsWith("action:new-") ? Plus : CornerDownLeft;

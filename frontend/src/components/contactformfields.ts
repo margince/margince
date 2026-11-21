@@ -1,4 +1,5 @@
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
+import { GREETING_REGISTER_LABEL } from "../format/greetingregister";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -386,8 +387,10 @@ function greetingRegisterField(t: ReturnType<typeof useT>): CreateField {
     type: "select",
     options: [
       { value: "", label: t("create.greetingRegister.unset") },
-      { value: "formal", label: t("create.greetingRegister.formal") },
-      { value: "familiar", label: t("create.greetingRegister.familiar") },
+      ...Object.entries(GREETING_REGISTER_LABEL).map(([value, label]) => ({
+        value,
+        label: t(label),
+      })),
     ],
     hint: t("create.greetingRegisterHint"),
   };

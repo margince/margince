@@ -42,7 +42,7 @@ const routingDefsTemplate = `{
     "$ref": "#/$defs/embeddingsBinding"
   },
   "decisions": {
-    "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
+    "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, with or without a certification record, and falls back to its ladder whenever the answer does not stand.",
     "$ref": "#/$defs/decisionsBinding"
   },
   "providers": {

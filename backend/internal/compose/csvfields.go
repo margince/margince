@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -358,10 +359,7 @@ func canonicalFor(field, value string) string {
 		// rewrite the row on every re-import of an unchanged file — the same
 		// defect the email lowercasing fixed, with more ways to spell it. An
 		// unparseable value compares as written and is refused later by name.
-		if parsed, err := values.ParseDomain(trimmed); err == nil {
-			return parsed.String()
-		}
-		return trimmed
+		return owndomain.DomainOrAsWritten(trimmed)
 	}
 	return trimmed
 }

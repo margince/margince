@@ -37,11 +37,16 @@ prompt: |
   can offer her.
 
 # The only free/busy read. prep_for_meeting prepares for a meeting that already
-# exists and book_meeting commits one; neither answers when a host is open, and
+# exists and schedule_meeting books one; neither answers when a host is open, and
 # an answer assembled from the timeline instead is a second implementation of
 # the availability walk.
 must_call:
   - check_availability
+
+# The user asked for options to offer, not a booking. schedule_meeting queues a
+# real invitation to Mai, so a run that books a slot has asked her unbidden.
+must_not_call_with:
+  - invite_meeting~.
 
 may_call:
   # Finding Mai and her company is a legitimate first step — the prompt names

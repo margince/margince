@@ -747,9 +747,27 @@ fi
 # CLI, a stack that will not boot, a seed that fails, or a credential the MCP
 # endpoint rejects all arrive as `failure` — and "the assistant is answering
 # wrongly" is the one conclusion none of them support. LLM_OUTCOME is set by the
-# step from the runner's own "scenarios: N passed" line, which it prints only
-# once every scenario has actually been driven.
-if [[ "${LLM_RESULT:-}" = "failure" ]] && [[ "${LLM_OUTCOME:-}" != "scenario-failed" ]]; then
+# collect job from each shard's sweep: `ok` and `scenario-failed` only once
+# every scenario has a fresh verdict, `cut-off` when a shard ran out of time.
+#
+# A CUT-OFF IS ITS OWN FINDING. The lane did drive scenarios, so "could not run"
+# would be false, and a job the runner stopped ends `cancelled`, which no other
+# arm reads. It publishes nothing, so the issue is the only trace it leaves.
+if [[ "${LLM_OUTCOME:-}" = "cut-off" ]] || [[ "${LLM_RESULT:-}" = "cancelled" ]]; then
+  report "the weekly model-driven use cases were cut off" "priority: normal,area: ci-tests,bug" \
+"The weekly run of \`make e2e-llm\` on \`main\` stopped before every scenario had a
+verdict: $RUN_URL
+
+A shard of the sweep ran out of its time limit, or the runner stopped it. The
+scenarios it did drive are in the shard's transcripts, kept 30 days; the run
+published no verdict and opened no pull request, because a half result must not
+replace a whole one.
+
+Read the shard's sweep log first: a subscription limit makes the sweep wait, and
+waits that add up past the step's limit look like this. If a shard is simply too
+long, raise the shard count in \`e2e/llm/shards.py plan\` in the workflow."\
+    || unreported=1
+elif [[ "${LLM_RESULT:-}" = "failure" ]] && [[ "${LLM_OUTCOME:-}" != "scenario-failed" ]]; then
   report "the weekly model-driven use cases could not run" "priority: normal,area: ci-tests,bug" \
 "\`make e2e-llm\` failed on the weekly run of \`main\` WITHOUT driving the
 scenarios: $RUN_URL
@@ -776,14 +794,17 @@ elif [[ "${LLM_RESULT:-}" = "success" ]] || [[ "${LLM_OUTCOME:-}" = "scenario-fa
   # is no longer true and the arm below owns what is.
   resolve "the weekly model-driven use cases could not run"
 fi
+if [[ "${LLM_RESULT:-}" = "success" ]] || [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
+  resolve "the weekly model-driven use cases were cut off"
+fi
 
 if [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
   report "a use case is failing when driven by a real model" "priority: normal,area: ci-tests,bug" \
-"\`make e2e-llm\` drove all six use cases on \`main\` and at least one did not
+"\`make e2e-llm\` drove every use case on \`main\` and at least one did not
 reach its pass rate: $RUN_URL
 
 **Read the transcripts before treating this as a regression.** They are attached
-to the run as \`e2e-llm-transcripts\` and kept 30 days. The verdict line says
+to the run as \`e2e-llm-transcripts-<shard>\` and kept 30 days. The verdict line says
 which scenario failed; only the transcript says what the assistant actually did,
 and the difference between those two has been the whole value of this lane.
 
@@ -802,13 +823,13 @@ Three things this is NOT, each of which has looked like a regression before:
 There is no standing failure to dismiss this against. Case 6 — asked about past
 account-manager changes, the assistant repeating a note's wrong month in its own
 voice — was the one, and it was fixed: it passed 3 of 3 on \`claude-opus-5\`.
-This job drives \`claude-sonnet-5-5\` over the claude CLI, on a stack whose
-search ranks by word overlap (no embedding key reaches the runner), and its
-verdicts say \`search: lexical\`. A failure here is not yet a REGRESSION:
-re-run the case locally on a semantic stack (the how-to's section 2) before
-calling it one, and read this run's transcript for what differed. The run
-proposes its verdicts as a pull request; do not merge a lexical failure over a
-semantic pass until you know which one is true.
+This job drives \`claude-sonnet-5-5\` over the claude CLI. With the
+\`OPENAI_COMPATIBLE_API_KEY\` secret its search ranks by meaning, as a run by
+hand does, and it proposes its verdicts as a pull request. Without it, search
+ranks by word overlap, the verdicts stay outside the records tree, and this issue
+is the only result: re-run the case on a stack by meaning (the how-to's section
+2) before calling it a REGRESSION, and read this run's transcript for what
+differed.
 
 Nothing else is standing either. Every scenario in this lane is expected to pass,
 and this issue means one did not."\

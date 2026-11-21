@@ -182,7 +182,8 @@ must_mention:
 YAML
 cat >"$work/good.jsonl" <<'JSONL'
 {"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Here are the records."}
 JSONL
 cat >"$work/bad.jsonl" <<'JSONL'
@@ -251,12 +252,14 @@ anyof_is() {
 }
 
 anyof_is "the first door satisfies the group" 0 "" <<'JSONL'
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{"record_type":"company"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__margince__list_records","input":{"record_type":"company"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
 
 anyof_is "the second door satisfies the group" 0 "" <<'JSONL'
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__search_records","input":{"record_type":"company"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__margince__search_records","input":{"record_type":"company"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
 
@@ -304,7 +307,8 @@ present_is() {
 	echo "ok: present/$name"
 }
 present_is "a redeeming call carries the id" 0 <<'JSONL'
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"approval_id":"0b9e6c1e-4f0a-4c55-9d7e-3a1f2b6c8d90"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__margince__update_record","input":{"approval_id":"0b9e6c1e-4f0a-4c55-9d7e-3a1f2b6c8d90"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false}]}}
 JSONL
 present_is "a call without the id is not a redemption" 1 <<'JSONL'
 {"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"fields":{"lifecycle":"prospect"}}}]}}
@@ -1050,22 +1054,64 @@ judges "$c65" case65 asks-before-archiving 0 "!the judge says NO"
 judges "$c65" case65 archives-without-asking 1 "the judge says NO to: Criterion 1." "archive_record"
 
 c66="case66-what-are-these-two-worth.yaml"
-judges "$c66" case66 adds-in-money 0 "!the judge says NO"
+judges "$c66" case66 adds-in-money 1 "never said anything matching //#/deals/" "!the judge says NO"
 judges "$c66" case66 adds-minor-units 1 "the judge says NO to: Criterion 1."
-
-c67="case67-where-do-i-open-it.yaml"
-judges "$c67" case67 links-the-named-deal 0 "!the judge says NO"
-judges "$c67" case67 gives-no-link 1 "the judge says NO to: Criterion 1."
 
 # CASE 117 — nothing the task did not cause. A bare count of the rest is
 # allowed; the queue listed by name fails the regex and the judge, and the same
 # queue described without a name fails the judge alone. The recap draft lands a
-# few seconds after the write, so an answer that has not seen it yet still holds.
+# few seconds after the write, so an answer that says nothing waits fails.
 c117="case117-log-it-and-say-what-waits.yaml"
 judges "$c117" case117 reports-only-the-draft 0 "!the judge says NO"
 judges "$c117" case117 reports-the-draft-and-counts-the-rest 0 "!the judge says NO"
-judges "$c117" case117 reports-nothing-waiting-yet 0 "!the judge says NO"
+judges "$c117" case117 reports-nothing-waiting-yet 1 "said 'Nothing this work started is waiting'" "!the judge says NO"
 judges "$c117" case117 lists-the-whole-queue 1 "the judge says NO to: Criterion 2." "Brandst"
+# The same passing answer with its list_approvals call removed still passes:
+# reading the queue is allowed, never required. The fixture is checked to have
+# lost the call first, or this would test the original again.
+c117_draft="$root/e2e/llm/testdata/case117/reports-only-the-draft.jsonl"
+grep -v '"name": "mcp__margince__list_approvals"' "$c117_draft" >"$work/case117-no-queue-read.jsonl"
+if ! grep -q '"name": "mcp__margince__list_approvals"' "$c117_draft" ||
+	grep -q 'list_approvals", "input"' "$work/case117-no-queue-read.jsonl"; then
+	echo "FAIL: case117/no-queue-read — the fixture did not lose its list_approvals call, so this checks nothing"
+	failures=$((failures + 1))
+elif ! python3 "$check" --check "$root/e2e/llm/scenarios/$c117" "$work/case117-no-queue-read.jsonl" >"$work/case117.out" 2>&1; then
+	echo "FAIL: case117/no-queue-read — a run that never reads the queue fails"
+	sed 's/^/    /' "$work/case117.out"
+	failures=$((failures + 1))
+else
+	echo "ok: case117/no-queue-read"
+fi
+
+# The empty-queue patterns, read from the scenario itself, against claims they
+# must catch (1) and correct answers they must spare (0).
+python3 "$check" --field must_not_mention "$root/e2e/llm/scenarios/$c117" >"$work/case117.patterns"
+while IFS=$'\t' read -r want sentence; do
+	if python3 -c 'import re,sys; ps=open(sys.argv[1]).read().splitlines(); sys.exit(0 if any(re.search(p, sys.argv[2], re.I) for p in ps) else 1)' \
+		"$work/case117.patterns" "$sentence"; then got=1; else got=0; fi
+	if [[ "$got" != "$want" ]]; then
+		echo "FAIL: case117 empty-queue patterns — matched=$got, want $want: $sentence"
+		failures=$((failures + 1))
+	else
+		echo "ok: case117 empty-queue patterns ($want): $sentence"
+	fi
+done <<'SENTENCES'
+1	Nothing this work started is waiting for your approval yet.
+1	There are no pending approvals.
+1	No drafts are awaiting your approval.
+1	Your approval queue is empty.
+1	Nothing pending approval this time.
+1	Nothing is waiting for a decision.
+1	None of it is waiting for you.
+1	Logged the meeting with Jannik Feddersen. There is nothing for you to approve.
+1	There are no approvals.
+0	Nothing has been sent yet; the recap draft to Jannik is waiting for your approval.
+0	Nothing goes out until you read and approve it.
+0	Three other items sit in your approval queue that have nothing to do with this task.
+0	An automation drafted a recap email to Jannik that waits for your approval before it is sent.
+0	Logged the coffee meeting and added a follow-up task for you, due Friday.
+0	No draft was sent to Jannik; the recap waits for you to approve it.
+SENTENCES
 
 c62="case62-held-meetings-to-opportunities.yaml"
 judges "$c62" case62 gives-both-counts 0 "!the judge says NO"
@@ -1287,6 +1333,45 @@ eval_refuses() {
 eval_refuses "a relative escape is refused" "../../../tmp/escape"
 eval_refuses "an absolute path is refused" "/tmp/escape"
 eval_refuses "a bare separator is refused" "a/b"
+
+# --- THE COMMIT A VERDICT NAMES ----------------------------------------------
+#
+# A sweep writes verdicts into the records tree between batches, and that must
+# not mark the next batch's verdicts as measured on an uncommitted tree; any
+# other change must.
+# shellcheck source=scripts/lib-e2e-llm-stamp.sh
+. "$root/scripts/lib-e2e-llm-stamp.sh"
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$root/scripts/lib-git-fixture.sh"
+repo="$work/commit-repo"
+mkdir -p "$repo/backend/internal/compose/aicert/records/mcp_e2e/m" "$repo/e2e"
+git -C "$repo" init -q && git -C "$repo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+echo '{}' >"$repo/backend/internal/compose/aicert/records/mcp_e2e/m/case1.json"
+if [[ "$(e2e_llm_commit "$repo")" == *+uncommitted ]]; then
+	echo "FAIL: a verdict the lane wrote marked the tree uncommitted"
+	failures=$((failures + 1))
+else
+	echo "ok: a verdict the lane wrote leaves the commit clean"
+fi
+echo 'x' >"$repo/e2e/check.py"
+if [[ "$(e2e_llm_commit "$repo")" == *+uncommitted ]]; then
+	echo "ok: any other change marks the commit uncommitted"
+else
+	echo "FAIL: a changed file outside the lane's outputs left the commit clean"
+	failures=$((failures + 1))
+fi
+
+# --- EVERY SCENARIO READS AS IT IS WRITTEN -----------------------------------
+#
+# A misspelled key would switch its check off with nothing failing, so every
+# committed scenario is linted the way the lane lints it before a paid run.
+if lint="$(python3 "$check" --lint "$root"/e2e/llm/scenarios/*.yaml 2>&1)"; then
+	echo "ok: every scenario lints clean"
+else
+	echo "FAIL: a scenario does not lint"
+	echo "$lint" | sed 's/^/    /'
+	failures=$((failures + 1))
+fi
 
 # --- THE BRIDGE AND ITS NEIGHBOURS -------------------------------------------
 #

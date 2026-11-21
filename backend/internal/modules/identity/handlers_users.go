@@ -58,7 +58,7 @@ func seatIdentity(
 }
 
 // InviteUser (POST /users): provision a new member and mail the set-password link.
-func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request, _ crmcontracts.InviteUserParams) {
 	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return

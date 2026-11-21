@@ -13,6 +13,7 @@ export {
   assertIanaZone,
   calendarDaysBetween,
   displayDay,
+  formatAgreedClock,
   formatDate,
   formatDateAbbrev,
   formatDateAbbrevRange,

@@ -1651,11 +1651,11 @@ func (stubs) RevokeOverride(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "RevokeOverride")
 }
 
-func (stubs) RequestDetailsConfirmation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) RequestDetailsConfirmation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RequestDetailsConfirmationParams) {
 	httperr.NotImplemented(w, r, "RequestDetailsConfirmation")
 }
 
-func (stubs) IssueDoubleOptIn(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) IssueDoubleOptIn(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.IssueDoubleOptInParams) {
 	httperr.NotImplemented(w, r, "IssueDoubleOptIn")
 }
 
@@ -1671,7 +1671,7 @@ func (stubs) ExportContactOptOutRecords(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "ExportContactOptOutRecords")
 }
 
-func (stubs) SendPrivacyNotice(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) SendPrivacyNotice(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SendPrivacyNoticeParams) {
 	httperr.NotImplemented(w, r, "SendPrivacyNotice")
 }
 
@@ -4123,7 +4123,7 @@ func (stubs) ListUsers(w nethttp.ResponseWriter, r *nethttp.Request, params crmc
 	httperr.NotImplemented(w, r, "ListUsers")
 }
 
-func (stubs) InviteUser(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) InviteUser(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.InviteUserParams) {
 	httperr.NotImplemented(w, r, "InviteUser")
 }
 
@@ -4199,7 +4199,7 @@ func (stubs) RemoveMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmco
 	httperr.NotImplemented(w, r, "RemoveMember")
 }
 
-func (stubs) ResendUserInvite(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) ResendUserInvite(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ResendUserInviteParams) {
 	httperr.NotImplemented(w, r, "ResendUserInvite")
 }
 

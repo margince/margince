@@ -28,5 +28,8 @@ may_call:
   - read_workspace
   - whoami
 
+must_end_with:
+  - company "Reply Deutschland Betreuerwechsel" signal=*fund*
+
 runs: 3
 pass_at: 2

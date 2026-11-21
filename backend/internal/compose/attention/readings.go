@@ -44,8 +44,12 @@ import (
 // a lane which never ran is simply absent from it. Reading the floor flag from
 // `bounds` alone therefore states exact figures over work nobody looked at, which
 // is the one direction these numbers must never fail in.
+//
+// The changed figure counts `drawn` rows the view's changed page shows, so the
+// badge never counts an upcoming row its own link leaves out.
 func readingsOf(
 	considered, drawn []ranked,
+	view string,
 	bounds map[crmcontracts.WorklistItemSource]bool,
 	unread []crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.WorklistReadings {
@@ -56,7 +60,7 @@ func readingsOf(
 	// an amount for is not a deal worth nothing, and counting it as nothing
 	// reports a safer pipeline than the one that exists.
 	for _, row := range drawn {
-		if keepsRow(row, filterChangedSinceBrief) {
+		if shownIn(row.item.Category, view, string(filterChangedSinceBrief)) && keepsRow(row, filterChangedSinceBrief) {
 			out.ChangedSinceBrief++
 		}
 	}

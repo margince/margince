@@ -147,8 +147,9 @@ it("sends a follow-up's callback time as its due time, flagged as a time", async
     screen.getByRole("textbox", { name: "Next step" }),
     "Call back",
   );
-  const time = screen.getByRole("textbox", { name: "Time (optional)" });
-  expect(time.hasAttribute("disabled")).toBe(true);
+  const timeBox = () =>
+    screen.getByRole("textbox", { name: "Time (optional)" });
+  expect(timeBox().hasAttribute("disabled")).toBe(true);
   const dueField = screen.getByRole("textbox", {
     name: "Due date",
   }).parentElement;
@@ -159,8 +160,8 @@ it("sends a follow-up's callback time as its due time, flagged as a time", async
   await user.click(
     await screen.findByRole("button", { name: "Tuesday, 27 October 2026" }),
   );
-  expect(time.hasAttribute("disabled")).toBe(false);
-  await user.type(time, "15:00{Enter}");
+  expect(timeBox().hasAttribute("disabled")).toBe(false);
+  await user.type(timeBox(), "15:00{Enter}");
   await user.click(screen.getByRole("button", { name: "Log" }));
 
   await waitFor(() => expect(posted).toHaveLength(1));
@@ -222,4 +223,108 @@ it("sends a follow-up with no time as due by its day", async () => {
       due_has_time: false,
     },
   });
+});
+
+it("drops a refused follow-up time when its due date is cleared, and saves the step undated", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-07-06T09:00:00Z"));
+  const posted: unknown[] = [];
+  installFetchStub({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { activity: ["create"] } })),
+    "POST /activities": (body) => {
+      posted.push(body);
+      return jsonResponse({ id: "source-note" }, 201);
+    },
+  });
+  const user = userEvent.setup();
+  renderWithQueryClient(
+    <ViewerZoneProvider zone={browserZone()}>
+      <LogActivityForm entityType="contact" entityId="contact-one" />
+    </ViewerZoneProvider>,
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: "Subject" }),
+    "Pricing discussion",
+  );
+  await user.click(
+    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: "Next step" }),
+    "Send revised quote",
+  );
+  const dueBox = screen.getByRole("textbox", { name: "Due date" });
+  const dueField = dueBox.parentElement;
+  if (!dueField) throw new Error("expected the due date box inside its field");
+  await user.click(
+    within(dueField).getByRole("button", { name: /^Choose date/ }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Friday, 10 July 2026" }),
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: "Time (optional)" }),
+    "abc",
+  );
+  await user.tab();
+  expect(screen.getByText(/Enter a time as/)).toBeTruthy();
+
+  await user.clear(screen.getByRole("textbox", { name: "Due date" }));
+  await user.tab();
+
+  expect(screen.queryByText(/Enter a time as/)).toBeNull();
+  expect(
+    (
+      screen.getByRole("textbox", {
+        name: "Time (optional)",
+      }) as HTMLInputElement
+    ).value,
+  ).toBe("");
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).not.toHaveProperty("follow_up_task.due_at");
+});
+
+it("forgets a follow-up's accepted time when its due date is cleared", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-07-06T09:00:00Z"));
+  installFetchStub({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { activity: ["create"] } })),
+  });
+  const user = userEvent.setup();
+  renderWithQueryClient(
+    <ViewerZoneProvider zone={browserZone()}>
+      <LogActivityForm entityType="contact" entityId="contact-one" />
+    </ViewerZoneProvider>,
+  );
+  await user.click(
+    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+  );
+  const pickFriday = async () => {
+    const dueField = screen.getByRole("textbox", {
+      name: "Due date",
+    }).parentElement;
+    if (!dueField) throw new Error("expected the due date box in its field");
+    await user.click(
+      within(dueField).getByRole("button", { name: /^Choose date/ }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Friday, 10 July 2026" }),
+    );
+  };
+  const timeBox = () =>
+    screen.getByRole("textbox", {
+      name: "Time (optional)",
+    }) as HTMLInputElement;
+  await pickFriday();
+  await user.type(timeBox(), "15:00{Enter}");
+  expect(timeBox().value).not.toBe("");
+
+  await user.clear(screen.getByRole("textbox", { name: "Due date" }));
+  await user.tab();
+  await pickFriday();
+
+  expect(timeBox().value).toBe("");
 });
