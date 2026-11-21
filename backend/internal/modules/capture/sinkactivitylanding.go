@@ -39,6 +39,9 @@ func (s *Sink) landActivityTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 		return landed, err
 	}
 	// The privacy check must inspect the provider copy after resolving its owner.
+	if ctx, err = withMessagePrivacyTx(ctx, tx, rec, fields); err != nil {
+		return landed, err
+	}
 	ctx, deferred := s.deferOriginal(ctx, rec)
 	if !deferred {
 		if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {

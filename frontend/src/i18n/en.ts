@@ -7722,7 +7722,7 @@ export const en = {
   "create.city": "City",
   "create.region": "State or region",
   "create.postalCode": "Postal code",
-  "create.country": "Country code (ISO 3166)",
+  "create.country": "Country",
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
@@ -7743,8 +7743,6 @@ export const en = {
     "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
   "create.dateRangeReversed":
     "The end date is before the start date. Choose a later end date.",
-  "create.countryCodeInvalid":
-    "Enter the country as its two-letter code, such as DE or US.",
   "create.referenceNotFound":
     "This record no longer exists, or you cannot see it.",
   "create.currency": "Currency",
