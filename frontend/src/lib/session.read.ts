@@ -1,5 +1,6 @@
 import { api } from "../api/client";
-import { problemMessage } from "./problem";
+import { problemMessage, SHOWN_REFUSALS } from "./problem";
+import { readStored, STORAGE_KEYS } from "./storage";
 
 // Confined sessions need a different remedy from signing in again.
 export type AuthProbeKind =
@@ -61,4 +62,12 @@ export async function readSession(signal?: AbortSignal, prepare?: "analytics") {
 export async function readPreparedAnalyticsSession(signal?: AbortSignal) {
   const data = await readSession(signal, "analytics");
   return { data, dataUpdatedAt: Date.now() };
+}
+
+/** Query meta for a read the startup asks with the probe: sign-in or the lock shows its refusal. */
+export const signInShowsRefusal = { [SHOWN_REFUSALS]: [401, 403] };
+
+/** Whether this browser held a session when it last asked. */
+export function sessionSeenNow(): boolean {
+  return readStored(STORAGE_KEYS.sessionSeen) === "1";
 }

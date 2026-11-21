@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useHoldsAdminRole } from "./capability";
 import { unwrap } from "./problem";
+import { signInShowsRefusal } from "./session.read";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
 
@@ -17,6 +18,7 @@ export const companyContextCapabilitiesQueryKey = [
 
 export const companyContextCapabilitiesOptions = queryOptions({
   queryKey: companyContextCapabilitiesQueryKey,
+  meta: signInShowsRefusal,
   queryFn: async (): Promise<Capabilities> =>
     unwrap(await api.GET("/company/context/capabilities")),
 });

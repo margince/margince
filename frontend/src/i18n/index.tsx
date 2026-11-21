@@ -3,6 +3,7 @@ import {
   createContext,
   type ReactNode,
   Suspense,
+  startTransition,
   use,
   useCallback,
   useContext,
@@ -20,6 +21,8 @@ import { STORAGE_KEYS, writeStored } from "../lib/storage";
 import {
   type CatalogLevel,
   catalogs,
+  completeRequested,
+  loadLocale,
   localeLoaded,
   localeReady,
 } from "./catalogs";
@@ -27,6 +30,7 @@ import type { MessageKey } from "./en";
 
 import {
   DEFAULT_LOCALE,
+  effectiveDisplayLocale,
   isLocale,
   type Locale,
   preferredLocale,
@@ -97,6 +101,19 @@ export function localeNameKey(locale: Locale): MessageKey {
 // only language a signed-out page can read.
 function rememberLocale(locale: Locale): void {
   writeStored(STORAGE_KEYS.locale, locale);
+}
+
+// A transition keeps the page drawn in the old language until the new one's
+// catalogs arrive, where an urgent update would blank it.
+function switchLocale(next: Locale, show: (locale: Locale) => void): void {
+  // A page that read the complete catalog will want the new one beside the essential.
+  if (completeRequested(effectiveDisplayLocale())) {
+    loadLocale(next).catch((error: unknown) =>
+      console.error("The selected language could not be loaded", error),
+    );
+  }
+  setEffectiveLocale(next);
+  startTransition(() => show(next));
 }
 
 export function translate(
@@ -237,11 +254,9 @@ const LocaleContext = createContext<
 
 export function LocaleProvider({
   initial,
-  initialEssential = false,
   children,
 }: Readonly<{
   initial?: Locale;
-  initialEssential?: boolean;
   children: ReactNode;
 }>) {
   // Three sources, in falling order of authority: the server's answer for this
@@ -270,9 +285,6 @@ export function LocaleProvider({
   // Adopted only when it DIFFERS from the last adopted value, so a reader who
   // switches language mid-session is not dragged back to their saved one while
   // the write is still in flight.
-  const [level, setLevel] = useState<CatalogLevel>(
-    initialEssential ? "essential" : "complete",
-  );
   const [adopted, setAdopted] = useState<Locale | undefined>(initial);
   const adoptLocale = useCallback(
     (next: Locale) => {
@@ -297,23 +309,19 @@ export function LocaleProvider({
       if (usable === adopted) {
         return false;
       }
-      if (usable !== locale) setLevel("complete");
       setAdopted(usable);
-      setEffectiveLocale(usable);
-      setLocaleState(usable);
+      switchLocale(usable, setLocaleState);
       return true;
     },
-    [adopted, locale],
+    [adopted],
   );
   // A pick is remembered where a detected default is not, so the two cannot be
   // confused later. Wrapped rather than persisted in an effect: an effect would
   // also fire for the detected value on first render and store a choice nobody
   // made.
   const setLocale = useCallback((next: Locale) => {
-    setLevel("complete");
     rememberLocale(next);
-    setEffectiveLocale(next);
-    setLocaleState(next);
+    switchLocale(next, setLocaleState);
   }, []);
   /*
    * The document's own language follows the catalog. index.html can only ship a
@@ -337,7 +345,7 @@ export function LocaleProvider({
   return (
     <LocaleContext.Provider value={value}>
       <Suspense fallback={null}>
-        <LocaleReady locale={locale} level={level}>
+        <LocaleReady locale={locale} level="essential">
           {children}
         </LocaleReady>
       </Suspense>

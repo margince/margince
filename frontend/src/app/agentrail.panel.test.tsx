@@ -6,7 +6,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
@@ -178,6 +178,14 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.doUnmock("./agentpanel");
+});
+
+// The rail's lazy panel keeps the module it first loads. Loaded after a case
+// resets the modules, it reads another i18n instance and speaks its default.
+beforeAll(async () => {
+  await openPanel();
+  cleanup();
+  vi.unstubAllGlobals();
 });
 
 describe("the agent panel's hierarchy", () => {
