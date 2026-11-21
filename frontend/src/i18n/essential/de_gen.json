@@ -3139,6 +3139,7 @@
   "compose.relinkThread": "Restlichen Thread verschieben",
   "compose.relinkThreadHint": "Jede Nachricht in diesem Thread, die du bearbeiten darfst, wird in einem Schritt verschoben.",
   "tasks.complete": "Erledigt",
+  "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
   "tasks.log.action": "Ergebnis erfassen",

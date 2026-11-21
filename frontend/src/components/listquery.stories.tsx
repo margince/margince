@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ListColumn } from "../design-system/listtable";
+import { ProblemError } from "../lib/problem";
 import {
   installFetchStub,
   jsonResponse,
@@ -131,6 +132,18 @@ export const ErrorState: Story = {
 
 export const Empty: Story = {
   render: () => <Harness fetchPage={async () => pageOf([])} />,
+};
+
+// The server refused the list's own sort or filter, as from an old link. A
+// retry would ask the same, so the list offers Clear filters instead.
+export const RefusedFilters: Story = {
+  render: () => (
+    <Harness
+      fetchPage={async () => {
+        throw new ProblemError({ status: 422, detail: "expected one of: a" });
+      }}
+    />
+  ),
 };
 
 // Views, a filter chip and a keyset cursor with more than one page: the

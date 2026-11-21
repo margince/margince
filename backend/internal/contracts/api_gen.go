@@ -61071,7 +61071,7 @@ type Project360 struct {
 		Page PageInfo `json:"page"`
 	} `json:"deals,omitempty"`
 
-	// Documents The files attached to the project itself, newest first.
+	// Documents The project's own uploads and the files of the activities filed under it, newest first.
 	Documents *struct {
 		Data []Attachment `json:"data"`
 		Page PageInfo     `json:"page"`

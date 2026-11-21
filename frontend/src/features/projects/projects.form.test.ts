@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   mapProjectCreate,
   mapProjectUpdate,
@@ -105,5 +106,38 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
       ended_at: null,
     });
     expect("phase" in patch).toBe(false);
+  });
+});
+
+// The name column holds a label of 120 characters, counted as the server
+// counts them, in both dialogs.
+describe("the project name field", () => {
+  const t = (key: string) => `<${key}>`;
+  const nameField = (mode: "create" | "edit") =>
+    projectFields(t, { owner: { owners: [], me: "u-me" }, mode }).find(
+      (field) => field.key === "name",
+    );
+
+  it("takes a name of exactly the label limit in characters, emoji included", () => {
+    const atLimit = `${"a".repeat(TEXT_LIMITS.label - 1)}🚀`;
+    for (const mode of ["create", "edit"] as const) {
+      const name = nameField(mode);
+      expect(name?.maxLength).toBeUndefined();
+      expect(name?.validate?.(atLimit)).toBeUndefined();
+    }
+  });
+
+  it("counts the name as the server stores it, without its edge spaces", () => {
+    const padded = ` ${"a".repeat(TEXT_LIMITS.label)}\u0085`;
+    for (const mode of ["create", "edit"] as const) {
+      expect(nameField(mode)?.validate?.(padded)).toBeUndefined();
+    }
+  });
+
+  it("refuses a name past the label limit in characters", () => {
+    const over = `${"a".repeat(TEXT_LIMITS.label)}🚀`;
+    for (const mode of ["create", "edit"] as const) {
+      expect(nameField(mode)?.validate?.(over)).toBeTruthy();
+    }
   });
 });

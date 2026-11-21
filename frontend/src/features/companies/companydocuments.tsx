@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AddDocumentDialog } from "../../components/adddocument";
 import {
   AttachmentGrid,
   AttachmentTile,
@@ -21,7 +22,6 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { DocumentExtractionPanel } from "../voice-knowledge/documentextraction";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:

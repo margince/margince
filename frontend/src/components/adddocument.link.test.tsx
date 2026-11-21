@@ -13,8 +13,8 @@ import {
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
-import { LocaleProvider } from "../../i18n";
+import { SEARCH_DEBOUNCE_MS } from "../design-system/debouncedsearch";
+import { LocaleProvider } from "../i18n";
 import { AddDocumentDialog } from "./adddocument";
 
 // Adding a link is one request: the address, the record and what the user

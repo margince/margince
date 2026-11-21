@@ -240,6 +240,7 @@ function CompanyTasksTab({
         renderTick={(step) => (
           <TaskCompleteCheck
             activityId={step.activity_id}
+            subject={step.subject}
             version={step.version}
             update={update}
           />

@@ -187,7 +187,7 @@ it("completes a task on the tick, and the row leaves on the re-read", async () =
 
   await screen.findByText("Send the price sheet");
   await user.click(
-    screen.getAllByRole("checkbox", { name: en["tasks.complete"] })[0],
+    screen.getByRole("checkbox", { name: "Mark Send the price sheet done" }),
   );
 
   await waitFor(() =>

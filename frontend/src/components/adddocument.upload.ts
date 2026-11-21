@@ -1,5 +1,5 @@
-import type { MessageKey } from "../../i18n/en";
-import type { AttachmentParent } from "../../lib/attachmentupload";
+import type { MessageKey } from "../i18n/en";
+import type { AttachmentParent } from "../lib/attachmentupload";
 
 // Why the upload cannot be offered, in the order the reader can act on. A
 // missing file is theirs to fix and a missing grant is not. A request in
