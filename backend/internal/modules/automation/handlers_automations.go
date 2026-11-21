@@ -335,7 +335,7 @@ func wireSetter(setter *ids.UUID) *openapi_types.UUID {
 // WireAutomation turns a stored rule into its API shape.
 func WireAutomation(a Automation) (crmcontracts.Automation, error) {
 	status := crmcontracts.AutomationStatusPaused
-	if a.Enabled {
+	if a.Enabled && (a.Configuration == nil || a.Configuration.State != crmcontracts.AutomationSetupStateNeedsSetup) {
 		status = crmcontracts.AutomationStatusEnabled
 	}
 	params := map[string]any{}
