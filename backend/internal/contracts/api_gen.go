@@ -11101,6 +11101,21 @@ func (e DataSubjectRequestSubjectKind) Valid() bool {
 	}
 }
 
+// Defines values for DataTaskActionNeededReason.
+const (
+	DataTaskActionNeededReasonPrivacyReviewerMissing DataTaskActionNeededReason = "privacy_reviewer_missing"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskActionNeededReason enum.
+func (e DataTaskActionNeededReason) Valid() bool {
+	switch e {
+	case DataTaskActionNeededReasonPrivacyReviewerMissing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DataTaskControlAction.
 const (
 	DataTaskControlActionEstimate DataTaskControlAction = "estimate"
@@ -48383,6 +48398,28 @@ type DataSubjectRequestProof struct {
 	Result            string         `json:"result"`
 }
 
+// DataTaskActionNeeded Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total.
+type DataTaskActionNeeded struct {
+	Count   int64                      `json:"count" minimum:"0"`
+	Reason  DataTaskActionNeededReason `json:"reason"`
+	Records []DataTaskActionRecord     `json:"records"`
+
+	// Remedy What to do about it, in the reader's language.
+	Remedy string `json:"remedy"`
+
+	// Sentence What was left open, in the reader's language.
+	Sentence string `json:"sentence"`
+}
+
+// DataTaskActionNeededReason defines model for DataTaskActionNeeded.Reason.
+type DataTaskActionNeededReason string
+
+// DataTaskActionRecord defines model for DataTaskActionRecord.
+type DataTaskActionRecord struct {
+	Id   openapi_types.UUID `json:"id"`
+	Type string             `json:"type"`
+}
+
 // DataTaskControl defines model for DataTaskControl.
 type DataTaskControl struct {
 	Action  DataTaskControlAction `json:"action"`
@@ -48396,6 +48433,8 @@ type DataTaskControlAction string
 
 // DataTaskProgress defines model for DataTaskProgress.
 type DataTaskProgress struct {
+	// ActionNeeded Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total.
+	ActionNeeded        *DataTaskActionNeeded          `json:"action_needed,omitempty"`
 	BatchLimit          int                            `json:"batch_limit"`
 	Batches             int64                          `json:"batches" minimum:"0"`
 	BlockedBy           *string                        `json:"blocked_by,omitempty"`

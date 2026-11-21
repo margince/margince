@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4556 |
+| Columns | 4557 |
 | Foreign keys | 635 |
 | Owning areas | 40 |
 
@@ -283,7 +283,7 @@ erDiagram
 | [`custom_field`](customfields.md#custom_field) | customfields | 19 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 17 | 1 |
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
-| [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
+| [`data_task_run`](platform.md#data_task_run) | platform | 23 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
 | [`deal`](deals.md#deal) | deals | 49 | 31 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 12 | 1 |

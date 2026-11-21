@@ -37,6 +37,9 @@ func TestDataTasksExecuteRunsInProcessAndQueuesNothing(t *testing.T) {
 	}{
 		"finished":      {compose.DataTaskRun{Progress: []datatask.Progress{{TaskID: "core/1_fix", Step: "a", Status: datatask.Done, Scanned: 2}}}, false},
 		"left in scope": {compose.DataTaskRun{Progress: []datatask.Progress{{TaskID: "core/1_fix", Step: "a", Status: datatask.Done, Scanned: 2}}, LeftInScope: map[string]int64{"core/1_fix/a": 3}}, true},
+		"needs action": {compose.DataTaskRun{Progress: []datatask.Progress{
+			{TaskID: "core/1_fix", Step: "a", Status: datatask.Done, Scanned: 2, Action: &datatask.ActionNeeded{Reason: "privacy_reviewer_missing", Count: 1}},
+		}}, true},
 		"awaiting review": {compose.DataTaskRun{Progress: []datatask.Progress{
 			{TaskID: "core/2_manual", Step: "a", Status: datatask.Pending, BlockedReason: datatask.ReviewRequired},
 		}}, true},

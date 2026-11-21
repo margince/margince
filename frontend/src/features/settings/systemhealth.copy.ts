@@ -68,6 +68,7 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   updates_failed: "health.code.updates_failed",
   updates_retrying: "health.code.updates_retrying",
   updates_review: "health.code.updates_review",
+  updates_action: "health.code.updates_action",
   recovery_missing: "health.code.recovery_missing",
   recovery_verified: "health.code.recovery_verified",
   recovery_unverified: "health.code.recovery_unverified",

@@ -370,7 +370,7 @@ export interface paths {
         put?: never;
         /**
          * Pause, resume, retry or estimate a background correction.
-         * @description Requires data_task:update and the observed ledger version. Retry retains the audit run ID.
+         * @description Requires data_task:update and the observed ledger version. Retry retains the audit run ID. On a failed step it continues from the cursor; on a done step with action_needed it starts the step over, so the records left open are tried again.
          */
         post: operations["controlDataTask"];
         delete?: never;
@@ -52642,6 +52642,24 @@ export interface components {
             blocked_reason?: "waiting_for_worker" | "newer_release_required" | "paused" | "failed" | "retry_wait" | "earlier_step" | "missing_prerequisite" | "review_required";
             blocked_by?: string;
             missing_prerequisites: string[];
+            action_needed?: components["schemas"]["DataTaskActionNeeded"];
+        };
+        /** @description Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total. */
+        DataTaskActionNeeded: {
+            /** @enum {string} */
+            reason: "privacy_reviewer_missing";
+            /** @description What was left open, in the reader's language. */
+            sentence: string;
+            /** @description What to do about it, in the reader's language. */
+            remedy: string;
+            /** Format: int64 */
+            count: number;
+            records: components["schemas"]["DataTaskActionRecord"][];
+        };
+        DataTaskActionRecord: {
+            type: string;
+            /** Format: uuid */
+            id: string;
         };
         SystemHealth: {
             /** Format: date-time */

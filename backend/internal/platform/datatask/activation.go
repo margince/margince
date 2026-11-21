@@ -104,7 +104,7 @@ func (e *Engine) replaceManualRun(ctx context.Context, tx pgx.Tx, task Task, ste
 	_, err := tx.Exec(ctx, `UPDATE data_task_run SET run_id=@run,task_version=@revision,status='pending',
  cursor=NULL,batch_limit=@limit,scanned=0,changed=0,batches=0,estimate=NULL,estimate_capped=false,
  estimated_at=NULL,consecutive_failures=0,last_error_class=NULL,next_attempt_at=NULL,last_progress_at=NULL,
- activation=@activation,updated_at=@now,version=version+1 WHERE task_id=@task AND step=@step`,
+ action_needed=NULL,activation=@activation,updated_at=@now,version=version+1 WHERE task_id=@task AND step=@step`,
 		pgx.NamedArgs{"run": runID, paramRevision: task.Version, "limit": step.Limit, "activation": activation, paramNow: e.now(), paramTask: task.ID, paramStep: step.Name})
 	if err != nil {
 		return err

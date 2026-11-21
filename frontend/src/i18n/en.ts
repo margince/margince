@@ -528,6 +528,7 @@ export const en = {
   "dataTasks.status.running": "Running",
   "dataTasks.status.paused": "Paused",
   "dataTasks.status.done": "Done",
+  "dataTasks.status.doneWithAction": "Done, action needed",
   "dataTasks.status.failed": "Failed",
   "dataTasks.action.pause": "Pause",
   "dataTasks.action.resume": "Resume",
@@ -543,6 +544,8 @@ export const en = {
   "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
   "dataTasks.blocked.missing_prerequisite":
     "Required updates must finish first.",
+  "dataTasks.actionRecords_one": "{count} record left to act on",
+  "dataTasks.actionRecords_other": "{count} records left to act on",
   "approval.preview.createEmployer":
     "Create the missing company and link this contact as an employee.",
   "approval.preview.reuseEmployer":
@@ -23844,6 +23847,8 @@ export const en = {
     "Search may miss records until indexing catches up. The records themselves remain saved.",
   "health.effect.updates":
     "The changes handled by this update remain incomplete. Already saved changes stay saved; some records may still have their previous values.",
+  "health.effect.updatesAction":
+    "The update finished. Some records it found still wait for someone to act on them.",
   "health.effect.recovery":
     "Normal CRM work can continue. During an outage, restoring service may take longer or lose more recent data than the recovery targets allow.",
   "health.effect.automatic":
@@ -24042,6 +24047,8 @@ export const en = {
   "health.code.updates_failed": "A data update needs technical attention",
   "health.code.updates_retrying": "A data update has another attempt recorded",
   "health.code.updates_review": "A data update needs administrator review",
+  "health.code.updates_action":
+    "A data update finished and left records for someone to act on",
   "health.code.recovery_missing": "No restore test recorded",
   "health.code.recovery_verified":
     "The recorded restore drill met its recovery targets",

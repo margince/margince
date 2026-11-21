@@ -40,7 +40,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [knowledge](knowledge.md) | 3 | 39 | 0 | 0 | 0 |
 | [migration](migration.md) | 2 | 42 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
-| [platform](platform.md) | 13 | 95 | 2 | 3 | 1 |
+| [platform](platform.md) | 13 | 96 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
 | [projects](projects.md) | 3 | 42 | 11 | 3 | 0 |
 | [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |
