@@ -25,6 +25,41 @@ function forwardFromVoice(state: ConversationState): ConversationEvent | null {
   return ways.find((event) => isLegal(state, event)) ?? null;
 }
 
+// What the reader's own move to an address asks of the act, or null.
+function arrivalEvent(
+  state: ConversationState,
+  routeId: string | undefined,
+  cameBack: boolean,
+): ConversationEvent | null {
+  if (
+    routeId === STEP_ADDRESSES.voice &&
+    isLegal(state, { type: "CONNECT_BACK" })
+  ) {
+    return { type: "CONNECT_BACK" };
+  }
+  return routeId === STEP_ADDRESSES.connect && cameBack
+    ? forwardFromVoice(state)
+    : null;
+}
+
+// What the route's arrival at `to` asks: the writes still owed, and the act's
+// move when the reader, not this hook, wrote the address.
+function readArrival(
+  written: string[],
+  from: string | undefined,
+  to: string | undefined,
+  state: ConversationState,
+  cameBack: boolean,
+): { owed: string[]; event: ConversationEvent | null } {
+  if (to === undefined || to === from) {
+    return { owed: written, event: null };
+  }
+  const at = written.indexOf(to);
+  return at === -1
+    ? { owed: written, event: arrivalEvent(state, to, cameBack) }
+    : { owed: written.slice(at + 1), event: null };
+}
+
 /** Keeps `#/onboarding/<step>` in step with the act. A disagreeing address is
  *  rewritten, except the browser's move back to voice, which moves the act. */
 export function useStepAddress(
@@ -41,46 +76,30 @@ export function useStepAddress(
   useEffect(() => {
     const prev = seen.current;
     seen.current = { act: state.act, routeId };
-    if (prev.act === "connect" && state.act === "voice") {
-      cameBack.current = true;
-    }
-    const arrived = routeId !== prev.routeId;
-    const echo =
-      arrived && routeId !== undefined && written.current.includes(routeId);
-    if (echo) {
-      written.current = written.current.slice(
-        written.current.indexOf(routeId) + 1,
-      );
-    }
+    cameBack.current ||= prev.act === "connect" && state.act === "voice";
+    const arrival = readArrival(
+      written.current,
+      prev.routeId,
+      routeId,
+      state,
+      cameBack.current,
+    );
+    written.current = arrival.owed;
     const address = STEP_ADDRESSES[state.act];
     if (address === undefined || routeId === address) {
       return;
     }
-    const moved = arrived && !echo;
-    if (
-      moved &&
-      routeId === STEP_ADDRESSES.voice &&
-      isLegal(state, { type: "CONNECT_BACK" })
-    ) {
-      dispatch({ type: "CONNECT_BACK" });
+    if (arrival.event !== null) {
+      dispatch(arrival.event);
       return;
     }
-    const forward =
-      moved && cameBack.current && routeId === STEP_ADDRESSES.connect
-        ? forwardFromVoice(state)
-        : null;
-    if (forward !== null) {
-      dispatch(forward);
-      return;
-    }
-    const next = { screen: "onboarding", id: address } as const;
     written.current = [...written.current, address];
     // Only a step forward is a history entry, so Back has one to return to;
     // any other disagreement is corrected in place.
-    if (prev.act === "voice" && state.act === "connect") {
-      navigate(next);
-    } else {
-      navigateReplacing(next);
-    }
+    const forward = prev.act === "voice" && state.act === "connect";
+    (forward ? navigate : navigateReplacing)({
+      screen: "onboarding",
+      id: address,
+    });
   }, [state, dispatch, routeId, navigateReplacing]);
 }
