@@ -195,3 +195,47 @@ func TestRetentionGoesOnWhenAMarkedCorrectionLockIsBusyAndCorrectsOnTheNextRun(t
 		t.Fatalf("the next run left %d old personal images", n)
 	}
 }
+
+func TestAHeldRecordKeepsItsCopyAndTheNextRetentionPassCorrectsItOnceTheHoldLifts(t *testing.T) {
+	for _, source := range []struct {
+		name  string
+		seed  func(*testing.T, *Env) ids.UUID
+		count string
+	}{
+		{"weekly image", markedWeeklyCopies, `SELECT count(*) FROM audit_log WHERE entity_type='weekly_plan_commitment' AND entity_id=$1 AND after->>'label'='Private Contact'`},
+		{"retired request", markedRequestCopies, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`},
+	} {
+		t.Run(source.name, func(t *testing.T) {
+			e := Setup(t)
+			record := source.seed(t, e)
+			held := e.SeedContact(t, "Held Contact", nil)
+			e.WsExec(t, `UPDATE contact SET legal_hold=true WHERE id=$1`, held)
+			ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+			now := clocktest.Now(t)
+			engine, err := datatask.New(e.Pool, []datatask.Task{markedTask()}, "test", func() time.Time { return now }, func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := engine.Seed(ctx); err != nil {
+				t.Fatal(err)
+			}
+			for range 6 {
+				if _, err := engine.Execute(ctx); err != nil {
+					t.Fatal(err)
+				}
+				now = now.Add(time.Hour)
+			}
+			if n := e.WsCount(t, source.count, record); n == 0 {
+				t.Fatal("the correction removed a copy while a legal hold stood")
+			}
+			e.WsExec(t, `UPDATE contact SET legal_hold=false WHERE id=$1`, held)
+			service := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+			if err := service.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+				t.Fatal(err)
+			}
+			if n := e.WsCount(t, source.count, record); n != 0 {
+				t.Fatalf("the next retention pass left %d copies after the hold lifted", n)
+			}
+		})
+	}
+}
