@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { graphemeSegmenter } from "../format/formatters";
+
 /**
  * characterCount is how many characters the server counts in `text`: code
  * points, as Postgres `char_length` and Go's rune count do. `String.length`
@@ -19,6 +21,5 @@ export function graphemes(text: string): string[] {
   if (typeof Intl.Segmenter !== "function") {
     return Array.from(text);
   }
-  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-  return Array.from(segmenter.segment(text), (part) => part.segment);
+  return Array.from(graphemeSegmenter().segment(text), (part) => part.segment);
 }

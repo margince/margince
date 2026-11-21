@@ -4,6 +4,8 @@
 package privacy
 
 import (
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -11,30 +13,47 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
+// legacyAuditSubjects maps the entity types whose old audit copies the linked
+// passes can tie to an erasure. The page query reads only these types, so a
+// type added here is both selected and corrected.
+var legacyAuditSubjects = map[string]func(legacyAuditEntry) (string, pgx.StrictNamedArgs){
+	"intro_request":     legacyIntroAuditQuery,
+	"dedupe_candidate":  legacyDedupeAuditQuery,
+	approvalEntity:      legacyApprovalAuditQuery,
+	rightsRequestEntity: legacyRequestAuditQuery,
+	"deal_room_comment": func(entry legacyAuditEntry) (string, pgx.StrictNamedArgs) {
+		return legacyBuyerAuditQuery(entry, legacyAuditArgs(entry), `NOT EXISTS(SELECT 1 FROM deal_room_comment WHERE id=@entity)`)
+	},
+	"deal_room_session": func(entry legacyAuditEntry) (string, pgx.StrictNamedArgs) {
+		return legacyBuyerAuditQuery(entry, legacyAuditArgs(entry), `NOT EXISTS(SELECT 1 FROM deal_room_session WHERE id=@entity)`)
+	},
+}
+
+// legacyAuditKinds lists the keys of legacyAuditSubjects for the page query.
+func legacyAuditKinds() []string {
+	return slices.Sorted(maps.Keys(legacyAuditSubjects))
+}
+
 func legacyAuditSubjectQuery(entry legacyAuditEntry) (string, pgx.StrictNamedArgs) {
-	args := legacyAuditArgs(entry)
-	switch entry.kind {
-	case "intro_request":
-		return `SELECT erasure.entity_type,erasure.entity_id,erasure.id FROM intro_request record
+	if query, ok := legacyAuditSubjects[entry.kind]; ok {
+		return query(entry)
+	}
+	return "", nil
+}
+
+func legacyIntroAuditQuery(entry legacyAuditEntry) (string, pgx.StrictNamedArgs) {
+	return `SELECT erasure.entity_type,erasure.entity_id,erasure.id FROM intro_request record
    JOIN audit_log erasure ON erasure.entity_type='contact' AND erasure.entity_id IN(record.contact_id,record.through_contact_id)
    WHERE record.id=@entity AND ` + legacyPrivacyBoundary + `
-   ORDER BY erasure.occurred_at,erasure.id LIMIT 1 FOR UPDATE OF record`, args
-	case "dedupe_candidate":
-		return `SELECT erasure.entity_type,erasure.entity_id,erasure.id FROM dedupe_candidate record
+   ORDER BY erasure.occurred_at,erasure.id LIMIT 1 FOR UPDATE OF record`, legacyAuditArgs(entry)
+}
+
+func legacyDedupeAuditQuery(entry legacyAuditEntry) (string, pgx.StrictNamedArgs) {
+	return `SELECT erasure.entity_type,erasure.entity_id,erasure.id FROM dedupe_candidate record
    JOIN audit_log erasure ON (erasure.entity_type='contact' AND erasure.entity_id IN(record.left_contact_id,record.right_contact_id))
     OR (erasure.entity_type='lead' AND erasure.entity_id IN(record.left_lead_id,record.right_lead_id))
    WHERE record.id=@entity AND ` + legacyPrivacyBoundary + `
-   ORDER BY erasure.occurred_at,erasure.id LIMIT 1 FOR UPDATE OF record`, args
-	case approvalEntity:
-		return legacyApprovalAuditQuery(entry)
-	case rightsRequestEntity:
-		return legacyRequestAuditQuery(entry)
-	case "deal_room_comment":
-		return legacyBuyerAuditQuery(entry, args, `NOT EXISTS(SELECT 1 FROM deal_room_comment WHERE id=@entity)`)
-	case "deal_room_session":
-		return legacyBuyerAuditQuery(entry, args, `NOT EXISTS(SELECT 1 FROM deal_room_session WHERE id=@entity)`)
-	}
-	return "", nil
+   ORDER BY erasure.occurred_at,erasure.id LIMIT 1 FOR UPDATE OF record`, legacyAuditArgs(entry)
 }
 
 // legacyBuyerAuditQuery finds the erasure of the seat that wrote a deleted

@@ -61,8 +61,9 @@ export type Census = Readonly<{
   readers: Set<string>;
 }>;
 
-// A function in format/ that prints an age, judged by its own body.
-function printsAge(fn: ts.Node): boolean {
+// A function in format/ that prints an age, judged by its own body. A
+// RelativeTimeFormat is found by its type, so one from the cache counts too.
+function printsAge(fn: ts.Node, checker: ts.TypeChecker): boolean {
   let found = false;
   const visit = (node: ts.Node): void => {
     if (found) return;
@@ -74,8 +75,9 @@ function printsAge(fn: ts.Node): boolean {
         : undefined;
     if (
       (named !== undefined && CLOCK_PLACEHOLDERS.has(named)) ||
-      (ts.isNewExpression(node) &&
-        node.expression.getText() === "Intl.RelativeTimeFormat")
+      ((ts.isNewExpression(node) || ts.isCallExpression(node)) &&
+        checker.getTypeAtLocation(node).getSymbol()?.getName() ===
+          "RelativeTimeFormat")
     ) {
       found = true;
       return;
@@ -433,7 +435,8 @@ export function census(program: ts.Program, files: readonly string[]): Census {
     if (name !== undefined) {
       formatFunctions.push({ name, params: [...node.parameters] });
     }
-    if (returnsText(node) && printsAge(node)) seeds.push(...node.parameters);
+    if (returnsText(node) && printsAge(node, checker))
+      seeds.push(...node.parameters);
   };
   // Writes a value into `node` and into the declared fields it lands in.
   const handInto = (

@@ -976,7 +976,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Eingegangen am",
   "reporting.enteredOn": "In die Phase gekommen am",
   "reporting.accruedOn": "Angefallen am",
-  "reporting.introducedOn": "Vorgestellt am",
+  "reporting.introductionCountedOn": "Vorgestellt oder erfasst am",
   "reporting.bookedOn": "Gebucht am",
   "reporting.commissionAmount": "Provision",
   "reporting.hoursUnit": "Stunden",
@@ -13062,10 +13062,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSecretHint":
     "Verwende ein App-spezifisches Passwort. Das Passwort wird im Schlüsseltresor gespeichert und nach Zeitplan zum Lesen der E-Mails genutzt, bis du das Postfach trennst. Beim Trennen wird das Passwort gelöscht.",
   "connectors.imapSubmitCta": "Verbinden",
-  "connectors.imapNeeded": "Pflichtfelder",
-  "connectors.imapStillNeeded": "Erforderlich: {fields}",
-  "connectors.imapRange": "Von {min} bis {max}",
-  "connectors.imapOutOfRange": "Außerhalb des Bereichs: {fields}",
+  "connectors.imapHostName":
+    "Gib nur den Servernamen ein, zum Beispiel imap.example.com.",
+  "connectors.imapSecretEmptied":
+    "Nach dem Fehlversuch geleert. Gib es erneut ein.",
   "connectors.imapLoginRejected":
     "Das Postfach hat diese Zugangsdaten abgelehnt. Prüfe Server, E-Mail-Adresse und App-Passwort.",
   "connectors.imapUnreachable":
@@ -17400,6 +17400,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",
   "connectFlow.calendarImap": "Über IMAP nicht verfügbar.",
   "connectFlow.pickService": "Wähle E-Mail, Kalender oder beides.",
+  "connectFlow.pickMail": "Wähle E-Mail.",
   "connectFlow.importLabel": "Ältere E-Mails importieren",
   "connectFlow.importNone": "Keine",
   "connectFlow.importAfter":
@@ -18026,7 +18027,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Suche und Abruf haben keine Denkstufe und keine Zeitlimits. Anbieter und Modell änderst du in der Zeile „Embedding-Modell“ unter Modellstufen.",
   "workingHours.unsetTitle": "Noch nicht festgelegt",
   "workingHours.unset":
-    "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, in der Zeitzone der Installation angeboten.",
+    "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, angeboten.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
   "workingHours.day.1": "Montag",
@@ -18376,6 +18377,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "capturePurge.preview": "Zuerst prüfen",
   "capturePurge.confirm": "Endgültig löschen",
   "capturePurge.done": "Schließen",
+  "capturePurge.recheck": "Erneut prüfen",
+  "capturePurge.changed":
+    "Die E-Mails haben sich seit der Prüfung geändert. Prüfe die Anzahl unten, bevor du löschst.",
   "capturePurge.failed":
     "Die Löschung konnte nicht abgeschlossen werden. Einige Nachrichten wurden möglicherweise bereits vernichtet. Prüfe erneut, was noch vorhanden ist.",
   "capturePurge.refused":
@@ -18429,7 +18433,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.containersUnreadableBody":
     "In dieser Liste fehlen möglicherweise Ordner, da der E-Mail-Anbieter nicht geantwortet hat. Bitte versuche es gleich erneut oder schließe E-Mails nach Absendeadresse oder Domain aus.",
   "captureExclusions.kindLabel": "Typ",
-  "captureExclusions.addLabel": "Adresse oder Domain ausschließen",
+  "captureExclusions.title.address": "Adresse ausschließen",
+  "captureExclusions.title.domain": "Domain ausschließen",
+  "captureExclusions.title.container": "Ordner oder Label ausschließen",
+  "captureExclusions.field.address": "Adresse",
+  "captureExclusions.field.domain": "Domain",
+  "captureExclusions.noMailbox": "Verbinde zuerst ein Postfach.",
   "captureExclusions.placeholder.address": "name@beispiel.example",
   "captureExclusions.placeholder.domain": "beispiel.example",
   "captureExclusions.add": "Ausschließen",
@@ -23186,6 +23195,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "saveBar.save": "Speichern",
   "saveBar.discard": "Verwerfen",
   "saveBar.unsaved": "Ungespeicherte Änderungen",
+  "saveBar.offered": "Speichere, um diese Werte zu übernehmen.",
   "saveBar.invalid": "Korrigiere die markierten Felder, um zu speichern.",
   "privacy.typeErasePrompt": "Gib zur Bestätigung dieses Wort ein:",
   "aiFigures.window": "Zeitraum",

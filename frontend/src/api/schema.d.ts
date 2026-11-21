@@ -87321,6 +87321,16 @@ export interface operations {
             query?: {
                 /** @description Report what would be destroyed and change nothing. */
                 preview?: boolean;
+                /**
+                 * @description The `destroyed` count a preview showed. With the two below, it binds the purge to what the
+                 *     caller saw: when the current selection differs, nothing is destroyed and the answer is 409.
+                 *     Send all three or none; ignored on a preview.
+                 */
+                expect_destroyed?: number;
+                /** @description The `released` count the preview showed. */
+                expect_released?: number;
+                /** @description The `anonymised` count the preview showed. */
+                expect_anonymised?: number;
             };
             header?: never;
             path: {
@@ -87343,6 +87353,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

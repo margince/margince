@@ -241,13 +241,17 @@ func TestEmbedGenMaintainsRowsFromEvents(t *testing.T) {
 // directly (the owner connection bypasses RLS, same as seed) — the
 // assertion surface for "which binding actually produced this row" the
 // tests below need. Every current caller checks a contact row; narrow to
-// that instead of carrying an entityType parameter no test varies.
+// that instead of carrying an entityType parameter no test varies. A contact
+// with no row reads as the empty model.
 func (e *SearchEnv) storedEmbeddingModel(t *testing.T, entityID ids.UUID) string {
 	t.Helper()
 	var model string
 	err := e.Owner.QueryRow(context.Background(),
 		`SELECT model FROM embedding WHERE entity_type = 'contact' AND entity_id = $1 AND chunk_ix = 0`,
 		entityID).Scan(&model)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ""
+	}
 	if err != nil {
 		t.Fatalf("reading stored embedding: %v", err)
 	}

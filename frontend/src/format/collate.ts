@@ -3,6 +3,7 @@
 
 import type { Locale } from "../i18n";
 import { INTL_LOCALE } from "./format";
+import { collator } from "./formatters";
 
 // Two ways to order strings, and the whole point of this file is that a caller
 // has to SAY which one it means.
@@ -30,18 +31,6 @@ import { INTL_LOCALE } from "./format";
  */
 export function forReader(a: string, b: string, locale: Locale): number {
   return collator(locale).compare(a, b);
-}
-
-const collators = new Map<Locale, Intl.Collator>();
-
-function collator(locale: Locale): Intl.Collator {
-  const held = collators.get(locale);
-  if (held) {
-    return held;
-  }
-  const made = new Intl.Collator(INTL_LOCALE[locale]);
-  collators.set(locale, made);
-  return made;
 }
 
 /**
