@@ -41,7 +41,7 @@ describe("A custom interval with no days yet", () => {
     async (_name, overview, evaluation) => {
       open(
         `#/analytics/overview?overview=${overview}&period=custom`,
-        evaluation,
+        () => evaluation(),
         { template: "sdr" },
       );
       expect(await screen.findByText(PROMPT)).toBeVisible();
@@ -60,7 +60,7 @@ describe("A custom interval with no days yet", () => {
       const user = userEvent.setup({ delay: null });
       open(
         "#/analytics/overview?overview=sales&period=custom",
-        salesEvaluation,
+        () => salesEvaluation(),
         {
           template: "sdr",
         },
@@ -76,7 +76,7 @@ describe("A custom interval with no days yet", () => {
     const user = userEvent.setup({ delay: null });
     open(
       "#/analytics/overview?overview=sales&period=custom&from=2026-10-01&through=2026-10-15",
-      salesEvaluation,
+      () => salesEvaluation(),
       { template: "sdr" },
     );
     const from = await screen.findByLabelText("From");
