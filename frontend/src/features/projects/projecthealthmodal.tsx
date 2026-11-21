@@ -76,7 +76,13 @@ export function ProjectHealthModal({
   // the objects would reset the form under the reader mid-edit.
   const resetRecord = record.reset;
   const resetCorrect = correct.reset;
-  const clearFaults = faults.show;
+  // Each opening starts with no field sentence. Reset during render: `show`
+  // is new each render, so an effect listing it would run forever.
+  const [faultsOpen, setFaultsOpen] = useState(open);
+  if (open !== faultsOpen) {
+    setFaultsOpen(open);
+    faults.show(new Map());
+  }
 
   // Re-seeded on every opening, not once at mount. A correction starts from
   // what the reading actually said, so a reader fixing one word does not have
@@ -90,8 +96,7 @@ export function ProjectHealthModal({
     setDraftId(crypto.randomUUID());
     resetRecord();
     resetCorrect();
-    clearFaults(new Map());
-  }, [open, correcting, resetRecord, resetCorrect, clearFaults]);
+  }, [open, correcting, resetRecord, resetCorrect]);
 
   const trimmed = trimServerSpace(note);
   const noteLabel = t("projectHealth.note");

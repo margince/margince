@@ -323,12 +323,14 @@ describe("AiProviderKeysCard", () => {
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
-    await user.type(within(row).getByPlaceholderText(/paste api key/i), "   ");
+    const box = within(row).getByPlaceholderText(/paste api key/i);
+    await user.type(box, "   ");
     // Removing a credential is the Remove button; a blank write is a mistake the
-    // server would refuse, so the button does not offer it.
-    expect(
-      within(row).getByRole("button", { name: /save key/i }),
-    ).toBeDisabled();
+    // server would refuse, so the press says the key is required instead.
+    await user.click(within(row).getByRole("button", { name: /save key/i }));
+    expect(within(row).getByText("This field is required.")).toBeVisible();
+    expect(box).toHaveFocus();
+    expect(box).toHaveAttribute("aria-invalid", "true");
     expect(backend.puts).toHaveLength(0);
   });
 

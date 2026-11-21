@@ -75,6 +75,11 @@ it.each(["Value", "Expected ARR"])(
     fireEvent.change(input, { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(save).not.toHaveBeenCalled();
+    expect(screen.getByText("Currency is required.")).toBeInTheDocument();
+    expect(
+      screen.getByText("This amount needs a currency first."),
+    ).toBeInTheDocument();
+    expect(input).toHaveFocus();
     fireEvent.change(input, { target: { value: "" } });
     // The double-press latch lets go a task after the refused press.
     act(() => vi.runAllTimers());

@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { refusalSentences } from "../lib/problem";
+import { blankRequired, refusalSentences } from "../lib/problem";
 import { Field, TextInput } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { useSinglePress } from "./presslatch";
+import { useFieldFaults } from "./savepage";
 
 /** A refused name write, split the way `NameDialog` draws it. */
 export function nameRefusal(
@@ -65,7 +67,7 @@ export function NameDialog({
   onClose: () => void;
   title: string;
   label: string;
-  /** The name a rename starts from; an unchanged name cannot be saved. */
+  /** The name a rename starts from; saving it unchanged only closes. */
   initial?: string;
   placeholder?: string;
   /** A line under the field, such as the raw key a rename keeps (`KeyCode`). */
@@ -80,7 +82,9 @@ export function NameDialog({
   onSave: (name: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }>) {
+  const { locale } = useLocale();
   const [draft, setDraft] = useState(initial);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const name = draft.trim();
   const { refusedName, markSent, forget } = useRefusedName(name, nameProblem);
   const [wasOpen, setWasOpen] = useState(open);
@@ -89,6 +93,7 @@ export function NameDialog({
     if (open) {
       setDraft(initial);
       forget();
+      faults.show(new Map());
     }
   }
   const unsaved = name !== initial.trim();
@@ -97,9 +102,19 @@ export function NameDialog({
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
   const singlePress = useSinglePress(pending);
-  const ready = name !== "" && name !== initial.trim() && !refusedName;
+  // An empty name says so on the field, a refused one is already on it, and
+  // an unchanged one has nothing to store, so Save then only closes.
   const save = () => {
-    if (!ready || pending) return;
+    const blank = blankRequired(locale, { [NAME_FIELD]: [label, draft] });
+    if (pending || faults.show(blank)) return;
+    if (refusedName) {
+      faults.show(new Map([[NAME_FIELD, refusedName]]));
+      return;
+    }
+    if (!unsaved) {
+      onClose();
+      return;
+    }
     markSent();
     onSave(name);
   };
@@ -110,7 +125,7 @@ export function NameDialog({
       title={title}
       intent="form"
       confirmLabel={confirmLabel}
-      confirmDisabled={!ready}
+      bodyRef={faultsRoot}
       pending={pending}
       error={problem}
       unsaved={unsaved}
@@ -127,14 +142,17 @@ export function NameDialog({
           label={label}
           labelHidden={label === title}
           hint={hint}
-          error={refusedName}
+          error={refusedName ?? faults.of(NAME_FIELD)}
         >
           {(control) => (
             <TextInput
               {...control}
               value={draft}
               placeholder={placeholder}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                faults.edited(NAME_FIELD);
+              }}
             />
           )}
         </Field>

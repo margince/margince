@@ -324,6 +324,10 @@ it("requires an email, phone or LinkedIn URL before creating a contact", async (
   ).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Create" }));
   expect(posted).toHaveLength(0);
+  expect(document.activeElement).toHaveAttribute("aria-invalid", "true");
+  expect(document.activeElement).toHaveAccessibleDescription(
+    expect.stringContaining("Add at least one email, phone or LinkedIn URL."),
+  );
   await user.type(
     screen.getByLabelText("LinkedIn"),
     "https://www.linkedin.com/in/dana-buyer",

@@ -327,7 +327,8 @@ describe("KnowledgeCard", () => {
   });
 
   it("refuses to create a set without both a name and a topic statement", async () => {
-    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    const backend = backendFor(ADMIN);
+    vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
     render(<KnowledgeCard />);
 
@@ -344,7 +345,11 @@ describe("KnowledgeCard", () => {
     await user.click(create);
     expect(dialog.getByText("What this set covers is required.")).toBeVisible();
     expect(topic).toHaveFocus();
-    expect(dialog.getByRole("button", { name: "Create" })).toBe(create);
+    expect(backend.posts).toHaveLength(0);
+
+    await user.type(topic, "How the product is operated.");
+    await user.click(create);
+    await waitFor(() => expect(backend.posts).toHaveLength(1));
   });
 
   it("asks before archiving a set, and sends nothing until the reader agrees", async () => {

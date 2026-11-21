@@ -183,8 +183,10 @@ function stubFilesAndRefusal() {
   const file = (id: string, title: string) => ({
     attachment: { id, title, filename: `${id}.pdf` },
   });
+  const posts: string[] = [];
   vi.stubGlobal("fetch", (input: Request) => {
     const path = new URL(input.url).pathname;
+    if (input.method === "POST") posts.push(path);
     if (
       input.method === "POST" &&
       path.endsWith("/deal-rooms/room-1/documents")
@@ -211,6 +213,7 @@ function stubFilesAndRefusal() {
     }
     return Promise.resolve(jsonResponse({ data: [], page: {} }));
   });
+  return posts;
 }
 
 it("says once, on the file, that the file is already in the room, until another is picked", async () => {
@@ -230,4 +233,17 @@ it("says once, on the file, that the file is already in the room, until another 
 
   await pickOption(user, picker, "Order form");
   expect(screen.queryByText("This file is already in the room.")).toBeNull();
+});
+
+it("says the file is required when added with none picked, and sends nothing", async () => {
+  const user = userEvent.setup();
+  const posts = stubFilesAndRefusal();
+  render(<AddDocument room={ROOM} refusal={undefined} />);
+  const picker = await screen.findByRole("combobox", { name: /^File/ });
+  await waitFor(() => expect(picker).toBeEnabled());
+  await user.click(screen.getByRole("button", { name: "Add to room" }));
+
+  expect(screen.getByText("File from this deal is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(picker);
+  expect(posts).toHaveLength(0);
 });

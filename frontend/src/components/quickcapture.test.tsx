@@ -69,6 +69,11 @@ describe("Quick capture", () => {
 
     await user.click(screen.getByTestId("quick-capture"));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    expect(document.activeElement).toHaveAccessibleDescription(
+      expect.stringContaining("Add at least one email, phone or LinkedIn URL."),
+    );
+    expect(posted).toHaveLength(0);
     await user.type(screen.getByLabelText("Email"), "dana@example.test");
     await user.type(
       screen.getByRole("combobox", { name: "Company" }),

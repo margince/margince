@@ -153,7 +153,7 @@ function RevokeException({
         bodyRef={faultsRoot}
         onConfirm={() => {
           const blank = blankRequired(locale, {
-            reason: [reasonLabel, reason],
+            reason: [undefined, reason],
           });
           if (!faults.show(blank)) revoke.mutate(reason.trim());
         }}

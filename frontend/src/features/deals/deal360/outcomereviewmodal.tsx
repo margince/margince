@@ -76,7 +76,13 @@ export function OutcomeReviewModal({
   const resetCreate = create.reset;
   const { locale } = useLocale();
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
-  const clearFaults = faults.show;
+  // Each opening starts with no field sentence. Reset during render: `show`
+  // is new each render, so an effect listing it would run forever.
+  const [faultsOpen, setFaultsOpen] = useState(open);
+  if (open !== faultsOpen) {
+    setFaultsOpen(open);
+    faults.show(new Map());
+  }
 
   // Re-taken on every open. The modal is mounted for the life of the panel
   // rather than remounted per open, so without this a second review would
@@ -113,9 +119,8 @@ export function OutcomeReviewModal({
       setDraftClosing(openingRef.current.closingOccurrenceId);
       setDraftTemplate(openingRef.current.template);
       resetCreate();
-      clearFaults(new Map());
     }
-  }, [open, resetCreate, clearFaults]);
+  }, [open, resetCreate]);
 
   const missing = draftTemplate.questions.filter(
     (q) =>

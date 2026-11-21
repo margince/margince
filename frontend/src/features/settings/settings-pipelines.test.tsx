@@ -671,6 +671,8 @@ describe("PipelinesCard: the ladder", () => {
     );
     await user.click(within(form).getByRole("button", { name: "Save" }));
     expect(backend.writes("PATCH", "/stages/s2")).toHaveLength(0);
+    expect(document.activeElement).toBe(type);
+    expect(type.getAttribute("aria-invalid")).toBe("true");
     await user.click(type);
     await user.click(screen.getByRole("option", { name: "Won" }));
     await user.click(within(form).getByRole("button", { name: "Save" }));

@@ -138,6 +138,18 @@ describe("ChangePasswordCard", () => {
     expect(within(dialog).getByText(/agents acting for you/)).toBeTruthy();
   });
 
+  it("says each empty field is required on Change, focuses the first, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    await openForm(user);
+
+    await user.click(submitButton());
+
+    expect(screen.getByText("Current password is required.")).toBeVisible();
+    expect(screen.getByLabelText(/current password/i)).toHaveFocus();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("will not submit until the confirmation matches", async () => {
     const user = userEvent.setup();
     const fetchSpy = vi.spyOn(globalThis, "fetch");
@@ -156,8 +168,9 @@ describe("ChangePasswordCard", () => {
       "a fine new passwrod",
     );
 
-    expect(submitButton()).toBeDisabled();
+    await user.click(submitButton());
     expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/confirm new password/i)).toHaveFocus();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -173,7 +186,8 @@ describe("ChangePasswordCard", () => {
     await user.type(screen.getByLabelText(/^new password/i), "short");
     await user.type(screen.getByLabelText(/confirm new password/i), "short");
 
-    expect(submitButton()).toBeDisabled();
+    await user.click(submitButton());
+    expect(screen.getByLabelText(/^new password/i)).toHaveFocus();
     // The refusal is announced and reads in the danger tone — not in the same
     // meta-grey as the neutral hint it replaces, and not in the same grey as
     // the success line this card shows in the very same slot.
@@ -206,7 +220,7 @@ describe("ChangePasswordCard", () => {
       screen.getByLabelText(/confirm new password/i),
       "🔑".repeat(11),
     );
-    expect(submitButton()).toBeDisabled();
+    await user.click(submitButton());
     expect(fetchSpy).not.toHaveBeenCalled();
 
     // And exactly twelve characters clears it.
@@ -215,7 +229,10 @@ describe("ChangePasswordCard", () => {
     const twelve = "🔑🗝".repeat(6);
     await user.type(screen.getByLabelText(/^new password/i), twelve);
     await user.type(screen.getByLabelText(/confirm new password/i), twelve);
-    expect(submitButton()).toBeEnabled();
+    expect(screen.getByLabelText(/^new password/i)).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
 
     // One character repeated is refused with the reason, however long.
     await user.clear(screen.getByLabelText(/^new password/i));

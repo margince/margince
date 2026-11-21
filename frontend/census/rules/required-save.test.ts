@@ -48,3 +48,24 @@ describe("a form with a required field keeps its submit enabled", () => {
     ).toEqual(["src/features/p.tsx:1"]);
   });
 });
+
+describe("the waivers", () => {
+  const held = 'const a = <Button disabled={x.trim() === ""} />;\n';
+  const waived = join(srcDir, "components", "tagfollow.tsx");
+
+  it("spare a waived file that still holds its submit", () => {
+    expect(
+      plantedFindings(rule, [{ path: waived, area: "src", text: held }]),
+    ).toEqual([]);
+  });
+
+  it("fail a waived file that holds no submit any more", () => {
+    expect(
+      plantedFindings(rule, [
+        { path: waived, area: "src", text: "export const a = 1;\n" },
+      ]),
+    ).toEqual([
+      "src/components/tagfollow.tsx: waived but holds no submit; remove its waiver",
+    ]);
+  });
+});

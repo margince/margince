@@ -18,21 +18,26 @@ const fields: CreateField[] = [
   },
 ];
 
-function open(onSubmit = vi.fn()) {
+function open(onSubmit = vi.fn(), formFields: CreateField[] = fields) {
   render(
     <LocaleProvider initial="en">
       <CreateRecordModal
         open
         onClose={() => {}}
         title="New thing"
-        fields={fields}
+        fields={formFields}
         pending={false}
         error={null}
         onSubmit={onSubmit}
       />
     </LocaleProvider>,
   );
-  return { onSubmit, input: screen.getByRole("textbox", { name: /Code/ }) };
+  return {
+    onSubmit,
+    get input() {
+      return screen.getByRole("textbox", { name: /Code/ });
+    },
+  };
 }
 
 describe("a field's own validate on an untouched form", () => {
@@ -65,20 +70,7 @@ describe("Create pressed with required fields empty", () => {
   ];
 
   it("says each is required, focuses the first, and sends nothing", () => {
-    const onSubmit = vi.fn();
-    render(
-      <LocaleProvider initial="en">
-        <CreateRecordModal
-          open
-          onClose={() => {}}
-          title="New thing"
-          fields={required}
-          pending={false}
-          error={null}
-          onSubmit={onSubmit}
-        />
-      </LocaleProvider>,
-    );
+    const { onSubmit } = open(vi.fn(), required);
     const create = screen.getByRole("button", { name: "Create" });
     expect(create).toBeEnabled();
     fireEvent.click(create);

@@ -11,6 +11,7 @@ import {
   Textarea,
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { isMessageKey, useLocale, useT } from "../../i18n";
@@ -20,7 +21,7 @@ import {
   leadSignalCatalogKey,
   leadWriteKeys,
 } from "../../lib/leadkeys";
-import { unwrap } from "../../lib/problem";
+import { blankRequired, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./leadsignals.css";
 
@@ -164,6 +165,7 @@ export function LeadManualSignals({
   const factors: readonly SignalCatalogFactor[] = catalog.data ?? [];
   const [answers, setAnswers] = useState<Answers>(NO_ANSWERS);
   const [note, setNote] = useState("");
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [kind, setKind] = useState<SignalKind>(DEFAULT_SIGNAL_KIND);
   const [confidence, setConfidence] = useState<string>(CONFIDENCE_UNSTATED);
 
@@ -318,7 +320,7 @@ export function LeadManualSignals({
       {readOnlyReason ? (
         <span>{readOnlyReason}</span>
       ) : (
-        <div className="form-stack">
+        <div className="form-stack" ref={faultsRoot}>
           {factors.map(({ factor: name, bands }) => (
             <Field key={name} label={label(`ask.${name}`)}>
               {(control) => (
@@ -342,13 +344,17 @@ export function LeadManualSignals({
             label={t("lead.signalReason")}
             hint={t("lead.signalReasonHint")}
             required
+            error={faults.of("note")}
           >
             {(control) => (
               <Textarea
                 {...control}
                 value={note}
                 disabled={!canEdit}
-                onChange={(event) => setNote(event.target.value)}
+                onChange={(event) => {
+                  setNote(event.target.value);
+                  faults.edited("note");
+                }}
               />
             )}
           </Field>
@@ -411,8 +417,13 @@ export function LeadManualSignals({
           <div className="form-actions">
             <Button
               variant="primary"
-              disabled={!canEdit || answered.length === 0 || note.trim() === ""}
-              onClick={() => set.mutate(writes())}
+              disabled={!canEdit || answered.length === 0}
+              onClick={() => {
+                const blank = blankRequired(locale, {
+                  note: [t("lead.signalReason"), note],
+                });
+                if (!faults.show(blank)) set.mutate(writes());
+              }}
             >
               {t("lead.signalSave")}
             </Button>

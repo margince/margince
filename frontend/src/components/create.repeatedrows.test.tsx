@@ -90,6 +90,9 @@ describe("repeated rows", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     expect(sent).toHaveLength(0);
+    const focused = document.activeElement as HTMLInputElement;
+    expect(focused.getAttribute("aria-invalid")).toBe("true");
+    expect(focused.value).toBe("dana@example.com");
   });
 
   it("points every address box at the line that names the repeat", async () => {

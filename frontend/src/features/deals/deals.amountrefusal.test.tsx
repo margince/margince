@@ -77,12 +77,12 @@ describe("a deal amount the currency cannot hold", () => {
     (label, typed, sentence) => {
       const save = vi.fn();
       render(<Form currency="EUR" keys={MONEY} seeded={PRICED} save={save} />);
-      fireEvent.change(screen.getByRole("textbox", { name: label }), {
-        target: { value: typed },
-      });
+      const box = screen.getByRole("textbox", { name: label });
+      fireEvent.change(box, { target: { value: typed } });
       expect(screen.getByText(sentence)).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Save" }));
       expect(save).not.toHaveBeenCalled();
+      expect(box).toHaveFocus();
     },
   );
 

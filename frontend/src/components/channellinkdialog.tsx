@@ -87,6 +87,7 @@ export function LinkExistingDialog({
         id={formId}
         ref={faultsRoot}
         className="form-stack"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           const blank = blankRequired(locale, {

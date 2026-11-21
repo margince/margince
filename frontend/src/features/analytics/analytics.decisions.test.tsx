@@ -70,11 +70,14 @@ it("lists the open decision and records its outcome without touching the deal", 
 
   await user.click(screen.getByRole("button", { name: "Record outcome" }));
   const save = screen.getByRole("button", { name: "Save outcome" });
-  expect(save).toBeDisabled();
-  await user.type(
-    screen.getByRole("textbox", { name: "What work was completed?" }),
-    "Buyer met",
-  );
+  const result = screen.getByRole("textbox", {
+    name: "What work was completed?",
+  });
+  await user.click(save);
+  expect(screen.getByText("This field is required.")).toBeVisible();
+  expect(result).toHaveFocus();
+  expect(outcome).not.toHaveBeenCalled();
+  await user.type(result, "Buyer met");
   await user.click(save);
   await waitFor(() => expect(outcome).toHaveBeenCalledTimes(1));
   expect(outcome.mock.calls[0]?.[0]).toEqual({ result: "Buyer met" });

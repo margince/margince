@@ -24,6 +24,7 @@ import {
   PanelRow,
 } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { formatDateTime, formatMoneyOrAbsent } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
@@ -38,6 +39,7 @@ import {
   useLegalReviewAvailable,
   useLegalReviewQueue,
 } from "../../lib/legalreviews.queries";
+import { blankRequired } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
@@ -170,9 +172,11 @@ function LegalReviewScreen({ id }: Readonly<{ id: string }>) {
 
 function DecidePanel({ review }: Readonly<{ review: LegalReview }>) {
   const t = useT();
+  const { locale } = useLocale();
   const me = useMe();
   const canDecide = useCan("legal_review", "update");
   const decide = useDecideLegalReview();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [outcome, setOutcome] = useState<LegalReviewOutcome | "">("");
   const [comments, setComments] = useState("");
   const summary = review.review;
@@ -193,8 +197,18 @@ function DecidePanel({ review }: Readonly<{ review: LegalReview }>) {
       </Panel>
     );
   }
-  const missingComments =
-    outcome === "changes_needed" && comments.trim() === "";
+  const labels = {
+    outcome: t("legalReview.outcome"),
+    comments: t("legalReview.commentsLabel"),
+  };
+  // Changes asked for owe the requester what to change.
+  const blank = () =>
+    blankRequired(locale, {
+      outcome: [labels.outcome, outcome],
+      ...(outcome === "changes_needed"
+        ? { comments: [labels.comments, comments] as const }
+        : {}),
+    });
   return (
     <Panel title={t("legalReview.decideTitle")}>
       <PanelBody>
@@ -204,50 +218,56 @@ function DecidePanel({ review }: Readonly<{ review: LegalReview }>) {
           </PanelIntro>
         )}
         {own && <p className="t-body">{t("legalReview.ownRequest")}</p>}
-        <ChoiceList<LegalReviewOutcome>
-          legend={t("legalReview.outcome")}
-          value={outcome}
-          disabled={own || !canDecide}
-          onChange={setOutcome}
-          choices={[
-            {
-              value: "approved",
-              label: t("legalReview.outcomeApproved"),
-              description: t("legalReview.outcomeApprovedHint"),
-            },
-            {
-              value: "changes_needed",
-              label: t("legalReview.outcomeChanges"),
-              description: t("legalReview.outcomeChangesHint"),
-            },
-          ]}
-        />
-        <Field
-          label={t("legalReview.commentsLabel")}
-          hint={t("legalReview.commentsHint")}
-        >
-          {(control) => (
-            <Textarea
-              {...control}
-              value={comments}
-              maxLength={TEXT_LIMITS.note}
-              disabled={own || !canDecide}
-              onChange={(event) => setComments(event.target.value)}
-            />
-          )}
-        </Field>
+        <div className="form-stack" ref={faultsRoot}>
+          <ChoiceList<LegalReviewOutcome>
+            legend={t("legalReview.outcome")}
+            value={outcome}
+            disabled={own || !canDecide}
+            onChange={(next) => {
+              setOutcome(next);
+              faults.edited("outcome");
+              faults.edited("comments");
+            }}
+            choices={[
+              {
+                value: "approved",
+                label: t("legalReview.outcomeApproved"),
+                description: t("legalReview.outcomeApprovedHint"),
+              },
+              {
+                value: "changes_needed",
+                label: t("legalReview.outcomeChanges"),
+                description: t("legalReview.outcomeChangesHint"),
+              },
+            ]}
+          />
+          <ErrorLine>{faults.of("outcome")}</ErrorLine>
+          <Field
+            label={labels.comments}
+            hint={t("legalReview.commentsHint")}
+            required={outcome === "changes_needed"}
+            error={faults.of("comments")}
+          >
+            {(control) => (
+              <Textarea
+                {...control}
+                value={comments}
+                maxLength={TEXT_LIMITS.note}
+                disabled={own || !canDecide}
+                onChange={(event) => {
+                  setComments(event.target.value);
+                  faults.edited("comments");
+                }}
+              />
+            )}
+          </Field>
+        </div>
         <div className="card-actions">
           <Button
             variant="primary"
-            disabled={
-              own ||
-              !canDecide ||
-              outcome === "" ||
-              missingComments ||
-              decide.isPending
-            }
+            disabled={own || !canDecide || decide.isPending}
             onClick={() => {
-              if (outcome !== "") {
+              if (!faults.show(blank()) && outcome !== "") {
                 decide.mutate({ id: summary.id, outcome, comments });
               }
             }}

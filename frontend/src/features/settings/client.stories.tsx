@@ -68,8 +68,8 @@ function story(routes: RouteMap) {
   };
 }
 
-// Nothing looked up yet: the chrome, the lookup control with its submit
-// disabled on an empty field, and the isolation footer.
+// Nothing looked up yet: the chrome, the lookup control, and the isolation
+// footer.
 export const Resting: Story = { render: story({}) };
 
 // A recognized sender: the mini record, with the way through to the full 360.

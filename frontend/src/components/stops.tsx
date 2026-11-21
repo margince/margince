@@ -308,7 +308,7 @@ function LiftStop({
         confirmVariant="danger"
         bodyRef={faultsRoot}
         onConfirm={() => {
-          const blank = blankRequired(locale, { reason: [reasonLabel, words] });
+          const blank = blankRequired(locale, { reason: [undefined, words] });
           if (!faults.show(blank)) lift.mutate(words);
         }}
         pending={lift.isPending}

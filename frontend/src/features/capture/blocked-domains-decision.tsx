@@ -8,12 +8,13 @@ import type { components } from "../../api/schema";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 
 // RECORDING a decision about a domain: the form, what it refuses to send, and
 // the write itself.
@@ -103,14 +104,19 @@ export function DecisionDialog({
   onClose,
 }: Readonly<{ initial: Decision; set: SetDecision; onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const headingId = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
   const [domain, setDomain] = useState(initial.domain);
   const [admission, setAdmission] = useState<Admission>(initial.admission);
   const [reason, setReason] = useState(initial.reason);
   const trimmedDomain = domain.trim();
   const trimmedReason = reason.trim();
-  const ready = trimmedDomain !== "" && trimmedReason !== "";
+  const labels = {
+    domain: t("blockedDomains.domainLabel"),
+    reason: t("blockedDomains.reasonLabel"),
+  };
   return (
     <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
@@ -118,10 +124,16 @@ export function DecisionDialog({
       </Heading>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (!ready) {
+          const blank = blankRequired(locale, {
+            domain: [labels.domain, domain],
+            reason: [labels.reason, reason],
+          });
+          if (faults.show(blank) || set.isPending) {
             return;
           }
           set.mutate(
@@ -135,14 +147,17 @@ export function DecisionDialog({
         }}
       >
         <div className="form-row">
-          <Field label={t("blockedDomains.domainLabel")} required>
+          <Field label={labels.domain} required error={faults.of("domain")}>
             {(control) => (
               <TextInput
                 {...control}
                 data-testid="blocked-domain-input"
                 placeholder={t("blockedDomains.domainPlaceholder")}
                 value={domain}
-                onChange={(event) => setDomain(event.target.value)}
+                onChange={(event) => {
+                  setDomain(event.target.value);
+                  faults.edited("domain");
+                }}
               />
             )}
           </Field>
@@ -165,9 +180,10 @@ export function DecisionDialog({
           </Field>
         </div>
         <Field
-          label={t("blockedDomains.reasonLabel")}
+          label={labels.reason}
           hint={t("blockedDomains.reasonHint")}
           required
+          error={faults.of("reason")}
         >
           {(control) => (
             <TextInput
@@ -176,7 +192,10 @@ export function DecisionDialog({
               maxLength={REASON_MAX}
               placeholder={t("blockedDomains.reasonPlaceholder")}
               value={reason}
-              onChange={(event) => setReason(event.target.value)}
+              onChange={(event) => {
+                setReason(event.target.value);
+                faults.edited("reason");
+              }}
             />
           )}
         </Field>
@@ -198,7 +217,7 @@ export function DecisionDialog({
           type="submit"
           form={formId}
           variant="primary"
-          disabled={set.isPending || !ready}
+          pending={set.isPending}
         >
           {t("blockedDomains.save")}
         </Button>
