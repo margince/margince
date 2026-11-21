@@ -98,6 +98,16 @@ export function ReportingOverview({
   );
 }
 
+function NothingToShow({
+  noViews,
+  noDates,
+}: Readonly<{ noViews: boolean; noDates: boolean }>) {
+  const t = useT();
+  if (noViews) return <EmptyState>{t("reporting.noViews")}</EmptyState>;
+  if (noDates) return <EmptyState>{t("reporting.chooseDates")}</EmptyState>;
+  return null;
+}
+
 function OverviewBody({
   view,
   scope,
@@ -208,11 +218,7 @@ function OverviewBody({
             )}
           </>
         }
-        caption={
-          validDates
-            ? periodCaption(query.data, locale, t)
-            : t("reporting.chooseDates")
-        }
+        caption={validDates ? periodCaption(query.data, locale, t) : undefined}
       >
         {scopeControl}
         <ReportingFilters
@@ -248,9 +254,7 @@ function OverviewBody({
           }}
         />
       </FilterBar>
-      {metrics.length === 0 && (
-        <EmptyState>{t("reporting.noViews")}</EmptyState>
-      )}
+      <NothingToShow noViews={metrics.length === 0} noDates={!validDates} />
       {invalidSelection && <ErrorLine error={query.error} />}
       {/* Its sources are its own, so a failed or unasked evaluation does not
           take the list down with it. */}

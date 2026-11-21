@@ -357,3 +357,19 @@ func TestReplaceNoncesLeavesALongerNameAlone(t *testing.T) {
 		t.Fatalf("a 27-character name was rewritten to %q", got)
 	}
 }
+
+// RuleStart cuts a prompt where its per-call part begins, so the rules before
+// it read the same under every nonce.
+func TestRuleStartFindsTheBoundarySentence(t *testing.T) {
+	const rules = "Label each message.\n\n"
+	for range 2 {
+		system := rules + promptfence.New().Rule("message") + "\nAnswer in JSON."
+		start, ok := promptfence.RuleStart(system)
+		if !ok || system[:start] != rules {
+			t.Fatalf("RuleStart = %d, %v; want the rule sentence right after %q", start, ok, rules)
+		}
+	}
+	if _, ok := promptfence.RuleStart("No captured text here."); ok {
+		t.Error("a prompt that declares no boundary reported one")
+	}
+}

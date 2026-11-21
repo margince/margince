@@ -113,6 +113,9 @@ type OwedCandidate struct {
 	// PriorOutbound is our own last message in this thread, when there is one.
 	// Nil for a threadless message and for one that opens a conversation.
 	PriorOutbound *PriorOutbound
+	// Version is the row's version when it was read. MarkOwedVerdictDeclined
+	// stamps only that version, so text edited during the call is asked again.
+	Version int64
 }
 
 // candidateColumns is what both reads select, including our own last message in
@@ -129,10 +132,10 @@ const candidateColumns = `a.id, a.kind, coalesce(a.subject, ''), coalesce(left(a
                 FILTER (WHERE p.role = 'to' AND p.address <> ''), '{}'),
        coalesce(array_agg(DISTINCT p.address)
                 FILTER (WHERE p.role = 'cc' AND p.address <> ''), '{}'),
-       prior.id, coalesce(prior.subject, ''), coalesce(prior.body, ''), prior.occurred_at`
+       prior.id, coalesce(prior.subject, ''), coalesce(prior.body, ''), prior.occurred_at, a.version`
 
 // candidateGroupBy keeps the participant aggregation from multiplying the row.
-const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.calendar_method, a.occurred_at,
+const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.calendar_method, a.occurred_at, a.version,
           prior.id, prior.subject, prior.body, prior.occurred_at`
 
 // scanCandidates reads the rows both candidate queries return, each body cut
@@ -157,7 +160,7 @@ func scanOwedCandidate(row pgx.CollectableRow, extra ...any) (OwedCandidate, err
 	var priorID *ids.UUID
 	var priorSubject, priorBody string
 	var priorAt *time.Time
-	fields := []any{&m.ID, &m.Kind, &m.Subject, &m.Body, &m.HasCalendarPart, &m.CalendarMethod, &m.To, &m.Cc, &priorID, &priorSubject, &priorBody, &priorAt}
+	fields := []any{&m.ID, &m.Kind, &m.Subject, &m.Body, &m.HasCalendarPart, &m.CalendarMethod, &m.To, &m.Cc, &priorID, &priorSubject, &priorBody, &priorAt, &m.Version}
 	fields = append(fields, extra...)
 	if err := row.Scan(fields...); err != nil {
 		return OwedCandidate{}, err

@@ -23,6 +23,7 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 	if outcome == predictHeldKey {
 		return
 	}
+	w.rememberRow(row, outcome)
 	typed, _, _ := w.landingCells(row)
 	w.claimRow(row, typed)
 	w.links.markNaturalPending(w.object, textFields(row.Fields)[naturalKeyField(w.object)])
@@ -39,9 +40,9 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 func reviewDisposition(outcome predictedOutcome) (string, error) {
 	switch outcome {
 	case predictCreate:
-		return "create", nil
+		return importRowCreate, nil
 	case predictCollides:
-		return "create_duplicate", nil
+		return importRowCreateDuplicate, nil
 	case predictUpdate:
 		return "update", nil
 	case predictUnchanged:

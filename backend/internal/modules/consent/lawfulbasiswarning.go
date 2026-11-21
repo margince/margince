@@ -161,22 +161,22 @@ func (s *Store) warningMayApplyTx(ctx context.Context, tx pgx.Tx, country Recipi
 }
 
 // entityCountriesTx is the data-protection country of every live legal
-// entity: the default entity's through senderCountryOf, then each further one
-// that states its own.
+// entity: the default entity's through senderCountryOf, then each further
+// one's jurisdiction.
 func (s *Store) entityCountriesTx(ctx context.Context, tx pgx.Tx) ([]jurisdiction.Code, error) {
 	home, err := s.senderCountryOf(ctx, tx, ids.UUID{})
 	if err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT lower(country) FROM legal_entity
-		 WHERE NOT is_default AND archived_at IS NULL AND country IS NOT NULL`)
+		SELECT DISTINCT jurisdiction FROM legal_entity
+		 WHERE NOT is_default AND archived_at IS NULL AND jurisdiction IS NOT NULL`)
 	if err != nil {
-		return nil, fmt.Errorf("consent: reading the legal entities' countries: %w", err)
+		return nil, fmt.Errorf("consent: reading the legal entities' jurisdictions: %w", err)
 	}
 	further, err := pgx.CollectRows(rows, pgx.RowTo[jurisdiction.Code])
 	if err != nil {
-		return nil, fmt.Errorf("consent: reading the legal entities' countries: %w", err)
+		return nil, fmt.Errorf("consent: reading the legal entities' jurisdictions: %w", err)
 	}
 	return append([]jurisdiction.Code{home}, further...), nil
 }

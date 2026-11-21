@@ -28,7 +28,7 @@ func employmentFirstObservedSQL(contact, domain, activity, skew string) string {
 	return storekit.SQLf(`least(
 		(SELECT min(ev.occurred_at)
 		   FROM contact_email pe
-		   JOIN activity_participant ap ON lower(ap.address) = lower(pe.email)
+		   JOIN activity_participant ap ON lower(ap.address) = pe.email
 		   JOIN activity ev ON ev.id = ap.activity_id
 		  WHERE pe.contact_id = %[1]s
 		    AND `+owndomain.CoversSQL("pe.email_domain_folded", "%[2]s")+`

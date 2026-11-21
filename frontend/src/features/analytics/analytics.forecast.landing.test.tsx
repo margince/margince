@@ -299,9 +299,30 @@ describe("the modelled finish beside the landing", () => {
     ).toBeTruthy();
   });
 
-  it("says which deals it leaves out", () => {
-    draw(model({ unpriced: 2, fxMissing: 1 }));
-    expect(screen.getByText("2 unpriced deals left out")).toBeTruthy();
+  it("says every kind of deal it leaves out, one line each, and leaves what the range is to the receipt", () => {
+    const { container } = draw(model({ unpriced: 2, fxMissing: 1 }));
+    const detail = container.querySelector(".stat-card-detail");
+    expect(
+      Array.from(detail?.children ?? [], (line) => line.textContent),
+    ).toEqual([
+      "2 unpriced deals left out",
+      "1 deal without an exchange rate left out",
+    ]);
+    expect(
+      screen.queryByText(`Includes ${money(400_00)} already won`),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        "Central 80% of modelled outcomes under current chances",
+      ),
+    ).toBeNull();
+  });
+
+  it("names the deals without an exchange rate when every deal is priced", () => {
+    draw(model({ fxMissing: 3 }));
+    expect(
+      screen.getByText("3 deals without an exchange rate left out"),
+    ).toBeTruthy();
   });
 
   it("says it assumes the chances are right, in the receipt", async () => {
@@ -314,7 +335,9 @@ describe("the modelled finish beside the landing", () => {
       await screen.findByText(/it is not a measured forecast accuracy\.$/),
     ).toBeTruthy();
     expect(
-      screen.getByText("1 deal without an exchange rate left out"),
+      screen.getByText("1 deal without an exchange rate left out", {
+        selector: "p",
+      }),
     ).toBeTruthy();
   });
 

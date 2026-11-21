@@ -224,7 +224,7 @@ it("creates a fiscal-quarter count target on every pipeline and pages the target
   const dialog = within(await screen.findByRole("dialog"));
   await pickOption(
     user,
-    await dialog.findByRole("combobox", { name: "Metrics" }),
+    await dialog.findByRole("combobox", { name: "Metric" }),
     "Meetings held",
   );
   // A count of meetings takes no pipeline filter, so none is offered.

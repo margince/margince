@@ -933,6 +933,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.targetStatus": "Trạng thái mục tiêu",
   "reporting.activeTargets": "Mục tiêu đang áp dụng",
   "reporting.allTargets": "Tất cả mục tiêu",
+  "reporting.retiredTargets": "Mục tiêu đã ngừng",
   "reporting.noTargetsYet":
     "Chưa có mục tiêu nào. Trưởng nhóm, quản lý hoặc quản trị viên đặt mục tiêu.",
   "reporting.periodYear": "Năm",
@@ -1360,7 +1361,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.setup.unusedItem": "“{phrase}”: {reason}",
   "reporting.setup.fieldName": "Tên",
   "reporting.setup.fieldCountry": "Quốc gia",
-  "reporting.setup.fieldMetric": "Chỉ số",
   "reporting.setup.fieldChart": "Biểu đồ",
   "reporting.describeInitiative": "Mô tả sáng kiến",
   "reporting.describeInitiativeHint":
@@ -1444,9 +1444,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mở Đánh giá doanh số cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
   "reporting.noProducts":
     "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
-  "reporting.actualsThrough": "Số liệu thực tế đến {at}",
+  "reporting.actualsThrough": "Số liệu thực tế đến {at} · {zone}",
   "reporting.periodNotStarted":
-    "Khoảng thời gian bắt đầu lúc {at}; chưa có gì diễn ra trong đó",
+    "Khoảng thời gian bắt đầu lúc {at} ({zone}); chưa có gì diễn ra trong đó",
   "reporting.writtenNoneWon": "Chưa chốt doanh số nào trong {period}.",
   "reporting.writtenWon": "Đã chốt trong {period}: {amount}.",
   "reporting.writtenTarget":
@@ -1692,6 +1692,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.blocks": "Biểu đồ và thứ tự",
   "reporting.metricUnavailable": "Chỉ số không còn khả dụng",
   "reporting.metrics": "Chỉ số",
+  "reporting.metric": "Chỉ số",
   "reporting.cancel": "Hủy",
   "reporting.saved": "Đã lưu báo cáo",
   "reporting.live": "Báo cáo trực tiếp",
@@ -6331,22 +6332,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.colName": "Tên",
   "legalEntities.colLegalName": "Tên pháp lý",
   "legalEntities.colCountry": "Quốc gia",
-  "legalEntities.countryMissing": "Chưa đặt: áp dụng quốc gia của bản cài đặt",
+  "legalEntities.colJurisdiction": "Khu vực pháp lý",
+  "legalEntities.jurisdictionMissing":
+    "Chưa đặt: áp dụng khu vực pháp lý của hệ thống",
   "legalEntities.defaultBadge": "Mặc định",
   "legalEntities.defaultUnnamed": "Công ty của bạn",
   "legalEntities.displayName": "Tên",
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
-  "legalEntities.defaultCountry":
-    "Quốc gia: {country}. Công ty mặc định theo khu vực pháp lý của hệ thống.",
-  "legalEntities.defaultCountryNone":
-    "Chưa đặt quốc gia. Công ty mặc định theo khu vực pháp lý của hệ thống.",
-  "legalEntities.defaultCountryLink": "Đổi ở mục Khu vực pháp lý",
+  "legalEntities.countryHint": "Quốc gia của địa chỉ đăng ký.",
+  "legalEntities.jurisdiction": "Khu vực pháp lý",
+  "legalEntities.jurisdictionHint":
+    "Luật của khu vực này áp dụng cho thư nhân viên công ty gửi và hồ sơ họ phụ trách.",
+  "legalEntities.defaultJurisdiction":
+    "Khu vực pháp lý: {jurisdiction}. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultJurisdictionNone":
+    "Chưa đặt khu vực pháp lý. Công ty mặc định theo khu vực pháp lý của hệ thống.",
+  "legalEntities.defaultJurisdictionLink": "Đổi ở mục Khu vực pháp lý",
   "jurisdiction.entities.title": "Pháp nhân",
-  "jurisdiction.entities.lead":
-    "Quốc gia của mỗi công ty quyết định luật áp dụng cho thư nhân viên gửi và hồ sơ họ phụ trách.",
-  "jurisdiction.entities.default": "{country}, theo lựa chọn ở trên",
-  "jurisdiction.entities.none": "Chưa đặt quốc gia",
+  "jurisdiction.entities.default": "{jurisdiction}, theo lựa chọn ở trên",
+  "jurisdiction.entities.none": "Chưa đặt khu vực pháp lý",
   "jurisdiction.entities.edit": "Đổi pháp nhân",
   "legalEntities.edit": "Sửa",
   "legalEntities.archive": "Lưu trữ",
@@ -9173,7 +9178,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.meetingsNoShow": "Vắng mặt",
   "analytics.meetingsCanceled": "Đã hủy",
   "analytics.outcomesOwnLensOnly":
-    "Mục này đo hồ sơ của một thành viên. Các mục rộng hơn bao gồm phần còn lại của phạm vi.",
+    "Mục này đếm hồ sơ của riêng một thành viên.",
   "analytics.reportWinLoss": "Thắng và thua",
   "analytics.reportLossEvents": "Từng lần thua",
   "analytics.reportStageAge": "Thời gian ở giai đoạn",
@@ -19376,6 +19381,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.deals.noClose": "Chưa có ngày chốt",
   "contact.deals.untitled": "Deal chưa có tên",
   "contact.deals.noStage": "Chưa có giai đoạn",
+  "contact.deals.seatEnded": "Không còn tham gia cơ hội này",
   "contact.meetings.upcoming": "Sắp tới",
   "contact.meetings.past": "Đã diễn ra",
   "contact.meetings.noneBooked": "Chưa có cuộc họp nào sắp tới.",
@@ -23301,6 +23307,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.chipIndustry": "Ngành: {name}",
   "analytics.overview.chipBasis": "Giá trị: {basis}",
   "analytics.overview.profileCompany": "Doanh số công ty",
+  "analytics.overview.profileTeam": "Doanh số nhóm",
+  "analytics.overview.profileSeller": "Doanh số nhân viên kinh doanh",
   "analytics.overview.profileProduct": "Doanh số sản phẩm",
   "analytics.overview.removeFilter": "Bỏ {filter}",
   "analytics.intervention.scope":
@@ -23727,7 +23735,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.closedRevenue": "Doanh số đã chốt",
   "progress.goal": "Mục tiêu",
   "progress.goalLine": "Mục tiêu của kỳ: {goal}",
-  "progress.figuresUpTo": "Số liệu đến {cutoff}",
+  "progress.figuresUpTo": "Số liệu đến {cutoff} · {zone}",
   "progress.ofGoalLine": "trên mục tiêu {goal}",
   "progress.toGo": "Còn {amount}",
   "progress.noGoalFor": "Chưa công bố mục tiêu doanh số cho {period}.",
@@ -23760,8 +23768,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.readings": "Chỉ số doanh thu",
   "progress.productSales": "Doanh số sản phẩm",
   "progress.serviceSales": "Dịch vụ và dự án",
-  "progress.planned": "Pipeline đang mở",
-  "progress.plannedAt": "Deal đang mở tính đến {at}",
+  "progress.planned": "Pipeline mở dự kiến chốt trong kỳ",
+  "progress.plannedAt": "Deal đang mở tính đến {at} · {zone}",
   "progress.scenarios": "Tháng có thể kết thúc ở đâu",
   "progress.scenario.worst": "Trường hợp xấu nhất",
   "progress.scenario.worstWhy": "Nếu không chốt thêm deal nào",
@@ -23849,6 +23857,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "goals.history.what": "Thay đổi",
   "goals.history.reason": "Lý do",
   "goals.history.when": "Thời điểm",
+  "goals.history.zone": "Thời gian theo {zone}",
   "goals.event.draft": "{name} đã lưu bản nháp",
   "goals.event.published": "{name} đã công bố mục tiêu",
   "goals.event.discarded": "{name} đã bỏ bản nháp",
