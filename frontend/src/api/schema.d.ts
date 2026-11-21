@@ -25126,8 +25126,8 @@ export interface paths {
          *     effect the same way, and the row and the audit name the agent until the
          *     user chooses a zone themselves. Saving the zone already stored writes nothing.
          *
-         *     Not open to agents: an agent acting for a user must not change the
-         *     clock that user's times, bookings and mail are read on.
+         *     An agent sends `agent` alone, and only once its user asked for the zone:
+         *     it never passes as the user's own pick or as the browser.
          */
         put: operations["saveMyTimezone"];
         post?: never;
@@ -45600,7 +45600,8 @@ export interface components {
             /**
              * @description The countries the sender states for this message's recipients, read as the send reads them:
              *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-             *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Only the human sender states them: an agent's preview carrying this field is refused with 403
+             *     `permission_denied`, and an integration's with 422 `invalid`.
              *     Each address may appear once; a second entry is refused with 422 `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
@@ -45642,7 +45643,8 @@ export interface components {
             /**
              * @description The countries the sender states for this message's recipients, read as the send reads them:
              *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-             *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Only the human sender states them: an agent's preview carrying this field is refused with 403
+             *     `permission_denied`, and an integration's with 422 `invalid`.
              *     Each address may appear once; a second entry is refused with 422 `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];

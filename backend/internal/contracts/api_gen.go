@@ -60571,7 +60571,8 @@ type PreviewAccountSendRequest struct {
 
 	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
 	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-	// An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+	// Only the human sender states them: an agent's preview carrying this field is refused with 403
+	// `permission_denied`, and an integration's with 422 `invalid`.
 	// Each address may appear once; a second entry is refused with 422 `invalid`.
 	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
@@ -60617,7 +60618,8 @@ type PreviewSendRequest struct {
 
 	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
 	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-	// An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+	// Only the human sender states them: an agent's preview carrying this field is refused with 403
+	// `permission_denied`, and an integration's with 422 `invalid`.
 	// Each address may appear once; a second entry is refused with 422 `invalid`.
 	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 

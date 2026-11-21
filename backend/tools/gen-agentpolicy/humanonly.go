@@ -38,31 +38,11 @@ func withoutHumanOnly(root any) ([]string, error) {
 			}
 		}
 	}
-	if markedBelow(root) {
+	if carriesBelow(root, humanOnlyMarker) {
 		return nil, errors.New("x-human-only is read on a top-level body member only")
 	}
 	sort.Strings(names)
 	return names, nil
-}
-
-// markedBelow reports a humanOnlyMarker left anywhere in node.
-//
-//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
-func markedBelow(node any) bool {
-	switch v := node.(type) {
-	case map[string]any:
-		if v[humanOnlyMarker] != nil {
-			return true
-		}
-		for _, member := range v {
-			if markedBelow(member) {
-				return true
-			}
-		}
-	case []any:
-		return slices.ContainsFunc(v, markedBelow)
-	}
-	return false
 }
 
 // humanOnlyOffTheDoor names each operation that marks a body member
@@ -83,8 +63,9 @@ func humanOnlyOffTheDoor(paths map[string]map[string]yaml.Node, rawSchemas map[s
 			defects = append(defects, fmt.Sprintf("%s: %v", p.Route, err))
 			continue
 		}
-		if _, humanOnly, err := bodySchema(&op.RequestBody, rawSchemas); err != nil || len(humanOnly) > 0 {
-			defects = append(defects, fmt.Sprintf("%s marks %v x-human-only (%v); only a served_by: route operation enforces it", p.Route, humanOnly, err))
+		if _, marks, err := bodySchema(&op.RequestBody, rawSchemas); err != nil || len(marks.humanOnly) > 0 || len(marks.agentValues) > 0 {
+			defects = append(defects, fmt.Sprintf("%s marks %v x-human-only and %v x-agent-values (%v); only a served_by: route operation enforces them",
+				p.Route, marks.humanOnly, marks.agentValues, err))
 		}
 	}
 	return defects

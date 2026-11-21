@@ -49,6 +49,7 @@ func agentContract(src []byte, tables []string) ([]byte, []byte, int, error) {
 	for _, op := range ops {
 		text.describeOperation(op)
 	}
+	narrowForAgents(root)
 	stripExtensions(root)
 
 	components, _ := oasnode.Lookup(root, "components")
