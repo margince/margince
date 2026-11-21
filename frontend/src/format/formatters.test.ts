@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDate, formatMoney, formatTimeOfDay } from "./format";
 import {
   dateTimeFormat,
+  displayNames,
+  listFormat,
   numberFormat,
+  relativeTimeFormat,
   zonelessDateTimeFormat,
 } from "./formatters";
 import { setDateTimePreferences } from "./preferences";
@@ -73,6 +76,71 @@ describe("the formatter cache", () => {
     expect(
       numberFormat("en", { style: "percent", maximumFractionDigits: 1 }),
     ).not.toBe(first);
+  });
+
+  it.each([
+    [
+      "fraction digits",
+      () => numberFormat("en", { maximumFractionDigits: 0 }).format(1.25),
+      () => numberFormat("en", { maximumFractionDigits: 2 }).format(1.25),
+    ],
+    [
+      "currency display",
+      () =>
+        numberFormat("en", { style: "currency", currency: "USD" }).format(1),
+      () =>
+        numberFormat("en", {
+          style: "currency",
+          currency: "USD",
+          currencyDisplay: "code",
+        }).format(1),
+    ],
+    [
+      "numbering system",
+      () => numberFormat("en", { numberingSystem: "latn" }).format(12),
+      () => numberFormat("en", { numberingSystem: "arab" }).format(12),
+    ],
+    [
+      "calendar",
+      () =>
+        dateTimeFormat("en", { timeZone: "UTC", year: "numeric" }).format(0),
+      () =>
+        dateTimeFormat("en", {
+          timeZone: "UTC",
+          year: "numeric",
+          calendar: "buddhist",
+        }).format(0),
+    ],
+    [
+      "list type",
+      () => listFormat("en", { type: "conjunction" }).format(["a", "b"]),
+      () => listFormat("en", { type: "disjunction" }).format(["a", "b"]),
+    ],
+    [
+      "relative-time numeric",
+      () => relativeTimeFormat("en", { numeric: "always" }).format(1, "day"),
+      () => relativeTimeFormat("en", { numeric: "auto" }).format(1, "day"),
+    ],
+    [
+      "display-names type",
+      () => displayNames("en", { type: "region" }).of("DE"),
+      () => displayNames("en", { type: "language" }).of("DE"),
+    ],
+  ])("keeps two formatters apart that differ only in %s", (_, one, other) => {
+    expect(one()).not.toBe(other());
+    expect(one()).toBe(one());
+  });
+
+  it("hands back a distinct formatter for each value of an option", () => {
+    expect(numberFormat("en", { maximumFractionDigits: 0 })).not.toBe(
+      numberFormat("en", { maximumFractionDigits: 2 }),
+    );
+    expect(listFormat("en", { type: "conjunction" })).not.toBe(
+      listFormat("en", { type: "disjunction" }),
+    );
+    expect(displayNames("en", { type: "region" })).not.toBe(
+      displayNames("en", { type: "language" }),
+    );
   });
 
   it("refuses to cache a date formatter that names no zone", () => {

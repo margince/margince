@@ -6,7 +6,8 @@
 // the same question per row; the cache there builds each formatter once.
 //
 // The formatter names come from `intlFormatters()`, so a new Intl kind is
-// covered without a list here. Tests and stories may build their own: they
+// covered without a list here. The `toLocale*String` methods build a formatter
+// on every call, so they count as one. Tests and stories may build their own: they
 // render nothing a reader sees, and some build one to compare against.
 
 import ts from "typescript";
@@ -17,6 +18,7 @@ import {
   intlAliases,
   intlFormatters,
   isZoneLookup,
+  localeMethods,
 } from "./one-locale.census";
 
 const OWNER = "src/format/formatters.ts";
@@ -37,21 +39,49 @@ const judged = (file: CensusFile) =>
   file.rel !== OWNER &&
   !NOT_SHIPPED.test(file.rel);
 
+/**
+ * The locale methods that format, read from the TypeScript lib declarations:
+ * `toLocaleString`, `toLocaleDateString`, `toLocaleTimeString`. Casing and
+ * collation take a locale too, but build no formatter.
+ */
+export function formattingMethods(): string[] {
+  return [...localeMethods().keys()]
+    .filter((name) => /^toLocale\w*String$/.test(name))
+    .sort(stable);
+}
+
+// The method a call names, by either spelling.
+function methodCalled(callee: ts.Expression): string | undefined {
+  if (ts.isPropertyAccessExpression(callee)) return callee.name.text;
+  return ts.isElementAccessExpression(callee) &&
+    ts.isStringLiteralLike(callee.argumentExpression)
+    ? callee.argumentExpression.text
+    : undefined;
+}
+
 /** Each Intl formatter a file constructs or calls, as `line: Intl.Name`. */
 export function constructionsIn(
   parsed: ts.SourceFile,
   formatters: readonly string[],
+  methods: readonly string[] = formattingMethods(),
 ): string[] {
-  const aliases = intlAliases(parsed, formatters);
+  const bindings = intlAliases(parsed, formatters);
   const found: string[] = [];
+  const at = (node: ts.Node, text: string) => {
+    const { line } = parsed.getLineAndCharacterOfPosition(
+      node.getStart(parsed),
+    );
+    found.push(`${line + 1}: ${text}`);
+  };
   const walk = (node: ts.Node): void => {
     if (ts.isNewExpression(node) || ts.isCallExpression(node)) {
-      const formatter = formatterReached(node.expression, formatters, aliases);
+      const formatter = formatterReached(node.expression, formatters, bindings);
       if (formatter !== undefined && !isZoneLookup(node)) {
-        const { line } = parsed.getLineAndCharacterOfPosition(
-          node.getStart(parsed),
-        );
-        found.push(`${line + 1}: Intl.${formatter}`);
+        at(node, `Intl.${formatter}`);
+      }
+      const method = methodCalled(node.expression);
+      if (method !== undefined && methods.includes(method)) {
+        at(node, `.${method}()`);
       }
     }
     node.forEachChild(walk);
@@ -63,22 +93,29 @@ export function constructionsIn(
 export const rule: CensusRule = {
   name: "one-formatter-cache",
   corpus: (tree) => tree.files.filter(judged),
-  floors: (_corpus, tree) => [
-    ...(tree.files.some((file) => file.rel === OWNER)
-      ? []
-      : [`${OWNER} was not read`]),
-    ...["NumberFormat", "DateTimeFormat", "ListFormat"]
-      .filter((name) => !intlFormatters().includes(name))
-      .map((name) => `the Intl formatters derived lack ${name}`),
-  ],
+  floors: (_corpus, tree) => {
+    const methods = formattingMethods();
+    return [
+      ...(tree.files.some((file) => file.rel === OWNER)
+        ? []
+        : [`${OWNER} was not read`]),
+      ...["NumberFormat", "DateTimeFormat", "ListFormat"]
+        .filter((name) => !intlFormatters().includes(name))
+        .map((name) => `the Intl formatters derived lack ${name}`),
+      ...["toLocaleDateString", "toLocaleString", "toLocaleTimeString"]
+        .filter((name) => !methods.includes(name))
+        .map((name) => `the formatting methods derived lack ${name}`),
+    ];
+  },
   across: (corpus) => {
     const formatters = intlFormatters();
+    const methods = formattingMethods();
     const allowed = new Set(ownFormatters.map(({ file }) => file));
     const reached = new Set<string>();
     const findings: string[] = [];
     for (const file of corpus) {
       if (file.source === undefined) continue;
-      const found = constructionsIn(file.source, formatters);
+      const found = constructionsIn(file.source, formatters, methods);
       if (found.length > 0) reached.add(file.rel);
       if (allowed.has(file.rel)) continue;
       findings.push(...found.map((text) => `${file.rel}:${text}`));
@@ -94,5 +131,6 @@ export const rule: CensusRule = {
     "Ask src/format/formatters.ts for the formatter (numberFormat, " +
     "dateTimeFormat, listFormat and the rest), or use a helper in " +
     "src/format/ that already does. A date formatter with no zone goes " +
-    "through zonelessDateTimeFormat, which builds it anew each call.",
+    "through zonelessDateTimeFormat, which builds it anew each call. " +
+    "A toLocaleString call becomes a format helper or numberFormat(...).format.",
 };

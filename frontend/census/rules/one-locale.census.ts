@@ -175,53 +175,89 @@ export function isZoneLookup(node: ts.Node): boolean {
   );
 }
 
-/**
- * The local names bound to an Intl formatter, by destructure, declaration or
- * assignment. A call through one is judged like a direct call.
- */
-export function intlAliases(
-  parsed: ts.SourceFile,
-  formatters: readonly string[],
-): Set<string> {
-  const aliases = new Set<string>();
-  const isIntl = (node: ts.Expression): boolean =>
-    ts.isIdentifier(node) && node.text === "Intl";
+/** The local names bound to the `Intl` namespace and to its formatters. */
+export type IntlBindings = Readonly<{
+  namespaces: ReadonlySet<string>;
+  formatters: ReadonlySet<string>;
+}>;
+
+// `Intl` itself, a name bound to it, or the global's own property.
+function namesIntl(node: ts.Expression, namespaces: ReadonlySet<string>) {
+  return (
+    (ts.isIdentifier(node) && namespaces.has(node.text)) ||
+    (ts.isPropertyAccessExpression(node) && node.name.text === "Intl")
+  );
+}
+
+/** Each local name a declaration or assignment binds to `value`. */
+function bindingsOf(parsed: ts.SourceFile) {
+  const found: { name: string; value: ts.Expression }[] = [];
   const walk = (node: ts.Node): void => {
     if (
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
       ts.isIdentifier(node.left)
     ) {
-      const member = memberOfIntl(node.right, isIntl);
-      if (member !== undefined && formatters.includes(member)) {
-        aliases.add(node.left.text);
-      }
+      found.push({ name: node.left.text, value: node.right });
     }
-    if (ts.isVariableDeclaration(node) && node.initializer !== undefined) {
-      const init = node.initializer;
-      if (ts.isObjectBindingPattern(node.name) && isIntl(init)) {
-        for (const element of node.name.elements) {
-          const source = element.propertyName ?? element.name;
-          if (
-            ts.isIdentifier(source) &&
-            formatters.includes(source.text) &&
-            ts.isIdentifier(element.name)
-          ) {
-            aliases.add(element.name.text);
-          }
-        }
-      }
-      if (ts.isIdentifier(node.name)) {
-        const member = memberOfIntl(init, isIntl);
-        if (member !== undefined && formatters.includes(member)) {
-          aliases.add(node.name.text);
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer !== undefined
+    ) {
+      found.push({ name: node.name.text, value: node.initializer });
+    }
+    node.forEachChild(walk);
+  };
+  walk(parsed);
+  return found;
+}
+
+/**
+ * The local names bound to `Intl` or to one of its formatters, by destructure,
+ * declaration or assignment. A call through one is judged like a direct call.
+ */
+export function intlAliases(
+  parsed: ts.SourceFile,
+  formatters: readonly string[],
+): IntlBindings {
+  const bound = bindingsOf(parsed);
+  // A name bound to a name bound to Intl is Intl too, so repeat to a fixpoint.
+  const namespaces = new Set(["Intl"]);
+  for (let size = 0; size !== namespaces.size; ) {
+    size = namespaces.size;
+    for (const { name, value } of bound) {
+      if (namesIntl(value, namespaces)) namespaces.add(name);
+    }
+  }
+  const isIntl = (node: ts.Expression) => namesIntl(node, namespaces);
+  const aliases = new Set<string>();
+  for (const { name, value } of bound) {
+    const member = memberOfIntl(value, isIntl);
+    if (member !== undefined && formatters.includes(member)) aliases.add(name);
+  }
+  const walk = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer !== undefined &&
+      isIntl(node.initializer)
+    ) {
+      for (const element of node.name.elements) {
+        const source = element.propertyName ?? element.name;
+        if (
+          ts.isIdentifier(source) &&
+          formatters.includes(source.text) &&
+          ts.isIdentifier(element.name)
+        ) {
+          aliases.add(element.name.text);
         }
       }
     }
     node.forEachChild(walk);
   };
   walk(parsed);
-  return aliases;
+  return { namespaces, formatters: aliases };
 }
 
 /** The `Intl` member this expression names, by either spelling. */
@@ -246,14 +282,13 @@ function memberOfIntl(
 export function formatterReached(
   callee: ts.Expression,
   formatters: readonly string[],
-  aliases: ReadonlySet<string>,
+  bindings: IntlBindings,
 ): string | undefined {
-  if (ts.isIdentifier(callee) && aliases.has(callee.text)) {
+  if (ts.isIdentifier(callee) && bindings.formatters.has(callee.text)) {
     return callee.text;
   }
-  const member = memberOfIntl(
-    callee,
-    (candidate) => ts.isIdentifier(candidate) && candidate.text === "Intl",
+  const member = memberOfIntl(callee, (candidate) =>
+    namesIntl(candidate, bindings.namespaces),
   );
   return member !== undefined && formatters.includes(member)
     ? member

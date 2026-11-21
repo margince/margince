@@ -34,6 +34,46 @@ describe("the one-formatter-cache rule", () => {
     ]);
   });
 
+  it("refuses a formatter reached through a name bound to Intl", () => {
+    const findings = plantedFindings(rule, [
+      planted("features/mail/y.ts", [
+        "const platform = Intl;",
+        "export const a = new platform.DateTimeFormat(INTL_LOCALE[locale]);",
+        "let later;",
+        "later = platform;",
+        'export const b = new later["NumberFormat"](INTL_LOCALE[locale]);',
+        "const { ListFormat } = later;",
+        "export const c = new ListFormat(INTL_LOCALE[locale]);",
+        "export const d = new globalThis.Intl.Collator(INTL_LOCALE[locale]);",
+        "export const z = platform.DateTimeFormat().resolvedOptions();",
+      ]),
+    ]);
+    expect(findings.filter((line) => line.startsWith("src/features"))).toEqual([
+      "src/features/mail/y.ts:2: Intl.DateTimeFormat",
+      "src/features/mail/y.ts:5: Intl.NumberFormat",
+      "src/features/mail/y.ts:7: Intl.ListFormat",
+      "src/features/mail/y.ts:8: Intl.Collator",
+    ]);
+  });
+
+  it("refuses the locale methods that build a formatter per call", () => {
+    const findings = plantedFindings(rule, [
+      planted("features/deals/z.ts", [
+        'export const a = amount.toLocaleString(INTL_LOCALE[locale], { style: "currency", currency });',
+        "export const b = at.toLocaleDateString(INTL_LOCALE[locale]);",
+        'export const c = at.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit" });',
+        'export const d = at["toLocaleString"](INTL_LOCALE[locale]);',
+        "export const e = name.toLocaleUpperCase(INTL_LOCALE[locale]);",
+      ]),
+    ]);
+    expect(findings.filter((line) => line.startsWith("src/features"))).toEqual([
+      "src/features/deals/z.ts:1: .toLocaleString()",
+      "src/features/deals/z.ts:2: .toLocaleDateString()",
+      "src/features/deals/z.ts:3: .toLocaleTimeString()",
+      "src/features/deals/z.ts:4: .toLocaleString()",
+    ]);
+  });
+
   it("covers every formatter the runtime reports", () => {
     const formatters = intlFormatters();
     const findings = plantedFindings(rule, [
