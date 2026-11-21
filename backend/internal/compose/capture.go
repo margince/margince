@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // gmailScopes are the Google scopes a Gmail connection requests: mail read for
@@ -106,8 +107,13 @@ type CaptureConfig struct {
 	MaxBackfillMonths  int
 	HistoryConcurrency int
 	HistoryHold        bool
-	GmailMailboxQuota  int
-	GmailProjectQuota  int
+	// HistoryPageSize, HistoryFetchWorkers, HistoryLookahead and HistoryPageDelay
+	// are already resolved against their defaults by CaptureConfigFromDeploy. A
+	// zero value, as in a bare construction, keeps the built-in behaviour.
+	HistoryPageSize, HistoryFetchWorkers, HistoryLookahead int
+	HistoryPageDelay                                       time.Duration
+	GmailMailboxQuota                                      int
+	GmailProjectQuota                                      int
 	// Now is the clock the deal question judges a mail's currentness by. Nil
 	// is the wall clock.
 	Now func() time.Time
@@ -171,6 +177,12 @@ var RatesModelPricing = config.Define(config.Spec[map[string]string]{
 	Doc: "Ignored, with a warning at boot; kept so existing files load.",
 })
 
+// historyTuning is the history import's page size and fetching, as the
+// connectors take them.
+func (c CaptureConfig) historyTuning() connector.BackfillTuning {
+	return connector.BackfillTuning{PageSize: c.HistoryPageSize, FetchWorkers: c.HistoryFetchWorkers, Lookahead: c.HistoryLookahead}
+}
+
 // NewCaptureRegistry builds the connector registry; process roles register
 // their compiled-in connectors on it and drive SyncOnce. The vault seals and
 // resolves each connection's credential (nil is valid for a role that only
@@ -191,6 +203,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 		// construction and every deployment that has not set one get.
 		WithMaxBackfillMonths(cfg.MaxBackfillMonths).
 		WithBackfillAdmission(cfg.HistoryConcurrency, cfg.HistoryHold).
+		WithBackfillPageDelay(cfg.HistoryPageDelay).
 		// The digest's projects section is answered here because its reads
 		// span the deals module's tables (digestprojects.go).
 		WithDigestProjects(digestProjectsSource)
