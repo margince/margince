@@ -426,7 +426,7 @@ export function ContactDetails({
         groups={[
           {
             label: t("co.address.summary"),
-            keys: ADDRESS_KEYS,
+            keys: [...ADDRESS_KEYS],
           },
         ]}
         record={edit.record}
