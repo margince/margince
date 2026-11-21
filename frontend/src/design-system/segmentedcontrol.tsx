@@ -23,28 +23,17 @@ export function SegmentedControl<Option extends string>({
   value: Option;
   onChange: (next: Option) => void;
   labels: Record<Option, string>;
-  // How much is behind each option, for a strip that chooses between bodies of
-  // a record rather than between settings. Partial and per-option on purpose:
-  // an option whose count is absent draws none, which is what a section that
-  // is not a list of things (an overview, a form) needs — and it is NOT the
-  // same as a zero. A zero is a fact about the account and prints; a missing
-  // count is a fact about the section and does not.
-  //
-  // Inside the button, so the count joins the option's accessible name and a
-  // screen reader announces "Contacts 6" rather than leaving the figure to a
-  // sighted reader alone.
+  // How much is behind each option. An absent count draws none: a section that
+  // is no list (an overview, a form) has no count, and that is not a zero.
+  // The count sits inside the button, so a screen reader hears "Contacts 6".
   counts?: Partial<Record<Option, number>>;
   // Options whose count is a floor, drawn "25+": the read stopped at a bound.
   floors?: Partial<Record<Option, boolean>>;
-  // Accessible name for the control as a whole (the `fieldset` group); a
-  // screen reader announces it alongside each option so the buttons aren't
-  // read out of context. Optional so existing callers are unaffected.
+  // The name of the `fieldset` group. A screen reader says it with each
+  // option, so no option is heard out of context.
   label?: string;
-  // Options carrying a dot: something waits behind that option. Decorative by
-  // construction — the dot is `aria-hidden` and the fact it hints at must be
-  // stated in words on the surface the option opens, because a mark is the one
-  // thing a screen reader cannot read out and a colour-blind reader may not
-  // see. It draws attention; it never carries the meaning alone.
+  // Options with a dot: something waits behind them. The dot is `aria-hidden`,
+  // so the surface the option opens states that fact in words.
   marks?: Partial<Record<Option, boolean>>;
   // The option whose choice is being stored. Every option waits until it lands,
   // so a second press cannot overtake the first.

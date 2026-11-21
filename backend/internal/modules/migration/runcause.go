@@ -56,10 +56,30 @@ type stopRecorded struct{ cause error }
 func (s stopRecorded) Error() string   { return s.cause.Error() }
 func (s stopRecorded) Unwrap() []error { return []error{s.cause, ErrStopRecorded} }
 
-// RunStop stops an attempt with the sentence its run carries.
+// RunStop stops an attempt with the sentence its run carries. Refusal, when
+// set, is that sentence as a code and values a screen words itself.
 type RunStop struct {
-	Cause string
-	Err   error
+	Cause   string
+	Refusal *StopRefusal
+	Err     error
+}
+
+// StopRefusal refuses the run's file by field and code. Params are the values
+// its sentence names, as the upload's own field error carries them.
+type StopRefusal struct {
+	Field  string            `json:"field"`
+	Code   string            `json:"code"`
+	Max    int               `json:"max,omitempty"`
+	Params map[string]string `json:"params,omitempty"`
+}
+
+// RefusalOf is the refusal a stop carries, or nil for a stop with a sentence only.
+func RefusalOf(err error) *StopRefusal {
+	var stop RunStop
+	if errors.As(err, &stop) {
+		return stop.Refusal
+	}
+	return nil
 }
 
 func (s RunStop) Error() string { return s.Err.Error() }

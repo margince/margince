@@ -177,7 +177,7 @@ func TestEachAttemptOfARunCountsAsAWalk(t *testing.T) {
 	first := approvedRun(ctx, t, s)
 	w := newMapWriters(s, first.Run)
 	slice(ctx, t, s, first, w, Budget{Rows: 2})
-	if err := s.FailLease(ctx, first, CauseStopped); err != nil {
+	if err := s.FailLease(ctx, first, stopWith(CauseStopped)); err != nil {
 		t.Fatalf("FailLease: %v", err)
 	}
 	resumed, err := s.ResumeApproved(ctx, first.Run, 0, queueNothing)
