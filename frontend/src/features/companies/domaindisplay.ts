@@ -108,9 +108,8 @@ function decodedLabel(label: string): string | undefined {
   return decoded;
 }
 
-// The Unicode form only when every label decodes safely and the domain reads in
-// one script: Latin, or one other script that its ending uses too. A non-Latin
-// name under a Latin ending can imitate a Latin one, so it keeps its stored form.
+// The Unicode form needs safe labels in one script, Latin or the ending's own.
+// A non-Latin name under a Latin ending can imitate a Latin one.
 export function displayDomain(domain: string): string {
   const labels = domain.split(".").map(decodedLabel);
   if (!labels.every((label) => label !== undefined)) return domain;
