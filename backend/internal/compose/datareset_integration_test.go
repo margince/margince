@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -693,5 +694,58 @@ func TestAResetLeavesNoFactRevision(t *testing.T) {
 	}
 	if got := e.WsCount(t, "SELECT count(*) FROM company_fact_revision"); got != 0 {
 		t.Fatalf("a reset left %d fact revision rows behind", got)
+	}
+}
+
+// A reset clears a refused send and the decision to send it anyway. What it
+// keeps is the audit row: who decided, when, and under which reason.
+func TestAResetClearsADirectedSendAndKeepsItsAuditRow(t *testing.T) {
+	e := integration.Setup(t)
+	conn := integration.OwnerConn(t)
+	var review ids.UUID
+	if err := conn.QueryRow(context.Background(), `
+		INSERT INTO communication_review (state, kind, reason_code, refusals, initiated_by)
+		VALUES ('needs_repair', 'single', 'no_marketing_consent',
+		        '[{"address": "anna@example.test", "reason_code": "no_marketing_consent"}]', $1)
+		RETURNING id`, e.Rep1).Scan(&review); err != nil {
+		t.Fatalf("seeding the refused send: %v", err)
+	}
+	director := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"admin"},
+		Objects: map[string]principal.ObjectGrant{
+			"contact":                 {Read: true, Update: true},
+			"communication_exception": {Create: true, Read: true, Update: true, Delete: true},
+		},
+	})
+	instruction, err := consent.NewStore(e.DB()).DirectSend(director, review, consent.DirectInput{
+		ReasonCode:     consent.ReasonContractualNecessity,
+		Explanation:    "The framework agreement obliges us to send this notice.",
+		WarningVersion: consent.OverrideWarningVersion,
+		Acknowledged:   true,
+	})
+	if err != nil {
+		t.Fatalf("directing the send: %v", err)
+	}
+	if _, err := conn.Exec(context.Background(), `DELETE FROM communication_instruction WHERE id = $1`, instruction.ID); err == nil {
+		t.Fatal("a direct delete removed a decision whose review still stands")
+	}
+
+	ctx := e.Admin()
+	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		tables, err := resetTargetTables(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return sweepWorkspaceData(ctx, tx, tables)
+	})
+	if err != nil {
+		t.Fatalf("a reset with a directed send in the data: %v", err)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM communication_review`) + e.WsCount(t, `SELECT count(*) FROM communication_instruction`); got != 0 {
+		t.Errorf("the reset left %d review and instruction rows", got)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'communication_instruction'
+		AND entity_id = $1 AND action = 'create' AND after ->> 'reason_code' = $2`, instruction.ID, consent.ReasonContractualNecessity); got != 1 {
+		t.Errorf("%d audit rows record the decision after the reset, want 1", got)
 	}
 }
