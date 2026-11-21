@@ -104,13 +104,17 @@ func plainWords(m modelCoverage, titles map[string]string) string {
 	if m.Search == "lexical" {
 		held += ". Measured with search working on word matches only, which is harder than a real setup"
 	}
+	if m.SelfJudged {
+		held += ". A model of the same family judged its answers"
+	}
 	return held + "."
 }
 
 func writeCoverageJobs(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## What can it do for me?\n\n")
 	p.WriteString("One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably " +
-		"yet, and a dash means not tried yet. What a good answer must do is in the second column.\n\n")
+		"yet, and a dash means not tried yet. What a good answer must do is in the second column. " +
+		"A result can be older than the tools it measured: `make e2e-llm-report` says which still hold.\n\n")
 	header := "| Job | What a good answer does |"
 	rule := "|---|---|"
 	var headerSb115 strings.Builder
@@ -151,10 +155,11 @@ func plainCriteria(caseName string, numbers []int, catalog []criterionRow) strin
 func jobMark(c caseRow, model string) string {
 	for _, run := range c.ByModel {
 		if run.Model == model {
+			mark := "❌"
 			if run.Held {
-				return "✅"
+				mark = "✅"
 			}
-			return "❌"
+			return mark
 		}
 	}
 	return "-"

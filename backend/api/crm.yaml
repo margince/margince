@@ -812,7 +812,7 @@ paths:
       tags: [Identity]
       operationId: previewHomeRepair
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: preview_home_repair, router: run_research, action: preview_home_repair, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: preview_home_repair, router: run_research, action: preview_home_repair, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       summary: Review a bounded page of automatic Home work.
       description: |
         Requires data_task:read and each record's content permissions. This operation changes no work.
@@ -1824,7 +1824,7 @@ paths:
         be used. `501` means the installation has no model configured. `503` means the model did
         not read it: `ai_allowance_used_up` when the monthly AI allowance is spent, a
         `provider_*` code when the AI provider is blocked, and `assistant_unavailable` otherwise.
-      x-mcp-tool: { verb: read_card_photo, router: run_research, action: read_card_photo, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: read_card_photo, router: run_research, action: read_card_photo, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       requestBody:
         required: true
         content:
@@ -2251,7 +2251,7 @@ paths:
       tags: [Contacts]
       operationId: regenerateContactBrief
       x-waits-on-model: always
-      x-mcp-tool: { verb: regenerate_contact_brief, router: run_research, action: refresh_contact_brief, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: regenerate_contact_brief, router: run_research, action: refresh_contact_brief, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Regenerate this contact's brief, ignoring the cached one.
       description: |
@@ -2689,7 +2689,7 @@ paths:
       tags: [Contacts, AI]
       operationId: draftIntroNote
       x-waits-on-model: always
-      x-mcp-tool: { verb: draft_intro_note, router: run_research, action: draft_intro_note, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: draft_intro_note, router: run_research, action: draft_intro_note, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Draft the forwardable note a colleague can paste into their own introduction.
       description: |
@@ -4201,7 +4201,7 @@ paths:
       tags: [Companies, AI]
       operationId: draftIntroRequest
       x-waits-on-model: always
-      x-mcp-tool: { verb: draft_intro_request, router: run_research, action: draft_intro_request, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: draft_intro_request, router: run_research, action: draft_intro_request, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Draft the message asking a colleague to introduce you.
       description: |
@@ -4572,7 +4572,7 @@ paths:
       tags: [Companies]
       operationId: refreshCompanyDossier
       x-waits-on-model: always
-      x-mcp-tool: { verb: refresh_company_dossier, router: run_research, action: refresh_dossier, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: refresh_company_dossier, router: run_research, action: refresh_dossier, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Reassemble the dossier now, past a fingerprint that still matches.
       description: |
@@ -4685,7 +4685,7 @@ paths:
     post:
       tags: [Companies]
       operationId: ensureCompanyScan
-      x-mcp-tool: { verb: ensure_company_scan, router: run_research, action: refresh_scan, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: ensure_company_scan, router: run_research, action: refresh_scan, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Make sure this reader's scan of the company is current, reading it again only when the company changed.
       description: |
@@ -4767,7 +4767,7 @@ paths:
       tags: [Companies]
       operationId: refreshCompanyGrowthFit
       x-waits-on-model: always
-      x-mcp-tool: { verb: refresh_company_growth_fit, router: run_research, action: refresh_growth_fit, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: refresh_company_growth_fit, router: run_research, action: refresh_growth_fit, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Re-assemble the caller's growth fit now, past a fingerprint that still matches.
       description: |
@@ -4843,7 +4843,7 @@ paths:
       # than around them. The operation stays for clients built against it, and
       # because Ask about this account is served from the same assembly.
       deprecated: true
-      x-mcp-tool: { verb: regenerate_company_brief, router: run_research, action: refresh_company_brief, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: regenerate_company_brief, router: run_research, action: refresh_company_brief, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Regenerate this company's brief, ignoring the cached one.
       description: |
@@ -4961,7 +4961,7 @@ paths:
       tags: [Companies]
       operationId: askAboutCompany
       x-waits-on-model: always
-      x-mcp-tool: { verb: ask_about_company, router: run_research, action: ask_about_company, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: ask_about_company, router: run_research, action: ask_about_company, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Ask one of the prepared questions about this company.
       description: |
@@ -7616,7 +7616,7 @@ paths:
     post:
       tags: [Reports]
       operationId: assessSalesReview
-      x-mcp-tool: { verb: assess_sales_review, router: run_research, action: assess_sales_review, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: assess_sales_review, router: run_research, action: assess_sales_review, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       x-waits-on-model: on-miss
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: "The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see. Written by the model and kept per reader until the figures or the recorded decisions move; without a model, or when the model's reply cannot be grounded, it answers no sentences and `generated_by` says so, and the page shows its own summary."
@@ -7639,7 +7639,7 @@ paths:
     post:
       tags: [Reports]
       operationId: proposeReportSetup
-      x-mcp-tool: { verb: propose_report_setup, router: run_research, action: propose_report_setup, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: propose_report_setup, router: run_research, action: propose_report_setup, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       x-waits-on-model: always
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: "A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without a model it answers 409 `ai_not_configured`."
@@ -11622,7 +11622,7 @@ paths:
       operationId: createMeetingProposal
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Create a personal, expiring invitation without reserving time or sending mail.
-      x-mcp-tool: { verb: create_meeting_proposal, router: send_outbound, action: meeting_proposal, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      x-mcp-tool: { verb: create_meeting_proposal, router: send_outbound, action: meeting_proposal, tier: auto_execute, scope: send, served_by: route, ask_user_first: true, egress: false }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -13482,7 +13482,7 @@ paths:
       tags: [Contacts]
       operationId: saveEmailSignatureTemplate
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: save_email_signature_template, router: send_outbound, action: signature_template, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      x-mcp-tool: { verb: save_email_signature_template, router: send_outbound, action: signature_template, tier: auto_execute, scope: send, served_by: route, ask_user_first: true, egress: false }
       summary: Set the workspace's signature template (admin/ops).
       requestBody:
         required: true
@@ -15455,7 +15455,7 @@ paths:
       operationId: proposeFilter
       x-waits-on-model: always
       # It spends the workspace's model budget, so an agent needs the enrich scope.
-      x-mcp-tool: { verb: propose_filter, router: run_research, action: propose_filter, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: propose_filter, router: run_research, action: propose_filter, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Propose filter clauses for a list described in plain words.
       description: |
@@ -19383,7 +19383,7 @@ paths:
       tags: [Search]
       operationId: EmbedReindexStart
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: start_search_reindex, router: run_research, action: start_search_reindex, tier: auto_execute, scope: enrich, served_by: route, ask_user_first: true }
+      x-mcp-tool: { verb: start_search_reindex, router: run_research, action: start_search_reindex, tier: auto_execute, scope: enrich, served_by: route, ask_user_first: true, egress: false }
       summary: Confirm and start a fleet-wide reindex.
       description: |
         Claims the `embed_store_binding` marker (idle → reembedding) and enqueues the resumable
@@ -20402,7 +20402,7 @@ paths:
       operationId: messageAnchorCompanySiteRead
       x-waits-on-model: always
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: message_anchor_company_site_read, router: run_research, action: ask_site_read, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: message_anchor_company_site_read, router: run_research, action: ask_site_read, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       summary: Ask Margince about a website read and receive reviewable company-field suggestions.
       description: |
         Answers only from the selected dossier's grounded findings. Suggested changes are returned
@@ -21865,7 +21865,7 @@ paths:
       tags: [Capture]
       operationId: startConnectorBackfill
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: start_connector_backfill, router: run_research, action: start_backfill, tier: auto_execute, scope: enrich, served_by: route, ask_user_first: true }
+      x-mcp-tool: { verb: start_connector_backfill, router: run_research, action: start_backfill, tier: auto_execute, scope: enrich, served_by: route, ask_user_first: true, egress: false }
       summary: Start the bounded connect-time backfill.
       description: |
         Creates the CAP-DDL-4 run and enqueues the resumable job (ADR-0063). Widen-only — a
@@ -26498,6 +26498,14 @@ paths:
         goes. The next message to the same contact needs its own. A retry under the same
         `Idempotency-Key` answers the recorded 201, so a client whose first answer was lost learns
         the message went.
+
+        LATER, WHEN A MOMENT IS GIVEN. With `scheduled_at` and `scheduled_tz`, or `scheduled_intent`,
+        the decision is recorded now and the held message moves to that moment instead of going now.
+        The answer is 202 with the scheduled message. The engine decides again when it fires, and
+        the recorded decision is spent then. The moment must be in the future.
+
+        ALREADY SENT. When the review's message has gone, from another tab or an earlier press, its
+        sender gets 409 `already_sent` rather than 404.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -26511,6 +26519,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
+        '202':
+          description: The decision is recorded and the held message waits for the moment given.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduledSend' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -28553,6 +28566,8 @@ paths:
         erasure. `queued` reports that the message was staged in the same transaction that minted
         the link. An installation with no lane is refused with 409 before anything is minted,
         because the link is mailed and never returned.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -28698,6 +28713,8 @@ paths:
         The address is derived from the contact's own live primary email, never taken from the
         caller, and the token is never returned. Both properties are the same ones
         `confirm-request` rests on and for the same reasons.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -28746,6 +28763,8 @@ paths:
         erasure. `queued` reports that the message was staged, in the same transaction that minted
         the link. An installation with no lane is refused with 409 before anything is minted,
         because the link is mailed and never returned.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -29224,6 +29243,11 @@ paths:
         record every write to which the ceiling then refuses. A `read` grant to a read seat is the
         authority their licence already carries and is accepted. A `team` subject is not a seat and is
         not filtered — the read seats inside it are still refused every write at their own admission.
+
+        The recipient's role binds as well: a `write` grant to a user whose role can neither change
+        records of this type nor create activities (attaching one needs `write`) is saved as `read`,
+        and the answer carries `limited_by_role: true`. The answer names no role. A `team` grant
+        keeps `write`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       x-mcp-tool: { verb: share_record, router: change_access, action: share, tier: auto_execute, scope: write, served_by: route }
@@ -29328,6 +29352,8 @@ paths:
         member in that legal entity and needs `legal_entity.update` and `user_admin.update`; an
         unknown or archived entity is 422 `unknown_legal_entity`. Emits `user.invited`.
       x-mcp-tool: { verb: invite_user, router: send_outbound, action: invite_member, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -30253,6 +30279,8 @@ paths:
         of returning it. Shares that operation's rate limits per actor and per target. Nothing
         retries on its own: an admin sends again from the roster.
       x-mcp-tool: { verb: resend_member_invite, router: send_outbound, action: resend_member_invite, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
           description: The member, and whether the new invitation email was handed to the sender.
@@ -31206,7 +31234,7 @@ paths:
       tags: [Voice]
       operationId: createVoiceBuild
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: build_voice_profile, router: run_research, action: build_voice_profile, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: build_voice_profile, router: run_research, action: build_voice_profile, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       summary: Queue a durable build over the current included corpus.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -32931,7 +32959,7 @@ paths:
         `diff_from_previous` line-item summary versus the prior revision; a mechanical
         regenerate (no AI context available) still works and returns `ai_generated=false`. The
         produced draft's terms are not frozen until the send gate.
-      x-mcp-tool: { verb: regenerate_offer, router: run_research, action: regenerate_offer, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: regenerate_offer, router: run_research, action: regenerate_offer, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
@@ -33335,7 +33363,7 @@ paths:
         within the day rather than a second ranking: it returns `201` when it assembled today's
         run and `200` when today's already existed. It reads and stages only — no deal field
         mutates and nothing is sent.
-      x-mcp-tool: { verb: generate_morning_brief, router: run_research, action: generate_brief, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: generate_morning_brief, router: run_research, action: generate_brief, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       responses:
         '200':
           description: Today's run already existed; this is it, unchanged.
@@ -35959,7 +35987,7 @@ paths:
       tags: [Deals, AI]
       operationId: proposeDealRoles
       x-waits-on-model: always
-      x-mcp-tool: { verb: propose_deal_roles, router: run_research, action: propose_deal_roles, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: propose_deal_roles, router: run_research, action: propose_deal_roles, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Read the buying roles out of what this deal's contacts have written.
       description: |
@@ -36269,7 +36297,7 @@ paths:
       tags: [Contacts]
       operationId: saveMyEmailSignature
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: save_my_email_signature, router: send_outbound, action: my_signature, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      x-mcp-tool: { verb: save_my_email_signature, router: send_outbound, action: my_signature, tier: auto_execute, scope: send, served_by: route, ask_user_first: true, egress: false }
       summary: Write or clear your own sign-off.
       description: |
         An empty `body` clears the plain-text fallback. Personal HTML and the
@@ -38930,7 +38958,7 @@ paths:
       tags: [Knowledge, AI]
       operationId: askCorpus
       x-waits-on-model: always
-      x-mcp-tool: { verb: ask_knowledge_corpus, router: run_research, action: ask_corpus, tier: auto_execute, scope: enrich, served_by: route }
+      x-mcp-tool: { verb: ask_knowledge_corpus, router: run_research, action: ask_corpus, tier: auto_execute, scope: enrich, served_by: route, egress: false }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Ask this corpus a question, answered only from its documents.
       description: |
@@ -39689,7 +39717,9 @@ components:
         Client-supplied key making a mutation safe to retry — an update exactly as much as a
         create (API-CC-6). **Scope:** the key is unique within
         `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-        returns the original status + body. Reusing the same key with a *different* request body
+        returns the original status + body. A connected agent's principal is its connection, so a
+        retry on a refreshed token replays too. An agent tool that runs this route takes the same
+        key as its `idempotency_key`. Reusing the same key with a *different* request body
         returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
         do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
         means the first request under the key is still running and carries `Retry-After`;
@@ -43111,8 +43141,9 @@ components:
       description: |
         The decision-model lane: a model that answers a typed question with calibrated
         probabilities, asked before a decision site's ladder. Absent means no task uses
-        one. It serves a task only when certified for that site and when its endpoint
-        reaches no further than the task's own bindings.
+        one. Bound, it answers every task that declares a decision form, with or without
+        a certification record; each site keeps an answer only at its own floor and
+        otherwise falls back to its ladder.
       properties:
         provider:
           type: string
@@ -46387,7 +46418,7 @@ components:
         decision_first: { type: boolean, description: 'The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor.' }
         decision_skip_reason:
           type: string
-          enum: [unbound, uncertified]
+          enum: [unbound]
           x-extensible-enum: true
           x-go-type: string
           description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
@@ -46733,7 +46764,7 @@ components:
       properties:
         attempt: { type: integer }
         is_terminal: { type: boolean }
-        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
+        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, or decision_uncertified on a row stored before the decision lane stopped reading certification — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
         kind: { type: string, enum: [completion, embedding, decision], x-extensible-enum: true, x-go-type: string, description: 'What this attempt asked: a chat completion, an embedding, or a decision model.' }
         tier: { type: string, description: 'The tier this attempt ran on; decide for the decision lane.' }
         provider: { type: string }
@@ -52353,7 +52384,7 @@ components:
           description: "The deal's status, so a reader can tell an open opportunity from one that has closed."
         seat_current:
           type: boolean
-          description: "False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it."
+          description: "False once the seat's End day has arrived in the installation's time zone; an End date still ahead keeps it current. A seat that ended stays listed as history, and a follow-up cannot rest on it."
         role:
           type: string
           description: "The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title."
@@ -58225,7 +58256,7 @@ components:
         contracts: { $ref: '#/components/schemas/ContractListResponse' }
         documents:
           type: object
-          description: The files attached to the project itself, newest first.
+          description: The project's own uploads and the files of the activities filed under it, newest first.
           required: [data, page]
           properties:
             data: { type: array, items: { $ref: '#/components/schemas/Attachment' } }
@@ -64861,9 +64892,10 @@ components:
             a card handed over at a stand. `requested_by_subject` is the contact asking us to write
             to them away from every system: a phone call, a conversation at a counter.
 
-            Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-            records the product already holds, and a hand-written one would be a second, unbacked
-            answer to a question the data already settles.
+            Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+            product already holds, and a hand-written one would be a second, unbacked answer to a
+            question the data already settles. `active_deal` is retired: nothing writes it, and the
+            guard does not read it.
         note:
           type: string
           minLength: 1
@@ -76270,6 +76302,12 @@ components:
         expires_at: { type: [string, 'null'], format: date-time, description: 'Optional TTL; an expired grant matches no rows.' }
         created_at: { type: string, format: date-time }
         version: { type: integer, format: int64 }
+        limited_by_role:
+          type: boolean
+          description: |
+            Only on the answer to a share, and only when true: the share asked for `write` and the
+            user's role can neither change records of this type nor create activities, so the grant
+            was saved as `read`. A team grant is never limited, because its members hold different roles.
 
     CreateRecordGrantRequest:
       type: object
@@ -76299,6 +76337,12 @@ components:
       properties:
         shared: { type: integer, minimum: 0 }
         skipped: { type: integer, minimum: 0 }
+        limited_by_role:
+          type: boolean
+          description: |
+            Present, and true, only when at least one grant was written and the share asked for `write`
+            while the user's role can neither change contacts nor create activities, so the grants were
+            saved as `read`.
 
     RecordAccess:
       type: object
@@ -76762,6 +76806,16 @@ components:
             The refusal reason codes the director was shown, from the review's `refusals`. When the
             review's refusals changed since then, the decision is refused with `instruction_stale`
             and the director opens the review again.
+        scheduled_intent: { $ref: '#/components/schemas/IntentTime' }
+        scheduled_at:
+          type: string
+          format: date-time
+          description: |
+            A future moment to send at instead of now. The decision is recorded now and spent when
+            the message fires. Absent sends now.
+        scheduled_tz:
+          type: string
+          description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
 
     ConfirmSubmission:
       type: object
@@ -79518,7 +79572,7 @@ components:
       additionalProperties: false
       required: [scopes]
       properties:
-        label:  { type: [string, 'null'], maxLength: 120, description: 'Which agent this binds, e.g. "Claude Desktop".' }
+        label:  { type: [string, 'null'], maxLength: 120, description: 'Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one.' }
         scopes:
           type: array
           minItems: 1

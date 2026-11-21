@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -108,10 +109,9 @@ var assuranceSubjectsSQL = `
 		                OR (a.kind = 'meeting' AND %[3]s))) AS has_next_step,
 		       EXISTS (SELECT 1
 		          FROM relationship r
-		         WHERE r.kind = 'deal_stakeholder'
+		         WHERE %[12]s
 		           AND r.deal_id = d.id
-		           AND r.role = $3
-		           AND r.archived_at IS NULL) AS has_economic_buyer,
+		           AND %[13]s = $3) AS has_economic_buyer,
 		       (SELECT count(*)
 		          FROM stage_exit_criterion c
 		         WHERE c.stage_id = d.stage_id
@@ -334,7 +334,8 @@ func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, a
 		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "al.deal_id", "$2"), visibleToAllSQL("a"),
 		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
 		// A date an import moved is the source system's history, not a push.
-		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"))
+		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"), dealseat.CurrentSQL("r"),
+		dealrole.RecordedSQL("r.role"))
 }
 
 // onlyDealSQL narrows the read to the deals in only, or not at all when only is

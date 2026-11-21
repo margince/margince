@@ -19,11 +19,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-// The most one password sign-in costs once the session stamp is fresh. That is
-// begin, session, roles with teams, two settings and commit.
+// What one sign-in costs once the session stamp is fresh: begin, session, the
+// batch of roles and teams, both settings, and commit. Fewer means a read was skipped.
 const (
-	authenticateStatementCeiling = 7
-	authenticateRoundTripCeiling = 6
+	authenticateStatementCeiling = 6
+	authenticateRoundTrips       = 5
 )
 
 // meteredIdentityPool is a pool on the same database whose connections count
@@ -48,34 +48,53 @@ func meteredIdentityPool(t *testing.T, base *pgxpool.Pool) (*pgxpool.Pool, func(
 
 func TestAuthenticateStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
 	e := setupRevocationEnv(t, "auth-cost")
-	token := e.signIn(t, "device")
+	// Every real seat holds a role, and a role with a mask is the costliest.
+	role := e.customRole(t, "Masked sales", "rep", nil)
+	e.maskRole(t, role)
+	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, role); err != nil {
+		t.Fatal(err)
+	}
+	provider, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), "google",
+		OIDCClaims{Subject: "auth-cost-member", Email: e.member.Email})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessions := map[string]string{"password": e.signIn(t, "device"), "provider": provider}
 	pool, trips := meteredIdentityPool(t, e.pool)
 	db := database.BindTo(pool, e.ws)
 	cfg := unlockedConfig(t, pool)
 	e.svc.db = db
 	e.svc.WithConfig(cfg).WithVault(keyvault.NewMemory())
-	e.svc.WithRequireMFA(NewInstallationSettings(db, settings.New(pool, settings.NewRegistry(append(Definitions(), cfg.StoredDefinitions()...)...)), cfg).MFARequired)
+	e.svc.WithAdmissionSettings(NewInstallationSettings(db, settings.New(pool, settings.NewRegistry(append(Definitions(), cfg.StoredDefinitions()...)...)), cfg).AdmissionSettings)
 
-	// The first request warms the connection and, with the stamp fresh from
-	// sign-in, writes nothing; the measured one is the steady state.
-	if _, err := e.svc.Authenticate(e.wsOnlyCtx(), token); err != nil {
-		t.Fatal(err)
-	}
-	ctx, meter := database.WithStatementMeter(e.wsOnlyCtx())
-	before := trips()
-	if _, err := e.svc.Authenticate(ctx, token); err != nil {
-		t.Fatal(err)
-	}
-	seen, roundTrips := meter.Cost(), trips()-before
-	t.Logf("authenticate statements=%d exchanges=%d round trips=%d transactions=%d", seen.Statements, seen.Exchanges, roundTrips, seen.Transactions)
-	if seen.Transactions != 1 {
-		t.Errorf("authenticate opened %d transactions, want 1", seen.Transactions)
-	}
-	if seen.Statements > authenticateStatementCeiling {
-		t.Errorf("authenticate sent %d statements, budget %d", seen.Statements, authenticateStatementCeiling)
-	}
-	if roundTrips < seen.Exchanges || roundTrips > authenticateRoundTripCeiling {
-		t.Errorf("authenticate used %d round trips for %d pgx calls, budget %d", roundTrips, seen.Exchanges, authenticateRoundTripCeiling)
+	for kind, token := range sessions {
+		t.Run(kind, func(t *testing.T) {
+			// The first request warms the connection and, with the stamp fresh
+			// from sign-in, writes nothing; the measured one is the steady state.
+			if _, err := e.svc.Authenticate(e.wsOnlyCtx(), token); err != nil {
+				t.Fatal(err)
+			}
+			ctx, meter := database.WithStatementMeter(e.wsOnlyCtx())
+			before := trips()
+			id, err := e.svc.Authenticate(ctx, token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(id.Permissions.FieldMasks) == 0 {
+				t.Fatal("the measured seat carries no field mask, so the mask read went uncounted")
+			}
+			seen, roundTrips := meter.Cost(), trips()-before
+			t.Logf("authenticate statements=%d exchanges=%d round trips=%d transactions=%d", seen.Statements, seen.Exchanges, roundTrips, seen.Transactions)
+			if seen.Transactions != 1 {
+				t.Errorf("authenticate opened %d transactions, want 1", seen.Transactions)
+			}
+			if seen.Statements > authenticateStatementCeiling {
+				t.Errorf("authenticate sent %d statements, budget %d", seen.Statements, authenticateStatementCeiling)
+			}
+			if roundTrips < seen.Exchanges || roundTrips != authenticateRoundTrips {
+				t.Errorf("authenticate used %d round trips for %d pgx calls, want %d", roundTrips, seen.Exchanges, authenticateRoundTrips)
+			}
+		})
 	}
 }
 

@@ -61,6 +61,7 @@ func TestTopicStripsRepliesAndForwards(t *testing.T) {
 		"Termin":                      "termin",
 		"Re: Termin, unser Angebot":   "termin, unser angebot",
 		"Angebot Re: Termin":          "angebot re: termin",
+		"FW: Re: Termin":              "termin",
 	}
 	for subject, want := range cases {
 		if got := mailsubject.Topic(subject); got != want {

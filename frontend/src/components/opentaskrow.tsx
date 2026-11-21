@@ -100,6 +100,7 @@ export function OpenTaskRow({
         task.writable && (
           <TaskCompleteCheck
             activityId={task.id}
+            subject={task.subject}
             version={task.version}
             update={taskUpdate}
           />

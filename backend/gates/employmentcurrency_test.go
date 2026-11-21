@@ -26,10 +26,10 @@ package gates
 // by testing `ended_at` itself. It must call the helper.
 //
 // What it deliberately does NOT judge: a relationship of another kind. A
-// `deal_stakeholder` or a `partner_of` edge also carries `ended_at`, and
-// whether a future end date leaves one of those current is a different
-// question that nobody has answered yet. Widening this gate to cover them would
-// be asserting an answer rather than holding one.
+// `deal_stakeholder` edge has its own definition, held by
+// dealseatcurrency_test.go. A `partner_of` edge also carries `ended_at`, and
+// whether a future end date leaves one of those current is a question nobody
+// has answered yet.
 
 import (
 	"fmt"
@@ -54,23 +54,15 @@ import (
 // from everywhere. Eight statements in seven files were ratified here by name
 // while it lived in `modules/contacts`; all eight now call it, so there is
 // nothing left to ratify and the map is gone rather than emptied.
-// carriesASecondEdgeKind ratifies the two statements whose employment arm DOES
-// call the helper and which still read as findings here, because they ask about
-// another edge kind in the same statement and this census matches per statement
-// rather than per arm.
+// carriesASecondEdgeKind ratifies a statement whose employment arm calls the
+// helper but which still reads as a finding here. It asks about another edge
+// kind too, and this census matches per statement rather than per arm.
 //
-// The other kind is a stakeholder edge — on a deal, on a project — and it has no
-// notice period: a stakeholder either is on the deal or is not, so `ended_at IS
-// NULL` is the whole question there and the date comparison would be wrong. What
-// the gate cannot see is which arm the test belongs to.
-//
-// TWO, and a different reason from the eight this map replaced. Those said the
-// predicate was out of reach; it is not any more. These say the census reads a
-// statement whole. Sharpening it to judge the conjunction the employment kind
-// sits in would retire them, and is worth doing the moment a third appears.
+// The other kind is a project stakeholder edge, which tests its own ended_at.
+// What the gate cannot see is which arm the test belongs to. Sharpening it to
+// judge the conjunction the employment kind sits in would retire this entry.
 var carriesASecondEdgeKind = gatekit.Waive(map[string]string{
 	"internal/modules/projects/surface.go": "the employment arm calls employment.CurrentPrimarySQL; the project_stakeholder arm beside it tests its own ended_at, which has no notice period to allow for",
-	"internal/modules/signals/warmroom.go": "the employment arm calls employment.IsCurrentSQL; the deal_stakeholder arm beside it tests its own ended_at, which has no notice period to allow for",
 })
 
 const (

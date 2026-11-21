@@ -391,7 +391,7 @@ func (s *Service) worklistFrom(
 		// merely convenient: DSR rows classify as `system` and feed none of the
 		// four readings, so a suppressed DSR lane hides no work these figures
 		// count. A lane whose rows DID feed one would have to be named.
-		Readings: readingsOf(considered, drawn, bounded, missing),
+		Readings: readingsOf(considered, drawn, s.view, bounded, missing),
 	}
 	s.echoAsked(&out, filter)
 	// The token for the row this page stopped on, minted ONLY when there is more

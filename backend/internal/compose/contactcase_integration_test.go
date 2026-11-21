@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"maps"
 	"slices"
 	"testing"
 	"time"
@@ -53,6 +54,7 @@ type caseEnv struct {
 func setupCases(t *testing.T) *caseEnv {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRoleToEach(t, "rep", e.Rep1, e.Rep2, e.Rep3)
 	consentStore := consent.NewStore(e.DB())
 	return &caseEnv{e: e, phone: 1000, store: contacts.NewStore(e.DB()).
 		WithStopCarrier(consentStore).
@@ -213,7 +215,7 @@ func TestACaseMergeOfColleaguesContactsNeedsThePolicy(t *testing.T) {
 		t.Errorf("the survivor is not owned by the chosen owner")
 	}
 	want := map[ids.UUID]string{c.e.Rep2: "write", c.e.Rep3: "write"}
-	if got := sharesOf(out); !mapsEqual(got, want) {
+	if got := sharesOf(out); !maps.Equal(got, want) {
 		t.Errorf("shares = %v, want %v", got, want)
 	}
 	for owner, access := range want {
@@ -229,18 +231,6 @@ func sharesOf(out crmcontracts.ContactCaseOutcome) map[ids.UUID]string {
 		got[ids.UUID(share.UserId)] = string(share.Access)
 	}
 	return got
-}
-
-func mapsEqual[K comparable, V comparable](a, b map[K]V) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for k, v := range a {
-		if b[k] != v {
-			return false
-		}
-	}
-	return true
 }
 
 func grantAccess(t *testing.T, e *integration.Env, record, user ids.UUID) string {
@@ -262,6 +252,7 @@ func TestACaseMergeKeepsEachFormerOwnerAtTheirSeat(t *testing.T) {
 		t.Fatal(err)
 	}
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3, gone)
+	c.e.MoveToRole(t, c.e.Rep2, "read_only")
 	for _, stmt := range []string{
 		`UPDATE app_user SET seat_type = 'read' WHERE id = $1`,
 	} {
@@ -279,8 +270,11 @@ func TestACaseMergeKeepsEachFormerOwnerAtTheirSeat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("merging the case: %v", err)
 	}
-	if got, want := sharesOf(out), map[ids.UUID]string{c.e.Rep2: "write", c.e.Rep3: "read"}; !mapsEqual(got, want) {
-		t.Errorf("shares = %v, want %v: a read seat keeps read", got, want)
+	if got, want := sharesOf(out), map[ids.UUID]string{c.e.Rep2: "read", c.e.Rep3: "read"}; !maps.Equal(got, want) {
+		t.Errorf("shares = %v, want %v: a read seat or a read_only role keeps read", got, want)
+	}
+	if n := c.e.CutShareAudits(t, members[0], c.e.Rep2, "limited_by_role"); n != 1 {
+		t.Errorf("%d carried shares audited as limited by role, want 1", n)
 	}
 	if grantAccess(t, c.e, members[0], c.e.Rep3) != "read" {
 		t.Error("the read seat's stored grant is not read")
@@ -303,7 +297,7 @@ func TestASubsetMergeLeavesTheRestAsAnOpenPairWithTheSurvivor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("merging two of three: %v", err)
 	}
-	if got := sharesOf(out); !mapsEqual(got, map[ids.UUID]string{c.e.Rep2: "write"}) {
+	if got := sharesOf(out); !maps.Equal(got, map[ids.UUID]string{c.e.Rep2: "write"}) {
 		t.Errorf("shares = %v, want only the selected colleague", got)
 	}
 	if grantAccess(t, c.e, members[0], c.e.Rep3) != "" {

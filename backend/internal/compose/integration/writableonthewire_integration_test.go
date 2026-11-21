@@ -40,6 +40,7 @@ func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
 	mine := e.SeedContact(t, "My contact", &e.Rep1)
 	theirs := e.SeedContact(t, "Their contact", &e.Rep3)
 	shared := e.SeedContact(t, "Shared contact", &e.Rep3)
+	e.GrantRole(t, e.Rep1, "rep")
 	if _, err := svc.CreateRecordGrant(e.Admin(), identity.CreateGrantInput{
 		RecordType: "contact", RecordID: shared,
 		SubjectType: "user", SubjectID: e.Rep1, Access: "write",

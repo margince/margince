@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"maps"
 	"slices"
 	"testing"
 	"time"
@@ -66,7 +67,7 @@ func TestAPreviewWritesNothingAndAnswersWhatTheMergeDoes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("merging after the preview: %v", err)
 	}
-	if !mapsEqual(sharesOf(preview), sharesOf(merged)) || len(preview.MergedIds) != len(merged.MergedIds) ||
+	if !maps.Equal(sharesOf(preview), sharesOf(merged)) || len(preview.MergedIds) != len(merged.MergedIds) ||
 		preview.Mode != merged.Mode || len(preview.Skipped) != len(merged.Skipped) {
 		t.Errorf("the preview answered %+v, the merge did %+v", preview, merged)
 	}

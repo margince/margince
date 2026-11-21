@@ -18,6 +18,7 @@ The eight shapes, what each is for, and how each one silently passes:
 |---|---|---|
 | `accountreachcopies_test.go` | H2 | The stored company clock and the activity walk use the same employment bounds. |
 | `acquisitionvocabulary_test.go` | H1 | Two modules spell "we do not know how this contact arrived" the same way. |
+| `agentegresscolumn_test.go` | H2 | The outgoing allowance counts what its name says: a call that sends something out of the workspace. |
 | `agenttoolcatalogtiers_test.go` | H2 | The tool catalog's Tier column says what the contract says. |
 | `aiactivitycatalogparity_test.go` | H3 | The AI-activity contract names the work that can reach it and nothing else, and caps what the read caps. |
 | `aiconnectreadme_test.go` | H2 | Every connect path in aiconnect.ts has one skill README section that links the same vendor guide, and the README offers no path the page lacks. |
@@ -52,6 +53,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `composedfrontendbuilders_test.go` | H3 | Two builders compile the composed SPA (the make lane and the release image), and each of them must install the composed workspace before it does. |
 | `configgenerated_test.go` | H3 | The configuration files written from the settings registry are the ones its generator writes now. |
 | `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |
+| `consentnoconnectioncopy_test.go` | H3 | A rep reads the guard's "no connection" reason in their own language, from the web app's copy. |
 | `consumergroupwiring_test.go` | H3 | Every lane the worker starts is a group the catalog declares. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts the record types the search module can anchor a context read on (every searchable type but the text-only ones), and the contract has to say the same set. |
 | `contractadmission_test.go` | H3 | A route the contract declares `security: []` is reachable without a session. |
@@ -90,6 +92,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendcurrencies_test.go` | H3 | The currency picker must never offer a code the server refuses. |
 | `frontendcustomfieldtypes_test.go` | H3 | The custom-field types are one list on both sides of the wire. |
 | `frontenddatenotation_test.go` | H3 | A server-written brief and the app around it must write one day the same way, or the reader sees 16/11/2026 beside 2026-11-16 on one screen. |
+| `frontenddealroles_test.go` | H3 | A stored deal role is free text, and both sides decide the same question. |
 | `frontenddue_window_test.go` | H3 | The task due-date box offers days inside the window the server accepts. |
 | `frontendeffectfailures_test.go` | H2 | A failed approval's line reads in the reader's language when the browser has words for its code. |
 | `frontendemailtext_test.go` | H3 | The browser and the server split a mail body by the same rules, or a row's preview and the message it opens disagree about where the sender stopped writing. |
@@ -109,6 +112,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendlinkedinhosts_test.go` | H3 | Which hosts count as LinkedIn is decided on both sides of the wire, and the two answers are different sizes by design. |
 | `frontendmagickeys_test.go` | H2 | Every sentence the receipt emits has a word for it, in the client that draws it and in the catalog that translates it. |
 | `frontendmailproviders_test.go` | H3 | Which capture providers are a mailbox is answered on both sides of the wire, and the two answers must be the same three names. |
+| `frontendmailsubject_test.go` | H3 | The browser and the server both group a thread by its subject without the reply and forward markers. |
 | `frontendmaskedfields_test.go` | H3 | A field the server can withhold is drawn as withheld, or the screen states something false. |
 | `frontendmessagevoice_test.go` | H3 | messageVoiceCases lists the contract's directions and authors for one kind, with the side the activity engine reads. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the same table, or the integer they exchange means two different amounts. |
@@ -725,6 +729,7 @@ The eight shapes, what each is for, and how each one silently passes:
 |---|---|---|
 | `consentpurposescope_test.go` | H1 | consent\_purpose is installation-wide configuration, not a row-scoped record. |
 | `consumermailonelist_test.go` | H2 | One consumer-mail list, held by a test rather than by a comment. |
+| `dealseatcurrency_test.go` | H1 | dealseat.CurrentSQL is the one spelling of "this contact sits on the deal's buying committee". |
 | `draftpersistenceparity_test.go` | H3 | Two drafting tools keep their drafts in different places by design, and each says so beside the other's name. |
 | `elapseddayszone_test.go` | H1 | A day count is reckoned in the zone the sentence is drawn in. |
 | `employmentcurrency_test.go` | H1 | employment.IsCurrentSQL calls itself "the one spelling of 'this job is still theirs'", and every statement that asks whether an employment is current goes through it. |

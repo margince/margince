@@ -28,7 +28,7 @@ import (
 // The plaintext token is deliberately absent from the response. This link is
 // only ever mailed, and returning it would hand a caller the capability that the
 // delivered-to-their-own-mailbox claim rests on.
-func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RequestDetailsConfirmationParams) {
 	language, ok := sendLanguageOf(w, r)
 	if !ok {
 		return
@@ -78,7 +78,7 @@ func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Requ
 // the same reasons: `queued` says the message reached the lane, `sendable` says
 // this installation has one, and neither claims delivery. The plaintext token
 // is absent because this link is only ever mailed.
-func (h Handlers) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.SendPrivacyNoticeParams) {
 	language, ok := sendLanguageOf(w, r)
 	if !ok {
 		return

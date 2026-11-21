@@ -13,9 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// loadFieldMasks reads the columns the principal's roles withhold — the
-// union over every role held, additive like the grants: a role that masks a
-// field masks it for the seat, whatever another role says.
+// loadFieldMasks reads the columns the principal's roles withhold. It is the
+// union over every role held: a role that masks a field masks it for the seat.
+// roleDocumentsSQL answers the same per seat, and
+// TestASeatWithTwoRolesHoldsTheUnionOfTheirMasks holds the two together.
 func loadFieldMasks(ctx context.Context, tx pgx.Tx, roleKeys []string) ([]principal.FieldMask, error) {
 	if len(roleKeys) == 0 {
 		return nil, nil

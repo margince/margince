@@ -30,9 +30,10 @@ func (a *assembly) readContracts() error {
 	return nil
 }
 
-// readDocuments lists the files attached to the project itself. Its gate is
-// the project grant — an attachment inherits its parent's authority — which
-// the anchor read already held, so the section has no omission case.
+// readDocuments lists the project's own uploads and the files of the
+// activities filed under it. Its gate is the project grant, which the anchor
+// read already held, so the section has no omission case. Each activity file
+// is gated on its own activity.
 func (a *assembly) readDocuments() error {
 	limit := sectionLimit
 	rows, page, err := a.svc.activities.ListAttachmentsTx(a.ctx, a.tx, entityTypeProject, a.projectID.UUID, nil, &limit)

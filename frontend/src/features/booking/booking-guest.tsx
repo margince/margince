@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { GoneNotice } from "../../components/gonenotice";
 import { Calendar, type ISODay } from "../../design-system/calendar";
 import { CompanyLogo } from "../../design-system/companylogo";
 import { Heading } from "../../design-system/heading";
@@ -36,6 +37,7 @@ import {
   GuestDetailsForm,
   GuestHost,
   GuestUnavailable,
+  guestTitle,
   PreviewNotice,
   videoAppOf,
 } from "./booking-guest-parts";
@@ -258,7 +260,11 @@ export function BookingGuestScreen({
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
-        <QueryGate pendingLabel={t("common.loading")} query={profile}>
+        <QueryGate
+          pendingLabel={t("common.loading")}
+          query={profile}
+          gone={<GoneNotice messageKey="book.linkGone" />}
+        >
           {(host) =>
             publicUnavailable ? (
               <GuestUnavailable host={host} zone={zone} />
@@ -380,17 +386,6 @@ export function BookingGuestScreen({
       </div>
     </div>
   );
-}
-
-// The tab names the host only while their page takes bookings; a paused or
-// missing page keeps a generic title, as its link-preview card does.
-function guestTitle(
-  t: ReturnType<typeof useT>,
-  host: { paused: boolean; host_name: string } | undefined,
-): string {
-  return host && !host.paused && host.host_name
-    ? t("book.pageTitle", { host: host.host_name })
-    : t("book.pageTitleGeneric");
 }
 
 // A busy month's read stops after a bounded number of pages; a day past where

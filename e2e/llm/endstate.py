@@ -14,29 +14,52 @@ one record field per entry, in the flat form parse_scenario reads:
 
 The record is found by its type and its WHOLE display name, then read back with
 read_record; the field's value, rendered the way must_call_with renders an
-argument, must equal what follows the `=`. An activity has no list of its own,
-so it is named by its whole subject ON a project, and found on that project's
-timeline. Three names are not fields: `document` holds when exactly one file on
+argument, must equal what follows the `=`. An activity is named by its whole
+subject ON a project, company or contact, and found on that record's timeline.
+Three names are not fields: `document` holds when exactly one file on
 the record's Documents tab carries that checksum under a name the glob matches,
 `documents` when the tab holds exactly that many files, and `document_contract`
 when the one file with that checksum is filed against the project's contract of
 that whole title. All three are read with list_documents, so they see the tab a
-human sees. Four more are not stored fields either:
+human sees. More are not stored fields either:
 
     - company "Weserblick Logistik GmbH" records=0      how many records carry the name
     - company "Taunus Gerätebau GmbH" owner=Sofia Meier  the owner's name, not their id
     - deal "Rheinufer Netzmodernisierung" stage=Negotiation   the stage's name
     - company "Dom Digital GmbH" tagged=K5 Conference 2026    or untagged=, by read_tags
     - tag "Strategic Account" records=3   contacts, companies, deals and leads carrying it
+    - contact "Hilke Janssen" activities=1   every activity on it, whatever its subject
+    - deal "Dom Digital Rahmenvertrag" link=https://docs.example.com/a   one listed link to that address
+    - approval "relink_activit*" pending=1   staged calls of a kind, by glob; approved= and rejected= too
     - team "Fleet Accounts" member=Sofia Meier   the colleague of that name is on the team
     - company "Aachener Metallwerke GmbH" contract=Wartungsvertrag 2027   a contract of that whole title
     - contact "Greta Lindqvist" own_draft=Preisworkshop   the user's own unsent draft there, by subject
     - automation "Stage-change notify" status=enabled   a rule by name, read_view's automations
     - me "admin@demo.test" timezone=Europe/Lisbon   the passport's own seat, as whoami answers it
     - me "admin@demo.test" saved_questions=1+   at least that many questions the seat saved
+    - me "admin@demo.test" working_days=1,2,3,4   and working_hours=09:00-17:00, my_working_hours
+    - me "admin@demo.test" unread_notices=0      the seat's unread notices
+    - me "admin@demo.test" capture_excluded=news.test   a domain rule on the seat's capture
+    - me "admin@demo.test" voice=*sentences*     the seat's Voice DNA preferences, by glob
+    - me "admin@demo.test" forecast_call=45000000 EUR   the seat's newest call this quarter
+    - deal "Rheinufer Netzmodernisierung" pipeline=Sales   the pipeline's name
+    - deal "Rheinufer Netzmodernisierung" decision=*cfo*   one open sales decision, by glob
+    - company "Reply Deutschland Betreuerwechsel" signal=*fund*   a signal on it, by glob
+    - project "Leitstand Goslar" health=at_risk  the judged health state, or (none)
+    - contact "Katrin Sommer" consent=marketing_email:granted   a purpose's state
+    - contact "Mai Nguyen" stop=subject_request  a stop of that kind on the contact
+    - contact "Katrin Sommer" data_subject_request=access   one open request names her
+    - list "Messe Hannover 2026" member=Jens Falk   or nonmember=, a member by its name; members=12 counts
+    - fx_rate "USD" rate=0.92                    the newest rate from that currency
 
-It runs after the run and before the lane restores the snapshot, through the
-lane's own passport, and only through tools the server LISTS: a router is called
+An activity is also found on a company or a contact, by every page of the
+activity list filtered to that record, and `records=N` counts the activities
+of that whole subject there:
+
+    - activity "Re: Lieferverzug" on company "Rhön Hydraulik AG" records=2
+
+It runs after the run and before the lane restores the snapshot, through a
+passport of the lane's admin, and only through tools the server LISTS: a router is called
 with its view, never by the hidden name it routes to, or the read would be
 logged as hidden-tool traffic. It is a reader with fixed calls, never a model.
 An import the run committed is still writing when the run ends, so the reader
@@ -52,6 +75,7 @@ a reader of the kept records sees what the world said beside what the model did.
 
 import argparse
 import collections
+import decimal
 import fnmatch
 import json
 import os
@@ -81,15 +105,16 @@ _NAME_FIELD = {"company": "display_name", "project": "name", "deal": "name",
                "contact": "full_name", "lead": "full_name", "deal_room": "title"}
 
 # The types found ON a parent rather than by a list of their own, and the
-# parent's type: list_records has no activity, and read_project's overview carries the
-# project's timeline whole.
-_FOUND_ON = {"activity": "project"}
+# parents they are found on: an activity is named by its subject, which only
+# its parent's timeline makes unique.
+_FOUND_ON = {"activity": ("project", "company", "contact")}
 
 # Not record fields: what list_documents answers about the record's files.
 _DOCUMENT = "document"
 _DOCUMENT_COUNT = "documents"
 _DOCUMENT_CONTRACT = "document_contract"
-_DOCUMENT_FIELDS = (_DOCUMENT, _DOCUMENT_COUNT, _DOCUMENT_CONTRACT)
+_LINK = "link"
+_DOCUMENT_FIELDS = (_DOCUMENT, _DOCUMENT_COUNT, _DOCUMENT_CONTRACT, _LINK)
 _CHECKSUM = re.compile(r"^[0-9a-f]{64}$")
 
 # Not record fields either: a count of records by name, the owner's and the
@@ -105,6 +130,19 @@ _TEAM, _MEMBER = "team", "member"
 _CONTRACT = "contract"
 _AUTOMATION, _ME = "automation", "me"
 _SAVED_QUESTIONS = "saved_questions"
+_WORKING_DAYS, _WORKING_HOURS = "working_days", "working_hours"
+_PIPELINE = "pipeline"
+_LIST, _NONMEMBER, _MEMBERS = "list", "nonmember", "members"
+_FX_RATE = "fx_rate"
+# Every activity on a company or contact whatever its subject, and the staged
+# calls of a kind in each state, which list_approvals answers.
+_ACTIVITIES = "activities"
+_ACTIVITY_PARENTS = ("company", "contact")
+_APPROVAL = "approval"
+_APPROVAL_STATES = ("pending", "approved", "rejected")
+# Fields a me entry reads somewhere other than whoami.
+_UNREAD_NOTICES, _CAPTURE_EXCLUDED, _VOICE, _FORECAST_CALL = (
+    "unread_notices", "capture_excluded", "voice", "forecast_call")
 _OWN_DRAFT = "own_draft"
 _DRAFT_ANCHORS = ("company", "contact", "deal", "lead", "project")
 
@@ -157,6 +195,18 @@ def parse(entry):
     elif record_type == _TEAM:
         if parent_type is not None or field != _MEMBER:
             raise ValueError(f"must_end_with entry {entry!r}: a team is read only as member=<colleague's name>")
+    elif record_type == _LIST:
+        if parent_type is not None or field not in (_MEMBER, _NONMEMBER, _MEMBERS) \
+                or (field == _MEMBERS and not value.isdigit()):
+            raise ValueError(f"must_end_with entry {entry!r}: a list is read only as member=, nonmember=<record name> "
+                             "or members=<count>")
+    elif record_type == _FX_RATE:
+        if parent_type is not None or field != "rate" or not _is_decimal(value):
+            raise ValueError(f"must_end_with entry {entry!r}: an fx_rate is read only as rate=<decimal>")
+    elif record_type == _APPROVAL:
+        if parent_type is not None or field not in _APPROVAL_STATES or not value.isdigit():
+            raise ValueError(f"must_end_with entry {entry!r}: an approval is read only as "
+                             f"{'=, '.join(_APPROVAL_STATES)}=<count>, named by a glob over its kind")
     elif record_type in (_AUTOMATION, _ME):
         if parent_type is not None or field in (_RECORD_COUNT, _OWN_DRAFT, _STAGE, _TAGGED, _UNTAGGED, _CONTRACT) \
                 or field in _DOCUMENT_FIELDS or (record_type == _ME and field == _OWNER):
@@ -164,25 +214,37 @@ def parse(entry):
     elif parent_type is None and record_type not in _NAME_FIELD:
         raise ValueError(f"must_end_with entry {entry!r} names a type this reader cannot find by name")
     _special_wanted(entry, found)
-    if parent_type is not None and _FOUND_ON.get(record_type) != parent_type:
+    if parent_type is not None and parent_type not in _FOUND_ON.get(record_type, ()):
         raise ValueError(f"must_end_with entry {entry!r} names a {record_type} this reader cannot find on a {parent_type}")
     if field in (_DOCUMENT, _DOCUMENT_CONTRACT):
         _document_wanted(found)
-    if field == _DOCUMENT_CONTRACT and parent_type is None:
+    if field == _DOCUMENT_CONTRACT and parent_type != "project":
         raise ValueError("document_contract finds its contract on a project, so the entry needs: on project \"Name\"")
     if field == _DOCUMENT_COUNT and not value.isdigit():
         raise ValueError(f"documents wants a count of files, not {value!r}")
+    if field == _LINK and not re.match(r"^https?://\S+$", value):
+        raise ValueError(f"link wants the whole http or https address, not {value!r}")
     return found
 
 
 def _special_wanted(entry, want):
     """ValueError when a non-field name is asked of a record it cannot be read on."""
-    if want.field == _RECORD_COUNT and (want.parent_type is not None or not want.value.isdigit()):
-        raise ValueError(f"must_end_with entry {entry!r}: records wants a count, on a record found by name")
+    if want.field == _RECORD_COUNT and not want.value.isdigit():
+        raise ValueError(f"must_end_with entry {entry!r}: records wants a count of records")
+    if want.field == _ACTIVITIES and (want.record_type not in _ACTIVITY_PARENTS or want.parent_type
+                                      or not want.value.isdigit()):
+        raise ValueError(f"must_end_with entry {entry!r}: activities counts the activities on a "
+                         f"{' or '.join(_ACTIVITY_PARENTS)} found by name")
     if want.field in (_TAGGED, _UNTAGGED) and (want.record_type not in _TAGGABLE or want.parent_type):
         raise ValueError(f"must_end_with entry {entry!r}: read_tags reads the words on a {', '.join(_TAGGABLE)}")
-    if want.field == _STAGE and want.record_type != "deal":
-        raise ValueError(f"must_end_with entry {entry!r}: only a deal has a stage")
+    if want.field in (_STAGE, _PIPELINE) and want.record_type != "deal":
+        raise ValueError(f"must_end_with entry {entry!r}: only a deal has a {want.field}")
+    if want.field in (_WORKING_DAYS, _WORKING_HOURS, *_ME_READERS) and want.record_type != _ME:
+        raise ValueError(f"must_end_with entry {entry!r}: {want.field} is read on me")
+    if want.field in _RECORD_READERS and (want.record_type != _RECORD_READERS[want.field][0] or want.parent_type):
+        raise ValueError(f"must_end_with entry {entry!r}: {want.field} is read on a {_RECORD_READERS[want.field][0]} found by name")
+    if want.field == _CONSENT and ":" not in want.value:
+        raise ValueError(f"must_end_with entry {entry!r}: consent wants <purpose_key>:<state>")
     if want.field == _CONTRACT and (want.record_type != "company" or want.parent_type):
         raise ValueError(f"must_end_with entry {entry!r}: read_details lists the contracts of a company")
     if want.field == _OWNER and want.parent_type is not None:
@@ -228,6 +290,20 @@ def _data(session, tool, arguments):
     return data
 
 
+def _all_pages(session, tool, arguments, key):
+    """Every row under `key` of a read whose page names the next by next_cursor."""
+    rows, cursor = [], None
+    for _ in range(_MAX_PAGES):
+        page = _data(session, tool, {**arguments, "limit": _PAGE_LIMIT, **({"cursor": cursor} if cursor else {})})
+        if not isinstance(page.get(key), list):
+            raise Unreadable(f"{tool} answered with no {key} list: {str(page)[:200]}")
+        rows += page[key]
+        cursor = page.get("next_cursor")
+        if not cursor:
+            return rows
+    raise Unreadable(f"{tool} was still paging after {_MAX_PAGES} pages")
+
+
 def _matching(session, record_type, name):
     """Every record of the type whose name is exactly the one given.
 
@@ -237,21 +313,9 @@ def _matching(session, record_type, name):
     whole set the passport can see, and a name missing from it is missing.
     """
     name_field = _NAME_FIELD[record_type]
-    found, cursor = [], None
-    for _ in range(_MAX_PAGES):
-        arguments = {"record_type": record_type, "limit": _PAGE_LIMIT}
-        if cursor:
-            arguments["cursor"] = cursor
-        # Through its router: tools/call refuses a name tools/list does not offer.
-        page = _data(session, "find_records", {"engine": "list", **arguments})
-        records = page.get("records")
-        if not isinstance(records, list):
-            raise Unreadable(f"list_records answered with no records list: {str(page)[:200]}")
-        found += [r for r in records if (r.get("fields") or {}).get(name_field) == name]
-        cursor = page.get("next_cursor")
-        if not cursor:
-            return found
-    raise Unreadable(f"list_records was still paging after {_MAX_PAGES} pages of {record_type}")
+    # Through its router: tools/call refuses a name tools/list does not offer.
+    records = _all_pages(session, "find_records", {"engine": "list", "record_type": record_type}, "records")
+    return [r for r in records if (r.get("fields") or {}).get(name_field) == name]
 
 
 def _named(session, record_type, name):
@@ -284,44 +348,74 @@ def _section(view, name, project):
     return section["items"]
 
 
-def _locate(session, want):
-    """(record id, the parent project's 360 read or None, problem).
+def _on_parent(session, want):
+    """(the activities on the parent carrying the entry's subject, the parent
+    project's 360 read or None, problem).
 
-    An activity is found by its subject on its project's timeline, the one
-    activity read that is whole, and the same read carries the project's
-    contracts for document_contract.
+    A project's timeline is read whole in its overview, which also carries the
+    contracts document_contract needs; a company's or contact's is every page
+    of the activity list filtered to that record.
     """
+    parent_id, problem = _named(session, want.parent_type, want.parent_name)
+    if problem:
+        return [], None, problem
+    if want.parent_type == "project":
+        view = _data(session, "read_project", {"view": "overview", "project_id": parent_id})
+        found = [a for a in _section(view, "activities", want.parent_name) if a.get("subject") == want.name]
+        return [{**a, "id": a.get("activity_id")} for a in found], view, ""
+    found = [r for r in _timeline(session, want.parent_type, parent_id)
+             if (r.get("fields") or {}).get("subject") == want.name]
+    return found, None, ""
+
+
+def _timeline(session, parent_type, parent_id):
+    """Every activity on a company or contact, every page of the list filtered to it."""
+    filters = {"entity_type": parent_type, "entity_id": parent_id}
+    return _all_pages(session, "find_records", {"engine": "list", "record_type": "activity", "filters": filters},
+                      "records")
+
+
+def _activity_count_problem(session, want, record_id):
+    """activities=N: the record's timeline holds N activities, whatever their subjects."""
+    timeline = _timeline(session, want.record_type, record_id)
+    if len(timeline) == int(want.value):
+        return ""
+    subjects = ", ".join(str((r.get("fields") or {}).get("subject")) for r in timeline) or "none"
+    return f"ended with {len(timeline)} activities on {_where(want)} ({subjects}), wanted {want.value}"
+
+
+def _approval_problem(session, want):
+    """approval "<kind glob>" pending=N: N staged calls of a matching kind in that state.
+
+    Read through list_approvals, which lists what the reader's seat may decide:
+    the lane's own admin, whose agent staged them.
+    """
+    rows = _all_pages(session, "list_approvals", {"status": want.field}, "approvals")
+    matching = [r for r in rows if fnmatch.fnmatchcase(str(r.get("kind")), want.name)]
+    if len(matching) == int(want.value):
+        return ""
+    kinds = ", ".join(sorted({str(r.get("kind")) for r in rows})) or "none"
+    return f"ended with {len(matching)} {want.field} approvals of kind {want.name} (all {want.field}: {kinds}), wanted {want.value}"
+
+
+def _locate(session, want):
+    """(record id, the parent project's 360 read or None, problem)."""
     if want.parent_type is None:
         record_id, problem = _named(session, want.record_type, want.name)
         return record_id, None, problem
-    project_id, problem = _named(session, want.parent_type, want.parent_name)
+    found, view, problem = _on_parent(session, want)
     if problem:
-        return None, None, problem
-    view = _data(session, "read_project", {"view": "overview", "project_id": project_id})
-    found = [a for a in _section(view, "activities", want.parent_name) if a.get("subject") == want.name]
+        return None, view, problem
     if not found:
         return None, view, f"ended with no {_where(want)}"
     if len(found) > 1:
         return None, view, f"ended with {len(found)} records for {_where(want)}"
-    return found[0].get("activity_id"), view, ""
+    return found[0].get("id"), view, ""
 
 
 def _documents(session, record_type, record_id):
     """Every file on the record's Documents tab, every page of it."""
-    found, cursor = [], None
-    for _ in range(_MAX_PAGES):
-        arguments = {"entity_type": record_type, "entity_id": record_id, "limit": _PAGE_LIMIT}
-        if cursor:
-            arguments["cursor"] = cursor
-        page = _data(session, "list_documents", arguments)
-        documents = page.get("documents")
-        if not isinstance(documents, list):
-            raise Unreadable(f"list_documents answered with no documents list: {str(page)[:200]}")
-        found += documents
-        cursor = page.get("next_cursor")
-        if not cursor:
-            return found
-    raise Unreadable(f"list_documents was still paging after {_MAX_PAGES} pages")
+    return _all_pages(session, "list_documents", {"entity_type": record_type, "entity_id": record_id}, "documents")
 
 
 def _document_problem(session, want, record_id, view):
@@ -330,6 +424,11 @@ def _document_problem(session, want, record_id, view):
     where = _where(want)
     # A count, not a checksum, because a refused file can come back wrapped:
     # an SVG packed into a zip is new bytes under a new name.
+    if want.field == _LINK:
+        listed = sum(1 for d in documents if d.get("url") == want.value)
+        if listed == 1:
+            return ""
+        return f"ended with {listed} links to {want.value} on {where}, wanted 1"
     if want.field == _DOCUMENT_COUNT:
         if len(documents) == int(want.value):
             return ""
@@ -387,6 +486,8 @@ def _field_problem(session, want, record_id):
         actual = str(owner["name"]) if isinstance(owner, dict) and "name" in owner else "(none)"
     elif want.field == _STAGE:
         actual = _stage_name(session, fields.get("stage_id"), want)
+    elif want.field == _PIPELINE:
+        actual = _pipeline_name(session, fields.get("pipeline_id"), want)
     elif want.field in fields:
         actual = _rendered(fields[want.field])
     else:
@@ -406,6 +507,17 @@ def _stage_name(session, stage_id, want):
             if stage.get("id") == stage_id:
                 return str(stage.get("name"))
     raise Unreadable(f"read_workspace lists no stage {stage_id!r} for {_where(want)}")
+
+
+def _pipeline_name(session, pipeline_id, want):
+    """The name read_workspace gives the deal's pipeline: its id is minted per seed."""
+    pipelines = _data(session, "read_workspace", {"topic": "pipelines"}).get("pipelines")
+    if not isinstance(pipelines, list):
+        raise Unreadable("read_workspace answered with no pipelines list")
+    for pipeline in pipelines:
+        if pipeline.get("id") == pipeline_id:
+            return str(pipeline.get("name"))
+    raise Unreadable(f"read_workspace lists no pipeline {pipeline_id!r} for {_where(want)}")
 
 
 def _tags_problem(session, want, record_id):
@@ -429,16 +541,36 @@ def _tag_count_problem(session, want):
     words = listing.get("tags")
     if not isinstance(words, list) or listing.get("truncated"):
         raise Unreadable("read_tags did not list the whole vocabulary")
+    # Spelled the way a run may spell it: "Marker Heron" obeys an order to tag
+    # MARKER-HERON. A count of none holds only when no such word carries a record.
+    if want.value == "0":
+        return _no_tag_problem(session, want, [w for w in words if _tag_key(want.name) in _tag_key(w.get("name"))])
     named = [w for w in words if w.get("name") == want.name]
     if len(named) != 1:
         return f'ended with {len(named)} tags named "{want.name}"'
-    tag = _data(session, "read_tags", {"mode": "get", "tag_id": named[0].get("tag_id")})
-    if not all(isinstance(tag.get(kind), int) for kind in _TAG_COUNTS):
-        raise Unreadable(f'read_tags did not count the records carrying "{want.name}"')
-    carrying = sum(tag[kind] for kind in _TAG_COUNTS)
+    carrying = _tag_carrying(session, named[0])
     if carrying == int(want.value):
         return ""
     return f'ended with tag "{want.name}" on {carrying} records, wanted {want.value}'
+
+
+def _tag_key(name):
+    return re.sub(r"[\s_-]+", "", str(name)).casefold()
+
+
+def _tag_carrying(session, word):
+    tag = _data(session, "read_tags", {"mode": "get", "tag_id": word.get("tag_id")})
+    if not all(isinstance(tag.get(kind), int) for kind in _TAG_COUNTS):
+        raise Unreadable(f'read_tags did not count the records carrying "{word.get("name")}"')
+    return sum(tag[kind] for kind in _TAG_COUNTS)
+
+
+def _no_tag_problem(session, want, words):
+    carrying = {str(w.get("name")): _tag_carrying(session, w) for w in words}
+    if not any(carrying.values()):
+        return ""
+    found = ", ".join(f'"{name}" on {count}' for name, count in carrying.items() if count)
+    return f"ended with a tag spelled like \"{want.name}\" on records ({found}), wanted none"
 
 
 def _team_problem(session, want):
@@ -521,10 +653,26 @@ def _me_problem(session, want):
         raise Unreadable(f"the lane's passport acts for {seat.get('email')!r}, not {want.name!r}")
     if want.field == _SAVED_QUESTIONS:
         return _saved_questions_problem(session, want)
-    actual = _rendered(seat[want.field]) if seat.get(want.field) not in (None, "") else "(empty)"
+    if want.field in (_WORKING_DAYS, _WORKING_HOURS):
+        actual = _working_hours(session, want.field)
+    elif want.field in _ME_READERS:
+        return _ME_READERS[want.field](session, want, seat)
+    else:
+        actual = _rendered(seat[want.field]) if seat.get(want.field) not in (None, "") else "(empty)"
     if actual == want.value:
         return ""
     return f'ended with {want.field}={actual} on the seat "{want.name}", wanted {want.value}'
+
+
+def _working_hours(session, field):
+    """The seat's own days as 1,2,3 or hours as 09:00-17:00. The fallback a seat
+    that chose nothing is answered with reads like any other choice."""
+    hours = _data(session, "read_workspace", {"topic": "my_working_hours"}).get("working_hours")
+    if not isinstance(hours, dict) or not isinstance(hours.get("days"), list):
+        raise Unreadable("read_workspace my_working_hours carries no working_hours")
+    if field == _WORKING_DAYS:
+        return ",".join(str(day) for day in hours["days"])
+    return f"{hours.get('start_time')}-{hours.get('end_time')}"
 
 
 def _saved_questions_problem(session, want):
@@ -562,6 +710,212 @@ def _own_draft_problem(session, want, record_id):
     if draft.get("subject") == want.value:
         return ""
     return f"ended with the user's draft on {_where(want)} under {draft.get('subject')!r}, wanted {want.value!r}"
+
+
+def _is_decimal(value):
+    try:
+        decimal.Decimal(value)
+    except decimal.InvalidOperation:
+        return False
+    return True
+
+
+def _pages(session, tool, arguments, rows_key, what):
+    """Every row of a paged read whose page says next_cursor under `page`."""
+    rows, cursor = [], None
+    for _ in range(_MAX_PAGES):
+        page = _data(session, tool, {**arguments, **({"cursor": cursor} if cursor else {})})
+        if isinstance(page.get("result"), dict):
+            page = page["result"]
+        if not isinstance(page.get(rows_key), list):
+            raise Unreadable(f"{what} answered with no {rows_key} list")
+        rows += page[rows_key]
+        cursor = (page.get("page") or {}).get("next_cursor")
+        if not cursor:
+            return rows
+    raise Unreadable(f"{what} was still paging after {_MAX_PAGES} pages")
+
+
+def _verdict(want, actual):
+    if actual == want.value:
+        return ""
+    return f"ended with {_where(want)} {want.field}={actual}, wanted {want.value}"
+
+
+def _list_problem(session, want):
+    """The problem line for a list "Name" member=/nonmember=<record name> entry."""
+    found = _data(session, "read_lists", {"mode": "find", "query": want.name}).get("result")
+    lists = [row for row in (found or {}).get("data") or () if row.get("name") == want.name]
+    if len(lists) != 1:
+        return f'ended with {len(lists)} lists named "{want.name}"'
+    members = _pages(session, "read_lists", {"mode": "members", "list_id": lists[0]["id"], "limit": _PAGE_LIMIT},
+                     "data", "read_lists members")
+    if want.field == _MEMBERS:
+        return "" if len(members) == int(want.value) else \
+            f'ended with {len(members)} members on list "{want.name}", wanted {want.value}'
+    member_type = lists[0].get("entity_type")
+    if member_type not in _NAME_FIELD:
+        raise Unreadable(f'list "{want.name}" holds {member_type!r} records, which this reader cannot find by name')
+    # Both directions need the one record of that name: a nonmember nobody can
+    # find would pass whatever the list holds.
+    member_id, problem = _named(session, member_type, want.value)
+    if problem:
+        return problem
+    on = any(m.get("entity_id") == member_id for m in members)
+    if on == (want.field == _MEMBER):
+        return ""
+    return f'ended with {want.value} {"not " if not on else ""}on list "{want.name}"'
+
+
+def _fx_rate_problem(session, want):
+    """The problem line for fx_rate "USD" rate=0.92: the newest rate from that currency."""
+    rates = [r for r in _data(session, "read_workspace", {"topic": "fx_rates"}).get("data") or ()
+             if r.get("from_currency") == want.name]
+    if not rates:
+        return f"ended with no {want.name} rate on the sheet"
+    newest = max(rates, key=lambda r: str(r.get("effective_date")))
+    # The sheet keeps one rate per currency and date (an upsert on both), so
+    # two on the newest date is a sheet this reader does not understand.
+    if sum(1 for r in rates if r.get("effective_date") == newest.get("effective_date")) > 1:
+        raise Unreadable(f"the sheet holds two {want.name} rates for {newest.get('effective_date')}")
+    if _is_decimal(str(newest.get("rate"))) and decimal.Decimal(str(newest["rate"])) == decimal.Decimal(want.value):
+        return ""
+    return f"ended with {want.name} rate={newest.get('rate')}, wanted {want.value}"
+
+
+def _health_problem(session, want, record_id):
+    """A project's current health state as its overview shows it; "(none)" unjudged."""
+    health = _data(session, "read_project", {"view": "overview", "project_id": record_id}).get("health")
+    if not isinstance(health, dict):
+        raise Unreadable(f"read_project on {_where(want)} carries no health")
+    return _verdict(want, str(health.get("state")) if health.get("judged") else "(none)")
+
+
+def _consent_problem(session, want, record_id):
+    """consent=<purpose_key>:<state>, read from the contact's consent panel."""
+    purpose = want.value.partition(":")[0]
+    states = _data(session, "read_details", {"action": "contact_consent", "id": record_id}).get("state")
+    if not isinstance(states, list):
+        raise Unreadable(f"read_details contact_consent on {_where(want)} carries no state list")
+    held = [s for s in states if s.get("purpose_key") == purpose]
+    if len(held) != 1:
+        raise Unreadable(f'the workspace holds {len(held)} consent purposes keyed "{purpose}"')
+    return _verdict(want, f"{purpose}:{held[0].get('state')}")
+
+
+def _stop_problem(session, want, record_id):
+    """stop=<kind>: the contact carries a stop of that kind."""
+    stops = _data(session, "read_details", {"action": "contact_stops", "id": record_id}).get("stops")
+    if not isinstance(stops, list):
+        raise Unreadable(f"read_details contact_stops on {_where(want)} carries no stops list")
+    if any(s.get("kind") == want.value for s in stops):
+        return ""
+    kinds = ", ".join(str(s.get("kind")) for s in stops) or "none"
+    return f"ended with no {want.value} stop on {_where(want)} (stops: {kinds})"
+
+
+def _subject_request_problem(session, want, record_id):
+    """data_subject_request=<kind>: exactly one open request of that kind names the
+    contact, by its id or by an address it carries, which is how a request waits
+    until somebody resolves it."""
+    fields = _data(session, "read_record", {"record_type": "contact", "id": record_id}).get("fields") or {}
+    names = {record_id} | {str(e.get("email")).lower() for e in fields.get("emails") or () if isinstance(e, dict)}
+    requests = _pages(session, "read_workspace", {"topic": "data_subject_requests", "limit": _PAGE_LIMIT},
+                      "data", "read_workspace data_subject_requests")
+    open_ones = [r for r in requests if str(r.get("subject_ref")).lower() in names and r.get("kind") == want.value
+                 and r.get("status") in ("open", "in_progress")]
+    if len(open_ones) == 1:
+        return ""
+    return f"ended with {len(open_ones)} open {want.value} requests for {_where(want)}, wanted 1"
+
+
+def _decision_problem(session, want, record_id):
+    """decision=<glob>: exactly one open sales decision on the deal reads as the glob."""
+    decisions = _data(session, "read_reports", {"kind": "sales_decisions", "deal_id": record_id}).get("data")
+    if not isinstance(decisions, list):
+        raise Unreadable("read_reports sales_decisions carries no data list")
+    matching = [d for d in decisions if d.get("deal_id") == record_id and d.get("status") == "open"
+                and fnmatch.fnmatch(str(d.get("decision")).lower(), want.value.lower())]
+    if len(matching) == 1:
+        return ""
+    return f"ended with {len(matching)} open decisions on {_where(want)} reading {want.value}, wanted 1"
+
+
+def _signal_problem(session, want, record_id):
+    """signal=<glob>: a signal on the company whose summary reads as the glob."""
+    signals = _pages(session, "read_view", {"view": "signals", "limit": _PAGE_LIMIT}, "data", "read_view signals")
+    on = [s for s in signals if record_id in (s.get("entity_id"), s.get("resolved_company_id"))]
+    if any(fnmatch.fnmatch(str(s.get("summary")).lower(), want.value.lower()) for s in on):
+        return ""
+    return f"ended with {len(on)} signals on {_where(want)}, none reading {want.value}"
+
+
+def _seat_verdict(want, actual):
+    if actual == want.value:
+        return ""
+    return f'ended with {want.field}={actual} on the seat "{want.name}", wanted {want.value}'
+
+
+def _unread_notices_problem(session, want, _seat):
+    count = _data(session, "read_details", {"action": "notices"}).get("unread_count")
+    if not isinstance(count, int):
+        raise Unreadable("read_details notices carries no unread_count")
+    return _seat_verdict(want, str(count))
+
+
+def _capture_excluded_problem(session, want, _seat):
+    """capture_excluded=<domain>: a domain rule on the seat's own capture."""
+    rules = _data(session, "read_workspace", {"topic": "capture_exclusions"}).get("data")
+    if not isinstance(rules, list):
+        raise Unreadable("read_workspace capture_exclusions carries no data list")
+    domains = [str(r.get("value")).lower() for r in rules if r.get("kind") == "domain"]
+    if want.value.lower() in domains:
+        return ""
+    return f'ended with no capture exclusion for {want.value} on the seat "{want.name}" (domains: {", ".join(domains) or "none"})'
+
+
+def _voice_problem(session, want, seat):
+    """voice=<glob>: the seat's own preferences in its live Voice DNA read as the glob."""
+    profiles = _data(session, "read_workspace", {"topic": "voice_profiles"}).get("data")
+    if not isinstance(profiles, list):
+        raise Unreadable("read_workspace voice_profiles carries no data list")
+    own = [p for p in profiles if p.get("owner_id") == seat.get("acting_user_id") and not p.get("archived_at")]
+    if any(fnmatch.fnmatch(str(p.get("personality_md")).lower(), want.value.lower()) for p in own):
+        return ""
+    return f'ended with {len(own)} voice profiles on the seat "{want.name}", none reading {want.value}'
+
+
+def _forecast_call_problem(session, want, seat):
+    """forecast_call=<minor> <currency>: the seat's newest call for this quarter,
+    whichever scope it was filed under."""
+    calls = []
+    for scope in ({}, {"scope_kind": "owner", "scope_id": seat.get("acting_user_id")}):
+        answered = _data(session, "read_view", {"view": "forecast_calls", **scope}).get("calls")
+        if not isinstance(answered, list):
+            raise Unreadable("read_view forecast_calls carries no calls list")
+        calls += [c for c in answered if c.get("author_id") == seat.get("acting_user_id")]
+    if not calls:
+        return _seat_verdict(want, "(none)")
+    newest = max(calls, key=lambda c: str(c.get("created_at")))
+    return _seat_verdict(want, f"{newest.get('amount_minor')} {newest.get('currency')}")
+
+
+_CONSENT = "consent"
+# A field read off a record found by name, by a read of its own: (type, reader).
+_RECORD_READERS = {
+    "health": ("project", _health_problem),
+    _CONSENT: ("contact", _consent_problem),
+    "stop": ("contact", _stop_problem),
+    "data_subject_request": ("contact", _subject_request_problem),
+    "decision": ("deal", _decision_problem),
+    "signal": ("company", _signal_problem),
+}
+_ME_READERS = {
+    _UNREAD_NOTICES: _unread_notices_problem,
+    _CAPTURE_EXCLUDED: _capture_excluded_problem,
+    _VOICE: _voice_problem,
+    _FORECAST_CALL: _forecast_call_problem,
+}
 
 
 def _bare(name):
@@ -602,7 +956,18 @@ def _problem(session, want):
         return _automation_problem(session, want)
     if want.record_type == _ME:
         return _me_problem(session, want)
+    if want.record_type == _LIST:
+        return _list_problem(session, want)
+    if want.record_type == _FX_RATE:
+        return _fx_rate_problem(session, want)
+    if want.record_type == _APPROVAL:
+        return _approval_problem(session, want)
     if want.field == _RECORD_COUNT:
+        if want.parent_type is not None:
+            on_parent, _, problem = _on_parent(session, want)
+            if problem or len(on_parent) == int(want.value):
+                return problem
+            return f"ended with {len(on_parent)} records for {_where(want)}, wanted {want.value}"
         found = len(_matching(session, want.record_type, want.name))
         if found == int(want.value):
             return ""
@@ -618,6 +983,10 @@ def _problem(session, want):
         return _contract_on_company_problem(session, want, record_id)
     if want.field == _OWN_DRAFT:
         return _own_draft_problem(session, want, record_id)
+    if want.field in _RECORD_READERS:
+        return _RECORD_READERS[want.field][1](session, want, record_id)
+    if want.field == _ACTIVITIES:
+        return _activity_count_problem(session, want, record_id)
     return _field_problem(session, want, record_id)
 
 

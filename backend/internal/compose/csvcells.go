@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -311,7 +312,7 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	}
 	// parseCompanyDomains refuses a domain its parser cannot read before the write.
 	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
-		if _, err := values.ParseDomain(domain); err != nil {
+		if _, err := owndomain.ParseDomain(domain); err != nil {
 			return problemOf(fieldDomain, fields[fieldDomain], migration.Why(migration.ReasonNotADomain, "value", domain))
 		}
 	}

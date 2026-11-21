@@ -23,9 +23,17 @@ changes them under **Settings → AI usage → Agent limits**, on **Agent passpo
 how many AI tokens the agent used; it is only for you to see, and limits
 nothing.
 
+A call goes out when it sends something outside Margince, such as a mail or a
+question to a data provider. AI work that stays inside Margince, such as
+refreshing a brief, counts as a change instead.
+
 A connected app's passports share one allowance: a renewed passport goes on
 counting where the last one stopped. MCP tool calls and API calls count against
 the same allowance. Your own work in the browser is never counted.
+
+The scheduled agents in Margince, such as the morning brief, are not counted
+either, even when they run on a passport. Each run has its own limit on steps
+and on the tools its agent may use.
 
 ## Allowances by role
 

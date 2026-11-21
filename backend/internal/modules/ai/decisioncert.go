@@ -3,6 +3,12 @@
 
 package ai
 
+import (
+	"fmt"
+	"log/slog"
+	"strings"
+)
+
 // DecisionCertKey is what a decision binding is certified FOR: one site of one
 // task, on one provider and model. The runtime can see exactly these four, so
 // the table keys on nothing else.
@@ -20,10 +26,40 @@ type DecisionCert struct {
 	CorpusVersion string
 }
 
-// decisionIsCertified reads the generated table: a row exists only for a
-// certified decision record whose scenario stamps match this build
-// (decisioncert_gen.go).
-func decisionIsCertified(key DecisionCertKey) bool {
-	_, ok := decisionCertified[key]
-	return ok
+// DecisionMinKept is the fewest kept answers a certified decision record needs
+// to earn a row. Zero wrong in 15 kept bounds the wrong rate under 14% at 90%
+// confidence (1 - 0.1^(1/15)); one kept answer bounded nothing.
+const DecisionMinKept = 15
+
+// UncertifiedDecisionSites names each decision site, as task/site, that the
+// bound lane's provider and model hold no certified row for in the generated
+// table (decisioncert_gen.go). The lane answers those sites all the same: a row
+// is the operator's evidence for the binding, never a gate on it.
+func (cfg RoutingConfig) UncertifiedDecisionSites() []string {
+	lane := cfg.Decisions
+	if lane == nil {
+		return nil
+	}
+	var sites []string
+	for _, task := range DecisionTasks() {
+		for _, site := range SitesFor(task) {
+			key := DecisionCertKey{Task: task, Site: site.Name, Provider: lane.Provider, Model: lane.Model}
+			if _, certified := decisionCertified[key]; !certified {
+				sites = append(sites, string(task)+"/"+site.Name)
+			}
+		}
+	}
+	return sites
+}
+
+// logUncertifiedDecisionSites warns, at boot and at save, where the lane
+// answers with no certified record behind it.
+func logUncertifiedDecisionSites(log *slog.Logger, cfg RoutingConfig) {
+	sites := cfg.UncertifiedDecisionSites()
+	if len(sites) == 0 {
+		return
+	}
+	log.Warn(fmt.Sprintf("ai: routing: the decisions lane is bound to a model with no current certified record for these sites "+
+		"(certified on at least %d kept answers, not stale); it answers them all the same", DecisionMinKept),
+		"provider", cfg.Decisions.Provider, "model", cfg.Decisions.Model, "sites", strings.Join(sites, ","))
 }

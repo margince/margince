@@ -33,7 +33,6 @@ tasks:
     summary: ` + summary + `
     ladder: [alpha]
     execution_mode: background
-    on_budget_exhausted: queue
     status: planned
     subject_restriction: honour
 `

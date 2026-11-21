@@ -45,7 +45,8 @@ function opensLayer(trigger: Element): boolean {
   );
 }
 
-function layerIsOpen(target: EventTarget | null): boolean {
+/** A dialog, menu or listbox is up, or the target sits in one. */
+export function layerIsOpen(target: EventTarget | null): boolean {
   return (
     liveDialogs().length > 0 ||
     (target instanceof Element && target.closest(LISTING_LAYER) !== null) ||

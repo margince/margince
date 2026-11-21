@@ -304,15 +304,30 @@ export function Field({
           {error}
         </p>
       )}
-      {hint && (
-        <p
-          className="t-caption"
-          id={hintId}
-          role={hintLive ? "status" : undefined}
-        >
-          {hint}
-        </p>
-      )}
+      <FieldHint id={hintId} hint={hint} live={hintLive} />
     </div>
+  );
+}
+
+// A live region announces changes, not its own arrival, so a live hint's region
+// stands, hidden and empty, before its first words.
+function FieldHint({
+  id,
+  hint,
+  live,
+}: Readonly<{
+  id: string | undefined;
+  hint: ReactNode;
+  live: boolean | undefined;
+}>) {
+  if (!hint && !live) return null;
+  return (
+    <p
+      className={hint ? "t-caption" : "sr-only"}
+      id={id}
+      role={live ? "status" : undefined}
+    >
+      {hint}
+    </p>
   );
 }

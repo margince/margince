@@ -157,13 +157,14 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## agent_task
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `approval_id` | `uuid` | yes | Points at `approval.id`. |
 | `claimed_at` | `timestamp with time zone` |  |  |
+| `connection_id` | `uuid` |  | Points at `oauth_grant.id`. |
 | `error` | `jsonb` |  |  |
 | `expires_at` | `timestamp with time zone` | yes |  |
 | `passport_id` | `uuid` | yes | Points at `passport.id`. |
@@ -180,6 +181,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `approval_id` | `approval` | the parent cannot be deleted while this row points at it |
+| `connection_id` | `oauth_grant` | the parent cannot be deleted while this row points at it |
 | `passport_id` | `passport` | the parent cannot be deleted while this row points at it |
 
 **Rules**

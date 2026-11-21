@@ -24,6 +24,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -33,9 +34,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -108,7 +111,12 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 			// key per request-path, so /deals/A and /deals/B never collide.
 			endpoint := r.Method + " " + r.URL.Path
 
-			outcome, hold, stored, err := claimKey(r.Context(), pool, actor.ID, key, endpoint, digest)
+			outcome, hold, stored, err := claimKey(r.Context(), pool, retryHolder(actor), key, endpoint, digest)
+			if err != nil && admittedByTheTool(r) { // a tool's caller asked for at most once, so it is refused
+				slog.ErrorContext(r.Context(), "idempotency claim failed; a tool call was not run", "err", err)
+				httperr.Write(w, r, fmt.Errorf("this call could not be made safe to retry just now, so it was not run; retry the identical call: %w", apperrors.ErrConflict))
+				return
+			}
 			if err != nil {
 				// Degraded, not refused: idempotency is a retry-safety layer,
 				// and refusing the request because the layer itself hiccupped
@@ -122,6 +130,9 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 				outcome, hold, stored = claimFresh, claimHold{}, storedResponse{}
 			}
 			if outcome != claimFresh {
+				if outcome == claimReplay { // a replay changes nothing, so it charges no write or send
+					agentvolume.NoteEffects(r.Context(), 0)
+				}
 				writeClaimOutcome(w, r, pool, probes, restore, route, outcome, stored)
 				return
 			}

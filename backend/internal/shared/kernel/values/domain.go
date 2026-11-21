@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Domain is a normalized registrable host: lowercased, no scheme, no
@@ -17,8 +19,9 @@ import (
 type Domain struct{ s string }
 
 // ParseDomain accepts a bare host or a full URL and reduces it to the
-// normalized host. IDN input is passed through as given (punycode or
-// unicode); the kernel does not transcode without x/net.
+// normalized host. Unicode labels pass the shape check as given; the kernel
+// cannot transcode, so callers go through owndomain.ParseDomain, which stores
+// the punycode form.
 func ParseDomain(raw string) (Domain, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
@@ -58,17 +61,24 @@ func validHost(host string) bool {
 		return false
 	}
 	for _, l := range labels {
-		if len(l) == 0 || len(l) > 63 || l[0] == '-' || l[len(l)-1] == '-' {
+		if n := utf8.RuneCountInString(l); n == 0 || n > 63 || l[0] == '-' || l[len(l)-1] == '-' {
 			return false
 		}
 		for _, r := range l {
-			if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-' {
+			if !hostRune(r) {
 				return false
 			}
 		}
 	}
 	// An all-numeric final label is an IP fragment, not a TLD.
 	return strings.Trim(labels[len(labels)-1], "0123456789") != ""
+}
+
+func hostRune(r rune) bool {
+	if r < utf8.RuneSelf {
+		return (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-'
+	}
+	return unicode.IsLetter(r) || unicode.IsMark(r) || unicode.IsDigit(r)
 }
 
 func (d Domain) String() string { return d.s }

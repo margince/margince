@@ -86,6 +86,7 @@ func TestAnInheritedProjectGivesItsOwnerNoSayOverTheNote(t *testing.T) {
 		t.Fatalf("creating the deal: %v", err)
 	}
 	// Inheriting the project adds to it, so Rep1 needs a write share on it.
+	e.GrantRole(t, e.Rep1, "rep")
 	if _, err := identity.NewService(e.Pool).CreateRecordGrant(e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
 		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
 		Objects: map[string]principal.ObjectGrant{"project": {Read: true, Update: true}},

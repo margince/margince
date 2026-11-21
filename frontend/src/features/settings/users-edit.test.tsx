@@ -117,3 +117,44 @@ it("asks for a cleared name on its field and sends nothing", async () => {
   expect(await screen.findByText("Full name is required.")).toBeTruthy();
   expect(saved).toEqual([]);
 });
+
+it("offers Reload member after an edit clash and shows the current record", async () => {
+  const user = userEvent.setup();
+  const routed = backend([]);
+  const current = { ...MEMBER, display_name: "Ivy Elsewhere" };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      const json = { "Content-Type": "application/json" };
+      if (req.method === "PATCH") {
+        return new Response(
+          JSON.stringify({ status: 409, code: "version_skew" }),
+          { status: 409, headers: json },
+        );
+      }
+      if (
+        req.method === "GET" &&
+        new URL(req.url).pathname.endsWith(MEMBER.id)
+      ) {
+        return new Response(JSON.stringify(current), { headers: json });
+      }
+      return routed(input, init);
+    }),
+  );
+  render(<EditMember member={MEMBER} onClose={vi.fn()} />);
+  const name = screen.getByRole("textbox", { name: "Full name" });
+  await user.clear(name);
+  await user.type(name, "Ivy Mine");
+  await user.click(screen.getByRole("button", { name: "Save member" }));
+  await user.click(
+    await screen.findByRole("button", { name: en["users.reloadMember"] }),
+  );
+  await waitFor(() =>
+    expect((name as HTMLInputElement).value).toBe("Ivy Elsewhere"),
+  );
+  expect(
+    screen.queryByRole("button", { name: en["users.reloadMember"] }),
+  ).toBeNull();
+});

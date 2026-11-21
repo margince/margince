@@ -602,6 +602,115 @@ describe("AskMarginceModal", () => {
     // is fine and so is the set.
     expect(screen.queryByText(/not covered by this set/i)).toBeNull();
     expect(screen.queryAllByText(/still being read/i)).toHaveLength(0);
+    // A reader who cannot choose the model is told who can, and given no link.
+    expect(screen.getByText(/An administrator can choose one/)).toBeTruthy();
+    expect(
+      screen.queryByRole("link", { name: "Choose an embedding model" }),
+    ).toBeNull();
+  });
+
+  it("takes a reader who may choose the search model to where it is chosen", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor(
+        { ...ASKER, ai_routing: ["read", "update"] },
+        {
+          reply: answer({
+            outcome: "retrieval_unavailable",
+            summary: undefined,
+            claims: [],
+          }),
+        },
+      ).fetchMock,
+    );
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
+
+    const link = await screen.findByRole("link", {
+      name: "Choose an embedding model",
+    });
+    expect(link.getAttribute("href")).toBe("/#/settings/models/tiers");
+    expect(screen.queryByText(/An administrator can choose one/)).toBeNull();
+  });
+
+  it("holds the question to the length the server takes, and counts it near the end", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
+    render(<AskMarginceModal open onClose={() => {}} />);
+    const box = await screen.findByLabelText(/your question/i);
+    await user.type(box, "Why?");
+    expect(screen.queryByText(/of 1,000 characters/)).toBeNull();
+    await user.click(box);
+    await user.paste("x".repeat(900));
+    // Announced as it changes: the reader is still typing in the box.
+    expect(
+      screen.getByText("904 of 1,000 characters").getAttribute("role"),
+    ).toBe("status");
+
+    await user.paste("x".repeat(100));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your question: at most 1,000 characters.",
+    );
+    expect(screen.getByRole("button", { name: "Ask" })).toBeDisabled();
+  });
+
+  it("asks nothing for a carried question past the limit until the reader shortens it", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ASKER);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(
+      <AskMarginceModal
+        open
+        onClose={() => {}}
+        carriedQuestion={"x".repeat(1001)}
+      />,
+    );
+    const box = await screen.findByLabelText(/your question/i);
+    await waitFor(() => expect(box).toHaveValue("x".repeat(1001)));
+    const ask = screen.getByRole("button", { name: "Ask" });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your question: at most 1,000 characters.",
+    );
+    expect(ask).toBeDisabled();
+
+    await user.type(box, "{Backspace}");
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    await waitFor(() => expect(ask).toBeEnabled());
+    expect(backend.asked).toHaveLength(0);
+  });
+
+  // A live region announces a change, not its own arrival, so the count's
+  // region stands before its first words do.
+  it("keeps the count's status region in place before the count shows", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
+    render(<AskMarginceModal open onClose={() => {}} />);
+    const box = await screen.findByLabelText(/your question/i);
+    const status = [...document.querySelectorAll('[role="status"]')].find(
+      (node) => node.textContent === "" && node.classList.contains("sr-only"),
+    );
+    expect(status).toBeDefined();
+
+    await user.click(box);
+    await user.paste("x".repeat(900));
+
+    expect(screen.getByText("900 of 1,000 characters")).toBe(status);
+  });
+
+  it("counts a question in characters as the server does, so emoji count once", async () => {
+    const backend = backendFor(ASKER);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const emoji = "😀".repeat(600);
+    render(
+      <AskMarginceModal open onClose={() => {}} carriedQuestion={emoji} />,
+    );
+    const box = await screen.findByLabelText(/your question/i);
+    await waitFor(() => expect(box).toHaveValue(emoji));
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText(/of 1,000 characters/)).toBeNull();
   });
 
   it("says nothing read the passages when no writer was in the path", async () => {

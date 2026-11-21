@@ -588,3 +588,14 @@ func TestACoveredRequestDoesNotOfferAnotherReadersPrivateTask(t *testing.T) {
 		t.Fatal("source reply remains unavailable")
 	}
 }
+
+// A stored role is free text, so "Champion" still names the way in.
+func TestTheFirstMoveReadsARoleInAnyCase(t *testing.T) {
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{
+		{Role: "influencer", Name: "Ines Eschbacher"},
+		{Role: "Champion", Name: "Anna Berg"},
+	}}
+	if mv := decideMove(f); !strings.Contains(mv.Reason, "Anna Berg") {
+		t.Errorf("the champion stored as \"Champion\" was not chosen: %q", mv.Reason)
+	}
+}

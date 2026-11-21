@@ -11,9 +11,14 @@ import (
 	"testing"
 )
 
+// testPassportLabel names the passports the tests in this package mint, so
+// their rows can be told apart.
+const testPassportLabel = "test agent"
+
 // The contract declares scopes as unique items and a label of at most 120
-// characters; a locally minted passport must refuse what the schema forbids.
-func TestAPassportIsRefusedAnAmbiguousScopeListOrAnOverlongLabel(t *testing.T) {
+// characters. A locally minted passport must refuse what the schema forbids,
+// and a label that is given but blank.
+func TestAPassportIsRefusedAnAmbiguousScopeListABlankOrAnOverlongLabel(t *testing.T) {
 	e := setupRevocationEnv(t, "passport-admission")
 	human := e.admin
 
@@ -25,7 +30,10 @@ func TestAPassportIsRefusedAnAmbiguousScopeListOrAnOverlongLabel(t *testing.T) {
 		field   string
 		allowed bool
 	}{
-		{"duplicate scopes", IssuePassportInput{Scopes: []string{"read", "read"}}, "scopes", false},
+		{"no label", IssuePassportInput{Scopes: []string{"read"}}, "", true},
+		{"empty label", IssuePassportInput{Label: new(""), Scopes: []string{"read"}}, "label", false},
+		{"whitespace label", IssuePassportInput{Label: new("  \t "), Scopes: []string{"read"}}, "label", false},
+		{"duplicate scopes", IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read", "read"}}, "scopes", false},
 		{"121-character label", IssuePassportInput{Label: &long, Scopes: []string{"read"}}, "label", false},
 		{"120-character label", IssuePassportInput{Label: &atLimit, Scopes: []string{"read"}}, "", true},
 	}

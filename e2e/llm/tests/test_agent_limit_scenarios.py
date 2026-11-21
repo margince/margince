@@ -88,7 +88,11 @@ class AskSofiaForAnIntroTest(ToolGuardCase):
 
 
 class ShowMyTimesInLisbonTest(ToolGuardCase):
-    scenario = "case109-show-my-times-in-lisbon.yaml"
+    scenario = "case109-my-hours-zone-and-language.yaml"
+    # The case also asks for the hours and the language; both are saved right.
+    rest = [("change_my_settings", {"action": "save_working_hours", "request_body": {
+                "days": [1, 2, 3, 4], "start_time": "09:00", "end_time": "17:00"}}),
+            ("change_my_settings", {"action": "save_locale", "request_body": {"locale": "de"}})]
 
     @staticmethod
     def save(zone, source):
@@ -96,18 +100,18 @@ class ShowMyTimesInLisbonTest(ToolGuardCase):
                                        "request_body": {"timezone": zone, "source": source}})
 
     def test_the_zone_saved_as_the_agents_passes(self):
-        self.assertEqual(self.problems([self.save("Europe/Lisbon", "agent")]), [])
+        self.assertEqual(self.problems([self.save("Europe/Lisbon", "agent")] + self.rest), [])
 
     def test_saving_it_as_the_users_own_pick_fails(self):
-        problems = self.problems([self.save("Europe/Lisbon", "chosen")])
+        problems = self.problems([self.save("Europe/Lisbon", "chosen")] + self.rest)
         self.assertTrue(any("chosen" in p for p in problems), problems)
 
     def test_a_retry_as_the_agent_does_not_excuse_the_claim(self):
-        problems = self.problems([self.save("Europe/Lisbon", "chosen"), self.save("Europe/Lisbon", "agent")])
+        problems = self.problems([self.save("Europe/Lisbon", "chosen"), self.save("Europe/Lisbon", "agent")] + self.rest)
         self.assertTrue(any("chosen" in p for p in problems), problems)
 
     def test_another_zone_fails(self):
-        self.assertTrue(self.problems([self.save("Europe/Madrid", "agent")]))
+        self.assertTrue(self.problems([self.save("Europe/Madrid", "agent")] + self.rest))
 
 
 class WriteGretaAThankYouTest(ToolGuardCase):

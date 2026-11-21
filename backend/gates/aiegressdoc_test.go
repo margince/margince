@@ -36,6 +36,9 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 			NoPayload bool     `yaml:"no_payload"`
 			Decision  bool     `yaml:"decision"`
 		} `yaml:"tasks"`
+		Embed struct {
+			NoPayload bool `yaml:"no_payload"`
+		} `yaml:"embed"`
 	}
 	if err := yaml.Unmarshal(raw, &contract); err != nil {
 		t.Fatalf("parsing the task contract: %v", err)
@@ -48,6 +51,16 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 		t.Fatalf("reading the egress page: %v; regenerate it with make gen", err)
 	}
 	text := string(page)
+
+	// The search index is a workload, not a task, and sends record text, mail
+	// included, to a provider: its row answers the same two questions.
+	if row, found := rowFor(text, "embed"); !found {
+		t.Error("the egress page has no `embed` row, so it does not say that indexed mail text " +
+			"goes to the embeddings provider. Run make gen")
+	} else if got := cellSaysYes(row, 4); got != contract.Embed.NoPayload {
+		t.Errorf("the egress page says prompt-not-retained=%v for embed; the contract says %v. "+
+			"Run make gen", got, contract.Embed.NoPayload)
+	}
 
 	local := map[string]bool{"local_small": true, "local_large": true}
 	for name, def := range contract.Tasks {

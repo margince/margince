@@ -182,9 +182,9 @@ func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string,
 // company-write and not contact-write is refused the button on the company's
 // page. Asking the record instead would light a button the write then refuses.
 //
-// The entry's action travels with it because the object grant the inverse asks
-// for is the contacts store's own to decide — reversing a create is an archive
-// there, and the archive asks delete.
+// The entry's action travels with it because the contacts store decides the
+// object grant the inverse asks for. Reversing a create is an archive there,
+// and the archive asks the edge kind's removal grant.
 func edgeIsWritableByCaller(edges *contacts.Store) func(context.Context, pgx.Tx, contacts.EdgeFacts, string) error {
 	return func(ctx context.Context, tx pgx.Tx, facts contacts.EdgeFacts, entryAction string) error {
 		if err := edges.RefuseEdgeWrite(ctx, facts.Kind, entryAction); err != nil {

@@ -472,6 +472,8 @@ export const en = {
   "approvalPreferences.explain":
     "Muted kinds leave your queue only. Other readers keep their proposals. Muting or restoring a kind turns off your automatic changes for that kind. Sends, bookings, merges and proposals from agent passports stay visible.",
   "approvalPreferences.review": "Review including muted",
+  "approvalPreferences.reviewKind": "Review including muted: {kind}",
+  "approvalPreferences.reviewTitle": "Muted: {kind}",
   "approvalPreferences.reviewExplain":
     "This review includes muted proposals and expired items. Bundles in your ordinary queue can show fewer members because of your personal mutes; review each proposal before deciding.",
   "approvalPreferences.close": "Close review",
@@ -2040,8 +2042,6 @@ export const en = {
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
-  "aiAdmin.decisionSkip.uncertified":
-    "Decision model not used: not certified for this activity.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -2545,8 +2545,8 @@ export const en = {
   "history.verb.update": "{subject} updated the record",
   "history.verb.archive": "{subject} archived the record",
   "history.verb.merge": "{subject} merged the record",
-  "history.verb.promote": "{subject} promoted the record",
-  "history.verb.demote": "{subject} demoted the record",
+  "history.verb.promote": "{subject} qualified the lead",
+  "history.verb.demote": "{subject} reversed the qualification",
   "history.verb.disqualify": "{subject} disqualified the record",
   "history.verb.restore": "{subject} restored the record",
   "history.verb.export": "{subject} exported the record",
@@ -2668,6 +2668,8 @@ export const en = {
   "history.field.full_name": "Name",
   "history.field.win_probability": "Probability",
   "history.field.stage_id": "Stage",
+  "history.field.disqualify_reason_id": "Disqualify reason",
+  "history.field.trigger": "Qualified by",
   "history.field.win_probability_override": "Probability set on the deal",
   "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
@@ -2759,6 +2761,13 @@ export const en = {
   "history.emptyList": "None set",
   "history.value.occurred_precision.instant": "Date and time",
   "history.value.occurred_precision.day": "Date only",
+  "history.value.direction.inbound": "Received",
+  "history.value.direction.outbound": "Sent",
+  "history.value.meeting_status.booked": "Booked",
+  "history.value.meeting_status.held": "Held",
+  "history.value.meeting_status.no_show": "No-show",
+  "history.value.meeting_status.canceled": "Canceled",
+  "history.value.relationship_mark.vendor_marketing": "Vendor marketing",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -2850,6 +2859,8 @@ export const en = {
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.unavailableForRole": "Not available for your role.",
+  "shell.unknownAddress": "This address does not lead anywhere in Margince.",
+  "shell.unknownAddress.goTo": "Go to {name}",
   "shell.closeMenu": "Close",
   // The agent panel's one promise, as opposed to its readings: what the agent
   // can REACH. Row scope bounds it on the server, and a guarantee nobody is
@@ -2935,6 +2946,7 @@ export const en = {
   "palette.placeholder": "Search or ask Margince",
   "palette.empty": "No matches.",
   "palette.recent": "Recent",
+  "palette.recentSearch": "Search",
   "palette.clearRecent": "Clear",
   "palette.filter": "Show only",
   "palette.filterAll": "All",
@@ -2952,7 +2964,8 @@ export const en = {
   "palette.seeAll": "See all results for “{query}”",
   "palette.searching": "Searching records…",
   "palette.searchFailedTitle": "Search failed",
-  "palette.searchFailed": "The commands above still work.",
+  "palette.searchFailed":
+    "Records could not be searched. Screens and actions still work.",
   "palette.askDataRow": "Ask CRM data: “{query}”",
   "palette.openAnalytics": "Open in Analytics",
   "palette.dataUnsupportedOnly":
@@ -3023,6 +3036,8 @@ export const en = {
   "common.dateInFuture": "This date cannot be in the future.",
   "common.fieldDecimalPlaces": "Decimal places allowed in {field}: {max}.",
   "common.valueDecimalPlaces": "Decimal places allowed: {max}.",
+  "common.characterCount_one": "{count} of {max} character",
+  "common.characterCount_other": "{count} of {max} characters",
   "common.valueTooLong": "This value is too long.",
   "common.undo": "Undo",
   "common.close": "Close",
@@ -3225,6 +3240,10 @@ export const en = {
   "share.revokeConfirm":
     "Revoke {access} access to {record} for {name}? It ends at the next request and cannot be undone.",
   "share.granted": "{name} now has {access} access to {record}.",
+  "share.limitedByRole":
+    "Saved as read access. {name} cannot edit {record} with their role.",
+  "share.companyContactsLimitedByRole":
+    "Saved as read access. {name} cannot edit contacts with their role.",
   "share.thisRecord": "this record",
   "share.until": "Until {date}",
   "share.approvalRequired":
@@ -3511,6 +3530,15 @@ export const en = {
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
+  "common.goneBackToAnalytics": "Back to Analytics",
+  "reporting.sharedForecastGone":
+    "This link no longer works. Ask the sender for a new one.",
+  "reporting.reportGone":
+    "This report does not exist, or it is not shared with you.",
+  "analytics.q.gone":
+    "This question does not exist, or it is not shared with you.",
+  "book.linkGone":
+    "This booking page is not available. Ask the sender for a new link.",
   "common.empty": "Nothing here yet.",
   "common.saving": "Saving…",
   "common.loading": "Loading…",
@@ -3646,6 +3674,7 @@ export const en = {
   "table.sortBy": "Sort by {column}",
   "table.noMatches": "No {unit} match these filters.",
   "table.clearFilters": "Clear filters",
+  "table.dialsRefused": "This list cannot be shown with these filters.",
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
@@ -3855,7 +3884,7 @@ export const en = {
   "consent.reason.unconfirmed_double_opt_in":
     "Consent was recorded but never confirmed by the double opt-in",
   "consent.reason.no_connection":
-    "They have never written to you, and no deal or inquiry connects you",
+    "They have not written to you, met you or asked you for anything that is on file",
   "consent.reason.qualifying_event": "A recorded exchange connects you",
   "consent.reason.consent_confirmed":
     "They gave consent, with the confirmation on file",
@@ -3867,7 +3896,6 @@ export const en = {
     "They bought from you and were told then that they may object to advertising",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
-  "consent.reason.qualifying.active_deal": "An open deal connects you",
   "consent.reason.qualifying.in_person":
     "A recorded exchange on {date}: {note}",
   "consent.reason.qualifying.meeting": "A meeting on {date} connects you",
@@ -5573,6 +5601,7 @@ export const en = {
   "co.roleLabel.blocker": "Blocker",
   "co.roleLabel.influencer": "Influencer",
   "co.roleLabel.user": "End user",
+  "co.roleLabel.decision_maker": "Decision-maker",
   "co.evidence.extractedUnconfirmed": "Extracted by AI · not confirmed",
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
@@ -7623,6 +7652,8 @@ export const en = {
   "create.save": "Create",
   "create.saving": "Creating…",
   "create.contact": "New contact",
+  "create.added": "{name} added",
+  "create.addedOpen": "Open",
   // The fast path beside it: reading a profile in another window and typing
   // what it says. The label names the ACT, not the source, because the same
   // form takes a conference badge and a business card.
@@ -8483,7 +8514,8 @@ export const en = {
     "Sending is refused until a reason is recorded.",
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
-  "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.dealFact":
+    "No open deal with this recipient supports this follow-up.",
   "sendPermission.reason.footerIncomplete":
     "Read the footer details below. You can send this email with a recorded reason.",
   "sendPermission.footer.language": "{detail} in {language}",
@@ -8638,6 +8670,12 @@ export const en = {
   "directSend.correctionFailed":
     "The correction was not saved. Reopen the review to check the current message and approval.",
   "directSend.open": "Send with a recorded exception",
+  "directSend.alreadySent": "This message was already sent.",
+  "directSend.when": "When to send",
+  "directSend.whenLater": "At a later time",
+  "directSend.whenLaterDetail":
+    "Your decision is recorded now. The checks run again when the message goes.",
+  "directSend.scheduled": "Scheduled as a recorded exception.",
   "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
@@ -8731,6 +8769,7 @@ export const en = {
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",
+  "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
   "tasks.log.action": "Log what happened",
@@ -9533,6 +9572,7 @@ export const en = {
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save forecast",
   "forecast.callAmountNeeded": "Type the expected total first.",
+  "forecast.callAmountNegative": "Enter an amount of zero or more.",
   "analytics.scopeLabel": "Record scope",
   "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.period": "Period",
@@ -9608,8 +9648,6 @@ export const en = {
     "Your mail carries this instead of the company template. Leave it empty to use the company template again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
   "settings.signatureHtmlHintPlain":
     "Leave this empty to use your plain text again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
-  "settings.signatureHtmlCount_one": "{count} of {max} character",
-  "settings.signatureHtmlCount_other": "{count} of {max} characters",
   "settings.signatureOwnHtml": "Your HTML signature",
   "settings.signatureReviewTitle": "Review {name}’s retained signature",
   "settings.signatureReviewIntro":
@@ -9807,6 +9845,9 @@ export const en = {
   "settings.tokenCopyFailed": "Select the passport above and copy it by hand.",
   "settings.passportNext": "Next, use it",
   "settings.passportLabel": "Agent name",
+  "settings.passportUnnamed": "Unnamed passport",
+  "settings.passportNameRequired": "Give the agent a name",
+  "settings.passportNameTooLong": "Use at most 120 characters.",
   "settings.mint": "Mint passport",
   "settings.minting": "Minting…",
   "settings.mintCancel": "Cancel",
@@ -15289,13 +15330,15 @@ export const en = {
   "corpusAsk.notReady":
     "This set is still being read: {embedded} of {total} passages are searchable. Retry shortly. The question is not the problem.",
   "corpusAsk.retrievalUnavailable":
-    "Nothing was searched. This installation has no search index configured.",
+    "No embedding model is chosen for search, so nothing was searched. The question is not the problem.",
+  "corpusAsk.retrievalUnavailableAskAdmin":
+    "An administrator can choose one under AI models, Model tiers.",
   "corpusAsk.unreviewed":
     "These passages are closest to your question. They have not been reviewed for whether they answer it.",
   "corpusAsk.failed": "Question not answered",
   "corpusAsk.unreviewedTitle": "Passages not reviewed",
   "corpusAsk.notReadyTitle": "This set is still being read",
-  "corpusAsk.retrievalUnavailableTitle": "No search index is configured",
+  "corpusAsk.retrievalUnavailableTitle": "Documents cannot be searched yet",
   "corpusAsk.noGrantTitle": "You cannot open this company’s documents",
   "corpusAsk.noGrant":
     "You do not have access to this document set. An administrator can grant access.",
@@ -16732,7 +16775,7 @@ export const en = {
   "aicalls.reason.decision_state_too_large":
     "Input too large for the decision model",
   "aicalls.reason.decision_uncertified":
-    "Decision model not certified for this task",
+    "Decision model not certified for this task (older calls only)",
   "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
@@ -17563,8 +17606,7 @@ export const en = {
   "aiRouting.lane.local_large":
     "Higher local-tier route; inspect the configured endpoint",
   "aiRouting.lane.embeddings": "Search and retrieval across records",
-  "aiRouting.lane.decisions":
-    "Typed questions, asked before the tiers where certified",
+  "aiRouting.lane.decisions": "Typed questions, asked before the tiers",
   "aiRouting.decisions.add": "Add decision model",
   "aiRouting.decisions.remove": "Remove decision model",
   "aiRouting.decisions.preset.openrouter": "Preset: OpenRouter",
@@ -19623,6 +19665,7 @@ export const en = {
   "contact.deals.noClose": "None dated",
   "contact.deals.untitled": "Untitled deal",
   "contact.deals.noStage": "No stage yet",
+  "contact.deals.seatEnded": "No longer on this deal",
   "contact.meetings.upcoming": "Upcoming",
   "contact.meetings.past": "Held",
   "contact.meetings.noneBooked": "No upcoming meetings.",
@@ -20314,6 +20357,15 @@ export const en = {
   "lists.restore": "Restore",
   "lists.unavailable": "Lists are switched off for this installation.",
   "lists.gone": "This list is not there, or it is not shared with you.",
+  "record.gone.contact":
+    "This contact is not there, or it is not shared with you.",
+  "record.gone.company":
+    "This company is not there, or it is not shared with you.",
+  "record.gone.lead": "This lead is not there, or it is not shared with you.",
+  "record.gone.deal": "This deal is not there, or it is not shared with you.",
+  "record.gone.project":
+    "This project is not there, or it is not shared with you.",
+  "record.gone.offer": "This offer is not there, or it is not shared with you.",
   "lists.unnamed": "Unnamed",
   "lists.filterLine": "Filter: {sentence}",
   "lists.head.exported_one": "{count} time, last on {when}",
@@ -20609,8 +20661,8 @@ export const en = {
     "A recipient stopped marketing after you scheduled this. It will not send to them.",
   "sched.held.recipientReplied":
     "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
-  "sched.held.confirmSendsNow":
-    "Confirming sends this message now, not at the time it was scheduled for.",
+  "sched.held.confirmChoosesWhen":
+    "Its scheduled time has passed. When you confirm, choose to send it now or at a new time.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",
@@ -20737,6 +20789,10 @@ export const en = {
   "project.archiveConfirm":
     "Archiving removes this project from the active list and frees its key. This cannot be undone here.",
   "project.archivedReadOnly": "This project is archived and takes no changes.",
+  "project.page.notFound": "Project not found",
+  "project.page.notFoundBody":
+    "This project does not exist, or you cannot see it.",
+  "project.page.backToProjects": "Back to projects",
   "project.notYoursToChange":
     "You cannot edit this project. Ask its owner to share it, or an administrator for edit rights.",
   "project.phaseLabel": "Phase",
@@ -21620,7 +21676,7 @@ export const en = {
   "worklist.filter.linked.except_decisions":
     "Showing everything except approvals already in your Morning brief.",
   "worklist.filter.linked.changed_since_brief":
-    "Showing only changes since last night’s Morning brief.",
+    "Showing only changes since your last Morning brief.",
   "worklist.filter.linked.clear": "Show full Worklist",
   "worklist.category.customer_waiting": "Customer waiting",
   "worklist.category.leads": "Lead",
@@ -22311,6 +22367,7 @@ export const en = {
   "lead.card.askedOpen": "Open message",
   "lead.card.qualified": "If they are qualified",
   "lead.card.qualifiedContact": "Contact",
+  "lead.card.qualifiedCompany": "Company",
   "lead.card.qualifiedDeal": "Deal",
   "lead.card.qualifiedDealOptional": "You can open one in the same step",
   "lead.card.qualifiedNewContact": "A new contact",

@@ -219,7 +219,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 		return ids.LeadID{}, err
 	}
 	fixed := []any{
-		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
+		id, in.FullName, in.Email, in.Title, in.CompanyName, foldedCompanyKey(in.CandidateCompanyKey),
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 		in.Phone, in.Origin, in.OriginDetail, leadEmailDomain(in.Email), in.Industry, in.OwnerID, in.PartnerCompanyID,
 		in.ProductID,

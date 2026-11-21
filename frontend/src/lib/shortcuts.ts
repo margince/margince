@@ -56,6 +56,11 @@ function shortcutHandler(id: ShortcutId): (() => void) | undefined {
   return slots.get(id)?.at(-1)?.run;
 }
 
+/** Run what a press of `id` runs, for a control that offers the binding by name. */
+export function pressShortcut(id: ShortcutId): void {
+  shortcutHandler(id)?.();
+}
+
 /** Answer a binding while this component is mounted and `enabled`. */
 export function useShortcutHandler(
   id: ShortcutId,

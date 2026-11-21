@@ -68,6 +68,18 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/mail/directsendmodal.stories.tsx",
+    why: "Draws Send anyway at a later time for a held message set in a named zone, so the picker reads that zone rather than the viewer's.",
+  },
+  {
+    file: "features/mail/directsendwhen.test.tsx",
+    why: "Pins the held message's zone so the later moment the dialog sends is checked as picked in that zone, not the runner's.",
+  },
+  {
+    file: "features/worklist/worklist.row.stories.tsx",
+    why: "Draws a task agreed on another zone's clock, so the row shows the reader's time beside the agreed clock and zone.",
+  },
+  {
     file: "app/palettestanding.test.ts",
     why: "Pins the reader's zone so a hit's close and due dates read the same on every runner: the lines under test print a day.",
   },
@@ -134,6 +146,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "components/websiteinquiry.fixtures.ts",
     why: "The inquiry policy fixture pins Berlin so its deadline example covers a change to daylight saving time independently of the reader's zone.",
+  },
+  {
+    file: "features/sign-in/magic.records.test.tsx",
+    why: "Pins a reader zone apart from any runner's, so a done line's records are dated on the reader's stored clock and not the browser's.",
   },
   {
     file: "features/worklist/worklist.happened.test.ts",
@@ -554,7 +570,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Finds zones in the list by their IANA id and a former name, which needs both names spelled out.",
   },
   {
-    file: "features/voice-knowledge/adddocument.test.tsx",
+    file: "components/adddocument.test.tsx",
     why: "Installation-settings fixture: the company timezone the document form reads back.",
   },
   {
