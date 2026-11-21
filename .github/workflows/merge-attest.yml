@@ -197,6 +197,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           MERGE_VERDICT_RESULT: ${{ needs.verdict.result }}
           # Both are written by a step that then FAILS, which is how the run
           # itself goes red. The reporter treats either arriving empty as a
