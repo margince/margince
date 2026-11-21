@@ -7,171 +7,171 @@
 
 package gates
 
-// A member's principal is built in one place: authz.MemberPrincipal, or
-// authz.HumanPrincipal for a caller that resolved the authority inside its own
-// transaction.
-//
-// A hand-built principal that leaves out SeatType is judged as a full seat.
-//
-// The census is every principal literal in non-test code that copies
-// Permissions or TeamIDs from another value. Only the authz package may do
-// that; there is no skip list, so a new site fails here. Rebinding fresh
-// grants onto an existing principal by assignment is a different act and is
-// not a construction.
+// A member's principal is built in authz.MemberPrincipal or authz.HumanPrincipal.
+// Outside authz no code may move an authz.RBAC's Permissions or TeamIDs into a
+// principal, by literal or assignment, or set Permissions from a local variable.
+// Types decide, so aliased imports and renames change nothing.
 
 import (
 	"go/ast"
-	"io/fs"
-	"path/filepath"
-	"strings"
+	"go/types"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// isPrincipalLiteral matches a composite literal of principal.Principal, the
-// type this package's callers build.
-func isPrincipalLiteral(lit *ast.CompositeLit) bool {
-	switch typ := lit.Type.(type) {
-	case *ast.SelectorExpr:
-		pkg, ok := typ.X.(*ast.Ident)
-		return ok && pkg.Name == "principal" && typ.Sel.Name == "Principal"
+const (
+	authzPackagePath     = modulePath + "/internal/shared/ports/authz"
+	principalPackagePath = modulePath + "/internal/shared/kernel/principal"
+)
+
+// minimumMemberPrincipalCalls is the count of calls to authz.MemberPrincipal
+// and authz.HumanPrincipal outside the authz package. A walk that stops seeing
+// them has stopped seeing the callers this gate protects.
+const minimumMemberPrincipalCalls = 20
+
+func isNamedType(t types.Type, pkgPath, name string) bool {
+	if ptr, ok := t.(*types.Pointer); ok {
+		t = ptr.Elem()
+	}
+	named, ok := t.(*types.Named)
+	return ok && named.Obj().Pkg() != nil && named.Obj().Pkg().Path() == pkgPath && named.Obj().Name() == name
+}
+
+func isGrantField(name string) bool { return name == "Permissions" || name == "TeamIDs" }
+
+type principalCensus struct {
+	info *types.Info
+	// literals counts principal.Principal literals seen, wherever they are.
+	literals int
+}
+
+func (c *principalCensus) typeIs(expr ast.Expr, pkgPath, name string) bool {
+	tv, ok := c.info.Types[expr]
+	return ok && isNamedType(tv.Type, pkgPath, name)
+}
+
+// readsResolvedGrants reports whether expr takes Permissions or TeamIDs out of
+// an authz.RBAC anywhere inside it.
+func (c *principalCensus) readsResolvedGrants(expr ast.Expr) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok && isGrantField(sel.Sel.Name) && c.typeIs(sel.X, authzPackagePath, "RBAC") {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// setsFromAnAuthority reports whether value, bound to a principal's grant
+// field, is a resolved authority. Another principal's field or a session's own
+// field is not.
+func (c *principalCensus) setsFromAnAuthority(field string, value ast.Expr) bool {
+	if c.readsResolvedGrants(value) {
+		return true
+	}
+	if field != "Permissions" || !c.typeIs(value, principalPackagePath, "Permissions") {
+		return false
+	}
+	switch value.(type) {
 	case *ast.Ident:
-		return typ.Name == "Principal"
+		return true
 	}
 	return false
 }
 
-var authorityReads = map[string]bool{
-	"EffectiveAuthority":   true,
-	"EffectiveAuthorityTx": true,
-	"EffectiveRBAC":        true,
-	"AdmittedAuthority":    true,
-	"HeldAuthorityTx":      true,
-}
-
-// resolvedAuthorities names the variables in fn that hold a member's resolved
-// RBAC: the first result of an authority read, or a parameter typed authz.RBAC.
-// A session's own Identity or another principal also has a Permissions field;
-// copying from those is not reading a member's authority.
-func resolvedAuthorities(fn *ast.FuncDecl) map[string]bool {
-	names := map[string]bool{}
-	for _, field := range fn.Type.Params.List {
-		if !isRBACType(field.Type) {
-			continue
+// handBuilt returns what in n builds a principal from an authority by hand.
+func (c *principalCensus) handBuilt(n ast.Node) []ast.Node {
+	var out []ast.Node
+	switch node := n.(type) {
+	case *ast.CompositeLit:
+		if !c.typeIs(node, principalPackagePath, "Principal") {
+			return nil
 		}
-		for _, name := range field.Names {
-			names[name.Name] = true
-		}
-	}
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		assign, ok := n.(*ast.AssignStmt)
-		if !ok || len(assign.Rhs) != 1 {
-			return true
-		}
-		call, ok := assign.Rhs[0].(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && authorityReads[sel.Sel.Name] {
-			if first, ok := assign.Lhs[0].(*ast.Ident); ok {
-				names[first.Name] = true
+		c.literals++
+		for _, elt := range node.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			if key, ok := kv.Key.(*ast.Ident); ok && isGrantField(key.Name) && c.setsFromAnAuthority(key.Name, kv.Value) {
+				out = append(out, kv)
 			}
 		}
-		return true
-	})
-	return names
+	case *ast.AssignStmt:
+		for i, lhs := range node.Lhs {
+			sel, ok := lhs.(*ast.SelectorExpr)
+			if !ok || !isGrantField(sel.Sel.Name) || !c.typeIs(sel.X, principalPackagePath, "Principal") {
+				continue
+			}
+			sources := node.Rhs
+			if len(node.Lhs) == len(node.Rhs) {
+				sources = node.Rhs[i : i+1]
+			}
+			for _, src := range sources {
+				if c.setsFromAnAuthority(sel.Sel.Name, src) && (len(out) == 0 || out[len(out)-1] != ast.Node(node)) {
+					out = append(out, node)
+				}
+			}
+		}
+	}
+	return out
 }
 
-// isRBACType matches authz.RBAC, and the bare RBAC inside the authz package.
-func isRBACType(expr ast.Expr) bool {
-	switch typ := expr.(type) {
+// isAuthzBuilderCall matches a call to authz.MemberPrincipal or
+// authz.HumanPrincipal, resolved by the callee's package and name.
+func (c *principalCensus) isAuthzBuilderCall(n ast.Node) bool {
+	call, ok := n.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	var ident *ast.Ident
+	switch fun := call.Fun.(type) {
 	case *ast.SelectorExpr:
-		return typ.Sel.Name == "RBAC"
+		ident = fun.Sel
 	case *ast.Ident:
-		return typ.Name == "RBAC"
+		ident = fun
+	default:
+		return false
 	}
-	return false
-}
-
-// copiesGrantsInto reports whether the literal sets Permissions or TeamIDs
-// from a resolved authority, which is how that authority becomes a principal.
-func copiesGrantsInto(lit *ast.CompositeLit, resolved map[string]bool) bool {
-	for _, elt := range lit.Elts {
-		kv, ok := elt.(*ast.KeyValueExpr)
-		if !ok {
-			continue
-		}
-		key, ok := kv.Key.(*ast.Ident)
-		if !ok || (key.Name != "Permissions" && key.Name != "TeamIDs") {
-			continue
-		}
-		sel, ok := kv.Value.(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != key.Name {
-			continue
-		}
-		if from, ok := sel.X.(*ast.Ident); ok && resolved[from.Name] {
-			return true
-		}
-	}
-	return false
+	fn, ok := c.info.Uses[ident].(*types.Func)
+	return ok && fn.Pkg() != nil && fn.Pkg().Path() == authzPackagePath &&
+		(fn.Name() == "MemberPrincipal" || fn.Name() == "HumanPrincipal")
 }
 
 func TestNoCodeOutsideAuthzBuildsAMemberPrincipalByHand(t *testing.T) {
 	t.Parallel()
 
-	literals := 0
-	for _, root := range []string{"internal", "cmd"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			path = filepath.ToSlash(path)
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
-				strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
-				return err
-			}
-			file, parseErr := gatekit.ParseFile(path, 0)
-			if parseErr != nil {
-				return parseErr
-			}
-			for _, decl := range file.Decls {
-				fn, ok := decl.(*ast.FuncDecl)
-				if !ok || fn.Body == nil {
-					continue
+	literals, builderCalls := 0, 0
+	for _, pkg := range typedModule(t) {
+		inAuthz := pkg.path == authzPackagePath
+		census := &principalCensus{info: pkg.info}
+		for _, file := range pkg.files {
+			ast.Inspect(file, func(n ast.Node) bool {
+				if !inAuthz && census.isAuthzBuilderCall(n) {
+					builderCalls++
 				}
-				literals += checkMemberPrincipalLiterals(t, path, fn)
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("walking %s: %v", root, err)
+				for _, site := range census.handBuilt(n) {
+					if inAuthz {
+						continue
+					}
+					t.Errorf("%s (%s) builds a principal from a resolved authority by hand.\n"+
+						"Use authz.MemberPrincipal, or authz.HumanPrincipal when the read ran inside "+
+						"your own transaction, then set what is yours (ID, Type, OnBehalfOf) on the result. "+
+						"A hand-built principal that leaves out SeatType is judged as a full seat.",
+						gatekit.SourceFileSet().Position(site.Pos()), pkg.path)
+				}
+				return true
+			})
 		}
+		literals += census.literals
 	}
-	if literals < 1 {
-		t.Fatalf("this census saw %d principal literal(s) copying a resolved authority; authz.HumanPrincipal "+
-			"is one, so the walk has stopped recognising the construction", literals)
+	if literals == 0 {
+		t.Fatal("this census saw no principal.Principal literal, so the type match has stopped working")
 	}
-}
-
-// checkMemberPrincipalLiterals counts the hand-built member principals in fn
-// and fails each one that sits outside the authz package.
-func checkMemberPrincipalLiterals(t *testing.T, path string, fn *ast.FuncDecl) int {
-	t.Helper()
-	resolved := resolvedAuthorities(fn)
-	count := 0
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		lit, ok := n.(*ast.CompositeLit)
-		if !ok || !isPrincipalLiteral(lit) || !copiesGrantsInto(lit, resolved) {
-			return true
-		}
-		count++
-		if strings.HasPrefix(path, "internal/shared/ports/authz/") {
-			return true
-		}
-		t.Errorf("%s:%d builds a principal from a resolved authority by hand.\n"+
-			"Use authz.MemberPrincipal, or authz.HumanPrincipal when the read ran inside "+
-			"your own transaction, then set what is yours (ID, Type, OnBehalfOf) on the result. "+
-			"A hand-built principal that leaves out SeatType is judged as a full seat.",
-			path, gatekit.SourceFileSet().Position(lit.Pos()).Line)
-		return true
-	})
-	return count
+	if builderCalls < minimumMemberPrincipalCalls {
+		t.Fatalf("this census saw %d call(s) to authz.MemberPrincipal or authz.HumanPrincipal outside authz and expects at "+
+			"least %d; the walk has stopped seeing the callers it protects", builderCalls, minimumMemberPrincipalCalls)
+	}
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 )
 
 // readOnlyCtx is a signed-in member whose role reads but records nothing, as
@@ -81,6 +82,12 @@ type readOnlyAuthority struct{ liveAuthority }
 
 func (readOnlyAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{}, nil
+}
+
+// AdmittedAuthority answers from this fixture's own two reads, since the
+// embedded fixture's copy would dispatch to its base reads.
+func (r readOnlyAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }
 
 func TestCallbackRefusesARoleThatCannotCaptureBeforeExchangingTheCode(t *testing.T) {

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -258,6 +259,12 @@ type adminAuthority struct{ liveAuthority }
 
 func (adminAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
 	return adminRBAC(), nil
+}
+
+// AdmittedAuthority answers from this fixture's own two reads, since the
+// embedded fixture's copy would dispatch to its base reads.
+func (r adminAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }
 
 func extAdminCtx() context.Context {
@@ -508,6 +515,12 @@ type readSeatAdminAuthority struct{ adminAuthority }
 
 func (readSeatAdminAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
 	return principal.SeatRead, nil
+}
+
+// AdmittedAuthority answers from this fixture's own two reads, since the
+// embedded fixture's copy would dispatch to its base reads.
+func (r readSeatAdminAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }
 
 func TestAReadSeatCannotConnectAnExtension(t *testing.T) {
