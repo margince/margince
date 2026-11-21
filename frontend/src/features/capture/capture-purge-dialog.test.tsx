@@ -170,8 +170,8 @@ it("rechecks a zero count and then offers the delete for what arrived", async ()
   ).toBeInTheDocument();
 });
 
-// The confirm carries the counts the reader saw; a 409 means more mail arrived, so
-// the dialog shows the new count and asks again instead of deleting it unseen.
+// The confirm carries the counts the reader saw. A 409 means more mail arrived,
+// so the dialog shows the new count and asks again instead of deleting it unseen.
 it("sends the previewed counts and re-checks when the server says they moved", async () => {
   const urls: string[] = [];
   vi.stubGlobal(
