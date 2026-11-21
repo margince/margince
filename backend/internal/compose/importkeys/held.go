@@ -116,6 +116,41 @@ func DomainHeld(ctx context.Context, pool *pgxpool.Pool, domain string) (bool, e
 	return held, err
 }
 
+// EmailHeldByAnother answers which kinds of live record other than self hold
+// this address, through the lookup every contact and lead write asks. A record
+// moving an address onto itself is not its own holder.
+func EmailHeldByAnother(ctx context.Context, pool *pgxpool.Pool, email string, self ids.UUID) (contact, lead bool, err error) {
+	if email == "" {
+		return false, false, nil
+	}
+	err = probe(ctx, pool, fmt.Sprintf("%q", email), func(tx pgx.Tx) error {
+		holders, err := storekit.IdentityHoldersOf(ctx, tx, storekit.IdentityKeys{Emails: []string{email}})
+		for _, held := range holders.Contacts {
+			contact = contact || held.UUID != self
+		}
+		for _, held := range holders.Leads {
+			lead = lead || held.UUID != self
+		}
+		return err
+	})
+	return contact, lead, err
+}
+
+// CompanyLinkedInHeldByAnother is LinkedInHeld for a company that moves a URL
+// onto itself: its own URL is not a holder.
+func CompanyLinkedInHeldByAnother(ctx context.Context, pool *pgxpool.Pool, url string, self ids.UUID) (bool, error) {
+	if url == "" {
+		return false, nil
+	}
+	var held bool
+	err := probe(ctx, pool, fmt.Sprintf("%q", url), func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM company WHERE lower(linkedin_url) = lower($1) AND archived_at IS NULL AND id <> $2)`,
+			url, self).Scan(&held)
+	})
+	return held, err
+}
+
 // DomainHeldByAnother is DomainHeld for a company that moves a domain onto
 // itself: its own live domains are not a holder.
 func DomainHeldByAnother(ctx context.Context, pool *pgxpool.Pool, domain string, self ids.UUID) (bool, error) {
