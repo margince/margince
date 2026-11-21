@@ -905,7 +905,7 @@ describe("the reads of a member held on onboarding", () => {
         }
         // Home fails each of its reads on its own card rather than on a fixture.
         if (path === "/worklist" || SIDE_READS.includes(path)) {
-          return json({ code: "unavailable" }, 503);
+          return json({ code: "service_unavailable" }, 503);
         }
         return json({ data: [], page: {} });
       }),

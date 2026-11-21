@@ -30,7 +30,7 @@ function stubServer(version: number) {
       const body: { expected_version: number } = await request.clone().json();
       writes.push(body.expected_version);
       if (body.expected_version !== row.version) {
-        return json({ code: "version_conflict" }, 409);
+        return json({ code: "version_skew" }, 409);
       }
       row.version += 1;
       return json({ ...row, ...body });
