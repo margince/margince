@@ -79,7 +79,7 @@ type VoiceProfile struct {
 	CapturedBy          string
 	Version             int64
 	CreatedAt           time.Time
-	UpdatedAt           *time.Time
+	UpdatedAt           time.Time
 	ArchivedAt          *time.Time
 }
 
