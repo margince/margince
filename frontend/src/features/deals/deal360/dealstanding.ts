@@ -277,22 +277,28 @@ export function stageTimes({
 }
 
 /**
- * The offer that stands: the newest revision not replaced by a later one.
- * Drafts count, because a draft is what the deal is about to say.
+ * The offer that stands is the accepted one, because accepting it set the
+ * deal's value. Without one, it is the latest draft or sent offer.
+ * A rejected or expired offer says nothing about what the deal will be.
  */
 export function standingOffer(
   offers: readonly Offer[] | undefined,
 ): Offer | undefined {
-  let best: Offer | undefined;
-  for (const offer of offers ?? []) {
-    if (offer.status === "superseded" || offer.archived_at) {
-      continue;
-    }
-    if (!best || offer.revision > best.revision) {
-      best = offer;
-    }
+  const live = (offers ?? []).filter((offer) => !offer.archived_at);
+  const latest = (candidates: Offer[], at: (offer: Offer) => string) =>
+    candidates.reduce<Offer | undefined>(
+      (best, offer) =>
+        !best || Date.parse(at(offer)) > Date.parse(at(best)) ? offer : best,
+      undefined,
+    );
+  const accepted = live.filter((offer) => offer.status === "accepted");
+  if (accepted.length > 0) {
+    return latest(accepted, (offer) => offer.accepted_at ?? offer.created_at);
   }
-  return best;
+  return latest(
+    live.filter((offer) => offer.status === "draft" || offer.status === "sent"),
+    (offer) => offer.created_at,
+  );
 }
 
 export type NextStep = Readonly<{

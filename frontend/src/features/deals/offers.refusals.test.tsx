@@ -140,6 +140,7 @@ describe("the add-line form", () => {
     });
     render(<OfferLineEditor offer={offer} />);
     await user.type(screen.getByTestId("new-line-description"), "Workshop");
+    await user.type(screen.getByTestId("new-line-unit-price"), "2000");
     await user.click(screen.getByTestId("add-line"));
 
     const sentence = "Unit price must be at most €1,000.00.";
