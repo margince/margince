@@ -10,7 +10,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 34 | 433 | 28 | 38 | 18 |
+| [activities](activities.md) | 32 | 427 | 28 | 38 | 18 |
 | [agents](agents.md) | 3 | 35 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 204 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 22 | 0 | 2 | 0 |
@@ -18,19 +18,19 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
 | [assurance](assurance.md) | 9 | 105 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 33 | 1 | 2 | 0 |
-| [capture](capture.md) | 27 | 271 | 6 | 27 | 14 |
+| [capture](capture.md) | 25 | 264 | 6 | 27 | 14 |
 | [chatlinks](chatlinks.md) | 2 | 36 | 0 | 4 | 2 |
 | [collections](collections.md) | 13 | 108 | 1 | 10 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
-| [compose](compose.md) | 48 | 434 | 3 | 40 | 36 |
+| [compose](compose.md) | 47 | 430 | 3 | 40 | 36 |
 | [consent](consent.md) | 23 | 321 | 2 | 42 | 23 |
 | [contacts](contacts.md) | 49 | 707 | 77 | 35 | 12 |
 | [continuity](continuity.md) | 1 | 8 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 95 | 0 | 8 | 1 |
-| [deals](deals.md) | 27 | 384 | 26 | 17 | 5 |
+| [deals](deals.md) | 26 | 381 | 26 | 17 | 5 |
 | [finance](finance.md) | 5 | 85 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 95 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 206 | 157 | 6 | 5 |
@@ -40,7 +40,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [knowledge](knowledge.md) | 3 | 39 | 0 | 0 | 0 |
 | [migration](migration.md) | 2 | 41 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
-| [platform](platform.md) | 12 | 90 | 2 | 3 | 1 |
+| [platform](platform.md) | 13 | 93 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
 | [projects](projects.md) | 3 | 42 | 11 | 3 | 0 |
 | [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |

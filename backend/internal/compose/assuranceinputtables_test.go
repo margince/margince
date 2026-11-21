@@ -24,8 +24,8 @@ var announcedBy = map[string]struct{ family, why string }{
 		"messages arrive, and those are activity events"},
 	"activity_link":        {"activity", "linking an activity is announced as activity.updated"},
 	"activity_participant": {"activity", "a participant's answer is written with its activity"},
-	"activity_waiting_horizon": {"", "a measured number of days that bounds how old a wait may be; it moves " +
-		"for every deal at once and the next run reads it"},
+	"installation_state": {"", "the waiting horizon, a measured number of days that bounds how old a wait may be; " +
+		"it moves for every deal at once and the next run reads it"},
 	"capture_thread_verdict": {"", "a held thread hides a signal's evidence, and every read of the findings " +
 		"checks the cited message's visibility again"},
 	"capture_import": {"", "which mail connections delivered a deal's mail; a first import comes with its activity.captured, " +

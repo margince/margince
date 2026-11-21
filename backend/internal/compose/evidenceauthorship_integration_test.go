@@ -285,8 +285,8 @@ func TestTheAuthorshipPassCarriesOnFromWhereItStopped(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Stand where a cut-short run would have: the first row behind us.
-	f.WsExec(t, `INSERT INTO deal_authorship_sweep_cursor (singleton, after_evidence_id)
-		VALUES (true, $1)`, first)
+	f.WsExec(t, `INSERT INTO installation_state (key, value)
+		VALUES ('deal_authorship_sweep_cursor', jsonb_build_object('after_evidence_id', $1::uuid))`, first)
 
 	f.runPass()
 
@@ -297,8 +297,8 @@ func TestTheAuthorshipPassCarriesOnFromWhereItStopped(t *testing.T) {
 		t.Errorf("the row ahead of the place was judged %d time(s), want once", n)
 	}
 	// The page was short, so the place clears and the next run starts over.
-	if at := f.WsScalar(t, `SELECT coalesce(after_evidence_id::text, 'cleared')
-		FROM deal_authorship_sweep_cursor`); at != "cleared" {
+	if at := f.WsScalar(t, `SELECT coalesce(value->>'after_evidence_id', 'cleared')
+		FROM installation_state WHERE key = 'deal_authorship_sweep_cursor'`); at != "cleared" {
 		t.Errorf("the pass stopped at %s after a short page, want it cleared", at)
 	}
 }
@@ -309,8 +309,8 @@ func TestTheAuthorshipPassCarriesOnFromWhereItStopped(t *testing.T) {
 func TestAScopedRunLeavesTheHourlyPlaceAlone(t *testing.T) {
 	f := newAuthorshipFixture(t)
 	held := f.claim(f.inboundMail("cfo@buyer-corp.test"), "budget")
-	f.WsExec(t, `INSERT INTO deal_authorship_sweep_cursor (singleton, after_evidence_id)
-		VALUES (true, $1)`, held)
+	f.WsExec(t, `INSERT INTO installation_state (key, value)
+		VALUES ('deal_authorship_sweep_cursor', jsonb_build_object('after_evidence_id', $1::uuid))`, held)
 	if _, err := f.own.Add(f.Admin(), "Buyer-Corp.test"); err != nil {
 		t.Fatal(err)
 	}
@@ -325,7 +325,7 @@ func TestAScopedRunLeavesTheHourlyPlaceAlone(t *testing.T) {
 	if n := f.corrections(held); n != 1 {
 		t.Fatalf("the scoped run judged the row %d time(s), want once", n)
 	}
-	at := f.WsScalar(t, `SELECT coalesce(after_evidence_id::text, 'cleared') FROM deal_authorship_sweep_cursor`)
+	at := f.WsScalar(t, `SELECT coalesce(value->>'after_evidence_id', 'cleared') FROM installation_state WHERE key = 'deal_authorship_sweep_cursor'`)
 	if at != held.String() {
 		t.Errorf("the scoped run moved the place to %s, want it left at %s", at, held)
 	}

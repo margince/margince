@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -85,16 +86,25 @@ type AnsweredContact struct {
 // check runs, with the row's own address substituted.
 func AnsweredContactsTx(ctx context.Context, tx pgx.Tx, reason string, limit int) ([]AnsweredContact, error) {
 	evidence := strings.ReplaceAll(addressAnswered(), "$1", "pe.email")
+	place, _, err := storekit.InstallationStateTx[answeredSweepPlace](ctx, tx, storekit.StateCaptureAnsweredSweepCursor)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading where the answered-contact pass stopped: %w", err)
+	}
+	// A pass that stored nothing yet, or reached the end, starts before every id.
+	after := ids.Nil
+	if place.After != nil {
+		after = *place.After
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT ON (p.id) p.id, pe.email
 		  FROM contact p
 		  JOIN contact_email pe ON pe.contact_id = p.id AND pe.archived_at IS NULL
 		 WHERE p.visibility = 'owner' AND p.narrowing_reason = $1
 		   AND p.archived_at IS NULL AND p.merged_into_id IS NULL
-		   AND p.id > coalesce((SELECT after_contact_id FROM capture_answered_sweep_cursor), '00000000-0000-0000-0000-000000000000'::uuid)
+		   AND p.id > $3
 		   AND `+evidence+`
 		 ORDER BY p.id, pe.email
-		 LIMIT $2`, reason, limit)
+		 LIMIT $2`, reason, limit, after)
 	if err != nil {
 		return nil, fmt.Errorf("capture: listing contacts whose address answered: %w", err)
 	}
@@ -113,6 +123,11 @@ func AnsweredContactsTx(ctx context.Context, tx pgx.Tx, reason string, limit int
 	return out, nil
 }
 
+// answeredSweepPlace is the last contact the pass offered. Nil starts at the first.
+type answeredSweepPlace struct {
+	After *ids.UUID `json:"after_contact_id"`
+}
+
 // AdvanceAnsweredSweepTx stores where the pass goes on from. A page shorter
 // than the pass asked for reached the end, and the next pass starts over. So a
 // contact skipped for a failure is offered again on the next round.
@@ -121,11 +136,8 @@ func AdvanceAnsweredSweepTx(ctx context.Context, tx pgx.Tx, page []AnsweredConta
 	if len(page) == limit && limit > 0 {
 		after = &page[len(page)-1].ContactID
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO capture_answered_sweep_cursor (singleton, after_contact_id, updated_at)
-		VALUES (true, $1, now())
-		ON CONFLICT (singleton) DO UPDATE
-		   SET after_contact_id = EXCLUDED.after_contact_id, updated_at = EXCLUDED.updated_at`, after); err != nil {
+	err := storekit.StoreInstallationStateTx(ctx, tx, storekit.StateCaptureAnsweredSweepCursor, answeredSweepPlace{After: after})
+	if err != nil {
 		return fmt.Errorf("capture: storing where the answered-contact pass stopped: %w", err)
 	}
 	return nil

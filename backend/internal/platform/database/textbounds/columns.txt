@@ -916,6 +916,7 @@ public.import_run.source document
 public.import_run.source_name exempt generated from independently checked source columns
 public.import_run.source_ref document
 public.import_run.status document
+public.installation_state.key document
 public.intro_request.captured_by document
 public.intro_request.decision_reason note
 public.intro_request.fallback_policy document
@@ -1509,8 +1510,6 @@ public.weekly_review_learning.kind document
 public.weekly_review_learning.text line
 public.weekly_review_learning_citation.label label
 public.weekly_review_learning_citation.subject_type document
-public.weekly_review_movement.bar document
-public.weekly_review_movement.period_kind document
 public.weekly_review_outlook.forward_measure document
 public.weekly_review_outlook.period_kind document
 public.withdrawal_credential.address document

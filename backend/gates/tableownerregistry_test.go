@@ -225,10 +225,6 @@ var tableOwners = map[string]string{
 	// Its candidates are owedSQL, which this module owns, so the marker is here
 	// rather than beside the compose-owned markers of the meeting passes.
 	"activity_calendar_method_backfill": "internal/modules/activities",
-	// The waiting horizon the worker pass measured, one row for the installation.
-	// The queue's own predicates are what read it, and they live in this module.
-	"activity_waiting_horizon":   "internal/modules/activities",
-	"activity_clock_refold_mark": "internal/modules/activities",
 	// The external identities one message answers to — its RFC Message-ID, its
 	// calendar occurrence. It hangs off `activity` and decides which row a
 	// second provider's copy of a message resolves to, so it belongs to the
@@ -339,7 +335,6 @@ var tableOwners = map[string]string{
 	"capture_alias_sighting":           "internal/modules/capture",
 	"capture_alias_refused":            "internal/modules/capture",
 	"capture_owner_identity_withdrawn": "internal/modules/capture",
-	"capture_party_admission_cursor":   "internal/modules/capture",
 	"capture_party_source_replay":      "internal/modules/capture",
 	"capture_party_source":             "internal/modules/capture",
 	"capture_import":                   "internal/modules/capture",
@@ -354,9 +349,7 @@ var tableOwners = map[string]string{
 	"capture_test_mailbox_sent": "internal/modules/capture",
 	// One receipt per repair pass per workspace turn — bookkeeping about a
 	// pass rather than a record fact, not audited; pruned to a history.
-	"capture_sweep_run":             "internal/modules/capture",
-	"capture_answered_sweep_cursor": "internal/modules/capture",
-	"deal_authorship_sweep_cursor":  "internal/modules/deals",
+	"capture_sweep_run": "internal/modules/capture",
 	// What the pipeline decided about each message, for 24 hours. Written by
 	// the sink alone; compose reads it and sweeps it, and the verdict engine
 	// writes nothing here — its answers live in the disposition ledger and are
@@ -549,7 +542,6 @@ var tableOwners = map[string]string{
 	"weekly_plan_commitment":          "internal/modules/weeklyplan",
 	"weekly_review_deal":              "internal/compose/weekly",
 	"weekly_review_outlook":           "internal/compose/weekly",
-	"weekly_review_movement":          "internal/compose/weekly",
 	"weekly_review_driver":            "internal/compose/weekly",
 	"weekly_review_scorecard":         "internal/compose/weekly",
 	"weekly_review_learning":          "internal/compose/weekly",
@@ -625,6 +617,9 @@ var tableOwners = map[string]string{
 	"event_outbox":     storekitOwned,
 	"field_provenance": storekitOwned,
 	"system_log":       storekitOwned,
+	// The bookkeeping rows of the background passes. A module reaches its row
+	// through the storekit readers and writers, with a shape of its own.
+	"installation_state": storekitOwned,
 }
 
 // sqlTarget is one write a literal performs: which table, by which verb, and
