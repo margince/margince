@@ -37,7 +37,7 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 
 	writeAgentTable(b, c, taskNames)
 
-	b.WriteString("// noPayloadTasks are the tasks whose content must NEVER reach\n")
+	b.WriteString("// noPayloadTasks are the tasks, and the embed workload, whose content must NEVER reach\n")
 	b.WriteString("// ai_call_payload, whatever the deployment's capture posture says. The\n")
 	b.WriteString("// contract pins the prohibition as a hard property, not a default.\n")
 	b.WriteString("var noPayloadTasks = map[Task]bool{\n")
@@ -45,6 +45,11 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 		if c.Tasks[name].NoPayload {
 			fmt.Fprintf(b, "\t%s: true,\n", taskConst(name))
 		}
+	}
+	// The embed lane traces under TaskEmbeddings, so the workload's own
+	// prohibition joins the one table every capture site reads.
+	if c.Embed.NoPayload {
+		b.WriteString("\tTaskEmbeddings: true,\n")
 	}
 	b.WriteString("}\n\n")
 	b.WriteString("// NoPayload reports the contract's payload prohibition for a task.\n")

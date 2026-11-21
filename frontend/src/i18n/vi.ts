@@ -3515,7 +3515,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.slotTaken":
     "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
-  "common.goneBackToAnalytics": "Quay lại Phân tích",
+  "common.goneBackToAnalytics": "Quay lại Analytics",
   "reporting.sharedForecastGone":
     "Liên kết này không còn dùng được. Hãy hỏi bên gửi để có liên kết mới.",
   "reporting.reportGone":

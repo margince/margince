@@ -16,15 +16,19 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// A stored role is free text, so a seat typed " Economic_Buyer " is the deal's
-// economic buyer and the input check raises no no_economic_buyer finding.
+// A stored role is free text, so a seat typed " Economic_Buyer " or padded with
+// a tab is the deal's economic buyer. It raises no no_economic_buyer finding.
 func TestTheInputCheckReadsAnEconomicBuyerInAnyCase(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	deal := e.SeedDeal(t, "Buyer typed by hand", pipeline, open, nil)
-	buyer := e.SeedContact(t, "Ute Sommer", nil)
-	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
-		VALUES ('deal_stakeholder', $1, $2, ' Economic_Buyer ', 'manual', 'human:x')`, buyer, deal)
+	typedOn := map[string]string{}
+	for _, typed := range []string{" Economic_Buyer ", "\tEconomic_Buyer\n", "\u00a0economic_buyer"} {
+		deal := e.SeedDeal(t, "Buyer typed by hand", pipeline, open, nil)
+		buyer := e.SeedContact(t, "Ute Sommer", nil)
+		e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
+			VALUES ('deal_stakeholder', $1, $2, $3, 'manual', 'human:x')`, buyer, deal, typed)
+		typedOn[deal.String()] = typed
+	}
 
 	now := clocktest.Now(t)
 	var subjects []assurance.Subject
@@ -36,12 +40,16 @@ func TestTheInputCheckReadsAnEconomicBuyerInAnyCase(t *testing.T) {
 		t.Fatalf("reading the subjects: %v", err)
 	}
 	for _, s := range subjects {
-		if s.DealID == deal.String() {
-			if !s.HasEconomicBuyer {
-				t.Error("a seat stored as \" Economic_Buyer \" is not read as the economic buyer")
-			}
-			return
+		typed, ok := typedOn[s.DealID]
+		if !ok {
+			continue
+		}
+		delete(typedOn, s.DealID)
+		if !s.HasEconomicBuyer {
+			t.Errorf("a seat stored as %q is not read as the economic buyer", typed)
 		}
 	}
-	t.Fatal("the deal is not among the input check's subjects")
+	if len(typedOn) > 0 {
+		t.Fatalf("deals missing from the input check's subjects: %v", typedOn)
+	}
 }

@@ -579,9 +579,13 @@ tasks:
 # Forcing it through the task shape would make it unparseable and would give
 # those obligations no meaning. Its absence from `tasks:` is why it escaped
 # every completeness check before this ADR.
+#
+# no_payload: an input is record text, and an activity's input is its subject
+# and body, so a mail embedded for search must not be kept by capture either.
 embed:
   tier: embed
   cost_unit: per_entity
+  no_payload: true
 
 degrade_to:
   frontier: premium
