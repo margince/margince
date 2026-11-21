@@ -3240,6 +3240,10 @@ export const en = {
   "share.revokeConfirm":
     "Revoke {access} access to {record} for {name}? It ends at the next request and cannot be undone.",
   "share.granted": "{name} now has {access} access to {record}.",
+  "share.limitedByRole":
+    "Saved as read access. {name} cannot edit {record} with their role.",
+  "share.companyContactsLimitedByRole":
+    "Saved as read access. {name} cannot edit contacts with their role.",
   "share.thisRecord": "this record",
   "share.until": "Until {date}",
   "share.approvalRequired":
@@ -3879,7 +3883,7 @@ export const en = {
   "consent.reason.unconfirmed_double_opt_in":
     "Consent was recorded but never confirmed by the double opt-in",
   "consent.reason.no_connection":
-    "They have never written to you, and no deal or inquiry connects you",
+    "They have not written to you, met you or asked you for anything that is on file",
   "consent.reason.qualifying_event": "A recorded exchange connects you",
   "consent.reason.consent_confirmed":
     "They gave consent, with the confirmation on file",
@@ -3891,7 +3895,6 @@ export const en = {
     "They bought from you and were told then that they may object to advertising",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
-  "consent.reason.qualifying.active_deal": "An open deal connects you",
   "consent.reason.qualifying.in_person":
     "A recorded exchange on {date}: {note}",
   "consent.reason.qualifying.meeting": "A meeting on {date} connects you",
@@ -8673,6 +8676,12 @@ export const en = {
   "directSend.correctionFailed":
     "The correction was not saved. Reopen the review to check the current message and approval.",
   "directSend.open": "Send with a recorded exception",
+  "directSend.alreadySent": "This message was already sent.",
+  "directSend.when": "When to send",
+  "directSend.whenLater": "At a later time",
+  "directSend.whenLaterDetail":
+    "Your decision is recorded now. The checks run again when the message goes.",
+  "directSend.scheduled": "Scheduled as a recorded exception.",
   "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
@@ -9568,6 +9577,7 @@ export const en = {
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save forecast",
   "forecast.callAmountNeeded": "Type the expected total first.",
+  "forecast.callAmountNegative": "Enter an amount of zero or more.",
   "analytics.scopeLabel": "Record scope",
   "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.period": "Period",
@@ -9840,6 +9850,9 @@ export const en = {
   "settings.tokenCopyFailed": "Select the passport above and copy it by hand.",
   "settings.passportNext": "Next, use it",
   "settings.passportLabel": "Agent name",
+  "settings.passportUnnamed": "Unnamed passport",
+  "settings.passportNameRequired": "Give the agent a name",
+  "settings.passportNameTooLong": "Use at most 120 characters.",
   "settings.mint": "Mint passport",
   "settings.minting": "Minting…",
   "settings.mintCancel": "Cancel",
@@ -20652,8 +20665,8 @@ export const en = {
     "A recipient stopped marketing after you scheduled this. It will not send to them.",
   "sched.held.recipientReplied":
     "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
-  "sched.held.confirmSendsNow":
-    "Confirming sends this message now, not at the time it was scheduled for.",
+  "sched.held.confirmChoosesWhen":
+    "Its scheduled time has passed. When you confirm, choose to send it now or at a new time.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",

@@ -26498,6 +26498,14 @@ paths:
         goes. The next message to the same contact needs its own. A retry under the same
         `Idempotency-Key` answers the recorded 201, so a client whose first answer was lost learns
         the message went.
+
+        LATER, WHEN A MOMENT IS GIVEN. With `scheduled_at` and `scheduled_tz`, or `scheduled_intent`,
+        the decision is recorded now and the held message moves to that moment instead of going now.
+        The answer is 202 with the scheduled message. The engine decides again when it fires, and
+        the recorded decision is spent then. The moment must be in the future.
+
+        ALREADY SENT. When the review's message has gone, from another tab or an earlier press, its
+        sender gets 409 `already_sent` rather than 404.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -26511,6 +26519,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
+        '202':
+          description: The decision is recorded and the held message waits for the moment given.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduledSend' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -29302,6 +29315,11 @@ paths:
         record every write to which the ceiling then refuses. A `read` grant to a read seat is the
         authority their licence already carries and is accepted. A `team` subject is not a seat and is
         not filtered — the read seats inside it are still refused every write at their own admission.
+
+        The recipient's role binds as well: a `write` grant to a user whose role can neither change
+        records of this type nor create activities (attaching one needs `write`) is saved as `read`,
+        and the answer carries `limited_by_role: true`. The answer names no role. A `team` grant
+        keeps `write`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       x-mcp-tool: { verb: share_record, router: change_access, action: share, tier: auto_execute, scope: write, served_by: route }
@@ -64946,9 +64964,10 @@ components:
             a card handed over at a stand. `requested_by_subject` is the contact asking us to write
             to them away from every system: a phone call, a conversation at a counter.
 
-            Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-            records the product already holds, and a hand-written one would be a second, unbacked
-            answer to a question the data already settles.
+            Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+            product already holds, and a hand-written one would be a second, unbacked answer to a
+            question the data already settles. `active_deal` is retired: nothing writes it, and the
+            guard does not read it.
         note:
           type: string
           minLength: 1
@@ -76365,6 +76384,12 @@ components:
         expires_at: { type: [string, 'null'], format: date-time, description: 'Optional TTL; an expired grant matches no rows.' }
         created_at: { type: string, format: date-time }
         version: { type: integer, format: int64 }
+        limited_by_role:
+          type: boolean
+          description: |
+            Only on the answer to a share, and only when true: the share asked for `write` and the
+            user's role can neither change records of this type nor create activities, so the grant
+            was saved as `read`. A team grant is never limited, because its members hold different roles.
 
     CreateRecordGrantRequest:
       type: object
@@ -76394,6 +76419,12 @@ components:
       properties:
         shared: { type: integer, minimum: 0 }
         skipped: { type: integer, minimum: 0 }
+        limited_by_role:
+          type: boolean
+          description: |
+            Present, and true, only when at least one grant was written and the share asked for `write`
+            while the user's role can neither change contacts nor create activities, so the grants were
+            saved as `read`.
 
     RecordAccess:
       type: object
@@ -76857,6 +76888,16 @@ components:
             The refusal reason codes the director was shown, from the review's `refusals`. When the
             review's refusals changed since then, the decision is refused with `instruction_stale`
             and the director opens the review again.
+        scheduled_intent: { $ref: '#/components/schemas/IntentTime' }
+        scheduled_at:
+          type: string
+          format: date-time
+          description: |
+            A future moment to send at instead of now. The decision is recorded now and spent when
+            the message fires. Absent sends now.
+        scheduled_tz:
+          type: string
+          description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
 
     ConfirmSubmission:
       type: object
@@ -79613,7 +79654,7 @@ components:
       additionalProperties: false
       required: [scopes]
       properties:
-        label:  { type: [string, 'null'], maxLength: 120, description: 'Which agent this binds, e.g. "Claude Desktop".' }
+        label:  { type: [string, 'null'], maxLength: 120, description: 'Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one.' }
         scopes:
           type: array
           minItems: 1

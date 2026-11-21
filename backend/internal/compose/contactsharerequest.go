@@ -129,7 +129,7 @@ func contactShareSummary(ctx context.Context, tx pgx.Tx, requester ids.UUID) (st
 }
 
 // contactShareAcceptEffect shares the contact with the colleague who asked:
-// Write, the access Share gives, or Read for a seat that may not write. The
+// Write, the access Share gives, or Read for a seat or role that may not write. The
 // contact's own visibility does not change.
 //
 // Decline needs no effect: the request closes, and StageUnlessDeclined files

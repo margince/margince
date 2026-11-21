@@ -47,7 +47,7 @@ func (e *revocationEnv) rotateIssuing(t *testing.T, fixture *connectFixture) Iss
 // used to build passports for testing.
 func (e *revocationEnv) mintOwnPassport(t *testing.T, human Identity, scopes []string) ids.PassportID {
 	t.Helper()
-	issued, err := e.svc.IssuePassport(e.wsCtx(human), human, IssuePassportInput{Scopes: scopes})
+	issued, err := e.svc.IssuePassport(e.wsCtx(human), human, IssuePassportInput{Label: new(testPassportLabel), Scopes: scopes})
 	if err != nil {
 		t.Fatalf("minting a passport: %v", err)
 	}

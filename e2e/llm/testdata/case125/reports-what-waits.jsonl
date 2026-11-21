@@ -1,0 +1,6 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__list_approvals", "mcp__margince__read_approval", "mcp__margince__decide_approvals"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__list_approvals", "input": {"status": "pending"}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "{\"data\":{\"approvals\":[{\"staged_action_id\":\"ap1\",\"kind\":\"relink_activity\"}]}}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_approval", "input": {"staged_action_id": "ap1"}, "id": "fixture2"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture2", "content": "{\"data\":{\"status\":\"pending\"}}", "is_error": false}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "One thing waits: moving the Abnahmeprotokoll mail onto the Leitstand Goslar project. It is still open, waiting for your yes. Approve it in the CRM, or tell me and I will release it."}

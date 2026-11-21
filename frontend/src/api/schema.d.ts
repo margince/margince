@@ -18065,6 +18065,14 @@ export interface paths {
          *     goes. The next message to the same contact needs its own. A retry under the same
          *     `Idempotency-Key` answers the recorded 201, so a client whose first answer was lost learns
          *     the message went.
+         *
+         *     LATER, WHEN A MOMENT IS GIVEN. With `scheduled_at` and `scheduled_tz`, or `scheduled_intent`,
+         *     the decision is recorded now and the held message moves to that moment instead of going now.
+         *     The answer is 202 with the scheduled message. The engine decides again when it fires, and
+         *     the recorded decision is spent then. The moment must be in the future.
+         *
+         *     ALREADY SENT. When the review's message has gone, from another tab or an earlier press, its
+         *     sender gets 409 `already_sent` rather than 404.
          */
         post: operations["directCommunicationSend"];
         delete?: never;
@@ -19926,6 +19934,11 @@ export interface paths {
          *     record every write to which the ceiling then refuses. A `read` grant to a read seat is the
          *     authority their licence already carries and is accepted. A `team` subject is not a seat and is
          *     not filtered — the read seats inside it are still refused every write at their own admission.
+         *
+         *     The recipient's role binds as well: a `write` grant to a user whose role can neither change
+         *     records of this type nor create activities (attaching one needs `write`) is saved as `read`,
+         *     and the answer carries `limited_by_role: true`. The answer names no role. A `team` grant
+         *     keeps `write`.
          */
         post: operations["createRecordGrant"];
         delete?: never;
@@ -47578,9 +47591,10 @@ export interface components {
              *     a card handed over at a stand. `requested_by_subject` is the contact asking us to write
              *     to them away from every system: a phone call, a conversation at a counter.
              *
-             *     Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-             *     records the product already holds, and a hand-written one would be a second, unbacked
-             *     answer to a question the data already settles.
+             *     Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+             *     product already holds, and a hand-written one would be a second, unbacked answer to a
+             *     question the data already settles. `active_deal` is retired: nothing writes it, and the
+             *     guard does not read it.
              * @enum {string}
              */
             kind: "in_person" | "requested_by_subject";
@@ -55843,6 +55857,12 @@ export interface components {
             created_at: string;
             /** Format: int64 */
             version: number;
+            /**
+             * @description Only on the answer to a share, and only when true: the share asked for `write` and the
+             *     user's role can neither change records of this type nor create activities, so the grant
+             *     was saved as `read`. A team grant is never limited, because its members hold different roles.
+             */
+            limited_by_role?: boolean;
         };
         CreateRecordGrantRequest: {
             /** @enum {string} */
@@ -55873,6 +55893,12 @@ export interface components {
         ShareCompanyContactsResult: {
             shared: number;
             skipped: number;
+            /**
+             * @description Present, and true, only when at least one grant was written and the share asked for `write`
+             *     while the user's role can neither change contacts nor create activities, so the grants were
+             *     saved as `read`.
+             */
+            limited_by_role?: boolean;
         };
         /**
          * @description Who can open one contact or company and who can change it. `data` is one page of the
@@ -56244,6 +56270,15 @@ export interface components {
              *     and the director opens the review again.
              */
             shown_reasons?: string[];
+            scheduled_intent?: components["schemas"]["IntentTime"];
+            /**
+             * Format: date-time
+             * @description A future moment to send at instead of now. The decision is recorded now and spent when
+             *     the message fires. Absent sends now.
+             */
+            scheduled_at?: string;
+            /** @description The IANA zone `scheduled_at` was picked in. Present exactly when it is. */
+            scheduled_tz?: string;
         };
         /**
          * @description What a subject typed into the confirm link we mailed them, and what somebody decided about
@@ -58926,7 +58961,7 @@ export interface components {
             reason?: string | null;
         };
         IssuePassportRequest: {
-            /** @description Which agent this binds, e.g. "Claude Desktop". */
+            /** @description Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one. */
             label?: string | null;
             /** @description Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC. */
             scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
@@ -92382,6 +92417,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Activity"];
+                };
+            };
+            /** @description The decision is recorded and the held message waits for the moment given. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledSend"];
                 };
             };
             403: components["responses"]["Forbidden"];

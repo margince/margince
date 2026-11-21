@@ -240,7 +240,7 @@ Also called: record missing, access denied, 404, cannot open a contact.
 ### Why can't I create a contact a colleague already has?
 A contact that capture made from a colleague's mail can be private to that colleague. When you create a contact with the same email address, Margince refuses it, so the CRM does not hold the contact twice. It says "A colleague already has this contact. Margince asked them to share it with you."
 
-Your colleague then finds the request on **Home**, under **Waiting on you**: "Mira Voss asks you to share this contact. Approving gives write access, or read access to a read-only seat." They choose **Decide**, then **Approve** to share the contact with you, or **Reject** to close the request. Another try does not ask again while a request is open or after your colleague rejected it. After they reject it, Margince says only "A colleague already has this contact."
+Your colleague then finds the request on **Home**, under **Waiting on you**: "Mira Voss asks you to share this contact. Approving gives write access, or read access when their seat or role cannot edit contacts." They choose **Decide**, then **Approve** to share the contact with you, or **Reject** to close the request. Another try does not ask again while a request is open or after your colleague rejected it. After they reject it, Margince says only "A colleague already has this contact."
 
 The refusal does not name the contact or its owner.
 Also called: contact already exists, email already taken, hidden contact.
@@ -251,7 +251,7 @@ Also called: contact already exists, email already taken, hidden contact.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**. Margince confirms who now has which access, for example "Mira Voss now has Read access to Acme renewal."
-You cannot share more than you hold, and **Grant access** needs the right to change the record. To change a colleague's record, press **Ask … for edit access** below the line saying it is not yours. If the owner approves on their **Worklist**, the record is shared with you for writing, and they stay its owner.
+You cannot share more than you hold, and **Grant access** needs the right to change the record. A **Write** share is saved as **Read** if the colleague's role can neither change such records nor log activities. A team share keeps **Write**. To change a colleague's record, press **Ask … for edit access** below the line saying it is not yours.
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
 
@@ -351,7 +351,7 @@ There are no levels of shares, no sharing by rules, and no way to give someone e
 
 When two contacts merge, the owner of the merged-away contact keeps access to the contact that remains. Margince gives them a share on it:
 
-- **Write** for a full seat, **Read** for a read seat.
+- **Write** for a full seat whose role can change contacts or log activities, and **Read** for anyone else.
 - A share they already held keeps its end date. It only goes from read to write.
 - A colleague who has left gets nothing, and the owner of the remaining contact needs no share.
 

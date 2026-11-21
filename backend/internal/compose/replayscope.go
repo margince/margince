@@ -315,7 +315,7 @@ var replayableOperations = map[string]replayTarget{
 
 	// Send anyway answers the outbound activity its decision released, gated
 	// on that activity like every other send.
-	"POST /v1/communication-reviews/{id}/direct-send": {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/communication-reviews/{id}/direct-send": {object: tableActivity, table: tableActivity, idPath: "id", altTable: tableScheduledSend, altMarker: "scheduled_at"},
 
 	"POST /v1/voice-profiles/{id}/corpus/clear": {object: tableVoiceProfile, table: tableVoiceProfile, idPath: "id"},
 

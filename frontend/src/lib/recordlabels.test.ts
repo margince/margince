@@ -62,6 +62,17 @@ describe("a stored deal role in a reader's words", () => {
     }
   });
 
+  it.each(LOCALES)(
+    "is empty for a name every object inherits (%s)",
+    (locale) => {
+      const t = wordsOf(locale);
+      for (const typed of ["__proto__", "constructor", "toString"]) {
+        expect(dealRoleLabel(typed, t)).toBe("");
+        expect(projectRoleLabel(typed, t)).toBe("");
+      }
+    },
+  );
+
   it.each(LOCALES)("names a built-in role in any case (%s)", (locale) => {
     const t = wordsOf(locale);
     expect(dealRoleLabel(" Champion ", t)).toBe(t("co.roleLabel.champion"));

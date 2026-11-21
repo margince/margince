@@ -1,3 +1,4 @@
+import { withoutSubjectPrefixes } from "../format/mailsubject";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
 
 export type { TimelineGroup };
@@ -35,10 +36,7 @@ const BULK_COPIES = 3;
 
 /** normalizeSubject strips the reply and forward prefixes a thread accretes. */
 function normalizeSubject(title: string): string {
-  return title
-    .replace(/^((re|aw|fwd|fw|wg)\s*:\s*)+/i, "")
-    .trim()
-    .toLowerCase();
+  return withoutSubjectPrefixes(title).trim().toLowerCase();
 }
 
 // inboundBulk is a message the sender attested as bulk mail and the team

@@ -148,6 +148,7 @@ func TestAnAgentWritesExactlyWhatItsHumanWrites(t *testing.T) {
 
 			// The share goes through the real writer: a hand-inserted grant row
 			// would prove the rule against a state production cannot reach.
+			e.GrantRole(t, e.Rep1, "rep")
 			if _, err := svc.CreateRecordGrant(e.Admin(), identity.CreateGrantInput{
 				RecordType: tc.table, RecordID: sharedWithMe,
 				SubjectType: "user", SubjectID: e.Rep1, Access: "write",

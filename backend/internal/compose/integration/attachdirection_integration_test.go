@@ -243,6 +243,7 @@ func shareCompany(t *testing.T, e *Env, company ids.UUID, access string) {
 		Objects:  map[string]principal.ObjectGrant{"company": {Read: true, Update: true}},
 		RowScope: principal.RowScopeOwn,
 	})
+	e.GrantRole(t, e.Rep1, "rep")
 	if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 		RecordType: "company", RecordID: company,
 		SubjectType: "user", SubjectID: e.Rep1, Access: access,

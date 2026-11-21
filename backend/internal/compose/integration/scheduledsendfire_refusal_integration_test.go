@@ -70,6 +70,12 @@ func (p *preflightEnv) confirmReview(t *testing.T, review string) int {
 // confirmReviewAs is confirmReview from a given seat.
 func confirmReviewAs(t *testing.T, seat *apptest.AppEnv, review string) int {
 	t.Helper()
+	return seat.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", confirmationFor(t, seat, review), nil, nil)
+}
+
+// confirmationFor is the Send anyway body for the review as the seat reads it.
+func confirmationFor(t *testing.T, seat *apptest.AppEnv, review string) AnyMap {
+	t.Helper()
 	var served struct {
 		AssessmentRevision string `json:"assessment_revision"`
 		ReasonCode         string `json:"reason_code"`
@@ -77,14 +83,14 @@ func confirmReviewAs(t *testing.T, seat *apptest.AppEnv, review string) int {
 	if status := seat.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, &served); status != http.StatusOK {
 		t.Fatalf("opening the review → %d", status)
 	}
-	return seat.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", AnyMap{
+	return AnyMap{
 		"reason_code":         "other",
 		"explanation":         "The buyer asked for this confirmation on the phone this morning.",
 		"warning_version":     consent.OverrideWarningVersion,
 		"acknowledged":        true,
 		"shown_reasons":       []string{served.ReasonCode},
 		"assessment_revision": served.AssessmentRevision,
-	}, nil, nil)
+	}
 }
 
 // The main path. Held with one review and nothing sent; the review is offered

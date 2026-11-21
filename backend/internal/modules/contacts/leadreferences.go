@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -45,12 +46,21 @@ func sameLeadProduct(current crmcontracts.Lead, product *ids.UUID) bool {
 	return product != nil && current.ProductId != nil && ids.UUID(*current.ProductId) == *product
 }
 
+// foldedCompanyKey is a routing key in its stored form, nil staying nil.
+func foldedCompanyKey(key *string) *string {
+	if key == nil {
+		return nil
+	}
+	folded := owndomain.KeyForm(*key)
+	return &folded
+}
+
 // setLeadReferences patches the records a lead points at that take no
 // normalising: its company routing key, project and product. The checks that
 // they exist ran in admitLeadReferences.
 func setLeadReferences(p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) {
 	if in.CandidateCompanyKey != nil {
-		p.Set("candidate_company_key", current.CandidateCompanyKey, *in.CandidateCompanyKey)
+		p.Set("candidate_company_key", current.CandidateCompanyKey, *foldedCompanyKey(in.CandidateCompanyKey))
 	}
 	if in.ProjectID != nil {
 		p.Set("project_id", current.ProjectId, *in.ProjectID)

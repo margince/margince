@@ -39,11 +39,20 @@ Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you r
 
 Records made before this check did not measure a model that knows nothing about Margince. A Claude CLI run read the `CLAUDE.md` and `AGENTS.md` of this repository, and your own settings. Measure those records again before you compare them with a new one. A codex record is in question too if your codex home held plugins, hooks, `memories`, `skills` or an `AGENTS.md`. `ls backend/internal/compose/aicert/records/mcp_e2e*/*@{claude,codex}-cli/` lists them.
 
-**Three passports.** Every scenario runs on a passport that holds `read` and
+**Five passports.** Every scenario runs on a passport that holds `read` and
 `write`, which is what most jobs need. A scenario that sends mail, writes drafts or sets up meetings
 says `passport: wide`. Then the lane gives a second passport that adds the
 `draft` and `send` scopes; `passport: research` adds `enrich`, for AI work. Without
 them, these tools are never in the list the model sees.
+
+The admin mints those three. Two more measure a user with fewer rights.
+`passport: rep` is minted by a seeded seat with the `rep` role, with `read` and `write`. That
+role writes only the records the seat owns, and another seat owns every seeded deal, so a write
+on a deal is refused. `passport: readonly` is the admin's, with `read` alone, so no tool that
+writes is offered.
+
+On these two, the lane reads the end state through the admin's passport. The narrow seat does
+not see every record a case names.
 
 The stack of the lane has no connected mailbox and no Telegram bot. So
 a send is refused after the model calls it, and before any data leaves. The
@@ -53,7 +62,8 @@ against the scopes of its passport.
 
 **A setup of its own.** A scenario that says `setup: <step>` runs that step of
 `e2e/llm/casesetup.py` before each of its runs, on the records the lane has just
-reset. The step writes through the REST API as the admin. The lane restores the
+reset. The step writes through the REST API as the admin. A step that must leave a call
+staged for approval mints a passport of its own and makes that call over MCP. The lane restores the
 snapshot before the next run, and that restore undoes the step. A step the file
 does not name stops the lane before the first run.
 

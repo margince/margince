@@ -141,7 +141,7 @@ class LintTest(unittest.TestCase):
     def test_writes_and_passport_take_only_their_values(self):
         problems = self.lint("name: x\nwrites: yes\nruns: 1\npass_at: 1\npassport: broad\nprompt: |\n  hi\n")
         self.assertIn("writes must be true or false, not 'yes'", problems)
-        self.assertIn("passport must be absent, wide or research, not 'broad'", problems)
+        self.assertIn("passport must be absent or one of wide, research, rep, readonly, not 'broad'", problems)
 
     def test_every_committed_scenario_lints_clean(self):
         directory = os.path.join(os.path.dirname(CHECK), "scenarios")

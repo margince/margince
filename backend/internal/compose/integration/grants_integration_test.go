@@ -114,6 +114,7 @@ func TestAShareIsPassedOnOnlyByACallerWhoCouldChangeTheRow(t *testing.T) {
 	// set the scene: a hand-inserted row would prove the rule against a state
 	// production cannot reach.
 	share := func(as context.Context, subject ids.UUID, access string) error {
+		e.GrantRole(t, subject, "rep")
 		_, err := svc.CreateRecordGrant(as, identity.CreateGrantInput{
 			RecordType: "contact", RecordID: foreign,
 			SubjectType: "user", SubjectID: subject, Access: access,
@@ -423,6 +424,7 @@ func TestARecordsTermsAreRestatedOnlyByACallerWhoCouldChangeIt(t *testing.T) {
 		t.Run(record.recordType, func(t *testing.T) {
 			until := time.Now().Add(time.Hour).UTC()
 			share := func(as context.Context, subject ids.UUID, access string, expires *time.Time) error {
+				e.GrantRole(t, subject, "rep")
 				_, err := svc.CreateRecordGrant(as, identity.CreateGrantInput{
 					RecordType: record.recordType, RecordID: record.id,
 					SubjectType: "user", SubjectID: subject, Access: access,
@@ -527,6 +529,7 @@ func TestAStrangerToTheRecordCannotRestateItsGrants(t *testing.T) {
 	stranger := seat(e.Rep1, principal.RowScopeTeam, []ids.UUID{e.Team1})
 
 	share := func(as context.Context, subject ids.UUID, access string, expires *time.Time) error {
+		e.GrantRole(t, subject, "rep")
 		_, err := svc.CreateRecordGrant(as, identity.CreateGrantInput{
 			RecordType: "deal", RecordID: deal,
 			SubjectType: "user", SubjectID: subject, Access: access,
