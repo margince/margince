@@ -73,20 +73,29 @@ describe("SalesGoalsScreen", () => {
     expect(screen.getByRole("button", { name: "Save draft" })).toBeTruthy();
   });
 
-  it("dates the history on the company's clock and names that zone once", async () => {
+  it("dates the history on the company's clock and names that zone once, for every season", async () => {
+    const [first] = draftPlan.history;
+    if (!first) throw new Error("the draft plan has a history");
+    const acrossSeasons: SalesGoalPlan = {
+      ...draftPlan,
+      history: [
+        { ...first, revision: 1, created_at: "2026-07-10T09:00:00Z" },
+        { ...first, revision: 2, created_at: "2026-11-10T09:00:00Z" },
+      ],
+    };
     window.location.hash = "#/goals?year=2026";
     installFetchStub({
       "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
-      [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
+      [`GET ${PLAN}`]: () => jsonResponse(acrossSeasons),
     });
     render(<SalesGoalsScreen />);
     const history = await screen.findByRole("region", { name: "History" });
     expect(
-      within(history).getByText(
-        "Times in Central European Standard Time · UTC+1",
-      ),
+      within(history).getByText("Times in Central European Time"),
     ).toBeTruthy();
-    expect(within(history).getByText("05/01/2026, 10:00")).toBeTruthy();
+    expect(within(history).queryByText(/UTC/)).toBeNull();
+    expect(within(history).getByText("10/07/2026, 11:00")).toBeTruthy();
+    expect(within(history).getByText("10/11/2026, 10:00")).toBeTruthy();
   });
 
   it("opens the plan of the seller a manager picks from the list", async () => {

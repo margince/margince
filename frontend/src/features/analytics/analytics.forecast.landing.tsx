@@ -218,11 +218,11 @@ export function ModelRangeCard({
               high: money(range.highMinor),
             })
       }
-      // The detail holds two lines. What the range leaves out takes both, and
-      // what the range is and holds stays in the basis.
+      // The detail holds two lines, one fact each. What the range leaves out
+      // takes both, and what the range is and holds stays in the basis.
       detail={
         left.length > 0 ? (
-          <span>{left.join(" · ")}</span>
+          left.map((line) => <span key={line}>{line}</span>)
         ) : (
           <>
             <span>{t("forecast.model.detail")}</span>

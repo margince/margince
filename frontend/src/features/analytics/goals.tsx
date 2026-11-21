@@ -17,7 +17,7 @@ import {
   formatNumber,
   identifierNumber,
 } from "../../format/format";
-import { zoneLabelAt } from "../../format/timezone";
+import { zoneNameAllYear } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCompanyZone } from "../../lib/companyzone";
@@ -339,13 +339,11 @@ function PlanHistory({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
   return (
     <Panel
       title={t("goals.history")}
-      // Named once at the newest change; an older row across a daylight-saving
-      // switch reads the same zone at its other offset.
       footer={
         newest && (
           <span className="t-caption">
             {t("goals.history.zone", {
-              zone: zoneLabelAt(newest.created_at, zone, locale),
+              zone: zoneNameAllYear(newest.created_at, zone, locale),
             })}
           </span>
         )
