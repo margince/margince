@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -40,7 +41,7 @@ func meetingNoonStartsDataTask() datatask.Task {
 				if !ok {
 					return 0, false, errors.New("meeting noon estimate: the executor passed no transaction")
 				}
-				zone, err := identity.TimezoneAppliedTx(ctx, tx)
+				zone, err := storedZoneForRepair(ctx, tx)
 				if err != nil {
 					return 0, false, err
 				}
@@ -60,7 +61,7 @@ func restoreNoonMeetingsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	zone, err := identity.TimezoneAppliedTx(ctx, tx)
+	zone, err := storedZoneForRepair(ctx, tx)
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -81,4 +82,10 @@ func restoreNoonMeetingsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 		}
 	}
 	return datatask.AdvanceUUID(in, scanned, changed)
+}
+
+// storedZoneForRepair reads the stored zone name. A repair is kept, so it
+// counts in the stored zone and never in the UTC a background pass falls back to.
+func storedZoneForRepair(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.ApplyTx(ctx, tx, identity.Timezone)
 }

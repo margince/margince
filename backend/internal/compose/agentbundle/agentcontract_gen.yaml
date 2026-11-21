@@ -50097,7 +50097,7 @@ components:
       additionalProperties: false
       required: [destination, available]
       properties:
-        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration]}
+        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional], description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.'}
         available: {type: boolean}
         reason: {type: string}
     JobHealthHistory:

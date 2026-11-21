@@ -2346,6 +2346,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_trace_sweep": "Dọn dẹp dấu vết thư",
   "systemJob.capture_which_deal": "Câu hỏi về cơ hội từ thư",
   "systemJob.close_date": "Kiểm tra ngày chốt",
+  "systemJob.installation_zone": "Kiểm tra múi giờ",
   "systemJob.commission_accrual": "Ghi nhận hoa hồng",
   "systemJob.partner_activation": "Kích hoạt đối tác",
   "systemJob.commitment_settle": "Chốt kết quả cam kết",
@@ -23434,6 +23435,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công việc tự động có thể đến sai đồng nghiệp, khiến việc theo dõi bị giao sai người cho đến khi sửa cách phân công.",
   "health.effect.receipts":
     "Yêu cầu từ chối vẫn có hiệu lực và việc gửi quảng cáo đến các liên hệ này vẫn dừng. Các liên hệ chưa được thông báo, trong khi quy định của quốc gia họ yêu cầu thông báo ngay.",
+  "health.effect.zone":
+    "Công việc chạy nền tính ngày theo UTC cho đến khi múi giờ được chọn lại. Gần nửa đêm, báo cáo có thể xếp một thời điểm vào ngày khác với công việc đó.",
+  "health.zoneNext": "Mở Khu vực và lịch rồi chọn lại múi giờ báo cáo.",
+  "health.code.zone_unresolved": "Không đọc được múi giờ báo cáo",
   "health.effect.readFailed":
     "Kiểm tra này không hiển thị được trạng thái hiện tại. Kiểm tra thất bại không có nghĩa tính năng bên dưới đã dừng.",
   "health.reportCopyFailed": "Không thể sao chép báo cáo kỹ thuật",
@@ -23560,6 +23565,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.recovery.recovery":
     "Ghi nhận diễn tập khôi phục thành công trong mục tiêu thời gian và mức mất dữ liệu.",
   "health.recovery.automatic": "Đánh giá kết quả phân công trên mẫu đủ lớn.",
+  "health.recovery.zone": "Máy chủ đọc lại được múi giờ báo cáo đã lưu.",
   "health.recovery.receipts":
     "Mỗi yêu cầu từ chối trong 30 ngày qua phải có xác nhận đã gửi, hoặc cảnh báo của nó đã được xử lý.",
   "health.ownerHandoff":
@@ -23573,6 +23579,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.inspect": "Xem vấn đề và bước tiếp theo",
   "health.openModels": "Mở Mô hình",
   "health.openConnections": "Mở Kết nối",
+  "health.openRegional": "Mở Khu vực và lịch",
   "health.unit.runs": "lần chạy",
   "health.history": "Lịch sử lỗi còn lưu",
   "health.historyWindow":
