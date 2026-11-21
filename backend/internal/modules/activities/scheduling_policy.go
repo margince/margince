@@ -33,7 +33,17 @@ func (s *Store) strictHours(ctx context.Context, host ids.UserID) (WorkingHours,
 	return hours, nil
 }
 
+// calendarBusy reads the host's calendars. exclude names the host's own event
+// on the booking calendar, which holds no time against its own move.
 func (s *Store) calendarBusy(ctx context.Context, host ids.UserID, p crmcontracts.SchedulingProfile, from, to time.Time, exclude string) ([]slot, error) {
+	return s.providerBusy(ctx, host, p, from, to, func(calendar string, interval connector.CalendarInterval) bool {
+		return exclude != "" && calendar == p.CalendarId && interval.EventID == exclude
+	})
+}
+
+// providerBusy reads busy time from every calendar the settings name, padded
+// by their buffer. skip leaves out the one event a move must not count.
+func (s *Store) providerBusy(ctx context.Context, host ids.UserID, p crmcontracts.SchedulingProfile, from, to time.Time, skip func(calendar string, interval connector.CalendarInterval) bool) ([]slot, error) {
 	if s.calendar == nil {
 		return nil, apperrors.ErrPermissionDenied
 	}
@@ -54,7 +64,7 @@ func (s *Store) calendarBusy(ctx context.Context, host ids.UserID, p crmcontract
 			return nil, calendarReadFailure(ctx, host, string(p.Provider), calendar, err)
 		}
 		for _, interval := range intervals {
-			if exclude != "" && calendar == p.CalendarId && interval.EventID == exclude {
+			if skip(calendar, interval) {
 				continue
 			}
 			occupied, err := connector.CalendarOccupancy(interval.Start, interval.End)
@@ -76,8 +86,13 @@ func (s *Store) reliableBusy(ctx context.Context, host ids.UserID, p crmcontract
 	if err != nil {
 		return nil, err
 	}
+	return s.withLocalBusy(ctx, host, p, from, to, exclude, busy)
+}
+
+// withLocalBusy adds the local holds of host to busy, padded by the buffer of p.
+func (s *Store) withLocalBusy(ctx context.Context, host ids.UserID, p crmcontracts.SchedulingProfile, from, to time.Time, exclude ids.UUID, busy []slot) ([]slot, error) {
 	buffer := time.Duration(p.BufferMinutes) * time.Minute
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
 		local, err := localMeetingSlots(ctx, tx, host, from.Add(-buffer), to.Add(buffer), exclude)
 		if err != nil {
 			return err
@@ -95,16 +110,16 @@ func (s *Store) ReliableAvailability(ctx context.Context, host ids.UserID, from,
 	if err := mayReadLiveCalendar(ctx, host); err != nil {
 		return nil, false, err
 	}
-	return s.hostReliableAvailability(ctx, host, from, to, duration, false)
+	return s.hostReliableAvailability(ctx, host, from, to, duration, nil)
 }
 
 // PageAvailability is the free time a standing booking page offers. It is the
-// host's free time, cut down to the times each team member is free.
-func (s *Store) PageAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration) ([]slot, bool, error) {
+// host's free time, cut down to the times each member of the page's team is free.
+func (s *Store) PageAvailability(ctx context.Context, host ids.UserID, team []teamCalendar, from, to time.Time, duration time.Duration) ([]slot, bool, error) {
 	if err := mayReadLiveCalendar(ctx, host); err != nil {
 		return nil, false, err
 	}
-	return s.hostReliableAvailability(ctx, host, from, to, duration, true)
+	return s.hostReliableAvailability(ctx, host, from, to, duration, team)
 }
 
 // mayReadLiveCalendar admits the host and the system principal the public page
@@ -120,7 +135,7 @@ func mayReadLiveCalendar(ctx context.Context, host ids.UserID) error {
 	return nil
 }
 
-func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration, withTeam bool) ([]slot, bool, error) {
+func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, from, to time.Time, duration time.Duration, team []teamCalendar) ([]slot, bool, error) {
 	profile, err := s.hostSchedulingProfile(ctx, host)
 	if err != nil {
 		return nil, false, err
@@ -144,19 +159,12 @@ func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, f
 	if err != nil {
 		return nil, false, err
 	}
-	return s.freeTime(ctx, host, profile, from, to, duration, withTeam)
+	return s.freeTime(ctx, host, profile, from, to, duration, team)
 }
 
-// freeTime walks the window for the host, and with withTeam for the page's
-// team as well: their busy time and their working hours.
-func (s *Store) freeTime(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile, from, to time.Time, duration time.Duration, withTeam bool) ([]slot, bool, error) {
-	var team []teamCalendar
-	if withTeam {
-		var err error
-		if team, err = s.pageTeam(ctx, profile); err != nil {
-			return nil, false, err
-		}
-	}
+// freeTime walks the window for the host and the team: each one's busy time
+// and working hours.
+func (s *Store) freeTime(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile, from, to time.Time, duration time.Duration, team []teamCalendar) ([]slot, bool, error) {
 	hours, err := s.strictHours(ctx, host)
 	if err != nil {
 		return nil, false, err
@@ -165,7 +173,7 @@ func (s *Store) freeTime(ctx context.Context, host ids.UserID, profile crmcontra
 	if err != nil {
 		return nil, false, err
 	}
-	teamBusy, teamHours, err := s.teamOccupancy(ctx, team, profile, from, to, ids.Nil, "")
+	teamBusy, teamHours, err := s.teamOccupancy(ctx, team, profile, from, to, ids.Nil, nil)
 	if err != nil {
 		return nil, false, err
 	}
@@ -248,7 +256,7 @@ func (s *Store) validatePolicyTime(ctx context.Context, host ids.UserID, profile
 	now := s.now()
 	if duration < minSlotDuration || duration > maxSlotDuration || start.Before(now.Add(time.Duration(profile.NoticeMinutes)*time.Minute)) ||
 		end.After(now.AddDate(0, 0, profile.HorizonDays)) || !hours.covers(start, end) {
-		return &SchedulingArgumentError{Field: "start", Code: "outside_availability", Message: "Choose a future time within the host's bookable hours and notice period"}
+		return &SchedulingArgumentError{Field: fieldStart, Code: codeOutsideAvailability, Message: "Choose a future time within the host's bookable hours and notice period"}
 	}
 	if s.calendar == nil {
 		return apperrors.ErrPermissionDenied

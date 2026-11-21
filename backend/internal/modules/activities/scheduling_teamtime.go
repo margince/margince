@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // memberPolicy reads a member's own calendars with the page's buffer, so a
@@ -24,13 +25,41 @@ func memberPolicy(member teamCalendar, page crmcontracts.SchedulingProfile) crmc
 	return policy
 }
 
-// teamOccupancy answers the busy time and working hours of each member over the window.
-// exclude and event name the meeting being moved, which holds no time against itself.
-func (s *Store) teamOccupancy(ctx context.Context, team []teamCalendar, page crmcontracts.SchedulingProfile, from, to time.Time, exclude ids.UUID, event string) ([]slot, []WorkingHours, error) {
+const (
+	fieldStart              = "start"
+	codeOutsideAvailability = "outside_availability"
+)
+
+// The refusals of a team time. Neither names a colleague, because the public
+// page shows them to a guest.
+var (
+	errOutsideTeamHours = &SchedulingArgumentError{
+		Field: fieldStart, Code: codeOutsideAvailability,
+		Message: "This time is outside the meeting team's hours. Choose another time.",
+	}
+	errTeamCalendarUnreadable = &SchedulingArgumentError{
+		Field: fieldStart, Code: "team_calendar_unavailable",
+		Message: "A calendar of the meeting team cannot be read, so this meeting cannot move now. Try again later.",
+	}
+)
+
+// teamOccupancy answers the busy time and working hours of each member over
+// the window. exclude and moved name a meeting being moved, which holds no
+// time against itself: exclude is its local hold, and moved its current time.
+func (s *Store) teamOccupancy(ctx context.Context, team []teamCalendar, page crmcontracts.SchedulingProfile, from, to time.Time, exclude ids.UUID, moved *slot) ([]slot, []WorkingHours, error) {
 	var busy []slot
 	hours := make([]WorkingHours, 0, len(team))
 	for _, member := range team {
-		memberBusy, err := s.reliableBusy(ctx, member.User, memberPolicy(member, page), from, to, exclude, event)
+		policy := memberPolicy(member, page)
+		// A member's copy of the moved meeting has an event id of its own, so
+		// it is known by the time it sits at.
+		memberBusy, err := s.providerBusy(ctx, member.User, policy, from, to, func(_ string, interval connector.CalendarInterval) bool {
+			return moved != nil && interval.Start.Equal(moved.Start) && interval.End.Equal(moved.End)
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		memberBusy, err = s.withLocalBusy(ctx, member.User, policy, from, to, exclude, memberBusy)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -45,39 +74,30 @@ func (s *Store) teamOccupancy(ctx context.Context, team []teamCalendar, page crm
 }
 
 // validateTeamTime refuses a booked time outside a member's working hours or
-// over a meeting on a member's calendar, before anything is written.
-func (s *Store) validateTeamTime(ctx context.Context, team []teamCalendar, page crmcontracts.SchedulingProfile, start, end time.Time, event string) error {
-	for _, member := range team {
-		hours, err := s.strictHours(ctx, member.User)
-		if err != nil {
-			return err
-		}
-		if !hours.covers(start, end) {
-			return &SchedulingArgumentError{Field: "start", Code: "outside_availability", Message: "Choose a future time within the host's bookable hours and notice period"}
-		}
-		busy, err := s.calendarBusy(ctx, member.User, memberPolicy(member, page), start, end, event)
-		if err != nil {
-			return err
-		}
-		if overlapsAny(slot{Start: start, End: end}, busy) {
-			return &SlotTakenError{Start: start}
-		}
+// over a member's busy time. It asks the question the offered times answer.
+func (s *Store) validateTeamTime(ctx context.Context, team []teamCalendar, page crmcontracts.SchedulingProfile, start, end time.Time, exclude ids.UUID, moved *slot) error {
+	busy, hours, err := s.teamOccupancy(ctx, team, page, start, end, exclude, moved)
+	if err != nil {
+		return err
+	}
+	booked := slot{Start: start, End: end}
+	if !allCover(hours, booked) {
+		return errOutsideTeamHours
+	}
+	if overlapsAny(booked, busy) {
+		return &SlotTakenError{Start: start}
 	}
 	return nil
 }
 
 // validatePageTime checks a time booked on a standing page for its host and
-// every member, before anything is written.
-func (s *Store) validatePageTime(ctx context.Context, host ids.UserID, page crmcontracts.SchedulingProfile, start, end time.Time) error {
+// the team the page was opened with, before anything is written.
+func (s *Store) validatePageTime(ctx context.Context, host ids.UserID, team []teamCalendar, start, end time.Time) error {
 	profile, err := s.validateInvitationTime(ctx, host, start, end)
 	if err != nil {
 		return err
 	}
-	team, err := s.pageTeam(ctx, page)
-	if err != nil {
-		return err
-	}
-	return s.validateTeamTime(ctx, team, profile, start, end, "")
+	return s.validateTeamTime(ctx, team, profile, start, end, ids.Nil, nil)
 }
 
 // slotHolders are the host and each member whose time a booking holds. They
@@ -115,17 +135,19 @@ func reserveSlotHolders(ctx context.Context, tx pgx.Tx, host ids.UserID, team []
 	return nil
 }
 
-// teamOf is the members a booked appointment holds time for, as calendars the
-// page can still read. A member who can no longer be read is left out: the
-// meeting stands, and they are still invited to it.
+// teamOf is the members a booked meeting holds time for, as calendars to check
+// a move against. A member who left the workspace is dropped. One still here
+// whose calendar cannot be read refuses the move, as the host's own would.
 func (s *Store) teamOf(ctx context.Context, members []ids.UUID) ([]teamCalendar, error) {
 	team := make([]teamCalendar, 0, len(members))
 	for _, member := range members {
-		calendar, ok, err := s.memberCalendar(ctx, ids.From[ids.UserKind](member))
-		if err != nil {
+		calendar, standing, err := s.memberCalendar(ctx, ids.From[ids.UserKind](member))
+		switch {
+		case err != nil:
 			return nil, err
-		}
-		if ok {
+		case standing == memberUnreadable:
+			return nil, errTeamCalendarUnreadable
+		case standing == memberReadable:
 			team = append(team, calendar)
 		}
 	}

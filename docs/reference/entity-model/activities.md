@@ -1264,7 +1264,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## meeting_invitation
 
-21 columns · primary key `(activity_id)` · referenced by 1 foreign key
+22 columns · primary key `(activity_id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1286,6 +1286,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `receipt` | `jsonb` |  |  |
 | `reminder_status` | `text`, default `'off'::text` | yes | One of `off`, `pending`, `queued`, `unavailable`. |
 | `status` | `text` | yes | One of `pending`, `confirmed`, `rescheduling`, `canceling`, `needs_attention`, `canceled` and 1 more. |
+| `team_user_ids` | `uuid[]`, default `'{}'::uuid[]` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -1313,6 +1314,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `meeting_invitation_management_hash_key`: `unique, btree (management_hash)`
 - `meeting_invitation_pkey`: `unique, btree (activity_id)`
 - `meeting_invitation_public_intent`: `unique, btree (((public_intent ->> 'key_hash'))) WHERE (public_intent IS NOT NULL)`
+- `meeting_invitation_team_user_ids`: `gin (team_user_ids)`
 
 **Triggers**
 

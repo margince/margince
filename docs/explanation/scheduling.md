@@ -49,13 +49,17 @@ the same free time around their meetings as around the host's. A read-only grant
 calendar is only read. A free time is free for the host and for every member. It must also fall in
 each member's own working hours, read in their own zone.
 
-A booking names the members in the `Team` field it stores. That holds their time the way a hosted
-meeting does. The local hold check (`localMeetingSlots`) counts it for each member. The booking
+A booking names the members in `meeting_invitation.team_user_ids`. That holds their time the way a
+hosted meeting does. The local hold check (`localMeetingSlots`) counts it for each member, through
+an arm of its own on that column's index. The booking
 takes the host lock of the host and of every member, always in one order. So two links cannot book
 one member twice, and each member's own page stops offering the time.
 
 Each member is invited on the one event, and the booking closes each member's own open tasks on the
-booked record. A move checks every member again who can still be read.
+booked record. A move checks every member again. A member who left the workspace is left out. A member whose
+calendar cannot be read refuses the move, as the host's own calendar would. The member's copy of
+the meeting has an event id of its own, so the move knows it by its current time. When a member
+leaves the workspace, every link that names them marks them `unavailable` and stays paused.
 
 ## Free times are read live, and a failed read shows no times
 

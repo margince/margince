@@ -23011,7 +23011,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.team.pending": "Wartet auf Bestätigung",
   "scheduling.team.confirmed": "Bestätigt",
   "scheduling.team.left": "Hat den Link verlassen",
-  "scheduling.team.unavailable": "Kalender nicht lesbar",
+  "scheduling.team.unavailable":
+    "Nicht verfügbar: kein Mitglied mehr oder Kalender nicht lesbar",
   "scheduling.team.requestsTitle": "Links anderer Mitglieder, die dich nennen",
   "scheduling.team.requestLabel": "{title} mit {name}",
   "scheduling.team.requestPending":

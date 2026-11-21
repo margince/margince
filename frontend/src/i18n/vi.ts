@@ -22395,7 +22395,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.team.pending": "Đang chờ xác nhận",
   "scheduling.team.confirmed": "Đã xác nhận",
   "scheduling.team.left": "Đã rời liên kết",
-  "scheduling.team.unavailable": "Không đọc được lịch",
+  "scheduling.team.unavailable":
+    "Không khả dụng: không còn là thành viên hoặc không đọc được lịch",
   "scheduling.team.requestsTitle": "Liên kết của đồng nghiệp có tên bạn",
   "scheduling.team.requestLabel": "{title} với {name}",
   "scheduling.team.requestPending":

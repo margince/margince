@@ -170,12 +170,13 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 // pagePaused is the one answer to whether a standing booking page takes
 // bookings. The host switched it on, its calendar can take them, and its team
 // is ready. The guest profile, the free-time read and both booking reads ask it.
-func (s *Store) pagePaused(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) (bool, error) {
+// An open page also answers its team, so a request reads the team once.
+func (s *Store) pagePaused(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) (bool, []teamCalendar, error) {
 	if !profile.Enabled {
-		return true, nil
+		return true, nil, nil
 	}
-	blocker, err := s.pageBlocker(ctx, host, profile)
-	return blocker != crmcontracts.SchedulingProfileBlockerNone, err
+	blocker, team, err := s.pageReadiness(ctx, host, profile)
+	return blocker != crmcontracts.SchedulingProfileBlockerNone, team, err
 }
 
 // calendarBlocker is why bookings cannot reach the host's calendar. A page that

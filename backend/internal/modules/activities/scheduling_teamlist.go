@@ -26,7 +26,11 @@ func (s *Store) SchedulingTeamCandidates(ctx context.Context) ([]crmcontracts.Sc
 	var colleagues []ids.UserID
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		args := schedulingArgs{}
-		rows, err := tx.Query(ctx, `SELECT u.id FROM app_user u WHERE u.id<>`+args.add(me)+` AND `+workforce.LiveHumanSQL("u")+` ORDER BY u.display_name, u.id`, args...)
+		// Only a colleague whose live booking page names a calendar provider can
+		// be read, so the provider check below runs for those alone.
+		rows, err := tx.Query(ctx, `SELECT u.id FROM app_user u WHERE u.id<>`+args.add(me)+` AND `+workforce.LiveHumanSQL("u")+`
+ AND EXISTS (SELECT 1 FROM booking_page p WHERE p.host_user_id=u.id AND p.revoked_at IS NULL AND coalesce(p.scheduling_policy->>'provider','')<>'')
+ ORDER BY u.display_name, u.id`, args...)
 		if err != nil {
 			return err
 		}
@@ -38,11 +42,11 @@ func (s *Store) SchedulingTeamCandidates(ctx context.Context) ([]crmcontracts.Sc
 	}
 	out := []crmcontracts.SchedulingTeamCandidate{}
 	for _, colleague := range colleagues {
-		calendar, ok, err := s.memberCalendar(ctx, colleague)
+		calendar, standing, err := s.memberCalendar(ctx, colleague)
 		if err != nil {
 			return nil, err
 		}
-		if ok && calendar.Profile.HostName != nil {
+		if standing == memberReadable && calendar.Profile.HostName != nil {
 			out = append(out, crmcontracts.SchedulingTeamCandidate{UserId: openapi_types.UUID(colleague.UUID), Name: *calendar.Profile.HostName})
 		}
 	}

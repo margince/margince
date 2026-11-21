@@ -129,7 +129,11 @@ func (f *teamFixture) name(t *testing.T, confirm bool, members ...ids.UserID) {
 
 func (f *teamFixture) slots(t *testing.T, from, to time.Time) []slot {
 	t.Helper()
-	free, _, err := f.store.PageAvailability(f.door(), f.host, from, to, 30*time.Minute)
+	_, open := f.store.openForBooking(f.door(), BookingPage{HostUserID: f.host})
+	if open.err != nil || open.paused {
+		t.Fatalf("the page is not open: paused=%v err=%v", open.paused, open.err)
+	}
+	free, _, err := f.store.PageAvailability(f.door(), f.host, open.team, from, to, 30*time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,8 +198,8 @@ func TestATeamLinkOffersOnlyTheTimesEveryMemberIsFree(t *testing.T) {
 		t.Fatalf("a free time answered %d", code)
 	}
 	row := f.invitationRow(t, ids.UUID(meeting.Id))
-	if !slices.Equal(row.Appointment.Team, []ids.UUID{busy.UUID}) || !slices.Contains(row.Appointment.Attendees, "member-"+busy.String()+"@send.test") {
-		t.Fatalf("the booking does not invite the member: team=%v attendees=%v", row.Appointment.Team, row.Appointment.Attendees)
+	if !slices.Equal(row.Team, []ids.UUID{busy.UUID}) || !slices.Contains(row.Appointment.Attendees, "member-"+busy.String()+"@send.test") {
+		t.Fatalf("the booking does not invite the member: team=%v attendees=%v", row.Team, row.Appointment.Attendees)
 	}
 }
 
@@ -250,8 +254,8 @@ func TestATeamLinkWaitsForEveryMemberToConfirm(t *testing.T) {
 	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerTeamNotReady {
 		t.Fatalf("a link no member confirmed reads %q", got)
 	}
-	if _, _, err := f.store.PageAvailability(f.door(), f.host, monday(9), monday(12), 30*time.Minute); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("an unconfirmed team link offered times: %v", err)
+	if _, open := f.store.openForBooking(f.door(), BookingPage{HostUserID: f.host}); open.err != nil || !open.paused {
+		t.Fatalf("an unconfirmed team link is open: %+v", open)
 	}
 	if err := f.store.AnswerSchedulingTeamRequest(f.as(first), f.host, crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
 		t.Fatal(err)
@@ -422,5 +426,138 @@ func TestATeamBookingClosesEachMembersOpenTask(t *testing.T) {
 	}
 	if !f.taskIsDone(t, ids.UUID(task.Id)) {
 		t.Fatal("the member's own task on the booker stayed open")
+	}
+}
+
+// bookAndDeliver books start through the page and lets the provider hold it,
+// so the meeting can move.
+func (f *teamFixture) bookAndDeliver(t *testing.T, start time.Time) crmcontracts.MeetingInvitation {
+	t.Helper()
+	code, meeting := f.book(t, start)
+	if code != http.StatusCreated {
+		t.Fatalf("booking answered %d", code)
+	}
+	if err := f.store.DeliverInvitations(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+	meeting, err := f.store.Invitation(f.ctx, ids.UUID(meeting.Id))
+	if err != nil || meeting.Status != invitationConfirmed {
+		t.Fatalf("not confirmed: %+v %v", meeting, err)
+	}
+	return meeting
+}
+
+func (f *teamFixture) move(meeting crmcontracts.MeetingInvitation, start time.Time) error {
+	end := start.Add(30 * time.Minute)
+	_, err := f.store.ChangeInvitation(f.ctx, ids.UUID(meeting.Id), crmcontracts.MeetingInvitationChange{Action: "reschedule", Version: meeting.Version, Start: &start, End: &end})
+	return err
+}
+
+// The colleague's copy of the meeting has an event id of its own, so only its
+// time tells it apart from a meeting of theirs.
+func TestATeamMeetingMovesOverTheColleaguesOwnCopyOfIt(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Member")
+	f.name(t, true, member)
+	meeting := f.bookAndDeliver(t, monday(11))
+	f.calendar.busyOf[member] = []connector.CalendarInterval{{EventID: "copy-on-the-colleagues-calendar", Start: monday(11), End: monday(11).Add(30 * time.Minute)}}
+	if err := f.move(meeting, monday(11).Add(15*time.Minute)); err != nil {
+		t.Fatalf("a 15-minute move collided with the meeting's own copy: %v", err)
+	}
+}
+
+func TestAMoveIsRefusedWhileAColleaguesCalendarCannotBeRead(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Member")
+	f.name(t, true, member)
+	meeting := f.bookAndDeliver(t, monday(11))
+	f.calendar.unreadable[member] = true
+	err := f.move(meeting, monday(13))
+	if refusal, ok := errors.AsType[*SchedulingArgumentError](err); !ok || refusal.Code != "team_calendar_unavailable" {
+		t.Fatalf("a move past an unreadable colleague: %v", err)
+	}
+}
+
+func TestAMoveDropsAColleagueWhoLeftAfterTheBooking(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Leaver")
+	f.name(t, true, member)
+	meeting := f.bookAndDeliver(t, monday(11))
+	f.calendar.busyOf[member] = []connector.CalendarInterval{{Start: monday(13), End: monday(14)}}
+	if _, err := f.env.owner.Exec(f.ctx, `UPDATE app_user SET status='deactivated' WHERE id=$1`, member.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.move(meeting, monday(13)); err != nil {
+		t.Fatalf("a colleague who left still holds the move back: %v", err)
+	}
+}
+
+func TestDaylightSavingIsReadInEachColleaguesOwnZone(t *testing.T) {
+	f := newTeamFixture(t)
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newYork, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// New York keeps summer time from 8 March 2026 and Berlin from 29 March, so
+	// in between the two zones are five hours apart, not six.
+	f.now = time.Date(2026, 3, 9, 6, 0, 0, 0, time.UTC)
+	f.hours[f.host] = WorkingHours{StartMinute: 9 * 60, EndMinute: 17 * 60, Days: []int{1, 2, 3, 4, 5}, Location: berlin}
+	member := f.colleague(t, "Abroad")
+	f.hours[member] = WorkingHours{StartMinute: 9 * 60, EndMinute: 17 * 60, Days: []int{1, 2, 3, 4, 5}, Location: newYork}
+	f.name(t, true, member)
+
+	day := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
+	free := starts(f.slots(t, day, day.Add(24*time.Hour)))
+	// 09:00 in New York is 13:00 UTC; 17:00 in Berlin is 16:00 UTC.
+	if len(free) == 0 || !free[0].Equal(day.Add(13*time.Hour)) || !free[len(free)-1].Equal(day.Add(15*time.Hour+30*time.Minute)) {
+		t.Fatalf("the shared hours are not 13:00 to 16:00 UTC: %v", free)
+	}
+}
+
+func TestABookingOutsideAColleaguesHoursIsRefusedWithoutNamingThem(t *testing.T) {
+	f := newTeamFixture(t)
+	newYork, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
+	member := f.colleague(t, "Abroad")
+	f.hours[member] = WorkingHours{StartMinute: 9 * 60, EndMinute: 17 * 60, Days: []int{1, 2, 3, 4, 5}, Location: newYork}
+	f.name(t, true, member)
+	// 10:00 UTC is inside the host's hours and 06:00 in New York.
+	err = f.store.validatePageTime(f.door(), f.host, f.openTeam(t), monday(10), monday(10).Add(30*time.Minute))
+	if refusal, ok := errors.AsType[*SchedulingArgumentError](err); !ok || refusal.Code != "outside_availability" || refusal.Message != errOutsideTeamHours.Message {
+		t.Fatalf("a time outside the colleague's hours: %v", err)
+	}
+}
+
+func (f *teamFixture) openTeam(t *testing.T) []teamCalendar {
+	t.Helper()
+	_, open := f.store.openForBooking(f.door(), BookingPage{HostUserID: f.host})
+	if open.err != nil || open.paused {
+		t.Fatalf("the page is not open: %+v", open)
+	}
+	return open.team
+}
+
+func TestADepartingColleagueIsMarkedOnEveryLinkThatNamesThem(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Leaver")
+	f.name(t, true, member)
+	if err := f.store.tx(f.ctx, func(tx pgx.Tx) error { return RetireTeamMemberTx(f.ctx, tx, member) }); err != nil {
+		t.Fatal(err)
+	}
+	var stored string
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT scheduling_policy->'team_members'->0->>'state' FROM booking_page WHERE host_user_id=$1 AND revoked_at IS NULL`, f.host.UUID).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != string(crmcontracts.SchedulingTeamMemberStateUnavailable) {
+		t.Fatalf("the departing colleague is stored as %q", stored)
+	}
+	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerTeamNotReady {
+		t.Fatalf("a link whose colleague departed reads %q", got)
 	}
 }

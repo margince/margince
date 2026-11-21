@@ -39,6 +39,11 @@ func (s *Store) invitationPolicy(ctx context.Context, row invitationRow) (crmcon
 	return profile, err
 }
 
+// bookedSlot is the time a meeting holds now, before the move asked for.
+func bookedSlot(row invitationRow) *slot {
+	return &slot{Start: row.Appointment.Start, End: row.Appointment.End}
+}
+
 func receiptEvent(row invitationRow) string {
 	if row.Receipt != nil {
 		return row.Receipt.EventID
@@ -65,11 +70,11 @@ func (s *Store) validateInvitationMove(ctx context.Context, host ids.UserID, id 
 	if overlapsAny(slot{Start: start, End: end}, busy) {
 		return 0, &SlotTakenError{Start: start}
 	}
-	team, err := s.teamOf(ctx, row.Appointment.Team)
+	team, err := s.teamOf(ctx, row.Team)
 	if err != nil {
 		return 0, err
 	}
-	return profile.BufferMinutes, s.validateTeamTime(ctx, team, profile, start, end, receiptEvent(row))
+	return profile.BufferMinutes, s.validateTeamTime(ctx, team, profile, start, end, id, bookedSlot(row))
 }
 
 func (s *Store) deliverInvitation(ctx context.Context, row invitationRow, in connector.CalendarAppointment) (*connector.CalendarReceipt, error) {
@@ -143,11 +148,11 @@ func (s *Store) invitationAvailability(ctx context.Context, host ids.UserID, id 
 	if err != nil {
 		return nil, false, err
 	}
-	team, err := s.teamOf(ctx, row.Appointment.Team)
+	team, err := s.teamOf(ctx, row.Team)
 	if err != nil {
 		return nil, false, err
 	}
-	teamBusy, teamHours, err := s.teamOccupancy(ctx, team, profile, from, to, id, receiptEvent(row))
+	teamBusy, teamHours, err := s.teamOccupancy(ctx, team, profile, from, to, id, bookedSlot(row))
 	if err != nil {
 		return nil, false, err
 	}

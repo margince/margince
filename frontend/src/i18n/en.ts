@@ -22686,7 +22686,8 @@ export const en = {
   "scheduling.team.pending": "Waiting for confirmation",
   "scheduling.team.confirmed": "Confirmed",
   "scheduling.team.left": "Left the link",
-  "scheduling.team.unavailable": "Calendar not readable",
+  "scheduling.team.unavailable":
+    "Not available: no longer a member, or calendar not readable",
   "scheduling.team.requestsTitle": "Colleagues’ links that name you",
   "scheduling.team.requestLabel": "{title} with {name}",
   "scheduling.team.requestPending":

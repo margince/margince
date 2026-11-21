@@ -12,26 +12,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// teamHoldSQL says a team booking hosted by a colleague names this member, so
-// it holds the member's time as the member's own meetings do.
-func teamHoldSQL(member string) string {
-	return `EXISTS(SELECT 1 FROM meeting_invitation m WHERE m.activity_id=a.id AND m.appointment->'Team' ? ` + member + `::text)`
-}
-
 // occupiesHostSlotSQL says meeting a holds an hour of its host's calendar: it
 // claims the slot, or an invitation went out for it.
 const occupiesHostSlotSQL = `(a.claims_host_slot OR EXISTS(SELECT 1 FROM meeting_invitation m WHERE m.activity_id=a.id))`
 
+// localMeetingSlots reads the holds on one colleague's time: the meetings they
+// host, and the team bookings that name them. Each is its own arm, so each
+// keeps its index.
 func localMeetingSlots(ctx context.Context, tx pgx.Tx, host ids.UserID, from, to time.Time, exclude ids.UUID) ([]slot, error) {
 	args := schedulingArgs{}
 	h, f, t, id := args.add(host), args.add(from), args.add(to), args.add(exclude)
 	rows, err := tx.Query(ctx, `SELECT occurred_at,occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second' -- meeting end: only an instant holds an hour of the host calendar (refuseDayHeldSlot)
- FROM activity a WHERE (host_user_id=`+h+` OR `+teamHoldSQL(h)+`) AND id<>`+id+` AND kind='meeting' AND archived_at IS NULL
+ FROM activity a WHERE host_user_id=`+h+` AND id<>`+id+` AND kind='meeting' AND archived_at IS NULL
  AND `+occupiesHostSlotSQL+`
  AND meeting_status IS DISTINCT FROM 'canceled' AND `+t+`>occurred_at -- occurred_at raw: the range's upper edge; only an instant holds a host hour
  AND occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second'>`+f+` -- meeting end: only an instant holds an hour of the host calendar (refuseDayHeldSlot)
+ UNION ALL SELECT occurred_at,occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second' -- meeting end: only an instant holds an hour of the member calendar (refuseDayHeldSlot)
+ FROM activity a WHERE id IN (SELECT activity_id FROM meeting_invitation WHERE team_user_ids @> ARRAY[`+h+`]::uuid[]) AND id<>`+id+` AND kind='meeting' AND archived_at IS NULL
+ AND meeting_status IS DISTINCT FROM 'canceled' AND `+t+`>occurred_at -- occurred_at raw: the range's upper edge; only an instant holds a member hour
+ AND occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second'>`+f+` -- meeting end: only an instant holds an hour of the member calendar (refuseDayHeldSlot)
  UNION ALL SELECT (appointment->>'Start')::timestamptz,(appointment->>'End')::timestamptz
- FROM meeting_invitation WHERE (host_user_id=`+h+` OR appointment->'Team' ? `+h+`::text) AND activity_id<>`+id+`
+ FROM meeting_invitation WHERE host_user_id=`+h+` AND activity_id<>`+id+`
+ AND command='update' AND status IN ('rescheduling','needs_attention')
+ AND (appointment->>'Start')::timestamptz<`+t+` AND (appointment->>'End')::timestamptz>`+f+`
+ UNION ALL SELECT (appointment->>'Start')::timestamptz,(appointment->>'End')::timestamptz
+ FROM meeting_invitation WHERE team_user_ids @> ARRAY[`+h+`]::uuid[] AND activity_id<>`+id+`
  AND command='update' AND status IN ('rescheduling','needs_attention')
  AND (appointment->>'Start')::timestamptz<`+t+` AND (appointment->>'End')::timestamptz>`+f, args...)
 	if err != nil {

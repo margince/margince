@@ -312,10 +312,10 @@ func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in
 		if row.Status != invitationConfirmed {
 			return apperrors.ErrConflict
 		}
-		if err := lockSlotHolders(ctx, tx, row.Host, row.Appointment.Team); err != nil {
+		if err := lockSlotHolders(ctx, tx, row.Host, row.Team); err != nil {
 			return err
 		}
-		if err := reserveSlotHolders(ctx, tx, row.Host, row.Appointment.Team, *in.Start, *in.End, buffer, row.ID); err != nil {
+		if err := reserveSlotHolders(ctx, tx, row.Host, row.Team, *in.Start, *in.End, buffer, row.ID); err != nil {
 			return err
 		}
 		row.Appointment.Start, row.Appointment.End = *in.Start, *in.End

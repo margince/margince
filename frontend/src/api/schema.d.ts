@@ -8223,7 +8223,9 @@ export interface paths {
          * Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
          * @description With reliable=true, reads live calendar occupancy and applies bookable hours,
          *     notice, buffers and booking horizon. Without it, returns CRM-only availability
-         *     for compatibility. This read never books or sends an invitation.
+         *     for compatibility. This read never books or sends an invitation. It reads the named
+         *     host alone: the colleagues a booking link names are not counted, so a time it returns
+         *     may still be taken for one of them.
          */
         get: operations["getAvailability"];
         put?: never;
