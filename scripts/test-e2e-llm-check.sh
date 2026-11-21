@@ -1497,6 +1497,13 @@ for field in '"driver": "gpt:api"' '"effort": "reasoning medium"' '"system_promp
 	fi
 done
 
+# CASE 112 — the admin has no plan this week, and either order of saying so
+# holds; an answer that invents a plan does not.
+c112="case112-my-plan-and-the-dossier.yaml"
+judges "$c112" case112 plan-first-says-none 0
+judges "$c112" case112 says-no-plan 0
+judges "$c112" case112 reads-a-plan-that-is-not-there 1 "never said anything matching"
+
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2
 	exit 1

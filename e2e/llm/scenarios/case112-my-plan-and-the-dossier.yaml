@@ -32,7 +32,8 @@ must_mention:
   - "Nordholz"
   - "(?i)\bplan\b"
   - "(?i)dossier[^\n]{0,120}(?:empty|blank|no (?:sections?|content|research|entries|findings)|nothing|not (?:yet )?(?:been )?(?:written|generated|researched|built|filled)|n['’]t (?:yet )?(?:been )?(?:written|generated|researched|built|filled))|(?:empty|no|blank)[^.\n]{0,40}dossier"
-  - "(?i)\bno\b[^.]{0,40}\bplan\b|not (yet )?(started|begun|opened)|hasn't been started|haven't started"
+  # "Weekly plan: none is saved" says it with the plan first.
+  - "(?i)\bno\b[^.]{0,40}\bplan\b|not (yet )?(started|begun|opened)|hasn't been started|haven't started|\bplan\b[^.\n]{0,25}\b(?:none|nothing|empty)\b"
 
 runs: 3
 pass_at: 2
