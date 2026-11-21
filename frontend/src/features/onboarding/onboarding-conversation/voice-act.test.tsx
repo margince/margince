@@ -301,6 +301,7 @@ describe("the conversational voice act", () => {
       preview: documentPreview,
       ingests: [{ stats: documentStats, summary: summaryOf(820) }],
     });
+    const user = userEvent.setup();
     render(<VoiceHarness initial={collectingState()} />);
 
     expect(
@@ -315,7 +316,7 @@ describe("the conversational voice act", () => {
       ),
     ).not.toHaveLength(0);
     // Samples are still taken; only the build waits for a provider.
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: /Build my voice profile/ }),
     );
     expect((await screen.findByRole("alert")).textContent).toContain(
@@ -338,6 +339,7 @@ describe("the conversational voice act", () => {
         { stats: documentStats, summary: summaryOf(820) },
       ],
     });
+    const user = userEvent.setup();
     render(<VoiceHarness initial={collectingState()} />);
 
     await uploadFile("one.md", "First document.");
@@ -350,7 +352,7 @@ describe("the conversational voice act", () => {
     ).toBeTruthy();
     // Below the floor the button still presses: the press names the words
     // still missing and starts nothing.
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: /Build my voice profile/ }),
     );
     expect((await screen.findByRole("alert")).textContent).toBe(
@@ -641,9 +643,10 @@ describe("the voice act's surface/rail split", () => {
   it("leaves the step in one press of Skip, with no second screen to pass", async () => {
     stubApi({});
     const dispatch = vi.fn();
+    const user = userEvent.setup();
     render(<VoiceAct state={collectingState()} dispatch={dispatch} />);
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
 

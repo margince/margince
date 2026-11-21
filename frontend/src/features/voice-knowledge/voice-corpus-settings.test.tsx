@@ -439,9 +439,10 @@ describe("handing a file to the Settings voice card", () => {
         detail: "request body exceeds the 1 MiB cap",
       },
     });
+    const user = userEvent.setup();
     render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
-    await userEvent.upload(fileInput(), fileOf("big.txt", "many words"));
+    await user.upload(fileInput(), fileOf("big.txt", "many words"));
 
     expect(
       await screen.findByText(

@@ -93,6 +93,7 @@ describe("the Sources list on the voice step", () => {
 
   it("removes a sample at its version and shows the meter without it", async () => {
     const calls = stubApi({ afterRemove: summaryOf(351) });
+    const user = userEvent.setup();
     render(
       <Resumed
         sources={[
@@ -102,9 +103,7 @@ describe("the Sources list on the voice step", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Remove offer.pdf" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Remove offer.pdf" }));
 
     await waitFor(() => expect(screen.queryByText("offer.pdf")).toBeNull());
     const [removal] = requestsTo(calls, "/sources/s1", "DELETE");
@@ -171,17 +170,18 @@ describe("the Sources list on the voice step", () => {
         { stats: documentStats, summary: summaryOf(1800) },
       ],
     });
+    const user = userEvent.setup();
     render(<Resumed sources={[]} />);
 
     for (const text of ["Hello from Zoe.", "Dear Sam, thanks."]) {
-      await userEvent.click(
+      await user.click(
         screen.getByRole("button", { name: en["ob.conv.voice.pasteInstead"] }),
       );
-      await userEvent.type(
+      await user.type(
         screen.getByLabelText(en["ob.conv.voice.composer"]),
         text,
       );
-      await userEvent.click(
+      await user.click(
         screen.getByRole("button", { name: en["ob.conv.voice.pasteAdd"] }),
       );
     }

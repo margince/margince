@@ -337,8 +337,10 @@ export function VoiceSamples({
   const removed = useRef(false);
   const meterId = useId();
   const remove = useMutation({
-    mutationFn: async (sample: Readonly<{ id: string; version: number }>) => {
-      await deleteVoiceSample(profileId, sample.id, sample.version);
+    mutationFn: async (
+      sample: Readonly<{ profileId: string; id: string; version: number }>,
+    ) => {
+      await deleteVoiceSample(sample.profileId, sample.id, sample.version);
     },
     onSuccess: () => {
       removed.current = true;
@@ -401,7 +403,11 @@ export function VoiceSamples({
               }
               onConfirm={() =>
                 removing &&
-                remove.mutate({ id: removing.id, version: removing.version })
+                remove.mutate({
+                  profileId,
+                  id: removing.id,
+                  version: removing.version,
+                })
               }
             >
               <p>
