@@ -118,8 +118,8 @@ func (s *Service) queryColumns(ctx context.Context, whereTail string, args ...an
 // for a caller that cannot take a second connection from inside it. Same
 // answer, same lack of a gate of its own.
 //
-// It reads once per object per transaction. Every catalog write runs in a
-// transaction of its own, so no record transaction sees the catalog change under it.
+// It reads once per object per transaction. A catalog write in the same
+// transaction drops the remembered answer through forgetActiveColumns.
 func ActiveColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]fieldcatalog.Column, error) {
 	return database.Remember(tx, activeColumnsMemo+object, func() ([]fieldcatalog.Column, error) {
 		return queryColumnsIn(ctx, tx, "AND status = $2 ORDER BY column_name", object, statusActive)
@@ -133,6 +133,12 @@ func (s *Service) ActiveColumnsIn(ctx context.Context, tx pgx.Tx, object string)
 }
 
 const activeColumnsMemo = "customfields.active-columns:"
+
+// forgetActiveColumns is what every write to an object's catalog rows calls in
+// its transaction, so a record write after it there reads the new catalog.
+func forgetActiveColumns(tx pgx.Tx, object string) {
+	database.Forget(tx, activeColumnsMemo+object)
+}
 
 func queryColumnsIn(ctx context.Context, tx pgx.Tx, whereTail string, args ...any) ([]fieldcatalog.Column, error) {
 	rows, err := tx.Query(ctx,

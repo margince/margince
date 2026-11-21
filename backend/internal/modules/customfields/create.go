@@ -193,8 +193,12 @@ func insertCatalogRow(ctx context.Context, tx pgx.Tx, bindings []catalogBinding)
 	for i, b := range bindings {
 		columns[i], args[i] = b.column, b.value
 	}
-	return scanCustomField(tx.QueryRow(ctx, storekit.SQLf(`INSERT INTO custom_field (%s) VALUES (%s) RETURNING %s`,
+	out, err := scanCustomField(tx.QueryRow(ctx, storekit.SQLf(`INSERT INTO custom_field (%s) VALUES (%s) RETURNING %s`,
 		strings.Join(columns, ", "), storekit.Placeholders(args), catalogColumns), args...))
+	if err == nil {
+		forgetActiveColumns(tx, string(out.Object))
+	}
+	return out, err
 }
 
 // serializeSchemaChange is the shared arming step of both DDL paths

@@ -11,6 +11,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -142,5 +143,46 @@ func TestTenWritesInOneTransactionReadTheCatalogOnce(t *testing.T) {
 	}
 	if got := with.Statements - without.Statements; got != 1 {
 		t.Errorf("ten writes in one transaction spent %d statements on the catalog, want 1", got)
+	}
+}
+
+// errRollBack ends a test transaction without keeping what it wrote.
+var errRollBack = errors.New("roll the test transaction back")
+
+func TestAFieldRetiredInTheTransactionRefusesAWriteAfterAReadThere(t *testing.T) {
+	e := Setup(t)
+	admin := e.As(e.Rep1, nil, CustomFieldAdminPerms)
+	catalog := customfields.NewService(e.Pool, SchemaPool(t))
+	field, err := catalog.Create(admin, customfields.FieldSpec{
+		Object: "contact", Label: "Region contact", Type: customfields.TypeText, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := contacts.NewStore(e.DB()).WithFieldCatalog(catalog)
+	created, err := store.CreateContact(admin, contacts.CreateContactInput{FullName: "Retired Field"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.ContactKind](ids.UUID(created.Id))
+
+	var written error
+	err = database.WithWorkspaceWriteTx(admin, e.Pool, func(ctx context.Context) error {
+		if _, err := store.GetContact(ctx, id, storekit.LiveOnly); err != nil {
+			return err
+		}
+		if _, err := catalog.Retire(ctx, ids.UUID(field.Id)); err != nil {
+			return err
+		}
+		_, written = store.UpdateContact(ctx, id, contacts.UpdateContactInput{
+			CustomFields: map[string]any{*field.ColumnName: "north"},
+		})
+		return errRollBack
+	})
+	if !errors.Is(err, errRollBack) {
+		t.Fatalf("the transaction ended with %v before the write", err)
+	}
+	if written == nil {
+		t.Error("a write naming a field retired earlier in the same transaction was accepted: the catalog read before the retirement was reused")
 	}
 }
