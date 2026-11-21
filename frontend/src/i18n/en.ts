@@ -3885,7 +3885,7 @@ export const en = {
   "consent.reason.unconfirmed_double_opt_in":
     "Consent was recorded but never confirmed by the double opt-in",
   "consent.reason.no_connection":
-    "They have never written to you, and no deal or inquiry connects you",
+    "No message, meeting or request on file connects you",
   "consent.reason.qualifying_event": "A recorded exchange connects you",
   "consent.reason.consent_confirmed":
     "They gave consent, with the confirmation on file",
@@ -3897,7 +3897,6 @@ export const en = {
     "They bought from you and were told then that they may object to advertising",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
-  "consent.reason.qualifying.active_deal": "An open deal connects you",
   "consent.reason.qualifying.in_person":
     "A recorded exchange on {date}: {note}",
   "consent.reason.qualifying.meeting": "A meeting on {date} connects you",
@@ -4534,9 +4533,10 @@ export const en = {
     "Only when someone confirms the signature. Never taken from the deal’s close date.",
   "contracts.form.save": "Record contract",
   "contracts.form.errNoName": "Enter a contract title.",
+  "contracts.form.errNegativeAmount":
+    "Value and annual recurring revenue cannot be negative.",
   "contracts.form.errTermOrder": "A term cannot end before it starts.",
   "contracts.add": "Add contract",
-  "contracts.rowMenu": "Contract actions",
   "contracts.renew.title": "Renew contract",
   "contracts.renew.hint":
     "Creates a new contract with its own terms and marks this one superseded. Only the counterparty is kept.",
@@ -4646,6 +4646,8 @@ export const en = {
   "deal.lines.description": "Description",
   "deal.lines.quantity": "Quantity",
   "deal.lines.price": "Selling price",
+  "deal.lines.priceInOtherCurrency":
+    "This product is priced in {currency}. Enter its price.",
   "deal.lines.remove": "Remove {name}",
   "deal.lines.editTitle": "Products and services",
   "deal.lines.save": "Save products",
@@ -6428,6 +6430,8 @@ export const en = {
   "deal.standing.figure.offer": "Offer {number} · version {revision}",
   "deal.standing.figure.amountByModel": "Read by Margince from the email",
   "deal.standing.figure.currencyGuessed": "Currency assumed, check it",
+  "deal.standing.figure.offerInProgress":
+    "Offer {number} · version {revision} · {status}",
   "deal.standing.figure.next": "Next step",
   "standing.noneYet": "None yet",
   "deal.standing.figure.daysInStage": "Days in stage",
@@ -6972,6 +6976,7 @@ export const en = {
   "deal.offersEmpty": "No offers yet",
 
   "offer.backToDeal": "Back to deal",
+  "offer.deal": "Deal",
   "offer.totals": "Totals",
   "offer.net": "Net",
   "offer.tax": "Tax",
@@ -7004,26 +7009,33 @@ export const en = {
   "offer.unit": "Unit",
   "offer.unitFromProduct": "From the product",
   "offer.quantity": "Quantity",
+  "offer.unitPriceRequired": "Enter a unit price or pick a product.",
   "offer.unitPrice": "Unit price",
   "offer.discountPct": "Discount %",
   "offer.taxRate": "Tax %",
   "offer.committedPeriods": "Periods",
   "offer.lineTotal": "Line total",
   "offer.unpriced": "unpriced, excluded from total",
-  "offer.removeLine": "Remove",
+  "offer.lineCell": "{column}, line {position}",
+  "offer.removeLineNamed": "Remove line {position}",
   "offer.pickProduct": "Pick product",
   "offer.pickProductConfirm": "Product: {name}",
   "offer.send": "Send",
-  "offer.sendConfirm": "Send this offer to the buyer?",
-  "offer.sendBody": "The offer becomes read-only until the buyer responds.",
+  "offer.sendConfirm": "Mark this offer as sent?",
+  "offer.sendBody":
+    "Nothing is emailed, and this version is locked for good. Render the PDF and send it to the buyer yourself.",
   "offer.accept": "Accept",
   "offer.acceptConfirm": "Mark this offer as accepted?",
   "offer.acceptBody":
     "The deal value and currency are updated to match this offer.",
   "offer.reject": "Reject",
+  "offer.discard": "Discard draft",
+  "offer.discardBody": "The draft is archived and leaves the deal’s offers.",
   "offer.rejectConfirm": "Mark this offer as rejected?",
   "offer.rejectReason": "Reason (optional)",
   "offer.regenerate": "Regenerate revision",
+  "offer.writeUnsure":
+    "Margince could not tell whether that went through. Check the deal’s offers before you try again.",
   "offer.aiDisclosureTitle": "AI-assisted offer",
   "offer.diffAdded_one": "{count} line added",
   "offer.diffAdded_other": "{count} lines added",
@@ -8516,7 +8528,8 @@ export const en = {
     "Sending is refused until a reason is recorded.",
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
-  "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.dealFact":
+    "No open deal with this recipient supports this follow-up.",
   "sendPermission.reason.footerIncomplete":
     "Read the footer details below. You can send this email with a recorded reason.",
   "sendPermission.footer.language": "{detail} in {language}",
@@ -8671,6 +8684,12 @@ export const en = {
   "directSend.correctionFailed":
     "The correction was not saved. Reopen the review to check the current message and approval.",
   "directSend.open": "Send with a recorded exception",
+  "directSend.alreadySent": "This message was already sent.",
+  "directSend.when": "When to send",
+  "directSend.whenLater": "At a later time",
+  "directSend.whenLaterDetail":
+    "Your decision is recorded now. The checks run again when the message goes.",
+  "directSend.scheduled": "Scheduled as a recorded exception.",
   "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
@@ -16513,6 +16532,7 @@ export const en = {
   "product.unitOtherLabel": "Other unit",
   "product.unitOtherRequired": "Type the unit, or pick one from the list.",
   "product.unitPrice": "Unit price",
+  "product.candidatePrice": "{price} / {unit}",
   "product.currency": "Currency",
   "product.taxRate": "Default tax rate %",
   "product.billingModel": "Billing",
@@ -20655,8 +20675,8 @@ export const en = {
     "A recipient stopped marketing after you scheduled this. It will not send to them.",
   "sched.held.recipientReplied":
     "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
-  "sched.held.confirmSendsNow":
-    "Confirming sends this message now, not at the time it was scheduled for.",
+  "sched.held.confirmChoosesWhen":
+    "Its scheduled time has passed. When you confirm, choose to send it now or at a new time.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",
@@ -22361,6 +22381,7 @@ export const en = {
   "lead.card.askedOpen": "Open message",
   "lead.card.qualified": "If they are qualified",
   "lead.card.qualifiedContact": "Contact",
+  "lead.card.qualifiedCompany": "Company",
   "lead.card.qualifiedDeal": "Deal",
   "lead.card.qualifiedDealOptional": "You can open one in the same step",
   "lead.card.qualifiedNewContact": "A new contact",
@@ -23139,6 +23160,7 @@ export const en = {
   "legalReview.closesOn": "Closes {date}",
   "legalReview.back": "All legal reviews",
   "legalReview.packTitle": "Review pack",
+  "legalReview.packDeal": "Deal",
   "legalReview.decideTitle": "Answer",
   "legalReview.ownRequest":
     "You asked for this review, so a colleague answers it.",
@@ -23161,7 +23183,7 @@ export const en = {
   "legalReview.packOffer": "Current offer",
   "legalReview.offerNumber": "Offer",
   "legalReview.offerRevision": "{number}, revision {revision}",
-  "legalReview.offerTotal": "Total",
+  "legalReview.offerTotal": "Gross total",
   "legalReview.offerValidUntil": "Valid until",
   "legalReview.offerTerms": "Terms",
   "legalReview.packNoOffer": "No offer on this deal.",
@@ -23198,6 +23220,8 @@ export const en = {
     "You cannot open this file. Ask the colleague who requested the review.",
   "legalReview.offerLine": "Line {number}",
   "legalReview.offerLineText": "{quantity} × {description} at {price}",
+  "legalReview.offerLineDiscount": "Discount {rate}%",
+  "legalReview.offerLineTax": "Tax {rate}%",
   "legalReview.offerLineRecurring_one": "{cadence} for {count} period",
   "legalReview.offerLineRecurring_other": "{cadence} for {count} periods",
   "legalReview.offerLineStaged": "Proposed, not yet in the total",

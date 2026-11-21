@@ -20,6 +20,10 @@ function DiscountCell({ onSave }: Args) {
       value={10}
       width={90}
       testId="line-discount"
+      label={t("offer.lineCell", {
+        column: t("offer.discountPct"),
+        position: "1",
+      })}
       check={(text) => discountFault(text, locale, t)}
       onSave={onSave}
     />

@@ -267,3 +267,25 @@ func TestTheGuardAnswersOnTheSameWindowAsTheSend(t *testing.T) {
 		t.Errorf("the send path verdict on the same lapsed inbound = %q, want unknown", v.State)
 	}
 }
+
+// A stakeholder on an open deal, with nothing else on file, is no connection
+// for the guard: the guard reads no deal.
+func TestAnOpenDealAloneIsNoConnectionForTheGuard(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "business_correspondence", "business_correspondence")
+	e.openDeal(t, "open", true)
+
+	guard, err := e.store.ContactConsentGuard(e.ctx, e.contact)
+	if err != nil {
+		t.Fatalf("reading the guard: %v", err)
+	}
+	for _, entry := range guard.Entries {
+		if entry.PurposeKey == "business_correspondence" {
+			if entry.ReasonCode != ReasonNoConnection {
+				t.Fatalf("a deal stakeholder with nothing on file answers %v (%s), want no_connection", entry.ReasonCode, entry.Reason)
+			}
+			return
+		}
+	}
+	t.Fatal("the guard has no business_correspondence entry")
+}

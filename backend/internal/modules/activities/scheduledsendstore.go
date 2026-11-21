@@ -226,16 +226,9 @@ func (s *Store) RescheduleScheduledSend(ctx context.Context, id ids.UUID, sched 
 	if timer == nil {
 		return ScheduledSend{}, errNoScheduleTimer
 	}
-	normalized, err := normalizeSchedule(sched)
+	sched, err := s.CheckLater(sched)
 	if err != nil {
 		return ScheduledSend{}, err
-	}
-	sched = normalized
-	if err := validateSchedule(sched, s.now()); err != nil {
-		return ScheduledSend{}, err
-	}
-	if !sched.At.After(s.now()) {
-		return ScheduledSend{}, &InvalidScheduleError{Field: FieldScheduledAt, Reason: "is in the past"}
 	}
 	current, err := s.GetScheduledSend(ctx, id)
 	if err != nil {
