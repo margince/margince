@@ -75,8 +75,7 @@ type StopRefusal struct {
 
 // RefusalOf is the refusal a stop carries, or nil for a stop with a sentence only.
 func RefusalOf(err error) *StopRefusal {
-	var stop RunStop
-	if errors.As(err, &stop) {
+	if stop, ok := errors.AsType[RunStop](err); ok {
 		return stop.Refusal
 	}
 	return nil
