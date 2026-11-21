@@ -9,7 +9,7 @@ workflow is outside the gate:
 | Workflow | What starts it | Blocks a merge? |
 |---|---|---|
 | `cla.yml` | `pull_request_target` (`opened`, `reopened`, `synchronize`, `closed`); a PR comment that contains `recheck` or `Contributor License Agreement`; `merge_group` | Yes, for an author outside the Margince team |
-| `cache-warm.yml` | `pace.yml`, `main` every three hours, manual dispatch | No |
+| `cache-warm.yml` | `pace.yml` on `main` and `develop`, `main` every three hours, manual dispatch | No |
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
@@ -17,7 +17,7 @@ workflow is outside the gate:
 | `mcp-e2e-stale.yml` | pull request events that touch the MCP catalog or the e2e lane | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
 | `main-health.yml` | `pace.yml`, `main` every six hours, manual dispatch | No |
-| `pace.yml` | every push to `main` | No (runs after the merge) |
+| `pace.yml` | every push to `main` or `develop` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
 | `release.yml` | manual dispatch naming a tag | No |
@@ -38,15 +38,22 @@ recording needs a secret a fork run never gets, and so it never checks out the p
 
 ## `cache-warm.yml`
 
-The only writer of the Go build cache and of the frontend cache. It is also one of the writers of
-the golangci analysis cache and of the gate binaries. A red or cancelled run makes the next lane slower, and costs nothing else. It is a
-separate workflow because a merge queue build cannot fill the cache. `actions/cache` scopes a write
-to the branch that writes plus the default branch, and a queue ref does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
+The writer of the `plain` and `integration` Go build caches and of the frontend cache. It is also one
+of the writers of the golangci analysis cache and of the gate binaries. A red or cancelled run makes
+the next lane slower, and costs nothing else. It is a separate workflow because a merge queue build
+cannot fill the cache. `actions/cache` scopes a write to the branch that writes, and a queue ref does
+not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
 for why it does not run on each push.
 
-GitHub drops some of the cron runs. So `pace.yml` starts it from a push to `main` once the newest run is
-three hours old, as it does for `main-health.yml`. Why `ci.yml` saves neither lint cache: [The lint
-caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-and-the-golangci-one-on-develop-too).
+It writes on `main` and on `develop`, so a pull request reads the entry of the branch it merges into.
+`integration` and `integration-timing` run on `main` only, and gate binaries are saved on `main` only.
+Its `prune` job then deletes the older entries of its own ref (`REF=<ref> scripts/reap-build-caches.sh`).
+
+GitHub runs a cron only on the default branch, and drops some of those runs. So `pace.yml` starts it
+from a push to `main` or `develop` once that branch's newest run is three hours old. It does the same
+for `main-health.yml` on `main`. Why `ci.yml` saves neither lint cache: [The lint caches are saved on
+`main` and `develop`](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-and-develop).
+
 Its `ci-image` job builds the [CI image](../explanation/ci-image.md), and `plain` warms the caches of
 the runner and, if the image can be pulled, of the image. `lint-cache.yml` lints in it, or else on the runner.
 `integration-timing` saves the test times the integration shards split by (cache `integration-test-timing-<run>`), each test's mean over the five newest `test-timing-integration` artifacts.

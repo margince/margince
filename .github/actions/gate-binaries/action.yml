@@ -10,6 +10,7 @@ inputs:
       Whether a miss saves the binaries it installed. Only a job on `main` sets
       it: an entry saved from a pull request can be read by that pull request
       alone, and it pushes a `main` entry out of the cache quota.
+      The key holds no commit, so a `develop` copy would only take room.
     required: false
     default: "false"
 
