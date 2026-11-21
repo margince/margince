@@ -583,7 +583,7 @@ func seedBulkDeals(t *testing.T, e *integration.Env, owner ids.UUID, n int) []cr
 }
 
 // bulkStatements is what one call of the engine cost in statements.
-func bulkStatements(t *testing.T, ctx context.Context, run func(context.Context) error) int64 {
+func bulkStatements(ctx context.Context, t *testing.T, run func(context.Context) error) int64 {
 	t.Helper()
 	ctx, meter := database.WithStatementMeter(ctx)
 	if err := run(ctx); err != nil {
@@ -611,14 +611,14 @@ func TestABulkReassignmentCostsAFixedNumberOfStatementsPerRecord(t *testing.T) {
 			cost := func(items []crmcontracts.BulkItem) (preview, execute int64) {
 				n := len(items)
 				confirmed := change(items)
-				preview = bulkStatements(t, e.Admin(), func(ctx context.Context) error {
+				preview = bulkStatements(e.Admin(), t, func(ctx context.Context) error {
 					shown, err := engine.Preview(ctx, confirmed)
 					if err == nil && shown.ConfirmToken != nil {
 						confirmed.confirmToken = *shown.ConfirmToken
 					}
 					return err
 				})
-				execute = bulkStatements(t, e.Admin(), func(ctx context.Context) error {
+				execute = bulkStatements(e.Admin(), t, func(ctx context.Context) error {
 					out, err := engine.Execute(ctx, confirmed)
 					if err == nil && out.Changed != n {
 						err = fmt.Errorf("changed %d of %d, skipped %v", out.Changed, n, out.Skipped)

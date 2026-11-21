@@ -205,16 +205,7 @@ func (s *Store) writeCompanyInTx(
 		p.SetStamp("name_source", nameSourceHuman)
 	}
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
-		if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
-			return none, &RequiredFieldError{Field: filterOwnerID}
-		}
-		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
-			return none, &DuplicateCompanyLinkedInError{URL: deref(in.LinkedInURL)}
-		}
-		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companySourceKey {
-			return none, fmt.Errorf("a company with this source_system and source_id already exists: %w", apperrors.ErrConflict)
-		}
-		return none, fmt.Errorf("apply company patch: %w", err)
+		return none, companyPatchRefusal(err, in)
 	}
 	if err := s.relocateIfAddressMoved(ctx, tx, id, p); err != nil {
 		return none, err
@@ -230,6 +221,21 @@ func (s *Store) writeCompanyInTx(
 	owner := ownerAfterEdit(p, (*ids.UUID)(current.OwnerId), in.OwnerID)
 	return recordEdit[crmcontracts.Company]{current: current, changed: true},
 		s.followShareOwnerTx(ctx, tx, entityCompany, id.UUID, (*ids.UUID)(current.OwnerId), owner)
+}
+
+// companyPatchRefusal names the constraint a company write broke, or wraps the
+// error when it broke none this edit knows.
+func companyPatchRefusal(err error, in UpdateCompanyInput) error {
+	if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
+		return &RequiredFieldError{Field: filterOwnerID}
+	}
+	if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
+		return &DuplicateCompanyLinkedInError{URL: deref(in.LinkedInURL)}
+	}
+	if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companySourceKey {
+		return fmt.Errorf("a company with this source_system and source_id already exists: %w", apperrors.ErrConflict)
+	}
+	return fmt.Errorf("apply company patch: %w", err)
 }
 
 // recordCompanyUpdate is everything the write OWES once it has landed: the

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"

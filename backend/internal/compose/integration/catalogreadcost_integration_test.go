@@ -43,7 +43,7 @@ func catalogWithFields(t *testing.T, e *Env, objects ...string) *customfields.Se
 }
 
 // metered answers what run cost on the statement meter.
-func metered(t *testing.T, ctx context.Context, run func(context.Context) error) database.StatementCost {
+func metered(ctx context.Context, t *testing.T, run func(context.Context) error) database.StatementCost {
 	t.Helper()
 	ctx, meter := database.WithStatementMeter(ctx)
 	if err := run(ctx); err != nil {
@@ -85,8 +85,8 @@ func TestAStoreReadsTheCatalogOnItsOwnTransaction(t *testing.T) {
 		}
 	}
 	assertOneTransactionWithOneCatalogStatement(t, "GetDeal",
-		metered(t, e.Admin(), getDeal(deals.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(catalog))),
-		metered(t, e.Admin(), getDeal(deals.NewStore(e.DB(), installseam.Deals()))))
+		metered(e.Admin(), t, getDeal(deals.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(catalog))),
+		metered(e.Admin(), t, getDeal(deals.NewStore(e.DB(), installseam.Deals()))))
 
 	title := 0
 	updateContact := func(store *contacts.Store) func(context.Context) error {
@@ -97,8 +97,8 @@ func TestAStoreReadsTheCatalogOnItsOwnTransaction(t *testing.T) {
 		}
 	}
 	assertOneTransactionWithOneCatalogStatement(t, "UpdateContact",
-		metered(t, e.Admin(), updateContact(contacts.NewStore(e.DB()).WithFieldCatalog(catalog))),
-		metered(t, e.Admin(), updateContact(contacts.NewStore(e.DB()))))
+		metered(e.Admin(), t, updateContact(contacts.NewStore(e.DB()).WithFieldCatalog(catalog))),
+		metered(e.Admin(), t, updateContact(contacts.NewStore(e.DB()))))
 }
 
 func TestTenWritesInOneTransactionReadTheCatalogOnce(t *testing.T) {
@@ -134,8 +134,8 @@ func TestTenWritesInOneTransactionReadTheCatalogOnce(t *testing.T) {
 			})
 		}
 	}
-	with := metered(t, e.Admin(), updateAll(contacts.NewProvider(e.DB()).WithFieldCatalog(catalog)))
-	without := metered(t, e.Admin(), updateAll(contacts.NewProvider(e.DB())))
+	with := metered(e.Admin(), t, updateAll(contacts.NewProvider(e.DB()).WithFieldCatalog(catalog)))
+	without := metered(e.Admin(), t, updateAll(contacts.NewProvider(e.DB())))
 	t.Logf("ten writes: %d statements, %d transactions with the catalog; %d statements without",
 		with.Statements, with.Transactions, without.Statements)
 	if with.Transactions != 1 {
