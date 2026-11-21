@@ -13,7 +13,12 @@ import { type Locale, LocaleProvider } from "../i18n";
 import { useMe } from "../lib/session";
 import { type GrantSpec, meFixture } from "./mefixture";
 import { RecordShell } from "./recordshell.testkit";
-import { recordUnroutedSessionProbe } from "./unrouted-session";
+import {
+  emptyListAnswersAreQuiet,
+  recordEmptyListAnswer,
+  recordUnroutedSessionProbe,
+  UNROUTED_WARNING,
+} from "./unrouted-session";
 
 // Shared Storybook rendering harness for the feature modules, used by the
 // fe-uat render gate (frontend/scripts/fe-uat.mjs). Every screen component
@@ -43,28 +48,53 @@ export const emptyPage = {
 
 // Maps "METHOD /path" (contract path, sans the /v1 prefix) to a canned
 // response (or a pending promise, for a Pending-state story). A route not in
-// the map falls back to an empty list page — the honest default for any GET
-// a story doesn't care about — rather than a silent 404 that would render a
-// confusing error state.
+// the map goes to the stub's fallback, which by default answers an empty list.
 export type RouteMap = Record<
   string,
   (body: unknown, url: URL) => Response | Promise<Response>
 >;
 
-// The session probe is the ONE route the fallback must not answer, and the
-// reason is not that an empty list is a poor guess: `useMe` rejects a body
-// with no `user` as malformed, every capability hook then fails closed, and
-// the screen quietly renders its denied branch. Nothing about that failure is
-// visible — the card draws, the screenshot is taken, the render gate is green,
-// and the story's NAME is the only thing still claiming what it shows. Two
-// files' worth of stories sat in that state until somebody read the fixtures.
-//
-// There is also no correct guess available: answering with a full-grant
-// fixture would make every unrouted story an admin, which is the same lie
-// pointed the other way. So say so, loudly enough that the render gate marks
-// the story (a console error fails a capture) instead of blessing it.
+// What a request no route answers gets back. `key` is "METHOD /path".
+export type Fallback = (key: string) => Response;
+
 const SESSION_PROBE = "GET /me";
 
+// The default answer is an empty list, the honest guess for a read a story
+// does not care about. It is the wrong shape for any other read, and the
+// screen then dies on a TypeError that names no route. So the stub says what
+// it guessed: a console warning for the story gate, which appends it to a
+// failing story's errors, and a record the unit-test setup prints when a case
+// fails. Neither fails a story that renders, because most guesses are right.
+export function emptyListFallback(key: string): Response {
+  recordEmptyListAnswer(key);
+  if (!emptyListAnswersAreQuiet()) console.warn(`${UNROUTED_WARNING} ${key}`);
+  return jsonResponse(emptyPage);
+}
+
+// A story that cannot stand any guess, because a wrong one draws a different
+// screen without failing, passes this as the second argument of
+// installFetchStub: every unrouted request is then refused, naming the route.
+export function refuseUnrouted(key: string): Response {
+  console.error(
+    `story fetch stub: a component asked for ${key} and this story did not route it. ` +
+      `Add '"${key}": () => jsonResponse(…)' to the story's routes.`,
+  );
+  return jsonResponse(
+    {
+      title: `${key} was not routed by this story`,
+      status: 501,
+      detail: "See the console error above; add the route to installFetchStub.",
+    },
+    501,
+  );
+}
+
+// The session probe is the ONE route the fallback must not answer: `useMe`
+// rejects a body with no `user` as malformed, every capability hook then fails
+// closed, and the screen quietly renders its denied branch under a story named
+// for another one. There is also no correct guess, since a full-grant fixture
+// would make every unrouted story an admin. So say so loudly enough that the
+// render gate marks the story and the test runner fails the case.
 function unroutedSessionProbe(): Response {
   recordUnroutedSessionProbe();
   console.error(
@@ -190,7 +220,7 @@ const NATIVE_FETCH = globalThis.fetch;
 
 export function installFetchStub(
   routes: RouteMap,
-  fallback: () => Response = () => jsonResponse(emptyPage),
+  fallback: Fallback = emptyListFallback,
 ): void {
   const stub = async (
     input: RequestInfo | URL,
@@ -213,7 +243,7 @@ export function installFetchStub(
         ? handler(null, url)
         : handler(await requestBody(request, init, method), url);
     }
-    return key === SESSION_PROBE ? unroutedSessionProbe() : fallback();
+    return key === SESSION_PROBE ? unroutedSessionProbe() : fallback(key);
   };
   globalThis.fetch = stub as typeof fetch;
 }

@@ -36,3 +36,34 @@ export function takeUnroutedSessionProbes(): number {
   probes = 0;
   return taken;
 }
+
+// Reads no route answered, which the stub answered with an empty list because
+// most are lists nobody cares about. When the screen then fails on a body that
+// is not a list, these are the first suspects, and the failure names none.
+/** What the stub prints before each such key; the story gate matches on it. */
+export const UNROUTED_WARNING =
+  "story fetch stub: no route answered, replied with an empty list:";
+
+let emptyListAnswers: string[] = [];
+let quiet = false;
+
+/** Called by the fetch stub for each request it answered with an empty list. */
+export function recordEmptyListAnswer(key: string): void {
+  if (!emptyListAnswers.includes(key)) emptyListAnswers.push(key);
+}
+
+/** The distinct "METHOD /path" keys answered that way since the last take, and resets them. */
+export function takeEmptyListAnswers(): string[] {
+  const taken = emptyListAnswers;
+  emptyListAnswers = [];
+  return taken;
+}
+
+/** Unit suites read hundreds of unstubbed lists, so they are not told about each one. */
+export function quietEmptyListAnswers(): void {
+  quiet = true;
+}
+
+export function emptyListAnswersAreQuiet(): boolean {
+  return quiet;
+}
