@@ -33,12 +33,14 @@ import (
 type linkKey struct{ Object, Key string }
 
 // linkAnswer is what a ref resolved to. Pending is a row of this upload that
-// will land but has not yet, which only the dry run sees.
+// will land but has not yet, which only the dry run sees. PendingRef names that
+// row alone, however the link spelled it, so two spellings of one row agree.
 type linkAnswer struct {
-	ID      ids.UUID
-	Pending bool
-	Found   bool
-	Why     migration.Reason
+	ID         ids.UUID
+	Pending    bool
+	PendingRef string
+	Found      bool
+	Why        migration.Reason
 }
 
 // resolves reports whether the link can be written when the run lands.
@@ -58,8 +60,9 @@ type linkResolver struct {
 	// says so instead of claiming the row never existed.
 	refused map[linkKey]bool
 	// pendingNatural holds the natural keys of those rows (a contact's email,
-	// a company's domain), so a link written with one resolves as the commit's does.
-	pendingNatural map[linkKey]bool
+	// a company's domain) to the ref that names the row, so a link written with
+	// one resolves as the commit's does and folds with a link by ref.
+	pendingNatural map[linkKey]string
 	// claims are the unique keys of the run's landing rows (newRecordRefusal).
 	claims importkeys.Ledger
 	// batch is what the test run's landing rows leave, for the duplicate check.
@@ -94,7 +97,7 @@ func resolverOn(identities *migration.RunStore, pool *pgxpool.Pool, sourceSystem
 		pool:           pool,
 		pending:        map[linkKey]bool{},
 		refused:        map[linkKey]bool{},
-		pendingNatural: map[linkKey]bool{},
+		pendingNatural: map[linkKey]string{},
 		claims:         importkeys.Ledger{},
 		landed:         map[linkKey]ids.UUID{},
 		cache:          map[linkKey]linkAnswer{},
@@ -155,10 +158,11 @@ func naturalKeyFor(object, raw string) (linkKey, bool) {
 }
 
 // markNaturalPending records the natural key of a row the dry run predicts will
-// land. A link naming it by email or domain then resolves before the row exists.
-func (r *linkResolver) markNaturalPending(object, raw string) {
+// land. A link naming it by email or domain then resolves before the row
+// exists, and answers with ref.
+func (r *linkResolver) markNaturalPending(object, raw, ref string) {
 	if key, ok := naturalKeyFor(object, raw); ok {
-		r.pendingNatural[key] = true
+		r.pendingNatural[key] = strings.TrimSpace(ref)
 		clear(r.cache)
 	}
 }
@@ -228,10 +232,12 @@ func (r *linkResolver) resolveLink(ctx context.Context, object, raw string) (lin
 
 func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, error) {
 	if r.pending[key] {
-		return linkAnswer{Pending: true}, nil
+		return linkAnswer{Pending: true, PendingRef: key.Key}, nil
 	}
-	if natural, ok := naturalKeyFor(key.Object, key.Key); ok && r.pendingNatural[natural] {
-		return linkAnswer{Pending: true}, nil
+	if natural, ok := naturalKeyFor(key.Object, key.Key); ok {
+		if ref, pending := r.pendingNatural[natural]; pending {
+			return linkAnswer{Pending: true, PendingRef: ref}, nil
+		}
 	}
 	if id, ok := r.landed[key]; ok {
 		return linkAnswer{ID: id, Found: true}, nil
@@ -311,12 +317,16 @@ func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (li
 	return employerAnswer(hit, key), err
 }
 
+// employerRef is the ref a company implied by a name answers with. The name
+// folds, so two spellings of it agree.
+func employerRef(name string) string { return "name:" + employerKey(name) }
+
 // employerAnswer reads a name's candidates as a link. One links, and several is
 // a question for a human. None falls through to the next step.
 func employerAnswer(hit employerCandidate, name string) linkAnswer {
 	switch {
 	case hit.count == 1 && hit.pending:
-		return linkAnswer{Pending: true}
+		return linkAnswer{Pending: true, PendingRef: employerRef(name)}
 	case hit.count == 1:
 		return linkAnswer{ID: hit.id.UUID, Found: true}
 	case hit.count > 1:
