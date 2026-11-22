@@ -190,6 +190,9 @@ func TestEveryCloudAdapterUsesTheHardenedTransport(t *testing.T) {
 		if provider == providerGeminiVertex {
 			cfg.BaseURL, cfg.Location = "", "eu"
 		}
+		if provider == providerAzureOpenAI {
+			cfg.BaseURL, cfg.Location = azureTestEndpoint, azureTestRegion
+		}
 		client, err := SelectBrain(cfg, keys)
 		if err != nil {
 			t.Fatalf("SelectBrain(%s): %v", provider, err)

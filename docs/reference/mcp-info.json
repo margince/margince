@@ -24248,8 +24248,7 @@
                     "type": "array"
                   },
                   "location": {
-                    "description": "On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write it is accepted only when empty or equal to the provider's, and a different one is a 422 `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an embedding model at fewer locations than a chat model, so the lane may sit elsewhere. Refused on every provider but `gemini_vertex`.",
-                    "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
+                    "description": "On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write it is accepted only when empty or equal to the provider's, and a different one is a 422 `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an embedding model at fewer locations than a chat model, so the lane may sit elsewhere. Refused on every provider but `gemini_vertex` and `azure_openai`.",
                     "type": "string"
                   },
                   "model": {
@@ -24257,7 +24256,7 @@
                     "type": "string"
                   },
                   "provider": {
-                    "description": "The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The credential is never part of this document.",
+                    "description": "The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.",
                     "type": "string"
                   },
                   "routing": {
@@ -24538,7 +24537,7 @@
                 "type": "array"
               },
               "profile": {
-                "description": "The location ladder (§4). `sovereign` means zero egress by construction: a cloud provider on any tier is refused, and so is a local provider pointed at another host. `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the connection's and the location's to say.",
+                "description": "The location ladder (§4). `sovereign` means zero egress by construction: a cloud provider on any tier is refused, and so is a local provider pointed at another host. `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and the location's to say.",
                 "enum": [
                   "eu_hosted",
                   "sovereign",
@@ -24552,12 +24551,11 @@
                   "additionalProperties": false,
                   "properties": {
                     "base_url": {
-                      "description": "Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`.",
+                      "description": "Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. On `azure_openai` it is required while a lane binds it and is the resource endpoint, `https://\u003cresource\u003e.openai.azure.com`.",
                       "type": "string"
                     },
                     "location": {
-                      "description": "The Vertex AI location a `gemini_vertex` provider is served from, which is where Google processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks Google about each bound model at the new location first; one it does not serve is a 422.",
-                      "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
+                      "description": "Where the provider processes the call. On `gemini_vertex` the Vertex AI location: `eu`, `us`, `global`, or a region such as `europe-west4`. Moving it asks Google about each bound model at the new location first; one it does not serve is a 422. On `azure_openai` the Azure region of the resource, such as `swedencentral`; a region this build does not know is a 422, and under the `eu_hosted` profile so is a region outside the EU. Required while a lane binds either provider, and refused on every other provider.",
                       "type": "string"
                     },
                     "upstream": {
@@ -24625,8 +24623,7 @@
                       "type": "array"
                     },
                     "location": {
-                      "description": "On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write it is accepted only when empty or equal to the provider's, and a different one is a 422 `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an embedding model at fewer locations than a chat model, so the lane may sit elsewhere. Refused on every provider but `gemini_vertex`.",
-                      "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
+                      "description": "On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write it is accepted only when empty or equal to the provider's, and a different one is a 422 `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an embedding model at fewer locations than a chat model, so the lane may sit elsewhere. Refused on every provider but `gemini_vertex` and `azure_openai`.",
                       "type": "string"
                     },
                     "model": {
@@ -24634,7 +24631,7 @@
                       "type": "string"
                     },
                     "provider": {
-                      "description": "The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The credential is never part of this document.",
+                      "description": "The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.",
                       "type": "string"
                     },
                     "routing": {

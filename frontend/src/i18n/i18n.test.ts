@@ -108,6 +108,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiProviders.name.anthropic",
   "aiProviders.name.openai",
   "aiProviders.name.gemini",
+  "aiProviders.name.azureOpenai",
+  "aiRouting.azureRegion.placeholder",
   "aiProviders.name.jev",
   "aiProviders.name.geminiDecision",
   "aiProviders.name.ollama",

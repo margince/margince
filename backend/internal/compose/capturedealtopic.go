@@ -209,6 +209,10 @@ func dealTopicShapeValid(in dealTopicInput) ai.Validator {
 // validateDealTopicPayload names the first violation. A deal may be
 // unanswered or answered twice, or named by a ref the prompt never showed. A
 // verdict may fall outside the closed set, or a confidence outside [0,1].
+//
+// A bad confidence fails the reply here. The other batched sites drop the one
+// answer. This reply is one joint judgement of a mail against every deal, and a
+// dropped deal would read as ruled out.
 func validateDealTopicPayload(payload dealTopicPayload, in dealTopicInput) string {
 	refs := dealtopicprompt.Refs(in)
 	if msg := checkBatchFidelity(payload.Results, refs.All()); msg != "" {
