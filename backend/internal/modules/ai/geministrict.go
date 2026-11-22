@@ -3,12 +3,11 @@
 
 package ai
 
-// Gemini's constrained decoder leaves out the optional properties of an object:
-// an agent's log_activity call carried `kind` and `subject` and never the
-// `body` its store requires. So on the Gemini wire every optional property is
-// sent as required and nullable, and the nulls the decoder must then write are
-// taken back out of the reply before anyone reads it. The schema a caller
-// built, and every other provider's wire, are unchanged.
+// Gemini's constrained decoder leaves out the optional properties of an object.
+// An agent's log_activity call carried `kind` and `subject`, never the `body`
+// its store requires. So on the Gemini wire every optional property is sent as
+// required and nullable. The nulls the decoder then writes are taken back out
+// of the reply before anyone reads it. Other providers' wires are unchanged.
 
 import (
 	"bytes"
@@ -48,7 +47,7 @@ func geminiStrictSchema(raw json.RawMessage) (json.RawMessage, error) {
 		}
 	}
 	if properties != nil {
-		required, err := json.Marshal(properties)
+		required, err := json.Marshal(requiredFirst(requiredOf(node), properties))
 		if err != nil {
 			return nil, err
 		}
@@ -129,9 +128,9 @@ func geminiStrictNamed(raw json.RawMessage) (json.RawMessage, error) {
 }
 
 // geminiDropPaddedNulls takes out of reply each null written for a property
-// geminiStrictSchema made nullable, read against the schema the caller sent,
-// so a property that admits null in that schema keeps its null. A reply that
-// is not JSON is returned as it came, for the caller's own parser to refuse.
+// geminiStrictSchema made nullable. It reads the caller's schema, so a property
+// that admits null there keeps its null. A reply that is not JSON is returned as
+// it came, for the caller's own parser to refuse.
 func geminiDropPaddedNulls(callerSchema json.RawMessage, reply string) string {
 	node, err := decodeSchemaObject(callerSchema)
 	if err != nil {
@@ -145,8 +144,8 @@ func geminiDropPaddedNulls(callerSchema json.RawMessage, reply string) string {
 }
 
 // dropPaddedNulls walks value as node describes it. An object under anyOf or
-// oneOf is read by the branch it matches, which is how a step's tool call is
-// read by its own tool's arguments.
+// oneOf is read by the branch it matches. That is how a step's tool call is read
+// by its own tool's arguments.
 func dropPaddedNulls(node schemaObject, value json.RawMessage) json.RawMessage {
 	if branch, found := matchingBranch(node, value); found {
 		return dropPaddedNulls(branch, value)
@@ -208,8 +207,8 @@ func dropInItems(items, value json.RawMessage) json.RawMessage {
 	return encoded
 }
 
-// matchingBranch is the first anyOf or oneOf branch value fits: every key it
-// requires present, no key it closes out, and each enum property one of its
+// matchingBranch is the first anyOf or oneOf branch value fits. Every key it
+// requires is present, no key it closes out is, and each enum holds one of its
 // values. The strict wire wrote every key, so a branch is told by its enums.
 func matchingBranch(node schemaObject, value json.RawMessage) (schemaObject, bool) {
 	for _, key := range []string{kwAnyOf, kwOneOf} {
@@ -303,6 +302,19 @@ func admitsNull(prop json.RawMessage) bool {
 		}
 	}
 	return false
+}
+
+// requiredFirst lists the caller's required keys in their own order, then the
+// optional ones. Gemini writes required keys in that order, so a verdict the
+// caller put first is decided before the fields that describe it.
+func requiredFirst(required, properties []string) []string {
+	out := slices.Clone(required)
+	for _, key := range properties {
+		if !slices.Contains(out, key) {
+			out = append(out, key)
+		}
+	}
+	return out
 }
 
 func requiredOf(node schemaObject) []string {

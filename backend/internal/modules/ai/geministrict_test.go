@@ -8,13 +8,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// noteSchema is a write whose body is optional, beside a field that is required
-// and nullable and one that is optional and nullable, whose nulls must survive.
+// noteSchema is a write whose body is optional. Beside it are a required
+// nullable field and an optional nullable one, whose nulls must survive.
 const noteSchema = `{"type":"object","properties":{` +
 	`"kind":{"type":"string","enum":["note"]},` +
 	`"next_step":{"type":["string","null"]},` +
@@ -45,8 +46,27 @@ func TestGeminiIsSentEveryOptionalPropertyAsRequiredAndNullable(t *testing.T) {
 	}
 }
 
-// The nulls the strict wire made the decoder write come back out; a null in a
-// field the caller declared nullable, and every value written, stays.
+// Gemini writes required keys in their listed order. So the caller's required
+// keys keep their order ahead of the padded ones. A verdict listed first is then
+// decided before the phrase only one verdict may carry.
+func TestGeminiKeepsTheCallersRequiredOrderAheadOfThePadding(t *testing.T) {
+	strict, err := geminiStrictSchema(json.RawMessage(`{"type":"object","properties":{` +
+		`"confidence":{"type":"number"},"due_at":{"type":"string"},"remaining":{"type":"string"},"verdict":{"type":"string"}},` +
+		`"required":["verdict","remaining","confidence"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct{ Required []string }
+	if err := json.Unmarshal(strict, &got); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"verdict", "remaining", "confidence", "due_at"}; !slices.Equal(got.Required, want) {
+		t.Errorf("required = %v, want %v", got.Required, want)
+	}
+}
+
+// The nulls the strict wire made the decoder write come back out. A null in a
+// field the caller declared nullable stays, and so does every value written.
 func TestGeminiTakesThePaddedNullsBackOut(t *testing.T) {
 	reply := `{"kind":"note","next_step":null,"cleared":null,"subject":"Quiet 27 days","body":null,"links":[{"entity_id":"d1","label":null}]}`
 	got := geminiDropPaddedNulls(json.RawMessage(noteSchema), reply)
@@ -58,8 +78,8 @@ func TestGeminiTakesThePaddedNullsBackOut(t *testing.T) {
 	}
 }
 
-// A step's tool call is read by the branch its tool names, so a null in one
-// tool's optional argument is dropped and the other tool's schema is not read.
+// A step's tool call is read by the branch its tool names. A null in that
+// tool's optional argument is dropped, and the other tool's schema is not read.
 func TestGeminiReadsAToolCallByTheBranchItNames(t *testing.T) {
 	step := `{"anyOf":[` +
 		`{"type":"object","properties":{"tool":{"type":"string","enum":["log_activity"]},"args":` + noteSchema + `},"required":["tool","args"],"additionalProperties":false},` +
@@ -87,8 +107,8 @@ func TestTheGeminiClientAnswersWithoutThePadding(t *testing.T) {
 	}
 }
 
-// A schema-constrained request is refused a stream before anything is sent: a
-// stream cannot have the padded nulls taken back out of a reply it hands on.
+// A schema-constrained request is refused a stream before anything is sent. A
+// stream cannot take the padded nulls back out of a reply it hands on.
 func TestGeminiRefusesToStreamASchemaConstrainedRequest(t *testing.T) {
 	sent := false
 	client := newGeminiForTest(t, func(http.ResponseWriter, *http.Request) { sent = true })
