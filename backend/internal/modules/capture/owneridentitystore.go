@@ -79,6 +79,8 @@ type OwnerIdentity struct {
 type OwnerIdentityStore struct {
 	db             *database.DB
 	addressClaimed AddressClaimHook
+	// addressWithdrawn undoes addressClaimed when the claim is withdrawn.
+	addressWithdrawn AddressWithdrawnHook
 }
 
 // NewOwnerIdentityStore builds the store over the app pool.
@@ -254,6 +256,9 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 			return err
 		}
 		withdrawn.auditID, withdrawn.withdrawnBy = auditID, actor.ID
+		if err := s.addressWithdrawnTx(ctx, tx, withdrawn.OwnerIdentity); err != nil {
+			return err
+		}
 		return keepWithdrawalTx(ctx, tx, withdrawn)
 	})
 }

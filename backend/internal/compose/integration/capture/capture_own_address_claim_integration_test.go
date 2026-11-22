@@ -17,11 +17,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/ownaddress"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -68,7 +71,7 @@ func claimExec(t *testing.T, e *integration.SearchEnv, query string, args ...any
 
 // claimStore is the owner-identity store as the app builds it.
 func claimStore(e *integration.SearchEnv) *capturemod.OwnerIdentityStore {
-	return ownaddress.NewStore(e.DB(), contacts.NewStore(e.DB()))
+	return compose.NewOwnerIdentityStore(e.Pool, contacts.NewStore(e.DB()))
 }
 
 // claimSeat is the member as the app sees them: a human seat holding the
@@ -82,11 +85,20 @@ func claimSeat(e *integration.SearchEnv, user ids.UUID) context.Context {
 
 // claimAsOwn declares the address as the user's own, answering the question the
 // product asks first about an address a contact already holds.
-func claimAsOwn(t *testing.T, e *integration.SearchEnv, user ids.UUID, address string) {
+func claimAsOwn(t *testing.T, e *integration.SearchEnv, user ids.UUID, address string) capturemod.OwnerIdentity {
 	t.Helper()
-	if _, err := claimStore(e).AddConfirmed(claimSeat(e, user), capturemod.IdentityKindAddress, address, true); err != nil {
+	identity, err := claimStore(e).AddConfirmed(claimSeat(e, user), capturemod.IdentityKindAddress, address, true)
+	if err != nil {
 		t.Fatalf("claiming %s: %v", address, err)
 	}
+	return identity
+}
+
+// claimProve connects a mailbox for the address, which is what proves it is the
+// member's own. A typed claim proves nothing.
+func claimProve(t *testing.T, e *integration.SearchEnv, user ids.UUID, address string) {
+	t.Helper()
+	claimExec(t, e, `INSERT INTO capture_connection (provider, user_id, status, account_label) VALUES ('graph', $1, 'connected', $2)`, user, address)
 }
 
 // claimMintFormerContact lands the exchange that makes capture file a contact.
@@ -132,7 +144,20 @@ func claimBuyerRows(t *testing.T, e *integration.SearchEnv) int {
 	return claimCount(t, e, `SELECT count(*) FROM activity_participant WHERE address = $1`, claimedBuyer)
 }
 
-func TestClaimingAnAddressArchivesItsMintedContactAndRefilesItsMail(t *testing.T) {
+// claimProvenFormer proves the address and claims it, the way a member who
+// connected the mailbox does.
+func claimProvenFormer(t *testing.T, e *integration.SearchEnv) capturemod.OwnerIdentity {
+	t.Helper()
+	claimProve(t, e, e.Rep1, claimedFormer)
+	return claimAsOwn(t, e, e.Rep1, claimedFormer)
+}
+
+func archiveRows(t *testing.T, e *integration.SearchEnv, contact ids.UUID) int {
+	t.Helper()
+	return claimCount(t, e, `SELECT count(*) FROM audit_log WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'archive'`, contact)
+}
+
+func TestClaimingAProvenAddressArchivesItsMintedContactAndRefilesItsMail(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -143,12 +168,12 @@ func TestClaimingAnAddressArchivesItsMintedContactAndRefilesItsMail(t *testing.T
 			"it proves nothing about refiling", before, buyerBefore)
 	}
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimProvenFormer(t, e)
 
 	if claimContactLive(t, e, contact) {
 		t.Error("the contact capture made for the claimed address is still live")
 	}
-	if n := claimCount(t, e, `SELECT count(*) FROM audit_log WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'archive'`, contact); n != 1 {
+	if n := archiveRows(t, e, contact); n != 1 {
 		t.Errorf("%d archive audit rows for the contact, want 1", n)
 	}
 	if n := contactLinkCount(t, e, contact); n != 0 {
@@ -170,28 +195,78 @@ func TestClaimingAnAddressArchivesItsMintedContactAndRefilesItsMail(t *testing.T
 	}
 }
 
+// A typed address proves nothing: a member could type a customer's address.
+func TestATypedClaimOfACustomersAddressArchivesNothing(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	before := contactLinkCount(t, e, contact)
+
+	claimAsOwn(t, e, e.Rep1, claimedFormer)
+
+	if !claimContactLive(t, e, contact) {
+		t.Error("an unproven claim archived the contact of the address it named")
+	}
+	if n := contactLinkCount(t, e, contact); n != before {
+		t.Errorf("%d links left on the contact, want the %d it had: an unproven claim refiles nothing", n, before)
+	}
+	if n := archiveRows(t, e, contact); n != 0 {
+		t.Errorf("%d archive audit rows for a contact that was left", n)
+	}
+}
+
+func readableBy(t *testing.T, e *integration.SearchEnv, reader context.Context) []bool {
+	t.Helper()
+	var ids_ []ids.UUID
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(context.Background(), `SELECT id FROM activity WHERE kind = 'email' ORDER BY id`)
+		if err != nil {
+			return err
+		}
+		ids_, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		return err
+	})
+	if err != nil {
+		t.Fatalf("listing the mail: %v", err)
+	}
+	var out []bool
+	store := activities.NewStore(e.DB())
+	for _, id := range ids_ {
+		_, err := store.GetActivityContent(reader, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
+		out = append(out, err == nil)
+	}
+	return out
+}
+
 func TestRefilingKeepsWhoMayReadTheMail(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	claimMintFormerContact(t, env)
+	colleague := principal.WithActor(seatContext(e, e.Rep3), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep3.String(), UserID: e.Rep3,
+		SeatType: principal.SeatFull, Permissions: integration.AdminPerms,
+	})
 	const readers = `
 		SELECT coalesce(string_agg(a.id::text || ':' || a.audience || ':' || coalesce(a.restricted_at::text, ''), ',' ORDER BY a.id), '')
 		  FROM activity a WHERE a.kind = 'email'`
 	before := claimText(t, e, readers)
-	members := `SELECT count(*) FROM activity_participant WHERE user_id IS NOT NULL AND user_id <> $1`
+	seenBefore := readableBy(t, e, colleague)
+	const members = `SELECT count(*) FROM activity_participant WHERE user_id IS NOT NULL AND user_id <> $1`
 	othersBefore := claimCount(t, e, members, e.Rep1)
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimProvenFormer(t, e)
 
 	if after := claimText(t, e, readers); after != before {
-		t.Errorf("refiling changed who may read the mail:\n before %s\n after  %s", before, after)
+		t.Errorf("refiling changed the audience of the mail:\n before %s\n after  %s", before, after)
+	}
+	seenAfter := readableBy(t, e, colleague)
+	for i := range seenBefore {
+		if seenAfter[i] && !seenBefore[i] {
+			t.Errorf("message %d became readable to a colleague after the refile", i)
+		}
 	}
 	if n := claimCount(t, e, members, e.Rep1); n != othersBefore {
 		t.Errorf("%d participant rows name another member, was %d: the mail must not gain a colleague", n, othersBefore)
-	}
-	if n := claimCount(t, e, `
-		SELECT count(*) FROM activity a WHERE a.kind = 'email' AND split_part(a.captured_by, ':', 3) <> $1::text`, e.Rep1); n != 0 {
-		t.Errorf("%d messages are no longer stamped as the member's own capture", n)
 	}
 }
 
@@ -214,7 +289,7 @@ func TestAContactAColleagueOwnsIsLeftWhenAnotherSeatClaimsItsAddress(t *testing.
 		t.Fatalf("seeding the colleague's contact: %v", err)
 	}
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimProvenFormer(t, e)
 
 	if !claimContactLive(t, e, theirs) {
 		t.Error("the member's claim archived a contact their colleague owns")
@@ -227,7 +302,7 @@ func TestAContactTwoSeatsClaimIsLeft(t *testing.T) {
 	contact := claimMintFormerContact(t, env)
 	claimAsOwn(t, e, e.Rep3, claimedFormer)
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimProvenFormer(t, e)
 
 	if !claimContactLive(t, e, contact) {
 		t.Error("an address two seats claim is not one member's alone, yet its contact was archived")
@@ -244,7 +319,7 @@ func TestAContactWithAColleaguesOrHandLoggedMailIsLeftWhole(t *testing.T) {
 		 WHERE id = (SELECT activity_id FROM activity_link WHERE contact_id = $2 ORDER BY activity_id LIMIT 1)`,
 		e.Rep3, contact)
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimProvenFormer(t, e)
 
 	if !claimContactLive(t, e, contact) {
 		t.Error("the contact was archived although one message linked to it is not the member's own capture")
@@ -252,26 +327,68 @@ func TestAContactWithAColleaguesOrHandLoggedMailIsLeftWhole(t *testing.T) {
 	if n := contactLinkCount(t, e, contact); n != before {
 		t.Errorf("%d links to the left contact, want the %d it had: the savepoint must undo the refile", n, before)
 	}
-	if n := claimCount(t, e, `SELECT count(*) FROM audit_log WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'archive'`, contact); n != 0 {
+	if n := archiveRows(t, e, contact); n != 0 {
 		t.Errorf("%d archive audit rows for a contact that was left", n)
 	}
 }
 
-func TestClaimingTheSameAddressAgainChangesNothing(t *testing.T) {
+func TestAContactWithANonMailActivityIsLeftWhole(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
-	const trail = `SELECT count(*) FROM audit_log WHERE entity_type IN ('contact', 'activity') AND action IN ('archive', 'activity_relink')`
-	first := claimCount(t, e, trail)
+	claimExec(t, e, `
+		UPDATE activity SET kind = 'note'
+		 WHERE id = (SELECT activity_id FROM activity_link WHERE contact_id = $1 ORDER BY activity_id LIMIT 1)`, contact)
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimProvenFormer(t, e)
 
-	if second := claimCount(t, e, trail); second != first {
-		t.Errorf("a second claim wrote %d more audit rows", second-first)
+	if !claimContactLive(t, e, contact) {
+		t.Error("the contact was archived although a note is linked to it")
 	}
-	if claimContactLive(t, e, contact) {
-		t.Error("the contact came back to life")
+}
+
+func TestAContactWithAHeldMessageIsLeftWhole(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	claimExec(t, e, `
+		UPDATE activity SET restricted_at = now()
+		 WHERE id = (SELECT activity_id FROM activity_link WHERE contact_id = $1 ORDER BY activity_id LIMIT 1)`, contact)
+
+	claimProvenFormer(t, e)
+
+	if !claimContactLive(t, e, contact) {
+		t.Error("the contact was archived although one of its messages is held")
+	}
+}
+
+func TestAContactWithAMemberOnItsMailIsLeftWhole(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	claimExec(t, e, `
+		INSERT INTO activity_participant (activity_id, user_id, role)
+		SELECT activity_id, $2, 'cc' FROM activity_link WHERE contact_id = $1 ORDER BY activity_id LIMIT 1`, contact, e.Rep3)
+
+	claimProvenFormer(t, e)
+
+	if !claimContactLive(t, e, contact) {
+		t.Error("the contact was archived although a colleague is a participant on its mail")
+	}
+}
+
+func TestAContactInADealOrARelationshipIsLeftWhole(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	claimExec(t, e, `
+		INSERT INTO relationship (kind, contact_id, company_id, role, source, captured_by)
+		VALUES ('billing_contact', $1, (SELECT id FROM company LIMIT 1), 'recipient', 'manual', 'human:'||$2::text)`, contact, e.Rep1)
+
+	claimProvenFormer(t, e)
+
+	if !claimContactLive(t, e, contact) {
+		t.Error("the contact was archived although a person gave it a relationship")
 	}
 }
 
@@ -283,7 +400,7 @@ func TestAContactAUserEditedIsLeftWhole(t *testing.T) {
 		INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
 		VALUES ('human', $1, 'update', 'contact', $2)`, e.Rep1.String(), contact)
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimProvenFormer(t, e)
 
 	if !claimContactLive(t, e, contact) {
 		t.Error("a contact a user had worked on was archived by the claim")
@@ -299,9 +416,137 @@ func TestAContactPublishedToTheWorkspaceIsLeftWhole(t *testing.T) {
 	contact := claimMintFormerContact(t, env)
 	claimExec(t, e, `UPDATE contact SET visibility = 'workspace', narrowing_reason = NULL WHERE id = $1`, contact)
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimProvenFormer(t, e)
 
 	if !claimContactLive(t, e, contact) {
 		t.Error("a contact the whole workspace can see was archived on one member's claim")
+	}
+}
+
+// seedBulkMail links n more of the member's own captured messages to the contact.
+func seedBulkMail(t *testing.T, e *integration.SearchEnv, contact ids.UUID, n int) {
+	t.Helper()
+	claimExec(t, e, `
+		INSERT INTO activity (kind, subject, body, raw, direction, source_system, source_id, source, captured_by, counterparty_email)
+		SELECT 'email', 'bulk', 'body', '{"headers":"x"}'::jsonb, 'inbound', 'gmail', 'bulk-' || g, 'gmail:bulk-' || g,
+		       'connector:gmail:' || $1::text, $2
+		  FROM generate_series(1, $3) g`, e.Rep1, claimedFormer, n)
+	claimExec(t, e, `
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		SELECT id, 'contact', $1 FROM activity WHERE source_id LIKE 'bulk-%'`, contact)
+}
+
+func TestAContactWithExactlyTheLimitOfMailIsRefiled(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	seedBulkMail(t, e, contact, ownaddress.RefileLimit-contactLinkCount(t, e, contact))
+
+	claimProvenFormer(t, e)
+
+	if claimContactLive(t, e, contact) || contactLinkCount(t, e, contact) != 0 {
+		t.Errorf("a contact with %d messages, the limit, was not refiled", ownaddress.RefileLimit)
+	}
+}
+
+func TestAContactOverTheLimitOfMailIsLeftWhole(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	seedBulkMail(t, e, contact, ownaddress.RefileLimit+1-contactLinkCount(t, e, contact))
+	before := contactLinkCount(t, e, contact)
+
+	claimProvenFormer(t, e)
+
+	if !claimContactLive(t, e, contact) || contactLinkCount(t, e, contact) != before {
+		t.Errorf("a contact with %d messages, past the limit, was changed", before)
+	}
+}
+
+func TestClaimingTheSameAddressAgainChangesNothing(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	claimProvenFormer(t, e)
+	const trail = `SELECT count(*) FROM audit_log WHERE entity_type IN ('contact', 'activity') AND action IN ('archive', 'activity_relink')`
+	first := claimCount(t, e, trail)
+
+	claimAsOwn(t, e, e.Rep1, claimedFormer)
+
+	if second := claimCount(t, e, trail); second != first {
+		t.Errorf("a second claim wrote %d more audit rows", second-first)
+	}
+	if claimContactLive(t, e, contact) {
+		t.Error("the contact came back to life")
+	}
+}
+
+func TestWithdrawingAClaimPutsTheContactAndItsMailBack(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	links := contactLinkCount(t, e, contact)
+	participants := claimCount(t, e, `SELECT count(*) FROM activity_participant WHERE contact_id = $1`, contact)
+	const audiences = `SELECT coalesce(string_agg(id::text || a.audience, ',' ORDER BY id), '') FROM activity a`
+	audience := claimText(t, e, audiences)
+	identity := claimProvenFormer(t, e)
+
+	if err := claimStore(e).Remove(claimSeat(e, e.Rep1), identity.ID); err != nil {
+		t.Fatalf("withdrawing the claim: %v", err)
+	}
+
+	if !claimContactLive(t, e, contact) {
+		t.Error("withdrawing the claim left the contact archived")
+	}
+	if n := contactLinkCount(t, e, contact); n != links {
+		t.Errorf("%d links after the withdrawal, want the %d it had", n, links)
+	}
+	if n := claimCount(t, e, `SELECT count(*) FROM activity_participant WHERE contact_id = $1`, contact); n != participants {
+		t.Errorf("%d participant rows after the withdrawal, want %d", n, participants)
+	}
+	if got := claimText(t, e, audiences); got != audience {
+		t.Errorf("the withdrawal changed who may read the mail:\n before %s\n after  %s", audience, got)
+	}
+}
+
+// Putting a withdrawn claim back is judged like declaring it. The contact is
+// live again, so the product asks first and changes nothing until it is answered.
+func TestPuttingAWithdrawnClaimBackAsksAboutTheLiveContact(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	identity := claimProvenFormer(t, e)
+	store := claimStore(e)
+	if err := store.Remove(claimSeat(e, e.Rep1), identity.ID); err != nil {
+		t.Fatalf("withdrawing the claim: %v", err)
+	}
+	links := contactLinkCount(t, e, contact)
+
+	if _, err := store.RestoreRemoval(claimSeat(e, e.Rep1), identity.ID); err == nil {
+		t.Fatal("putting the claim back did not ask about the contact that holds the address")
+	}
+
+	if !claimContactLive(t, e, contact) || contactLinkCount(t, e, contact) != links {
+		t.Error("a refused restore changed the contact or its mail")
+	}
+}
+
+// A contact a verdict retracts is capture's own: its mint row names the mailbox
+// owner in on_behalf_of and must not count as somebody's work.
+func TestACaptureMintedContactIsRetractableByAVerdict(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	var retracted bool
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var err error
+		retracted, err = contacts.NewStore(e.DB()).RetractCaptureOnlyContactTx(e.Admin(), tx, ids.From[ids.ContactKind](contact), e.Rep1)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("retracting: %v", err)
+	}
+	if !retracted {
+		t.Error("a contact capture minted could not be retracted: its own audit row vetoed it")
 	}
 }

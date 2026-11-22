@@ -5,7 +5,9 @@ package activities
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -13,9 +15,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// ownAddressClaimedReason is the evidence an unlink records when a member's
-// claim of an address as their own took the contact off the mail.
-const ownAddressClaimedReason = "own_address_claimed"
+// The evidence keys an own-address unlink records. The claim's removal reads
+// them to put the link and the participants back.
+const (
+	ownAddressClaimedReason  = "own_address_claimed"
+	ownAddressReleasedReason = "own_address_released"
+	evidenceReason           = "reason"
+	evidenceClaim            = "claim"
+	evidenceLink             = "link"
+	evidenceParticipants     = "participants"
+	evidenceUndoOf           = "undo_of"
+)
 
 // OwnAddressRefile is what one pass over a contact's mail found and did.
 type OwnAddressRefile struct {
@@ -35,52 +45,36 @@ type OwnAddressRefile struct {
 // same shape: the contact's link and participant rows go, and every other link
 // and participant stays.
 //
-// It acts only when every live message linked to the contact is the member's
-// own capture, not held, with no other member as a participant. Anything else
-// makes the contact foreign and nothing is changed. More than limit messages
-// is refused too, so one request never carries an unbounded rewrite.
+// It acts only when every live message linked to the contact is an email.
+// The member's own connector must have captured it. It must not be held, and
+// no other member may be a participant. Anything else makes the contact
+// foreign and nothing is changed.
+// More than limit messages is refused too.
 //
-// A rerun finds no link left to take off and changes nothing.
-func RefileOwnAddressMailTx(ctx context.Context, tx pgx.Tx, contact ids.ContactID, member ids.UUID, limit int) (OwnAddressRefile, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT a.id,
-		       split_part(a.captured_by, ':', 1) = 'connector'
-		   AND split_part(a.captured_by, ':', 3) = $2::uuid::text
-		   AND a.restricted_at IS NULL
-		   AND NOT EXISTS (SELECT 1 FROM activity_participant p
-		                    WHERE p.activity_id = a.id AND p.user_id IS NOT NULL AND p.user_id <> $2::uuid)
-		  FROM activity_link l
-		  JOIN activity a ON a.id = l.activity_id
-		 WHERE l.contact_id = $1 AND a.archived_at IS NULL
-		 ORDER BY a.id
-		 LIMIT $3`, contact.UUID, member, limit+1)
+// The first read picks candidates. The attendee locks and then the row locks
+// are taken, and the same read runs again under them. A message that changed
+// in between makes the contact foreign.
+//
+// Each unlink records the claim, the link and the participants it removed, and
+// recomputes the audience, so the mail stays the member's own.
+func RefileOwnAddressMailTx(ctx context.Context, tx pgx.Tx, contact ids.ContactID, member, claim ids.UUID, limit int) (OwnAddressRefile, error) {
+	mail, foreign, err := ownAddressMailTx(ctx, tx, contact, member, limit)
+	if err != nil || foreign || len(mail) > limit {
+		return OwnAddressRefile{Foreign: foreign, TooMany: len(mail) > limit}, err
+	}
+	if err := storekit.LockMeetingAttendeePage(ctx, tx, uuids(mail)); err != nil {
+		return OwnAddressRefile{}, err
+	}
+	again, foreign, err := ownAddressMailTx(ctx, tx, contact, member, limit)
 	if err != nil {
-		return OwnAddressRefile{}, fmt.Errorf("activities: reading the mail of a contact whose address was claimed: %w", err)
+		return OwnAddressRefile{}, err
 	}
-	defer rows.Close()
-	var mail []ids.ActivityID
-	for rows.Next() {
-		var id ids.ActivityID
-		var own bool
-		if err := rows.Scan(&id, &own); err != nil {
-			return OwnAddressRefile{}, fmt.Errorf("activities: reading the mail of a contact whose address was claimed: %w", err)
-		}
-		if !own {
-			return OwnAddressRefile{Foreign: true}, nil
-		}
-		mail = append(mail, id)
+	if foreign || !slices.Equal(mail, again) {
+		return OwnAddressRefile{Foreign: true}, nil
 	}
-	if err := rows.Err(); err != nil {
-		return OwnAddressRefile{}, fmt.Errorf("activities: reading the mail of a contact whose address was claimed: %w", err)
-	}
-	rows.Close()
-	if len(mail) > limit {
-		return OwnAddressRefile{TooMany: true}, nil
-	}
-	evidence := map[string]any{"reason": ownAddressClaimedReason, "decided_as": member}
 	out := OwnAddressRefile{}
 	for _, id := range mail {
-		moved, err := unlinkOwnAddressContactTx(ctx, tx, id, contact, evidence)
+		moved, err := unlinkOwnAddressContactTx(ctx, tx, id, contact, member, claim)
 		if err != nil {
 			return OwnAddressRefile{}, err
 		}
@@ -91,19 +85,79 @@ func RefileOwnAddressMailTx(ctx context.Context, tx pgx.Tx, contact ids.ContactI
 	return out, nil
 }
 
+func uuids(mail []ids.ActivityID) []ids.UUID {
+	out := make([]ids.UUID, len(mail))
+	for i, id := range mail {
+		out[i] = id.UUID
+	}
+	return out
+}
+
+// ownAddressMailTx reads the live messages linked to the contact, up to one
+// past limit. It reports whether any of them is not the member's own email.
+func ownAddressMailTx(ctx context.Context, tx pgx.Tx, contact ids.ContactID, member ids.UUID, limit int) ([]ids.ActivityID, bool, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT a.id,
+		       a.kind = 'email'
+		   AND split_part(a.captured_by, ':', 1) = 'connector'
+		   AND split_part(a.captured_by, ':', 3) = $2::uuid::text
+		   AND a.restricted_at IS NULL
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant p
+		                    WHERE p.activity_id = a.id AND p.user_id IS NOT NULL AND p.user_id <> $2::uuid)
+		  FROM activity_link l
+		  JOIN activity a ON a.id = l.activity_id
+		 WHERE l.contact_id = $1 AND a.archived_at IS NULL
+		 ORDER BY a.id
+		 LIMIT $3`, contact.UUID, member, limit+1)
+	if err != nil {
+		return nil, false, fmt.Errorf("activities: reading the mail of a contact whose address was claimed: %w", err)
+	}
+	defer rows.Close()
+	var mail []ids.ActivityID
+	for rows.Next() {
+		var id ids.ActivityID
+		var own bool
+		if err := rows.Scan(&id, &own); err != nil {
+			return nil, false, fmt.Errorf("activities: reading the mail of a contact whose address was claimed: %w", err)
+		}
+		if !own {
+			return nil, true, nil
+		}
+		mail = append(mail, id)
+	}
+	return mail, false, rows.Err()
+}
+
 // unlinkOwnAddressContactTx drops one message's link and participant rows for
-// the contact under the message's row lock, with the audit row and event
-// every unlink writes. The attendee lock comes before any participant write.
-func unlinkOwnAddressContactTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, contact ids.ContactID, evidence map[string]any) (bool, error) {
-	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
-		return false, err
+// the contact, with the audit row and event every unlink writes. The caller
+// holds the attendee and row locks.
+//
+// The audit evidence keeps the removed rows, so the claim's removal can put
+// them back. The participant's stated address is left out of it. An audit row
+// outlives an erasure, and the address is the contact's own.
+func unlinkOwnAddressContactTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, contact ids.ContactID, member, claim ids.UUID) (bool, error) {
+	var link json.RawMessage
+	if err := tx.QueryRow(ctx, `SELECT coalesce((SELECT to_jsonb(l) FROM activity_link l WHERE l.activity_id = $1 AND l.contact_id = $2), 'null'::jsonb)`,
+		id, contact.UUID).Scan(&link); err != nil {
+		return false, fmt.Errorf("activities: reading a link before taking a claimed address off it: %w", err)
 	}
-	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, id.UUID); err != nil {
-		return false, err
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM activity_participant WHERE activity_id = $1 AND contact_id = $2`,
-		id, contact.UUID); err != nil {
+	rows, err := tx.Query(ctx, `
+		DELETE FROM activity_participant ap WHERE ap.activity_id = $1 AND ap.contact_id = $2
+		RETURNING to_jsonb(ap) - 'address' - 'address_domain_folded'`, id, contact.UUID)
+	if err != nil {
 		return false, fmt.Errorf("activities: taking a claimed address off a message's participants: %w", err)
 	}
-	return unlinkRecordedTx(ctx, tx, id, linkEntityContact, contact.UUID, nil, evidence)
+	participants, err := pgx.CollectRows(rows, pgx.RowTo[json.RawMessage])
+	if err != nil {
+		return false, fmt.Errorf("activities: taking a claimed address off a message's participants: %w", err)
+	}
+	evidence := map[string]any{
+		evidenceReason: ownAddressClaimedReason, "decided_as": member, evidenceClaim: claim,
+		evidenceLink: link, evidenceParticipants: participants,
+	}
+	removed, err := unlinkRecordedTx(ctx, tx, id, linkEntityContact, contact.UUID, nil, evidence)
+	if err != nil || !removed {
+		return removed, err
+	}
+	return true, RecomputeAudienceTx(ctx, tx, id)
 }
