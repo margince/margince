@@ -24625,6 +24625,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/manager-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the team's manager to look at this deal.
+         * @description Accepting the Worklist's "bring in the manager" move. The deal then carries when it was
+         *     asked, by whom and why, and the team's leads see it on their focus list. It is one fact on
+         *     the deal, not a task per lead. Asking again changes nothing. A deal that is not open, or
+         *     one the caller may not change, answers 404.
+         */
+        post: operations["requestDealManager"];
+        /**
+         * Mark the manager request on this deal as handled.
+         * @description Clears the request. A team lead, or a seat with oversight of every team, may clear it. A
+         *     request also leaves the focus list by itself once the deal is no longer open. Idempotent:
+         *     a deal with no request answers the same success.
+         */
+        delete: operations["clearDealManagerRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/coverage": {
         parameters: {
             query?: never;
@@ -50977,6 +51009,30 @@ export interface components {
             withheld: boolean;
             /** @description One entry per team with a daily freeze this quarter, ordered by team id. */
             teams: components["schemas"]["ForecastFocusTeam"][];
+            /** @description Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out. */
+            requests?: components["schemas"]["ForecastFocusRequest"][];
+        };
+        RequestDealManagerRequest: {
+            /** @description Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them. */
+            reasons: ("big_deal" | "single_contact" | "stuck")[];
+        };
+        ForecastFocusRequest: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /**
+             * Format: uuid
+             * @description Absent when individual performance is off.
+             */
+            owner_id?: string;
+            /**
+             * Format: uuid
+             * @description Absent when individual performance is off.
+             */
+            requested_by?: string;
+            /** Format: date-time */
+            requested_at: string;
+            reasons: ("big_deal" | "single_contact" | "stuck")[];
         };
         ForecastFocusTeam: {
             /** @description Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size. */
@@ -64109,10 +64165,11 @@ export interface components {
              *     sends the reader to reauthorize a source that stopped answering.
              *
              *     `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
-             *     one engaged contact, or is stuck in its stage. `arguments` is a `CreateTaskRequest` assigned to the manager,
-             *     which the client files on accept; the move's reason names why the deal qualifies. It is offered only where
-             *     the deal owner has a team manager and the deal's own next step is a generic one. A reader who sets it aside
-             *     sees it again only when one of those facts changes.
+             *     one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+             *     `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+             *     deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+             *     requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+             *     when one of those facts changes.
              *
              *     `none` is a producer's answer that there is nothing to do — a closed deal has
              *     no next step. It is a member of this enum so a producer that computes one has
@@ -103248,6 +103305,59 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    requestDealManager: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestDealManagerRequest"];
+            };
+        };
+        responses: {
+            /** @description Asked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    clearDealManagerRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared, or there was none. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getDealCoverage: {

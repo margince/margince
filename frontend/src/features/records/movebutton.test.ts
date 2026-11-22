@@ -24,14 +24,17 @@ describe("whether a move can be drawn", () => {
         "the body the server prepared is present",
       ],
       [
-        { action: "bring_in_manager", arguments: { subject: "x" } },
+        {
+          action: "bring_in_manager",
+          arguments: { deal_id: "d1", reasons: ["stuck"] },
+        },
         true,
-        "the task for the manager is present",
+        "the deal and the reasons the server prepared are present",
       ],
       [
         { action: "bring_in_manager" },
         false,
-        "no task body: accepting would post {} and only be refused",
+        "no deal or reasons: accepting would post nothing and only be refused",
       ],
       [
         { action: "create_task" },

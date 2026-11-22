@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -44,6 +45,10 @@ func standingsOf(ctx context.Context, tx pgx.Tx, store ForecastReader, owners ma
 		}
 		leads[owner] = found
 	}
+	requested, err := deals.ManagerRequestedAmongTx(ctx, tx, dealIDs)
+	if err != nil {
+		return nil, err
+	}
 	forecast, err := store.DealStandings(ctx, tx, dealIDs)
 	if err != nil {
 		return nil, err
@@ -53,7 +58,7 @@ func standingsOf(ctx context.Context, tx pgx.Tx, store ForecastReader, owners ma
 		standing := forecast[deal]
 		out[deal] = dealstatus.ManagerStanding{
 			Managers: leads[owner], BaseMinor: standing.BaseMinor, AboveMedian: standing.AboveMedian,
-			Stuck: standing.Stuck, StuckStage: standing.StuckStage,
+			Stuck: standing.Stuck, StuckStage: standing.StuckStage, Requested: requested[deal],
 		}
 	}
 	return out, nil

@@ -13984,6 +13984,27 @@ func (e ForecastContributionProbabilitySource) Valid() bool {
 	}
 }
 
+// Defines values for ForecastFocusRequestReasons.
+const (
+	ForecastFocusRequestReasonsBigDeal       ForecastFocusRequestReasons = "big_deal"
+	ForecastFocusRequestReasonsSingleContact ForecastFocusRequestReasons = "single_contact"
+	ForecastFocusRequestReasonsStuck         ForecastFocusRequestReasons = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the ForecastFocusRequestReasons enum.
+func (e ForecastFocusRequestReasons) Valid() bool {
+	switch e {
+	case ForecastFocusRequestReasonsBigDeal:
+		return true
+	case ForecastFocusRequestReasonsSingleContact:
+		return true
+	case ForecastFocusRequestReasonsStuck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastFocusTeamStatus.
 const (
 	ForecastFocusTeamStatusBehind   ForecastFocusTeamStatus = "behind"
@@ -22297,6 +22318,27 @@ func (e ReportingValueBasis) Valid() bool {
 	case ReportingValueBasisImplementation:
 		return true
 	case ReportingValueBasisSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequestDealManagerRequestReasons.
+const (
+	RequestDealManagerRequestReasonsBigDeal       RequestDealManagerRequestReasons = "big_deal"
+	RequestDealManagerRequestReasonsSingleContact RequestDealManagerRequestReasons = "single_contact"
+	RequestDealManagerRequestReasonsStuck         RequestDealManagerRequestReasons = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the RequestDealManagerRequestReasons enum.
+func (e RequestDealManagerRequestReasons) Valid() bool {
+	switch e {
+	case RequestDealManagerRequestReasonsBigDeal:
+		return true
+	case RequestDealManagerRequestReasonsSingleContact:
+		return true
+	case RequestDealManagerRequestReasonsStuck:
 		return true
 	default:
 		return false
@@ -52523,6 +52565,9 @@ type ForecastFocus struct {
 	PeriodEnd   openapi_types.Date `json:"period_end"`
 	PeriodStart openapi_types.Date `json:"period_start"`
 
+	// Requests Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out.
+	Requests *[]ForecastFocusRequest `json:"requests,omitempty"`
+
 	// Teams One entry per team with a daily freeze this quarter, ordered by team id.
 	Teams []ForecastFocusTeam `json:"teams"`
 
@@ -52553,6 +52598,23 @@ type ForecastFocusReason struct {
 	ClosesInDays *int                 `json:"closes_in_days,omitempty"`
 	Signals      []ForecastRiskSignal `json:"signals"`
 }
+
+// ForecastFocusRequest defines model for ForecastFocusRequest.
+type ForecastFocusRequest struct {
+	DealId   openapi_types.UUID `json:"deal_id"`
+	DealName string             `json:"deal_name"`
+
+	// OwnerId Absent when individual performance is off.
+	OwnerId     *openapi_types.UUID           `json:"owner_id,omitempty"`
+	Reasons     []ForecastFocusRequestReasons `json:"reasons"`
+	RequestedAt time.Time                     `json:"requested_at"`
+
+	// RequestedBy Absent when individual performance is off.
+	RequestedBy *openapi_types.UUID `json:"requested_by,omitempty"`
+}
+
+// ForecastFocusRequestReasons defines model for ForecastFocusRequest.Reasons.
+type ForecastFocusRequestReasons string
 
 // ForecastFocusTeam defines model for ForecastFocusTeam.
 type ForecastFocusTeam struct {
@@ -65098,6 +65160,15 @@ type RequestDeadline struct {
 	Rule string `json:"rule"`
 }
 
+// RequestDealManagerRequest defines model for RequestDealManagerRequest.
+type RequestDealManagerRequest struct {
+	// Reasons Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them.
+	Reasons []RequestDealManagerRequestReasons `json:"reasons"`
+}
+
+// RequestDealManagerRequestReasons defines model for RequestDealManagerRequest.Reasons.
+type RequestDealManagerRequestReasons string
+
 // RequestLegalReviewRequest defines model for RequestLegalReviewRequest.
 type RequestLegalReviewRequest struct {
 	Note             *string             `json:"note,omitempty"`
@@ -75112,10 +75183,11 @@ type WorklistMove struct {
 	// sends the reader to reauthorize a source that stopped answering.
 	//
 	// `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
-	// one engaged contact, or is stuck in its stage. `arguments` is a `CreateTaskRequest` assigned to the manager,
-	// which the client files on accept; the move's reason names why the deal qualifies. It is offered only where
-	// the deal owner has a team manager and the deal's own next step is a generic one. A reader who sets it aside
-	// sees it again only when one of those facts changes.
+	// one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+	// `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+	// deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+	// requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+	// when one of those facts changes.
 	//
 	// `none` is a producer's answer that there is nothing to do — a closed deal has
 	// no next step. It is a member of this enum so a producer that computes one has
@@ -75177,10 +75249,11 @@ type WorklistMove struct {
 // sends the reader to reauthorize a source that stopped answering.
 //
 // `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
-// one engaged contact, or is stuck in its stage. `arguments` is a `CreateTaskRequest` assigned to the manager,
-// which the client files on accept; the move's reason names why the deal qualifies. It is offered only where
-// the deal owner has a team manager and the deal's own next step is a generic one. A reader who sets it aside
-// sees it again only when one of those facts changes.
+// one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+// `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+// deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+// requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+// when one of those facts changes.
 //
 // `none` is a producer's answer that there is nothing to do — a closed deal has
 // no next step. It is a member of this enum so a producer that computes one has
@@ -85927,6 +86000,9 @@ type UseDealEstimateJSONRequestBody = DealRevisionRequest
 
 // UpdateDealLineJSONRequestBody defines body for UpdateDealLine for application/json ContentType.
 type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
+
+// RequestDealManagerJSONRequestBody defines body for RequestDealManager for application/json ContentType.
+type RequestDealManagerJSONRequestBody = RequestDealManagerRequest
 
 // MoveDealPipelineJSONRequestBody defines body for MoveDealPipeline for application/json ContentType.
 type MoveDealPipelineJSONRequestBody = MoveDealPipelineRequest
@@ -101839,6 +101915,12 @@ type ServerInterface interface {
 	// Change one line of a deal; omit a field to leave it as it is, send null to clear it.
 	// (PATCH /deals/{id}/lines/{lineId})
 	UpdateDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID)
+	// Mark the manager request on this deal as handled.
+	// (DELETE /deals/{id}/manager-request)
+	ClearDealManagerRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Ask the team's manager to look at this deal.
+	// (POST /deals/{id}/manager-request)
+	RequestDealManager(w http.ResponseWriter, r *http.Request, id Id)
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
@@ -106783,6 +106865,18 @@ func (_ Unimplemented) RemoveDealLine(w http.ResponseWriter, r *http.Request, id
 // Change one line of a deal; omit a field to leave it as it is, send null to clear it.
 // (PATCH /deals/{id}/lines/{lineId})
 func (_ Unimplemented) UpdateDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark the manager request on this deal as handled.
+// (DELETE /deals/{id}/manager-request)
+func (_ Unimplemented) ClearDealManagerRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask the team's manager to look at this deal.
+// (POST /deals/{id}/manager-request)
+func (_ Unimplemented) RequestDealManager(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -135101,6 +135195,74 @@ func (siw *ServerInterfaceWrapper) UpdateDealLine(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ClearDealManagerRequest operation middleware
+func (siw *ServerInterfaceWrapper) ClearDealManagerRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearDealManagerRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestDealManager operation middleware
+func (siw *ServerInterfaceWrapper) RequestDealManager(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestDealManager(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDealMarginceChanges operation middleware
 func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request) {
 
@@ -161893,6 +162055,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/deals/{id}/lines/{lineId}", wrapper.UpdateDealLine)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/deals/{id}/manager-request", wrapper.ClearDealManagerRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/manager-request", wrapper.RequestDealManager)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)

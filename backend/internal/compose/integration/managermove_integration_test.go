@@ -12,6 +12,7 @@ package integration
 import (
 	"context"
 	"maps"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -38,6 +40,14 @@ type managerMoveFixture struct {
 	now      time.Time
 	pipeline ids.PipelineID
 	stage    ids.StageID
+}
+
+// leadReadingForecast is a team lead's grants: the rep's plus forecast and team lead read.
+func leadReadingForecast() principal.Permissions {
+	perms := repReadingForecast(true)
+	perms.Objects["team_lead"] = principal.ObjectGrant{Read: true}
+	perms.RowScope = principal.RowScopeTeam
+	return perms
 }
 
 // repReadingForecast is the rep's grants with the forecast read added or not.
@@ -147,8 +157,8 @@ func TestADealThatNeedsTheManagerOffersTheMoveWithEachReason(t *testing.T) {
 			t.Errorf("%s: reason = %q, want it to name %q", name, got.Reason, want.reason)
 		}
 		args := *got.Arguments
-		if args["assignee_id"] != f.e.Rep2 || args["task_type"] != "review" {
-			t.Errorf("%s: arguments = %v, want a review task for the manager", name, args)
+		if args["deal_id"] == nil || args["reasons"] == nil {
+			t.Errorf("%s: arguments = %v, want the deal and the reasons to post", name, args)
 		}
 	}
 	if got := f.move(f.rep, t, plain); got != nil {
@@ -276,5 +286,103 @@ func TestDealActionsBetweenNamesTasksDoneAndMeetingsHeldInsideTheWindow(t *testi
 	}
 	if got := read(f.now.Add(12*time.Hour), f.now.Add(24*time.Hour)); len(got) != 0 {
 		t.Errorf("a window after both actions lists %+v, want none", got)
+	}
+}
+
+func TestAcceptingTheMoveRequestsTheManagerThroughTheDealsOwnWrite(t *testing.T) {
+	f := newManagerMoveFixture(t)
+	f.e.GrantRole(t, f.e.Rep2, "manager")
+	f.e.WsExec(t, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, f.e.Team1, f.e.Rep3)
+	f.e.GrantRole(t, f.e.Rep3, "manager")
+	owner := f.e.Rep1
+	deal := f.e.SeedDeal(t, "Big renewal", f.pipeline, f.stage, &owner)
+	f.freeze(t, f.now.Add(-time.Hour), openRow(deal, 900_000), openRow(f.e.SeedDeal(t, "Small", f.pipeline, f.stage, &owner), 100_000))
+	offered := f.move(f.rep, t, deal)
+	if offered == nil {
+		t.Fatal("the deal offers no manager move before the request")
+	}
+
+	dealID := ids.From[ids.DealKind](deal)
+	if err := f.e.Deals.RequestManager(f.rep, dealID, []string{"big_deal"}); err != nil {
+		t.Fatalf("requesting the manager: %v", err)
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND manager_requested_at IS NOT NULL AND manager_requested_by = $2
+		AND manager_request_reasons = ARRAY['big_deal']`, deal, f.e.Rep1); n != 1 {
+		t.Errorf("the request is on the deal row %d times, want once with who asked and why", n)
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal' AND entity_id = $1 AND action = 'update'
+		AND after ? 'manager_requested_at'`, deal); n != 1 {
+		t.Errorf("%d audit rows name the request, want 1", n)
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE payload::text LIKE '%manager_requested_at%'`); n != 1 {
+		t.Errorf("%d events name the request, want 1", n)
+	}
+	if got := f.move(f.rep, t, deal); got != nil {
+		t.Errorf("the move is still offered after the request: %+v", got)
+	}
+	if err := f.e.Deals.RequestManager(f.rep, dealID, []string{"big_deal"}); err != nil {
+		t.Fatalf("asking again: %v", err)
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal' AND entity_id = $1 AND after ? 'manager_requested_at'`, deal); n != 1 {
+		t.Errorf("asking again wrote %d audit rows, want it to change nothing", n)
+	}
+
+	requested := func(ctx context.Context) []deals.ManagerRequest {
+		t.Helper()
+		var got []deals.ManagerRequest
+		err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+			var err error
+			got, err = f.e.Deals.ManagerRequests(ctx, tx, nil)
+			return err
+		})
+		if err != nil {
+			t.Fatalf("reading the requests: %v", err)
+		}
+		return got
+	}
+	first := requested(f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, leadReadingForecast()))
+	if len(first) != 1 || first[0].Name != "Big renewal" || !slices.Equal(first[0].Reasons, []string{"big_deal"}) {
+		t.Fatalf("the manager reads %+v, want the requested deal with its reason", first)
+	}
+	if second := requested(f.e.As(f.e.Rep3, []ids.UUID{f.e.Team1}, leadReadingForecast())); len(second) != 1 {
+		t.Errorf("a second lead reads %+v, want the same requested deal", second)
+	}
+	if rep := requested(f.rep); len(rep) != 0 {
+		t.Errorf("a seller who leads no team reads %+v, want none", rep)
+	}
+	f.e.WsExec(t, `DELETE FROM team_membership WHERE team_id = $1 AND user_id = $2`, f.e.Team1, f.e.Rep3)
+	f.e.WsExec(t, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, f.e.Team2, f.e.Rep3)
+	if outside := requested(f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, leadReadingForecast())); len(outside) != 0 {
+		t.Errorf("a lead of another team reads %+v, want none", outside)
+	}
+
+	if err := f.e.Deals.ClearManagerRequest(f.rep, dealID); err == nil {
+		t.Error("a seller who leads no team cleared the request")
+	}
+	if err := f.e.Deals.ClearManagerRequest(f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, leadReadingForecast()), dealID); err != nil {
+		t.Fatalf("the manager marking it handled: %v", err)
+	}
+	if left := requested(f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, leadReadingForecast())); len(left) != 0 {
+		t.Errorf("the handled request is still listed: %+v", left)
+	}
+}
+
+func TestARequestLeavesTheListWhenTheDealLeavesTheOpenPipeline(t *testing.T) {
+	f := newManagerMoveFixture(t)
+	owner := f.e.Rep1
+	deal := f.e.SeedDeal(t, "Closing deal", f.pipeline, f.stage, &owner)
+	if err := f.e.Deals.RequestManager(f.rep, ids.From[ids.DealKind](deal), []string{"stuck"}); err != nil {
+		t.Fatalf("requesting the manager: %v", err)
+	}
+	f.e.WsExec(t, `UPDATE deal SET status = 'won' WHERE id = $1`, deal)
+	lead := f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, leadReadingForecast())
+	var got []deals.ManagerRequest
+	err := database.WithWorkspaceTx(lead, f.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		got, err = f.e.Deals.ManagerRequests(lead, tx, nil)
+		return err
+	})
+	if err != nil || len(got) != 0 {
+		t.Errorf("a won deal's request lists %+v (err %v), want none", got, err)
 	}
 }

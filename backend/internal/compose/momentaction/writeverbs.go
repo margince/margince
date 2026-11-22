@@ -24,7 +24,7 @@ var worklistVerbWrites = map[crmcontracts.WorklistMoveAction]*langcopy.Phrase{
 	crmcontracts.WorklistMoveActionOpenTask:         nil,
 	crmcontracts.WorklistMoveActionOpenMeetingBrief: nil,
 	crmcontracts.WorklistMoveActionReconnect:        nil,
-	crmcontracts.WorklistMoveActionBringInManager:   &blockedWords.Task,
+	crmcontracts.WorklistMoveActionBringInManager:   nil,
 	crmcontracts.WorklistMoveActionNone:             nil,
 }
 

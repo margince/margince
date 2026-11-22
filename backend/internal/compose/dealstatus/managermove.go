@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,21 +17,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // ActionBringInManager asks the deal's team manager to look at the deal. Its
-// arguments are a task for that manager, which the client files on accept.
+// arguments name the deal and the reasons, which accepting posts as the request.
 const ActionBringInManager = "bring_in_manager"
 
 const (
-	argSubject         = "subject"
-	argSource          = "source"
+	argDealID          = "deal_id"
+	argReasons         = "reasons"
 	reasonBigDeal      = "big_deal"
 	reasonSingleThread = "single_contact"
 	reasonStuck        = "stuck"
-	// taskTypeReview is the task type that asks somebody to check a record.
-	taskTypeReview = "review"
 )
 
 // ManagerStanding is what the Worklist needs beyond a deal's own rows.
@@ -46,6 +41,8 @@ type ManagerStanding struct {
 	AboveMedian bool
 	Stuck       bool
 	StuckStage  string
+	// Requested says the deal already carries a request to its manager.
+	Requested bool
 }
 
 // ManagerStandings reads the standing of each deal, keyed by deal id, given the
@@ -60,10 +57,9 @@ func (s *Service) WithManagerStandings(read ManagerStandings) *Service {
 }
 
 var managerWords = struct {
-	Offer, Subject, BigDeal, SingleContact, Stuck langcopy.Phrase
+	Offer, BigDeal, SingleContact, Stuck langcopy.Phrase
 }{
 	Offer:         langcopy.Phrase{En: "Bring in your manager: %s.", De: "Holen Sie Ihre Führungskraft dazu: %s.", Vi: "Hãy mời quản lý của bạn tham gia: %s."},
-	Subject:       langcopy.Phrase{En: "Look at %s with me", De: "Schauen Sie sich %s mit mir an", Vi: "Cùng xem %s với tôi"},
 	BigDeal:       langcopy.Phrase{En: "its value is above the team's median", De: "der Wert liegt über dem Median des Teams", Vi: "giá trị cao hơn mức trung vị của nhóm"},
 	SingleContact: langcopy.Phrase{En: "only one contact is engaged", De: "nur ein Kontakt ist eingebunden", Vi: "chỉ có một liên hệ đang tham gia"},
 	Stuck:         langcopy.Phrase{En: "it is stuck in its stage", De: "er steckt in seiner Phase fest", Vi: "giao dịch đang bị kẹt ở giai đoạn hiện tại"},
@@ -145,10 +141,10 @@ func (s *Service) withManagerMoves(
 	for id := range owners {
 		standing := standings[id]
 		reasons := managerReasons(current[id], standing, *thresholds.MaxEngagedSeats)
-		if len(reasons) == 0 || len(standing.Managers) == 0 {
+		if len(reasons) == 0 || len(standing.Managers) == 0 || standing.Requested {
 			continue
 		}
-		offer, err := managerMove(current[id], standing.Managers[0], reasons)
+		offer, err := managerMove(current[id], reasons)
 		if err != nil {
 			return err
 		}
@@ -157,35 +153,20 @@ func (s *Service) withManagerMoves(
 	return nil
 }
 
-func managerMove(f facts, manager ids.UUID, reasons []managerReason) (crmcontracts.DealStatusCardMove, error) {
+func managerMove(f facts, reasons []managerReason) (crmcontracts.DealStatusCardMove, error) {
 	said := statusCopyFor(cmp.Or(f.say, f.lang))
 	words := make([]string, len(reasons))
+	codes := make([]string, len(reasons))
 	marks := make([]owedwork.Mark, len(reasons))
 	for i, reason := range reasons {
-		words[i] = said.Say(reason.phrase)
+		words[i], codes[i] = said.Say(reason.phrase), reason.code
 		marks[i] = owedwork.Mark{Kind: "manager_reason_" + reason.code, ID: reason.fact}
 	}
-	why := strings.Join(words, "; ")
-	subject := fmt.Sprintf(said.Say(managerWords.Subject), f.deal.Name)
-	offer := ruleMove(ruleBringInManager, fmt.Sprintf(said.Say(managerWords.Offer), why),
-		map[string]any{
-			argSubject:    subject,
-			"body":        capitalized(why) + ".",
-			"assignee_id": manager,
-			"task_type":   taskTypeReview,
-			argLinks:      []map[string]any{{argEntityType: linkDeal, argEntityID: f.deal.Id}},
-			argSource:     provenance.RecordSourceManual,
-		})
+	offer := ruleMove(ruleBringInManager, fmt.Sprintf(said.Say(managerWords.Offer), strings.Join(words, "; ")),
+		map[string]any{argDealID: f.deal.Id, argReasons: codes})
 	offer, err := assessMove(f, offer)
 	if err != nil {
 		return crmcontracts.DealStatusCardMove{}, err
 	}
 	return stamped(offer, marks...), nil
-}
-
-// capitalized upper-cases the first letter, which the joined reasons start
-// without so that they read mid-sentence in the move's reason.
-func capitalized(text string) string {
-	first, size := utf8.DecodeRuneInString(text)
-	return string(unicode.ToUpper(first)) + text[size:]
 }

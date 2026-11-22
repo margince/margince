@@ -24923,6 +24923,52 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/manager-request:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: requestDealManager
+      security: [{bearerAuth: []}]
+      summary: Ask the team's manager to look at this deal.
+      description: |-
+        Accepting the Worklist's "bring in the manager" move. The deal then carries when it was
+        asked, by whom and why, and the team's leads see it on their focus list. It is one fact on
+        the deal, not a task per lead. Asking again changes nothing. A deal that is not open, or
+        one the caller may not change, answers 404.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RequestDealManagerRequest'}
+      responses:
+        '204': {description: Asked.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [Deals]
+      operationId: clearDealManagerRequest
+      security: [{bearerAuth: []}]
+      summary: Mark the manager request on this deal as handled.
+      description: |-
+        Clears the request. A team lead, or a seat with oversight of every team, may clear it. A
+        request also leaves the focus list by itself once the deal is no longer open. Idempotent:
+        a deal with no request answers the same success.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '204': {description: 'Cleared, or there was none.'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /deals/{id}/coverage:
     get:
       tags: [Deals]
@@ -48264,6 +48310,38 @@ components:
           type: array
           description: One entry per team with a daily freeze this quarter, ordered by team id.
           items: {$ref: '#/components/schemas/ForecastFocusTeam'}
+        requests:
+          type: array
+          description: >-
+            Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out.
+          items: {$ref: '#/components/schemas/ForecastFocusRequest'}
+    RequestDealManagerRequest:
+      type: object
+      required: [reasons]
+      properties:
+        reasons:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            type: string
+            enum: [big_deal, single_contact, stuck]
+          description: >-
+            Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them.
+      additionalProperties: false
+    ForecastFocusRequest:
+      type: object
+      required: [deal_id, deal_name, requested_at, reasons]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        owner_id: {type: string, format: uuid, description: Absent when individual performance is off.}
+        requested_by: {type: string, format: uuid, description: Absent when individual performance is off.}
+        requested_at: {type: string, format: date-time}
+        reasons:
+          type: array
+          items: {type: string, enum: [big_deal, single_contact, stuck]}
+      additionalProperties: false
     ForecastFocusTeam:
       type: object
       required: [team_id, snapshot_id, taken_at, base_currency, status, deals, masked_count]
