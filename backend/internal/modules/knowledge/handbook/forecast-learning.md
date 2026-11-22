@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/forecasting/chance.go backend/internal/modules/forecasting/winchance.go backend/internal/modules/forecasting/accuracy.go backend/internal/compose/forecastchances.go backend/internal/compose/forecastaccuracy.go frontend/src/features/analytics/analytics.forecast.accuracy.tsx backend/internal/modules/assurance/risk.go frontend/src/features/analytics/analytics.forecast.deals.tsx frontend/src/features/settings/settings.stages.tsx backend/internal/modules/forecasting/range.go frontend/src/features/analytics/analytics.forecast.landing.tsx -->
+<!-- describes: backend/internal/modules/forecasting/chance.go backend/internal/modules/forecasting/winchance.go backend/internal/modules/forecasting/accuracy.go backend/internal/compose/winchance/forecastchances.go backend/internal/compose/winchance/forecastaccuracy.go frontend/src/features/analytics/analytics.forecast.accuracy.tsx backend/internal/modules/assurance/risk.go frontend/src/features/analytics/analytics.forecast.deals.tsx frontend/src/features/settings/settings.stages.tsx backend/internal/modules/forecasting/range.go frontend/src/features/analytics/analytics.forecast.landing.tsx -->
 # How the forecast learns
 
 The weighted forecast counts each open deal at a probability. This page says

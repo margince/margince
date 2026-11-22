@@ -26,12 +26,14 @@ var wonStintsSQL = wonStints(false)
 // whose both ends were moves made in this installation, and archived wins too.
 // The forecast learns only from recorded history, and an archived win is a win.
 // The paces keep their legacy-inclusive, live-only rule.
-func wonStints(recordedOnly bool) string {
-	return wonStintsOf(recordedOnly, "d.pipeline_id = $1")
-}
-
-// wonStintsOf is wonStints over the deals the pipeline clause selects.
-func wonStintsOf(recordedOnly bool, pipeline string) string {
+//
+// pipeline is the clause that selects the deals; it defaults to the deals of
+// pipeline $1.
+func wonStints(recordedOnly bool, pipeline ...string) string {
+	scope := "d.pipeline_id = $1"
+	if len(pipeline) > 0 {
+		scope = pipeline[0]
+	}
 	live := " AND d.archived_at IS NULL"
 	ends := stagemove.NotMadeElsewhereSQL("provenance") + " AND " + stagemove.NotMadeElsewhereSQL("left_provenance")
 	if recordedOnly {
@@ -45,7 +47,7 @@ func wonStintsOf(recordedOnly bool, pipeline string) string {
 		       extract(epoch FROM lead(h.changed_at) OVER moves - h.changed_at) AS secs
 		  FROM deal_stage_history h
 		  JOIN deal d ON d.id = h.deal_id
-		 WHERE ` + pipeline + ` AND d.status = 'won'` + live + `
+		 WHERE ` + scope + ` AND d.status = 'won'` + live + `
 		WINDOW moves AS (PARTITION BY h.deal_id ORDER BY h.changed_at, COALESCE(h.write_seq, 0), h.id)
 	) stint
 	 WHERE secs IS NOT NULL AND ` + ends
@@ -66,7 +68,7 @@ func StuckAfterDealPipelines(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID,
 
 func stuckAfter[S ids.UUID | []ids.UUID](ctx context.Context, tx pgx.Tx, pipeline string, scope S, floor int) (map[string]time.Duration, error) {
 	rows, err := tx.Query(ctx, `
-		WITH stints AS (`+wonStintsOf(true, pipeline)+`)
+		WITH stints AS (`+wonStints(true, pipeline)+`)
 		SELECT stage_id, percentile_cont(0.9) WITHIN GROUP (ORDER BY secs)
 		  FROM stints GROUP BY stage_id HAVING count(DISTINCT deal_id) >= $2`, scope, floor)
 	if err != nil {

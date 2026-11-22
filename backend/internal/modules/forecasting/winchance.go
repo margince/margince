@@ -8,6 +8,7 @@ package forecasting
 // briefs and tools. So a deal has one number and one explanation.
 
 import (
+	"maps"
 	"math"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
@@ -82,9 +83,7 @@ func ResolveWinChance(model ChanceModel, in ChanceInput) winprobability.Chance {
 // it. With fewer, it is the halving of the chance in use.
 func strongestEffect(model ChanceModel, signals []Signal, inUse int) (effect *float64, signal string, learned bool, sample int) {
 	effects := make(map[string]float64, len(model.Effects)+1)
-	for code, e := range model.Effects {
-		effects[code] = e
-	}
+	maps.Copy(effects, model.Effects)
 	codes := SignalCodes(signals)
 	quietFallback := false
 	for _, code := range codes {
@@ -107,7 +106,7 @@ func strongestEffect(model ChanceModel, signals []Signal, inUse int) (effect *fl
 			break
 		}
 	}
-	return effect, signal, !(quietFallback && signal == model.QuietSignal), model.Samples[signal].Present
+	return effect, signal, !quietFallback || signal != model.QuietSignal, model.Samples[signal].Present
 }
 
 // halvingEffect is the odds ratio that takes a chance to half of itself. A

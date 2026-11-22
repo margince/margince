@@ -472,12 +472,14 @@ func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 		t.Errorf("the gone-quiet tier staged %d cards; the date change "+
 			"is applied, and one receipt carries it with one way back", got)
 	}
-	var hasPace bool
-	if err := e.owner.QueryRow(context.Background(), `SELECT evidence ? 'close_date_sample_count' OR evidence ? 'close_date_median_stage_days' OR evidence ? 'close_date_remaining_stages' FROM audit_log WHERE entity_type='deal' AND entity_id=$1 AND evidence ? 'close_date_correction'`, id).Scan(&hasPace); err != nil {
+	// Nothing moved, so there is no correction to record or undo. The deal
+	// stays in the Home at-risk lane, which is where the owner is asked.
+	var corrections int
+	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM audit_log WHERE entity_type='deal' AND entity_id=$1 AND evidence ? 'close_date_correction'`, id).Scan(&corrections); err != nil {
 		t.Fatal(err)
 	}
-	if hasPace {
-		t.Fatal("a retained human date must not acquire an invented estimate basis")
+	if corrections != 0 {
+		t.Fatalf("the sweep wrote %d corrections for a quiet deal whose date and probability stand, want none", corrections)
 	}
 }
 

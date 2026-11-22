@@ -81,7 +81,10 @@ func newFixture(t *testing.T) *fixture {
 			f.pipeline, name, position, semantic, probability)
 	}
 	f.first, f.won, f.lost = stage("First", 0, "open", 20), stage("Won", 20, "won", 100), stage("Lost", 21, "lost", 0)
-	f.seed(`INSERT INTO setting (key, value) VALUES ('installation.base_currency', '"EUR"'::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
+	if _, err := owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.base_currency', '"EUR"'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`); err != nil {
+		t.Fatalf("seeding the base currency: %v", err)
+	}
 	f.writer = principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), env.WS), "system:winchance-test"), ids.NewV7())
 	read := principal.ObjectGrant{Read: true}
 	f.reader = principal.WithActor(principal.WithWorkspaceID(context.Background(), env.WS), principal.Principal{

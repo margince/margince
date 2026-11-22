@@ -37,7 +37,7 @@ type AccuracyBand struct {
 	MeanPercent, WonPercent *int
 }
 
-// AccuracyCalibration is every band that holds a deal, lowest first.
+// AccuracyCalibration holds the bands that hold a deal, lowest first.
 type AccuracyCalibration struct {
 	Deals int
 	Floor int

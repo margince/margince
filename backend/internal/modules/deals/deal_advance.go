@@ -232,8 +232,8 @@ func (s *Store) advanceOnTx(
 		if out.Deal, err = s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return fmt.Errorf("read advanced deal: %w", err)
 		}
-		if out.Deal.WinChance != nil && out.Deal.WinProbability != nil {
-			out.Probability = newProbabilitySet(*out.Deal.WinProbability, readerName)
+		if out.WinChance != nil && out.WinProbability != nil {
+			out.Probability = newProbabilitySet(*out.WinProbability, readerName)
 		}
 		return nil
 	}()
