@@ -15,6 +15,7 @@ import { ExtensionEntries } from "./extensionentries";
 const VISITS: ExtensionDescriptor = {
   name: "visits",
   title: "",
+  summary: "",
   verbs: [],
   secretScope: "",
   panels: [],

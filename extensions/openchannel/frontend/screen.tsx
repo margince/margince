@@ -5,7 +5,7 @@ import {
   throwProblem,
 } from "@margince/frontend/api";
 import { useCan, useT } from "@margince/frontend/app";
-import { Card, SectionHeader } from "@margince/frontend/design-system";
+import { Callout, Card, SectionHeader } from "@margince/frontend/design-system";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ENDPOINT_KEY,
@@ -102,6 +102,7 @@ export default function OpenchannelScreen() {
   const canReadEndpoint = useCan(ENDPOINT_OBJECT, "read");
   const canReadInbound = useCan(INBOUND_OBJECT, "read");
   const canReadOutbound = useCan(OUTBOUND_OBJECT, "read");
+  const canGrant = useCan("role_admin", "update");
   const endpoint = useEndpoint(canReadEndpoint);
   return (
     <div className="wrap narrow">
@@ -109,6 +110,15 @@ export default function OpenchannelScreen() {
           the screen's own top header IS the page's h1. */}
       <SectionHeader title={t("extOpenchannel.title")} level={1} />
       <p>{t("extOpenchannel.sub")}</p>
+      {/* Each card names the object it lacks; this says once where Read is
+          granted, and only one who edits roles is told to grant it. */}
+      {!(canReadEndpoint && canReadInbound && canReadOutbound) && (
+        <Callout tone="info" title={t("extOpenchannel.grant.title")}>
+          {t(
+            canGrant ? "extOpenchannel.grant.self" : "extOpenchannel.grant.ask",
+          )}
+        </Callout>
+      )}
       <Card>
         {canReadEndpoint ? (
           // Through the query gate, not off `endpoint.data` directly: data is

@@ -279,7 +279,9 @@ func (s *ChannelStore) requireConnectWiring(provider string) (ChannelBotCheck, e
 const addressScheme = "http"
 
 // connectAddress holds the provider's address rule: a self-hosted provider
-// needs its install's web address, and a fixed-API one takes none.
+// needs its install's web address, and a fixed-API one takes none. A bare host
+// (chat.example.com) is what people copy from the address bar, so it means
+// https rather than a refusal.
 func connectAddress(check ChannelBotCheck, raw string) (string, error) {
 	address := strings.TrimRight(strings.TrimSpace(raw), "/")
 	if !check.NeedsAddress() {
@@ -288,11 +290,26 @@ func connectAddress(check ChannelBotCheck, raw string) (string, error) {
 		}
 		return "", nil
 	}
+	address = withWebScheme(address)
 	parsed, err := url.Parse(address)
 	if err != nil || (parsed.Scheme != addressScheme && parsed.Scheme != addressScheme+"s") || parsed.Host == "" {
 		return "", fmt.Errorf("enter the chat's web address, such as https://chat.example.com: %w", apperrors.ErrInvalidArgument)
 	}
 	return address, nil
+}
+
+// withWebScheme puts https in front of an address that names no web scheme.
+// "host:port" parses as an unknown scheme, which is why the scheme is checked
+// rather than only the "://"; an address naming another scheme stays as written
+// so the caller refuses it.
+func withWebScheme(address string) string {
+	if address == "" || strings.Contains(address, "://") {
+		return address
+	}
+	if parsed, err := url.Parse(address); err == nil && (parsed.Scheme == addressScheme || parsed.Scheme == addressScheme+"s") {
+		return address
+	}
+	return addressScheme + "s://" + address
 }
 
 // sealSecret puts one secret in the vault before any row names it

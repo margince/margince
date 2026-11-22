@@ -44307,7 +44307,7 @@ type ConfirmSubmissionReceipt struct {
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
 type ConnectChannelRequest struct {
-	// Address The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+	// Address The chat's web address, such as `https://chat.example.com`; a bare host means https. Required for Dispact, which every team hosts itself; refused for Telegram.
 	Address *string `json:"address,omitempty"`
 
 	// BotToken The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back.
