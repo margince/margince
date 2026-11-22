@@ -10,7 +10,7 @@
 .richtext {
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
+  background: var(--bgField);
   /* `clip`, not `hidden`: it keeps the rounded corners without making the frame
      a scroll container, which would hold a sticky footer in place. */
   overflow: clip;
@@ -40,7 +40,7 @@
   gap: var(--space-3);
   padding: 2px var(--space-2) var(--space-2); /* ds:ignore the footer's own tight rhythm against the surface it sits under */
   /* Opaque, so text scrolling under a sticky footer does not show through. */
-  background: var(--bgElevated);
+  background: var(--bgField);
 }
 .richtext-hint {
   margin: 0;

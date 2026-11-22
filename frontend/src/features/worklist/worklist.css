@@ -387,7 +387,7 @@
 }
 .worklist-row-selected .worklist-rank {
   background: var(--textPrimary);
-  color: var(--bgElevated);
+  color: var(--textInverse);
 }
 
 /* The guardrail over the queue's own hiding rules. A diagnostic behind a

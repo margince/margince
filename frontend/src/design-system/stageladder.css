@@ -366,7 +366,7 @@
   background: var(--borderSubtle);
 }
 .stage-ladder-bar.is-done .stage-ladder-track-bar {
-  background: color-mix(in srgb, var(--accent) 40%, var(--bgElevated));
+  background: color-mix(in srgb, var(--accent) 40%, var(--bgField));
 }
 .stage-ladder-bar-step.is-here .stage-ladder-track-bar {
   background: var(--stage-ladder-here);
