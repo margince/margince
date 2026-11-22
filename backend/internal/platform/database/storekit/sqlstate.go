@@ -146,6 +146,35 @@ func CheckViolation(err error) (constraint string, ok bool) {
 	return pgViolation(err, pgCheckViolation)
 }
 
+// CheckViolationCode is the SQLSTATE CheckViolation reads, for a test that
+// builds the refusal Postgres sends.
+const CheckViolationCode = pgCheckViolation
+
+// CustomColumnPrefix starts every custom field's physical column name.
+const CustomColumnPrefix = "cf_"
+
+// PicklistConstraint names the CHECK that holds a custom picklist column to its
+// options, so its refusal can name the field.
+func PicklistConstraint(column string) string {
+	return column + "_check"
+}
+
+var picklistConstraint = regexp.MustCompile(`^(` + CustomColumnPrefix + `[a-z0-9_]+)_check$`)
+
+// PicklistViolation reads a refusal of a CHECK named by PicklistConstraint and
+// answers the custom column it holds.
+func PicklistViolation(err error) (column string, ok bool) {
+	constraint, ok := CheckViolation(err)
+	if !ok {
+		return "", false
+	}
+	match := picklistConstraint.FindStringSubmatch(constraint)
+	if match == nil {
+		return "", false
+	}
+	return match[1], true
+}
+
 // TextBoundViolation reads a refusal of a text bound: the shared guard, which
 // names the column and its limit, or a CHECK named by TextMaxConstraint.
 func TextBoundViolation(err error) (column string, limit int, ok bool) {

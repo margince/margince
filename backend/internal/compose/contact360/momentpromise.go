@@ -13,9 +13,13 @@ import (
 	"fmt"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -47,7 +51,7 @@ const (
 // here was how a contact owing nothing but an extracted commitment showed
 // "nothing needed" while the commitments card beneath said otherwise.
 func (said momentCopy) openPromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
-	next, ok := owedwork.Soonest(owedPromises(page), now)
+	next, ok := owedwork.Soonest(owedPromises(page, said.zone), now)
 	if !ok {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -195,7 +199,7 @@ func (said momentCopy) openPromiseWhyNow(now time.Time, task crmcontracts.Activi
 // and every other surface answering "what do we owe them?" name the same one.
 // That package states why the latest slip wins and why a tie goes to the claim.
 func (said momentCopy) overduePromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
-	slipped, ok := owedwork.MostRecentlySlipped(owedPromises(page), now)
+	slipped, ok := owedwork.MostRecentlySlipped(owedPromises(page, said.zone), now)
 	if !ok {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -219,14 +223,15 @@ func (said momentCopy) overduePromiseMoment(ctx context.Context, now time.Time, 
 // (internal/compose/contact360/moments_test.go), which fail if either source
 // stops reaching the card.
 //
-// A claim that became a task is left to its task, so the promise is counted
-// once. A task a rep typed for a promise an extractor also read stays a second
-// row: nothing links the two, and guessing which pairs mean one promise would
-// be this card inventing a fact.
-func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
+// A claim is counted once: claimStandsAlone leaves it to a listed task. A task
+// a rep typed for a promise an extractor also read stays a second row. Nothing
+// links the two, and guessing which pairs mean one promise would invent a fact.
+func owedPromises(page *crmcontracts.Contact360, zone *time.Location) []owedwork.Item {
 	var items []owedwork.Item
+	listed := map[openapi_types.UUID]bool{}
 	if page.NextSteps != nil {
 		for _, task := range page.NextSteps.Data {
+			listed[task.Id] = true
 			// A task the system minted — a check-in or renewal reminder — is
 			// the product nudging the reader, not a promise anybody made, so
 			// it stays on the task list and off the promise rungs. The account
@@ -242,14 +247,15 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 			}
 			items = append(items, owedwork.Item{
 				Ref: task, Source: owedwork.FromTask,
-				DueAt: task.DueAt, FiledAt: task.OccurredAt,
+				DueAt:   deadline.TaskDueOn(task.DueAt, task.DueHasTime != nil && *task.DueHasTime, storekit.WallClock(task.DueIntent), zone),
+				FiledAt: task.OccurredAt,
 			})
 		}
 	}
 	if page.Claims != nil {
 		for _, claim := range *page.Claims {
 			if claim.Kind != crmcontracts.ConversationClaimKindCommitmentOurs ||
-				claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.NeedsReview || claim.TaskActivityId != nil {
+				claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.NeedsReview || !claimStandsAlone(claim, listed) {
 				continue
 			}
 			items = append(items, owedwork.Item{
@@ -259,6 +265,17 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 		}
 	}
 	return items
+}
+
+// claimStandsAlone reports whether a claim is owed in its own name. It names
+// no task, or its task is open (task_open) but past the next_steps cap. The
+// same rule counts the page in contactpromises.ts, and
+// testdata/claimstandsalone.json holds the two equal.
+func claimStandsAlone(claim crmcontracts.ConversationClaim, listed map[openapi_types.UUID]bool) bool {
+	if claim.TaskActivityId == nil {
+		return true
+	}
+	return !listed[*claim.TaskActivityId] && claim.TaskOpen != nil && *claim.TaskOpen
 }
 
 // overdueTaskCard is the promise card for a late TASK.

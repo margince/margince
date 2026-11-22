@@ -104,6 +104,12 @@ out and marked "omitted (stated, but not clearly enough to accept)".
 Note that a document filed on **a deal** can be read for deal fields; one filed
 on **the company** cannot.
 
+**Reading a filed chat against your tasks.** When you file a chat screenshot,
+the AI reads it against your open tasks on that record. It marks a task done, or
+moves it to the day the chat names, only when the chat clearly settles it. The
+change shows in **Done for you** with **Undo**. See
+[Documents and files](documents-and-files.md).
+
 **Filling in a record from the web.** Reading a company's site, matching a
 LinkedIn connection, filling in a new company. Every one of these shows a card
 for you to check, instead of writing right into the record.

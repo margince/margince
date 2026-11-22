@@ -10,6 +10,7 @@ import {
   writableTarget,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { useRailRename } from "../../components/railfield";
 import { RecordTeam } from "../../components/recordteam";
 import { useFieldsDialog } from "../../components/sectionedit";
@@ -201,7 +202,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         // One sentence and nothing else: why this record takes no changes, so
         // every control it refuses points at it.
         readOnlyReason ? (
-          <p id={readOnlyReasonId}>{readOnlyReason}</p>
+          <>
+            <p id={readOnlyReasonId}>{readOnlyReason}</p>
+            <EditAccessRequest kind="project" record={project} />
+          </>
         ) : undefined
       }
     >

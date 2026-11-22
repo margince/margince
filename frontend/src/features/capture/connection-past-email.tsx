@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { RunCourseNote } from "../../components/runcoursenote";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Meter } from "../../design-system/readings";
@@ -258,6 +259,7 @@ function RunBody({
           <span className="t-caption">{progress}</span>
         </div>
       )}
+      <RunCourseNote run={run} />
       <span className="connection-service-facts">
         {STATS.map((stat) => (
           <span key={stat.key}>

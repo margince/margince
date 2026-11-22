@@ -90,6 +90,9 @@ func withdrawCaptureConnections(ctx context.Context, tx pgx.Tx, userID ids.UserI
 			 WHERE id = $1`, w.id); err != nil {
 			return err
 		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 	}
 	for _, w := range gone {
 		// One row per connection, naming the status it was withdrawn FROM, so

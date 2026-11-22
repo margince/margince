@@ -15,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// PrepareUpdateTx is Update split around a caller's transaction. The catalog
-// read takes its own connection, so it runs now, and the returned write runs
-// inside the caller's transaction through UpdateProjectTx.
+// PrepareUpdateTx is Update split around a caller's transaction. The grant is
+// asked now. The returned write reads the catalog on the caller's transaction
+// and runs UpdateProjectTx there.
 func (p *Provider) PrepareUpdateTx(ctx context.Context, t datasource.EntityType) (
 	func(context.Context, pgx.Tx, datasource.UpdateInput) (datasource.EntityRef, error), error,
 ) {
@@ -27,11 +27,6 @@ func (p *Provider) PrepareUpdateTx(ctx context.Context, t datasource.EntityType)
 	if err := auth.Require(ctx, projectObject, principal.ActionUpdate); err != nil {
 		return nil, err
 	}
-	active, err := p.store.catalogColumns(ctx)
-	if err != nil {
-		return nil, err
-	}
-	cols := CustomColumns{cols: active}
 	return func(ctx context.Context, tx pgx.Tx, in datasource.UpdateInput) (datasource.EntityRef, error) {
 		if in.Ref.Type != datasource.EntityProject {
 			return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
@@ -40,7 +35,11 @@ func (p *Provider) PrepareUpdateTx(ctx context.Context, t datasource.EntityType)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		v, err := p.store.UpdateProjectTx(ctx, tx, ids.From[ids.ProjectKind](in.Ref.ID), update, cols)
+		active, err := p.store.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		v, err := p.store.UpdateProjectTx(ctx, tx, ids.From[ids.ProjectKind](in.Ref.ID), update, CustomColumns{cols: active})
 		return ref(v.Id), err
 	}, nil
 }

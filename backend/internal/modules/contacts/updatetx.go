@@ -52,9 +52,8 @@ func (s *Store) UpdateLeadTx(
 	return s.updateLeadInTx(ctx, tx, id, in, cols.cols)
 }
 
-// PrepareUpdateTx is Update split around a caller's transaction. The catalog
-// read takes its own connection, so it runs now, and the returned write runs
-// inside the caller's transaction.
+// PrepareUpdateTx is Update split around a caller's transaction. The grant is
+// asked now. The returned write reads the catalog on the caller's transaction.
 //
 // It serves the record types that carry an owner. Others answer
 // UnsupportedEntityError, as Update does for a type it does not serve.
@@ -67,8 +66,7 @@ func (p *Provider) PrepareUpdateTx(ctx context.Context, t datasource.EntityType)
 	if object == "" {
 		return nil, &datasource.UnsupportedEntityError{Type: string(t)}
 	}
-	cols, err := p.store.activeCustomColumns(ctx, object, principal.ActionUpdate)
-	if err != nil {
+	if err := auth.Require(ctx, object, principal.ActionUpdate); err != nil {
 		return nil, err
 	}
 	return func(ctx context.Context, tx pgx.Tx, in datasource.UpdateInput) (datasource.EntityRef, error) {
@@ -79,7 +77,11 @@ func (p *Provider) PrepareUpdateTx(ctx context.Context, t datasource.EntityType)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		return p.updateTx(ctx, tx, in, raw, cols)
+		active, err := p.store.activeColumnsIn(ctx, tx, object)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		return p.updateTx(ctx, tx, in, raw, CustomColumns{cols: active})
 	}, nil
 }
 

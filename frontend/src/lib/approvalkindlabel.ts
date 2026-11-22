@@ -68,6 +68,8 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   employer_change: "approval.kind.employer_change",
   // A colleague asks the owner to hand over a contact or company.
   ownership_transfer: "approval.kind.ownership_transfer",
+  // A colleague asks the owner for edit access; the owner stays the owner.
+  edit_access: "approval.kind.edit_access",
   company_name_promotion: "approval.kind.company_name_promotion",
   vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",

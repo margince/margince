@@ -89,6 +89,9 @@ func (s *Sink) copiedPartsWithheld(
 //
 // A private thread keeps withholding, whoever arrives: being addressed is not
 // permission to store what somebody judged personal.
+//
+// Its bytes are stored inside the transaction, unlike a new message's. Which
+// rows wait for them is known only once the join is proven, and a join is rare.
 func (s *Sink) adoptWithheldParts(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	rec connector.NormalizedRecord, fields ActivityFields,

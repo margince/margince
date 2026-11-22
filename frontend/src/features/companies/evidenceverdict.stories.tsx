@@ -111,7 +111,7 @@ export const SavingCorrection: Story = {
       await canvas.findByRole("button", { name: en["evidence.correct"] }),
     );
     const field = await canvas.findByRole("textbox", {
-      name: en["evidence.correctedValue"],
+      name: new RegExp(`^${en["evidence.correctedValue"]}`),
     });
     await user.clear(field);
     await user.type(field, "Automotive tier-one supply");
@@ -143,7 +143,7 @@ export const CorrectionRefused: Story = {
       await canvas.findByRole("button", { name: en["evidence.correct"] }),
     );
     const field = await canvas.findByRole("textbox", {
-      name: en["evidence.correctedValue"],
+      name: new RegExp(`^${en["evidence.correctedValue"]}`),
     });
     await user.clear(field);
     await user.type(field, "Automotive tier-one supply");

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // Sweep checks every promise that has a responsible seat against the meetings
@@ -75,7 +76,7 @@ func (s Sweep) Reader(ctx context.Context, tx pgx.Tx, owner ids.UUID) (context.C
 	case err != nil:
 		return nil, fmt.Errorf("read the authority of promise owner %s: %w", owner, err)
 	default:
-		reader.SeatType, reader.TeamIDs, reader.Permissions = seat, rbac.TeamIDs, rbac.Permissions
+		reader = authz.HumanPrincipal(owner, rbac, seat)
 	}
 	return principal.WithActor(ctx, reader), nil
 }

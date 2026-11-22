@@ -173,15 +173,19 @@ describe("the one-locale rule", () => {
     const findings = plantedFindings(rule, [
       { path: join(srcDir, "features", "x.ts"), area: "src", text: bare },
       { path: join(srcDir, "format", "collate.ts"), area: "src", text: bare },
-      { path: join(srcDir, "format", "address.ts"), area: "src", text: bare },
+      {
+        path: join(srcDir, "format", "formatters.ts"),
+        area: "src",
+        text: bare,
+      },
     ]);
     expect(findings[0]).toBe("features/x.ts:1: .toLocaleString()");
     expect(findings).not.toContain("format/collate.ts:1: .toLocaleString()");
     expect(findings).toContain(
-      "format/timezone.ts: pinned, but reaches no formatter",
+      "mcp-apps/values.ts: pinned, but reaches no formatter",
     );
     expect(findings).not.toContain(
-      "format/address.ts: pinned, but reaches no formatter",
+      "format/formatters.ts: pinned, but reaches no formatter",
     );
   });
 });

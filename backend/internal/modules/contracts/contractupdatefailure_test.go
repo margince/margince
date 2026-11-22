@@ -33,6 +33,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/storekit/outboxtest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -102,16 +103,12 @@ func TestTheContractUpdateEventCarriesWhatChanged(t *testing.T) {
 	if sent == nil {
 		t.Fatal("no event was written, so there is nothing to check what it carries")
 	}
-	body, isBytes := sent.args[len(sent.args)-1].([]byte)
-	if !isBytes {
-		t.Fatalf("the outbox row's last bind is %T, not the marshalled envelope", sent.args[len(sent.args)-1])
-	}
 	var envelope struct {
 		Payload struct {
 			ChangedFields map[string]any `json:"changed_fields"`
 		} `json:"payload"`
 	}
-	if err := json.Unmarshal(body, &envelope); err != nil {
+	if err := json.Unmarshal(outboxtest.Envelope(t, sent.args).Payload, &envelope.Payload); err != nil {
 		t.Fatalf("reading the envelope the shape emitted: %v", err)
 	}
 	after := patch.After()

@@ -22,6 +22,8 @@ export function bookingFrame(view: () => ReactNode, overrides: RouteMap = {}) {
       "GET /me/working-hours": () => jsonResponse(bookingHours),
       "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
       "GET /scheduling/profile": () => jsonResponse(bookingProfile),
+      "GET /scheduling/team-candidates": () => jsonResponse([]),
+      "GET /scheduling/team-requests": () => jsonResponse([]),
       "GET /scheduling/calendars": () =>
         jsonResponse([
           {

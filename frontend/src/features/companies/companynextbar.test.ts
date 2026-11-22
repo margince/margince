@@ -120,6 +120,36 @@ describe("nextBarLateness", () => {
   });
 });
 
+describe("nextBarLateness for a task with only a date", () => {
+  const dated = {
+    ...PROMISE,
+    due_has_time: false,
+    due_at: "2026-11-17T07:59:59Z",
+    due_intent: {
+      wall_clock: "2026-11-16T23:59:59",
+      timezone: "America/Los_Angeles",
+    },
+  };
+  const drawn = view({
+    as_of: "2026-11-17T07:00:00Z",
+    moment: moment("overdue_promise", "t-promise"),
+    next_steps: { data: [dated], page: { has_more: false, next_cursor: null } },
+  });
+
+  it("is late by the company's calendar, as the Worklist counts it", () => {
+    expect(
+      nextBarLateness(drawn, "America/Los_Angeles", words, "Europe/Berlin")
+        ?.badge,
+    ).toBe("1 day late");
+  });
+
+  it("is not late on a company calendar that is still on the picked day", () => {
+    expect(
+      nextBarLateness(drawn, "Europe/Berlin", words, "America/Los_Angeles"),
+    ).toBeUndefined();
+  });
+});
+
 describe("otherTasks", () => {
   it("counts the tasks behind the one the bar draws", () => {
     expect(otherTasks(view(), PROMISE)).toBe(1);

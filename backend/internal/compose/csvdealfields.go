@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -22,13 +23,13 @@ import (
 // company_ref and the deal's custom fields.
 const (
 	dealTargetName       = "name"
-	dealTargetPipeline   = "pipeline"
-	dealTargetStage      = "stage"
-	dealTargetAmount     = "amount"
-	dealTargetCurrency   = "currency"
+	dealTargetPipeline   = recordexport.Pipeline
+	dealTargetStage      = recordexport.Stage
+	dealTargetAmount     = recordexport.Amount
+	dealTargetCurrency   = recordexport.Currency
 	dealTargetCloseDate  = "close_date"
 	dealTargetLostReason = "lost_reason"
-	dealTargetContactRef = "contact_ref"
+	dealTargetContactRef = recordexport.ContactRef
 )
 
 // dealStoredColumns names the stored deal's JSON field for each target the

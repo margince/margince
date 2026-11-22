@@ -1,4 +1,6 @@
 import { type ReactNode, type RefObject, useEffect, useRef } from "react";
+import { Card } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { Logomark } from "../../design-system/logomark";
 import { usePrefersReducedMotion } from "../../design-system/motion";
 import { useT } from "../../i18n";
@@ -18,6 +20,31 @@ export function PublicPage({ children }: Readonly<{ children: ReactNode }>) {
         <PublicFooter />
       </div>
     </div>
+  );
+}
+
+/** The page a dead link from a privacy mail lands on (unsubscribe, preferences,
+ * confirm): the answer as the heading, the reason under it. The tab title
+ * names the answer, not the product. */
+export function DeadLinkPage({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  const title = t("prefs.unsub.deadLinkTitle");
+  useEffect(() => {
+    const previous = document.title;
+    document.title = title;
+    return () => {
+      document.title = previous;
+    };
+  }, [title]);
+  return (
+    <PublicPage>
+      <Heading size="xlarge" className="t-display">
+        {t("prefs.unsub.deadLinkTitle")}
+      </Heading>
+      <Card>
+        <p>{children}</p>
+      </Card>
+    </PublicPage>
   );
 }
 

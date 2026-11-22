@@ -60,9 +60,9 @@ export default defineConfig({
     // runner happens to report — and the two do not have the same contrast.
     // The axe sweep read light here and dark on CI within one hour, which
     // presented as a flaky lane and was two palettes being sampled at random.
-    // Light is the default the product is built to (§2: "Build light-first");
-    // dark is swept explicitly by its own block in ac.spec.ts, so pinning here
-    // narrows what a test measures rather than what the suite covers.
+    // Light is the default the product is built to.
+    // Dark is swept by its own block in ac-a11y.spec.ts. So pinning here
+    // narrows what a test measures, not what the suite covers.
     colorScheme: "light",
     // the SW would compete with the network-edge seed mocks
     serviceWorkers: "block",

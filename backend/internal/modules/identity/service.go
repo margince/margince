@@ -212,6 +212,10 @@ func (in *BootstrapInput) normalize() error {
 		return err
 	}
 	in.AdminEmail = adminEmail.String()
+	in.AdminName = displayNameLine(in.AdminName)
+	if err := validateDisplayName(in.AdminName); err != nil {
+		return err
+	}
 	// The floor every path that sets a password already applies —
 	// deployconfig checks it when reading bootstrap_admin's file, the reset
 	// endpoint checks it on redemption. It belongs HERE too, because a claim

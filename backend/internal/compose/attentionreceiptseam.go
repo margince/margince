@@ -13,7 +13,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
 	"time"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // approvalStatusApproved is the decided status a receipt is read from. Spelled
@@ -102,13 +100,8 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 			if completed.Writable {
 				undo = &attention.ReceiptUndo{AuditLogID: completed.AuditID, Version: completed.Version}
 			}
-			locale := systemtext.Locale(ctx)
-			contact := completed.Contact
-			if contact == "" {
-				contact = systemtext.Copy(systemtext.TaskClosedContactKey(completed.Booking), locale)
-			}
-			reason := fmt.Sprintf(systemtext.Copy(systemtext.TaskClosedKey(completed.Booking), locale), contact, completed.WrittenAt.Format(time.DateOnly))
-			decided = append(decided, attention.Receipt{Source: attention.ReceiptFromCorrection, ID: completed.AuditID, AuditLogID: completed.AuditID, Kind: "task_completed", Summary: reason, Headline: completed.Subject, Reason: reason, OccurredAt: completed.At, TargetType: string(recordTypeActivity), TargetID: completed.ID, Actor: attention.ReceiptActor{Type: systemActor}, Undo: undo})
+			reason := attention.TaskReceiptReason(ctx, completed)
+			decided = append(decided, attention.Receipt{Source: attention.ReceiptFromCorrection, ID: completed.AuditID, AuditLogID: completed.AuditID, Kind: attention.TaskReceiptKind(completed), Summary: reason, Headline: completed.Subject, Reason: reason, OccurredAt: completed.At, TargetType: string(recordTypeActivity), TargetID: completed.ID, Actor: attention.ReceiptActor{Type: systemActor}, Undo: undo})
 		}
 	}
 	decided, err = r.withChangeReviews(ctx, decided)

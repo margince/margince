@@ -11,7 +11,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -68,7 +67,7 @@ func (a *assembly) readCommitments() error {
 			DueHasTime: t.DueHasTime,
 			DueIntent:  t.DueIntent,
 			AssigneeId: uuidPtr(t.AssigneeID),
-			Overdue:    deadline.Passed(t.DueAt, a.now),
+			Overdue:    t.Overdue,
 			Version:    t.Version,
 		}
 		if t.AssigneeID != nil {

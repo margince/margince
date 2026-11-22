@@ -23,6 +23,10 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
 import { useSinglePress } from "../../design-system/presslatch";
 import { QueryStates } from "../../design-system/querystates";
+import {
+  focusFirstRefused,
+  useFieldFaults,
+} from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { Switch } from "../../design-system/switch";
 import { useToast } from "../../design-system/toast";
@@ -45,7 +49,7 @@ import {
   useOriginMutations,
 } from "../../lib/leadorigins";
 import { isOption } from "../../lib/options";
-import { problemMessageOf } from "../../lib/problem";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
 import {
   leadsColumn,
   useRemovalFocus,
@@ -78,14 +82,16 @@ function AddOriginDialog({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const titleId = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
+  const labelLabel = t("leadSources.labelField");
   const [label, setLabel] = useState("");
   const [intent, setIntent] = useState<LeadOriginIntent>("neutral");
   const name = label.trim();
   const refused = nameRefusal(create.error, t, "leadOrigins.duplicate");
   const { refusedName, markSent } = useRefusedName(name, refused.nameProblem);
-  const ready = name !== "" && !refusedName;
   const singlePress = useSinglePress(create.isPending);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="form">
@@ -94,10 +100,18 @@ function AddOriginDialog({
       </Heading>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
-        onSubmit={singlePress((e: FormEvent) => {
+        noValidate
+        onSubmit={singlePress((e: FormEvent<HTMLFormElement>) => {
           e.preventDefault();
-          if (!ready || create.isPending) return;
+          const blank = blankRequired(locale, { label: [labelLabel, label] });
+          if (faults.show(blank) || create.isPending) return;
+          // The server refused this very name, and the field says so.
+          if (refusedName) {
+            focusFirstRefused(e.currentTarget);
+            return;
+          }
           markSent();
           create.mutate({ label: name, intent }, { onSuccess: onClose });
         })}
@@ -111,14 +125,21 @@ function AddOriginDialog({
             {refused.problem}
           </Callout>
         )}
-        <Field label={t("leadSources.labelField")} error={refusedName}>
+        <Field
+          label={labelLabel}
+          required
+          error={faults.of("label") ?? refusedName}
+        >
           {(control) => (
             <TextInput
               {...control}
               data-testid="lead-origin-new-label"
               placeholder={t("leadOrigins.newPlaceholder")}
               value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              onChange={(e) => {
+                setLabel(e.target.value);
+                faults.edited("label");
+              }}
             />
           )}
         </Field>
@@ -142,12 +163,10 @@ function AddOriginDialog({
         <Button variant="ghost" onClick={onClose}>
           {t("deals.cancel")}
         </Button>
-        {/* Not one `disabled`: an empty form and a write on its way read differently. */}
         <Button
           type="submit"
           form={formId}
           variant="primary"
-          disabled={!create.isPending && !ready}
           pending={create.isPending}
         >
           {t("leadOrigins.add")}

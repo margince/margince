@@ -9,6 +9,7 @@
 // facts are missing is left out rather than said without them.
 
 import { activityDay } from "../format/activitywhen";
+import { taskDueOnDay } from "../format/calendarday";
 import { formatDayMonthNearYear } from "../format/format.dates";
 import { useNow } from "../format/now";
 import { type Locale, useLocale } from "../i18n";
@@ -374,7 +375,7 @@ function taskLine(item: WorklistItem, t: T, clock: Clock): string | null {
   const dueAt = deadlineOf(item);
   if (!dueAt) return t("worklist.happened.task.undated");
   const due = formatDayMonthNearYear(
-    dueAt,
+    taskDueOnDay(dueAt, item.due_has_time, item.due_intent, clock.recordZone),
     clock.locale,
     clock.recordZone,
     clock.now,

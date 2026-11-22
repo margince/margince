@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -41,6 +43,10 @@ var errCatalog = errors.New("the catalog is unreachable")
 type refusingCatalog struct{}
 
 func (refusingCatalog) ActiveColumns(context.Context, string) ([]fieldcatalog.Column, error) {
+	return nil, errCatalog
+}
+
+func (refusingCatalog) ActiveColumnsIn(context.Context, pgx.Tx, string) ([]fieldcatalog.Column, error) {
 	return nil, errCatalog
 }
 

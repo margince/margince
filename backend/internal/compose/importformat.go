@@ -121,7 +121,7 @@ func formatColumns(object string, cat importCatalog, spoken langcopy.Spoken) ([]
 		}
 		column := crmcontracts.ImportFormatColumn{
 			Name: target, Description: spoken.Say(guide.Description), Example: spoken.Say(guide.Example),
-			RequiredOnNewRow: guide.RequiredOnNew || slices.Equal(rowKeyTargets(object), []string{target}),
+			RequiredOnNewRow: guide.RequiredOnNew || slices.Equal(slices.DeleteFunc(rowKeyTargets(object), func(k string) bool { return k == csvTargetID }), []string{target}),
 		}
 		fieldLabel := spoken.Say(guide.Label)
 		column.FieldLabel = &fieldLabel

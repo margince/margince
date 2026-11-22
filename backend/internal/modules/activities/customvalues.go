@@ -35,6 +35,12 @@ func (s *Store) ActiveActivityColumns(ctx context.Context) (CustomColumns, error
 	return CustomColumns{cols: cols}, err
 }
 
+// activityColumnsIn is ActiveActivityColumns on a transaction the store holds.
+func (s *Store) activityColumnsIn(ctx context.Context, tx pgx.Tx) (CustomColumns, error) {
+	cols, err := s.customColumnsIn(ctx, tx)
+	return CustomColumns{cols: cols}, err
+}
+
 // ActivityColumnsFrom is ActiveActivityColumns through a catalog the caller
 // bound to the transaction it already holds, so reading it takes no second
 // connection.
@@ -49,11 +55,16 @@ func ActivityColumnsFrom(ctx context.Context, catalog fieldcatalog.Reader) (Cust
 // attachCustomValues fills the activities a store method is about to return,
 // after its own transaction has committed.
 func (s *Store) attachCustomValues(ctx context.Context, rows ...*crmcontracts.Activity) error {
-	active, err := s.customColumns(ctx)
-	if err != nil || len(active) == 0 {
-		return err
+	if s.catalog == nil {
+		return nil
 	}
-	return s.tx(ctx, func(tx pgx.Tx) error { return withCustomValues(ctx, tx, active, rows) })
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.customColumnsIn(ctx, tx)
+		if err != nil || len(active) == 0 {
+			return err
+		}
+		return withCustomValues(ctx, tx, active, rows)
+	})
 }
 
 // pageOf points at every activity of a page, so one fill writes into it.

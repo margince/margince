@@ -55,8 +55,8 @@ func (c ComposedSubscription) GroupName() string {
 	return kevents.ExtensionGroupPrefix + string(c.Unit) + "-" + c.Sub.Name
 }
 
-// Group is the consumer group to run this listener on: its name, and the
-// distinct streams its declared event types route to.
+// Group is the consumer group to run this listener on: its name, its declared
+// event types, and the distinct streams they route to.
 //
 // Deriving the streams from the TYPES is what keeps a unit off streams it did
 // not ask for. A listener that names one activity event consumes the activity
@@ -74,7 +74,7 @@ func (c ComposedSubscription) Group() (kevents.Group, error) {
 		}
 	}
 	slices.Sort(streams)
-	return kevents.Group{Name: c.GroupName(), Streams: streams}, nil
+	return kevents.Group{Name: c.GroupName(), Streams: streams, Types: kevents.NewTypeSet(c.Sub.Events...)}, nil
 }
 
 // Handler is the bus consumer for this listener: it filters to the declared

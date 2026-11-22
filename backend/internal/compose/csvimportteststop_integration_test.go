@@ -104,9 +104,9 @@ func TestARefusedTestRunReturnsToDraftWithItsReason(t *testing.T) {
 		t.Fatalf("reading the run: %v", err)
 	}
 	want, _ := httperr.Classify(importwire.Problem(blobstore.ErrNotFound))
-	if run.Status != migration.StatusPending || run.Error != want.Detail || run.Progress != nil {
-		t.Fatalf("run = %s with %q and progress %+v, want pending with the refusal's reason %q",
-			run.Status, run.Error, run.Progress, want.Detail)
+	if run.Status != migration.StatusPending || run.Error != want.Detail || run.Progress != nil || run.ErrorRefusal != nil {
+		t.Fatalf("run = %s with %q, refusal %+v and progress %+v, want pending with the refusal's reason %q and no code",
+			run.Status, run.Error, run.ErrorRefusal, run.Progress, want.Detail)
 	}
 }
 

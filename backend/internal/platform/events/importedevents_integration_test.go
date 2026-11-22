@@ -20,11 +20,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// stageDealEvent stages one deal.stage_changed with the payload given.
-func (e *busEnv) stageDealEvent(t *testing.T, payload string) ids.UUID {
+// stageDealEvent stages one deal-stream event of the type and payload given.
+func (e *busEnv) stageDealEvent(t *testing.T, eventType, payload string) ids.UUID {
 	t.Helper()
 	env := kevents.Envelope{
-		EventID: ids.NewV7(), Type: "deal.stage_changed", Version: kevents.VersionOf("deal.stage_changed"),
+		EventID: ids.NewV7(), Type: eventType, Version: kevents.VersionOf(eventType),
 		OccurredAt: clocktest.Now(t),
 		Actor:      kevents.Actor{Type: "human", ID: "human:" + ids.NewV7().String()},
 		Entity:     kevents.EntityRef{Type: "deal", ID: ids.NewV7()},
@@ -66,8 +66,8 @@ func (c *collector) has(id ids.UUID) bool {
 
 func TestAnImportedEventReachesOnlyTheGroupsThatKeepImportedEvents(t *testing.T) {
 	e := setup(t)
-	imported := e.stageDealEvent(t, `{"to_stage_id":"`+ids.NewV7().String()+`","import_run_id":"`+ids.NewV7().String()+`","imported":true}`)
-	ordinary := e.stageDealEvent(t, `{"to_stage_id":"`+ids.NewV7().String()+`"}`)
+	imported := e.stageDealEvent(t, "deal.stage_changed", `{"to_stage_id":"`+ids.NewV7().String()+`","import_run_id":"`+ids.NewV7().String()+`","imported":true}`)
+	ordinary := e.stageDealEvent(t, "deal.stage_changed", `{"to_stage_id":"`+ids.NewV7().String()+`"}`)
 	if _, err := e.relay(t).relayBatch(t.Context()); err != nil {
 		t.Fatal(err)
 	}

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import type { MessageKey } from "../i18n/en";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -42,10 +43,29 @@ export type CaptureProgress = Readonly<{
   fraction: number | null;
   /** The mailboxes being imported, as the reader knows them. */
   sources: readonly string[];
+  /** Why the count may have fallen, when any live run restarted or retried. */
+  course: MessageKey | null;
 }>;
 
 /** How often the connectors read re-asks while an import is live. */
 const POLL_LIVE_MS = 2_500;
+
+/**
+ * The sentence that explains why a live import's count fell, or null when it
+ * has only gone up. A restarted scan reads from the newest message again, so
+ * its counts begin at zero. A retried page is read again, and the emails of the
+ * failed attempt are counted again. The server reports which one happened.
+ * Every surface that draws an import's count reads this one rule.
+ */
+export function runCourseKey(run: BackfillStatus): MessageKey | null {
+  if (!isLive(run)) {
+    return null;
+  }
+  if ((run.window_restarts ?? 0) > 0) {
+    return "backfill.restartedNote";
+  }
+  return (run.retry_attempts ?? 0) > 0 ? "backfill.retryNote" : null;
+}
 
 function isLive(run: BackfillStatus | undefined): run is BackfillStatus {
   return (
@@ -145,6 +165,11 @@ export function liveCapture(
       estimated === null || passedTheFloor
         ? null
         : Math.max(0, Math.min(1, scanned / estimated)),
+    course: live.reduce<MessageKey | null>(
+      (key, { run }) =>
+        key === "backfill.restartedNote" ? key : (runCourseKey(run) ?? key),
+      null,
+    ),
     sources: live.map(
       ({ connection }) => connection.account_label ?? connection.provider,
     ),

@@ -1,17 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge, Button, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Row } from "../../design-system/stack";
 import { formatDate } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
-import { unwrap } from "../../lib/problem";
+import { blankRequired, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   recordProfileFieldVerdict,
@@ -116,6 +117,9 @@ function EnrichedField({
   const readerZone = useViewerZone();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(field.value);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const draftErrorId = useId();
+  const fieldName = t(`contact.enriched.field.${field.field}`);
   // WHAT THE EDITOR OPENED ON, held apart from `field`.
   //
   // `field` refreshes underneath an open editor — a re-capture lands, a
@@ -172,16 +176,21 @@ function EnrichedField({
   // card above keeps its verbs.
   return (
     <Row gap="4" align="start" wrap={false}>
-      <div className="corrections-claim">
+      <div className="corrections-claim" ref={faultsRoot}>
         <Row gap="2" align="baseline">
           {/* Semibold, the heading weight, not the element's own bold: six of
             these labels down one card at 700 outweighed the panel's title. */}
-          <strong>{t(`contact.enriched.field.${field.field}`)}</strong>
+          <strong>{fieldName}</strong>
           {editing ? (
             <TextInput
-              aria-label={t(`contact.enriched.field.${field.field}`)}
+              aria-label={fieldName}
+              aria-invalid={faults.of("value") ? true : undefined}
+              aria-describedby={faults.of("value") ? draftErrorId : undefined}
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                faults.edited("value");
+              }}
             />
           ) : (
             <span>{field.value}</span>
@@ -193,6 +202,9 @@ function EnrichedField({
             <Badge>{t("contact.enriched.confirmed")}</Badge>
           )}
         </Row>
+        {editing && (
+          <ErrorLine id={draftErrorId}>{faults.of("value")}</ErrorLine>
+        )}
 
         {/* The evidence stays visible after a correction, not instead of it:
           what the machine read is the reason the correction was needed. */}
@@ -230,16 +242,21 @@ function EnrichedField({
         <div className="corrections-verbs">
           {editing ? (
             <>
-              {/* Pending is not refusal: the write the reader just started keeps
-                  their focus, while an empty draft is the one thing that really
-                  is refused. Disabling on both would move focus off the control
-                  they pressed, at the moment they are waiting on it. */}
+              {/* An empty draft says so at the box on press; pending keeps the
+                  focus on the control the reader is waiting on. */}
               <Button
                 pending={record.isPending}
-                disabled={draft.trim() === ""}
-                onClick={() =>
-                  record.mutate({ verdict: "corrected", value: draft.trim() })
-                }
+                onClick={() => {
+                  const blank = blankRequired(locale, {
+                    value: [fieldName, draft],
+                  });
+                  if (!faults.show(blank)) {
+                    record.mutate({
+                      verdict: "corrected",
+                      value: draft.trim(),
+                    });
+                  }
+                }}
               >
                 {t("contact.enriched.save")}
               </Button>
@@ -265,6 +282,7 @@ function EnrichedField({
                 onClick={() => {
                   setDraft(field.value);
                   setShown(shownValueOf(field));
+                  faults.show(new Map());
                   setEditing(true);
                 }}
               >

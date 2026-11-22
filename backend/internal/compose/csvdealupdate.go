@@ -168,7 +168,7 @@ func (w *csvWriters) writeDealUpdate(ctx context.Context, id ids.UUID, plan deal
 			plan.patch.Deal.IfVersion = w.reviewedVersion(id)
 		}
 		if plan.changed > 0 {
-			if _, err := w.deals.UpdateDealTx(ctx, tx, deal, plan.patch.Deal, w.cols.deals); err != nil {
+			if err := w.deals.ApplyDealUpdateTx(ctx, tx, deal, plan.patch.Deal, w.cols.deals); err != nil {
 				return err
 			}
 		}

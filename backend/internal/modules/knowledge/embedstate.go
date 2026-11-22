@@ -12,6 +12,9 @@ import (
 // ingestRunning is the status an attempt that has begun leaves on its document.
 const ingestRunning = "running"
 
+// ingestFailed is the status a terminally failed ingest leaves on its document.
+const ingestFailed = "failed"
+
 // ingestInFlight is a document whose ingest has not settled, over alias d.
 const ingestInFlight = `d.ingest_status IN ('queued', 'running')`
 

@@ -51,12 +51,12 @@ func (s *Store) ArchiveContact(
 	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
 	var out crmcontracts.Contact
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		if err := archiveContactInTx(ctx, tx, id, ifVersion, options); err != nil {
 			return err
 		}
@@ -110,6 +110,8 @@ func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVers
 // which costs the lead demotion nothing: it already holds FOR UPDATE on this
 // contact (demote.go), and LockRow re-takes an owned lock idempotently rather
 // than queueing behind itself.
+//
+//gate:parent-version-door
 func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now time.Time, ifVersion *int64) error {
 	p := storekit.NewPatch()
 	p.Set("archived_at", nil, now)

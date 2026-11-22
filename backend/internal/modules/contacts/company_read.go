@@ -38,12 +38,12 @@ func (s *Store) GetCompany(ctx context.Context, id ids.CompanyID, archived store
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	active, err := s.activeColumns(ctx, "company")
-	if err != nil {
-		return crmcontracts.Company{}, err
-	}
 	var out crmcontracts.Company
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		active, err := s.activeColumnsIn(ctx, tx, "company")
+		if err != nil {
+			return err
+		}
 		out, err = getCompanyInTx(ctx, tx, id, archived, active)
 		return err
 	})

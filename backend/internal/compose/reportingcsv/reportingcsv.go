@@ -39,6 +39,7 @@ var Labels = map[string]langcopy.Phrase{
 	"range_high":         {En: "High end of 8 in 10 outcomes", De: "Obere Grenze von 8 aus 10 Ergebnissen", Vi: "Mức cao của 8 trên 10 kết quả"},
 	"opening":            {En: "Opening", De: "Anfang", Vi: "Đầu kỳ"},
 	"closing":            {En: "Closing", De: "Ende", Vi: "Cuối kỳ"},
+	"assessment":         {En: "Assessment", De: "Einschätzung", Vi: "Đánh giá"},
 }
 
 // Major writes an amount of minor units as major units, with the digits the

@@ -102,13 +102,13 @@ func (s *Store) ChangeStatus(ctx context.Context, id ids.ContractID, to string, 
 	if err := auth.Require(ctx, contractObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Contract{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Contract{}, err
-	}
 
 	var out crmcontracts.Contract
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err
@@ -268,16 +268,16 @@ func (s *Store) freezeRateForActivation(ctx context.Context, tx pgx.Tx,
 // because that is what a notice period is — the status moves later, when the
 // date arrives and a human or a proposal says so.
 func (s *Store) Cancel(ctx context.Context, id ids.ContractID, noticeOn, effectiveOn time.Time, ifVersion *int64) (crmcontracts.Contract, error) {
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Contract{}, err
-	}
 	if err := auth.Require(ctx, contractObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 
 	var out crmcontracts.Contract
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err
@@ -317,13 +317,13 @@ func (s *Store) Renew(ctx context.Context, id ids.ContractID, successor CreateCo
 	if err != nil {
 		return crmcontracts.Contract{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Contract{}, err
-	}
 
 	var out crmcontracts.Contract
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err

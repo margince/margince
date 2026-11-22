@@ -32,27 +32,28 @@ import (
 const SeatCopyReadable = "copies.copy_readable"
 
 // SeatCopyColumns are the trailing columns ScanSeatCopyRow reads after the projection.
-const SeatCopyColumns = ", copies.copy_count, copies.copy_ids"
+const SeatCopyColumns = ", copies.copy_count, copies.copy_ids, copies." + connector.CopyFoldFullColumn
 
 // SeatCopyFrom renders a `FROM` clause that keeps one `activity a` row per
-// message.
-//
-// candidates is the reader's `WHERE` over `activity a`, and contentArm its
-// audience test there. The window runs over every candidate before the caller's
-// `ORDER BY` and `LIMIT`, so a page never holds two copies. A keyset clause goes
-// in the caller's outer `WHERE`, applied to the row shown.
-func SeatCopyFrom(ctx context.Context, candidates, contentArm string, arg func(any) int) string {
-	return connector.MailCopyGroupFrom(ctx, "activity", "a", candidates, contentArm, arg)
+// message, over the candidates the bound keeps. A keyset clause goes in the
+// caller's outer `WHERE`, applied to the row shown.
+func SeatCopyFrom(ctx context.Context, candidates, contentArm string, bound connector.FoldBound, arg func(any) int) string {
+	return connector.MailCopyGroupBoundedFrom(ctx, "activity", "a", candidates, contentArm, bound, arg)
 }
+
+// FoldedInFull reports whether the fold behind these rows saw every candidate.
+func FoldedInFull(copies []SeatCopies) bool { return len(copies) > 0 && copies[0].foldFull }
 
 // SeatCopies is what ScanSeatCopyRow read for one shown row: how many readable
 // rows it stands for, and their ids.
 type SeatCopies struct {
 	count int64
 	ids   []ids.UUID
+	// foldFull says the fold saw every candidate the read could reach.
+	foldFull bool
 }
 
-func (c *SeatCopies) dest() []any { return []any{&c.count, &c.ids} }
+func (c *SeatCopies) dest() []any { return []any{&c.count, &c.ids, &c.foldFull} }
 
 // stamp sets copies and the other copies' ids on the record only when it
 // stands for more than itself, so every copy stays reachable.

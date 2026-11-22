@@ -39,11 +39,13 @@ type caseMember struct {
 	Company   *string
 	OwnerID   *ids.UUID
 	OwnerName *string
-	// OwnerLive is a live human seat owning the member; OwnerSeat is its seat.
+	// OwnerLive is an active or invited human seat owning the member; OwnerSeat is its seat.
 	OwnerLive bool
 	OwnerSeat string
-	Version   int64
-	CreatedAt time.Time
+	// OwnerStatus is the seat's status, active or invited for a live owner.
+	OwnerStatus string
+	Version     int64
+	CreatedAt   time.Time
 }
 
 type caseEdge struct {
@@ -83,7 +85,7 @@ func (c contactCase) revision(policy bool) string {
 		if m.OwnerID != nil {
 			owner = m.OwnerID.String()
 		}
-		fmt.Fprintf(&b, "m:%s:%d:%s:%t:%s\n", m.ID, m.Version, owner, m.OwnerLive, m.OwnerSeat)
+		fmt.Fprintf(&b, "m:%s:%d:%s:%t:%s:%s\n", m.ID, m.Version, owner, m.OwnerLive, m.OwnerSeat, m.OwnerStatus)
 	}
 	for _, e := range c.Edges {
 		b.WriteString("p:" + e.ID.String() + ":" + e.Disposition + "\n")
@@ -158,10 +160,10 @@ func readComponentCase(ctx context.Context, tx pgx.Tx, k contactComponent, addre
 	return c, nil
 }
 
-// liveCaseOwnerSQL is whether the joined owner seat u still counts as an owner
-// of a case. It asks what identity asks before carrying a former owner's
-// access, so the owners a case names are the ones a merge can carry.
-var liveCaseOwnerSQL = "coalesce(u.removed_at IS NULL AND " + workforce.LiveHumanSQL("u") + ", false)"
+// liveCaseOwnerSQL is whether the joined owner seat u owns for a case: a human
+// who is active, or invited and not yet signed in. A new record may name the
+// same set, so the case and the pair merge keep the same colleagues.
+var liveCaseOwnerSQL = "coalesce(u.removed_at IS NULL AND " + workforce.AskableMemberSQL("u") + ", false)"
 
 // readCaseMembers reads what a reviewer compares, in id order. The employer is
 // the list's own, so a company hidden from the reader stays hidden here.
@@ -183,7 +185,7 @@ func readCaseMembers(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]ca
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT contact.id, contact.full_name, %s, contact.title, %s,
 		       contact.owner_id, u.display_name,
-		       %s, coalesce(u.seat_type, ''),
+		       %s, coalesce(u.seat_type, ''), coalesce(u.status, ''),
 		       contact.version, contact.created_at
 		  FROM contact LEFT JOIN app_user u ON u.id = contact.owner_id
 		 WHERE contact.id = ANY($%d) AND contact.archived_at IS NULL
@@ -194,7 +196,7 @@ func readCaseMembers(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]ca
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (caseMember, error) {
 		var m caseMember
 		err := row.Scan(&m.ID, &m.Name, &m.Email, &m.Title, &m.Company, &m.OwnerID, &m.OwnerName,
-			&m.OwnerLive, &m.OwnerSeat, &m.Version, &m.CreatedAt)
+			&m.OwnerLive, &m.OwnerSeat, &m.OwnerStatus, &m.Version, &m.CreatedAt)
 		return m, err
 	})
 }

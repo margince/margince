@@ -248,6 +248,9 @@ export const ACTIVITY_LINE: Readonly<
   rewrite: notDisplayed(
     "the rewritten words replace the rep's own in the field they pressed the button under; a rail line would announce text already on screen",
   ),
+  chat_task_reading: notDisplayed(
+    "the reading runs while the rep files the chat, and its change shows in Done for you with Undo; a rail line would announce it twice",
+  ),
   nl_search: notDisplayed(
     "a plain-words filter answers in the builder the reader pressed it from, under their own eyes; a rail line would announce a result already on screen",
   ),

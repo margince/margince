@@ -265,9 +265,9 @@ On **Leads**, pick the colleague under **Choose owner** and press **Assign**.
 Also called: bulk reassign, hand over accounts, transfer deals, a colleague left, reassign all their contacts.
 
 ### What can I do to several records at once?
-The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage** (open stages only). On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**).
+The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage** (open stages only). On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**). **Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do. Your own company is never archived.
 
-**Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do; your own company is never archived. A change of more than 10 records shows a "Large change" warning. You cannot win or lose many deals at once. After a change, the message that says how many changed has an **Undo** button. You cannot change custom fields on many records at once.
+A change of more than 10 records shows a "Large change" warning. On **Leads**, **Assign** and **Disqualify** ask first and name how many leads change, with the same warning above 10. You cannot win or lose many deals at once or change custom fields on many records at once. After a change, the message that says how many changed has an **Undo** button. **Move to stage** and **Disqualify** have no bulk **Undo**. **Move to stage** names the stage and says how many deals move and how many are already there before it moves anything.
 
 Also called: bulk actions, mass archive, bulk disqualify.
 
@@ -396,5 +396,5 @@ To export records from Margince, build a filter on **Filters and views**. Press 
 1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
 2. Press **Add condition** and fill at least one condition. **Matching records** then shows, with **Export CSV** and **Export JSON** beside its count.
 3. Press **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view shows them in the same place.
-Only records you can see are exported, and each export goes into the audit log. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** beside its name.
+Only records you can see are exported, each export is logged, and Data import takes the CSV back. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** beside its name.
 Also called: download a list, export to spreadsheet, extract contacts.

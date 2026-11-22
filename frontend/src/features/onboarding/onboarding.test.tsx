@@ -687,13 +687,12 @@ describe("the mandatory company minimum", () => {
     await skipManual();
     await skipManual();
     await skipManual();
-    expect(
-      (
-        screen.getByRole("button", {
-          name: /Next question/,
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    const answer = screen.getByRole("textbox");
+    await userEvent.click(
+      screen.getByRole("button", { name: /Next question/ }),
+    );
+    expect(screen.getByText("This field is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(answer);
     expect(requestTo(calls, "/company", "PUT")).toBeUndefined();
   });
 

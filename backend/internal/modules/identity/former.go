@@ -135,6 +135,9 @@ func (s *Service) provisionFormerMember(ctx context.Context, actor Identity, in 
 		if insErr != nil {
 			return insErr
 		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
 			roleID, newUserID); err != nil {

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -161,6 +162,9 @@ func (s memberWork) Retire(ctx context.Context, tx pgx.Tx, source ids.UUID, targ
 		return err
 	}
 	if err := collections.ArchiveMemberSavedViewsTx(ctx, tx, ids.From[ids.UserKind](source)); err != nil {
+		return err
+	}
+	if err := activities.RetireTeamMemberTx(ctx, tx, ids.From[ids.UserKind](source)); err != nil {
 		return err
 	}
 

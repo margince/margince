@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/importkeys"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -117,6 +118,26 @@ func (w *csvWriters) bind(ctx context.Context, row migration.Row, id ids.UUID) e
 	return nil
 }
 
+// claimLanded claims the keys a bound row's record holds. A key the row would
+// still have to move onto the record was refused. It claims nothing, as the
+// first pass claims nothing for a skipped row.
+func (w *csvWriters) claimLanded(ctx context.Context, row migration.Row, id ids.UUID) error {
+	if w.object == migration.ObjectDeal || w.object == migration.ObjectActivity {
+		return nil
+	}
+	typed, _, _ := w.landingCells(row)
+	current, err := w.read(ctx, id)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	changed, _, err := w.landingChanges(ctx, row, current, typed)
+	w.links.claims.ClaimUnmoved(w.object, w.keysOf(row, typed), importkeys.MovedKinds(changed, movedKeyFields))
+	return err
+}
+
 // claimLandedPrefix rebuilds the run's key ledger for a commit slice that
 // starts at checkpoint. Each slice builds fresh writers. The rows before the
 // cursor reach the ledger through the identity map. A row bound there landed,
@@ -138,8 +159,9 @@ func (b *bundleWriters) claimLandedPrefix(ctx context.Context, src migration.Sou
 			}
 			for _, row := range rows[:min(len(rows), checkpoint-seen)] {
 				if binding, bound := w.bindings[row.ExternalID]; bound && binding.RunStatus != migration.StatusUndone {
-					typed, _, _ := w.landingCells(row)
-					w.claimRow(row, typed)
+					if err := w.claimLanded(ctx, row, binding.NativeID); err != nil {
+						return err
+					}
 				}
 			}
 			seen += min(len(rows), checkpoint-seen)

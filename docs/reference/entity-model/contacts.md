@@ -588,7 +588,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-39 columns · primary key `(id)` · referenced by 50 foreign keys
+46 columns · primary key `(id)` · referenced by 50 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -620,6 +620,13 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
 | `source_id` | `text` |  | At most 128 characters. |
+| `strength_folded` | `boolean`, default `true` | yes |  |
+| `strength_last_engaged_at` | `timestamp with time zone` |  |  |
+| `strength_last_inbound_at` | `timestamp with time zone` |  |  |
+| `strength_last_inbound_day` | `boolean` |  |  |
+| `strength_last_interaction_at` | `timestamp with time zone` |  |  |
+| `strength_last_outbound_at` | `timestamp with time zone` |  |  |
+| `strength_last_outbound_day` | `boolean` |  |  |
 | `title` | `text` |  | Denormalized current title; authoritative title is on the employment relationship. |
 | `visibility` | `text`, default `'workspace'::text` | yes | Who this record is for. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -676,6 +683,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_name_trigram_candidates`: `btree (hash_array_extended(show_trgm(f_fold_apostrophes(lower(full_name))), (0)::bigint), id) WHERE (archived_at IS NULL)`
 - `idx_contact_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_contact_search`: `gin (search_tsv)`
+- `idx_contact_strength_unfolded`: `btree (id) WHERE ((NOT strength_folded) AND (archived_at IS NULL))`
 - `idx_contact_unkeyed_address_hashes`: `btree (id) WHERE ((anonymized_address_hashes IS NOT NULL) AND (anonymized_address_key_id IS NULL))`
 - `idx_contact_updated_keyset`: `btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `uq_contact_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
@@ -683,6 +691,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `contact_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `contact_strength_dates_archive`: `BEFORE UPDATE OF archived_at FOR EACH ROW WHEN ((old.archived_at IS DISTINCT FROM new.archived_at)) EXECUTE FUNCTION trg_contact_strength_dates_archive()`
 - `home_read_fence_contact_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
@@ -856,7 +865,12 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `bind_requests_on_address_move`: `BEFORE UPDATE OF contact_id FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION bind_requests_on_address_move()`
-- `contact_email_clears_reply_settled`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION contact_email_clears_reply_settled()`
+- `contact_email_clears_reply_settled`: `AFTER UPDATE OF contact_id, email, archived_at FOR EACH ROW EXECUTE FUNCTION contact_email_clears_reply_settled()`
+- `contact_email_strength_dates_added`: `AFTER INSERT REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_contact_email_strength_dates_added()`
+- `contact_email_strength_dates_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_contact_email_strength_dates_moved()`
+- `contact_email_strength_dates_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_contact_email_strength_dates_removed()`
+- `deleted_contact_email_clears_reply_settled`: `AFTER DELETE REFERENCING OLD TABLE AS written_contact_email FOR EACH STATEMENT EXECUTE FUNCTION written_contact_email_clears_reply_settled()`
+- `inserted_contact_email_clears_reply_settled`: `AFTER INSERT REFERENCING NEW TABLE AS written_contact_email FOR EACH STATEMENT EXECUTE FUNCTION written_contact_email_clears_reply_settled()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_contact_email()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "source": 20000, "email_type": 20000, "captured_by": 20000, "email_domain_folded": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"email":20000,"email_domain_folded":20000,"email_type":20000,"source":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "email_type": 20000, "captured_by": 20000, "email_domain_folded": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"email":20000,"email_domain_folded":20000,"email_type":20000,"source":20000}')`

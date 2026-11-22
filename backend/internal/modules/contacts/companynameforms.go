@@ -240,5 +240,26 @@ func matchingFormOf(s string) (string, *marketForms) {
 			return strings.Join(stripped, " "), market
 		}
 	}
-	return strings.Join(fields, " "), nil
+	return strings.Join(stripTrailingForms(fields), " "), nil
+}
+
+// stripTrailingForms removes the trailing legal forms the key strip cannot
+// reach, together with the legalSuffixes words they stack on, until none is
+// left. "Example GmbH & Co. KGaA" reduces to "example". Never down to nothing.
+func stripTrailingForms(fields []string) []string {
+	for {
+		before := len(fields)
+		// Runs first, so "Sdn Bhd" goes whole before the word "bhd" leaves "sdn".
+		fields = stripTrailingRuns(fields, trailingFormRuns)
+		for len(fields) > 1 {
+			last := fields[len(fields)-1]
+			if !legalSuffixes[last] && !trailingFormWords[last] {
+				break
+			}
+			fields = fields[:len(fields)-1]
+		}
+		if len(fields) == before {
+			return fields
+		}
+	}
 }

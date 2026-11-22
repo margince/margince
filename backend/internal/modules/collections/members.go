@@ -202,43 +202,21 @@ func (s *Store) listStaticMembers(ctx context.Context, tx pgx.Tx, list listRow, 
 	return out, page, err
 }
 
-// CountMembers answers how many members of the list this reader may see:
-// never the list's whole size, which would tell them how many records they
-// cannot see.
+// CountMembers answers how many members of the list this reader may see, as
+// a list read reports it. A Live List whose filter no longer compiles has none.
 func (s *Store) CountMembers(ctx context.Context, listID ids.ListID) (int, error) {
 	list, err := s.GetList(ctx, listID)
 	if err != nil {
 		return 0, err
 	}
-	if list.ListType == listTypeDynamic {
-		engine, pred, err := s.liveFilter(ctx, list)
-		if err != nil {
-			return 0, err
-		}
-		var n int
-		err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-			n, err = engine.CountMatching(ctx, tx, pred)
-			return err
-		})
-		return n, err
-	}
-	if err := auth.Require(ctx, list.EntityType, principal.ActionRead); err != nil {
+	summaries, err := s.summarize(ctx, []listRow{list})
+	if err != nil {
 		return 0, err
 	}
-	var n int
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		visible, err := visibleMemberClause(ctx, list.EntityType, arg)
-		if err != nil {
-			return err
-		}
-		query := fmt.Sprintf(
-			"SELECT count(*) FROM list_member lm WHERE lm.list_id = $%d AND %s", arg(listID), visible,
-		)
-		return tx.QueryRow(ctx, query, args...).Scan(&n)
-	})
-	return n, err
+	if summaries[0].VisibleCount == nil {
+		return 0, fmt.Errorf("the stored filter of list %s no longer compiles: %w", listID, errNotAFilterTree)
+	}
+	return *summaries[0].VisibleCount, nil
 }
 
 func rowScanMember(row pgx.Row, m *memberRow) error {

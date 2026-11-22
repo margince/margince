@@ -47,7 +47,7 @@ func TestSweepWorkspaceEmbeddingDriftHealsIdentityMatchedGaps(t *testing.T) {
 	lostID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Lost Event Contact', 'manual', 'human:x')`)
 	baselineCalls := len(fake.Calls())
 
-	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder)
+	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder, search.DriftFull)
 	if err != nil {
 		t.Fatalf("SweepWorkspaceEmbeddingDrift: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestSweepWorkspaceEmbeddingDriftHealsIdentityMatchedGaps(t *testing.T) {
 
 	// A second pass over a healed store is a no-op — the sweep is safe to
 	// tick forever.
-	healed, err = e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder)
+	healed, err = e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder, search.DriftFull)
 	if err != nil {
 		t.Fatalf("second SweepWorkspaceEmbeddingDrift: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestSweepWorkspaceEmbeddingDriftRefusesTheBindingChangeCase(t *testing.T) {
 		t.Fatalf("test setup: EntitiesPending = %d, want 1", pending)
 	}
 
-	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder)
+	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder, search.DriftFull)
 	if err != nil {
 		t.Fatalf("SweepWorkspaceEmbeddingDrift: %v", err)
 	}
@@ -156,7 +156,7 @@ func TestSweepWorkspaceEmbeddingDriftWaitsOutARunningReindex(t *testing.T) {
 		t.Fatalf("test setup: EntitiesPending = %d, want 1", pending)
 	}
 
-	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder)
+	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder, search.DriftFull)
 	if err != nil {
 		t.Fatalf("SweepWorkspaceEmbeddingDrift: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestSweepWorkspaceEmbeddingDriftNeverEnumeratesHeldMail(t *testing.T) {
 	}
 
 	before := len(fake.Calls())
-	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder)
+	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder, search.DriftFull)
 	if err != nil {
 		t.Fatalf("SweepWorkspaceEmbeddingDrift: %v", err)
 	}
@@ -221,10 +221,58 @@ func TestSweepWorkspaceEmbeddingDriftNeverEnumeratesHeldMail(t *testing.T) {
 		t.Fatalf("EntitiesPending after the sweep = %d (err %v), want 0", pending, err)
 	}
 	before = len(fake.Calls())
-	if healed, err = e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder); err != nil || healed != 0 {
+	if healed, err = e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder, search.DriftFull); err != nil || healed != 0 {
 		t.Fatalf("second sweep healed = %d (err %v), want 0", healed, err)
 	}
 	if calls := len(fake.Calls()) - before; calls != 0 {
 		t.Fatalf("second sweep made %d embed calls, want 0", calls)
+	}
+}
+
+// TestTheRecentDriftPassHealsOnlyRowsInsideItsWindow holds the split. The
+// recent pass heals a row written inside the window and leaves an older one.
+// The full pass heals the older row too.
+func TestTheRecentDriftPassHealsOnlyRowsInsideItsWindow(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+	fake := ai.NewFakeClient()
+	embedder := fakeEmbedderNamed(t, fake, "model-current")
+	identity, _ := embedder.EmbedIdentity()
+	if err := e.Store.SeedBinding(ctx, identity); err != nil {
+		t.Fatalf("SeedBinding: %v", err)
+	}
+
+	newContact := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'New Lost Contact', 'manual', 'human:x')`)
+	oldContact := e.SeedID(t, `
+		INSERT INTO contact (id, full_name, source, captured_by, created_at, updated_at)
+		VALUES ($1, 'Old Lost Contact', 'manual', 'human:x', now() - interval '3 hours', now() - interval '3 hours')`)
+	newNote := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, source, captured_by, audience, audience_reason)
+		VALUES ($1, 'note', 'New note', 'a lost new note', 'manual', 'human:x', 'workspace', 'not_captured')`)
+	oldNote := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, source, captured_by, audience, audience_reason, created_at)
+		VALUES ($1, 'note', 'Old note', 'a lost old note', 'manual', 'human:x', 'workspace', 'not_captured',
+		        now() - interval '3 hours')`)
+
+	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder, search.DriftRecent)
+	if err != nil {
+		t.Fatalf("recent SweepWorkspaceEmbeddingDrift: %v", err)
+	}
+	if healed != 2 {
+		t.Fatalf("the recent pass healed %d rows, want 2 (the contact and the note inside the window)", healed)
+	}
+	if e.storedEmbeddingModel(t, newContact) != identity || e.activityEmbeddingModel(t, newNote) != identity {
+		t.Fatal("the recent pass left a row written inside its window unembedded")
+	}
+	if e.storedEmbeddingModel(t, oldContact) != "" || e.activityEmbeddingModel(t, oldNote) != "" {
+		t.Fatal("the recent pass read a row written before its window, so it still reads the whole table")
+	}
+
+	healed, err = e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder, search.DriftFull)
+	if err != nil {
+		t.Fatalf("full SweepWorkspaceEmbeddingDrift: %v", err)
+	}
+	if healed != 2 || e.storedEmbeddingModel(t, oldContact) != identity || e.activityEmbeddingModel(t, oldNote) != identity {
+		t.Fatalf("the full pass healed %d rows, want the 2 written before the window", healed)
 	}
 }

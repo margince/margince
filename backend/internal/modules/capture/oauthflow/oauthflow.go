@@ -17,10 +17,12 @@ package oauthflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -69,6 +71,10 @@ type Config struct {
 	// HTTPClient overrides the bounded default (tests inject none and set
 	// TokenURL to an httptest server instead).
 	HTTPClient *http.Client
+
+	// Tokens keeps refreshed access tokens for their lifetime. One cache serves
+	// every client built for a process, since a client may be built per call.
+	Tokens *TokenCache
 }
 
 // Client runs the handshake for one configured provider.
@@ -276,7 +282,63 @@ func (c *Client) AccessToken(ctx context.Context, refreshToken string) (string, 
 // replacement ages out on a schedule nobody set. A caller that persists it
 // keeps the connection alive indefinitely; one that does not is exactly where
 // it was.
+//
+// With a cache, a token minted for this grant is reused until shortly before it
+// expires, and a hit reports no rotation. A rotated answer is kept under the
+// replacement, the token the connection presents next once it stores it.
 func (c *Client) Refresh(ctx context.Context, refreshToken string, granted []string) (TokenRefresh, error) {
+	cache := c.cfg.Tokens
+	if cache == nil {
+		return c.redeem(ctx, refreshToken, granted)
+	}
+	key := c.grantKey(refreshToken, granted)
+	if renewRequested(ctx) {
+		cache.Drop(key)
+	} else if cached, ok := cache.lookup(key); ok {
+		return TokenRefresh{AccessToken: cached.AccessToken, ExpiresIn: cached.ExpiresIn}, nil
+	}
+	refreshed, err := c.redeem(ctx, refreshToken, granted)
+	if err != nil {
+		return TokenRefresh{}, err
+	}
+	next := refreshToken
+	if refreshed.Rotated != "" {
+		next = refreshed.Rotated
+	}
+	cache.keep(c.grantKey(next, granted), MintedToken{AccessToken: refreshed.AccessToken, ExpiresIn: refreshed.ExpiresIn})
+	return refreshed, nil
+}
+
+// grantKey names one grant's token. The scopes are part of it because a refresh
+// asking another scope list may be answered with a token of another reach.
+func (c *Client) grantKey(refreshToken string, granted []string) string {
+	scopes := slices.Clone(granted)
+	slices.Sort(scopes)
+	return CacheKey(c.cfg.Provider, c.cfg.ClientID, strings.Join(scopes, " "), refreshToken)
+}
+
+type renewKey struct{}
+
+// Renewing marks ctx so Refresh redeems at the provider even where it keeps a
+// token for the grant, and replaces that token.
+func Renewing(ctx context.Context) context.Context {
+	return context.WithValue(ctx, renewKey{}, true)
+}
+
+func renewRequested(ctx context.Context) bool {
+	renew, ok := ctx.Value(renewKey{}).(bool)
+	return ok && renew
+}
+
+// Unauthorized reports a provider call refused with 401: the access token, not
+// the grant, was refused, so a token redeemed again may pass.
+func Unauthorized(err error) bool {
+	var refused *connector.ProviderError
+	return errors.As(err, &refused) && refused.Status == http.StatusUnauthorized && refused.Op != tokenOp
+}
+
+// redeem posts one refresh grant to the token endpoint.
+func (c *Client) redeem(ctx context.Context, refreshToken string, granted []string) (TokenRefresh, error) {
 	form := url.Values{
 		paramGrantType:    {"refresh_token"},
 		"refresh_token":   {refreshToken},

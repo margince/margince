@@ -5,13 +5,14 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { RecordListsActions } from "../../components/addtoshortlist";
-import { ADDRESS_FIELDS, mapCompanyUpdate } from "../../components/companyform";
+import { mapCompanyUpdate } from "../../components/companyform";
 import {
   formatSizeBand,
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { type RailEdit, RailField } from "../../components/railfield";
 import { useSectionEdit } from "../../components/sectionedit";
 import { Badge } from "../../design-system/atoms";
@@ -26,6 +27,7 @@ import type { RecordRename } from "../../design-system/recordview";
 import { postalLines } from "../../format/address";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { ADDRESS_KEYS } from "../../lib/addresscolumns";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
@@ -131,7 +133,14 @@ function RailBody({
     <>
       <RecordDetails
         sections={sections}
-        footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
+        footnote={
+          refusal && (
+            <>
+              <span id={refusal.id}>{refusal.text}</span>
+              <EditAccessRequest kind="company" record={company} />
+            </>
+          )
+        }
       />
       {about.element}
       {address.element}
@@ -263,7 +272,6 @@ export function useRowBuilders(company: Company, edit: Edit) {
 }
 
 const ABOUT_KEYS = ["domains", "industry", "size_band", "lifecycle"];
-const ADDRESS_KEYS = ADDRESS_FIELDS.map((field) => field.key);
 
 function useAboutSection(
   company: Company,

@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // vcardIngestMaxCards bounds what ONE MESSAGE may import.
@@ -251,19 +252,13 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 		}
 		return nil, fmt.Errorf("compose: resolving the mailbox behind a captured card: %w", err)
 	}
-	rbac, seat, err := w.users.EffectiveAuthority(ctx, args.Workspace, grantedBy)
+	actor, err := authz.MemberPrincipal(ctx, w.users, args.Workspace, grantedBy)
 	if err != nil {
 		return nil, fmt.Errorf("compose: the mailbox's granting human no longer resolves: %w", err)
 	}
-	actor := principal.Principal{
-		Type:        principal.PrincipalConnector,
-		ID:          "connector:" + provider,
-		UserID:      grantedBy,
-		OnBehalfOf:  grantedBy,
-		TeamIDs:     rbac.TeamIDs,
-		SeatType:    seat,
-		Permissions: rbac.Permissions,
-	}
+	actor.Type = principal.PrincipalConnector
+	actor.ID = "connector:" + provider
+	actor.OnBehalfOf = grantedBy
 	actorCtx := principal.WithActor(ctx, actor)
 	return principal.WithCorrelationID(actorCtx, ids.NewV7()), nil
 }
