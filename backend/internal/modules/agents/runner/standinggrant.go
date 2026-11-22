@@ -280,8 +280,7 @@ func RecordDecisionTx(
 		ON CONFLICT (user_id, agent_spec) DO UPDATE
 		   SET state = EXCLUDED.state,
 		       passport_id = EXCLUDED.passport_id,
-		       decided_at = now(),
-		       updated_at = now()
+		       decided_at = now()
 		RETURNING id, xmax = 0`, userID, spec, state, passportID).Scan(&id, &inserted); err != nil {
 		return fmt.Errorf("record the rep's standing grant: %w", err)
 	}

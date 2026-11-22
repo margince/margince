@@ -73,8 +73,7 @@ func (r *Registry) ConnectShared(ctx context.Context, in SharedConnect) (ids.UUI
 			return ids.Nil, err
 		}
 	}
-	scopes, err := grantedScopes(c, actor, in.Provider)
-	if err != nil {
+	if err := requireDeclaredScopes(c, actor, in.Provider); err != nil {
 		return ids.Nil, err
 	}
 	if in.Auth, err = probeShared(ctx, c, in.Auth); err != nil {
@@ -88,7 +87,7 @@ func (r *Registry) ConnectShared(ctx context.Context, in SharedConnect) (ids.UUI
 	if err != nil {
 		return ids.Nil, fmt.Errorf("capture: sealing the shared mailbox credential: %w", err)
 	}
-	row := sharedUpsert{SharedConnect: in, address: bareAddress(in.Address), by: actor.UserID, scopes: scopes, ref: ref}
+	row := sharedUpsert{SharedConnect: in, address: bareAddress(in.Address), by: actor.UserID, ref: ref}
 	var id ids.UUID
 	var priorRef *string
 	if err := r.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -125,7 +124,6 @@ type sharedUpsert struct {
 	SharedConnect
 	address string
 	by      ids.UUID
-	scopes  []string
 	ref     keyvault.Ref
 }
 
@@ -172,15 +170,15 @@ func upsertSharedConnectionTx(ctx context.Context, tx pgx.Tx, in sharedUpsert) (
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO capture_connection (provider, user_id, connected_by, reader_team_id, account_label, mail_posture,
-		                                scopes, credential_ref, status, share_acknowledged_at, backup_owner_id)
-		VALUES (@provider, NULL, @by, @readers, @address, @visibility, @scopes, @ref, 'connected', now(), @backup)
+		                                credential_ref, status, share_acknowledged_at, backup_owner_id)
+		VALUES (@provider, NULL, @by, @readers, @address, @visibility, @ref, 'connected', now(), @backup)
 		ON CONFLICT (provider, lower(account_label)) WHERE user_id IS NULL
 		DO UPDATE SET credential_ref = EXCLUDED.credential_ref, auth = NULL, status = 'connected', archived_at = NULL,
-		              connected_at = now(), connected_by = EXCLUDED.connected_by, scopes = EXCLUDED.scopes,
+		              connected_at = now(), connected_by = EXCLUDED.connected_by,
 		              backup_owner_id = EXCLUDED.backup_owner_id, generation = capture_connection.generation + 1
 		RETURNING id`, pgx.StrictNamedArgs{
 		sqlArgProvider: in.Provider, "by": in.by, "readers": in.ReaderTeam, "address": in.address,
-		"visibility": posture, "scopes": in.scopes, "ref": string(in.ref), "backup": backup,
+		"visibility": posture, "ref": string(in.ref), "backup": backup,
 	}).Scan(&id); err != nil {
 		return ids.Nil, nil, err
 	}

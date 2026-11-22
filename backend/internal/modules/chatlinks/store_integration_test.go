@@ -326,7 +326,7 @@ func TestAReplayedEventAddsNothingAndASilentLinkRecordsNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	ev := Event{
-		EventID: ids.NewV7(), EventType: "deal.stage_changed", EntityType: "deal", EntityID: e.deal,
+		EventID: ids.NewV7(), EventType: "deal.stage_changed",
 		Tier: TierMilestone, Detail: map[string]any{"to_stage_name": "Won"}, Deals: []ids.UUID{e.deal},
 	}
 	for range 2 {
@@ -360,8 +360,8 @@ func TestANarrowedActivityIsWithdrawnAndItsPostRewritten(t *testing.T) {
 	}
 	activity := ids.NewV7()
 	for _, ev := range []Event{
-		{EventID: ids.NewV7(), EventType: "activity.captured", EntityType: "activity", EntityID: activity, ActivityID: &activity, Tier: TierImportant, Deals: []ids.UUID{e.deal}},
-		{EventID: ids.NewV7(), EventType: "offer.sent", EntityType: "offer", EntityID: ids.NewV7(), Tier: TierMilestone, Deals: []ids.UUID{e.deal}},
+		{EventID: ids.NewV7(), EventType: "activity.captured", ActivityID: &activity, Tier: TierImportant, Deals: []ids.UUID{e.deal}},
+		{EventID: ids.NewV7(), EventType: "offer.sent", Tier: TierMilestone, Deals: []ids.UUID{e.deal}},
 	} {
 		if err := e.store.RecordEvent(e.system(), ev); err != nil {
 			t.Fatal(err)
@@ -459,8 +459,8 @@ func TestAWithdrawDuringAPostLeavesTheFlushMoreToDo(t *testing.T) {
 	}
 	activity := ids.NewV7()
 	if err := e.store.RecordEvent(e.system(), Event{
-		EventID: ids.NewV7(), EventType: "activity.captured", EntityType: "activity",
-		EntityID: activity, ActivityID: &activity, Tier: TierImportant, Deals: []ids.UUID{e.deal},
+		EventID: ids.NewV7(), EventType: "activity.captured",
+		ActivityID: &activity, Tier: TierImportant, Deals: []ids.UUID{e.deal},
 	}); err != nil {
 		t.Fatal(err)
 	}

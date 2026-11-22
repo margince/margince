@@ -138,8 +138,8 @@ func (e *estEnv) seedConnection(t *testing.T, user ids.UserID, provider string) 
 	t.Helper()
 	connID := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO capture_connection (id, provider, user_id, scopes, status)
-		VALUES ($1, $2, $3, '{}', 'connected')`,
+		INSERT INTO capture_connection (id, provider, user_id, status)
+		VALUES ($1, $2, $3, 'connected')`,
 		connID, provider, user.UUID); err != nil {
 		t.Fatal(err)
 	}

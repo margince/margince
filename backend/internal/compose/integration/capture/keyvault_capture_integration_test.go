@@ -239,9 +239,9 @@ func TestTwoBootsRelocateOneCredentialOnce(t *testing.T) {
 
 	connID := ids.NewV7()
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO capture_connection (id, provider, user_id, scopes, status, auth)
-		VALUES ($1, 'graph', $2, $3, 'connected', $4)`,
-		connID, e.Rep1, []string{string(principal.ScopeRead)}, []byte("granted-token")); err != nil {
+		INSERT INTO capture_connection (id, provider, user_id, status, auth)
+		VALUES ($1, 'graph', $2, 'connected', $3)`,
+		connID, e.Rep1, []byte("granted-token")); err != nil {
 		t.Fatalf("seeding the legacy connection: %v", err)
 	}
 
@@ -286,9 +286,9 @@ func TestBackfillMigratesLegacyAuthRowOntoTheVault(t *testing.T) {
 	// binds a workspace, and this table no longer has one to bind.
 	connID := ids.NewV7()
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO capture_connection (id, provider, user_id, scopes, status, auth)
-		VALUES ($1, 'graph', $2, $3, 'connected', $4)`,
-		connID, e.Rep1, []string{string(principal.ScopeRead)}, []byte("granted-token")); err != nil {
+		INSERT INTO capture_connection (id, provider, user_id, status, auth)
+		VALUES ($1, 'graph', $2, 'connected', $3)`,
+		connID, e.Rep1, []byte("granted-token")); err != nil {
 		t.Fatalf("seeding the legacy connection: %v", err)
 	}
 

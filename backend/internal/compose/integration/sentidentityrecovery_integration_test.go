@@ -300,8 +300,8 @@ func TestAnotherMailboxsSentMessageWithTheSameIDLeavesTheSendAlone(t *testing.T)
 	colleague := uuidOf(t, createdID(t, r.AppEnv, "/v1/users", AnyMap{
 		"email": colleagueMailbox, "display_name": "Second Mailbox", "role": "rep",
 	}))
-	r.inWorkspace(t, `INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes, account_label)
-		VALUES ('gmail', $1, '{}', 'connected', '{"refresh_token":"r","granted":[]}', $2, $3)`,
+	r.inWorkspace(t, `INSERT INTO capture_connection (provider, user_id, status, auth, provider_scopes, account_label)
+		VALUES ('gmail', $1, 'connected', '{"refresh_token":"r","granted":[]}', $2, $3)`,
 		colleague, []string{apptest.GmailReadonlyScope}, colleagueMailbox)
 
 	r.captureSent(seatMailboxCtx(t, r.workspaceID(t), colleague), t, colleagueMailbox,

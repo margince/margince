@@ -338,7 +338,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## confirm_token
 
-18 columns · primary key `(id)` · referenced by 2 foreign keys
+16 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -348,8 +348,6 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `delivered_to` | `text` | yes |  |
 | `expires_at` | `timestamp with time zone` | yes |  |
-| `fetch_count` | `integer`, default `0` | yes |  |
-| `first_fetched_at` | `timestamp with time zone` |  |  |
 | `issued_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `kind` | `text`, default `'record_confirmation'::text` | yes | One of `record_confirmation`, `consent_confirmation`, `privacy_notice`. |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
