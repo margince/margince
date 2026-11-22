@@ -1,6 +1,10 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import {
   cleanup,
   render as rtlRender,
@@ -434,6 +438,36 @@ describe("restore into the conversational shell", () => {
     expect(
       screen.getByRole("button", { name: "Remove notes.txt" }),
     ).toBeTruthy();
+  });
+
+  it("a reconnect does not re-read the voice probe the restore already took", async () => {
+    const calls = stubApi({
+      state: stateRow({ step: "voice" }),
+      company: savedProfile,
+      voiceProfiles: [{ id: "018f3a1b-0000-7000-8000-0000000000f1" }],
+      corpusWords: 701,
+      sources: [
+        { id: "s1", source_label: "offer.pdf", word_count: 350 },
+        { id: "s2", source_label: "notes.txt", word_count: 351 },
+      ],
+    });
+    render(<OnboardingScreen />);
+    expect(await screen.findByText("offer.pdf")).toBeTruthy();
+
+    onlineManager.setOnline(false);
+    onlineManager.setOnline(true);
+
+    // The setup read refetches on reconnect, so once it is back the probe
+    // has had its chance to refetch too.
+    await waitFor(() =>
+      expect(requestsTo(calls, "/installation/setup", "GET")).toHaveLength(2),
+    );
+    const probeReads = calls.filter(
+      (request) =>
+        new URL(request.url).pathname.endsWith("/voice-profiles") &&
+        request.method === "GET",
+    );
+    expect(probeReads).toHaveLength(1);
   });
 
   it("the member path comes from the state row and resumes at the step it names", async () => {
