@@ -7,7 +7,7 @@ package capture
 //
 // Such a message has no capture_import row, so no confidentiality question is
 // opened for it and nothing judges it. The owner can read these mails already.
-// "I receive this address" is the ordinary own-address claim
+// "This address is mine" is the ordinary own-address claim
 // (OwnerIdentityStore.AddConfirmed), and the stranded-mail sweep then imports
 // the mail. "Not mine" is a row in capture_alias_refused.
 
@@ -19,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // UnroutedAddress is one address the caller's unjudged mail was sent to.
@@ -49,10 +50,10 @@ const (
 // mail the caller's own connector brought in, so a colleague's capture is never
 // counted. Mail the caller sent names its recipients as parties, not as
 // addresses they failed to receive.
-const unroutedMessagesSQL = `
+var unroutedMessagesSQL = `
 	SELECT a.id FROM activity a
 	 WHERE a.kind = 'email' AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	   AND a.direction IS DISTINCT FROM 'outbound'
+	   AND NOT COALESCE(` + relstrength.WeWroteSQL("a") + `, false)
 	   AND a.captured_by IN (
 	         SELECT 'connector:' || c.provider || ':' || c.user_id FROM capture_connection c
 	          WHERE c.user_id = $1)
@@ -64,7 +65,7 @@ const unroutedMessagesSQL = `
 
 // unroutedCountsSQL counts the scanned messages per address the caller has not
 // refused, most mail first, and carries the totals on every row.
-const unroutedCountsSQL = `
+var unroutedCountsSQL = `
 	WITH scanned AS (` + unroutedMessagesSQL + `),
 	recipients AS (
 	  SELECT p.activity_id, p.address

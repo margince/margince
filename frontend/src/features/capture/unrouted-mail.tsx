@@ -15,7 +15,7 @@ import { DomainQuestionCallout, domainQuestionOf } from "./domainquestion";
 
 // Mail in the reader's own mailbox that was sent to addresses that are not
 // theirs. Nothing judges it until the reader says, per address, whether they
-// receive it. "I receive this address" is the ordinary own-address claim, so
+// receive it. "This address is mine" is the ordinary own-address claim, so
 // capture then checks that mail like the rest. "Not mine" keeps it hidden and
 // stops the count. The list is the reader's own mailbox and nobody else's.
 

@@ -360,7 +360,9 @@ and holds the decisions you make about it. The cards, in order:
 
 **Mail not shared with the team.** Threads your mailbox is holding back from the team right now, with the reason. Margince keeps them unshared, so no action is needed. To share one, search for it and choose **Preview and change sharing**; only you can share yours. When a thread is held, its earlier messages that the team could already read are held too. Sharing the thread again opens them.
 
-**Mail sent to addresses that are not yours.** Mail in your mailbox that was sent to other addresses, such as a shared inbox or a colleague. Margince does not check it, so it stays hidden. The card lists each address with its number of messages, and appears only while there is such mail. Only you see it. Choose **I receive this address** if the address is yours: it is added to your other addresses, and its mail is checked like the rest. Choose **Not mine** to keep the mail hidden and stop counting the address. **Undo** on the notice takes either answer back.
+**Mail sent to addresses that are not yours.** Mail in your mailbox that was sent to other addresses, such as a shared inbox or a colleague. Margince does not check it, so it stays hidden. The card lists each address with its number of messages, and appears only while there is such mail. Only you see it. 
+
+Choose **This address is mine** if the address is yours: it is added to your other addresses, and its mail is checked like the rest. Choose **Not mine** to keep the mail hidden and stop counting the address. **Undo** on the notice takes either answer back. The card lists at most 50 addresses and says when it is cut.
 
 **Capture exclusions** are addresses and domains whose messages never come into the CRM. Your rules apply only to mailboxes you connected. The company's rules apply to everyone, and only an administrator may add or remove one of those. A rule applies from the next message; what is already captured stays.
 

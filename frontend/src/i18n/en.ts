@@ -18205,8 +18205,8 @@ export const en = {
     "{count} messages in your mailbox were sent to addresses that are not yours.",
   "unroutedMail.count_one": "{count} message",
   "unroutedMail.count_other": "{count} messages",
-  "unroutedMail.receive": "I receive this address",
-  "unroutedMail.receiveLabel": "I receive this address: {value}",
+  "unroutedMail.receive": "This address is mine",
+  "unroutedMail.receiveLabel": "This address is mine: {value}",
   "unroutedMail.notMine": "Not mine",
   "unroutedMail.notMineLabel": "Not mine: {value}",
   "unroutedMail.received": "Address added. Its mail is checked like the rest.",
@@ -18215,7 +18215,6 @@ export const en = {
   "unroutedMail.removedClaim": "Address removed.",
   "unroutedMail.more":
     "The list is cut. Answer these addresses and the next ones appear.",
-  "unroutedMail.loading": "Mail sent to other addresses",
   "captureValue.refusedAddress":
     "Enter one email address, for example name@example.com.",
   "captureValue.refusedDomain":

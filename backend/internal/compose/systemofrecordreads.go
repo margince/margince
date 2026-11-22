@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/editaccess"
 	"github.com/margince/margince/backend/internal/compose/recordreferences"
+	"github.com/margince/margince/backend/internal/compose/unroutedmail"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -49,6 +50,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		threadPass: verdictPass(pool, ConfidentialityVerdictArgs{}.Kind()),
 	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: NewOwnerIdentityStore(pool, s.contactsStore)}
+	s.Endpoints = unroutedmail.Endpoints{Store: s.captureOwnerIdentityHandlers.store}
 	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.captureConfig) })
 	s.conversationSuggestionHandlers = conversationSuggestionHandlers{read: func(ctx context.Context, anchor datasource.EntityRef) (capture.ConversationSuggestions, error) {
 		return suggestionSink().ConversationSuggestions(ctx, anchor)

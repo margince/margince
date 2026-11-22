@@ -18365,26 +18365,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch keine hinzugefügt. Teammitglieder sehen diese Liste nie.",
   "unroutedMail.title": "Mails an Adressen, die nicht deine sind",
   "unroutedMail.sub":
-    "Dein Postfach enthält Mails, die an andere Adressen gingen. Sie werden nicht geprüft, bis du sagst, ob du diese Adresse empfängst. Nur du siehst diese Liste.",
+    "Dein Postfach enthält Mails, die an andere Adressen gingen. Diese Mails werden nicht geprüft, bis du sagst, ob du diese Adresse empfängst. Nur du siehst diese Liste.",
   "unroutedMail.summary_one":
     "{count} Mail in deinem Postfach ging an eine Adresse, die nicht deine ist.",
   "unroutedMail.summary_other":
     "{count} Mails in deinem Postfach gingen an Adressen, die nicht deine sind.",
   "unroutedMail.count_one": "{count} Mail",
   "unroutedMail.count_other": "{count} Mails",
-  "unroutedMail.receive": "Diese Adresse empfange ich",
-  "unroutedMail.receiveLabel": "Diese Adresse empfange ich: {value}",
+  "unroutedMail.receive": "Das ist meine Adresse",
+  "unroutedMail.receiveLabel": "Das ist meine Adresse: {value}",
   "unroutedMail.notMine": "Nicht meine",
   "unroutedMail.notMineLabel": "Nicht meine: {value}",
   "unroutedMail.received":
-    "Adresse hinzugefügt. Ihre Mails werden wie die übrigen geprüft.",
+    "Adresse hinzugefügt. Die Mails werden wie die übrigen geprüft.",
   "unroutedMail.refused":
     "Ausgeblendet. Diese Adresse wird nicht mehr gezählt.",
   "unroutedMail.restored": "Wieder gezählt.",
   "unroutedMail.removedClaim": "Adresse entfernt.",
   "unroutedMail.more":
     "Die Liste ist gekürzt. Beantworte diese Adressen, dann erscheinen die nächsten.",
-  "unroutedMail.loading": "Mails an andere Adressen",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":

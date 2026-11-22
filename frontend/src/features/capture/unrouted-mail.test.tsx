@@ -20,7 +20,7 @@ import {
 } from "../../testing/story-utils";
 import { UnroutedMailCard } from "./unrouted-mail";
 
-// The reader answers per address: "I receive this address" is the ordinary
+// The reader answers per address: "This address is mine" is the ordinary
 // own-address claim, and "Not mine" keeps the mail hidden. Both can be undone.
 
 afterEach(() => {
