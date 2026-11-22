@@ -23,7 +23,7 @@ By default the list hides archived roles. Turn on **Show archived roles** to see
 
 ### How do I make a new role?
 An Admin chooses **New role**. A role always starts as a copy, so there is no blank role.
-1. Under **Copy rights from**, pick the role to copy. The new role starts with exactly its rights.
+1. Under **Copy rights from**, pick the role to copy. The new role starts with all of its rights.
 2. Type a **Name**, up to 120 characters.
 3. Choose **Create role**.
 
