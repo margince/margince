@@ -235,8 +235,8 @@ func TestLadderDocumentWritesTheProvidersBlockAndNoPerLaneHost(t *testing.T) {
 }
 
 // The config a run serves is finalized from that document, as a stored routing
-// is: the provider's host and pins reach every tier, and the version and the
-// embeddings width a raw struct never gets are present.
+// is. The provider's host and pins reach every tier. The version and the
+// embeddings width, which a raw struct never gets, are present.
 func TestLadderForTaskServesTheFinalizedProvidersDocument(t *testing.T) {
 	binding := ai.ProviderConfig{
 		Provider: "openai_compatible",

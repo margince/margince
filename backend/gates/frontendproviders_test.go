@@ -116,8 +116,8 @@ func TestTheDecisionRowOffersExactlyTheDecisionProviders(t *testing.T) {
 
 // The Providers table adds a keyless row, with a host-only sheet, for each
 // local provider the server's key list never names. That set must be the
-// registry's local providers with an endpoint of their own, and none may take a
-// key, or the row would claim "no key needed" for a provider that has one.
+// registry's local providers with an endpoint of their own. None may take a
+// key, or its row would say "no key needed" for a provider that has one.
 func TestTheHostOnlyProviderRowsAreExactlyTheKeylessLocalProviders(t *testing.T) {
 	t.Parallel()
 	offered := readFormConstant(t, servicesFile, "LOCAL_PROVIDERS")

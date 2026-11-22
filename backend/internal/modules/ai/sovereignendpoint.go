@@ -37,8 +37,8 @@ var localBaseURLDefaults = projectProviders(
 	func(d providerDescriptor) bool { return d.defaultBaseURL != "" })
 
 // LocalHostProviders names the local providers that dial an endpoint of their
-// own and take no key, in name order: the ones an administrator sets a host
-// for and nothing else.
+// own and take no key, in name order. An administrator sets a host for these
+// and nothing else.
 func LocalHostProviders() []string {
 	return slices.Sorted(maps.Keys(localBaseURLDefaults))
 }
