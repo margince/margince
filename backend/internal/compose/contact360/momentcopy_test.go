@@ -166,6 +166,27 @@ func TestAnUndatedDayTaskUsesItsOwnDate(t *testing.T) {
 	}
 }
 
+// 23:00 and 01:00 in Bangkok share a UTC date. Only the record zone makes it tomorrow.
+func TestADeadlineAfterMidnightIsDueTomorrowInTheRecordZone(t *testing.T) {
+	bangkok := time.FixedZone("UTC+7", 7*60*60)
+	lateEvening := time.Date(2026, 8, 4, 23, 0, 0, 0, bangkok)
+	tomorrowMorning := time.Date(2026, 8, 5, 1, 0, 0, 0, bangkok)
+	task := contracts.Activity{Kind: "task", OccurredAt: now, DueAt: &tomorrowMorning}
+	claim := contracts.ConversationClaim{DueAt: &tomorrowMorning}
+	for _, tc := range []struct{ lang, want string }{
+		{"en", "Due tomorrow."}, {"de", "Morgen fällig."}, {"vi", "Đến hạn ngày mai."},
+	} {
+		said := momentCopyFor(tc.lang)
+		said.zone = bangkok
+		if got := said.openPromiseWhyNow(lateEvening, task); got != tc.want {
+			t.Errorf("%s task: %q, want %q", tc.lang, got, tc.want)
+		}
+		if got := said.openClaimWhyNow(lateEvening, claim); got != tc.want {
+			t.Errorf("%s claim: %q, want %q", tc.lang, got, tc.want)
+		}
+	}
+}
+
 func TestContactEvidenceFallbackCaptionsFollowLanguage(t *testing.T) {
 	for _, tc := range []struct{ lang, inbound, outbound, meeting string }{
 		{"en", "Their last message", "Last message to them", "Meeting"},

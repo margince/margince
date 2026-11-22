@@ -58168,6 +58168,9 @@ type MeResponse struct {
 	// ReaderRenderingAvailable Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
 	ReaderRenderingAvailable *bool `json:"reader_rendering_available,omitempty"`
 
+	// RoleNames The name an admin gave each live role in `roles`, keyed by role key. A member may not read the role directory, so this is how a screen shows a custom role by its name. A client may still show a seeded role in its own translation. Absent from an older server; a key it does not name is shown as the key.
+	RoleNames *map[string]string `json:"role_names,omitempty"`
+
 	// Roles Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact.
 	Roles []string `json:"roles"`
 

@@ -4023,6 +4023,7 @@ export const en = {
   "co.overview.for": "for {name}",
   "co.overview.noDate": "No date",
   "co.overview.allDeals": "All deals",
+  "co.overview.allContacts": "All contacts",
   "co.overview.noWork": "No open deal or project",
   "co.overview.project": "Project",
   "co.overview.ends": "ends {date}",
@@ -5041,7 +5042,6 @@ export const en = {
   "co.deals.col.close": "Close",
   "co.deals.col.status": "Status",
   "co.rail.contacts.empty": "No contacts yet.",
-  "co.rail.contacts.add": "Add contact",
 
   "co.commercial.title": "Commercial",
   "linkedinImport.title": "LinkedIn connections",
@@ -9678,6 +9678,7 @@ export const en = {
   "explain.col.stage": "Stage",
   "explain.col.owner": "Owner",
   "explain.col.pipeline": "Pipeline",
+  "explain.col.inCurrency": "{label} ({currency})",
 
   "settings.profileTitle": "Profile",
   "unsaved.title": "Discard unsaved changes?",
@@ -10599,7 +10600,6 @@ export const en = {
   "settings.tierWait": "Enrichment from the web: waits in Approvals.",
   "settings.tierAdvance":
     "Advance or close a deal, or file activities under a project: runs immediately if the agent has that permission.",
-  "settings.locked": "Locked",
   "settings.purposes": "Consent purposes",
   "settings.purposesSub":
     "What this installation asks consent for, and which purposes need double opt-in.",

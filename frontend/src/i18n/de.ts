@@ -4096,6 +4096,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.for": "für {name}",
   "co.overview.noDate": "Kein Datum",
   "co.overview.allDeals": "Alle Deals",
+  "co.overview.allContacts": "Alle Kontakte",
   "co.overview.noWork": "Kein offener Deal und kein Projekt",
   "co.overview.project": "Projekt",
   "co.overview.ends": "endet {date}",
@@ -5105,7 +5106,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.deals.col.close": "Abschluss",
   "co.deals.col.status": "Status",
   "co.rail.contacts.empty": "Noch keine Kontakte.",
-  "co.rail.contacts.add": "Kontakt hinzufügen",
 
   "co.commercial.title": "Geschäftliches",
   "linkedinImport.title": "LinkedIn-Verbindungen",
@@ -9733,6 +9733,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "explain.col.stage": "Phase",
   "explain.col.owner": "Verantwortlich",
   "explain.col.pipeline": "Pipeline",
+  "explain.col.inCurrency": "{label} ({currency})",
 
   "settings.profileTitle": "Profil",
   "unsaved.title": "Ungespeicherte Änderungen verwerfen?",
@@ -10623,7 +10624,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tierWait": "Anreicherung aus dem Web: wartet in Freigaben.",
   "settings.tierAdvance":
     "Deal-Phase ändern oder Deal abschließen, Aktivitäten einem Projekt zuordnen: läuft sofort, wenn der Agent die Berechtigung hat.",
-  "settings.locked": "Gesperrt",
   "settings.purposes": "Einwilligungszwecke",
   "settings.purposesSub":
     "Wofür diese Installation Einwilligungen einholt und welche Zwecke ein Double-Opt-in brauchen.",

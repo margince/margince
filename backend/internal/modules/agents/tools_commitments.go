@@ -38,6 +38,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -282,15 +283,15 @@ func (c OpenCommitment) wire(asOf time.Time, loc *time.Location) CommitmentItem 
 	return item
 }
 
-// daysOverdue counts whole days late. A task with only a date counts calendar
-// days from its picked date, the rule that ranks it. Any other counts elapsed.
+// daysOverdue counts calendar days late in loc. A task with only a date counts
+// from its picked date, the rule that ranks it.
 func (c OpenCommitment) daysOverdue(asOf time.Time, loc *time.Location) (int, bool) {
 	if wall := storekit.WallClock(c.DueIntent); c.DueAt != nil && !c.DueHasTime && wall != "" && loc != nil {
 		if offset, ok := deadline.WallDayOffset(wall, asOf, loc); ok {
 			return -offset, offset < 0
 		}
 	}
-	return daysOverdue(c.DueAt, asOf)
+	return daysOverdue(c.DueAt, asOf, loc)
 }
 
 // late says the reader that built this row judged it overdue by the one task
@@ -319,10 +320,16 @@ func commitmentState(dueAt *time.Time, asOf time.Time) string {
 	}
 }
 
-// daysOverdue answers how many WHOLE days a promise has been past its date, and
-// whether it is past it at all.
-func daysOverdue(dueAt *time.Time, asOf time.Time) (int, bool) {
-	return deadline.DaysPast(dueAt, asOf)
+// daysOverdue counts calendar days in loc past the date, as the record cards do.
+// The bool says whether the promise is late at all.
+func daysOverdue(dueAt *time.Time, asOf time.Time, loc *time.Location) (int, bool) {
+	if !deadline.Passed(dueAt, asOf) {
+		return 0, false
+	}
+	if loc == nil {
+		loc = time.UTC
+	}
+	return elapsed.Days(*dueAt, asOf, loc), true
 }
 
 // noteCommitmentEvidence records the row a promise was read from, whichever

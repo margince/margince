@@ -13,9 +13,9 @@ export type LatePromise = Readonly<{ badge: string; sentence: string }>;
 
 /**
  * The badge and the sentence of a late promise, both from one calendar-day
- * count in the reader's zone. The server words lateness in elapsed days, so a
- * record page shows this sentence in place of the server's for a late promise.
- * Nothing when the promise is not late.
+ * count in the zone the page reads the due day in. The server counts in the
+ * record's zone, which can fall on another day, so a record page shows this
+ * sentence in place of the server's. Nothing when the promise is not late.
  */
 export function latePromise(
   dueAt: string,

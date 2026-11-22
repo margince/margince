@@ -34,7 +34,7 @@ openapi: 3.1.0
 #     request) is minted SERVER-SIDE per request and is NEVER client-supplied — no request header
 #     is honored for it. Clients do not set it.
 #   - Autonomy gate applies identically on REST and MCP (ADR-0055): when the caller is an AGENT
-#     principal (bearer/Passport), a mutating operation whose mapped autonomy tier is 🟡 does NOT
+#     principal (bearer/Passport), a mutating operation whose autonomy tier for that caller is 🟡 does NOT
 #     perform the change — it stages an approval (ErrRequiresApproval) exactly as the MCP tool does,
 #     keyed by operationId→ToolSpec, and returns the approval-required response (403 code:
 #     approval_required, or 202 where a staging ref is returned). REST is NOT read-only for agents;
@@ -6990,12 +6990,13 @@ paths:
       description: |
         The `advance_deal` MCP verb. Writes one `deal_stage_history` row + one audit row
         (action `advance_stage`) recording prior + next stage; closed-won emits `deal.stage_changed` (to_status=won).
-        A move with a closed-won/closed-lost stage at EITHER end is 🟡 confirm-first
-        (irreversible / touches money) — for an agent caller this requires an approval
-        token. Closing a deal is the obvious half; REOPENING one is the other, and it is
-        the same money: moving a won deal back to an open stage clears its close date,
-        its lost reason and the FX rate frozen at close, and takes revenue out of a
-        quarter that has already been reported.
+        An agent on a user's passport moves the deal at once, closing or reopening it
+        included: it may do unaided what its user may do. A move with a closed-won/closed-lost
+        stage at EITHER end is 🟡 confirm-first only for automatic work with no passport and
+        no user behind it, which needs an approval token. Closing a deal is the obvious half;
+        REOPENING one is the other, and it is the same money: moving a won deal back to an
+        open stage clears its close date, its lost reason and the FX rate frozen at close,
+        and takes revenue out of a quarter that has already been reported.
 
         A move to the stage the deal already holds changes nothing and answers 200 with the
         deal as it stands: a retried call must not close a closed deal again and move its
@@ -7008,7 +7009,8 @@ paths:
       # advance_deal is the one TierDynamic tool (ADR-0026): the gate resolves the tier from the
       # stage semantics at BOTH ENDS of the move, not statically. open→open = 🟢 (no token); a
       # terminal won/lost stage at either end = 🟡 (approval token required), so closing a deal and
-      # reopening one are both gated. The resolver reads each stage's `semantic` from pipeline
+      # reopening one are both gated. A passport agent acting as its user is 🟢 before the resolver
+      # runs (auth.TierFor), so this tier governs only passportless automatic work. The resolver reads each stage's `semantic` from pipeline
       # config, not just the request args — and it may only
       # ever RAISE, so an unknown or malformed semantic at either end fails toward the approval gate.
       # See interfaces.md §2.1 (TierDynamic) and events.md §5.3.
@@ -7027,7 +7029,7 @@ paths:
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c2
               closeWon:
-                summary: Closing won (🟡 — requires approval token for agents)
+                summary: Closing won (runs at once for a passport agent; 🟡 approval token for passportless automatic work)
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c9
                   status: won
@@ -7039,7 +7041,7 @@ paths:
               schema: { $ref: '#/components/schemas/DealAdvanced' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
-          description: RBAC denied, or a 🟡 transition attempted without an approval token.
+          description: RBAC denied, or passportless automatic work attempted a 🟡 transition without an approval token.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -7177,10 +7179,12 @@ paths:
         the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
         timeline. The answer is the deal as it now stands and the note's activity id.
 
-        The tier is the advance's. A move to or from a won or lost stage is confirm-first for
-        an agent: the call stages one approval and answers 403 `approval_required` naming it.
-        Repeat the same call with that id as `approval_id`, or as the `X-Approval-Token`
-        header, once a human has approved it. A human's own call is its approval.
+        The tier is the advance's. An agent on a user's passport moves the deal at once, to or
+        from a won or lost stage included. For automatic work with no passport and no user
+        behind it, such a move is confirm-first: the call stages one approval and answers 403
+        `approval_required` naming it. Repeat the same call with that id as `approval_id`, or as
+        the `X-Approval-Token` header, once a human has approved it. A human's own call is its
+        approval.
 
         A retry with the same `idempotency_key` answers the first call's result and moves
         nothing. An `Idempotency-Key` header is taken as that key.
@@ -69252,6 +69256,14 @@ components:
           description: >
             Effective role keys for this principal, and the one authority for them —
             `user.roles` is deliberately left unset here rather than repeating the same fact.
+        role_names:
+          type: object
+          additionalProperties: { type: string }
+          description: >
+            The name an admin gave each live role in `roles`, keyed by role key. A member may not
+            read the role directory, so this is how a screen shows a custom role by its name. A
+            client may still show a seeded role in its own translation. Absent from an older
+            server; a key it does not name is shown as the key.
         teams:
           type: array
           items: { type: string, format: uuid }
