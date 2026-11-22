@@ -21447,7 +21447,7 @@ export const en = {
   "worklist.gap.loading": "Loading the ranked deals…",
   "worklist.gap.requested.title": "Asked for your help",
   "worklist.gap.requested.done": "Mark handled",
-  "worklist.gap.reason.big_deal": "Above the team's median value",
+  "worklist.gap.reason.big_deal": "Above the team’s median value",
   "worklist.gap.reason.single_contact": "Only one contact engaged",
   "worklist.gap.reason.stuck": "Stuck in its stage",
   "worklist.gap.empty":

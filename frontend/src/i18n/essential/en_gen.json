@@ -4016,6 +4016,7 @@
   "deal360.openTask": "Open task",
   "deal360.createTask": "Create follow-up",
   "deal360.bringInManager": "Bring in manager",
+  "deal360.managerAsked": "Manager asked",
   "deal360.followUpCreated": "Follow-up created",
   "deal360.openBrief": "Open meeting brief",
   "auto.runs.outcomeFired": "Fired",

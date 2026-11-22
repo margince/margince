@@ -21750,7 +21750,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.gap.tab": "Lücke schließen",
   "worklist.gap.title": "Lücke schließen",
   "worklist.gap.loading": "Gereihte Deals werden geladen…",
-  "worklist.gap.requested.title": "Um Ihre Hilfe gebeten",
+  "worklist.gap.requested.title": "Um deine Hilfe gebeten",
   "worklist.gap.requested.done": "Als erledigt markieren",
   "worklist.gap.reason.big_deal": "Wert über dem Median des Teams",
   "worklist.gap.reason.single_contact": "Nur ein Kontakt eingebunden",

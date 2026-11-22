@@ -106,8 +106,8 @@ func (s *Store) ClearManagerRequest(ctx context.Context, id ids.DealID) error {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return err
 	}
-	if auth.TeamLeadReachOf(ctx) == auth.ReachesNoTeam {
-		return fmt.Errorf("clearing a manager request: %w", apperrors.ErrPermissionDenied)
+	if _, err := auth.RequireTeamLeadReach(ctx); err != nil {
+		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := lockThenEnsureWritable(ctx, tx, id); err != nil {
