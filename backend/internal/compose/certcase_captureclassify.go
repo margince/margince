@@ -28,6 +28,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -256,6 +257,11 @@ func (c *captureClassifyCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		}
 	}
 	if msg := validateClassifyPayload(payload, c.batch); msg != "" {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
+	}
+	// The engine drops an answer it cannot use and asks again; certification
+	// still counts that answer against the model.
+	if msg := usableanswer.FirstFault(payload.Results, classifyResult.fault); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
 	// validateClassifyPayload admits exactly one result per requested id: every
