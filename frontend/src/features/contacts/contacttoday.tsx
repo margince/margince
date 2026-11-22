@@ -7,9 +7,11 @@ import { RecordNextBar } from "../../components/latestinbound";
 import { TaskTerms } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button, type ButtonVariant } from "../../design-system/atoms";
+import { CallAction } from "../../design-system/callaction";
 import { ErrorLine } from "../../design-system/errorline";
 import { SourceLink } from "../../design-system/sourcelink";
 import { taskDueOnDay, taskDueZone } from "../../format/calendarday";
+import { primaryPhone } from "../../format/contacturi";
 import { daysPast } from "../../format/lateness";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { latePromise } from "../../lib/latepromise";
@@ -25,7 +27,7 @@ import {
   MomentDoneVerb,
   useMomentSetAside,
 } from "./contactmaybedone";
-import { momentTask, owedLateness, recordsTheMoveNames } from "./contactowed";
+import { owedLateness, recordsTheMoveNames } from "./contactowed";
 import { momentDrafts } from "./contactpage.drawers";
 import "../records/record360/record360.css";
 import { useCompanyZone } from "../../lib/companyzone";
@@ -179,10 +181,13 @@ function MomentBar({
   const late = owedLateness(moment, view, zone, { t, plural, locale });
   const notNow = useMomentSetAside(view.contact.id);
   const defer = notNow.deferOf(moment);
-  const task = momentTask(moment, view);
-  const call = task && (
-    <TaskCallAction task={task} pageContact={view.contact} />
-  );
+  // Writing stays one press away when the server leads with the call.
+  const writing =
+    moment.recommended_action.kind === "call"
+      ? moment.secondary_actions?.filter(
+          (action) => action.kind === "draft_reply",
+        )
+      : undefined;
   return (
     <RecordNextBar
       // A meeting about to happen, or a promise past its date, outranks what
@@ -205,14 +210,11 @@ function MomentBar({
       }
       action={
         moment.may_be_done ? (
-          <>
-            <MayBeDoneVerbs
-              moment={moment}
-              question={moment.may_be_done}
-              view={view}
-            />
-            {call}
-          </>
+          <MayBeDoneVerbs
+            moment={moment}
+            question={moment.may_be_done}
+            view={view}
+          />
         ) : (
           <>
             <ActionVerb
@@ -221,10 +223,17 @@ function MomentBar({
               primary
               onAction={onAction}
             />
+            {writing?.map((action) => (
+              <ActionVerb
+                key={action.kind}
+                action={action}
+                contact={view.contact}
+                onAction={onAction}
+              />
+            ))}
             {moment.done && (
               <MomentDoneVerb done={moment.done} contactId={view.contact.id} />
             )}
-            {call}
             {notNow.failure && <ErrorLine error={notNow.failure} inline />}
           </>
         )
@@ -392,17 +401,32 @@ function verbVariant(drafts: boolean, lead: boolean): ButtonVariant {
   return drafts ? "aiQuiet" : "ghost";
 }
 
-function ActionVerb({
-  action,
-  contact,
-  primary,
-  onAction,
-}: Readonly<{
+type ActionVerbProps = Readonly<{
   action: ContactMomentAction;
   contact: Contact360["contact"];
   primary?: boolean;
   onAction: (action: ContactMomentAction) => void;
-}>) {
+}>;
+
+// A call is a `tel:` link the server named; every other verb is a button
+// that opens a surface.
+function ActionVerb(props: ActionVerbProps) {
+  const { action, contact, primary } = props;
+  if (action.kind === "call") {
+    return (
+      <CallAction
+        appearance="button"
+        label={action.label}
+        number={primaryPhone(contact.phones)?.phone}
+        filled={primary}
+        record={{ entityType: "contact", entityId: contact.id }}
+      />
+    );
+  }
+  return <SurfaceVerb {...props} />;
+}
+
+function SurfaceVerb({ action, contact, primary, onAction }: ActionVerbProps) {
   const t = useT();
   const permissionRefusal =
     action.kind === "schedule_meeting"

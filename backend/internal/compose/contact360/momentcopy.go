@@ -54,6 +54,7 @@ var momentWords = struct {
 	RecordedRole      langcopy.Phrase
 	OpenTask          langcopy.Phrase
 	Write             langcopy.Phrase
+	Call              langcopy.Phrase
 	TeamOwes          langcopy.Phrase
 	YouOwe            langcopy.Phrase
 	TaskUndated       langcopy.Phrase
@@ -98,6 +99,7 @@ var momentWords = struct {
 	RecordedRole:      langcopy.Phrase{En: "the recorded %s", De: "erfasste Rolle %s", Vi: "được ghi nhận là %s"},
 	OpenTask:          langcopy.Phrase{En: "an open task", De: "eine offene Aufgabe", Vi: "một nhiệm vụ đang mở"},
 	Write:             langcopy.Phrase{En: "Write to them", De: "Nachricht schreiben", Vi: "Viết cho họ"},
+	Call:              langcopy.Phrase{En: "Call them", De: "Anrufen", Vi: "Gọi cho họ"},
 	TeamOwes:          langcopy.Phrase{En: "Your team owes them: %s", De: "Ihr Team schuldet ihnen: %s", Vi: "Nhóm của bạn cần thực hiện cho họ: %s"},
 	YouOwe:            langcopy.Phrase{En: "You owe them: %s", De: "Sie schulden ihnen: %s", Vi: "Bạn cần thực hiện cho họ: %s"},
 	TaskUndated:       langcopy.Phrase{En: "Task from %s with no due date.", De: "Aufgabe vom %s ohne Fälligkeitsdatum.", Vi: "Nhiệm vụ từ ngày %s chưa có hạn."},
