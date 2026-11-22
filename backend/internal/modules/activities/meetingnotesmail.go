@@ -82,7 +82,8 @@ func notesMailMeetingSQL(ctx context.Context, in MeetingNotesMailInput, title st
 	   AND a.source_system IS DISTINCT FROM '` + transcriptSourceSystem + `'
 	   AND lower(regexp_replace(btrim(coalesce(a.subject, '')), '\s+', ' ', 'g')) = ` + titleArg + `
 	   AND ` + occurredday.WithinSQL("a", from, until) + `
-	   AND EXISTS (SELECT 1 FROM activity_participant o WHERE o.activity_id = a.id AND o.user_id = ` + ownerArg + `)
+	   AND EXISTS (SELECT 1 FROM activity_participant o WHERE o.activity_id = a.id AND o.user_id = ` + ownerArg + `
+	        AND ` + auth.ParticipantStandsSQL("o", "a") + `)
 	   AND ` + scope + `
 	 ORDER BY a.occurred_at DESC, a.id
 	 LIMIT 2`, args, nil
