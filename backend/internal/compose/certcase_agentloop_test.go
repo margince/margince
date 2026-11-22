@@ -269,6 +269,11 @@ func TestAgentLoopCaseGradesTheWriteNotTheSteps(t *testing.T) {
 		agentLoopOutcome(t, agentLoopAgent, agentLoopBaseFixture(t), agentLoopWriteTool, aitasks.OutcomeWrongAnswer,
 			"ended without writing", agentLoopReadBriefStep, annotation(agentLoopItemID, stranger), agentLoopFinalReply)
 	})
+	t.Run("a write carrying a retry key is the same write", func(t *testing.T) {
+		keyed := strings.Replace(annotation(agentLoopItemID, agentLoopActivityID), `"args":{`, `"args":{"idempotency_key":"brief-1",`, 1)
+		agentLoopOutcome(t, agentLoopAgent, agentLoopBaseFixture(t), agentLoopWriteTool, aitasks.OutcomeAccepted,
+			"on every item", agentLoopReadBriefStep, keyed, agentLoopFinalReply)
+	})
 	t.Run("an item not in the run is refused", func(t *testing.T) {
 		agentLoopOutcome(t, agentLoopAgent, agentLoopBaseFixture(t), agentLoopWriteTool, aitasks.OutcomeWrongAnswer,
 			"ended without writing", agentLoopReadBriefStep, annotation(stranger, agentLoopActivityID), agentLoopFinalReply)

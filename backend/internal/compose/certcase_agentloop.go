@@ -37,6 +37,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -341,8 +342,11 @@ func (c *agentLoopCase) gradeRun(res runner.Result) aitasks.Outcome {
 	work := c.tools.work
 	var writes []json.RawMessage
 	for _, step := range res.Steps {
-		if step.Tool == work.write && step.Admission == agentLoopExecuted {
-			writes = append(writes, step.Args)
+		if step.Tool != work.write || step.Admission != agentLoopExecuted {
+			continue
+		}
+		if args, err := agents.WithoutReservedArgs(step.Args); err == nil {
+			writes = append(writes, args)
 		}
 	}
 	if c.expected == agentLoopFinalStep {

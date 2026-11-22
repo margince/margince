@@ -57,6 +57,10 @@ func (agentLoopToolSurface) Explain(_ context.Context, _ string, err error) stri
 // Invoke answers one call. A read no fixture entry matches is ErrNotFound, the
 // existence-hiding answer a read of a record nobody wrote gets in production.
 func (s agentLoopToolSurface) Invoke(_ context.Context, name string, args json.RawMessage) (json.RawMessage, error) {
+	args, err := agents.WithoutReservedArgs(args)
+	if err != nil {
+		return nil, err
+	}
 	if name == s.work.write {
 		if _, err := s.work.wrote(args, s.list); err != nil {
 			return nil, err

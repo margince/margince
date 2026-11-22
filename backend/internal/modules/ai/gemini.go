@@ -201,8 +201,17 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 	return resp, nil
 }
 
+// errGeminiSchemaStream refuses a schema-constrained stream: Gemini is sent the
+// schema's optional fields as required and nullable, and only a whole reply can
+// have the padded nulls taken back out (geministrict.go).
+//
 //nolint:ireturn // model.Client.Stream returns the port's TokenStream interface by contract
+var errGeminiSchemaStream = errors.New("ai: gemini: a request with a response schema completes and is not streamed")
+
 func (c *geminiClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
+	if len(req.ResponseSchema) > 0 {
+		return nil, errGeminiSchemaStream
+	}
 	body, err := c.generate(ctx, req, true)
 	if err != nil {
 		return nil, err
@@ -314,9 +323,7 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 		wire.SystemInstruction = &geminiContent{Parts: []geminiPart{{Text: req.System}}}
 	}
 	wire.GenerationConfig = geminiGenerationConfig(req, genModel, opts)
-	// Only a whole reply can have its padding taken back out, so a stream is
-	// sent the caller's schema as it is.
-	if format := wire.GenerationConfig.ResponseFormat; format != nil && !stream {
+	if format := wire.GenerationConfig.ResponseFormat; format != nil {
 		if strict, err := geminiStrictSchema(req.ResponseSchema); err == nil {
 			format.Text.Schema = strict
 		}

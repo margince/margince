@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -83,5 +84,18 @@ func TestTheGeminiClientAnswersWithoutThePadding(t *testing.T) {
 	}
 	if want := `{"kind":"note","next_step":null,"subject":"s"}`; resp.Text != want {
 		t.Errorf("text = %s, want %s", resp.Text, want)
+	}
+}
+
+// A schema-constrained request is refused a stream before anything is sent: a
+// stream cannot have the padded nulls taken back out of a reply it hands on.
+func TestGeminiRefusesToStreamASchemaConstrainedRequest(t *testing.T) {
+	sent := false
+	client := newGeminiForTest(t, func(http.ResponseWriter, *http.Request) { sent = true })
+	_, err := client.Stream(context.Background(), model.Request{
+		Messages: []model.Message{{Role: "user", Content: "hi"}}, ResponseSchema: json.RawMessage(noteSchema),
+	})
+	if !errors.Is(err, errGeminiSchemaStream) || sent {
+		t.Errorf("err = %v, request sent %v; want errGeminiSchemaStream and nothing sent", err, sent)
 	}
 }
