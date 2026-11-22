@@ -28,17 +28,15 @@ import (
 // wireSystemOfRecordReads builds the reads over this system of record: the
 // company view and its grounded prose.
 func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
-	// The contacts store carries the fieldcatalog seam contactsHandlers gets.
-	// Without it the company view would omit the cf_* columns that
-	// GET /companies/{id} returns for the same record.
+	// The contacts store carries the fieldcatalog seam, or the company view
+	// would omit the cf_* columns GET /companies/{id} returns.
 	// The brief reads through the 360 service, so it sees only what the page shows.
 	// Its nil model lane is bound by WithCompanyBrief; unbound, it serves its floor.
 	s.contactsStore = newContactsStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
 	s.blockedDomainHandlers = blockedDomainHandlers{contacts: s.contactsStore}
 	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
-	// Both stores, because answering a domain question is two different acts:
-	// keeping it settles the triage ledger, discarding it writes the caller's
-	// own capture exclusion.
+	// Both stores: keeping a domain question settles the triage ledger, and
+	// discarding it writes the caller's own capture exclusion.
 	s.domainQuestionHandlers = domainQuestionHandlers{
 		contacts:   s.contactsStore,
 		exclusions: capture.NewExclusionStore(InstallationDB(pool)),
