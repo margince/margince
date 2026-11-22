@@ -152,12 +152,10 @@ export function TeamsCard() {
   const canRename = useCanWrite("team_admin", "update");
   const isAdmin = useHoldsAdminRole();
   const canEditTeam = canRename && isAdmin;
-  // Listing archived teams needs only the read: a read seat sees them.
-  const mayListArchived = useCan("team_admin", "read") && isAdmin;
   // `team_ids` rides the roster only for `user_admin:read`; without it every
   // user reads as on no team, a false statement rather than a withholding.
   const canSeeMembership = useCan("user_admin", "read");
-  const list = useTeamRows(mayListArchived);
+  const list = useTeamRows(isAdmin);
   // The wide walk, because the Members page lists invited seats and a team
   // count that includes them must have the same seats behind it.
   const users = useEveryMember(canSeeMembership);
@@ -179,7 +177,9 @@ export function TeamsCard() {
         </PageHeadAction>
       )}
       {/* Untitled: on a one-panel page the page heading names the teams. */}
-      <Panel actions={mayListArchived && <ShowArchivedTeams list={list} />}>
+      <Panel
+        actions={list.mayShowArchived && <ShowArchivedTeams list={list} />}
+      >
         <PanelBody>
           <PanelIntro>
             {t("users.teamsSub")}
@@ -237,7 +237,9 @@ export function TeamsCard() {
 
 // The rows the Teams page lists: the live roster, or every team with the
 // archived ones once an admin asks for them.
-function useTeamRows(mayShowArchived: boolean) {
+function useTeamRows(isAdmin: boolean) {
+  // Listing archived teams needs only the read: a read seat sees them.
+  const mayShowArchived = useCan("team_admin", "read") && isAdmin;
   const [showArchived, setShowArchived] = useState(false);
   const teams = useRoster("team", true);
   const teamsPartial = useRosterPartial("team", true);
@@ -245,6 +247,7 @@ function useTeamRows(mayShowArchived: boolean) {
   const wide = mayShowArchived && showArchived;
   const entries = wide ? every.data?.entries : teams.data;
   return {
+    mayShowArchived,
     showArchived,
     setShowArchived,
     loaded: teams.data !== undefined,
