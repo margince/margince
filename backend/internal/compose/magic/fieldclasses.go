@@ -16,6 +16,7 @@ var syntheticAuditFields = setOf(
 	"commitment_evidence_unavailable", "communication_basis", "confirm_submission",
 	"consent_records_carried", "corrected", "decided_by_level", "disposition", "domain", "filled",
 	"guest_answers_changed", "guest_links_added", "guests_added", "guests_left_out", "guests_retired",
+	"impersonation_warning_carried", "impersonation_warning_cleared",
 	"invitation_status", "legal_entity_id", "lifted_by", "lifted_by_level", "lifted_suppression",
 	"link_suggestion",
 	"meeting_documents_added", "meeting_guests_removed", "merged_from_id", "merged_into_id", "note",
@@ -56,7 +57,8 @@ var internalColumns = map[string]map[string]bool{
 	),
 	typeContact: setOf(
 		"anonymized_address_hashes", "anonymized_address_key_id", "converted_from_lead_id", "created_from_activity_id",
-		"photo_object_key", "photo_origin", "relationship_mark_set_by",
+		"photo_object_key", "photo_origin", "quarantine_cleared_at", "quarantine_cleared_by", "quarantine_reason",
+		"relationship_mark_set_by",
 		"strength_folded", "strength_last_engaged_at", "strength_last_inbound_at", "strength_last_inbound_day",
 		"strength_last_interaction_at", "strength_last_outbound_at", "strength_last_outbound_day",
 	),

@@ -2773,6 +2773,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
   "history.field.acquisition_request_retracted":
     "Yêu cầu khi thu nhận đã bị rút lại",
+  "history.field.impersonation_warning_cleared": "Đã gỡ cảnh báo mạo danh",
+  "history.field.impersonation_warning_carried":
+    "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
   "history.field.reason": "Lý do",
   "history.field.recorded_at_level": "Ghi nhận ở cấp",
   "history.field.relationship_types": "Loại quan hệ",
@@ -2812,6 +2815,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.value.meeting_status.canceled": "Đã hủy",
   "history.value.relationship_mark.vendor_marketing":
     "Quảng cáo từ nhà cung cấp",
+  "history.value.impersonation.punycode_domain": "Tên miền thư mã hóa",
+  "history.value.impersonation.display_name_other_domain":
+    "Tên miền khác trong tên hiển thị",
+  "history.value.impersonation.unrecorded": "Không ghi lại dấu hiệu",
 
   "confidence.high": "cao",
   "confidence.med": "trung bình",
@@ -21854,6 +21861,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.follow.stopped": "Bạn đã ngừng theo dõi liên hệ này.",
   "contact.follow.setAside": "Bạn đã gác lại liên hệ này đến {date}.",
   "contact.follow.resume": "Theo dõi lại",
+  "contact.impersonation.title":
+    "Bên gửi này có thể đang mạo danh một bên khác",
+  "contact.impersonation.clear": "Có vẻ ổn",
+  "contact.impersonation.reason.punycodeDomain":
+    "Tên miền thư dùng cách viết mã hóa, có thể trông giống một tên miền khác.",
+  "contact.impersonation.reason.displayNameOtherDomain":
+    "Tên hiển thị chứa một địa chỉ thuộc tên miền khác với tên miền đã gửi thư.",
+  "contact.impersonation.reason.unrecorded":
+    "Không có ghi nhận về dấu hiệu đã phát hiện.",
   "worklist.verb.completeUndo": "Hoàn tác",
   "worklist.verb.completeUndoFailed": "Không thể mở lại việc cần làm. Thử lại.",
   "worklist.source.failed": "Không thể tải nguồn: {source}",

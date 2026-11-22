@@ -228,6 +228,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"company_technical_state.lane":                 {"internal/modules/contacts", "TechnicalLane"},
 	"company_technical_state.last_outcome":         {"internal/contracts", "TechnicalEnrichLaneOutcome"},
 	"contact.narrowing_reason":                     {"internal/modules/contacts", "NarrowingReason"},
+	"contact.quarantine_reason":                    {"internal/contracts", "ContactImpersonationWarningReason"},
 	"contact.visibility":                           {"internal/contracts", "RecordAccessVisibility"},
 	"contact_confirm_submission.resolution":        {"internal/contracts", "ConfirmSubmissionResolution"},
 	"contact_provider_claim.claim_key":             {"internal/shared/ports/provider", "ClaimKey"},

@@ -302,10 +302,8 @@ func (s *Store) offerChannelContact(ctx context.Context, tx pgx.Tx, in EnsureCha
 	// bot serves the workspace, and auth's owner predicate already treats an
 	// ownerless row as workspace-shared at every row-scope tier.
 	//
-	// quarantined_at is left NULL, and not because impersonation does not
-	// happen here: both tells quarantineSuspect reads — a punycode domain, a
-	// display name naming a DIFFERENT domain than the message arrived from —
-	// are statements about a mail domain this record does not have.
+	// No impersonation sign is recorded. Both signs impersonationSign reads are
+	// statements about a mail domain, and a channel record has none.
 	id, err := createContact(ctx, tx, s, match, ContactSpec{
 		FullName: name,
 		// A channel message arrived from them: the same act as an inbound
