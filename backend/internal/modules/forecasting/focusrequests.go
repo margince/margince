@@ -40,8 +40,8 @@ func (h Handlers) WithManagerRequests(read ManagerRequestsFunc) Handlers {
 // requestedDeals is the section of requested deals, empty rather than null.
 // With individual performance off a request would name a colleague's deal, so
 // the section is left empty, as the ranked list shows only the reader's own.
-func (h Handlers) requestedDeals(ctx context.Context, tx pgx.Tx, only *Scope) ([]crmcontracts.ForecastFocusRequest, error) {
-	out := []crmcontracts.ForecastFocusRequest{}
+func (h Handlers) requestedDeals(ctx context.Context, tx pgx.Tx, only *Scope) ([]crmcontracts.ForecastFocusRequested, error) {
+	out := []crmcontracts.ForecastFocusRequested{}
 	if allowed, bound := auth.IndividualPerformanceOf(ctx); h.managerRequests == nil || (bound && !allowed) {
 		return out, nil
 	}
@@ -54,13 +54,13 @@ func (h Handlers) requestedDeals(ctx context.Context, tx pgx.Tx, only *Scope) ([
 		return nil, err
 	}
 	for _, row := range rows {
-		wire := crmcontracts.ForecastFocusRequest{
+		wire := crmcontracts.ForecastFocusRequested{
 			DealId: openapi_types.UUID(row.DealID), DealName: row.Name, RequestedAt: row.RequestedAt,
 			OwnerId: optionalUUID(row.OwnerID), RequestedBy: optionalUUID(row.RequestedBy),
-			Reasons: make([]crmcontracts.ForecastFocusRequestReasons, 0, len(row.Reasons)),
+			Reasons: make([]crmcontracts.ForecastFocusRequestedReasons, 0, len(row.Reasons)),
 		}
 		for _, reason := range row.Reasons {
-			wire.Reasons = append(wire.Reasons, crmcontracts.ForecastFocusRequestReasons(reason))
+			wire.Reasons = append(wire.Reasons, crmcontracts.ForecastFocusRequestedReasons(reason))
 		}
 		out = append(out, wire)
 	}

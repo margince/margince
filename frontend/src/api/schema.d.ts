@@ -51010,13 +51010,13 @@ export interface components {
             /** @description One entry per team with a daily freeze this quarter, ordered by team id. */
             teams: components["schemas"]["ForecastFocusTeam"][];
             /** @description Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out. */
-            requests?: components["schemas"]["ForecastFocusRequest"][];
+            requests?: components["schemas"]["ForecastFocusRequested"][];
         };
         RequestDealManagerRequest: {
             /** @description Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them. */
             reasons: ("big_deal" | "single_contact" | "stuck")[];
         };
-        ForecastFocusRequest: {
+        ForecastFocusRequested: {
             /** Format: uuid */
             deal_id: string;
             deal_name: string;

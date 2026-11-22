@@ -13984,21 +13984,21 @@ func (e ForecastContributionProbabilitySource) Valid() bool {
 	}
 }
 
-// Defines values for ForecastFocusRequestReasons.
+// Defines values for ForecastFocusRequestedReasons.
 const (
-	ForecastFocusRequestReasonsBigDeal       ForecastFocusRequestReasons = "big_deal"
-	ForecastFocusRequestReasonsSingleContact ForecastFocusRequestReasons = "single_contact"
-	ForecastFocusRequestReasonsStuck         ForecastFocusRequestReasons = "stuck"
+	ForecastFocusRequestedReasonsBigDeal       ForecastFocusRequestedReasons = "big_deal"
+	ForecastFocusRequestedReasonsSingleContact ForecastFocusRequestedReasons = "single_contact"
+	ForecastFocusRequestedReasonsStuck         ForecastFocusRequestedReasons = "stuck"
 )
 
-// Valid indicates whether the value is a known member of the ForecastFocusRequestReasons enum.
-func (e ForecastFocusRequestReasons) Valid() bool {
+// Valid indicates whether the value is a known member of the ForecastFocusRequestedReasons enum.
+func (e ForecastFocusRequestedReasons) Valid() bool {
 	switch e {
-	case ForecastFocusRequestReasonsBigDeal:
+	case ForecastFocusRequestedReasonsBigDeal:
 		return true
-	case ForecastFocusRequestReasonsSingleContact:
+	case ForecastFocusRequestedReasonsSingleContact:
 		return true
-	case ForecastFocusRequestReasonsStuck:
+	case ForecastFocusRequestedReasonsStuck:
 		return true
 	default:
 		return false
@@ -52566,7 +52566,7 @@ type ForecastFocus struct {
 	PeriodStart openapi_types.Date `json:"period_start"`
 
 	// Requests Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out.
-	Requests *[]ForecastFocusRequest `json:"requests,omitempty"`
+	Requests *[]ForecastFocusRequested `json:"requests,omitempty"`
 
 	// Teams One entry per team with a daily freeze this quarter, ordered by team id.
 	Teams []ForecastFocusTeam `json:"teams"`
@@ -52599,22 +52599,22 @@ type ForecastFocusReason struct {
 	Signals      []ForecastRiskSignal `json:"signals"`
 }
 
-// ForecastFocusRequest defines model for ForecastFocusRequest.
-type ForecastFocusRequest struct {
+// ForecastFocusRequested defines model for ForecastFocusRequested.
+type ForecastFocusRequested struct {
 	DealId   openapi_types.UUID `json:"deal_id"`
 	DealName string             `json:"deal_name"`
 
 	// OwnerId Absent when individual performance is off.
-	OwnerId     *openapi_types.UUID           `json:"owner_id,omitempty"`
-	Reasons     []ForecastFocusRequestReasons `json:"reasons"`
-	RequestedAt time.Time                     `json:"requested_at"`
+	OwnerId     *openapi_types.UUID             `json:"owner_id,omitempty"`
+	Reasons     []ForecastFocusRequestedReasons `json:"reasons"`
+	RequestedAt time.Time                       `json:"requested_at"`
 
 	// RequestedBy Absent when individual performance is off.
 	RequestedBy *openapi_types.UUID `json:"requested_by,omitempty"`
 }
 
-// ForecastFocusRequestReasons defines model for ForecastFocusRequest.Reasons.
-type ForecastFocusRequestReasons string
+// ForecastFocusRequestedReasons defines model for ForecastFocusRequested.Reasons.
+type ForecastFocusRequestedReasons string
 
 // ForecastFocusTeam defines model for ForecastFocusTeam.
 type ForecastFocusTeam struct {

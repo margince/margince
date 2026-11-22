@@ -54,7 +54,7 @@ func (s *Store) RequestManager(ctx context.Context, id ids.DealID, reasons []str
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, dealTable, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return err
 	}
 	reasons, err := checkedReasons(reasons)
@@ -99,7 +99,7 @@ func (s *Store) ClearManagerRequest(ctx context.Context, id ids.DealID) error {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, dealTable, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return err
 	}
 	if auth.TeamLeadReachOf(ctx) == auth.ReachesNoTeam {
@@ -128,10 +128,13 @@ func (s *Store) ClearManagerRequest(ctx context.Context, id ids.DealID) error {
 }
 
 func (s *Store) writeManagerRequest(ctx context.Context, tx pgx.Tx, id ids.DealID, p *storekit.Patch) error {
+	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+		return err
+	}
 	if err := applyDealPatchGuarded(ctx, tx, id, p, nil); err != nil {
 		return fmt.Errorf("write the manager request: %w", err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", dealTable, id.UUID, p.Before(), p.After())
+	auditID, err := storekit.Audit(ctx, tx, "update", "deal", id.UUID, p.Before(), p.After())
 	if err != nil {
 		return fmt.Errorf("audit the manager request: %w", err)
 	}
@@ -165,6 +168,12 @@ func checkedReasons(reasons []string) ([]string, error) {
 func (s *Store) ManagerRequests(ctx context.Context, tx pgx.Tx, team *ids.UUID) ([]ManagerRequest, error) {
 	if auth.TeamLeadReachOf(ctx) == auth.ReachesNoTeam {
 		return nil, nil
+	}
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil, nil
+		}
+		return nil, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -223,6 +232,9 @@ func ManagerRequestedAmongTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID)
 	out := map[ids.UUID]bool{}
 	if len(dealIDs) == 0 {
 		return out, nil
+	}
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
 	}
 	args := []any{dealIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }

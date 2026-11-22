@@ -48314,7 +48314,7 @@ components:
           type: array
           description: >-
             Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out.
-          items: {$ref: '#/components/schemas/ForecastFocusRequest'}
+          items: {$ref: '#/components/schemas/ForecastFocusRequested'}
     RequestDealManagerRequest:
       type: object
       required: [reasons]
@@ -48329,7 +48329,7 @@ components:
           description: >-
             Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them.
       additionalProperties: false
-    ForecastFocusRequest:
+    ForecastFocusRequested:
       type: object
       required: [deal_id, deal_name, requested_at, reasons]
       properties:
