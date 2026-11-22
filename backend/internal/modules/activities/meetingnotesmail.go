@@ -61,9 +61,9 @@ func notesMailTitle(subject string) (string, bool) {
 	return title, title != ""
 }
 
-// notesMailMeetingSQL lists the live meetings the mailbox owner is on whose
-// title equals the one the subject names, compared whole, and which started
-// within notesMailWindow before the mail. A transcript is not a meeting.
+// notesMailMeetingSQL lists the live meetings the mailbox owner is on. Each
+// has the title the subject names, compared whole. Each started within
+// notesMailWindow before the mail. A transcript is not a meeting.
 const notesMailMeetingSQL = `
 	SELECT a.id FROM activity a
 	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.restricted_at IS NULL
