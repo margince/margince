@@ -162,7 +162,7 @@
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--bgElevated) 72%, transparent);
+  background: color-mix(in srgb, var(--bgField) 72%, transparent);
 }
 .confirm-origin svg {
   width: 16px;
@@ -291,7 +291,7 @@
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--bgElevated) 94%, transparent);
+  background: color-mix(in srgb, var(--bgField) 94%, transparent);
   backdrop-filter: blur(10px);
 }
 .mw-confirm-company-row {
@@ -350,7 +350,7 @@
   text-align: left;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
 }
 /* The plate's own two columns, over `.checkfield`'s. Both classes are named so
    this wins whichever order the route split loads the two stylesheets in: the
