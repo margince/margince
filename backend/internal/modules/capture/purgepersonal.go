@@ -155,11 +155,10 @@ func personalPurgeDue(seatCol string) string {
 // scope above replaces it: inbound, connector-captured, unlinked, and inside
 // the verdict's reach. A verdict no human confirmed also waits four times as long.
 //
-// Read-only. Unlike SelectPurgeSubjectTx the shields are a FILTER here, so the
-// batch limit counts only mail the sweep may destroy: a seat whose oldest due
-// messages are all held would otherwise spend every batch on them and never
-// reach the eligible mail behind. What the shields keep is reported apart, by
-// CountPersonalKeptTx, so the owner's receipt does not depend on the batch.
+// Read-only. Unlike SelectPurgeSubjectTx the shields are a filter here, so the
+// batch limit counts only mail the sweep may destroy. Otherwise a seat whose
+// oldest due mail is all held would spend every batch on it. CountPersonalKeptTx
+// reports what the shields keep, so the receipt does not depend on the batch.
 func SelectPersonalPurgeTx(
 	ctx context.Context, tx pgx.Tx, user ids.UUID, windows PersonalPurgeWindows, floor StatutoryFloor, limit int, activities ...ids.UUID,
 ) (PurgeSubject, error) {

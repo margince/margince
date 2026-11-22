@@ -359,12 +359,9 @@ func (p *CapturePurger) sweepSeat(ctx context.Context, seat ids.UUID, windows ca
 	}); err != nil {
 		return PurgeOutcome{}, fmt.Errorf("verdict: selecting personal mail for one seat: %w", err)
 	}
-	// No contacts are anonymised here. A `personal` verdict creates NO
-	// counterparty record in the first place — captureverdict's KindPersonal
-	// arm returns without one — so there is nothing this sweep could match,
-	// and passing a selector that looked for one would either find a contact
-	// somebody made for another reason or find nothing while implying it had
-	// looked.
+	// No contacts are anonymised here. A `personal` verdict creates no
+	// counterparty record, so there is nothing this sweep could match. A
+	// selector that looked for one could find a contact made for another reason.
 	n, err := p.purgePersonalSelection(ctx, subject, seat, windows)
 	if err != nil {
 		return PurgeOutcome{}, fmt.Errorf("verdict: destroying personal mail: %w", err)

@@ -237,9 +237,9 @@ func TestTheConfidentialityPassCapIsASettingOnlyTheUpdateGrantChanges(t *testing
 	}
 }
 
-// The three sibling pass caps ride the same store and gate as the confidentiality
-// cap: every role reads the declared default, only the update grant saves a
-// change, and a value past the ceiling is refused.
+// The three sibling pass caps ride the same store and gate as the
+// confidentiality cap. Every role reads the declared default. Only the update
+// grant saves a change. A value past the ceiling is refused.
 func TestTheOtherPassCapsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
 	e := integration.SetupSearch(t)
 	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))

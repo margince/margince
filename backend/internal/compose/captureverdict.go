@@ -174,11 +174,10 @@ type verdictPayload struct {
 }
 
 // RunWorkspace judges up to maxVerdicts deferred dispositions in the workspace
-// already bound in ctx, or up to the admin's pass cap when maxVerdicts is not
-// positive. Every sender the pass reaches counts, answered or not,
-// so a failing model cannot make the cap a suggestion. A budget stop ends the
-// pass cleanly: what was decided is committed, and the rest stays claimable for
-// the next cycle.
+// already bound in ctx. A maxVerdicts that is not positive means the admin's
+// pass cap. Every sender the pass reaches counts, answered or not. A failing
+// model cannot make the cap a suggestion. A budget stop ends the pass cleanly.
+// What was decided is committed, and the rest stays claimable.
 //
 // The cap is per workspace, not per pass: a shared counter lets one large
 // backlog consume the whole budget and starve every workspace after it.

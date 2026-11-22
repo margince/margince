@@ -34,7 +34,7 @@ func (s PurgeSubject) KeptCounts() KeptCounts {
 // personalKeptByShield is the condition under which a due personal message is
 // kept rather than destroyed: the statutory shield or an open request.
 // SelectPersonalPurgeTx negates it and CountPersonalKeptTx asserts it, so the
-// sweep destroys exactly what the receipt does not list as kept.
+// sweep destroys what the receipt does not list as kept.
 func personalKeptByShield(shielded string) string {
 	return `((` + shielded + `) OR ` + underAnOpenRequest + `)`
 }
@@ -42,9 +42,8 @@ func personalKeptByShield(shielded string) string {
 // CountPersonalKeptTx counts every due personal message of one seat that a
 // shield keeps, by reason, whatever one sweep batch happened to reach.
 //
-// Held (`restricted_at`) is always zero: PersonalPurgeScope leaves a restricted
-// message out of what is due, so it is neither work for the sweep nor a
-// deletion the owner was promised.
+// Held (`restricted_at`) is always zero. PersonalPurgeScope leaves a restricted
+// message out of what is due, so the sweep never owed its deletion.
 func CountPersonalKeptTx(
 	ctx context.Context, tx pgx.Tx, user ids.UUID, windows PersonalPurgeWindows, floor StatutoryFloor,
 ) (KeptCounts, error) {
