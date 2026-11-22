@@ -30,14 +30,14 @@ func LockMeetingAttendeeWrites(ctx context.Context, tx pgx.Tx, activityIDs ...id
 	return lockMeetingAttendees(ctx, tx, `pg_advisory_xact_lock`, activityIDs)
 }
 
-// LockMeetingAttendeePage takes a batch page's attendee locks and then its
-// activity row locks, in that order. The page is read unlocked first, so each
-// per-row writer checks its rule again under the row lock.
+// LockMeetingAttendeePage takes a batch page's attendee locks and then the row
+// locks of its unheld activities, in that order. The page is read unlocked
+// first, so each per-row writer checks its rule again under the row lock.
 func LockMeetingAttendeePage(ctx context.Context, tx pgx.Tx, page []ids.UUID) error {
 	if err := LockMeetingAttendeeWrites(ctx, tx, page...); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `SELECT id FROM activity WHERE id = ANY($1) ORDER BY id FOR UPDATE`, page); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT id FROM activity WHERE id = ANY($1) AND restricted_at IS NULL ORDER BY id FOR UPDATE`, page); err != nil {
 		return fmt.Errorf("locking a page of activities: %w", err)
 	}
 	return nil

@@ -107,8 +107,8 @@ func TestEveryAttendeeWriterTakesTheMeetingLock(t *testing.T) {
 }
 
 // assertTheTextAgrees is the second count: a plain search of the source text.
-// A file it finds that the parsed census missed means the census read less of
-// the tree than it guards, and the reverse means the two readings disagree.
+// A file only it finds means the parsed census read less of the tree. A file
+// only the census finds means the two readings disagree.
 func assertTheTextAgrees(t *testing.T, byDir map[string][]gatekit.ParsedFile) {
 	t.Helper()
 	parsed := map[string]bool{}
@@ -240,7 +240,7 @@ func attendeeLockOrder(fn *ast.FuncDecl) (lockAt, rowLockAt token.Pos) {
 				rowLockAt = n.Pos()
 			}
 		case *ast.BasicLit:
-			if n.Kind == token.STRING && activityRowLock.MatchString(n.Value) && !rowLockAt.IsValid() {
+			if text, ok := gatekit.LiteralText(n); ok && activityRowLock.MatchString(text) && !rowLockAt.IsValid() {
 				rowLockAt = n.Pos()
 			}
 		}
