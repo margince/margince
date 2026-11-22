@@ -18,7 +18,8 @@ func WithholdContact(ctx context.Context, language string, moment *crmcontracts.
 	}
 	reason := langcopy.For(language).Say(blockedWords.ReadOnlyContact)
 	block := func(action *crmcontracts.ContactMomentAction) {
-		if action.Destination == nil {
+		// Dialing writes nothing, so a read-only contact can still be called.
+		if action.Destination == nil || action.Kind == crmcontracts.ContactMomentActionKindCall {
 			return
 		}
 		switch action.Destination.Surface {

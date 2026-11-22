@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 276.3 KB |
+| Tool catalog | 281.6 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 72145 |
+| Approx. wire tokens | 73488 |
 | Largest tool | `read_details` (17.6 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 54.0 KB | 19% | Yes, every step |
-| Input schemas | 158.8 KB | 57% | Yes, every step |
+| Descriptions (incl. governance clause) | 54.2 KB | 19% | Yes, every step |
+| Input schemas | 163.8 KB | 58% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **212.8 KB** | **77%** | **the recurring cost** |
+| **Description + input schema** | **218.0 KB** | **77%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -66,18 +66,18 @@ descriptions and input schemas are what each step pays for.
 |---|---|:-:|---|---:|
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2918 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1775 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1870 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1096 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
-| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1599 |
+| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2008 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3209 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2301 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 652 |
@@ -91,7 +91,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1067 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1366 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
@@ -102,13 +102,13 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 318 |
 | [`read_record`](#read_record) | Read a record | yes |  | 284 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2825 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 3289 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1920 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 487 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -763,18 +763,19 @@ themselves; requires passport scope "write".)
 
 ```text
 Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take
-them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; or
-mark up to 500 of the user's Worklist tasks done (record_type worklist_item, verb complete) — or
-undo such a change. Call mode preview first and show the user what it says: how many records change,
-which are left alone and why, and the sample rows. Execute only after they agree. Each record is
-changed only if it still has the version you sent and you may change it. To undo, pass the batch_id
-to undo_preview, show the user the answer, and call undo after they agree; a change is undone once,
-and records changed since are left alone. Ask in words even when the host also shows a form.
-update_record and archive_record change one record. Above 10 records, execute and undo need the
-confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the
-change by it. (Runs immediately; the user's yes is needed for it, so tell them what the call will
-change and get it before calling, unless they asked for this call themselves; requires passport
-scope "write".)
+them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; move
+up to 500 deals to one open stage (verb move_stage); or mark up to 500 of the user's Worklist tasks
+done (record_type worklist_item, verb complete) — or undo such a change. Call mode preview first
+and show the user what it says: how many records change, which are left alone and why, and the
+sample rows. Execute only after they agree. Each record is changed only if it still has the version
+you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the
+answer, and call undo after they agree; a change is undone once, and records changed since are left
+alone. A stage move skips a deal that is won or lost, and its undo moves each deal back as a new
+move. Ask in words even when the host also shows a form. update_record and archive_record change one
+record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
+once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; the user's yes
+is needed for it, so tell them what the call will change and get it before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -870,6 +871,11 @@ scope "write".)
       ],
       "type": "string"
     },
+    "stage_id": {
+      "description": "The open stage to move deals to, for move_stage. Choose one from the workspace's pipeline list with read_workspace with topic=pipelines. A won or lost deal is left alone",
+      "format": "uuid",
+      "type": "string"
+    },
     "tag_id": {
       "description": "The tag, for add_tag and remove_tag",
       "format": "uuid",
@@ -909,6 +915,7 @@ scope "write".)
         "add_tag",
         "remove_tag",
         "create_task",
+        "move_stage",
         "complete"
       ],
       "type": "string"
@@ -1031,6 +1038,10 @@ scope "write".)
                     "format": "uuid",
                     "type": "string"
                   },
+                  "stage_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
                   "tagged": {
                     "type": "boolean"
                   },
@@ -1056,6 +1067,10 @@ scope "write".)
                     "type": "boolean"
                   },
                   "owner_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "stage_id": {
                     "format": "uuid",
                     "type": "string"
                   },
@@ -1863,6 +1878,11 @@ they asked for this call themselves; requires passport scope "write".)
     },
     "address": {
       "description": "set_sender_decision, withdraw_sender_decision only",
+      "type": "string"
+    },
+    "company_id": {
+      "description": "import_vcards only",
+      "format": "uuid",
       "type": "string"
     },
     "connection_id": {
@@ -2965,6 +2985,12 @@ asked for this call themselves; requires passport scope "write".)
           "type": "object"
         },
         "close_window": {
+          "description": "Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter` is the current fiscal quarter, `all_open` is every open deal, and `custom` is `close_interval`, which it requires.",
+          "enum": [
+            "fiscal_quarter",
+            "all_open",
+            "custom"
+          ],
           "type": "string"
         },
         "country": {
@@ -3040,6 +3066,17 @@ asked for this call themselves; requires passport scope "write".)
                                 "type": "string"
                               },
                               "fn": {
+                                "description": "The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.",
+                                "enum": [
+                                  "count",
+                                  "count_distinct",
+                                  "sum",
+                                  "avg",
+                                  "min",
+                                  "max",
+                                  "median",
+                                  "p75"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -3062,6 +3099,11 @@ asked for this call themselves; requires passport scope "write".)
                       "type": "object"
                     },
                     "width": {
+                      "description": "`half` shares a row with the next half card. A chart that needs the whole width draws full regardless.",
+                      "enum": [
+                        "full",
+                        "half"
+                      ],
                       "type": "string"
                     }
                   },
@@ -3092,6 +3134,15 @@ asked for this call themselves; requires passport scope "write".)
           "type": "array"
         },
         "period": {
+          "description": "`this_week` runs from Monday 00:00 in the installation zone to the evaluation time. Read at that exact moment, the week holds no time yet and the context's interval starts where it ends.",
+          "enum": [
+            "this_week",
+            "this_month",
+            "last_month",
+            "last_week",
+            "this_quarter",
+            "custom"
+          ],
           "type": "string"
         },
         "pipeline_id": {
@@ -3109,6 +3160,12 @@ asked for this call themselves; requires passport scope "write".)
               "type": "string"
             },
             "kind": {
+              "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
+              "enum": [
+                "owner",
+                "team",
+                "workspace"
+              ],
               "type": "string"
             },
             "label": {
@@ -3121,9 +3178,20 @@ asked for this call themselves; requires passport scope "write".)
           "type": "object"
         },
         "target_basis": {
+          "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
+          "enum": [
+            "month",
+            "fiscal_quarter"
+          ],
           "type": "string"
         },
         "value_basis": {
+          "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
+          "enum": [
+            "all",
+            "software",
+            "implementation"
+          ],
           "type": "string"
         }
       },
@@ -6674,6 +6742,12 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "object"
                         },
                         "close_window": {
+                          "description": "Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter` is the current fiscal quarter, `all_open` is every open deal, and `custom` is `close_interval`, which it requires.",
+                          "enum": [
+                            "fiscal_quarter",
+                            "all_open",
+                            "custom"
+                          ],
                           "type": "string"
                         },
                         "country": {
@@ -6712,6 +6786,15 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "array"
                         },
                         "period": {
+                          "description": "`this_week` runs from Monday 00:00 in the installation zone to the evaluation time. Read at that exact moment, the week holds no time yet and the context's interval starts where it ends.",
+                          "enum": [
+                            "this_week",
+                            "this_month",
+                            "last_month",
+                            "last_week",
+                            "this_quarter",
+                            "custom"
+                          ],
                           "type": "string"
                         },
                         "pipeline_id": {
@@ -6729,6 +6812,12 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                               "type": "string"
                             },
                             "kind": {
+                              "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
+                              "enum": [
+                                "owner",
+                                "team",
+                                "workspace"
+                              ],
                               "type": "string"
                             },
                             "label": {
@@ -6741,9 +6830,20 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "object"
                         },
                         "target_basis": {
+                          "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
+                          "enum": [
+                            "month",
+                            "fiscal_quarter"
+                          ],
                           "type": "string"
                         },
                         "value_basis": {
+                          "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
+                          "enum": [
+                            "all",
+                            "software",
+                            "implementation"
+                          ],
                           "type": "string"
                         }
                       },
@@ -10849,11 +10949,12 @@ and the open partner commission liability. run runs one of the named reports, gr
 evidence searches the passages behind a saved run. company_coverage names deals with one contact,
 companies in pipeline nobody has talked to, and won companies gone silent. report_run_cell_records,
 analytics_cell_records and question_card_records name the records behind one figure. Read only.
-Every figure names its coverage and when it was captured; quote both. read_workspace topic
-report_vocabulary names what each run report takes. For a written section a reader keeps, such as a
-board pack, use read_analytics: query with save, then compose. Use read_forecast for what a period
-is expected to close, and read_forecast with view=input_sources for how complete the data behind a
-number is. Keep a run's id to search its evidence, and quote coverage with each number.
+Every figure names its coverage and when it was captured; quote both. A partial coverage with
+nothing priced is not a figure to report. read_workspace topic report_vocabulary names what each run
+report takes. For a written section a reader keeps, such as a board pack, use read_analytics: query
+with save, then compose. Use read_forecast for what a period is expected to close, and read_forecast
+with view=input_sources for how complete the data behind a number is. Keep a run's id to search its
+evidence, and quote coverage with each number.
 ```
 
 <details><summary>Input schema</summary>
@@ -11116,6 +11217,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
           "type": "string"
         },
         "kind": {
+          "description": "Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.",
+          "enum": [
+            "owner",
+            "team",
+            "workspace"
+          ],
           "type": "string"
         }
       },
@@ -11168,6 +11275,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
           "type": "object"
         },
         "close_window": {
+          "description": "Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter` is the current fiscal quarter, `all_open` is every open deal, and `custom` is `close_interval`, which it requires.",
+          "enum": [
+            "fiscal_quarter",
+            "all_open",
+            "custom"
+          ],
           "type": "string"
         },
         "country": {
@@ -11243,6 +11356,17 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
                                 "type": "string"
                               },
                               "fn": {
+                                "description": "The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.",
+                                "enum": [
+                                  "count",
+                                  "count_distinct",
+                                  "sum",
+                                  "avg",
+                                  "min",
+                                  "max",
+                                  "median",
+                                  "p75"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -11265,6 +11389,11 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
                       "type": "object"
                     },
                     "width": {
+                      "description": "`half` shares a row with the next half card. A chart that needs the whole width draws full regardless.",
+                      "enum": [
+                        "full",
+                        "half"
+                      ],
                       "type": "string"
                     }
                   },
@@ -11295,6 +11424,15 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
           "type": "array"
         },
         "period": {
+          "description": "`this_week` runs from Monday 00:00 in the installation zone to the evaluation time. Read at that exact moment, the week holds no time yet and the context's interval starts where it ends.",
+          "enum": [
+            "this_week",
+            "this_month",
+            "last_month",
+            "last_week",
+            "this_quarter",
+            "custom"
+          ],
           "type": "string"
         },
         "pipeline_id": {
@@ -11312,6 +11450,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
               "type": "string"
             },
             "kind": {
+              "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
+              "enum": [
+                "owner",
+                "team",
+                "workspace"
+              ],
               "type": "string"
             },
             "label": {
@@ -11324,9 +11468,20 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
           "type": "object"
         },
         "target_basis": {
+          "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
+          "enum": [
+            "month",
+            "fiscal_quarter"
+          ],
           "type": "string"
         },
         "value_basis": {
+          "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
+          "enum": [
+            "all",
+            "software",
+            "implementation"
+          ],
           "type": "string"
         }
       },
@@ -12670,6 +12825,14 @@ passport scope "send".)
             "type": "string"
           },
           "entity_type": {
+            "description": "The kind of record the meeting is filed on.",
+            "enum": [
+              "contact",
+              "company",
+              "deal",
+              "lead",
+              "project"
+            ],
             "type": "string"
           }
         },

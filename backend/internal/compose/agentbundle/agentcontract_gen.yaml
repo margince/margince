@@ -754,6 +754,16 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      parameters:
+        - name: company_id
+          in: query
+          required: false
+          schema: {type: string, format: uuid}
+          description: |-
+            The company every contact the import creates works for. Each created contact and its
+            current employment edge to this company land in one transaction, and the company a card
+            names is not used. A card that matches a contact already held updates it and does not
+            move its employer. A company the caller cannot read answers 422 naming `company_id`.
       requestBody:
         required: true
         content:
@@ -5488,8 +5498,8 @@ paths:
         leads, each with the `version` it was shown, and one verb: `reassign_owner` (with
         `owner_id`), `archive`, `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`,
         while lists are switched on), `add_tag` / `remove_tag` (with `tag_id`), or `create_task`
-        (with `task`). Or it names up to 500 Worklist tasks and promises (`worklist_item`) and the
-        verb `complete`. The answer says which records the change would alter (`affected`), which it
+        (with `task`). Or it names up to 500 deals and the verb `move_stage` (with `stage_id`). Or it
+        names up to 500 Worklist tasks and promises (`worklist_item`) and the verb `complete`. The answer says which records the change would alter (`affected`), which it
         would leave alone and why (`excluded`), and up to three before/after rows to show the user.
 
         Needs the passport permission Change records.
@@ -36553,7 +36563,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [draft_reply, schedule_meeting, complete_task, log_activity, open_record, open_meeting_brief, open_research, ask_colleague]
+          enum: [draft_reply, schedule_meeting, complete_task, log_activity, open_record, open_meeting_brief, open_research, ask_colleague, call]
         label: {type: string}
         destination:
           description: Where the action goes. Absent for an action that opens no surface of its own.
@@ -40166,8 +40176,9 @@ components:
       type: string
       description: |-
         The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-        verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-        no bulk verb.
+        verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+        disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+        `complete`.
         A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
         named by the id its row carries; `complete` is its only verb, and no other kind takes it.
       enum: [contact, company, deal, lead, worklist_item]
@@ -40180,10 +40191,13 @@ components:
         `addListMember` and `removeListMember` do, and change nothing on the record itself.
         `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
         as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-        under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+        under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+        stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+        won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+        its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
         a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
         `settleConversationClaim` with `outcome: done` does.
-      enum: [reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task, complete]
+      enum: [reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task, move_stage, complete]
     BulkTask:
       type: object
       description: The task `create_task` files under every record of the selection.
@@ -40216,6 +40230,7 @@ components:
         note: {type: string, maxLength: 500, description: 'Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.'}
         tag_id: {type: string, format: uuid, description: 'The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.'}
         task: {$ref: '#/components/schemas/BulkTask'}
+        stage_id: {type: string, format: uuid, description: 'The open stage to move the deals to. Required for `move_stage` and refused for every other verb.'}
     BulkChangeExecuteRequest:
       type: object
       required: [record_type, verb, items]
@@ -40232,6 +40247,7 @@ components:
         note: {type: string, maxLength: 500, description: 'Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.'}
         tag_id: {type: string, format: uuid, description: 'The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.'}
         task: {$ref: '#/components/schemas/BulkTask'}
+        stage_id: {type: string, format: uuid, description: 'The open stage to move the deals to. Required for `move_stage` and refused for every other verb.'}
         confirm_token: {type: string, description: 'The token a preview of exactly this selection returned. Required above 10 records.'}
     BulkSkipReason:
       type: string
@@ -40271,6 +40287,7 @@ components:
         tagged: {type: boolean, description: 'For a tag verb, whether the record carries the tag.'}
         task_id: {type: string, format: uuid, description: 'For `create_task`, the task filed under the record, once the change ran.'}
         done: {type: boolean, description: 'For `complete`, whether the task or promise is done.'}
+        stage_id: {type: string, format: uuid, description: 'For `move_stage`, the stage the deal stands on.'}
     BulkSampleRow:
       type: object
       description: One record the change would alter, as it is and as it would be.
@@ -40345,6 +40362,7 @@ components:
         list_id: {type: string, format: uuid, description: 'The Shortlist a list verb named.'}
         tag_id: {type: string, format: uuid, description: 'The tag a tag verb named.'}
         task: {$ref: '#/components/schemas/BulkTask'}
+        stage_id: {type: string, format: uuid, description: 'The stage a stage move named.'}
         changed: {type: integer, description: The number of records changed.}
         skipped:
           type: array
@@ -40892,7 +40910,7 @@ components:
       type: object
       required: [entity_type, entity_id]
       properties:
-        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_type: {type: string, enum: [contact, company, deal, lead, project], description: The kind of record the meeting is filed on.}
         entity_id: {type: string, format: uuid}
     MeetingAvailability:
       type: object
@@ -45857,6 +45875,9 @@ components:
             - team
             - workspace
             - managed_teams
+          description: |-
+            Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id`
+            naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.
         id:
           type: string
           format: uuid
@@ -45890,6 +45911,10 @@ components:
     ReportingValueBasis:
       type: string
       enum: [all, software, implementation]
+      description: |-
+        Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+        the default, `software` and `implementation` count only that component of it. Open figures
+        take only `all`.
     ReportingSelection:
       type: object
       additionalProperties: false
@@ -45927,6 +45952,7 @@ components:
           enum:
             - month
             - fiscal_quarter
+          description: Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.
         close_window:
           type: string
           enum:
@@ -46183,6 +46209,9 @@ components:
     ReportingCoverage:
       type: object
       additionalProperties: false
+      description: |-
+        How much of the population the figure could be computed for. A `partial` reading with a
+        `priced_count` of 0 priced nothing, so its figure is not one to report.
       required:
         - status
         - withheld
@@ -50874,7 +50903,7 @@ components:
       additionalProperties: false
       required: [kind]
       properties:
-        kind: {type: string, enum: [owner, team, workspace]}
+        kind: {type: string, enum: [owner, team, workspace], description: 'Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.'}
         id: {type: string, format: uuid}
     RunReportRequest:
       type: object
@@ -51274,6 +51303,21 @@ components:
           type: [string, 'null']
           format: uuid
           description: That record's id, so the name can link to it.
+        processed:
+          type: [integer, 'null']
+          minimum: 0
+          description: |-
+            How much of its work a LIVE occurrence has finished so far, in the unit its source
+            counts (a website read counts pages). Null while unknown, which is not zero: most
+            kinds report no position, and a client then draws an unmeasured ring. A settled
+            item carries none.
+        total:
+          type: [integer, 'null']
+          minimum: 1
+          description: |-
+            How much the occurrence expects to finish in all, in the unit of `processed`. A
+            client draws a measured arc only when both counts are present; with `processed`
+            alone the ring stays unmeasured, and no percentage is ever derived from elapsed time.
     AgentTool:
       type: object
       required: [name, title, description, tier, egress]

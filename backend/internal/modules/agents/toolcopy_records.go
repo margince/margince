@@ -197,13 +197,14 @@ var relinkActivitiesCopy = toolCopy{
 var bulkUpdateRecordsCopy = toolCopy{
 	Purpose: "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add " +
 		"them to or take them off a Shortlist, put a tag on or take it off, or file one task under " +
-		"each, in one change; or mark up to 500 of the user's Worklist tasks done " +
+		"each, in one change; move up to 500 deals to one open stage (verb move_stage); or mark up to 500 of the user's Worklist tasks done " +
 		"(record_type worklist_item, verb complete) — or undo such a change.",
 	Limits: "Call mode preview first and show the user what it says: how many records change, " +
 		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
 		"record is changed only if it still has the version you sent and you may change it. To " +
 		"undo, pass the batch_id to undo_preview, show the user the answer, and call undo after " +
-		"they agree; a change is undone once, and records changed since are left alone. Ask in " +
+		"they agree; a change is undone once, and records changed since are left alone. A stage " +
+		"move skips a deal that is won or lost, and its undo moves each deal back as a new move. Ask in " +
 		"words even when the host also shows a form.",
 	Instead: "update_record and archive_record change one record.",
 	Retain: "Above 10 records, execute and undo need the confirm_token their preview answered; " +

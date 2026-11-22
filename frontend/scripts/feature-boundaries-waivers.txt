@@ -210,7 +210,6 @@ reach features/import/import.test.tsx features/settings/settings.tsx
 reach features/import/linkedin-reach.stories.tsx features/capture/connection-outcomes.tsx
 reach features/import/linkedin-reach.test.tsx features/capture/connection-outcomes.tsx
 reach features/import/merge.test.tsx features/contacts/contactrecordactions.tsx
-reach features/import/vcard-import.tsx app/nav.ts
 reach features/leads/leadhistory.tsx features/records/history.tsx
 reach features/leads/leadhistory.tsx features/records/recordchronology.tsx
 reach features/leads/leadhistory.tsx features/records/timelineactions.tsx

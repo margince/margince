@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 51732,
-    "median_tool_tokens": 797,
-    "mean_tool_tokens": 1077
+    "tokens": 53047,
+    "median_tool_tokens": 806,
+    "mean_tool_tokens": 1104
   },
   "agents": [
     {
@@ -88,16 +88,16 @@
       "tokens": 4494
     },
     {
+      "name": "read_reports",
+      "tokens": 3289
+    },
+    {
       "name": "change_settings",
       "tokens": 3209
     },
     {
       "name": "change_activities",
       "tokens": 2918
-    },
-    {
-      "name": "read_reports",
-      "tokens": 2825
     },
     {
       "name": "read_workspace",
@@ -112,12 +112,16 @@
       "tokens": 2041
     },
     {
+      "name": "change_reports",
+      "tokens": 2008
+    },
+    {
       "name": "read_view",
       "tokens": 1920
     },
     {
       "name": "change_capture",
-      "tokens": 1870
+      "tokens": 1891
     },
     {
       "name": "change_attention",
@@ -128,8 +132,8 @@
       "tokens": 1678
     },
     {
-      "name": "change_reports",
-      "tokens": 1599
+      "name": "read_analytics",
+      "tokens": 1366
     },
     {
       "name": "run_research",
@@ -148,10 +152,6 @@
       "tokens": 1096
     },
     {
-      "name": "read_analytics",
-      "tokens": 1067
-    },
-    {
       "name": "change_record_parts",
       "tokens": 1017
     },
@@ -164,6 +164,10 @@
       "tokens": 978
     },
     {
+      "name": "bulk_update_records",
+      "tokens": 892
+    },
+    {
       "name": "create_record",
       "tokens": 891
     },
@@ -174,10 +178,6 @@
     {
       "name": "change_relationships",
       "tokens": 816
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 798
     },
     {
       "name": "read_lists",
@@ -205,7 +205,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 487
+      "tokens": 515
     },
     {
       "name": "list_approvals",

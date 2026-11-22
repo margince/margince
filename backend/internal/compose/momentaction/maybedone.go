@@ -67,8 +67,18 @@ func askDone(said langcopy.Spoken, zone *time.Location, q doneQuestion, evidence
 			Label: said.Say(doneWords.Done),
 			State: crmcontracts.ContactMomentActionStateAvailable,
 		},
+		SecondaryActions: callOf(q.Plain),
 		MayBeDone: &crmcontracts.ContactMomentMayBeDone{
 			PromiseType: q.Kind, PromiseId: q.PromiseID, EmailActivityId: *evidence[1].Id, WroteAt: at,
 		},
 	}
+}
+
+// callOf keeps the plain card's call on the question card, which replaces the
+// card's lead move with Done. The call is the same action the plain card chose.
+func callOf(plain crmcontracts.ContactMoment) *[]crmcontracts.ContactMomentAction {
+	if plain.RecommendedAction.Kind != crmcontracts.ContactMomentActionKindCall {
+		return nil
+	}
+	return &[]crmcontracts.ContactMomentAction{plain.RecommendedAction}
 }

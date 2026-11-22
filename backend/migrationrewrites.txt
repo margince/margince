@@ -214,3 +214,5 @@
 1795316995_a_second_email_evidence_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795316996_a_shared_mailbox_contact_stays_its_backup_owners.down.sql | contact | runs only on a rollback and touches only contacts a verdict kept for a shared mailbox's backup owner, a small share of one mailbox's senders
 1795316997_the_shared_mailbox_narrowing_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795320397_the_progress_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795331732_a_bulk_change_can_move_deals_to_a_stage_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

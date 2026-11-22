@@ -52,6 +52,7 @@ type BulkChangeCommand struct {
 	Note         *string
 	TagID        *ids.UUID
 	Task         *BulkTask
+	StageID      *ids.UUID
 	ConfirmToken string
 }
 
@@ -93,6 +94,7 @@ type BulkRecordState struct {
 	Tagged   *bool     `json:"tagged,omitempty"`
 	TaskID   *ids.UUID `json:"task_id,omitempty"`
 	Done     *bool     `json:"done,omitempty"`
+	StageID  *ids.UUID `json:"stage_id,omitempty"`
 }
 
 // BulkSampleRow is one record the change would alter, before and after.
@@ -145,6 +147,7 @@ type bulkUpdateRecordsArgs struct {
 	Note         *string    `json:"note"`
 	TagID        *ids.UUID  `json:"tag_id"`
 	Task         *BulkTask  `json:"task"`
+	StageID      *ids.UUID  `json:"stage_id"`
 	ConfirmToken string     `json:"confirm_token"`
 	BatchID      *ids.UUID  `json:"batch_id"`
 }
@@ -164,13 +167,14 @@ func (t bulkUpdateRecords) Spec() mcp.ToolSpec {
 			"mode":{"type":"string","enum":["preview","execute","undo_preview","undo"],
 				"description":"preview says what would change; execute changes it; undo_preview and undo do the same for putting back the change batch_id names"},
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","worklist_item"],"description":"A lead takes every verb but archive and complete. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done"},
-			"verb":{"type":"string","enum":["reassign_owner","archive","add_to_list","remove_from_list","add_tag","remove_tag","create_task","complete"]},
+			"verb":{"type":"string","enum":["reassign_owner","archive","add_to_list","remove_from_list","add_tag","remove_tag","create_task","move_stage","complete"]},
 			"items":{"type":"array","minItems":1,"maxItems":500,"items":{"type":"object","required":["id","version"],
 				"properties":{"id":{"type":"string","format":"uuid"},"version":{"type":"integer"}},"additionalProperties":false}},
 			"owner_id":{"type":"string","format":"uuid","description":"The new owner, for reassign_owner"},
 			"list_id":{"type":"string","format":"uuid","description":"The Shortlist, for add_to_list and remove_from_list"},
 			"note":{"type":"string","maxLength":500,"description":"Why, for add_to_list and remove_from_list"},
 			"tag_id":{"type":"string","format":"uuid","description":"The tag, for add_tag and remove_tag"},
+			"stage_id":{"type":"string","format":"uuid","description":"The open stage to move deals to, for move_stage. Choose one from ` + pipelinesSource + ` with list_pipelines. A won or lost deal is left alone"},
 			"task":{"type":"object","required":["subject"],"description":"The task create_task files under each record",
 				"properties":{"subject":{"type":"string","minLength":1,"maxLength":500},
 					"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
@@ -194,7 +198,7 @@ func (t bulkUpdateRecords) Handle(ctx context.Context, in json.RawMessage) (json
 	cmd := BulkChangeCommand{
 		RecordType: args.RecordType, Verb: args.Verb, Items: args.Items,
 		OwnerID: args.OwnerID, ListID: args.ListID, Note: args.Note, TagID: args.TagID, Task: args.Task,
-		ConfirmToken: args.ConfirmToken,
+		StageID: args.StageID, ConfirmToken: args.ConfirmToken,
 	}
 	switch args.Mode {
 	case bulkModePreview, bulkModeExecute:
@@ -228,7 +232,7 @@ func (t bulkUpdateRecords) undo(ctx context.Context, args bulkUpdateRecordsArgs)
 		return nil, &BadArgsError{Cause: fmt.Errorf("%s needs batch_id, the batch execute answered", args.Mode)}
 	}
 	if args.RecordType != "" || args.Verb != "" || len(args.Items) > 0 || args.OwnerID != nil || args.ListID != nil ||
-		args.TagID != nil || args.Task != nil {
+		args.TagID != nil || args.Task != nil || args.StageID != nil {
 		return nil, &BadArgsError{Cause: fmt.Errorf("%s takes only batch_id and confirm_token; the batch names the rest", args.Mode)}
 	}
 	if args.Mode == bulkModeUndo {
