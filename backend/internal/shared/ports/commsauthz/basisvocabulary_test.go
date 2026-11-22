@@ -5,8 +5,8 @@ package commsauthz
 
 // The lawful-basis list is closed and names no country.
 //
-// The pack that grants a basis supplies its legal citation, so a value that
-// names a market belongs in that pack and not in this list.
+// The pack that grants a basis supplies its legal citation. A value that names
+// a market belongs in that pack.
 
 import (
 	"go/ast"
