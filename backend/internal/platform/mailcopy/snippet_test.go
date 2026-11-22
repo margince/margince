@@ -21,6 +21,7 @@ func TestWordSnippetEndsOnAWholeWordWithinItsLimit(t *testing.T) {
 		{"a cut just before a space keeps the word", "alpha beta gamma", 11, "alpha beta…"},
 		{"a comma before the cut is not left hanging", "alpha, beta gamma", 10, "alpha…"},
 		{"one long word is cut by rune", "abcdefghijkl", 10, "abcdefghi…"},
+		{"a word cut keeping under half the limit cuts by rune", "Re: https://example.test/a/very/long/path", 20, "Re: https://example…"},
 		{"the limit counts characters, not bytes", "Grüße aus Đà Nẵng", 12, "Grüße aus…"},
 	} {
 		t.Run(c.name, func(t *testing.T) {

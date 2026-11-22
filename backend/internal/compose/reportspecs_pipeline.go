@@ -75,7 +75,7 @@ func pipelineCurrentSpec() reportSpec {
 }
 
 // dealCompanyDrillColumn puts the deal's own company on a drill-through row
-// beside its partner, which is the only company the dimensions name.
+// beside its partner company, so the partner is not read as the deal's company.
 var dealCompanyDrillColumn = map[string]string{fieldCompanyID: colCompanyID}
 
 // fieldCloseMonth groups open deals by the month they are expected to close.

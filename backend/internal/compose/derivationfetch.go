@@ -169,17 +169,16 @@ func derivationRows(
 
 // maskedDerivationSelects blanks a reference the caller cannot open and keeps
 // its row. Not excluding: dropped rows would add up to less than the headline.
+// The aggregate recompute is not masked: it returns no reference, and wrapping
+// one would give the two halves different SQL for one row set.
 func maskedDerivationSelects(
 	ctx context.Context, spec reportSpec, plan derivationPlan, arg func(any) int,
 ) ([]string, error) {
 	if len(spec.referenceScopes) == 0 {
 		return plan.selects, nil
 	}
-	// Only the references this plan actually RETURNS. A spec may scope a column
-	// it exposes as a filter alone (deals-by-stage scopes company_id for
-	// that reason), and no select mentions it — while ScopeClauseFor registers a
-	// bind parameter for every column it is asked about. A parameter the
-	// finished statement never names is a Postgres error, not a no-op.
+	// Only the references a select names: each ScopeClauseFor binds a parameter,
+	// and Postgres rejects one the statement never uses.
 	returned := make(map[string]bool, len(plan.columns))
 	for _, name := range plan.columns {
 		if expr, ok := derivationColumnExpr(spec, name); ok {

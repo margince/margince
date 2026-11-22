@@ -245,11 +245,8 @@ var prebuiltReports = map[string]reportSpec{
 		}),
 		listPredicates: deals.CommercialFilterPredicates("t"),
 		filterScopes:   projectFilterScope,
-		// Both company references, which a normal deal read masks per row
-		// when the caller cannot open them. company_id is a FILTER here
-		// and not a dimension, and it needs the scope for that alone: a count
-		// filtered to one company answers whether that company exists and has
-		// a deal, which is the disclosure whether or not the id is printed.
+		// A normal deal read masks both companies per row. The company_id scope
+		// narrows a count filtered to one company and blanks the drill column.
 		referenceScopes: map[string]string{
 			colPartnerCompanyID: tableCompany,
 			colCompanyID:        tableCompany,

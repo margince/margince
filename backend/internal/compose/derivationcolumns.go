@@ -5,8 +5,8 @@ package compose
 
 import "github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 
-// derivationColumns returns names and selects aligned by index. A measure follows
-// the dimensions, so a derived measure sits next to its inputs.
+// derivationColumns returns names and selects aligned by index. What a row may
+// disclose is held by TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore.
 func derivationColumns(spec reportSpec) (columns, selects []string) {
 	columns, selects = []string{"id"}, []string{"t.id AS id"}
 	add := func(name, expression string) {
