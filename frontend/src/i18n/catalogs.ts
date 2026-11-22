@@ -48,7 +48,8 @@ function loadCatalog(locale: Locale, level: CatalogLevel): Promise<void> {
     .then((catalog) => {
       Object.assign(catalogs[locale], catalog);
       (level === "complete" ? loadedCatalogs : essentialCatalogs).add(locale);
-      Object.assign(loading, { status: "fulfilled", value: undefined });
+      loading.status = "fulfilled";
+      loading.value = undefined;
     })
     .catch((error: unknown) => {
       catalogLoads.delete(key);
