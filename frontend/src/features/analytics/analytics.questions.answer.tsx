@@ -4,7 +4,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
-import { PartialMark } from "../../components/partialmark";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
@@ -14,16 +13,14 @@ import {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
   formatDateTime,
-  MONEY_ABSENT,
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { labelFor } from "../../lib/labelfor";
-import { coverageOfMeasure, hasGap } from "../../lib/moneycoverage";
 import { ProblemError, throwProblem } from "../../lib/problem";
 import { derivationColumns, ExcludedNote } from "./analytics.explain";
 import { ExplainDrawer } from "./analytics.explain.drawer";
-import { CoverageFootnote } from "./analytics.moneygap";
+import { measureCell } from "./analytics.questions.cell";
 import {
   type Namer,
   shortId,
@@ -56,59 +53,6 @@ const NO_LABELS: CustomLabels = new Map();
 export type ExplainSource =
   | Readonly<{ kind: "query"; query: AnalyticsQuery }>
   | Readonly<{ kind: "run"; runId: string }>;
-
-// A sum that adds only the deals that convert carries its mark and the gap in words.
-// So does a blank sum, because no deal converts.
-function measureCell(
-  query: AnalyticsQuery,
-  column: string,
-  row: AnswerRow,
-  baseCurrency: string | null,
-  locale: Locale,
-  t: Translate,
-): ReactNode {
-  const coverage = coverageOfMeasure(row, column);
-  const figure = measureFigure(query, column, row, baseCurrency, locale, t);
-  if (!hasGap(coverage)) {
-    return figure;
-  }
-  return (
-    <span className="analytics-money-cell">
-      {figure}
-      <PartialMark coverage={coverage} />
-      <CoverageFootnote coverage={coverage} />
-    </span>
-  );
-}
-
-function measureFigure(
-  query: AnalyticsQuery,
-  column: string,
-  row: AnswerRow,
-  baseCurrency: string | null,
-  locale: Locale,
-  t: Translate,
-): ReactNode {
-  const measure = measureOfColumn(query, column);
-  const value = row[column];
-  if (!measure || typeof value !== "number") {
-    return value == null ? MONEY_ABSENT : String(value);
-  }
-  const reading = measureReading(measure, row, query, baseCurrency);
-  if (reading.kind === "mixed") {
-    return t("analytics.q.mixedCurrencies");
-  }
-  if (reading.kind === "noBase") {
-    return t("analytics.noBaseCurrency");
-  }
-  return (
-    <span className="t-num">
-      {reading.kind === "money"
-        ? formatAnalyticsMoneyOrAbsent(value, reading.currency, locale)
-        : formatAnalyticsNumber(value, locale)}
-    </span>
-  );
-}
 
 // Whether any shown cell reads the way asked: an amount summed across
 // currencies, or a converted one with no base currency to state it in.
