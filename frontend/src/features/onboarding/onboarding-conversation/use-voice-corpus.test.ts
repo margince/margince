@@ -722,7 +722,8 @@ describe("useVoiceCorpus — writes that settle across a step change", () => {
     ingest.open();
     await waitFor(() => expect(result.current.manifest).toHaveLength(1));
     reread.open();
-    await waitFor(() => expect(result.current.meterStale).toBe(false));
+    // The removal ends only once its read again has answered.
+    await waitFor(() => expect(result.current.removing).toBeNull());
     const probe = client.getQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY);
     expect(probe?.summary?.total_words).toBe(1800);
     expect(probe?.sources).toHaveLength(1);
