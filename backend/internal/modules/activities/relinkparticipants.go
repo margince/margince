@@ -82,6 +82,9 @@ func participantRelinkQuery(ctx context.Context, id ids.ActivityID, target ids.U
 // address or account back into a bare sender row. A row whose bare twin already
 // exists is deleted instead, as the unique index allows only one.
 func unbindDisplacedSenders(ctx context.Context, tx pgx.Tx, id ids.ActivityID, target ids.UUID, displaced []ids.UUID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, id.UUID); err != nil {
+		return err
+	}
 	where, args, _, err := displacedRowsSQL(ctx, id, target, displaced)
 	if err != nil {
 		return err

@@ -6,7 +6,7 @@ package magic
 import (
 	"context"
 	"fmt"
-	"strings"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,7 +19,7 @@ import (
 )
 
 // UnplacedChange counts one kind of admitted machine change the receipt cannot
-// place. Action is the audit action, or the link a list or tag row filed.
+// place, by its audit action.
 type UnplacedChange struct {
 	EntityType string
 	Action     string
@@ -62,8 +62,8 @@ func (s *Service) UnplacedChanges(ctx context.Context, since time.Time) ([]Unpla
 // unplacedChangesSince counts the admitted machine changes no done-lane arm can
 // place. With no table to join, no gate proves the reader may see them. A
 // child row a placement can place is placed, whoever reads.
-// Creates and archives are left out, since they include bookkeeping. Upkeep of
-// maintenance subjects is left out, except the record links filed under them.
+// Creates and archives are left out, since they include bookkeeping. Changes to
+// maintenance and upkeep subjects are left out, list and tag links included.
 // The counts name what kinds of record were touched, so they need ai_diagnostics.
 func unplacedChangesSince(ctx context.Context, tx pgx.Tx, since time.Time) ([]UnplacedChange, error) {
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
@@ -76,19 +76,18 @@ func unplacedChangesSince(ctx context.Context, tx pgx.Tx, since time.Time) ([]Un
 	placed = append(placed, typeActivity)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	action, linked := linkChangeSQL(arg)
 	query := fmt.Sprintf(`
-		SELECT a.entity_type, %s, count(*) FROM audit_log a
+		SELECT a.entity_type, a.action, count(*) FROM audit_log a
 		 WHERE a.occurred_at >= $%d
 		   AND a.actor_type = ANY($%d)
 		   AND a.action = ANY($%d)
-		   AND (NOT (a.entity_type = ANY($%d)) OR %s)
+		   AND NOT (a.entity_type = ANY($%d))
 		   AND NOT (a.entity_type = ANY($%d))
 		   AND NOT %s
 		 GROUP BY 1, 2
 		 ORDER BY 3 DESC, 1, 2`,
-		action, arg(since), arg(MachineActors()), arg(admittedActions(false)),
-		arg(auditentity.MaintenanceTypes()), linked, arg(placed), placeableSQL(arg))
+		arg(since), arg(MachineActors()), arg(admittedActions(false)),
+		arg(slices.Concat(auditentity.MaintenanceTypes(), auditentity.UpkeepTypes())), arg(placed), placeableSQL(arg))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("count the machine actions this build cannot place: %w", err)
@@ -103,20 +102,4 @@ func unplacedChangesSince(ctx context.Context, tx pgx.Tx, since time.Time) ([]Un
 		changes = append(changes, change)
 	}
 	return changes, rows.Err()
-}
-
-// linkChangeSQL answers the action a row counts under and the predicate that
-// admits it. A list or tag row counts under the link it filed.
-func linkChangeSQL(arg func(any) int) (string, string) {
-	var action strings.Builder
-	action.WriteString("CASE")
-	linked := make([]string, 0, len(auditentity.LinkChanges()))
-	for _, link := range auditentity.LinkChanges() {
-		key := arg(link.Key)
-		match := fmt.Sprintf("(a.entity_type = $%d AND a.after ? $%d)", arg(link.EntityType), key)
-		fmt.Fprintf(&action, " WHEN %s THEN $%d::text", match, key)
-		linked = append(linked, match)
-	}
-	action.WriteString(" ELSE a.action END")
-	return action.String(), "(" + strings.Join(linked, " OR ") + ")"
 }

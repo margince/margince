@@ -25,6 +25,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -59,14 +62,30 @@ const (
 	childIntroduction = introductions.Table
 	childAssignment   = "record_assignment"
 	childAttachment   = "attachment"
+	childSuggestion   = "deal_suggestion"
+	childScheduled    = "scheduled_send"
+	childInvoice      = "finance_invoice"
+	childPayment      = "finance_payment"
 )
 
-// onDeal joins a child that carries its deal's id.
-const onDeal = "e.id = placed.deal_id"
+// onDeal and onCompany join a child that carries its parent's id.
+const (
+	onDeal    = "e.id = placed.deal_id"
+	onCompany = "e.id = placed.company_id"
+)
+
+// grantFinance is the object grant every invoice and payment read asks.
+const grantFinance = "finance"
+
+// scheduledOn joins a scheduled send to a record it files under.
+func scheduledOn(parent string) string {
+	return "e.id IN (" + activities.ScheduledSendRecordsSQL("placed", parent) + ")"
+}
 
 // placements lists where the done lane places each child type, in the order a
 // row tries them. A contract with a deal is placed on the deal, one without on its
-// company, as the contract's own visibility anchors it.
+// company, as the contract's own visibility anchors it. A scheduled send has no
+// parent column and goes on the first record it files under.
 var placements = []placement{
 	{child: childOffer, parent: typeDeal, grant: childOffer, on: onDeal},
 	{child: childContract, parent: typeDeal, grant: childContract, on: onDeal, readable: auth.ContractVisibleClause},
@@ -75,13 +94,21 @@ var placements = []placement{
 	{child: childEvidence, parent: typeDeal, on: onDeal},
 	{child: childIntroduction, parent: typeContact, grant: introductions.Object, on: "e.id = placed.contact_id", readable: introductions.ReadableSQL},
 	{child: childAssignment, parent: typeDeal, on: onDeal},
-	{child: childAssignment, parent: typeCompany, on: "e.id = placed.company_id"},
+	{child: childAssignment, parent: typeCompany, on: onCompany},
 	{child: childAssignment, parent: typeProject, on: "e.id = placed.project_id"},
 	{child: childAttachment, parent: typeContact, on: "placed.entity_type = 'contact' AND e.id = placed.entity_id"},
 	{child: childAttachment, parent: typeCompany, on: "placed.entity_type = 'company' AND e.id = placed.entity_id"},
 	{child: childAttachment, parent: typeDeal, on: "placed.entity_type = 'deal' AND e.id = placed.entity_id"},
 	{child: childAttachment, parent: typeLead, on: "placed.entity_type = 'lead' AND e.id = placed.entity_id"},
 	{child: childAttachment, parent: typeProject, on: "placed.entity_type = 'project' AND e.id = placed.entity_id"},
+	{child: childSuggestion, parent: typeCompany, grant: typeDeal, on: onCompany, readable: deals.ReadableSuggestionClause},
+	{child: childScheduled, parent: typeDeal, grant: typeActivity, on: scheduledOn(typeDeal), readable: activities.ScheduledSendReadableSQL},
+	{child: childScheduled, parent: typeCompany, grant: typeActivity, on: scheduledOn(typeCompany), readable: activities.ScheduledSendReadableSQL},
+	{child: childScheduled, parent: typeContact, grant: typeActivity, on: scheduledOn(typeContact), readable: activities.ScheduledSendReadableSQL},
+	{child: childScheduled, parent: typeLead, grant: typeActivity, on: scheduledOn(typeLead), readable: activities.ScheduledSendReadableSQL},
+	{child: childScheduled, parent: typeProject, grant: typeActivity, on: scheduledOn(typeProject), readable: activities.ScheduledSendReadableSQL},
+	{child: childInvoice, parent: typeCompany, grant: grantFinance, on: onCompany, readable: finance.LedgerRowReadableSQL},
+	{child: childPayment, parent: typeCompany, grant: grantFinance, on: onCompany, readable: finance.LedgerRowReadableSQL},
 }
 
 // placedSentences name what a machine did to a child, by audit action. The
@@ -108,6 +135,10 @@ var placedSentences = map[string]map[string]string{
 	childAttachment: {
 		actionCreate: "magic.action.create_attachment", actionUpdate: "magic.action.update_attachment", actionArchive: "magic.action.archive_attachment",
 	},
+	childSuggestion: {actionCreate: "magic.action.create_deal_suggestion", actionUpdate: "magic.action.update_deal_suggestion"},
+	childScheduled:  {actionSchedule: "magic.action.schedule_send", actionUpdate: "magic.action.update_scheduled_send"},
+	childInvoice:    {actionCreate: "magic.action.create_invoice", actionUpdate: "magic.action.update_invoice"},
+	childPayment:    {actionCreate: "magic.action.create_payment", actionUpdate: "magic.action.update_payment"},
 }
 
 // armPlaced names the read placed children come from. One read serves every
@@ -134,7 +165,7 @@ func describePlaced(e entry) (description, bool) {
 
 // doneForPlacements reads the placed children's machine actions in one scan of
 // the window. Each row joins the one placement its type names, and that join
-// carries both gates. Up to fourteen reads of the window would be the
+// carries both gates. One read per placement would be the
 // alternative, each scanning the same rows.
 func doneForPlacements(
 	ctx context.Context, tx pgx.Tx, since time.Time, actions []string, width int,

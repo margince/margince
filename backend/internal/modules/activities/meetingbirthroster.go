@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -33,6 +34,9 @@ func NameBirthRosterTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID
 	}
 	if seat == ids.Nil || len(addresses) == 0 {
 		return 0, nil
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return 0, err
 	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity_participant ap SET roster_seat = $2

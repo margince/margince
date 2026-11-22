@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
 import { EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
 import { QueryGate } from "../../design-system/querystates";
-import {
-  formatAnalyticsMoneyOrAbsent,
-  formatAnalyticsNumber,
-  formatDateTime,
-  MONEY_ABSENT,
-} from "../../format/format";
-import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { ExcludedNote } from "./analytics.explain";
+import { measureCell } from "./analytics.questions.cell";
 import {
   isMoneyField,
   isNativeMoneyField,
@@ -36,44 +31,12 @@ import {
 } from "./analytics.questions.vocab";
 import { useAnalyticsSchema } from "./analytics.schema";
 
-type Translate = ReturnType<typeof useT>;
-
 const NO_LABELS: CustomLabels = new Map();
 
 /** Where a row's records are read from: the question itself, or a saved run. */
 export type ExplainSource =
   | Readonly<{ kind: "query"; query: AnalyticsQuery }>
   | Readonly<{ kind: "run"; runId: string }>;
-
-function measureCell(
-  query: AnalyticsQuery,
-  column: string,
-  row: AnswerRow,
-  baseCurrency: string | null,
-  money: MoneyFields,
-  locale: Locale,
-  t: Translate,
-): ReactNode {
-  const measure = measureOfColumn(query, column);
-  const value = row[column];
-  if (!measure || typeof value !== "number") {
-    return value == null ? MONEY_ABSENT : String(value);
-  }
-  const reading = measureReading(measure, row, query, baseCurrency, money);
-  if (reading.kind === "mixed") {
-    return t("analytics.q.mixedCurrencies");
-  }
-  if (reading.kind === "noBase") {
-    return t("analytics.noBaseCurrency");
-  }
-  return (
-    <span className="t-num">
-      {reading.kind === "money"
-        ? formatAnalyticsMoneyOrAbsent(value, reading.currency, locale)
-        : formatAnalyticsNumber(value, locale)}
-    </span>
-  );
-}
 
 // Whether any shown cell reads the way asked: an amount summed across
 // currencies, or a converted one with no base currency to state it in.

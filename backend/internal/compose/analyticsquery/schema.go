@@ -22,7 +22,10 @@ import "sort"
 type Field struct {
 	// Unpriced is the trusted row expression counting amounts without conversion.
 	Unpriced string
-	Name     string
+	// PartialSum makes a sum over this field add the amounts that convert.
+	// The entity's coverage says what it leaves out. Unpriced alone withholds the group.
+	PartialSum bool
+	Name       string
 	// Expr is the SQL the compiler renders. It comes from the spec catalog and
 	// never from a request; nothing a caller sends reaches this string.
 	Expr string
@@ -126,6 +129,20 @@ type Entity struct {
 	// Contributor is the seat each row is credited to, "" when the entity
 	// names none. The plan counts the seats behind each group from it.
 	Contributor string
+	// Coverage says how a group's partial sums state what they leave out. Nil
+	// where no field of the entity has one.
+	Coverage *MoneyCoverage
+}
+
+// MoneyCoverage is the trusted SQL that counts, per group, the deals a partial
+// sum leaves out. Those are the deals with no amount and those with no rate.
+type MoneyCoverage struct {
+	// Value is the deal's amount in the base currency, null when its currency has no rate.
+	Value string
+	// Amount is the deal's own amount, which is null when no amount was entered.
+	Amount string
+	// Currency is the deal's currency, listed for the deals with no rate.
+	Currency string
 }
 
 // Schema is the whole vocabulary, for one caller.

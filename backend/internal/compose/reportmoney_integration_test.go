@@ -41,9 +41,6 @@ func TestTheConvertedTotalPerCompanyReconcilesWithItsEvidence(t *testing.T) {
 		t.Fatalf("rows = %+v, want the one unowned group", result.Rows)
 	}
 	row := result.Rows[0]
-	if row["base"] != nil {
-		t.Errorf("an incomplete converted total was served: %v", row["base"])
-	}
 	if got := wireInt(t, row, "priced"); got != 2 {
 		t.Errorf("priced = %d, want 2 of the 3 deals", got)
 	}
@@ -55,8 +52,8 @@ func TestTheConvertedTotalPerCompanyReconcilesWithItsEvidence(t *testing.T) {
 		t.Fatalf("the converted row minted no derivation handle: %+v", row)
 	}
 	derivation := e.explainReport(e.Admin(), t, "open-deals-per-company", handle)
-	if derivation.Aggregates["base"] != nil {
-		t.Errorf("drill-through served an incomplete converted total: %v", derivation.Aggregates["base"])
+	if got := wireInt(t, row, "base"); got != 105_000 || derivation.Aggregates["base"] == nil {
+		t.Errorf("converted total = %d with drill-through %v, want 100000 + 10000 USD at 0.5 in both", got, derivation.Aggregates["base"])
 	}
 }
 

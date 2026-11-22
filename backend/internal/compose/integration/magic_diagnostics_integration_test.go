@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -64,8 +65,22 @@ func TestTheUnplaceableCountReachesOnlyADiagnosticsSeat(t *testing.T) {
 	}
 }
 
-// A product price change is business work even while the receipt cannot place it.
+// A changed role on an employment is business work the receipt cannot place.
 func seedUnplaceableMachineAction(t *testing.T, e *Env) {
+	t.Helper()
+	contactID, companyID := ContactIDOf(e.SeedContact(t, "Unplaced Contact", nil)), companyIDOf(e.SeedCompany(t, "Unplaced Co", nil))
+	edge, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{Kind: "employment", ContactID: &contactID, CompanyID: &companyID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	role := "Buyer"
+	if _, err := e.Contacts.UpdateRelationship(principal.SystemActing(e.Admin(), "directory-sync"), edge.ID, contacts.UpdateRelationshipInput{Role: &role}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A product price change is upkeep by decision, and leaves the count.
+func seedUpkeepMachineAction(t *testing.T, e *Env) {
 	t.Helper()
 	ctx := principal.SystemActing(e.Admin(), "catalog-sync")
 	store := deals.NewStore(e.DB(), installseam.Deals())
@@ -139,12 +154,13 @@ func TestInfrastructureUpdatesDoNotMakeAQuietReceiptIncomplete(t *testing.T) {
 	}
 }
 
-// A list membership and a tagging are business work under a maintenance subject.
-// The breakdown names them; the list's and tag's own edits stay upkeep.
-func TestTheUnplacedBreakdownNamesLinksAndAddsUpToTheReceipt(t *testing.T) {
+// A list membership, a tagging and a product price change are upkeep. The
+// breakdown leaves them out and names the business change that is left.
+func TestTheUnplacedBreakdownLeavesOutUpkeepAndAddsUpToTheReceipt(t *testing.T) {
 	e := Setup(t)
 	since := clocktest.Now(t).Add(-time.Hour)
 	seedUnplaceableMachineAction(t, e)
+	seedUpkeepMachineAction(t, e)
 	seedMachineLinkChanges(t, e)
 	svc := magic.NewService(e.Pool, nil, func() time.Time { return clocktest.Now(t) })
 
@@ -156,7 +172,7 @@ func TestTheUnplacedBreakdownNamesLinksAndAddsUpToTheReceipt(t *testing.T) {
 	for _, change := range changes {
 		got[change.EntityType+"/"+change.Action] = change.Count
 	}
-	want := map[string]int{"product/update": 1, "list/added": 1, "list/removed": 1, "tag/applied": 1, "tag/removed": 1}
+	want := map[string]int{"relationship/update": 1}
 	if !maps.Equal(got, want) {
 		t.Fatalf("breakdown %v, want %v", got, want)
 	}
