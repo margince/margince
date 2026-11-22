@@ -14892,6 +14892,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.capture_connection": "Connector",
   "audit.kind.capture_exclusion": "Erfassungsausschluss",
   "audit.kind.capture_pending_counterparty": "Neue Absendeadresse zur Prüfung",
+  "audit.kind.capture_personal_sweep": "Bereinigung privater Mails",
   "audit.kind.capture_settings": "Erfassungseinstellungen",
   "audit.kind.chat_link": "Chat-Verknüpfung",
   "audit.kind.commission": "Provision",

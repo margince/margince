@@ -14823,6 +14823,7 @@ export const en = {
   "audit.kind.capture_connection": "Connector",
   "audit.kind.capture_exclusion": "Capture exclusion",
   "audit.kind.capture_pending_counterparty": "New sender to review",
+  "audit.kind.capture_personal_sweep": "Private mail cleanup",
   "audit.kind.capture_settings": "Capture settings",
   "audit.kind.chat_link": "Chat link",
   "audit.kind.commission": "Commission",

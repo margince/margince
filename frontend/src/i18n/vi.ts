@@ -14482,6 +14482,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.capture_connection": "Trình kết nối",
   "audit.kind.capture_exclusion": "Loại trừ khỏi thu thập",
   "audit.kind.capture_pending_counterparty": "Địa chỉ gửi mới cần xem lại",
+  "audit.kind.capture_personal_sweep": "Dọn thư riêng tư",
   "audit.kind.capture_settings": "Cài đặt thu thập",
   "audit.kind.chat_link": "Liên kết trò chuyện",
   "audit.kind.commission": "Hoa hồng",
