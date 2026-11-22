@@ -2868,9 +2868,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.acquisition_request_retracted":
     "Anfrage aus der Herkunft zurückgenommen",
   "history.field.impersonation_warning_cleared":
-    "Warnung vor falscher Absendeadresse aufgehoben",
+    "Warnung vor möglicher Täuschung aufgehoben",
   "history.field.impersonation_warning_carried":
-    "Warnung vor falscher Absendeadresse aus Zusammenführung übernommen",
+    "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
@@ -22437,7 +22437,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.follow.resume": "Wieder verfolgen",
   "contact.impersonation.title":
     "Diese Absendeadresse gibt sich möglicherweise als jemand anderes aus",
-  "contact.impersonation.clear": "Ist in Ordnung",
+  "contact.impersonation.clear": "Als unbedenklich einstufen",
   "contact.impersonation.reason.punycodeDomain":
     "Die E-Mail-Domain nutzt eine kodierte Schreibweise, die einer anderen Domain ähneln kann.",
   "contact.impersonation.reason.displayNameOtherDomain":

@@ -21841,7 +21841,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.follow.resume": "Theo dõi lại",
   "contact.impersonation.title":
     "Bên gửi này có thể đang mạo danh một bên khác",
-  "contact.impersonation.clear": "Không có vấn đề",
+  "contact.impersonation.clear": "Có vẻ ổn",
   "contact.impersonation.reason.punycodeDomain":
     "Tên miền thư dùng cách viết mã hóa, có thể trông giống một tên miền khác.",
   "contact.impersonation.reason.displayNameOtherDomain":
