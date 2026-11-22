@@ -160,9 +160,7 @@ Also called: page size, see all records, load more.
 ## Archived records on a list
 
 ### How do I see archived records?
-To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Press **View**, then press **Show archived**.
-
-Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
+To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Press **View**, then press **Show archived**. Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
 Also called: show deleted, find an archived contact, closed records, inactive.
 
 ## Views
@@ -226,9 +224,7 @@ To build a filter from a sentence in Margince, open **Filters and views**, press
 4. Anything the fields cannot say, such as "likely to buy", is listed under **Could not use** with the reason.
 5. Check the match count, then save. Proposed rows are saved as plain conditions. Nothing is saved until you press **Save**.
 
-Once the filter has conditions, the box folds under **Describe changes in plain words**.
-
-This needs an AI model set up under **Settings** → **AI models**. The AI never gets your CRM records. It gets your sentence, the record type, the date of today, your language, and the fields you can filter on. That means names, types, ways to compare and picklist choices, with the custom field labels you may read. If you can read companies, it also gets what your own company sells and to whom, so it can read words like "our target market".
+Once the filter has conditions, the box folds under **Describe changes in plain words**. This needs an AI model set up under **Settings** → **AI models**. The AI never gets your CRM records. It gets your sentence, the record type, the date of today, your language, and the fields you can filter on. That means names, types, ways to compare and picklist choices, with the custom field labels you may read. If you can read companies, it also gets what your own company sells and to whom, so it can read words like "our target market".
 Also called: natural-language filter, AI filter, describe a segment.
 
 ### What can I filter on in Filters and views?
