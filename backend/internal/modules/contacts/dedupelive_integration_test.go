@@ -81,10 +81,7 @@ func TestTheOpenCountDropsWhenASubjectIsArchived(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	first, _ := seedCompanyPair(ctx, t, e)
-	before, err := e.store.CountOpenDedupeCandidates(ctx)
-	if err != nil {
-		t.Fatalf("counting before: %v", err)
-	}
+	before := countOpen(ctx, t, e)
 	if before != 1 {
 		t.Fatalf("the seed counted %d open candidates, want 1", before)
 	}
@@ -93,10 +90,7 @@ func TestTheOpenCountDropsWhenASubjectIsArchived(t *testing.T) {
 		t.Fatalf("archiving one side: %v", err)
 	}
 
-	after, err := e.store.CountOpenDedupeCandidates(ctx)
-	if err != nil {
-		t.Fatalf("counting after: %v", err)
-	}
+	after := countOpen(ctx, t, e)
 	if after != 0 {
 		t.Errorf("the badge still counts %d open decisions about an archived company, want 0", after)
 	}

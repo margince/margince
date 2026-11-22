@@ -220,14 +220,20 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	return rows, next, err
 }
 
-// ListFirstDedupePage reads the first page of the queue and, in the same
+// FirstDedupePageInput filters the first page of the open queue. It has no
+// cursor: a later page's window would count only the pairs after it.
+type FirstDedupePageInput struct {
+	EntityTypes []string
+	Owners      *storekit.OwnerSet
+	Limit       int
+}
+
+// ListFirstDedupePage reads the first page of the open queue and, in the same
 // statement, how many pairs the whole filtered queue holds. The total is the
 // window count over the page's own predicate, so it never counts a pair the
-// page would hide. It always starts at the top, because a later page's window
-// would count only the pairs after its cursor.
-func (s *Store) ListFirstDedupePage(ctx context.Context, in DedupeQueueInput) ([]DedupeCandidateRow, int, error) {
-	in.Cursor = ""
-	rows, _, total, err := s.listDedupe(ctx, in, true)
+// page would hide.
+func (s *Store) ListFirstDedupePage(ctx context.Context, in FirstDedupePageInput) ([]DedupeCandidateRow, int, error) {
+	rows, _, total, err := s.listDedupe(ctx, DedupeQueueInput{EntityTypes: in.EntityTypes, Owners: in.Owners, Limit: in.Limit}, true)
 	return rows, total, err
 }
 

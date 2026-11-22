@@ -37,7 +37,7 @@ const (
 var pairLaneTypes = []string{entityCompany, entityLead}
 
 func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int, owners *attention.PairOwners) ([]attention.DuplicatePair, int, error) {
-	rows, total, err := d.store.ListFirstDedupePage(ctx, contacts.DedupeQueueInput{Limit: limit, EntityTypes: pairLaneTypes, Owners: owners})
+	rows, total, err := d.store.ListFirstDedupePage(ctx, contacts.FirstDedupePageInput{Limit: limit, EntityTypes: pairLaneTypes, Owners: owners})
 	if err != nil {
 		return nil, 0, err
 	}

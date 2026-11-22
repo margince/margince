@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -50,7 +51,7 @@ func TestTheQueueReadsEachOwnersCasesAndNoContactPair(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	every, err := c.store.CountOpenDedupeCandidates(c.e.Admin())
+	_, every, err := c.store.ListFirstDedupePage(c.e.Admin(), contacts.FirstDedupePageInput{Limit: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
