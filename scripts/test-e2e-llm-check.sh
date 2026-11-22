@@ -1523,6 +1523,8 @@ done
 c64="case64-catch-me-up-and-the-brief.yaml"
 judges "$c64" case64 says-the-brief-is-missing 0
 judges "$c64" case64 says-there-is-no-brief 0
+judges "$c64" case64 says-the-brief-hasnt-been-generated 0
+judges "$c64" case64 says-the-brief-isnt-there 0
 judges "$c64" case64 reads-a-brief-that-is-not-there 1 "never said anything matching"
 
 # CASE 112 — the admin has no plan this week, and either order of saying so
