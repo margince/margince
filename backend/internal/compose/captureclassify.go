@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -39,9 +40,6 @@ const (
 	// rather than left empty so a stored row says "we do not know what judged
 	// this" instead of looking like a column nobody filled.
 	classifierUnreported = "unreported"
-	// classifyCatchUpCap bounds one catch-up pass (ADR-0063: hourly cap
-	// 500); the nightly pass runs the same engine with a higher cap.
-	classifyCatchUpCap = 500
 )
 
 var classifyLabels = map[string]bool{"commitment": true, "meeting": true, capturekind.Other: true}
@@ -64,13 +62,17 @@ var replyVerdicts = map[string]bool{
 type CaptureClassifier struct {
 	pool  *pgxpool.Pool
 	store *activities.Store
+	caps  *capture.PassCaps
 	brain completer
 	log   *slog.Logger
 }
 
 // NewCaptureClassifier builds the engine over the pool and one model lane.
 func NewCaptureClassifier(pool *pgxpool.Pool, brain completer, log *slog.Logger) *CaptureClassifier {
-	return &CaptureClassifier{pool: pool, store: activities.NewStore(InstallationDB(pool)), brain: brain, log: log}
+	db := InstallationDB(pool)
+	return &CaptureClassifier{
+		pool: pool, store: activities.NewStore(db), caps: capture.NewPassCaps(db), brain: brain, log: log,
+	}
 }
 
 // unlabeledMessage is one backlog row as the prompt sees it.
@@ -109,12 +111,15 @@ type classifyPayload struct {
 // workspace after it.
 func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) error {
 	if maxLabels <= 0 {
-		maxLabels = classifyCatchUpCap
+		var err error
+		if maxLabels, err = c.caps.Classify(ctx); err != nil {
+			return err
+		}
 	}
 	calls := newSweepCalls(maxLabels, classifyBatchSize)
 	settled := 0
 	for settled < maxLabels && calls.remain() {
-		batch, err := c.store.UnlabeledCaptureMessages(ctx, capturelabel.Ruleset, classifyBatchSize, classifyBodyLimit)
+		batch, err := c.store.UnlabeledCaptureMessages(ctx, capturelabel.Ruleset, min(classifyBatchSize, maxLabels-settled), classifyBodyLimit)
 		if err != nil {
 			return fmt.Errorf("classify: reading backlog: %w", err)
 		}

@@ -24,6 +24,9 @@ func TestEachWebsiteReadingLimitAdmitsItsRangeAndNothingPastIt(t *testing.T) {
 		{SiteReadMaxMiB, 1, DefaultSiteReadMaxMiB, MaxSiteReadMaxMiB},
 		{SiteReadWallSeconds, MinSiteReadWallSeconds, DefaultSiteReadWallSeconds, MaxSiteReadWallSeconds},
 		{ConfidentialityPassCap, 1, DefaultConfidentialityPassCap, MaxConfidentialityPassCap},
+		{VerdictPassCap, 1, DefaultVerdictPassCap, MaxVerdictPassCap},
+		{ClassifyPassCap, 1, DefaultClassifyPassCap, MaxClassifyPassCap},
+		{OwedClassifyPassCap, 1, DefaultOwedClassifyPassCap, MaxOwedClassifyPassCap},
 	} {
 		t.Run(tc.entry.Key(), func(t *testing.T) {
 			for _, ok := range []int{tc.lowest, tc.def, tc.highest} {

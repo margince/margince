@@ -55,15 +55,13 @@ const (
 	// verdictCreateFloor is what a CREATING answer needs, and it is higher —
 	// see clearsItsFloor for why the two mistakes are not the same size.
 	verdictCreateFloor = 0.85
-	// verdictCatchUpCap bounds one pass so a large backlog is drained over
-	// several cycles rather than in one unbounded run.
-	verdictCatchUpCap = 200
 )
 
 // CounterpartyVerdictEngine drains the capture disposition ledger.
 type CounterpartyVerdictEngine struct {
 	pool       *pgxpool.Pool
 	pending    *capture.PendingStore
+	caps       *capture.PassCaps
 	contacts   *contacts.Store
 	activities *activities.Store
 	approvals  *approvals.Service
@@ -106,6 +104,7 @@ func NewCounterpartyVerdictEngine(
 	return &CounterpartyVerdictEngine{
 		pool:       pool,
 		pending:    capture.NewPendingStore(InstallationDB(pool)),
+		caps:       capture.NewPassCaps(InstallationDB(pool)),
 		contacts:   newCounterpartyStore(pool),
 		activities: activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
 		approvals:  NewApprovalsService(InstallationDB(pool)),
@@ -174,16 +173,19 @@ type verdictPayload struct {
 }
 
 // RunWorkspace judges up to maxVerdicts deferred dispositions in the workspace
-// already bound in ctx. Every sender the pass reaches counts, answered or not,
-// so a failing model cannot make the cap a suggestion. A budget stop ends the
-// pass cleanly: what was decided is committed, and the rest stays claimable for
-// the next cycle.
+// already bound in ctx. A maxVerdicts that is not positive means the admin's
+// pass cap. Every sender the pass reaches counts, answered or not. A failing
+// model cannot make the cap a suggestion. A budget stop ends the pass cleanly.
+// What was decided is committed, and the rest stays claimable.
 //
 // The cap is per workspace, not per pass: a shared counter lets one large
 // backlog consume the whole budget and starve every workspace after it.
 func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdicts int) error {
 	if maxVerdicts <= 0 {
-		maxVerdicts = verdictCatchUpCap
+		var err error
+		if maxVerdicts, err = e.caps.Verdict(ctx); err != nil {
+			return err
+		}
 	}
 	budget := reAskBudgetFor(maxVerdicts)
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
