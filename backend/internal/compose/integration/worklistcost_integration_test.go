@@ -42,7 +42,8 @@ const worklistOutsideStatements = 9
 // undated and so drawn under Upcoming. Lower this pgx-call ceiling when a
 // batch or empty-set shortcut removes calls.
 // waiting_customers reads the private_mail_requests setting once a transaction.
-const worklistExchangeBudget = 74
+// needs_you reads the reader's duplicate pairs, a list and a count.
+const worklistExchangeBudget = 76
 
 const worklistRoundTripBudget = worklistExchangeBudget
 
@@ -190,10 +191,11 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // read is the assembly a cache miss pays; the cache's own lookup and store are
 // outside it.
 // Both count waiting_customers' private_mail_requests read, and the undated
-// tasks' planned, row_names and subject_labels reads.
+// tasks' planned, row_names and subject_labels reads, and needs_you's read of
+// the reader's duplicate pairs, a list and a count.
 const (
-	homeReadStatementCeiling = 101
-	homeReadRoundTripCeiling = 68
+	homeReadStatementCeiling = 103
+	homeReadRoundTripCeiling = 70
 )
 
 // homeStages are the stages Home's read runs. A lane that stops running lowers
