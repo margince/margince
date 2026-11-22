@@ -3,7 +3,10 @@
 
 package compose
 
-import "github.com/margince/margince/backend/pkg/extension"
+import (
+	"github.com/margince/margince/backend/internal/compose/extai"
+	"github.com/margince/margince/backend/pkg/extension"
+)
 
 // preflightDeclarations runs the checks that read one unit alone, in the order
 // validateExtensionSet used to run them inline.
@@ -29,7 +32,7 @@ func preflightDeclarations(e extension.Extension) error {
 	if err := preflightSystemReads(e); err != nil {
 		return err
 	}
-	if err := preflightAITasks(e); err != nil {
+	if err := extai.Preflight(e); err != nil {
 		return err
 	}
 	return preflightIngress(e)

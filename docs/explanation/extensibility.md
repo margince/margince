@@ -120,7 +120,7 @@ already exists:
 | `Jobs` | Scheduled work: a job that runs on a fixed schedule and starts one worker run per tenant |
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
 | `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
-| `AITasks` | The AI tasks the unit may run. Each call goes through `Runtime.AI` and the core's own AI path, with its region limit, credential redaction, budget and call log; the unit never holds a provider client or key |
+| `AITasks` | The AI tasks the unit may run. Each call goes through `Runtime.AI` and the core's own AI path, with its region limit, secret stripping, budget and call log; the unit never holds a provider client or key |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
 | `Reach` | The unit's own tables whose columns hold a core company, contact or lead id. The core's merge moves those columns onto the record that stays, and its erasure clears the columns a table lists. Core never names the unit's tables in its own SQL |
 | `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |

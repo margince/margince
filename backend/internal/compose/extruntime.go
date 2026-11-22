@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/extai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
@@ -54,12 +55,8 @@ var extensionRuntimeDeps struct {
 // the pool a unit's own SQL and the governed core port both run on, and the
 // custodian its secrets need.
 //
-// The core port needs no binding of its own, and that is worth stating because
-// the design expected one. Its two dependencies — the store that owns the write
-// and the fresh read of the workspace's record mode — are each derived from the
-// pool at the call (activities.NewStore is the tree's own idiom for exactly
-// that), so no role can wire the port half-way and no role serves a different
-// set of capabilities than another.
+// The core port needs no binding of its own. Its store and its read of the
+// record mode come from the pool at the call, so no role wires it half-way.
 type extensionRuntimeBinding struct {
 	pool  *pgxpool.Pool
 	vault keyvault.Vault
@@ -75,11 +72,6 @@ type extensionRuntimeBinding struct {
 	// impossible. Nil on a role that composed no capture, and the port then
 	// refuses by name rather than half-working.
 	captureSink *capture.Sink
-	// ai is the model lane a unit's AI calls ride, bound by BindExtensionAI.
-	// Nil on a role that bound none, and AI then answers ErrAIUnavailable.
-	ai extensionAILane
-	// anyContactRestricted replaces the database read of restrictions in tests.
-	anyContactRestricted func(context.Context) (bool, error)
 }
 
 // BindExtensionCapture records the capture pipeline a unit's ingress lands
@@ -106,20 +98,10 @@ func BindExtensionCapture(pool *pgxpool.Pool, cfg CaptureConfig) {
 
 // BindExtensionRuntime records what a governed extension tool's per-call
 // Runtime reaches the installation through. Every role that serves or runs
-// agent tools calls it once at boot, after the pool and the custodian exist
-// — which is later than RegisterExtensions, because a declaration is inert
-// and needs neither.
-//
-// vault may be nil on a deployment that configured no keyvault: the secret
-// namespace then refuses by name (extsecrets.ErrNoCustodian) rather than
-// writing a mapping row naming material nothing could unseal. A nil pool
-// leaves the whole capability surface refusing with
-// errExtensionRuntimeUnwired.
-// A second bind to a DIFFERENT non-nil pool is a wiring fault: two pools in
-// one process means half the extension calls run on the wrong one, silently.
-// It is logged rather than refused because this is not the layer that gets to
-// end a boot, and because a test restoring a previous binding legitimately
-// rebinds — but it must never happen unremarked.
+// agent tools calls it once at boot, after the pool and the custodian exist.
+// A nil vault makes the secret namespace refuse by name (extsecrets.ErrNoCustodian),
+// and a nil pool makes every capability refuse with errExtensionRuntimeUnwired.
+// A second bind to a different non-nil pool is a wiring fault, logged and not refused.
 func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 	extensionRuntimeDeps.mu.Lock()
 	defer extensionRuntimeDeps.mu.Unlock()
@@ -127,13 +109,15 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 		slog.Default().Warn("compose: the extension runtime was rebound to a different pool; " +
 			"every extension capability from now on runs against the new one")
 	}
-	binding := extensionRuntimeDeps.extensionRuntimeBinding
-	if prev := binding.pool; prev != nil && prev != pool {
-		// Both were built over the old pool, so they are rebound by their own calls.
-		binding.ai, binding.captureSink = nil, nil
+	extensionRuntimeDeps.extensionRuntimeBinding = extensionRuntimeBinding{pool: pool, vault: vault}
+}
+
+// AI is the unit's AI port for this call, guarded by this Runtime's lifetime.
+func (r *callRuntime) AI() extension.AI { //nolint:ireturn // the published port, as Secrets.
+	return extai.Port{
+		Scope: r.scoped, Unit: r.unit, Declared: ComposedExtensions, Pool: r.deps.pool,
+		PDF: processPDFReader, MaxDocumentBytes: maxDocumentBytes, MaxInputChars: maxDocumentTextChars,
 	}
-	binding.pool, binding.vault = pool, vault
-	extensionRuntimeDeps.extensionRuntimeBinding = binding
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than

@@ -23,10 +23,14 @@ func TestACallRecordsTheExtensionItWasMadeFor(t *testing.T) {
 
 	extensionCall, coreCall := ids.NewV7(), ids.NewV7()
 	calls := []Call{
-		{LogicalCallID: extensionCall, Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: TaskExtensionTask,
-			Tier: TierCheapCloud, RequestFingerprint: "fp-extension", Extension: "books/summarise"},
-		{LogicalCallID: coreCall, Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: TaskSummarize,
-			Tier: TierCheapCloud, RequestFingerprint: "fp-core"},
+		{
+			LogicalCallID: extensionCall, Attempt: 1, IsTerminal: true, Kind: callKindCompletion,
+			Task: TaskExtensionTask, Tier: TierCheapCloud, RequestFingerprint: "fp-extension", Extension: "books/summarise",
+		},
+		{
+			LogicalCallID: coreCall, Attempt: 1, IsTerminal: true, Kind: callKindCompletion,
+			Task: TaskSummarize, Tier: TierCheapCloud, RequestFingerprint: "fp-core",
+		},
 	}
 	for _, c := range calls {
 		if err := meter.Record(ctx, []Call{c}); err != nil {

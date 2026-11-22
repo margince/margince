@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package extai
 
 // The certification case for extension_task/run, the one site every extension
 // AI call rides. A declared task is data, so the fixture carries it. The case
-// builds the request with extensionAIRequest, as a live call does.
+// builds the request with buildRequest, as a live call does.
 //
 // A scenario names the words a right answer holds. No one rule says two free
 // texts, or two of a unit's JSON answers, mean the same.
@@ -22,71 +22,74 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-const extensionTaskSite = "extension_task/run"
+const certSite = "extension_task/run"
 
-// extensionTaskFixture is one call of a declared task: the declaration's own
+// maxCertChars bounds a scenario's input; a scenario carries no documents.
+const maxCertChars = 60000
+
+// certFixture is one call of a declared task: the declaration's own
 // prompt and schema, and the text it is given.
-type extensionTaskFixture struct {
+type certFixture struct {
 	Prompt    string `json:"prompt"`
 	Schema    string `json:"schema,omitempty"`
 	InputText string `json:"input_text"`
 }
 
-// extensionTaskExpectation names the words a right answer holds.
-type extensionTaskExpectation struct {
+// certExpectation names the words a right answer holds.
+type certExpectation struct {
 	Contains []string `json:"contains"`
 }
 
-type extensionTaskCases struct{}
+type CertCases struct{}
 
-func (extensionTaskCases) Site() aitasks.Site {
+func (CertCases) Site() aitasks.Site {
 	return aitasks.Site{Task: ai.TaskExtensionTask, Variant: "run", Kind: ai.SiteKindOneShot}
 }
 
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
-func (extensionTaskCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
-	var f extensionTaskFixture
+func (CertCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
+	var f certFixture
 	if err := json.Unmarshal(fixture, &f); err != nil {
-		return nil, fmt.Errorf("%s: the fixture is not the shape this site takes: %w", extensionTaskSite, err)
+		return nil, fmt.Errorf("%s: the fixture is not the shape this site takes: %w", certSite, err)
 	}
-	var want extensionTaskExpectation
+	var want certExpectation
 	if err := json.Unmarshal(expected, &want); err != nil {
-		return nil, fmt.Errorf("%s: the expected answer is not {contains: [...]}: %w", extensionTaskSite, err)
+		return nil, fmt.Errorf("%s: the expected answer is not {contains: [...]}: %w", certSite, err)
 	}
 	if len(want.Contains) == 0 {
-		return nil, fmt.Errorf("%s: the scenario names no words the answer must hold, so no answer could fail it", extensionTaskSite)
+		return nil, fmt.Errorf("%s: the scenario names no words the answer must hold, so no answer could fail it", certSite)
 	}
 	task := extension.AITask{Name: "certified", Prompt: f.Prompt, Schema: f.Schema}
 	if err := task.Validate(); err != nil {
-		return nil, fmt.Errorf("%s: %w", extensionTaskSite, err)
+		return nil, fmt.Errorf("%s: %w", certSite, err)
 	}
-	req, err := extensionAIRequest(context.Background(), task, extension.AIInput{
+	req, err := buildRequest(context.Background(), limits{maxChars: maxCertChars}, task, extension.AIInput{
 		Text: f.InputText, NoContact: "a certification fixture",
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", extensionTaskSite, err)
+		return nil, fmt.Errorf("%s: %w", certSite, err)
 	}
-	return &extensionTaskCase{task: task, req: req, want: want}, nil
+	return &certCase{task: task, req: req, want: want}, nil
 }
 
-type extensionTaskCase struct {
+type certCase struct {
 	task extension.AITask
 	req  model.Request
-	want extensionTaskExpectation
+	want certExpectation
 }
 
-func (c *extensionTaskCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
+func (c *certCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	trace := aitasks.Trace{Requests: []model.Request{c.req}}
 	resp, err := completer.Complete(ctx, c.req)
 	if err != nil {
-		return trace, fmt.Errorf("%s: %w", extensionTaskSite, err)
+		return trace, fmt.Errorf("%s: %w", certSite, err)
 	}
 	trace.Output = resp.Text
 	return trace, nil
 }
 
-func (c *extensionTaskCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	if err := extensionAnswerCheck(c.task)(trace.Output); err != nil {
+func (c *certCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
+	if err := answerCheck(c.task)(trace.Output); err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
 	for _, word := range c.want.Contains {

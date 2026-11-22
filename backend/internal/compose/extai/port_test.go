@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package extai
 
 import (
 	"bytes"
@@ -14,8 +14,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/pdftext"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -35,33 +38,64 @@ var aiUnitTasks = []extension.AITask{
 	{Name: "invoice_total", Prompt: "Return the invoice total.", Documents: true, Schema: `{"type":"object","required":["total"],"properties":{"total":{"type":"number"}}}`},
 }
 
-func composeAIUnits(t *testing.T) {
-	t.Helper()
-	before := ComposedExtensions()
-	setComposedExtensions([]extension.Extension{
-		{Name: "books", AITasks: aiUnitTasks},
-		{Name: "other", AITasks: []extension.AITask{{Name: "private_task", Prompt: "Do it."}}},
-	})
-	t.Cleanup(func() { setComposedExtensions(before) })
+// routerLane is the extension_task lane over a real router, as the model path
+// builds it.
+type routerLane struct{ router *ai.Router }
+
+func (l routerLane) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	resp, _, err := l.router.Complete(ctx, ai.TaskExtensionTask, req)
+	return resp, err
 }
 
-// aiRuntime is the books unit's per-call Runtime over a real router and the
-// offline model, so the call takes the path a core task takes.
-func aiRuntime(t *testing.T, cfg ai.RoutingConfig, fake *ai.FakeClient) (*callRuntime, *extAICalls) {
+func (l routerLane) CompleteValidated(ctx context.Context, req model.Request, validate ai.Validator) (model.Response, error) {
+	resp, _, err := l.router.CompleteStructured(ctx, ai.TaskExtensionTask, req, validate)
+	return resp, err
+}
+
+// harness is the books unit's port over a real router and the offline model,
+// so the call takes the path a core task takes.
+type harness struct {
+	lane       Lane
+	restricted func(context.Context) (bool, error)
+	live       bool
+	workspace  ids.UUID
+}
+
+func (h *harness) release() { h.live = false }
+
+func (h *harness) AI() Port {
+	return Port{
+		Lane: h.lane, Restricted: h.restricted, PDF: testPDF, MaxDocumentBytes: 8 << 20, MaxInputChars: 60000,
+		Scope: func(ctx context.Context) (context.Context, error) {
+			if !h.live {
+				return nil, extension.ErrRuntimeExpired
+			}
+			ctx = principal.WithWorkspaceID(ctx, h.workspace)
+			return provenance.WithExtension(ctx, provenance.Extension{Unit: "books", Version: "1.0.0"}), nil
+		},
+		Unit: "books",
+		Declared: func() []extension.Extension {
+			return []extension.Extension{
+				{Name: "books", AITasks: aiUnitTasks},
+				{Name: "other", AITasks: []extension.AITask{{Name: "private_task", Prompt: "Do it."}}},
+			}
+		},
+	}
+}
+
+var testPDF = pdftext.New()
+
+func aiRuntime(t *testing.T, cfg ai.RoutingConfig, fake *ai.FakeClient) (*harness, *extAICalls) {
 	t.Helper()
-	composeAIUnits(t)
 	calls := &extAICalls{}
-	path, err := NewLocalModelPath(cfg, ai.WithFakeClient(fake), ai.WithCallStore(calls), ai.WithoutResultCache())
+	router, err := ai.NewLocalRouter(cfg, ai.WithFakeClient(fake), ai.WithCallStore(calls), ai.WithoutResultCache(),
+		ai.WithRestrictionCheck(ai.NoRestrictionData{}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
-	return &callRuntime{
-		unit: "books", version: "1.0.0", live: true, callCtx: ctx,
-		deps: extensionRuntimeBinding{
-			pool: &pgxpool.Pool{}, ai: path.ExtensionTask,
-			anyContactRestricted: func(context.Context) (bool, error) { return false, nil },
-		},
+	return &harness{
+		lane: routerLane{router}, live: true, workspace: ids.NewV7(),
+		restricted: func(context.Context) (bool, error) { return false, nil },
 	}, calls
 }
 
@@ -235,7 +269,7 @@ func TestDocumentsAreRefusedForATaskThatDoesNotDeclareThem(t *testing.T) {
 
 func TestARoleWithNoAIPathAnswersUnavailable(t *testing.T) {
 	rt, _ := aiRuntime(t, offline(), ai.NewFakeClient())
-	rt.deps.ai = nil
+	rt.lane = nil
 	if _, err := rt.AI().Run(t.Context(), "summarise", noContact()); !errors.Is(err, extension.ErrAIUnavailable) {
 		t.Fatalf("err = %v, want ErrAIUnavailable", err)
 	}
@@ -251,14 +285,14 @@ func TestAReleasedRuntimeRefusesAI(t *testing.T) {
 
 func TestPreflightRefusesABadOrRepeatedAITask(t *testing.T) {
 	good := extension.Extension{Name: "books", AITasks: aiUnitTasks}
-	if err := preflightAITasks(good); err != nil {
+	if err := Preflight(good); err != nil {
 		t.Fatalf("a good declaration was refused: %v", err)
 	}
 	twice := extension.Extension{Name: "books", AITasks: []extension.AITask{aiUnitTasks[0], aiUnitTasks[0]}}
 	bad := extension.Extension{Name: "books", AITasks: []extension.AITask{{Name: "Bad", Prompt: "x"}}}
 	badSchema := extension.Extension{Name: "books", AITasks: []extension.AITask{{Name: "s", Prompt: "x", Schema: `{"type":"nope"}`}}}
 	for name, e := range map[string]extension.Extension{"twice": twice, "bad name": bad, "bad schema": badSchema} {
-		if err := preflightAITasks(e); err == nil {
+		if err := Preflight(e); err == nil {
 			t.Errorf("%s: want a refusal", name)
 		}
 	}
@@ -303,7 +337,7 @@ func TestADocumentIsReadByItsBytesAndNotByItsLabel(t *testing.T) {
 func TestARestrictedContactRefusesTheCallWhateverTheUnitSaysAboutItsInput(t *testing.T) {
 	fake := ai.NewFakeClient().Script("x")
 	rt, _ := aiRuntime(t, offline(), fake)
-	rt.deps.anyContactRestricted = func(context.Context) (bool, error) { return true, nil }
+	rt.restricted = func(context.Context) (bool, error) { return true, nil }
 	for name, in := range map[string]extension.AIInput{
 		"a reason that says no contact data": {Text: "hello", NoContact: "not contact data"},
 		"an unrelated contact id":            {Text: "hello", Contacts: []string{ids.NewV7().String()}},
@@ -317,26 +351,18 @@ func TestARestrictedContactRefusesTheCallWhateverTheUnitSaysAboutItsInput(t *tes
 	}
 }
 
-func TestARebindToAnotherPoolDropsTheLanesBuiltOnTheOldOne(t *testing.T) {
-	before := boundExtensionRuntime()
-	t.Cleanup(func() {
-		extensionRuntimeDeps.mu.Lock()
-		extensionRuntimeDeps.extensionRuntimeBinding = before
-		extensionRuntimeDeps.mu.Unlock()
-	})
-	path, err := NewLocalModelPath(offline())
-	if err != nil {
-		t.Fatal(err)
+func TestAPortOnAnotherPoolFindsNoLane(t *testing.T) {
+	rt, _ := aiRuntime(t, ai.FakeRoutingConfig(), ai.NewFakeClient().Script("x"))
+	port := rt.AI()
+	pool := &pgxpool.Pool{}
+	Bind(pool, rt.lane)
+	t.Cleanup(func() { Bind(nil, nil) })
+	port.Lane, port.Pool = nil, pool
+	if _, err := port.Run(t.Context(), "summarise", noContact()); err != nil {
+		t.Fatalf("a port on the bound pool found no lane: %v", err)
 	}
-	first, second := &pgxpool.Pool{}, &pgxpool.Pool{}
-	BindExtensionRuntime(first, nil)
-	BindExtensionAI(path.ExtensionTask)
-	BindExtensionRuntime(first, nil)
-	if boundExtensionRuntime().ai == nil {
-		t.Fatal("rebinding the same pool dropped the AI lane")
-	}
-	BindExtensionRuntime(second, nil)
-	if boundExtensionRuntime().ai != nil {
-		t.Fatal("the AI lane built over the old pool survived a rebind to another")
+	port.Pool = &pgxpool.Pool{}
+	if _, err := port.Run(t.Context(), "summarise", noContact()); !errors.Is(err, extension.ErrAIUnavailable) {
+		t.Fatalf("a port on another pool: err = %v, want ErrAIUnavailable", err)
 	}
 }

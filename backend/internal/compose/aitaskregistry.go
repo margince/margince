@@ -10,6 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/cardphoto"
 	"github.com/margince/margince/backend/internal/compose/chatsummary"
 	"github.com/margince/margince/backend/internal/compose/chattasks"
+	"github.com/margince/margince/backend/internal/compose/extai"
 	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/reportsetup"
 	"github.com/margince/margince/backend/internal/compose/rewrite"
@@ -85,7 +86,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskDocumentExtract, laneChat, chatCaptureCases{})
 	oneShot(ai.TaskGrowthFit, "growth_fit", growthFitCases{})
 	oneShot(ai.TaskCertJudge, "judge", certJudgeCases{})
-	oneShot(ai.TaskExtensionTask, "run", extensionTaskCases{})
+	oneShot(ai.TaskExtensionTask, "run", extai.CertCases{})
 	oneShot(ai.TaskRateExtract, "fx", rateFxCases{})
 	oneShot(ai.TaskVoiceBuild, "derive", voiceDeriveCases{})
 	oneShot(ai.TaskVoiceBuild, "eval_draft", voiceEvalDraftCases{})

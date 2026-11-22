@@ -1600,7 +1600,7 @@ res, err := rt.AI().Run(ctx, "invoice_total", extension.AIInput{
 ```
 
 Every call is one `extension_task` call on the core's router. So the installation's routing setting picks the
-model, the region limit applies as it does to a core task, credentials are removed from the input, and the
+model, the region limit applies as it does to a core task, secrets are stripped from the input, and the
 input is never kept in the call log's payload store. The `ai_call` row names the unit and the task as
 `<unit>/<task>`.
 
@@ -1613,16 +1613,16 @@ The rules:
   The core cannot check where your input came from, so it also refuses every AI call while any contact in the
   workspace is under a restriction of processing. The error is `ErrAIUnavailable`, and the call may be tried
   again after the restriction lifts.
-- **A document is read by its bytes, not its label.** A PDF is read as text by the reader the core uses for its own PDFs. A scan with no text layer is refused
+- A document is read by its bytes, not its label. A PDF is read as text by the reader the core uses for its own documents. A scan with no text layer is refused
   with `ErrAIScannedDocument`. No document goes to a model as bytes, and an image is refused with
   `ErrAIDocumentType`.
 - **`Documents: true` is required** to pass documents. Text types go through as text.
-- **With a `Schema`**, the answer comes back as `AIResult.JSON` and has been checked against it. Without one,
+- **With a `Schema`**, the answer comes back as `AIResult.JSON` and the core checks it against it. Without one,
   it comes back as `AIResult.Text`.
 - **The answer is advice.** `AIResult.MachineMade` is always true. A unit that shows or stores it says a model
   wrote it.
-- **`ErrAIUnavailable`** means routing, the region limit, a restriction or the budget refused the call. It went
-  nowhere, so a job may try again later.
+- **`ErrAIUnavailable`** means routing, the region limit, a restriction or the budget refused the call. It reached
+  no model, so a job may try again later.
 - The core's certification covers the one `extension_task` site. It does not run a unit's own examples yet.
 
 ## Call your provider

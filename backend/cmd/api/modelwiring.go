@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/extai"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -162,7 +163,7 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 		}
 		boot := ai.NewPublicProfile(candidate.state, candidate.cfg)
 		router := modelPath.Router()
-		compose.BindExtensionAI(modelPath.ExtensionTask)
+		extai.Bind(pool, modelPath.ExtensionTask)
 		return &modelPath, liveState(router, candidate.state), liveProfile(router, boot, candidate.state == compose.AIStateConfigured), nil
 	}
 	return nil, nil, nil, errors.New("api: no model path candidate resolved")
