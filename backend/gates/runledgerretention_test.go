@@ -36,9 +36,6 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 	"activity_reminder_delivery": "one row per task, keyed by the task and overwritten when its reminder " +
 		"moves; the task's delete cascades to it, so the task count bounds it and no window applies",
 	"data_task_run": "one durable row per release task step, bounded by the shipped catalog rather than execution count. Deleting a completed cursor would rerun a correction after restart; retirement requires an explicit minimum supported upgrade release.",
-	"data_task_run_history": "previous reviewed runs retain the operator, bounded selection and outcome " +
-		"needed to explain archived records after reactivation. No source bodies are stored; deleting " +
-		"this evidence requires an operator retention policy that outlives the corrected records",
 	"runner_job": "River's own job table, which the installation reset also leaves alone: " +
 		"its runtime manages retention and truncating underneath a running worker is not ours to do",
 	"agent_run": "one row per agent execution, holding the outcome and the degrade reason. The " +
@@ -55,9 +52,6 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 		"them and asked again on every read, never served as stored. It is deleted with its " +
 		"asker's user row, and a deactivated seat keeps it; a sent edition that copied its " +
 		"question has its own retention ladder",
-	"workflow_run": "one row per automation tick, and auth.LiveIntakeTaskClause reads the planned " +
-		"target of a route_lead run to exclude imported follow-ups. A window here is entangled with " +
-		"that clause rather than free",
 	"assurance_run": "one row per assurance pass over a deal. The verdict is the product; the run " +
 		"is how it was reached",
 	"brief_run": "one row per morning brief composed, which the annotate path locks and writes " +

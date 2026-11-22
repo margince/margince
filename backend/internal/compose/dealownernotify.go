@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // Deal stores have no job client; this inserter uses the caller's transaction.
@@ -114,12 +115,5 @@ func deciderContextTx(ctx context.Context, tx pgx.Tx, seat ids.UUID) (context.Co
 	if err != nil {
 		return nil, false, err
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          principal.HumanIDPrefix + seat.String(),
-		UserID:      seat,
-		SeatType:    seatType,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), true, nil
+	return principal.WithActor(ctx, authz.HumanPrincipal(seat, rbac, seatType)), true, nil
 }

@@ -13,14 +13,88 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "b8934ba17c77ac6e",
+    "tools": "e0dc9a3385adc523",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "d904305f3d25fa7b",
+    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "ran_at": "2026-11-21T14:54:38Z",
+    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
+    "graded_at": "2026-11-21T14:54:38Z"
+  },
   "usage": {
-    "input_tokens": 14,
-    "output_tokens": 2934,
-    "cache_creation_input_tokens": 16355,
-    "cache_read_input_tokens": 542992,
+    "input_tokens": 16,
+    "output_tokens": 2343,
+    "cache_creation_input_tokens": 10968,
+    "cache_read_input_tokens": 621403,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1491
+    "cost_usd": 0.1295
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "find_records",
+        "forecast_readings",
+        "list_pipelines",
+        "progress_deal",
+        "read_forecast",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "find_records",
+        "forecast_readings",
+        "list_pipelines",
+        "progress_deal",
+        "read_forecast",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5.5,
+      "min": 4,
+      "max": 7
+    },
+    "turns": {
+      "median": 6.5,
+      "min": 5,
+      "max": 8
+    },
+    "refused": {
+      "median": 1,
+      "min": 0,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 316193.5,
+      "min": 237551,
+      "max": 394836
+    },
+    "output_tokens": {
+      "median": 1171.5,
+      "min": 1096,
+      "max": 1247
+    },
+    "duration_ms": {
+      "median": 13154.5,
+      "min": 12669,
+      "max": 13640
+    }
   }
 }

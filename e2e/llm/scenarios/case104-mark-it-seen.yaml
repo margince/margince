@@ -7,6 +7,8 @@ writes: true
 prompt: |
   I have looked at Reply Deutschland already. Mark the company as seen for me.
 
+# Marking a company seen leaves nothing an end-state entry reads, so the call
+# is the outcome.
 must_call:
   - change_attention
 

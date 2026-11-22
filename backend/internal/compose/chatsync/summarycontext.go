@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -49,33 +50,36 @@ type summaryContext struct {
 // the given time. A project has no company or contacts here.
 func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link, record chatRecord, before time.Time) (summaryContext, error) {
 	var out summaryContext
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		owner, err := liveOwner(ctx, tx, record)
-		if err != nil {
-			return err
-		}
-		if owner != "" {
-			out.facts = append(out.facts, "Owner: "+owner)
-		}
-		readers, err := noteReaders(ctx, tx, link)
-		if err != nil {
-			return err
-		}
-		if link.DealID != nil {
-			facts, err := dealParties(ctx, tx, *link.DealID, readers)
+	// One snapshot, so every group of readers judges the same company and edges.
+	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			owner, err := liveOwner(ctx, tx, record)
 			if err != nil {
 				return err
 			}
-			out.facts = append(out.facts, facts...)
-		}
-		if out.earlier, err = previousNote(ctx, tx, link, before); err != nil {
+			if owner != "" {
+				out.facts = append(out.facts, "Owner: "+owner)
+			}
+			readers, err := noteReaders(ctx, tx, link)
+			if err != nil {
+				return err
+			}
+			if link.DealID != nil {
+				facts, err := dealParties(ctx, tx, *link.DealID, readers)
+				if err != nil {
+					return err
+				}
+				out.facts = append(out.facts, facts...)
+			}
+			if out.earlier, err = previousNote(ctx, tx, link, before); err != nil {
+				return err
+			}
+			if out.place.seats, err = storekit.WorkspaceSeatAddresses(ctx, tx); err != nil {
+				return err
+			}
+			out.place.own, err = capture.TrustedColleagueDomainsTx(ctx, tx)
 			return err
-		}
-		if out.place.seats, err = storekit.WorkspaceSeatAddresses(ctx, tx); err != nil {
-			return err
-		}
-		out.place.own, err = capture.TrustedColleagueDomainsTx(ctx, tx)
-		return err
+		})
 	})
 	return out, err
 }
@@ -150,27 +154,88 @@ func dealParties(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []prin
 	return facts, nil
 }
 
+// companyName is the deal's company when every reader may read it.
 func companyName(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []principal.Principal) (string, error) {
 	if err := auth.RequireReadForReaders(ctx, "company", readers...); err != nil {
 		return "", withheld(err)
 	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	deal := arg(dealID)
-	scope, err := auth.ScopeClauseForReaders(ctx, "company", "c", arg, readers...)
-	if err != nil {
-		return "", withheld(err)
-	}
 	var name string
-	err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT c.display_name FROM deal d JOIN company c ON c.id = d.company_id
-		WHERE d.id = $%d AND c.archived_at IS NULL AND c.visibility = 'workspace'%s`, deal, andClause(scope)), args...).Scan(&name)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
+	for group := range auth.ReaderGroups(readers) {
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		deal := arg(dealID)
+		scope, err := auth.ScopeClauseForReaders(ctx, "company", "c", arg, group...)
+		if err != nil {
+			return "", withheld(err)
+		}
+		err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT c.display_name FROM deal d JOIN company c ON c.id = d.company_id
+			WHERE d.id = $%d AND c.archived_at IS NULL AND c.visibility = 'workspace'%s`, deal, andClause(scope)), args...).Scan(&name)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		}
+		if err != nil {
+			return "", err
+		}
 	}
-	return name, err
+	return name, nil
 }
 
+// stakeholder is one current stakeholder a group of readers may all read.
+type stakeholder struct {
+	id   ids.UUID
+	name string
+}
+
+// stakeholderNames are the deal's current stakeholders every reader may read,
+// in the order the first group of readers sees them.
 func stakeholderNames(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []principal.Principal) ([]string, error) {
+	var shared []stakeholder
+	first := true
+	for group := range auth.ReaderGroups(readers) {
+		seen, err := stakeholdersReadBy(ctx, tx, dealID, group)
+		if err != nil {
+			return nil, err
+		}
+		if first {
+			shared, first = distinctStakeholders(seen), false
+		} else {
+			shared = seenByAll(shared, seen)
+		}
+		if len(shared) == 0 {
+			return nil, nil
+		}
+	}
+	names := make([]string, 0, min(len(shared), maxContactFacts))
+	for _, s := range shared[:min(len(shared), maxContactFacts)] {
+		names = append(names, s.name)
+	}
+	return names, nil
+}
+
+// distinctStakeholders keeps each contact once, at its first edge.
+func distinctStakeholders(rows []stakeholder) []stakeholder {
+	kept := map[ids.UUID]bool{}
+	return slices.DeleteFunc(rows, func(s stakeholder) bool {
+		if kept[s.id] {
+			return true
+		}
+		kept[s.id] = true
+		return false
+	})
+}
+
+// seenByAll keeps the stakeholders a later group of readers saw too.
+func seenByAll(shared, seen []stakeholder) []stakeholder {
+	later := make(map[ids.UUID]bool, len(seen))
+	for _, s := range seen {
+		later[s.id] = true
+	}
+	return slices.DeleteFunc(shared, func(s stakeholder) bool { return !later[s.id] })
+}
+
+// stakeholdersReadBy are the deal's current stakeholders each of readers may
+// read, with the object and row scope of the contact and the edge.
+func stakeholdersReadBy(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []principal.Principal) ([]stakeholder, error) {
 	if err := auth.RequireReadForReaders(ctx, "contact", readers...); err != nil {
 		return nil, withheld(err)
 	}
@@ -190,15 +255,17 @@ func stakeholderNames(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers [
 		}
 		scopes = append(scopes, edge)
 	}
-	limit := arg(maxContactFacts)
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT p.full_name FROM relationship r JOIN contact p ON p.id = r.contact_id
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT p.id, p.full_name FROM relationship r JOIN contact p ON p.id = r.contact_id
 		WHERE r.deal_id = $%d AND %s
 		  AND p.archived_at IS NULL AND p.visibility = 'workspace' AND NOT `+auth.ContactRestrictedSQL("p.id")+`%s
-		ORDER BY r.is_current_primary DESC, p.full_name, p.id LIMIT $%d`, deal, dealseat.CurrentSQL("r"), andClause(strings.Join(nonEmpty(scopes), " AND ")), limit), args...)
+		ORDER BY r.is_current_primary DESC, p.full_name, p.id`, deal, dealseat.CurrentSQL("r"), andClause(strings.Join(nonEmpty(scopes), " AND "))), args...)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowTo[string])
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (stakeholder, error) {
+		var s stakeholder
+		return s, row.Scan(&s.id, &s.name)
+	})
 }
 
 // withheld turns a reader's refusal into "leave the section out" and passes

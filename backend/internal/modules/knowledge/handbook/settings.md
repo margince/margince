@@ -317,7 +317,7 @@ Admin and Ops can see Retention and the **Held** list. The audit log and privacy
 
 System health and Reset data sit in the **System** group, and Data import in **Data**.
 
-**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass. Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review.
+**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass. Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review. **The reporting timezone cannot be read** means the server cannot load the saved time zone, so background work counts its days in UTC. Its button opens **Regional and calendar**, where an admin chooses the time zone again.
 
 **Not set up yet** lists each part nobody has set up, such as AI providers, search or restore tests. Each says what happened, why it matters and what to do, with a button that goes there. **Passing** lists the checks with nothing to do. **All checks** holds service status; **Diagnostics** shows the technical details.
 
@@ -334,7 +334,7 @@ Moving to another view asks you to save a draft first. **Search settings** opens
 
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, leads, deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the AI finds.
-- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
+- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it. A step marked **Done, action needed** finished but left records for someone. It says why, what to do and how many records are left. Once that is done, choose **Retry** on the step to handle the records again.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
 - **AI provider status**: recorded provider problems. An empty list does not prove that a provider recently answered. See [AI providers](ai-providers.md).
 - **Mail capture checks**: connections that need attention, with the member, mailbox, condition and last good sync. Admin and Ops see no messages here.

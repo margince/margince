@@ -9,3 +9,5 @@ sbom-schemas/spdx-3.0.1/spdx-3.0.1.schema.json | SPDX 3.0.1 JSON schema, https:/
 backend/internal/modules/capture/graphcal/data/windowsZones.xml | Unicode CLDR release-48, common/supplemental/windowsZones.xml | Unicode-3.0 | backend/internal/modules/capture/graphcal/data/LICENSE-cldr.txt
 backend/internal/platform/cldrzone/data/timezone.xml | Unicode CLDR release-48, common/bcp47/timezone.xml | Unicode-3.0 | backend/internal/platform/cldrzone/data/LICENSE-cldr.txt
 backend/internal/modules/capture/graphcal/data/moved-windows-zones.txt | derived from Unicode CLDR release-48 and release-49 common/supplemental/windowsZones.xml | Unicode-3.0 | backend/internal/modules/capture/graphcal/data/LICENSE-cldr.txt
+backend/internal/modules/deals/fonts/LiberationSans-Regular.ttf | Liberation Fonts 2.1.5 (Debian fonts-liberation2 1:2.1.5-3) | OFL-1.1 | backend/internal/modules/deals/fonts/LICENSE
+backend/internal/modules/deals/fonts/LiberationSans-Bold.ttf | Liberation Fonts 2.1.5 (Debian fonts-liberation2 1:2.1.5-3) | OFL-1.1 | backend/internal/modules/deals/fonts/LICENSE

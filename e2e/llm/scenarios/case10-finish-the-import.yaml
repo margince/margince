@@ -3,21 +3,13 @@
 # Case 3 asks whether an assistant shows the numbers BEFORE committing. This
 # asks the other half, and it has to be its own case for exactly that reason:
 # case 3's criterion 1 is that nothing is committed until the asker has seen
-# what the import would do, so requiring commit_import there would contradict
-# the case. Here the asker has already seen the file, says so, and asks for it
-# to be finished — and an assistant that stops at the dry run and asks for
-# permission it was already given has not done the job.
+# what the import would do, so the commit cannot be that case's outcome. Here
+# the asker has already seen the file, says so, and asks for it to be finished —
+# and an assistant that stops at the dry run and asks for permission it was
+# already given has not done the job.
 #
 # So the two cases are the two halves of one honest rule: check first when
 # nobody has looked, follow through when they have.
-#
-# WHY read_import IS REQUIRED. commit_import answers at once with the run
-# `running`: the write goes on after the call, so its answer carries the state
-# and not the counts. read_import with view report answers the run's state and,
-# once validated, its report. The report is the only thing that says how many
-# rows landed and what was skipped, it is the same shape before and after the
-# commit, and the asker wanted both numbers. So one tool both waits for the run
-# to finish and reads what it did.
 name: case10_finish_the_import
 title: Finish the import
 criteria: [1, 2]
@@ -41,30 +33,17 @@ prompt: |
   Fraenkische Prueftechnik GmbH,Bamberg,11-50,DE
   Uckermark Automation GmbH,Prenzlau,201-500,DE
 
-must_call:
-  - preview_import
-  - read_import
-  - commit_import
 may_call:
-  # Confirming the companies are really there afterwards is a reasonable thing
-  # to do and a different way to answer the same question; neither is the test.
+  # The import route (preview, commit, read the report) and creating the
+  # companies one by one both finish the job. The end state below is the test.
+  - preview_import
+  - commit_import
+  - read_import
+  - create_record
   - search_records
   - list_records
   - read_record
   - query_workspace
-
-# THE OBJECT IS THE PLAN. preview_import takes company, contact or lead, and
-# the three are not interchangeable: a lead lands unworked and waits for a human
-# to promote it, which is the right answer for a machine-scraped list and the
-# wrong one for a file two colleagues have already been through line by line. The
-# tool name alone passes on a run that filed four companies as unworked leads
-# and then reported four companies created.
-#
-# run_id is not pinned: it is minted by the preview inside the run itself, so
-# there is nothing a scenario file could compare it to.
-must_call_with:
-  - read_import.view=report
-  - preview_import.object=company
 
 must_mention:
   # Criterion 1: the number that landed, which is the file's four rows. All four
@@ -82,8 +61,9 @@ must_mention:
   # between them may not cross a SENTENCE END or a second NUMBER, which is what
   # keeps a date from counting: "I ran the import on 4 May. 10 rows processed, 1
   # skipped" reaches "rows" only over a full stop and a digit, and reaches
-  # nothing.
-  - "\b(?:4|four|vier)\b(?:(?!\b\d)[^.\n]){0,24}?(?:organi[sz]ations?|companies|company|records?|rows?|accounts?|Firmen|Unternehmen)|(?:organi[sz]ations?|companies|records?|rows?|accounts?)[^\n]{0,15}[:=]?\s*\b(?:4|four|vier)\b"
+  # nothing. The file is a partner list, so "all four partners are in the CRM as
+  # companies" is the count too.
+  - "\b(?:4|four|vier)\b(?:(?!\b\d)[^.\n]){0,40}?(?:organi[sz]ations?|companies|company|partners?|records?|rows?|accounts?|Firmen|Unternehmen)|(?:organi[sz]ations?|companies|records?|rows?|accounts?)[^\n]{0,15}[:=]?\s*\b(?:4|four|vier)\b"
   # Criterion 2: it answers the second question too. "Nothing was skipped" is
   # the honest report of this file, and the answer that never says it has left
   # the asker to assume it. Both orders, because an answer writes either
@@ -99,9 +79,8 @@ must_mention:
   # übersprungen", failed one half of one criterion pair and passed the other.
   - "(?:\bno\b|\bnone\b|nothing|\bzero\b|\b0\b|\bkeine\b|nichts)[^\n]{0,40}(?:skipp|fail|unusable|reject|error|issue|problem|übersprung|ausgelassen|verworfen|fehlgeschlag|Fehler|Problem)|(?:skipp\w*|fail\w*|unusable|issues?|errors?|problems?|übersprung\w*|ausgelassen|verworfen|fehlgeschlagen|Fehler|Probleme?)[^\n]{0,30}(?:\bnone\b|nothing|\bzero\b|\bkeine\b|nichts|:\s*0\b|=\s*0\b|\b0\b)"
   # CRITERION 1, WHICH NOTHING ABOVE COULD FAIL. The two counts are the same
-  # before the commit and after it — that is exactly why read_import's report is
-  # the view for both — so a run that stopped at the dry run and reported "4
-  # companies, 0 skipped" satisfied every assertion this case had while
+  # before the commit and after it, so a run that stopped at the dry run and
+  # reported "4 companies, 0 skipped" satisfied every assertion this case had while
   # doing the one thing it exists to catch. The forbidden half below only sees
   # an answer that ASKS; an answer that simply stops asks nothing.
   #
@@ -110,15 +89,15 @@ must_mention:
   # cell, so "Would create 4 companies" and "ready to commit once you
   # confirm" reach nothing while "4 companies created", "the partner list is
   # committed" and "vier Firmen angelegt" all land.
-  - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in the (?:CRM|workspace|system))|\bdrin\b|angelegt|eingelesen)"
+  - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in (?:the (?:CRM|workspace|system)|Margince))|\bdrin\b|angelegt|eingelesen)"
 
   # CRITERION 2, AND THE PART OF "WHAT ACTUALLY LANDED" NOTHING ELSE ASKED FOR.
-  # `name,city,size,country` places NOTHING on its own — the refusal names the
-  # four columns it could not match — so every run has to invent the mapping and
-  # send it back: size onto `size_band`, country onto `address.country`. Those
+  # `name,city,size,country` places NOTHING on its own, so every run, by the
+  # import or one company at a time, has to choose where each column goes:
+  # size onto `size_band`, country onto `address.country`. Those
   # are the assistant's choices and not the file's, and a run that quietly mapped
-  # `size` onto `description` and reported "4 companies created, 0 skipped"
-  # satisfied every other assertion this case has.
+  # `size` onto `description` fails the end state below; this one holds that
+  # the answer tells the asker.
   #
   # So the mapping it invented has to reach the reader. Anchored to a field name
   # the assistant chose rather than to the verb alone, and in both orders: a
@@ -163,8 +142,9 @@ must_not_mention:
   - "(?:cannot|can not|can't|unable to|not able to)[^\n]{0,25}(?:commit|complete|finish) (?:the |this )?import|import[^\n]{0,30}(?:has to|have to|must) be (?:committed|completed|finished|approved) in the (?:web )?app"
 
 
-# What landed, read from the world once the committed import has stopped
-# running: each company once, with the file's size in the field it belongs in.
+# What landed, read from the world once any committed import has stopped
+# running: each company once, as a company and not a lead, with the file's size
+# in the field it belongs in.
 must_end_with:
   - company "Weserbergland Antriebe GmbH" size_band=51-200
   - company "Lausitzer Sensorik AG" size_band=11-50

@@ -34,7 +34,7 @@ func (s *Sink) WithPartyReceiptSettlement(settle PartyReceiptSettlement) *Sink {
 // PartyAuthority checks the capturing member before admission, inside its
 // write, and inside every capture write of a mailbox run (HeldAuthorityTx).
 type PartyAuthority interface {
-	EffectiveAuthority(context.Context, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error)
+	authz.Resolver
 	EffectiveAuthorityTx(context.Context, pgx.Tx, ids.UUID) (authz.RBAC, principal.SeatType, error)
 	HeldAuthorityTx(context.Context, pgx.Tx, ids.UUID) (authz.RBAC, principal.SeatType, error)
 }
@@ -103,14 +103,14 @@ func (s *Sink) admitPartiesAs(ctx context.Context, activity ids.ActivityID, sour
 	if !ok {
 		return ctx, false, apperrors.ErrPermissionDenied
 	}
-	rbac, seat, err := s.partyAuthority.EffectiveAuthority(ctx, ws, source.User)
+	member, err := authz.MemberPrincipal(ctx, s.partyAuthority, ws, source.User)
 	if err != nil {
 		return ctx, false, err
 	}
-	if !seat.CanMutate() {
+	if !member.SeatType.CanMutate() {
 		return ctx, false, nil
 	}
-	acting := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalConnector, ID: connectorPrincipalID(source.Provider), UserID: source.User, OnBehalfOf: source.User, TeamIDs: rbac.TeamIDs, SeatType: seat, Permissions: rbac.Permissions})
+	acting := principal.WithActor(ctx, asConnector(member, connectorPrincipalID(source.Provider)))
 	parties, ready, err := s.readAdmissionParties(acting, activity, source)
 	if err != nil || !ready {
 		return ctx, false, err

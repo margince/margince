@@ -113,14 +113,24 @@ func leadOrContactKeyHolder(ctx context.Context, pool *pgxpool.Pool, ledger Ledg
 		keys = storekit.IdentityKeys{LinkedInURLs: []string{value}}
 	}
 	var holders storekit.IdentityHolders
+	var leadRival bool
 	if err := probe(ctx, pool, fmt.Sprintf("%q", value), func(tx pgx.Tx) (err error) {
 		holders, err = storekit.IdentityHoldersOf(ctx, tx, keys)
+		if err != nil || object != migration.ObjectLead {
+			return err
+		}
+		leadRival, err = contacts.LeadHasRivalContact(ctx, tx, ids.From[ids.LeadKind](self), holders)
 		return err
 	}); err != nil {
 		return "", err
 	}
 	for _, refuser := range refusers {
-		if ledger.Held(kind, value, refuser) || holds(holders, refuser, object, self) {
+		stored := holds(holders, refuser, object, self)
+		if object == migration.ObjectLead && refuser == migration.ObjectContact {
+			// The lead's store keeps the contact it was worked from out of the rivals.
+			stored = leadRival
+		}
+		if ledger.Held(kind, value, refuser) || stored {
 			return refuser, nil
 		}
 	}

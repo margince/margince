@@ -16,7 +16,7 @@ bound, the rest of the product works as normal.
 
 | What you need | Notes |
 |---|---|
-| **Postgres 16** with **pgvector** ≥ 0.5.0 and `ICU` support | Postgres does not trust the `vector` extension. A superuser must install it one time (`scripts/deploy/db-bootstrap.sql`). Subject words use `und-x-icu` for letter case and word breaks. The supported database image supplies it. |
+| **Postgres 16** with **pgvector** ≥ 0.7.0 and `ICU` support | Postgres does not trust the `vector` extension. A superuser must install it one time (`scripts/deploy/db-bootstrap.sql`). Search vectors are stored as `halfvec`, a type that version 0.7.0 added. On a database made with an older version, a superuser runs `ALTER EXTENSION vector UPDATE` before the upgrade. Subject words use `und-x-icu` for letter case and word breaks. The supported database image supplies it. |
 | **Redis 7.0 to 7.2** | It needs streams with consumer groups. **Valkey** works too, but we do not test it. |
 | **A proxy in front that ends TLS** | Serve the API and the web under one host name. |
 | **A correct system clock** | Retention, automation triggers and job schedules use the system time. |
@@ -52,11 +52,12 @@ change.
 | Mid-market | off | 4 | 8 GB | 50 GB |
 | Mid-market | on | 8 | 32 GB | 200 GB |
 
-- **Set `shared_buffers` by hand.** The Postgres defaults expect a machine
-  that runs only Postgres. Here, Postgres shares the memory with the other
-  processes. If the value stays at the size for a host with only Postgres, the
-  node runs out of memory and moves memory pages to disk. You see slow page
-  loads, not an error message.
+- **Size the Postgres memory to the host.** Here, Postgres shares the memory
+  with the other processes. The compose file sets `shared_buffers` for the 4 GB
+  host, and a larger host raises it in `.env`. For the rule, see
+  [Postgres memory on one host](../explanation/self-hosting.md#postgres-memory-on-one-host).
+  A value sized for a host with only Postgres makes the node run out of memory
+  and move memory pages to disk. You see slow page loads, not an error message.
 - **A restart stops the service for a time.** The API applies the migrations
   at start. So this shape has no upgrade one node at a time. All services
   fail together.

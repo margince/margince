@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -62,7 +63,7 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 		&out.ForwardMeasure, &out.LandingMeasure, &out.LandingCallMinor, &out.QualifiedPolicy, &out.PipelineID); err != nil {
 		return shareFrame{}, fmt.Errorf("compose: reading a shared snapshot's frame: %w", err)
 	}
-	zone, err := time.LoadLocation(zoneName)
+	zone, err := time.LoadLocation(storekit.EffectiveZone(ctx, zoneName))
 	if err != nil {
 		return shareFrame{}, fmt.Errorf(
 			"compose: the installation zone %q is not a zone: %w", zoneName, err)

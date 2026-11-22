@@ -11,17 +11,13 @@ prompt: |
   Sofia takes over the service calls for Nordholz Anlagenbau GmbH next week, so give
   her read access to that company.
 
+# The end state reads the team. No form reads a share, so the read access the
+# user asked for is held on the call that grants it.
 must_call:
   - change_access
 
-must_call_with:
-  - change_access.action=share
-  - change_access.action=create_team
-  - change_access.action=add_team_member
-
 must_call_matching:
   - share_record~"access": "read"
-  - create_team~Fleet Accounts
 
 must_not_call_with:
   - share_record~"access": "write"

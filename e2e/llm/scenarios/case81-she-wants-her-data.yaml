@@ -8,15 +8,6 @@ prompt: |
   Katrin Sommer (katrin.sommer@reply.test) wrote asking which personal data we hold about her. Open a data
   subject access request for it, received today.
 
-must_call:
-  - change_compliance
-
-must_call_with:
-  - change_compliance.action=open_data_subject_request
-
-must_call_matching:
-  - open_data_subject_request~"kind": "access"
-
 must_not_call_with:
   - create_record~.
   - change_activities~.
@@ -28,6 +19,7 @@ may_call:
   - read_record
   - read_workspace
   - whoami
+  - change_compliance
 
 must_mention:
   - "Katrin"

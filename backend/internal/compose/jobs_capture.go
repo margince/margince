@@ -40,8 +40,6 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	if cfg.GmailRegistry == nil {
 		return
 	}
-	digests := &captureDigestWorker{registry: cfg.GmailRegistry, pool: pool, log: log}
-	addDeclaredWorker[CaptureDigestArgs](reg, digests)
 	addDeclaredWorker[GmailSyncArgs](reg, &gmailSyncWorker{pool: pool, registry: cfg.GmailRegistry, log: log})
 	// The sync dispatcher scans every registered connector, so a Google
 	// Calendar connection (the same Google OAuth app) syncs on the identical

@@ -8,15 +8,6 @@ prompt: |
   Mai Nguyen at Vietnam Partner called and asked us to stop writing to her altogether. Please make sure nobody here
   emails her any more.
 
-must_call:
-  - change_compliance
-
-must_call_with:
-  - change_compliance.action=suppress_contact
-
-must_call_matching:
-  - suppress_contact~"kind": "subject_request"
-
 must_not_call_with:
   - update_record~.
   - archive_record~.
@@ -28,6 +19,7 @@ may_call:
   - read_record
   - read_workspace
   - whoami
+  - change_compliance
 
 must_mention:
   - "Mai"

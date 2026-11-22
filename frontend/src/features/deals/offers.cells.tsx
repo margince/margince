@@ -13,19 +13,17 @@ import { storedUnitOf, UnitPicker, unitChoiceOf } from "./productunit";
 import { useSavedDraft } from "./usesaveddraft";
 
 // A save that answers when its request settles, so a cell can tell an answer
-// from the draft it carried.
+// from the draft it carried. A refused save rejects; its reason shows in the
+// line's row, and the cell keeps the refused text for the reader to fix.
 type LineSave<Value> = (value: Value) => Promise<unknown>;
-
-function NotSaved() {
-  const t = useT();
-  return <ErrorLine>{t("leadSources.notSaved")}</ErrorLine>;
-}
 
 export function DescriptionCell({
   line,
+  label,
   onSave,
 }: Readonly<{
   line: OfferLineItem;
+  label: string;
   onSave: LineSave<UpdateOfferLineItemRequest>;
 }>) {
   const { draft, edit, leave, unsaved } = useSavedDraft({
@@ -38,28 +36,29 @@ export function DescriptionCell({
     },
   });
   return (
-    <>
-      <TextInput
-        data-testid={`line-description-${line.id}`}
-        className="offers-line-description"
-        value={draft}
-        aria-invalid={unsaved ? true : undefined}
-        onChange={(event) => edit(event.target.value)}
-        onBlur={() => leave()}
-      />
-      {unsaved && <NotSaved />}
-    </>
+    <TextInput
+      aria-label={label}
+      data-testid={`line-description-${line.id}`}
+      className="offers-line-description"
+      value={draft}
+      aria-invalid={unsaved ? true : undefined}
+      onChange={(event) => edit(event.target.value)}
+      onBlur={() => leave()}
+    />
   );
 }
 
 export function UnitCell({
   line,
+  label,
   onSave,
 }: Readonly<{
   line: OfferLineItem;
+  label: (column: string) => string;
   onSave: LineSave<UpdateOfferLineItemRequest>;
 }>) {
-  const { draft, edit, leave, unsaved } = useSavedDraft({
+  const t = useT();
+  const { draft, edit, leave } = useSavedDraft({
     saved: line.unit,
     toDraft: unitChoiceOf,
     submit: (next) => {
@@ -70,19 +69,18 @@ export function UnitCell({
     },
   });
   return (
-    <>
-      <UnitPicker
-        testId={`line-unit-${line.id}`}
-        value={draft}
-        onChange={(next, settled) => {
-          edit(next);
-          if (settled) {
-            leave(next);
-          }
-        }}
-      />
-      {unsaved && <NotSaved />}
-    </>
+    <UnitPicker
+      label={label(t("offer.unit"))}
+      otherLabel={label(t("product.unitOtherLabel"))}
+      testId={`line-unit-${line.id}`}
+      value={draft}
+      onChange={(next, settled) => {
+        edit(next);
+        if (settled) {
+          leave(next);
+        }
+      }}
+    />
   );
 }
 
@@ -94,12 +92,14 @@ export function NumericCell({
   value: savedValue,
   width,
   testId,
+  label,
   onSave,
   check,
 }: Readonly<{
   value: number;
   width: number;
   testId: string;
+  label: string;
   onSave: LineSave<number>;
   // The field's own refusal of a typed text, bounds included. Absent, any
   // number passes.
@@ -125,6 +125,7 @@ export function NumericCell({
   return (
     <>
       <input
+        aria-label={label}
         type="text"
         inputMode="decimal"
         className="input"
@@ -132,7 +133,7 @@ export function NumericCell({
         data-testid={testId}
         value={draft}
         aria-invalid={fault || unsaved ? true : undefined}
-        aria-describedby={fault || unsaved ? errorId : undefined}
+        aria-describedby={fault ? errorId : undefined}
         onChange={(event) => {
           edit(event.target.value);
           setFault(undefined);
@@ -145,9 +146,7 @@ export function NumericCell({
           leave();
         }}
       />
-      {(fault || unsaved) && (
-        <ErrorLine id={errorId}>{fault ?? t("leadSources.notSaved")}</ErrorLine>
-      )}
+      {fault && <ErrorLine id={errorId}>{fault}</ErrorLine>}
     </>
   );
 }
@@ -155,10 +154,12 @@ export function NumericCell({
 export function UnitPriceCell({
   line,
   currency,
+  label,
   onSave,
 }: Readonly<{
   line: OfferLineItem;
   currency: string;
+  label: string;
   onSave: LineSave<UpdateOfferLineItemRequest>;
 }>) {
   const { draft, edit, leave, unsaved } = useSavedDraft({
@@ -171,17 +172,15 @@ export function UnitPriceCell({
     },
   });
   return (
-    <>
-      <MoneyInput
-        data-testid={`line-unit-price-${line.id}`}
-        className="offers-line-price"
-        currency={currency}
-        valueMinor={draft}
-        aria-invalid={unsaved ? true : undefined}
-        onChangeMinor={edit}
-        onBlur={() => leave()}
-      />
-      {unsaved && <NotSaved />}
-    </>
+    <MoneyInput
+      aria-label={label}
+      data-testid={`line-unit-price-${line.id}`}
+      className="offers-line-price"
+      currency={currency}
+      valueMinor={draft}
+      aria-invalid={unsaved ? true : undefined}
+      onChangeMinor={edit}
+      onBlur={() => leave()}
+    />
   );
 }

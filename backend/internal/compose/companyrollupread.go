@@ -20,6 +20,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -51,6 +53,7 @@ type CompanyRollupResult struct {
 	// which is when its one snapshot was taken.
 	PipelineStateAt     time.Time
 	ClosedWonMinor      *int64
+	ClosedWonCoverage   crmcontracts.ReportRowCoverage
 	ClosedWonPeriod     RollupWonPeriod
 	BaseCurrency        string
 	ActivityCount30d    int
@@ -131,7 +134,7 @@ func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.
 		if result.WeightedPipelineMinor, err = weightedPipelineMinor(ctx, tx, included, fx, asOf); err != nil {
 			return err
 		}
-		if result.ClosedWonMinor, err = closedWonMinorIn(ctx, tx, included, result.ClosedWonPeriod, asOf, baseCurrency); err != nil {
+		if result.ClosedWonMinor, result.ClosedWonCoverage, err = closedWonMinorIn(ctx, tx, included, result.ClosedWonPeriod, asOf, baseCurrency); err != nil {
 			return err
 		}
 		if result.ActivityCount30d, err = companyActivityCount30d(ctx, tx, included, asOf); err != nil {
@@ -399,9 +402,10 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 
 // closedWonMinorIn values the deals won in the period by the read, placed by
 // closed_at. Win-loss sums the same deals at the same value (wonsales.go).
-// One won deal with no base value makes the total NULL. The figure is whole or
-// absent, never a priced part.
-func closedWonMinorIn(ctx context.Context, tx pgx.Tx, included []ids.UUID, period RollupWonPeriod, asOf time.Time, baseCurrency string) (*int64, error) {
+// The total adds the won deals that convert. Its coverage counts the rest, by
+// cause, and is absent of money only when no won deal converts.
+func closedWonMinorIn(ctx context.Context, tx pgx.Tx, included []ids.UUID, period RollupWonPeriod, asOf time.Time, baseCurrency string) (*int64, crmcontracts.ReportRowCoverage, error) {
+	none := crmcontracts.ReportRowCoverage{}
 	// The cutoff has a position of its own. The valuation casts its instant to
 	// a date, and a shared position would take the date type for both uses.
 	args := []any{included, period.Start, period.End, asOf}
@@ -412,22 +416,33 @@ func closedWonMinorIn(ctx context.Context, tx pgx.Tx, included []ids.UUID, perio
 	amount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
 		wonSalesValueSQL(fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d"), arg)
 	if err != nil {
-		return nil, err
+		return nil, none, err
 	}
 	nativeAmount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d", "d.amount_minor", arg)
 	if err != nil {
-		return nil, err
+		return nil, none, err
 	}
-	value := moneytotal.IncompleteBaseTotalSQL("sum("+amount+")", deals.UnpricedValueCountSQL(amount, nativeAmount, "TRUE"))
+	currency, err := auth.MaskedExpressionSQL(ctx, "deal", "currency", "d", "d.currency", arg)
+	if err != nil {
+		return nil, none, err
+	}
+	// The total counts every deal of the tree. Its coverage names only the deals
+	// this reader may read, so it never says a thing about one they may not.
+	visible, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil {
+		return nil, none, err
+	}
 	anchor := wonSalesAnchor("d")
 	var total *int64
+	var gaps dealcoverage.ScopedCounts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT %s
+		SELECT %s, %s
 		FROM deal d
 		WHERE d.company_id = ANY($1) AND %s AND d.status = 'won'
-		  AND %s >= $2 AND %s < $3 AND %s <= $4`, value, closedDealWhere("d"), anchor, anchor, anchor),
-		args...).Scan(&total)
-	return total, err
+		  AND %s >= $2 AND %s < $3 AND %s <= $4`, moneytotal.PartialSumSQL("sum("+amount+")"), dealcoverage.ScopedTerms(amount, nativeAmount, currency, visible),
+		closedDealWhere("d"), anchor, anchor, anchor),
+		args...).Scan(append([]any{&total}, gaps.Dest()...)...)
+	return total, gaps.Wire("closed_won"), err
 }
 
 // companyActivityWindowDays is how many days back activity_count_30d counts.

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -127,7 +128,7 @@ func (s *Store) CreateRecordRole(
 		if err != nil {
 			return fmt.Errorf("insert record role: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "create", "record_role", id, nil,
+		if _, err := storekit.Audit(ctx, tx, "create", auditentity.RecordRole, id, nil,
 			map[string]any{roleKeyColumn: key, roleLabelColumn: label}); err != nil {
 			return err
 		}
@@ -200,7 +201,7 @@ func (s *Store) UpdateRecordRole(
 		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "record_role", id,
+		if _, err := storekit.Audit(ctx, tx, "update", auditentity.RecordRole, id,
 			patch.Before(), patch.After()); err != nil {
 			return err
 		}

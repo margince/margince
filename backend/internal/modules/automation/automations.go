@@ -82,7 +82,7 @@ type Automation struct {
 	Params        json.RawMessage
 	Version       int64
 	CreatedAt     time.Time
-	UpdatedAt     *time.Time
+	UpdatedAt     time.Time
 	// PausedReason says why a rule paused itself; nil for a rule paused by
 	// hand or running.
 	PausedReason *string

@@ -158,3 +158,14 @@ func TestDescribeForClientAsksTheUserFirstOnlyWhereNoHumanApproves(t *testing.T)
 		t.Errorf("an ordinary write reads %q, want no confirmation asked", got)
 	}
 }
+
+// A call the user already logged is found on the timeline before it is logged
+// again, as a contact is found before it is created.
+func TestLoggingAnActivityReadsTheTimelineFirst(t *testing.T) {
+	served := changeActivities{}.Spec().Description
+	for _, want := range []string{"Before log", "read_context about catch_up", "never logged a second time"} {
+		if !strings.Contains(served, want) {
+			t.Errorf("change_activities copy lacks %q:\n%s", want, served)
+		}
+	}
+}

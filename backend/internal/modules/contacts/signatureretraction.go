@@ -358,7 +358,10 @@ func archiveSignatureNumber(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	if err != nil {
 		return nil, fmt.Errorf("contacts: archiving the number a signature read added: %w", err)
 	}
-	return replaced, nil
+	if len(replaced) == 0 {
+		return replaced, nil
+	}
+	return replaced, touchChildSetParent(ctx, tx, entityContact, contactID.UUID)
 }
 
 // sourceRefActivityID is the activity a profile field's source_ref names, as a

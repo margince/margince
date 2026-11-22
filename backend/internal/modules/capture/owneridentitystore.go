@@ -328,19 +328,25 @@ func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfS
 	// It is read rather than declared because nobody should have to declare who
 	// they are to the product they are signed in to.
 	rows, err := tx.Query(ctx, `
-		SELECT kind, value, source FROM capture_owner_identity WHERE user_id = $1
+		SELECT own.kind, own.value, own.source, own.source = $2 AND EXISTS (
+		         SELECT 1 FROM capture_owner_identity other
+		           JOIN app_user u ON u.id = other.user_id AND `+workforce.CaptureSeatSQL("u")+`
+		          WHERE other.user_id <> own.user_id AND other.kind = own.kind
+		            AND other.value = own.value AND other.source = $2)
+		  FROM capture_owner_identity own WHERE own.user_id = $1
 		 UNION ALL
-		SELECT 'address', account_label, '' FROM capture_connection
+		SELECT 'address', account_label, '', false FROM capture_connection
 		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
-`, user)
+`, user, IdentitySourceDeliveredTo)
 	if err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
 	}
 	defer rows.Close()
-	var addresses, domains []string
+	var addresses, domains, shared []string
 	for rows.Next() {
 		var kind, value, source string
-		if err := rows.Scan(&kind, &value, &source); err != nil {
+		var heldByAnotherSeat bool
+		if err := rows.Scan(&kind, &value, &source, &heldByAnotherSeat); err != nil {
 			return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
 		}
 		if discoveredMachineAddress(source, value) {
@@ -354,6 +360,9 @@ func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfS
 		// already stored bare (ValidExclusionValue parses it), so this changes
 		// nothing for those and is what makes the label usable.
 		addresses = append(addresses, bareAddress(value))
+		if heldByAnotherSeat {
+			shared = append(shared, value)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
@@ -372,7 +381,7 @@ func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfS
 	if login != "" {
 		identityOnly = append(identityOnly, login)
 	}
-	return NewSelfSetWithIdentityOnly(addresses, identityOnly, domains), nil
+	return NewSelfSetWithIdentityOnly(addresses, identityOnly, domains).withShared(shared), nil
 }
 
 // seatLoginAddressTx is the address this seat signs in with.

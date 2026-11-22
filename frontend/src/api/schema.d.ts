@@ -370,7 +370,7 @@ export interface paths {
         put?: never;
         /**
          * Pause, resume, retry or estimate a background correction.
-         * @description Requires data_task:update and the observed ledger version. Retry retains the audit run ID.
+         * @description Requires data_task:update and the observed ledger version. Retry retains the audit run ID. On a failed step it continues from the cursor; on a done step with action_needed it starts the step over, so the records left open are tried again.
          */
         post: operations["controlDataTask"];
         delete?: never;
@@ -2452,7 +2452,8 @@ export interface paths {
          *     All money converts to the workspace base currency. An open deal whose currency has no
          *     stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
          *     substituting a rate of 1. A won deal is valued at the base amount frozen when it was
-         *     won; one won deal in the period with no base value makes `closed_won` null.
+         *     won. `closed_won` adds the won deals that have one, and `closed_won_coverage` says how many
+         *     it leaves out and why. It is null only when no won deal in the period converts.
          *     Totals are server-computed and reconcile exactly to their parts — never client-summed.
          *     Requires read on companies, deals, and activities; figures aggregate every deal
          *     and activity of each readable company — per-record row visibility within a
@@ -5061,7 +5062,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them. */
+        /** The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them. */
         get: operations["getAccountCoverage"];
         put?: never;
         post?: never;
@@ -15351,6 +15352,7 @@ export interface paths {
         };
         /**
          * The calling user's morning digest — what capture did overnight.
+         * @deprecated
          * @description Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
          *     review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
          *     the connector health strip. `404 no_digest_yet` before the first nightly run — the
@@ -24639,8 +24641,8 @@ export interface paths {
          *     the same test the deal-health composite uses — one definition, so two screens
          *     cannot disagree about the same deal.
          *
-         *     Risk kinds and their sources: `single_threaded_theirs` is REPORT-PARAM-1
-         *     verbatim (fewer than two engaged contacts); `single_threaded_ours` is
+         *     Risk kinds and their sources: `single_threaded_theirs` is a touched deal
+         *     with at most `max_engaged_seats` engaged contacts; `single_threaded_ours` is
          *     GRAPH-RISK-1, a statement about OUR coverage rather than the customer's, which
          *     is why it carries its own id; `coverage_gap` is a deal with seats but no engaged
          *     champion — a well-threaded deal nobody inside is arguing for.
@@ -25269,8 +25271,8 @@ export interface paths {
          *     effect the same way, and the row and the audit name the agent until the
          *     user chooses a zone themselves. Saving the zone already stored writes nothing.
          *
-         *     Not open to agents: an agent acting for a user must not change the
-         *     clock that user's times, bookings and mail are read on.
+         *     An agent sends `agent` alone, and only once its user asked for the zone:
+         *     it never passes as the user's own pick or as the browser.
          */
         put: operations["saveMyTimezone"];
         post?: never;
@@ -35347,7 +35349,8 @@ export interface components {
             formula_sql: string;
             dependencies: string[];
             computable: boolean;
-            /** @description Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx". */
+            coverage?: components["schemas"]["ReportRowCoverage"];
+            /** @description Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx", "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked. */
             reason?: string | null;
         };
         /** @description A company. Mirrors the `company` table. */
@@ -35617,9 +35620,9 @@ export interface components {
          *
          *     `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
          *     weighted by its stage's win probability, and never a past period's pipeline.
-         *     `closed_won` is the deals won in `closed_won_period`; a null amount means at least
-         *     one of them has no base value on file, so the total is incomplete rather than
-         *     smaller. `activity_count_30d` counts the activities that reached a counted account
+         *     `closed_won` is the deals won in `closed_won_period` that have a base value on file.
+         *     `closed_won_coverage` counts the others by cause, for the deals this reader may read, and
+         *     its `partial` flag is true when any deal is left out. A null amount means none converts. `activity_count_30d` counts the activities that reached a counted account
          *     in `activity_window`, the 30 days before the read, which no period parameter moves.
          */
         CompanyHierarchyRollup: {
@@ -35634,6 +35637,7 @@ export interface components {
              */
             pipeline_state_at: string;
             closed_won: components["schemas"]["Money"];
+            closed_won_coverage?: components["schemas"]["ReportRowCoverage"];
             closed_won_period: components["schemas"]["CompanyRollupWonPeriod"];
             activity_count_30d: number;
             activity_window: components["schemas"]["ReportingWindow"];
@@ -35708,7 +35712,7 @@ export interface components {
         /** @description What an ensure may ask beyond "make it current". */
         CompanyScanRequest: {
             /**
-             * @description Read the account again even though the stored findings' fingerprint matches or
+             * @description Read the company again even though the stored findings' fingerprint matches or
              *     the rescan floor has not passed. A scan already in flight is still returned as
              *     it stands rather than started twice.
              * @default false
@@ -36087,7 +36091,7 @@ export interface components {
          *     approval is not a citable record type here, and an answer that named one could
          *     not be checked the way every other sentence can.
          *     `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
-         *     `whats_changed` — what has moved on this account recently.
+         *     `whats_changed` — what has moved on this company recently.
          * @enum {string}
          */
         CompanyQuestion: "whats_open" | "meeting_prep" | "whats_changed";
@@ -36452,7 +36456,8 @@ export interface components {
          *       `at`, the last of the two.
          *     - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
          *     - `last_met`: in touch through a meeting `days` days ago.
-         *     - `single_threaded`: in touch, but one contact carries the whole account.
+         *     - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+         *       the published `account_coverage.max_engaged_seats`.
          *     - `several_contacts`: `count` contacts here are in touch with us.
          *     - `deals_all_stalled`: all `count` open deals have stalled.
          *     - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -36501,7 +36506,7 @@ export interface components {
             last_meeting_precision?: components["schemas"]["OccurredPrecision"];
             /** @description How many contacts here have interacted at all — the account's real surface. */
             active_contacts?: number | null;
-            /** @description The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account. */
+            /** @description The relationship rests on no more contacts in touch than the published `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding follows too. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account. */
             single_threaded?: boolean | null;
             /** @description Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities. */
             open_commitments?: number | null;
@@ -39838,6 +39843,12 @@ export interface components {
             lines?: components["schemas"]["DealCoverageLine"][];
             risks: components["schemas"]["DealCoverageRisk"][];
             /**
+             * @description The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+             *     judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+             *     Absent when the edge sections are withheld, since no finding is judged then.
+             */
+            max_engaged_seats?: number;
+            /**
              * @description The sections withheld for lack of the `relationship` grant — so a client can say
              *     "you can't see this" instead of "there is none". Never returned absent, and empty
              *     on the ordinary read: empty and forbidden are different answers, and a client that
@@ -40923,9 +40934,10 @@ export interface components {
             open_deals?: number;
             /**
              * Format: int64
-             * @description Their amounts, in the installation currency, when every one carries a rate.
+             * @description Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`.
              */
             open_amount_minor?: number;
+            open_amount_coverage?: components["schemas"]["ReportRowCoverage"];
             won_deal?: components["schemas"]["AccountCoverageDeal"];
             /** Format: date-time */
             last_inbound?: string;
@@ -45820,7 +45832,8 @@ export interface components {
             /**
              * @description The countries the sender states for this message's recipients, read as the send reads them:
              *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-             *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Only the human sender states them: an agent's preview carrying this field is refused with 403
+             *     `permission_denied`, and an integration's with 422 `invalid`.
              *     Each address may appear once; a second entry is refused with 422 `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
@@ -45862,7 +45875,8 @@ export interface components {
             /**
              * @description The countries the sender states for this message's recipients, read as the send reads them:
              *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
-             *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Only the human sender states them: an agent's preview carrying this field is refused with 403
+             *     `permission_denied`, and an integration's with 422 `invalid`.
              *     Each address may appear once; a second entry is refused with 422 `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
@@ -47709,7 +47723,7 @@ export interface components {
             source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | "contract" | null;
             source_id?: string | null;
             /**
-             * @description Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+             * @description Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
              * @enum {string}
              */
             lifecycle_scope?: "company" | "workstream" | "unknown";
@@ -50057,15 +50071,15 @@ export interface components {
             reason: string;
             account_coverage?: components["schemas"]["AccountCoverageThresholds"];
         };
-        /** @description What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints. */
+        /** @description What the coverage section counts as at risk. Absent fields take the defaults the answer prints. */
         AccountCoverageThresholds: {
-            /** @description A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1. */
+            /** @description A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. The coverage section and the deal page both judge by it. Default 1. */
             max_engaged_seats?: number;
-            /** @description An account with an open deal and no exchange within this many days is untouched. Default 21. */
+            /** @description A company with an open deal and no exchange within this many days is untouched. Default 21. */
             untouched_days?: number;
-            /** @description A won account with no exchange within this many days is silent. Default 30. */
+            /** @description A won company with no exchange within this many days is silent. Default 30. */
             silent_days?: number;
-            /** @description How far back a won deal still makes an account a won account. Default 180. */
+            /** @description How far back a won deal still makes a company a won one. Default 180. */
             won_within_days?: number;
         };
         ReportingFramework: {
@@ -51001,6 +51015,8 @@ export interface components {
          *     NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
          */
         ForecastSufficiency: {
+            /** @description For each comparable period behind a historical median, newest first, the won deals its total leaves out for want of an amount or an exchange rate. */
+            comparable_unpriced?: number[];
             /**
              * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
              * @enum {string}
@@ -52630,6 +52646,24 @@ export interface components {
             blocked_reason?: "waiting_for_worker" | "newer_release_required" | "paused" | "failed" | "retry_wait" | "earlier_step" | "missing_prerequisite" | "review_required";
             blocked_by?: string;
             missing_prerequisites: string[];
+            action_needed?: components["schemas"]["DataTaskActionNeeded"];
+        };
+        /** @description Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total. */
+        DataTaskActionNeeded: {
+            /** @enum {string} */
+            reason: "privacy_reviewer_missing";
+            /** @description What was left open, in the reader's language. */
+            sentence: string;
+            /** @description What to do about it, in the reader's language. */
+            remedy: string;
+            /** Format: int64 */
+            count: number;
+            records: components["schemas"]["DataTaskActionRecord"][];
+        };
+        DataTaskActionRecord: {
+            type: string;
+            /** Format: uuid */
+            id: string;
         };
         SystemHealth: {
             /** Format: date-time */
@@ -52715,8 +52749,11 @@ export interface components {
             action: components["schemas"]["HealthAction"];
         };
         HealthAction: {
-            /** @enum {string} */
-            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration";
+            /**
+             * @description Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+             * @enum {string}
+             */
+            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration" | "regional";
             available: boolean;
             reason?: string;
         };
@@ -53102,9 +53139,9 @@ export interface components {
          *     masked to the viewer's readable fields — an absent key was hidden, not null.
          *     `summary` is server-composed plain language in English. A client that
          *     renders the line in its reader's language builds it from `action` and the
-         *     actor fields. It falls back to `summary` for an edge row, whose role
-         *     travels only in the sentence, and for an action or actor kind it does
-         *     not know.
+         *     actor fields. For an edge row it builds from `edge.role` and
+         *     `edge.changed_fields`, and falls back to `summary` when an older server
+         *     omits them, and for an action or actor kind it does not know.
          *     Field-level detail lives in before/after for the client to render.
          */
         AuditHistoryEntry: {
@@ -53192,6 +53229,12 @@ export interface components {
             other_entity_id: string;
             /** @description The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it. */
             other_label?: string | null;
+            /** @description The role the link was made with (create) or changed to (update), as the reader's field mask allows. Absent when the link has no role, when the reader's mask withholds it, and on an unlink; a client then falls back to `kind` or to `summary`. */
+            role?: string | null;
+            /** @description The role an update replaced, or removed when `role` is then absent. Set only when the role changed. */
+            previous_role?: string | null;
+            /** @description Names of the link fields an update moved, sorted, masked like `role`. Absent on create and unlink. An older server omits it, and the client then shows `summary`. */
+            changed_fields?: string[];
         } | null;
         /**
          * @description Whether this history entry can be put back, and if not, why. COMPUTED per read,
@@ -59788,11 +59831,13 @@ export interface components {
             as_of: string;
             counts: components["schemas"]["TeamWeeklyCounts"];
             /**
-             * @description What the team's week did to the pipeline. ABSENT when any member's week could not
-             *     be converted — summing only the ones that did would be a confident number quietly
-             *     missing a rep.
+             * @description What the team's week did to the pipeline: the members' figures added together. ABSENT when
+             *     a member's week is unread or has a figure no deal converts into, or members differ in
+             *     currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+             *     review was frozen before it said what it leaves out.
              */
             pipeline?: components["schemas"]["WeeklyReviewPipeline"];
+            pipeline_coverage?: components["schemas"]["ReportRowCoverage"];
             /**
              * @description Members whose week could not be read at all. Zero is the claim that every member's
              *     week was counted.
@@ -60159,7 +60204,9 @@ export interface components {
              */
             open: number;
             /**
-             * @description Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+             * @description Open deals with more distinct contacts in the last 30 days than the published
+             *     `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+             *     more), as of when the week was frozen. Thirty rather than
              *     the review's own week: the risk measured is the single point of failure, and a deal
              *     worked steadily for a month is multi-threaded whether or not the second contact
              *     happened to appear in these seven days.
@@ -60321,13 +60368,15 @@ export interface components {
              * @description What the week did to the pipeline, in the installation's base currency at the rate that
              *     applied when the review was written.
              *
-             *     ABSENT when the week held a deal that could not be converted — an open deal freezes no
-             *     rate, so a currency with no usable rate makes the whole figure unanswerable. A total
-             *     covering three of four deals would be a confident number that is quietly short, and
-             *     nothing is ever converted at an invented rate of 1. Absent is also the answer when the
-             *     installation names no base currency.
+             *     Each figure adds the deals that convert. ABSENT when no deal of one of the three figures
+             *     converts, or when the installation names no base currency. Nothing is ever converted at an
+             *     invented rate of 1.
+             *
+             *     `pipeline_coverage` says how many deals the figures leave out, by cause, and which
+             *     currencies have no rate. It is absent for a review frozen before it said so.
              */
             pipeline?: components["schemas"]["WeeklyReviewPipeline"];
+            pipeline_coverage?: components["schemas"]["ReportRowCoverage"];
             /**
              * @description The same rep's previous review, so a reader can see what CHANGED rather than only what
              *     happened. Absent for their first week.
@@ -63704,9 +63753,10 @@ export interface components {
             undone: number;
             /**
              * Format: int64
-             * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+             * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
              */
             value_base_minor: number;
+            value_coverage?: components["schemas"]["ReportRowCoverage"];
             /**
              * Format: int64
              * @description How much value these changes moved, in the base currency's minor units. Each deal's
@@ -64358,7 +64408,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. */
+        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. On the same reads, `code: owner_not_measurable` means a filter names an owner whose figures the caller may not measure. */
         PermissionDenied: {
             headers: {
                 [name: string]: unknown;
@@ -68860,19 +68910,19 @@ export interface operations {
                 "application/json": {
                     /**
                      * Format: uuid
-                     * @description The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the account instead.
+                     * @description The contact to be introduced TO. Must be somebody the caller can see at this company; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the company instead.
                      */
                     contact_id?: string | null;
                     /**
                      * Format: uuid
-                     * @description The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this account, or it is `404`.
+                     * @description The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the company's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this company, or it is `404`.
                      */
                     via_user_id: string;
                     /** @description Only with no `contact_id`, and optional there: the function the somebody works in. Must be one of the colleague's `functions` on the reach answer, or it is `422`, because the draft would ask for an introduction the colleague's connections cannot give. */
                     function?: components["schemas"]["LinkedInReachFunction"];
                     /**
                      * Format: uuid
-                     * @description Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
+                     * @description Which open deal the introduction is for. Absent draws on the company as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
                      */
                     deal_id?: string | null;
                 };
@@ -69415,7 +69465,7 @@ export interface operations {
                      *     sha256 digest in lowercase hex.
                      *
                      *     A value of the wrong SHAPE is a 422, so a client that mangled it can
-                     *     tell that from a hit. A well-formed value the account does not
+                     *     tell that from a hit. A well-formed value the company does not
                      *     currently raise is a `204` that stores nothing; see this operation's
                      *     description for why those two answers differ.
                      */
@@ -69423,13 +69473,13 @@ export interface operations {
                     /**
                      * Format: uuid
                      * @description The project the page was scoped to when the suggestion was rendered,
-                     *     absent on the whole-account page.
+                     *     absent on the whole-company page.
                      *
                      *     A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
                      *     page reasons over one project's activity — so the same advice raised
-                     *     on a scoped page and on the account page are two different
+                     *     on a scoped page and on the company page are two different
                      *     fingerprints. This route re-derives the suggestions to check the
-                     *     fingerprint is one the account really raises for this caller, and it
+                     *     fingerprint is one the company really raises for this caller, and it
                      *     can only reproduce a scoped one by narrowing the same way.
                      *
                      *     Send the project the reader was looking at. Omit it and a dismissal
@@ -85599,7 +85649,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             /** @description The plan failed validation (out-of-vocabulary field, invalid aggregate). */
             422: {
@@ -89523,10 +89573,7 @@ export interface operations {
     };
     getMorningDigest: {
         parameters: {
-            query?: {
-                /** @description A specific digest day; default: the latest generated. */
-                date?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;

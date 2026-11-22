@@ -101,12 +101,28 @@ const linkedInProfilePrefix = "/in/"
 // same profile as /in/sam.
 func linkedInProfileSlug(normalized string) (string, bool) {
 	_, path, ok := splitLinkedInHostPath(normalized)
-	if !ok {
+	if !ok || hasDotSegment(path) {
 		return "", false
 	}
 	rest, isProfile := strings.CutPrefix(path, linkedInProfilePrefix)
 	slug, _, _ := strings.Cut(rest, "/")
 	return slug, isProfile && slug != ""
+}
+
+// hasDotSegment reports a "." or ".." segment, spelled out or percent-encoded.
+// A browser resolves /in/../company/acme to a company page, so no such path is
+// a profile, whatever its first segment reads.
+func hasDotSegment(escapedPath string) bool {
+	path, err := url.PathUnescape(escapedPath)
+	if err != nil {
+		return true
+	}
+	for segment := range strings.SplitSeq(path, "/") {
+		if segment == "." || segment == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 // LinkedInSlotHosts are the hosts a value has to be on before this product will

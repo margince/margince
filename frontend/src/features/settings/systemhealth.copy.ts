@@ -68,6 +68,7 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   updates_failed: "health.code.updates_failed",
   updates_retrying: "health.code.updates_retrying",
   updates_review: "health.code.updates_review",
+  updates_action: "health.code.updates_action",
   recovery_missing: "health.code.recovery_missing",
   recovery_verified: "health.code.recovery_verified",
   recovery_unverified: "health.code.recovery_unverified",
@@ -77,6 +78,7 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   receipts_missed: "health.code.receipts_missed",
   unplaced_none: "health.code.unplaced_none",
   unplaced_counted: "health.code.unplaced_counted",
+  zone_unresolved: "health.code.zone_unresolved",
   withheld: "health.withheld",
   read_failed: "health.failed",
   unknown: "health.unknown",
@@ -117,6 +119,7 @@ export const healthRecovery: Readonly<Record<string, MessageKey>> = {
   recovery: "health.recovery.recovery",
   automatic: "health.recovery.automatic",
   receipts: "health.recovery.receipts",
+  zone: "health.recovery.zone",
 };
 
 export const healthImpacts: Readonly<Record<string, MessageKey>> = {

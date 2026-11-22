@@ -144,8 +144,8 @@ type dataTasksReport struct {
 	Steps   []crmcontracts.DataTaskProgress `json:"steps"`
 }
 
-// executeDataTasks prints the report. It fails unless every step finished and
-// none left rows in its scope, so a script cannot read either as done.
+// executeDataTasks prints the report. It fails unless every step finished, none
+// left rows in its scope and none left action needed, so a script cannot read these as done.
 func executeDataTasks(ctx context.Context, pool *pgxpool.Pool, maxBatches int, stdout io.Writer) error {
 	run, err := dataTaskExecutor(ctx, pool, maxBatches)
 	if err != nil {
@@ -160,6 +160,8 @@ func executeDataTasks(ctx context.Context, pool *pgxpool.Pool, maxBatches int, s
 		return errors.New("data-tasks execute: not every correction finished; read the verdict")
 	case len(verdict.LeftInScope) > 0:
 		return errors.New("data-tasks execute: corrections left rows in their scope; read left_in_scope")
+	case len(verdict.NeedsAction) > 0:
+		return errors.New("data-tasks execute: corrections left records for someone to act on; read needs_action")
 	}
 	return nil
 }

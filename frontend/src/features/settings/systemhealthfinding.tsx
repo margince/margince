@@ -169,6 +169,8 @@ function FindingActions({
     client.invalidateQueries({ queryKey: ["system-health"] });
     if (destination === "models" || destination === "connections")
       navigate(settingsHref(destination));
+    else if (destination === "regional")
+      navigate(settingsHref("company", "regional"));
     else
       navigate(
         {
@@ -254,6 +256,7 @@ function findingActionLabel(finding: Finding): MessageKey {
   if (finding.action.destination === "models") return "health.openModels";
   if (finding.action.destination === "connections")
     return "health.openConnections";
+  if (finding.action.destination === "regional") return "health.openRegional";
   if (finding.source === "jobs")
     return finding.code === "queue_unverified"
       ? "health.inspectRuns"

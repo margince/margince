@@ -22,9 +22,9 @@ Six things are checked per run, and all six must hold:
                    `tool~regex` asks, when the target is named in free text
                    rather than one argument's exact value.
   figures_from_results
-                   Is every money figure in the answer one Margince returned in
-                   this run? `true` checks each amount the answer states against
-                   the run's tool results, so a typed or invented figure fails.
+                   Is every money figure the run states one Margince returned in
+                   this run, or worked out from one? `true` checks each amount
+                   against the run's tool results, so an invented figure fails.
   judge            Does the answer do what this sentence says? Each entry is a
                    criterion in plain words, decided by a model (judge.py).
 
@@ -74,9 +74,11 @@ network.
 import collections
 import datetime
 import json
+import math
 import os
 import re
 import shlex
+import statistics
 import sys
 import tempfile
 
@@ -134,7 +136,12 @@ _SCHEMA = {
     "criteria": "list", "must_call": "list", "may_call": "list", "must_call_with": "list",
     "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
     "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
+    "elicitation": "list", "must_answer": "list", "mcp_only": "list", "expected_calls": "count",
 }
+# The checks an mcp_only entry may name: the ones that pin an MCP call's name or
+# argument, which a REST door spells by route. Every other check reads the
+# answer or the records and holds on both doors.
+_DOOR_SCOPED = ("must_call", "must_call_with", "must_call_matching")
 _REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
 # The credentials scripts/e2e-llm.sh mints, by the `passport:` value that picks
 # one; absent is the narrow one.
@@ -236,11 +243,87 @@ def lint(path):
 
         if data["setup"] not in casesetup.STEPS:
             problems.append(f"setup {data['setup']!r} is no step in casesetup.py")
-    return problems + _entry_problems(data)
+    return problems + _entry_problems(data) + _door_problems(data)
+
+
+def _door_problems(data):
+    """An mcp_only entry must repeat a door-scoped check of the same file exactly,
+    or a typo in it would switch nothing off and read as if it had."""
+    carried = {entry for key in _DOOR_SCOPED for entry in data.get(key, [])}
+    return [f"mcp_only names {entry!r}, which no {', '.join(_DOOR_SCOPED)} entry of this scenario carries"
+            for entry in data.get("mcp_only", []) if entry not in carried]
+
+
+def for_door(scenario, path):
+    """The scenario as the run's door grades it. A REST run is not held to the
+    checks mcp_only names: they pin an MCP argument that no REST route takes."""
+    if run_door(path) != "rest":
+        return scenario
+    skipped = set(scenario.get("mcp_only", []))
+    return {key: [entry for entry in value if entry not in skipped] if key in _DOOR_SCOPED else value
+            for key, value in scenario.items()}
+
+
+def run_door(path):
+    """The door the transcript's system line names; a run made over MCP names none."""
+    init = _events(path, "init")
+    return (init[0].get("door") if init else None) or "mcp"
+
+
+# ELICITATION is what the user answers when the server asks in the chat:
+# `<text the question holds> => accept|decline|cancel [field=value ...]`. Only a
+# host that can answer reads it (E2E_LLM_VIA=sdk); a value is JSON when it
+# parses as JSON, and a bare word otherwise.
+_ELICITATION_ACTIONS = ("accept", "decline", "cancel")
+_ELICITATION_FIELD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=\S+")
+
+
+def _form_value(text):
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return text
+    # NaN and Infinity parse here, and no JSON reader the runner uses accepts them.
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError(f"{text} is not a finite number, so no form field holds it")
+    if isinstance(value, (str, bool, int, float)) or (
+        isinstance(value, list) and all(isinstance(item, str) for item in value)
+    ):
+        return value
+    raise ValueError(f"{text} is not a value a form field holds")
+
+
+def elicitation_replies(entries):
+    """The scripted answers as the SDK runner reads them, in the scenario's order."""
+    replies = []
+    for entry in entries:
+        match, _, answer = str(entry).partition("=>")
+        action, *fields = answer.split() or [""]
+        if not match.strip() or action not in _ELICITATION_ACTIONS or not all(
+            _ELICITATION_FIELD.fullmatch(field) for field in fields
+        ):
+            raise ValueError(f"elicitation entry {entry!r} is not `<text> => accept|decline|cancel [field=value ...]`")
+        reply = {"match": match.strip(), "action": action}
+        if fields and reply["action"] != "accept":
+            raise ValueError(f"elicitation entry {entry!r} gives fields to a {reply['action']}, which sends none")
+        if reply["action"] == "accept":
+            reply["content"] = {}
+            for field in fields:
+                key, _, value = field.partition("=")
+                reply["content"][key] = _form_value(value)
+        replies.append(reply)
+    return replies
 
 
 def _entry_problems(data):
     problems = []
+    try:
+        scripted = {(reply["match"], reply["action"]) for reply in elicitation_replies(data.get("elicitation", []))}
+        for wanted in elicitation_replies(data.get("must_answer", [])):
+            if (wanted["match"], wanted["action"]) not in scripted:
+                problems.append(f"must_answer {wanted['match']!r} => {wanted['action']} is no elicitation entry")
+    except ValueError as malformed:
+        problems.append(str(malformed))
     for key in ("must_mention", "must_not_mention"):
         problems += [p for p in (_compiles(key, str(pattern)) for pattern in data.get(key, [])) if p]
     for entry in data.get("must_not_call_with", []):
@@ -403,9 +486,12 @@ def read_transcript(path):
 
 
 def read_tool_results(path):
-    """The text of every tool result in a transcript, in order."""
+    """The text of every tool result in a transcript, in order, one entry per
+    text part, so a result's JSON is read whole."""
     results = []
-    for line in _open_checked(path):
+    with _open_checked(path) as handle:
+        lines = handle.readlines()
+    for line in lines:
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
@@ -417,15 +503,17 @@ def read_tool_results(path):
             if isinstance(block, dict) and block.get("type") == "tool_result":
                 body = block.get("content")
                 if isinstance(body, list):
-                    body = " ".join(part.get("text", "") for part in body if isinstance(part, dict))
-                results.append(str(body or ""))
+                    results += [str(part.get("text", "")) for part in body if isinstance(part, dict)]
+                else:
+                    results.append(str(body or ""))
     return results
 
 
 # A money figure as an answer writes it: a currency sign, code or word before or
-# after a number. A space groups thousands only before exactly three digits, so
-# "€5 6 deals" is €5 and a count, not €56.
-_DIGITS = r"\d{1,3}(?:[.,\u202f\u00a0 ]\d{3})+(?:[.,]\d{1,2})?(?!\d)|\d+(?:[.,]\d+)?"
+# after a number. A space or a Swiss apostrophe groups thousands only before
+# exactly three digits, so "€5 6 deals" is €5 and a count, not €56.
+_GROUPING = "\u202f\u00a0 '\u2019"
+_DIGITS = rf"\d{{1,3}}(?:[.,{_GROUPING}]\d{{3}})+(?:[.,]\d{{1,2}})?(?!\d)|\d+(?:[.,]\d+)?"
 _SCALE = r"(?:\s?(?:[kK]|[mM]|bn|Mio\.?|million|thousand)\b)?"
 _CURRENCY_WORD = r"(?:EUR|USD|GBP|CHF|euros?|dollars?|pounds?)\b"
 _MONEY = re.compile(
@@ -439,7 +527,7 @@ _SCALES = {"k": 1e3, "thousand": 1e3, "m": 1e6, "million": 1e6, "mio": 1e6, "mio
 
 def _amount(digits, scale):
     """A written amount as (value, the step its writing rounds to)."""
-    text = re.sub(r"[\u202f\u00a0 ]", "", digits)
+    text = re.sub(f"[{_GROUPING}]", "", digits)
     # One separator followed by exactly one or two digits is a decimal mark;
     # every other separator groups thousands.
     decimal = re.search(r"[.,](\d{1,2})$", text)
@@ -459,8 +547,137 @@ def _holds(value, step, held):
     return any(near(value, a + b) or near(value, abs(a - b)) for i, a in enumerate(held) for b in held[i + 1:])
 
 
+# A figure no result holds may still be the model's own correct arithmetic over
+# figures that results do hold, such as a weighted total over several deals. The
+# judge decides that against the amounts the run read; an invented or wrong
+# figure still fails, in the final answer or anywhere the run said it.
+WORKED_OUT = (
+    "Check these money figures the run stated: {figures}. "
+    "None of them appears as such in the data Margince returned in this run, "
+    "so each must be read from that data or correctly worked out from it. "
+    "A figure the final answer does not state is shown after the answer, in the line the run said it in. "
+    "The data the run read held these amounts and rates, each named by its field and its record; "
+    "a field ending in _minor is in the currency's minor units:\n{held}\n"
+    "Answer yes if each of those figures is read from that data or correctly worked out from it, rounding aside. "
+    "Answer no if any of them is invented, or wrong against that data, wherever in the run it was said."
+)
+# Where the judge's answer shows the lines a figure was said in before the end.
+SAID_EARLIER = "\n\nSaid earlier in the run:\n"
+# Numbers that are neither money nor a rate, such as counts, listed after the
+# amounts. They are capped because a page of records carries many; no amount
+# or rate is ever cut.
+WORKED_OUT_OTHER_NUMBERS = 100
+_RATE_FIELD = re.compile(r"probability|rate|percent|pct|share", re.IGNORECASE)
+# The name shown for a record, on one line and short, so a record's name stays
+# a label inside the criterion.
+_RECORD_NAME_CHARS = 60
+
+# A figure the run stated that no tool result holds, and the line it was said in.
+Figure = collections.namedtuple("Figure", "text line")
+# figure_problems' answer: the figures no result holds, and a problem for each.
+Unheld = collections.namedtuple("Unheld", "figures problems")
+# The judge's question about the figures no result holds, the answer it reads,
+# and the problems it decides; criterion is None when every figure is held.
+WorkedOut = collections.namedtuple("WorkedOut", "criterion answer problems")
+
+
+def tools_by_run(paths, passing):
+    """Each run's tools whose call worked, by bare name, and whether the run
+    passed. The coverage page counts only a passing run's tools as driven."""
+    runs = []
+    for path in paths:
+        if os.path.exists(path):
+            tools = sorted({name.rsplit("__", 1)[-1] for name, _ in read_run(path).worked})
+            runs.append({"passed": path in passing, "tools": tools})
+    return runs
+
+
+def recorded_runs(args, passed):
+    """--record's transcripts and the passing ones among them, which follow
+    --passing; refused when they disagree with the count that passed."""
+    transcripts, passing = list(args), []
+    if "--passing" in transcripts:
+        at = transcripts.index("--passing")
+        transcripts, passing = transcripts[:at], transcripts[at + 1:]
+    if transcripts and (len(passing) != passed or not set(passing) <= set(transcripts)):
+        raise ValueError(f"--passing names {len(passing)} of the transcripts and {passed} runs passed; "
+                         "give every transcript, then --passing and each passing run's transcript once")
+    return transcripts, passing
+
+
+def worked_out_question(run, results):
+    """The question the judge is asked about the figures no result holds, the
+    answer it reads, and those figures' problems."""
+    unheld = figure_problems(run.said, results)
+    if not unheld.figures:
+        return WorkedOut(None, run.final, [])
+    figures = ", ".join(dict.fromkeys(figure.text for figure in unheld.figures))
+    earlier = list(dict.fromkeys(figure.line for figure in unheld.figures if figure.text not in run.final))
+    # The earlier lines are the model's own words, so they reach the judge
+    # inside the answer's fence and never in the criterion.
+    answer = run.final + (SAID_EARLIER + "\n".join(earlier) if earlier else "")
+    held = "\n".join(f"- {entry}" for entry in labelled_amounts(results)) or "- nothing"
+    return WorkedOut(WORKED_OUT.format(figures=figures, held=held), answer, unheld.problems)
+
+
+def worked_out_problems(run, results):
+    """The money figures the judge finds invented or wrong; none when every
+    figure is a result's own or the judge finds each correctly worked out."""
+    question = worked_out_question(run, results)
+    if question.criterion is None:
+        return []
+    correct, reason = judge.verdict(question.criterion, question.answer)
+    if correct:
+        return []
+    return question.problems + [f"{JUDGED_NO} the figures are worked out from the data\n      the judge's reason: {reason}"]
+
+
+def labelled_amounts(results):
+    """The amounts and rates the run's tool results hold, each named by its
+    field and record, then other numbers; a result that is not JSON gives the
+    money figures its text writes."""
+    money, rates, other = [], [], []
+    for text in results:
+        try:
+            document = json.loads(text)
+        except json.JSONDecodeError:
+            money += [f"a result's text: {match.group(0).strip()}" for match in _MONEY.finditer(text)]
+            continue
+        _label(document, "", "", (money, rates, other))
+    other = list(dict.fromkeys(other))
+    return list(dict.fromkeys(money)) + list(dict.fromkeys(rates)) + other[:WORKED_OUT_OTHER_NUMBERS]
+
+
+def _label(value, path, record, found):
+    money, rates, other = found
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            _label(item, f"{path}[{index}]", record, found)
+        return
+    if not isinstance(value, dict):
+        return
+    name = next((value[key] for key in ("name", "title", "label") if isinstance(value.get(key), str)), None)
+    if name:
+        label = " ".join(name.replace('"', "'").split())[:_RECORD_NAME_CHARS]
+        record = f' ("{label}")'
+    for key, field in value.items():
+        where = f"{path}.{key}" if path else str(key)
+        if isinstance(field, (dict, list)):
+            _label(field, where, record, found)
+        elif isinstance(field, str):
+            money += [f"{where}{record}: {match.group(0).strip()}" for match in _MONEY.finditer(field)]
+        elif isinstance(field, bool) or not isinstance(field, (int, float)):
+            continue
+        elif key.endswith("_minor"):
+            currency = value.get(key[: -len("_minor")] + "_currency") or value.get("currency")
+            unit = f" {currency}" if isinstance(currency, str) else ""
+            money.append(f"{where}{record}: {field}{unit}")
+        else:
+            (rates if _RATE_FIELD.search(key) else other).append(f"{where}{record}: {field}")
+
+
 def figure_problems(said, results):
-    """Each money figure in the answer that no tool result of the run holds.
+    """Each money figure the run stated that no tool result of the run holds.
 
     A result may carry an amount in minor units, so each number there counts
     also as a hundredth of itself; an answer may round, so a figure holds when
@@ -481,13 +698,22 @@ def figure_problems(said, results):
     rates = {rate for rate in (_amount(token, "")[0] for token in _RATE.findall(said))
              if 0 < rate <= 100 and any(abs(rate - number) < 1e-9 for number in held)}
     held += [amount * rate / 100 for amount in list(held) for rate in rates]
-    problems = []
+    figures, problems = [], []
     for match in _MONEY.finditer(said):
         digits = match.group(1) or match.group(3)
         value, step = _amount(digits, match.group(2) or match.group(4) or "")
         if not _holds(value, step, held):
-            problems.append(f"stated {match.group(0).strip()!r}, which no tool result of this run holds")
-    return problems
+            text = match.group(0).strip()
+            figures.append(Figure(text, _line_at(said, match.start())))
+            problems.append(f"stated {text!r}, which no tool result of this run holds")
+    return Unheld(figures, problems)
+
+
+def _line_at(text, at):
+    """The whole line of text that holds position at."""
+    start = text.rfind("\n", 0, at) + 1
+    end = text.find("\n", at)
+    return text[start: end if end >= 0 else len(text)].strip()
 
 
 # The usage fields the terminal `result` event carries, and the ONLY ones read.
@@ -580,6 +806,10 @@ def recorded_stamp(name, clock=None):
 
     A scenario the stamps do not name is a stamp file from another tree, and a
     verdict filed under it would claim to have measured copy it never saw.
+
+    graded_commit and graded_at are the checker's. Grading saved transcripts
+    again sets E2E_LLM_GRADED_COMMIT and keeps the run's E2E_LLM_COMMIT and
+    E2E_LLM_RAN_AT; a live grade leaves them equal.
     """
     path = os.environ.get("E2E_LLM_STAMPS")
     if not path:
@@ -588,9 +818,10 @@ def recorded_stamp(name, clock=None):
         stamps = json.load(handle)
     if name not in stamps:
         raise ValueError(f"the stamps at {path} carry no {name}: they were made for another tree")
-    when = (clock or (lambda: datetime.datetime.now(datetime.timezone.utc)))()
-    stamp = {**stamps[name], "commit": os.environ.get("E2E_LLM_COMMIT", ""),
-             "ran_at": when.strftime("%Y-%m-%dT%H:%M:%SZ")}
+    graded_at = (clock or (lambda: datetime.datetime.now(datetime.timezone.utc)))().strftime("%Y-%m-%dT%H:%M:%SZ")
+    commit = os.environ.get("E2E_LLM_COMMIT", "")
+    stamp = {**stamps[name], "commit": commit, "ran_at": os.environ.get("E2E_LLM_RAN_AT") or graded_at,
+             "graded_commit": os.environ.get("E2E_LLM_GRADED_COMMIT") or commit, "graded_at": graded_at}
     # The judge that graded, which E2E_LLM_JUDGE_MODEL can make another than
     # the table's: a verdict judged by another model is not current.
     if stamp.get("judge"):
@@ -636,6 +867,103 @@ def usage_line(expected, usage):
     )
 
 
+# A call the CLI turned away before any server saw it: a bare tool name the
+# model made up, which it then retries under the real one.
+_NO_SUCH_TOOL = re.compile(r"No such tool available", re.IGNORECASE)
+
+
+def read_effort(path):
+    """How directly one run finished: its calls, refused calls, turns, tokens
+    and wall time, or None when the run never reached its terminal `result`.
+
+    An unfinished run is left out rather than counted short, because its few
+    calls would read as the most direct run of all. A key the transcript does
+    not carry is absent, never 0.
+    """
+    calls, refused, result = 0, 0, None
+    with _open_checked(path) as handle:
+        for line in handle:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("type") == "result":
+                result = event
+            for block in (event.get("message") or {}).get("content") or []:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "tool_use":
+                    calls += 1
+                elif block.get("type") == "tool_result" and _refused_result(block):
+                    refused += 1
+    if result is None:
+        return None
+    effort = {"calls": calls, "refused": refused}
+    for field in ("num_turns", "duration_ms"):
+        if isinstance(result.get(field), int):
+            effort["turns" if field == "num_turns" else field] = result[field]
+    usage = read_usage(path)
+    if usage is not None:
+        counted = usage[0]
+        effort["prompt_tokens"] = sum(counted[field] for field in _USAGE_FIELDS if field != "output_tokens")
+        effort["output_tokens"] = counted["output_tokens"]
+    return effort
+
+
+def _refused_result(block):
+    if block.get("is_error") and not staged(block.get("content")):
+        return True
+    return bool(_NO_SUCH_TOOL.search(_tool_result_text(block)))
+
+
+_EFFORT_METRICS = ("calls", "turns", "refused", "prompt_tokens", "output_tokens", "duration_ms")
+
+
+def _spread(values):
+    median = statistics.median(values)
+    return {"median": int(median) if median == int(median) else median, "min": min(values), "max": max(values)}
+
+
+def efficiency(paths, expected_calls=None):
+    """The median and spread of each effort metric over the finished runs, or
+    None when no run finished.
+
+    A metric is reported only when every finished run carries it, so all of
+    them share the one denominator `runs`. It is a score and never a verdict:
+    nothing here moves PASS, FAIL or the exit code.
+    """
+    efforts = [effort for effort in map(read_effort, paths) if effort is not None]
+    if not efforts:
+        return None
+    out = {"runs": len(efforts)}
+    for metric in _EFFORT_METRICS:
+        if all(metric in effort for effort in efforts):
+            out[metric] = _spread([effort[metric] for effort in efforts])
+    if expected_calls is not None:
+        out["expected_calls"] = expected_calls
+        out["slow"] = out["calls"]["median"] > expected_calls
+    return out
+
+
+def efficiency_line(measured):
+    """The report's one line for how directly a scenario's runs finished."""
+    if measured is None:
+        return "  efficiency: no run finished, nothing measured"
+    parts = [f"{measured['runs']} run(s) finished"]
+    for metric in ("calls", "turns", "refused"):
+        if metric in measured:
+            spread = measured[metric]
+            parts.append(f"{metric} {spread['median']} ({spread['min']}-{spread['max']})")
+    if "duration_ms" in measured:
+        parts.append(f"{measured['duration_ms']['median'] / 1000:.1f}s median")
+    slow = ""
+    if measured.get("slow"):
+        slow = f"  <-- slow: median {measured['calls']['median']} calls, {measured['expected_calls']} expected"
+    return "  efficiency: " + ", ".join(parts) + slow
+
+
 # The failures that mean the model was never reached, rather than that it
 # answered badly. Matched on the message because the transport reports both the
 # same way — `is_error` on the terminal result — and only the message says which
@@ -664,6 +992,19 @@ _REFUSALS = re.compile(
 # it had called before.
 _MODEL_API_FAILED = re.compile(r"^(?:Failed to authenticate\.\s*)?API Error:", re.IGNORECASE)
 
+# The server's answer when the client declined a question it put in the chat
+# (backend/internal/modules/agents/inputrequired.go, errDeclinedInChat). Nobody
+# sits at a lane run to answer one: a CLI that can show the form declines it by
+# itself, so the run could not have done what the user asked.
+_DECLINED_IN_CHAT = re.compile(r"the user said no in the chat", re.IGNORECASE)
+
+
+def _tool_result_text(block):
+    content = block.get("content")
+    if isinstance(content, list):
+        return " ".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
+    return str(content or "")
+
 
 def unrun(path):
     """Why this run never happened, or "" when it did.
@@ -683,7 +1024,7 @@ def unrun(path):
     a real answer thrown away as a harness fault, and the rest of the lane
     abandoned with it.
     """
-    saw_assistant, called_tool, saw_result = False, False, False
+    saw_assistant, called_tool, saw_result, declined = False, False, False, False
     failure = ""
     for line in _open_checked(path):
         line = line.strip()
@@ -698,6 +1039,11 @@ def unrun(path):
             for block in (event.get("message") or {}).get("content") or []:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
                     called_tool = True
+        if event.get("type") == "user":
+            for block in (event.get("message") or {}).get("content") or []:
+                if isinstance(block, dict) and block.get("type") == "tool_result" \
+                        and _DECLINED_IN_CHAT.search(_tool_result_text(block)):
+                    declined = True
         if event.get("type") == "result":
             saw_result = True
             if event.get("is_error"):
@@ -718,6 +1064,11 @@ def unrun(path):
         return failure
     if _MODEL_API_FAILED.match(failure):
         return "the model's API stopped answering mid-run: " + failure
+    # A no the scenario scripted (E2E_LLM_VIA=sdk) is the user's own answer and
+    # the run's premise; only a question nobody scripted was declined for them.
+    if declined and not any(scripted_by for scripted_by, _ in answered(path)):
+        return ("the client declined a question the server asked in the chat, and no one in "
+                "the lane can answer one, so the run could not do what was asked")
     return ""
 
 
@@ -774,6 +1125,7 @@ def offered_problem(scenario, path):
     that attached nothing — so the lane stops rather than scoring it. The
     tools are the ones the transcript's system line says were offered.
     """
+    scenario = for_door(scenario, path)
     init = _events(path, "init")
     if not init:
         return "the transcript carries no system line, so what was offered is unknown"
@@ -890,10 +1242,25 @@ def _unmatched_problem(calls, entry):
     return "never called " + " or ".join(f"{tool} carrying anything matching /{pattern}/" for tool, pattern in wanted)
 
 
+def answered(path):
+    """(the entry that answered, the action) for each question the host answered."""
+    found = []
+    with _open_checked(path) as lines:
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict) and event.get("type") == "elicitation":
+                found.append((event.get("scripted_by"), (event.get("reply") or {}).get("action")))
+    return found
+
+
 def check(scenario, transcript_path):
     """The problem lines of one run. The positive checks read the final answer
     and the calls that worked; the forbidding checks read every word and every
     attempt, because a wrong claim or a forbidden call counts wherever it is."""
+    scenario = for_door(scenario, transcript_path)
     run = read_run(transcript_path)
     # A send the lane's stack cannot deliver is refused by design, and the
     # scenario grades what the answer says about it: there the call is the
@@ -941,6 +1308,14 @@ def check(scenario, transcript_path):
         if problem:
             problems.append(problem)
 
+    # MUST_ANSWER holds a case's premise: the question was asked and the host
+    # gave the scripted answer. A run that never reached the question cannot
+    # show what the answer does.
+    asked = answered(transcript_path)
+    for wanted in elicitation_replies(scenario.get("must_answer", [])):
+        if (wanted["match"], wanted["action"]) not in asked:
+            problems.append(f"the question holding {wanted['match']!r} was never answered {wanted['action']}")
+
     for pattern in scenario.get("must_mention", []):
         if not re.search(pattern, run.final, re.IGNORECASE):
             problems.append(f"never said anything matching /{pattern}/")
@@ -952,7 +1327,7 @@ def check(scenario, transcript_path):
 
     figures = scenario.get("figures_from_results")
     if figures == "true":
-        problems.extend(figure_problems(said, read_tool_results(transcript_path)))
+        problems.extend(worked_out_problems(run, read_tool_results(transcript_path)))
     elif figures is not None:
         problems.append(f"figures_from_results is {figures!r}; the only value is true")
 
@@ -999,8 +1374,10 @@ def main():
         # carries what the answer cost as well as whether it held. They are
         # optional: the offline harness records verdicts with no transcripts at
         # all, and a lane that refused to record without them would make the
-        # cheap path depend on the paid one.
-        usage = total_usage(sys.argv[5:]) if len(sys.argv) > 5 else None
+        # cheap path depend on the paid one. The ones after --passing are the
+        # runs that passed.
+        transcripts, passing = recorded_runs(sys.argv[5:], int(sys.argv[3]))
+        usage = total_usage(transcripts) if transcripts else None
         record = {
             "scenario": scenario.get("name"),
             "criteria": scenario.get("criteria", []),
@@ -1030,6 +1407,13 @@ def main():
             # sweep from one whose transcripts it could not read, which the
             # totals alone cannot say.
             record["usage"] = usage
+        if transcripts:
+            record["tools_by_run"] = tools_by_run(transcripts, passing)
+        measured = efficiency(transcripts, scenario.get("expected_calls")) if transcripts else None
+        if measured is not None:
+            if "slow" in measured:
+                record["slow"] = measured.pop("slow")
+            record["efficiency"] = measured
         print(json.dumps(record, indent=2))
         return 0
 
@@ -1042,6 +1426,11 @@ def main():
         # file owns what a usage total means — the shell would otherwise parse
         # the JSON and spell the same shape a second time.
         print(usage_line(int(sys.argv[2]), total_usage(sys.argv[3:])))
+        return 0
+
+    if sys.argv[1] == "--efficiency":
+        scenario = parse_scenario(sys.argv[2])
+        print(efficiency_line(efficiency(sys.argv[3:], scenario.get("expected_calls"))))
         return 0
 
     if sys.argv[1] == "--ran":

@@ -103,7 +103,12 @@ const HEALTH_REASON: Record<HealthReasonCode, ReasonMessage> = {
     by: "days",
     today: "co.health.reason.lastMetToday",
   },
-  single_threaded: { needs: [], key: "co.health.reason.singleThreaded" },
+  // Count is the contacts in touch, more than one when the threshold allows it.
+  single_threaded: {
+    needs: ["count"],
+    plural: "co.health.reason.singleThreaded",
+    by: "count",
+  },
   several_contacts: {
     needs: ["count"],
     plural: "co.health.reason.severalContacts",

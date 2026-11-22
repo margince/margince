@@ -112,6 +112,11 @@ const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
   ["stage_id", "history.field.stage_id"],
   ["disqualify_reason_id", "history.field.disqualify_reason_id"],
   ["trigger", "history.field.trigger"],
+  ["role", "history.field.role"],
+  ["is_current_primary", "history.field.is_current_primary"],
+  ["employment_status", "history.field.employment_status"],
+  ["started_precision", "history.field.started_precision"],
+  ["ended_precision", "history.field.ended_precision"],
   ["win_probability_override", "history.field.win_probability_override"],
   ["win_probability_set_by", "history.field.win_probability_set_by"],
 ]);

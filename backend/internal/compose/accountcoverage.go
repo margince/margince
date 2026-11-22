@@ -162,11 +162,11 @@ func capRows(rows []crmcontracts.AccountCoverageRow) []crmcontracts.AccountCover
 	return rows
 }
 
-// singleThreadedDeals are the open deals of the population with at most the
-// threshold's engaged seats. A deal whose committee the reader cannot read
+// singleThreadedDeals are the open deals of the population the deal page's
+// rule calls single-threaded. A deal whose committee the reader cannot read
 // whole is counted as withheld and judged by nobody.
 func singleThreadedDeals(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, int, error) {
-	candidates, err := openDealsOf(ctx, tx, pop)
+	candidates, touched, err := openDealsOf(ctx, tx, pop)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -191,7 +191,7 @@ func singleThreadedDeals(ctx context.Context, tx pgx.Tx, pop *coveragePopulation
 			withheld++
 			continue
 		}
-		if seat.Engaged > *pop.thresholds.MaxEngagedSeats {
+		if !reporting.SingleThreaded(touched[ids.UUID(candidate.Deal.Id)], seat.Engaged, *pop.thresholds.MaxEngagedSeats) {
 			continue
 		}
 		engaged, named := seat.Engaged, seat.Named

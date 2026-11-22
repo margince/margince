@@ -163,10 +163,8 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 			AuditId:    openapi_types.UUID(e.ID),
 			ReceiptId:  new(receiptIdentity(e)),
 			OccurredAt: e.OccurredAt,
-			Entity: crmcontracts.MagicEntityRef{
-				Type: e.EntityType, Id: openapi_types.UUID(e.EntityID), Label: e.Label,
-			},
-			Changes: changes,
+			Entity:     entityRefOf(e),
+			Changes:    changes,
 		})
 		subjects = append(subjects, UndoSubject{AuditID: e.ID, EntityType: e.EntityType})
 	}
@@ -193,7 +191,7 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 // changed the whole record rather than some of its fields, and listing every
 // column of a new contact as "empty → value" says less than its name does.
 func changesOf(e entry) []crmcontracts.MagicFieldChange {
-	if bulkActions[e.Action] {
+	if bulkActions[e.Action] || e.ParentType != nil {
 		return []crmcontracts.MagicFieldChange{}
 	}
 	if changes := technicalFieldChanges(e); len(changes) > 0 {

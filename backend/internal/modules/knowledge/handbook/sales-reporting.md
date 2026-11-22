@@ -213,6 +213,8 @@ A team lead, management or an admin sets targets. Every other seat with access t
 
 Use **Export CSV**, next to **Save report**, for the report's numbers of today. Export a fixed edition for the numbers and question answers it stored. The `label` column names each figure as the screen does, in your language. The `metric` column keeps a fixed id that stays the same in every language. Amounts are in whole currency units with the currency beside them, such as `17100.55` and `EUR`. The file is named for the scope, period and day, such as `reporting-team-this-quarter-2026-11-18.csv`.
 
+An edition with the **Assessment** card has one row for it, with `assessment` in the `metric` column and `not_exported` as its coverage. The file holds the figures the summary is written from, and the summary itself is on the page.
+
 An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
 
 Any user who reads a report can see the definitions of its numbers. Admins open **Reporting setup** on its own to set up qualifying stages and the daily history of the pipeline.

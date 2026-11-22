@@ -191,3 +191,18 @@ func TestJobSummaryKeepsLiveRetriesBesideDiscardedHistory(t *testing.T) {
 		}
 	}
 }
+
+// The zone finding asks an admin to act, and sends them to the settings part
+// that holds the zone.
+func TestTheZoneFindingSendsAnAdminToTheRegionalSettings(t *testing.T) {
+	f := zoneFinding(healthSource("jobs", healthReadObject))
+	if f.Id != "jobs:zone_unresolved" || !f.RequiresAction || f.Count != nil || f.Unit != nil {
+		t.Errorf("finding = %+v, want an uncounted jobs:zone_unresolved that requires action", f)
+	}
+	if f.Responsible != crmcontracts.HealthFindingResponsibleAdministrator || f.Scope != crmcontracts.HealthFindingScopeInstallation {
+		t.Errorf("the finding is for %q at scope %q, want the administrator and the installation", f.Responsible, f.Scope)
+	}
+	if f.Action.Destination != crmcontracts.HealthActionDestinationRegional || !f.Action.Available {
+		t.Errorf("the finding's action is %+v, want the regional settings, available", f.Action)
+	}
+}

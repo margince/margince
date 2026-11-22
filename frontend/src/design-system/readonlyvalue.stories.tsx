@@ -30,6 +30,20 @@ export const WithReason: Story = {
   },
 };
 
+/** In every row of a list: no tab stop, the reason on hover and as its description. */
+export const WithReasonInEveryRow: Story = {
+  args: { reason: REASON, tabStop: false },
+  play: async ({ canvasElement }) => {
+    const value = within(canvasElement).getByText("Customer");
+    await expect(value).toHaveAccessibleDescription(REASON);
+    await expect(value).not.toHaveAttribute("tabindex");
+    await userEvent.hover(value);
+    await expect(
+      await within(document.body).findByRole("tooltip"),
+    ).toHaveTextContent(REASON);
+  },
+};
+
 /** No reason: plain text, and no tab stop. */
 export const WithoutReason: Story = {
   play: async ({ canvasElement }) => {

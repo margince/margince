@@ -164,3 +164,37 @@ func TestTheWeekCountsOnlyActivityTheRepMayRead(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// The multi-threaded count follows the published threshold: two contacts are
+// several at the default of one and too few at a threshold of two.
+func TestTheWeekCountsMultiThreadedDealsAtThePublishedThreshold(t *testing.T) {
+	w := seedContentGateWeek(t)
+	e := w.e
+	multi := func() int {
+		t.Helper()
+		var got int
+		if err := e.DB().Tx(e.repCtx, func(tx pgx.Tx) error {
+			block, err := scoreDeals(e.repCtx, tx, e.Rep1, w.start, w.end)
+			if err == nil && block != nil {
+				got = block.MultiThreaded
+			}
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	if got := multi(); got != 1 {
+		t.Fatalf("at the default threshold %d deals are multi-threaded, want the one with two contacts", got)
+	}
+	if _, err := w.owner.Exec(context.Background(), `INSERT INTO reporting_framework_revision (revision, definition, effective_at, created_by)
+		VALUES (1, '{"template":"sales","qualification":[],"capture_contexts":[],"reason":"test","account_coverage":{"max_engaged_seats":2}}', now(), $1)`, e.Rep1); err != nil {
+		t.Fatalf("publishing a threshold of two: %v", err)
+	}
+	if _, err := w.owner.Exec(context.Background(), `INSERT INTO reporting_framework (revision, version) VALUES (1, 1)`); err != nil {
+		t.Fatalf("publishing a threshold of two: %v", err)
+	}
+	if got := multi(); got != 0 {
+		t.Fatalf("at a threshold of two %d deals are multi-threaded, want none: two contacts are too few", got)
+	}
+}

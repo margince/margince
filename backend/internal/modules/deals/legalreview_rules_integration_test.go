@@ -255,7 +255,7 @@ func TestAnAdvanceWaitsForAnAmountChangeInFlight(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() { done <- e.advance(dealID, toID) }()
-	waitForALockWaiter(t, e)
+	waitForALockWaiter(t, e.configEnv)
 	if err := writer.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -266,8 +266,8 @@ func TestAnAdvanceWaitsForAnAmountChangeInFlight(t *testing.T) {
 }
 
 // waitForALockWaiter returns once some backend waits on a row lock, which is
-// the advance blocked on the writer. It fails rather than waiting forever.
-func waitForALockWaiter(t *testing.T, e *reviewEnv) {
+// the transaction under test blocked on another. It fails rather than waiting forever.
+func waitForALockWaiter(t *testing.T, e *configEnv) {
 	t.Helper()
 	// Bounded by tries rather than a clock: each try is a round trip.
 	for range 20000 {
@@ -281,7 +281,7 @@ func waitForALockWaiter(t *testing.T, e *reviewEnv) {
 			return
 		}
 	}
-	t.Fatal("the advance never waited on the deal row the writer holds")
+	t.Fatal("no transaction ever waited on a row lock another holds")
 }
 
 // A reviewer who may see less than the requester reads less of the pack. Not

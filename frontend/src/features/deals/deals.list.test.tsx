@@ -482,6 +482,7 @@ describe("DealsScreen", () => {
       "fetch",
       stubBackend([deal({ id: "a", stage_id: "s1" })], {
         stageTotalsStatus: 403,
+        stageTotalsCode: "owner_not_measurable",
       }),
     );
     render(<DealsScreen />);
@@ -495,6 +496,31 @@ describe("DealsScreen", () => {
         ).length,
       ).toBe(1),
     );
+  });
+
+  // A reader refused the report itself is not refused an owner, even with an
+  // owner dial set, so the column must not blame the owner.
+  it("does not blame the owner when the totals report itself is refused", async () => {
+    window.location.hash = "#/deals?owner_id=u-colleague";
+    let totalsAsked = false;
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ id: "a", stage_id: "s1" })], {
+        stageTotalsStatus: 403,
+        stageTotalsCode: "permission_denied",
+        onStageTotalsBody: () => {
+          totalsAsked = true;
+        },
+      }),
+    );
+    render(<DealsScreen />);
+    await waitFor(() => expect(totalsAsked).toBe(true));
+    expect(await screen.findAllByText("Fleet retrofit")).not.toHaveLength(0);
+    expect(
+      screen.queryByText(
+        "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
+      ),
+    ).toBeNull();
   });
 
   // A tag filter withholds totals too, since the report has no tag field and

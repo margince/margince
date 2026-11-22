@@ -88,6 +88,8 @@ func (l layerFile) addInstruments(name string, r *messaging.Rules) error {
 		r.Instruments = append(r.Instruments, messaging.Instrument{
 			Name: in.Name, EffectiveFrom: in.Effective, ExpiresFrom: in.Expires,
 			Provision: in.Provision, SourceURL: in.SourceURL,
+			TextURL: in.TextURL, TextDigest: in.TextDigest, TextFetchedAt: in.TextFetched,
+			CheckedByHandAt: in.CheckedByHand,
 		})
 	}
 	return nil

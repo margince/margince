@@ -31,6 +31,7 @@ const metricDateHeading: Partial<
   stage_age: "reporting.expectedCloseOn",
   leads_qualified: "reporting.qualifiedOn",
   bookings_won: "reporting.closedOn",
+  bookings_mix: "reporting.closedOn",
   meetings_held: "reporting.meetingOn",
   accepted_opportunities: "reporting.acceptedOn",
   leads_created: "reporting.createdOn",

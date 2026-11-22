@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -121,18 +122,12 @@ func (s *Store) CreateStageExitCriterion(
 	}
 	var out crmcontracts.StageExitCriterion
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := holdStagesLadderForAgent(ctx, tx, in.StageID); err != nil {
-			return err
-		}
 		// The stage row serializes every reshaping of its criteria list, so
 		// two concurrent adds cannot both compute the same tail position.
 		if _, err := lockCriteriaList(ctx, tx, in.StageID); err != nil {
 			return err
 		}
 		if err := refuseCriterionOnTerminalStage(ctx, tx, in.StageID); err != nil {
-			return err
-		}
-		if err := refuseAgentOnStagesLadder(ctx, tx, in.StageID); err != nil {
 			return err
 		}
 		if !in.MintKey {
@@ -204,9 +199,6 @@ func (s *Store) UpdateStageExitCriterion(
 	}
 	var out crmcontracts.StageExitCriterion
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := holdStagesLadderForAgent(ctx, tx, stageID); err != nil {
-			return err
-		}
 		if _, err := lockCriteriaList(ctx, tx, stageID); err != nil {
 			return err
 		}
@@ -225,9 +217,6 @@ func (s *Store) UpdateStageExitCriterion(
 			return apperrors.ErrVersionSkew
 		}
 		if err := refuseKindChangeAcrossLegalReview(current, in.Kind); err != nil {
-			return err
-		}
-		if err := refuseAgentOnStagesLadder(ctx, tx, stageID); err != nil {
 			return err
 		}
 		if CriterionKind(current.Kind) == CriterionLegalReviewed && current.Required &&
@@ -254,7 +243,7 @@ func writeCriterionUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
 		return fmt.Errorf("update exit criterion: %w", err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", criterionEntity, id.UUID,
+	auditID, err := storekit.Audit(ctx, tx, "update", auditentity.StageExitCriterion, id.UUID,
 		patch.Before(), patch.After())
 	if err != nil {
 		return fmt.Errorf("audit exit criterion update: %w", err)
@@ -273,16 +262,10 @@ func (s *Store) ArchiveStageExitCriterion(
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := holdStagesLadderForAgent(ctx, tx, stageID); err != nil {
-			return err
-		}
 		if _, err := lockCriteriaList(ctx, tx, stageID); err != nil {
 			return err
 		}
 		if _, err := storekit.LockRow(ctx, tx, criterionEntity, id.UUID, storekit.LiveOnly); err != nil {
-			return err
-		}
-		if err := refuseAgentOnStagesLadder(ctx, tx, stageID); err != nil {
 			return err
 		}
 		current, err := readCriterion(ctx, tx, id, storekit.LiveOnly)
@@ -321,7 +304,7 @@ func (s *Store) ArchiveStageExitCriterion(
 		// says how many rows moved up behind it. Without that the trail shows
 		// one criterion archived while several others quietly changed position
 		// and version, and nothing accounts for the difference.
-		auditID, err := storekit.Audit(ctx, tx, "archive", criterionEntity, id.UUID,
+		auditID, err := storekit.Audit(ctx, tx, "archive", auditentity.StageExitCriterion, id.UUID,
 			criterionAfter(current),
 			map[string]any{"archived": true, "siblings_renumbered": moved})
 		if err != nil {
@@ -339,7 +322,7 @@ func (s *Store) ArchiveStageExitCriterion(
 func announceCriterion(ctx context.Context, tx pgx.Tx,
 	stageID ids.StageID, id ids.ExitCriterionID, after map[string]any,
 ) error {
-	auditID, err := storekit.AuditEvent(ctx, tx, "create", criterionEntity, id.UUID, after)
+	auditID, err := storekit.AuditEvent(ctx, tx, "create", auditentity.StageExitCriterion, id.UUID, after)
 	if err != nil {
 		return fmt.Errorf("audit exit criterion create: %w", err)
 	}

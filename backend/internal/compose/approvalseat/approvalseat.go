@@ -18,26 +18,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // Context binds one seat's current stored authority. live is false for a seat
 // that is gone, which is a race and not a fault.
 func Context(ctx context.Context, ident *identity.Service, wsID, seat ids.UUID) (context.Context, bool, error) {
-	rbac, seatType, err := ident.EffectiveAuthority(ctx, wsID, seat)
+	member, err := authz.MemberPrincipal(ctx, ident, wsID, seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, fmt.Errorf("resolving the seat's authority: %w", err)
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          principal.HumanIDPrefix + seat.String(),
-		UserID:      seat,
-		SeatType:    seatType,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), true, nil
+	return principal.WithActor(ctx, member), true, nil
 }
 
 // StillDecidable asks the delivery question again: is this approval still the

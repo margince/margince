@@ -113,7 +113,7 @@ func ownerGateGap(ctx context.Context, spec reportSpec, name string) string {
 	if _, isFilter := spec.filters[name]; isFilter {
 		// nil tx: an own-scope rep's lens refuses a stranger without a read.
 		err := requireMeasurableOwners(ctx, nil, spec, callersOwnPopulation(), map[string]any{name: stranger})
-		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		if !errors.Is(err, apperrors.ErrPermissionDenied) || !errors.As(err, new(OwnerNotMeasurableError)) {
 			return "the filter " + name + " naming a stranger is not refused"
 		}
 	}
@@ -127,7 +127,7 @@ func ownerGateGap(ctx context.Context, spec reportSpec, name string) string {
 	// comparison, and beside a row id that is not part of the grouping.
 	typed := analyticsquery.Filter{Field: name, Op: analyticsquery.OpNe, Value: stranger}
 	err := requireMeasurableTypedOwners(ctx, nil, spec, callersOwnPopulation(), []analyticsquery.Filter{typed})
-	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if !errors.Is(err, apperrors.ErrPermissionDenied) || !errors.As(err, new(OwnerNotMeasurableError)) {
 		return "a typed filter on " + name + " naming a stranger is not refused"
 	}
 	for _, q := range rowNamedBesideTheGrouping(spec, name) {
