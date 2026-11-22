@@ -316,7 +316,7 @@ describe("ruling on the claim from the drawer", () => {
     expect(posts).toEqual([
       "/v1/companies/o-1/profile-fields/icp/confirm if-match=2",
     ]);
-    // The snippet the machine read stays beside the person's word.
+    // The snippet the machine read stays beside the human's word.
     expect(
       screen.getByText(/We build load-shifting software for industry/),
     ).toBeTruthy();

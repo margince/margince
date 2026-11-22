@@ -309,7 +309,7 @@ func TestAnAgentCorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 }
 
 // A confirmation changes no value, so a re-read that took the row back would
-// silently drop the person's agreement. Both sidecars run through the real
+// silently drop the human's agreement. Both sidecars run through the real
 // ApplyDeepRead with a proposal that differs from the stored value.
 func TestAConfirmedClaimSurvivesTheNextDeepRead(t *testing.T) {
 	e := setupDedupe(t)
@@ -369,12 +369,12 @@ func TestAConfirmedClaimSurvivesTheNextDeepRead(t *testing.T) {
 	}
 	for _, f := range facts {
 		if string(f.Field) == "phone" && (f.Value != phone || f.VerifiedAt == nil || string(f.Source) != "human") {
-			t.Errorf("phone = %q source %q after a deep read, want the confirmed %q kept as a person's", f.Value, f.Source, phone)
+			t.Errorf("phone = %q source %q after a deep read, want the confirmed %q kept as a human's", f.Value, f.Source, phone)
 		}
 	}
 	for _, f := range fields {
 		if string(f.Field) == "icp" && (f.Value != icp || f.VerifiedAt == nil || string(f.Source) != "human") {
-			t.Errorf("icp = %q source %q after a deep read, want the confirmed %q kept as a person's", f.Value, f.Source, icp)
+			t.Errorf("icp = %q source %q after a deep read, want the confirmed %q kept as a human's", f.Value, f.Source, icp)
 		}
 	}
 }
