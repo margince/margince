@@ -5951,6 +5951,9 @@ export const en = {
   "lead.source.referral": "Referral",
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
+  "lead.source.api": "Integration",
+  "lead.source.automation": "Automation",
+  "lead.source.capture": "Captured from a conversation",
   "lead.source.siteread": "From company website",
   "lead.source.unknown": "Unknown source",
   "leadSources.removeOnlyTitle":

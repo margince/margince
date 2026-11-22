@@ -250,7 +250,7 @@ func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx
 	INSERT INTO stage (id, pipeline_id, name, "position") SELECT pipeline, pipeline, 'Qualified', 1 FROM plan_seed;
 	CREATE TEMP TABLE plan_deal AS SELECT n, gen_random_uuid() id FROM plan_seed s, generate_series(1, s.deals) n;
 	INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-	  SELECT d.id, 'Deal '||d.n, 'open', s.rep, s.pipeline, s.pipeline, 'seed', 'system' FROM plan_deal d, plan_seed s;
+	  SELECT d.id, 'Deal '||d.n, 'open', s.rep, s.pipeline, s.pipeline, 'manual', 'system' FROM plan_deal d, plan_seed s;
 	CREATE TEMP TABLE plan_meeting AS
 	  SELECT gen_random_uuid() id, gen_random_uuid() contact, g, d.id deal,
 	         s.at - interval '4 days' - random() * interval '12 days' at_time

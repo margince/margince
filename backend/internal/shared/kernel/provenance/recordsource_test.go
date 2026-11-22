@@ -4,9 +4,54 @@
 package provenance
 
 import (
+	"errors"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
+
+func TestARecordSourceOutsideTheListIsRefusedNamingTheList(t *testing.T) {
+	t.Parallel()
+	for _, source := range RecordSources() {
+		if err := AdmitRecordSource(source); err != nil {
+			t.Errorf("AdmitRecordSource(%q) = %v, want nil", source, err)
+		}
+	}
+	for _, source := range []string{"", "seed", "Manual", "connector:apollo:a-1", "manual "} {
+		err := AdmitRecordSource(source)
+		var refused *RecordSourceError
+		if !errors.As(err, &refused) {
+			t.Fatalf("AdmitRecordSource(%q) = %v, want a RecordSourceError", source, err)
+		}
+		var fault apperrors.FieldFault = refused
+		field, code, message := fault.FieldFault()
+		if field != "source" || code != "invalid_source" {
+			t.Errorf("fault = %q/%q, want source/invalid_source", field, code)
+		}
+		for _, allowed := range RecordSources() {
+			if !strings.Contains(message, allowed) {
+				t.Errorf("refusal %q does not name the allowed source %q", message, allowed)
+			}
+		}
+	}
+}
+
+func TestTheRecordSourcesAreSortedDistinctAndACopy(t *testing.T) {
+	t.Parallel()
+	sources := RecordSources()
+	if !slices.IsSorted(sources) || len(slices.Compact(slices.Clone(sources))) != len(sources) {
+		t.Errorf("RecordSources() = %v, want a sorted list with no duplicate", sources)
+	}
+	if !slices.Contains(sources, RecordSourceManual) {
+		t.Errorf("RecordSources() = %v lacks %q", sources, RecordSourceManual)
+	}
+	sources[0] = "clobbered"
+	if RecordSources()[0] == "clobbered" {
+		t.Error("a caller's write reached the owner's own list")
+	}
+}
 
 func TestTheRetiredSpellingsAreSortedAndHoldNoDuplicate(t *testing.T) {
 	t.Parallel()

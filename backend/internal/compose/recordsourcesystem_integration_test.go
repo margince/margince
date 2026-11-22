@@ -56,7 +56,7 @@ func seedStoreBuiltImports(t *testing.T, e *integration.Env, sourceSystem *strin
 	}
 	project, err := projectStore.CreateProject(ctx, projects.CreateProjectInput{
 		Name: "Imported Project", CompanyID: ids.From[ids.CompanyKind](ids.UUID(company.Id)),
-		Source: "hubspot_import", SourceSystem: sourceSystem,
+		Source: "import", SourceSystem: sourceSystem,
 	})
 	if err != nil {
 		t.Fatalf("creating the project through its store: %v", err)
@@ -71,7 +71,7 @@ func seedStoreBuiltImports(t *testing.T, e *integration.Env, sourceSystem *strin
 		Name:       "Imported Deal",
 		PipelineID: ids.From[ids.PipelineKind](pipeline),
 		StageID:    ids.From[ids.StageKind](stage),
-		Source:     "hubspot_import", SourceSystem: sourceSystem,
+		Source:     "import", SourceSystem: sourceSystem,
 	})
 	if err != nil {
 		t.Fatalf("creating the deal through its store: %v", err)

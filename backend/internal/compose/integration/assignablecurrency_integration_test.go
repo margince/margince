@@ -63,7 +63,8 @@ func TestADealIsNotCreatedInAnUnassignedCurrency(t *testing.T) {
 		VALUES ($1, $2, 'Qualify', 0, 'open', 10)`, stage, pipeline)
 	zzz, amount := "ZZZ", int64(100)
 	_, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Typo", PipelineID: ids.PipelineID{UUID: pipeline}, StageID: ids.StageID{UUID: stage},
+		Source: "manual",
+		Name:   "Typo", PipelineID: ids.PipelineID{UUID: pipeline}, StageID: ids.StageID{UUID: stage},
 		AmountMinor: &amount, Currency: &zzz,
 	})
 	requireUnassigned(t, "creating a deal in ZZZ", err)

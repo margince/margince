@@ -106,3 +106,32 @@ func TestDealImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 		t.Error("the client door admitted the importer namespace")
 	}
 }
+
+// A source off the fixed list is refused on the deal and the offer wire, and
+// each channel on it passes.
+func TestDealAndOfferCreateInputsRefuseASourceOffTheList(t *testing.T) {
+	pipeline, stage := openapi_types.UUID(ids.NewV7()), openapi_types.UUID(ids.NewV7())
+	for _, source := range []string{"seed", "acme-helpdesk:ticket-4471", "Manual"} {
+		var refused *provenance.RecordSourceError
+		if _, err := DealCreationInput(crmcontracts.CreateDealRequest{
+			Name: "Typed", Source: source, PipelineId: pipeline, StageId: stage,
+		}); !errors.As(err, &refused) {
+			t.Errorf("deal source %q: err = %v, want a RecordSourceError", source, err)
+		}
+		if _, err := OfferCreationInput(t.Context(), []byte(`{"currency":"EUR","source":"`+source+`"}`)); !errors.As(err, &refused) {
+			t.Errorf("offer source %q: err = %v, want a RecordSourceError", source, err)
+		}
+	}
+	for _, source := range provenance.RecordSources() {
+		in, err := DealCreationInput(crmcontracts.CreateDealRequest{
+			Name: "Typed", Source: source, PipelineId: pipeline, StageId: stage,
+		})
+		if err != nil || in.Source != source {
+			t.Errorf("deal source %q: got %q, %v, want it kept", source, in.Source, err)
+		}
+		offer, err := OfferCreationInput(t.Context(), []byte(`{"currency":"EUR","source":"`+source+`"}`))
+		if err != nil || offer.Source != source {
+			t.Errorf("offer source %q: got %q, %v, want it kept", source, offer.Source, err)
+		}
+	}
+}

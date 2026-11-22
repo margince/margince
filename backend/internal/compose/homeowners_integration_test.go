@@ -36,7 +36,8 @@ func TestAnOwnedDealBeyondOtherOwnersScanBudgetStillReachesHome(t *testing.T) {
 	at := clocktest.Now(t)
 	own := e.SeedDeal(t, "A recorded recovery decision", pipeline, stage, &e.Rep1)
 	unownedDeal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Work without an owner", PipelineID: pipeline, StageID: stage, OwnerExact: true,
+		Source: "manual",
+		Name:   "Work without an owner", PipelineID: pipeline, StageID: stage, OwnerExact: true,
 	})
 	if err != nil {
 		t.Fatal(err)

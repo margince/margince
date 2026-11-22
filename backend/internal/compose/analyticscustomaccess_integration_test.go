@@ -31,7 +31,8 @@ func repDeals(t *testing.T, e *integration.Env, fixture territory, territory str
 	owner := ids.From[ids.UserKind](e.Rep1)
 	for i := range n {
 		if _, err := fixture.deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: fmt.Sprintf("Rep deal %d", i), PipelineID: fixture.pipeline, StageID: fixture.open,
+			Source: "manual",
+			Name:   fmt.Sprintf("Rep deal %d", i), PipelineID: fixture.pipeline, StageID: fixture.open,
 			OwnerID: &owner, CustomFields: map[string]any{*fixture.field.ColumnName: territory},
 		}); err != nil {
 			t.Fatal(err)

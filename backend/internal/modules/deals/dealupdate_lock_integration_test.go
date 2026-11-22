@@ -50,7 +50,8 @@ func seedOwnedDeal(t *testing.T, e *configEnv) (deal ids.DealID, from, to ids.St
 	}
 	owner := ids.From[ids.UserKind](e.admin)
 	created, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Contested", PipelineID: pipeline, StageID: from, OwnerID: &owner, OwnerExact: true,
+		Source: "manual",
+		Name:   "Contested", PipelineID: pipeline, StageID: from, OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)

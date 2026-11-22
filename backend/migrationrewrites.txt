@@ -221,3 +221,5 @@
 1795355020_the_sender_warning_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795355021_the_sender_warning_columns_are_bounded.up.sql | * | replaces the two text guards on contact; the guards act on later writes only, and it changes no existing row
 1795355021_the_sender_warning_columns_are_bounded.down.sql | * | restores the two earlier text guards on contact; it changes no existing row
+1795363335_a_record_source_names_a_channel.up.sql | *, partner | the UPDATE touches the partner table once, one row per partner company, and only rows whose source is off the list; the procedural body is a trigger function that acts on later updates of a deal, offer or project only, and those rows are left to a data task
+1795363336_the_partner_source_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

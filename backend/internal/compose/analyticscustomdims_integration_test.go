@@ -58,7 +58,8 @@ func territoryDeals(t *testing.T, e *integration.Env) territory {
 	store := deals.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(catalog)
 	for i, territory := range []string{"EMEA", "EMEA", "APAC"} {
 		if _, err := store.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: "Territory deal " + string(rune('A'+i)), PipelineID: pipeline, StageID: open,
+			Source: "manual",
+			Name:   "Territory deal " + string(rune('A'+i)), PipelineID: pipeline, StageID: open,
 			CustomFields: map[string]any{*field.ColumnName: territory},
 		}); err != nil {
 			t.Fatalf("seed deal %d: %v", i, err)

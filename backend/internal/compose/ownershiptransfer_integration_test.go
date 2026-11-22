@@ -113,7 +113,8 @@ func newHandoverPipeline(t *testing.T, e *integration.Env) handoverPipeline {
 func dealOn(t *testing.T, e *integration.Env, stages handoverPipeline, name string, owner, company ids.UUID) ids.UUID {
 	t.Helper()
 	in := deals.CreateDealInput{
-		Name: name, PipelineID: stages.pipeline, StageID: stages.open,
+		Source: "manual",
+		Name:   name, PipelineID: stages.pipeline, StageID: stages.open,
 		OwnerID: new(ids.From[ids.UserKind](owner)),
 	}
 	if !company.IsZero() {

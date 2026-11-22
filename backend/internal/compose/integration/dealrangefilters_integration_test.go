@@ -73,11 +73,11 @@ func assertListed(t *testing.T, what string, got []string, want ...string) {
 // day it closed, an open deal by its expected date, an undated deal by neither.
 func TestTheDealListNarrowsByCloseDay(t *testing.T) {
 	f := setupValuation(t)
-	f.rangeDeal(t, "February", deals.CreateDealInput{ExpectedClose: calendarDay(t, "2020-02-10")})
-	f.rangeDeal(t, "May", deals.CreateDealInput{ExpectedClose: calendarDay(t, "2020-05-01")})
+	f.rangeDeal(t, "February", deals.CreateDealInput{Source: "manual", ExpectedClose: calendarDay(t, "2020-02-10")})
+	f.rangeDeal(t, "May", deals.CreateDealInput{Source: "manual", ExpectedClose: calendarDay(t, "2020-05-01")})
 	f.rangeDeal(t, "Undated", deals.CreateDealInput{})
 	// Expected in June, closed on the fixture's day: the range must read the close.
-	won := f.rangeDeal(t, "Won early", deals.CreateDealInput{ExpectedClose: calendarDay(t, "2020-06-15")})
+	won := f.rangeDeal(t, "Won early", deals.CreateDealInput{Source: "manual", ExpectedClose: calendarDay(t, "2020-06-15")})
 	f.close(t, won)
 
 	quarter := deals.RangeFilters{CloseFrom: calendarDay(t, "2020-01-01"), CloseTo: calendarDay(t, "2020-03-31")}
@@ -97,10 +97,10 @@ func TestTheDealListNarrowsByValueAcrossCurrencies(t *testing.T) {
 	f := setupValuation(t)
 	f.rate(t, "USD", "0.5", valuationDate)
 	f.rate(t, "JPY", "0.006", valuationDate)
-	f.rangeDeal(t, "EUR 300", deals.CreateDealInput{AmountMinor: new(int64(30000)), Currency: new("EUR")})
-	f.rangeDeal(t, "USD 500", deals.CreateDealInput{AmountMinor: new(int64(50000)), Currency: new("USD")})
-	f.rangeDeal(t, "JPY 50000", deals.CreateDealInput{AmountMinor: new(int64(50000)), Currency: new("JPY")})
-	f.rangeDeal(t, "GBP without a rate", deals.CreateDealInput{AmountMinor: new(int64(70000)), Currency: new("GBP")})
+	f.rangeDeal(t, "EUR 300", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(30000)), Currency: new("EUR")})
+	f.rangeDeal(t, "USD 500", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(50000)), Currency: new("USD")})
+	f.rangeDeal(t, "JPY 50000", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(50000)), Currency: new("JPY")})
+	f.rangeDeal(t, "GBP without a rate", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(70000)), Currency: new("GBP")})
 	f.rangeDeal(t, "Unpriced", deals.CreateDealInput{})
 
 	list := func(r deals.RangeFilters) []string {
@@ -140,12 +140,12 @@ func TestTheDealListNarrowsByTheCompanyCountry(t *testing.T) {
 		}
 		return new(ids.From[ids.CompanyKind](ids.UUID(company.Id)))
 	}
-	f.rangeDeal(t, "Berlin", deals.CreateDealInput{CompanyID: country("Berlin GmbH", "DE", f.e.Rep1)})
+	f.rangeDeal(t, "Berlin", deals.CreateDealInput{Source: "manual", CompanyID: country("Berlin GmbH", "DE", f.e.Rep1)})
 	munich := country("Munich GmbH", "DE", f.e.Rep3)
-	f.rangeDeal(t, "Munich", deals.CreateDealInput{CompanyID: munich})
+	f.rangeDeal(t, "Munich", deals.CreateDealInput{Source: "manual", CompanyID: munich})
 	// A captured company still private to the rep who captured it.
 	f.e.WsExec(t, `UPDATE company SET visibility = 'owner' WHERE id = $1`, munich.UUID)
-	f.rangeDeal(t, "Hanoi", deals.CreateDealInput{CompanyID: country("Hanoi JSC", "VN", f.e.Rep1)})
+	f.rangeDeal(t, "Hanoi", deals.CreateDealInput{Source: "manual", CompanyID: country("Hanoi JSC", "VN", f.e.Rep1)})
 	f.rangeDeal(t, "No company", deals.CreateDealInput{})
 
 	germany := deals.ListDealsInput{Country: new("DE")}
@@ -219,8 +219,8 @@ func TestTheDealListTakesACodeInEitherCaseAndRefusesAMalformedOne(t *testing.T) 
 // refuses a malformed one by name, as the HTTP list does.
 func TestTheAgentsDealFilterTakesACodeInEitherCaseAndRefusesAMalformedOne(t *testing.T) {
 	f := setupValuation(t)
-	dollars := f.rangeDeal(t, "USD 500", deals.CreateDealInput{AmountMinor: new(int64(50000)), Currency: new("USD")})
-	f.rangeDeal(t, "EUR 300", deals.CreateDealInput{AmountMinor: new(int64(30000)), Currency: new("EUR")})
+	dollars := f.rangeDeal(t, "USD 500", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(50000)), Currency: new("USD")})
+	f.rangeDeal(t, "EUR 300", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(30000)), Currency: new("EUR")})
 	search := func(filters map[string]string) ([]datasource.Record, error) {
 		records, _, _, err := dealProvider(f.e).SearchEntity(f.e.Admin(), datasource.EntityDeal, nil, 25, nil, filters)
 		return records, err
