@@ -43151,8 +43151,10 @@ components:
           description: |
             The location ladder (§4). `sovereign` means zero egress by construction: a cloud
             provider on any tier is refused, and so is a local provider pointed at another host.
-            `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-            connection's and the location's to say.
+            `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+            `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+            Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+            the location's to say.
         tiers:
           type: object
           additionalProperties: { $ref: '#/components/schemas/AiTierBinding' }
@@ -43183,17 +43185,19 @@ components:
             Where the provider is reached. Required on `openai_compatible` while a lane binds it,
             and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint,
             posted to as written). Optional elsewhere; empty means the adapter's compiled default.
-            Refused on `gemini_vertex`, whose host follows from `location`.
+            Refused on `gemini_vertex`, whose host follows from `location`. On `azure_openai` it is
+            required while a lane binds it and is the resource endpoint, `https://<resource>.openai.azure.com`.
         upstream:
           $ref: '#/components/schemas/AiOpenRouterUpstream'
         location:
           type: string
-          pattern: '^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$'
           description: |
-            The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
-            processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-            while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
-            Google about each bound model at the new location first; one it does not serve is a 422.
+            Where the provider processes the call. On `gemini_vertex` the Vertex AI location: `eu`,
+            `us`, `global`, or a region such as `europe-west4`. Moving it asks Google about each
+            bound model at the new location first; one it does not serve is a 422. On `azure_openai`
+            the Azure region of the resource, such as `swedencentral`; a region this build does not
+            know is a 422, and under the `eu_hosted` profile so is a region outside the EU.
+            Required while a lane binds either provider, and refused on every other provider.
 
     AiOpenRouterUpstream:
       type: object
@@ -43223,7 +43227,7 @@ components:
           type: string
           description: |
             The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-            | openai | gemini | gemini_vertex. The credential is never part of this document.
+            | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
         model: { type: string, description: The provider-native model id. }
         base_url:
           type: string
@@ -43234,13 +43238,12 @@ components:
             embeddings server for that lane alone. Empty means the provider's host.
         location:
           type: string
-          pattern: '^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$'
           description: |
-            On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+            On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
             it is accepted only when empty or equal to the provider's, and a different one is a 422
             `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
             embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-            Refused on every provider but `gemini_vertex`.
+            Refused on every provider but `gemini_vertex` and `azure_openai`.
         input:
           type: array
           items: { type: string }
@@ -50598,6 +50601,13 @@ components:
       properties:
         entity_type: { type: string, enum: [company, fact, profile_field], x-extensible-enum: true }
         entity_id: { type: string, format: uuid }
+        claim_version:
+          type: integer
+          format: int64
+          description: |
+            The version of the stored claim this receipt was built from, the same number the claim's
+            list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+            receipt shows.
         source_kind:
           type: string
           enum: [site_read, connector, human, migration, rule]
@@ -69105,7 +69115,7 @@ components:
           type: array
           uniqueItems: true
           description: Distinct configured provider keys, sorted; fake is never returned.
-          items: { type: string, enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm], x-extensible-enum: true }
+          items: { type: string, enum: [anthropic, azure_openai, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm], x-extensible-enum: true }
 
     AiProfile:
       type: object
@@ -69120,7 +69130,7 @@ components:
           type: array
           uniqueItems: true
           description: Distinct configured provider keys, sorted; fake is never returned.
-          items: { type: string, enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm], x-extensible-enum: true }
+          items: { type: string, enum: [anthropic, azure_openai, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm], x-extensible-enum: true }
         configured_models:
           type: array
           description: Authenticated tier-to-model bindings. Credentials and endpoints never appear here.
@@ -69138,9 +69148,9 @@ components:
           x-enum-varnames: [AssistantModelTierLocalSmall, AssistantModelTierCheapCloud, AssistantModelTierPremium, AssistantModelTierFrontier, AssistantModelTierLocalLarge]
         provider:
           type: string
-          enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm]
+          enum: [anthropic, azure_openai, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm]
           x-extensible-enum: true
-          x-enum-varnames: [AssistantModelProviderAnthropic, AssistantModelProviderGemini, AssistantModelProviderGeminiVertex, AssistantModelProviderOllama, AssistantModelProviderOpenAI, AssistantModelProviderOpenAICompatible, AssistantModelProviderVLLM]
+          x-enum-varnames: [AssistantModelProviderAnthropic, AssistantModelProviderAzureOpenAI, AssistantModelProviderGemini, AssistantModelProviderGeminiVertex, AssistantModelProviderOllama, AssistantModelProviderOpenAI, AssistantModelProviderOpenAICompatible, AssistantModelProviderVLLM]
         model: { type: string }
 
     ServiceStatus:

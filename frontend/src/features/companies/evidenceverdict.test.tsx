@@ -64,6 +64,13 @@ function recordCalls() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
+      // The viewer read the correct verb consults is not a verdict call.
+      if (new URL(request.url).pathname.endsWith("/me")) {
+        return new Response("{}", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
       calls.push({
         method: request.method,
         path: new URL(request.url).pathname,
@@ -96,10 +103,13 @@ function refuseWith(status: number, problem: Record<string, unknown>) {
   );
 }
 
-function wrap(ui: ReactNode) {
+function wrap(ui: ReactNode, roles?: string[]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  if (roles) {
+    client.setQueryData(["me"], { roles });
+  }
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -446,5 +456,59 @@ describe("a human's verdict on a machine's claim", () => {
     expect(screen.getByText(/Set by an agent/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
     expect(screen.queryByText(/Confirmed by a person/)).toBeNull();
+  });
+});
+
+describe("who may correct the installation's own name", () => {
+  const name = { ...field, field: "display_name" as const };
+
+  // The seat's roles come from the cached session read the rest of the app
+  // shares, so seeding it states who is looking without a request.
+  function asRoles(roles: string[]) {
+    seatRoles = roles;
+  }
+  let seatRoles: string[] = [];
+
+  it("offers a writer who is not an administrator Confirm but not Correct", async () => {
+    asRoles(["rep"]);
+    wrap(
+      <EvidenceVerdict
+        companyId={COMPANY}
+        anchor
+        claim={profileFieldClaim(COMPANY, name)}
+        canEdit
+      />,
+      seatRoles,
+    );
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Correct" })).toBeNull();
+  });
+
+  it("offers an administrator both verbs", async () => {
+    asRoles(["admin"]);
+    wrap(
+      <EvidenceVerdict
+        companyId={COMPANY}
+        anchor
+        claim={profileFieldClaim(COMPANY, name)}
+        canEdit
+      />,
+      seatRoles,
+    );
+    expect(await screen.findByRole("button", { name: "Correct" })).toBeTruthy();
+  });
+
+  it("leaves Correct on a non-anchor company's name to any writer", () => {
+    asRoles(["rep"]);
+    wrap(
+      <EvidenceVerdict
+        companyId={COMPANY}
+        anchor={false}
+        claim={profileFieldClaim(COMPANY, name)}
+        canEdit
+      />,
+      seatRoles,
+    );
+    expect(screen.getByRole("button", { name: "Correct" })).toBeTruthy();
   });
 });

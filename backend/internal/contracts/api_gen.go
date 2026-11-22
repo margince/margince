@@ -1768,6 +1768,7 @@ func (e AiProfileName) Valid() bool {
 // Defines values for AiProfileProviders.
 const (
 	AiProfileProvidersAnthropic        AiProfileProviders = "anthropic"
+	AiProfileProvidersAzureOpenai      AiProfileProviders = "azure_openai"
 	AiProfileProvidersGemini           AiProfileProviders = "gemini"
 	AiProfileProvidersGeminiVertex     AiProfileProviders = "gemini_vertex"
 	AiProfileProvidersOllama           AiProfileProviders = "ollama"
@@ -1780,6 +1781,8 @@ const (
 func (e AiProfileProviders) Valid() bool {
 	switch e {
 	case AiProfileProvidersAnthropic:
+		return true
+	case AiProfileProvidersAzureOpenai:
 		return true
 	case AiProfileProvidersGemini:
 		return true
@@ -2647,6 +2650,7 @@ func (e AssignmentSubjectKind) Valid() bool {
 // Defines values for AssistantConfiguredModelProvider.
 const (
 	AssistantConfiguredModelProviderAssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
+	AssistantConfiguredModelProviderAssistantModelProviderAzureOpenAI      AssistantConfiguredModelProvider = "azure_openai"
 	AssistantConfiguredModelProviderAssistantModelProviderGemini           AssistantConfiguredModelProvider = "gemini"
 	AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex     AssistantConfiguredModelProvider = "gemini_vertex"
 	AssistantConfiguredModelProviderAssistantModelProviderOllama           AssistantConfiguredModelProvider = "ollama"
@@ -2659,6 +2663,8 @@ const (
 func (e AssistantConfiguredModelProvider) Valid() bool {
 	switch e {
 	case AssistantConfiguredModelProviderAssistantModelProviderAnthropic:
+		return true
+	case AssistantConfiguredModelProviderAssistantModelProviderAzureOpenAI:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderGemini:
 		return true
@@ -2764,6 +2770,7 @@ func (e AssistantProfileName) Valid() bool {
 // Defines values for AssistantProfileProviders.
 const (
 	AssistantProfileProvidersAnthropic        AssistantProfileProviders = "anthropic"
+	AssistantProfileProvidersAzureOpenai      AssistantProfileProviders = "azure_openai"
 	AssistantProfileProvidersGemini           AssistantProfileProviders = "gemini"
 	AssistantProfileProvidersGeminiVertex     AssistantProfileProviders = "gemini_vertex"
 	AssistantProfileProvidersOllama           AssistantProfileProviders = "ollama"
@@ -2776,6 +2783,8 @@ const (
 func (e AssistantProfileProviders) Valid() bool {
 	switch e {
 	case AssistantProfileProvidersAnthropic:
+		return true
+	case AssistantProfileProvidersAzureOpenai:
 		return true
 	case AssistantProfileProvidersGemini:
 		return true
@@ -35156,18 +35165,18 @@ type AiEmbeddingsBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// Location On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
 	// it is accepted only when empty or equal to the provider's, and a different one is a 422
 	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
 	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-	// Refused on every provider but `gemini_vertex`.
+	// Refused on every provider but `gemini_vertex` and `azure_openai`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini | gemini_vertex. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
@@ -35742,13 +35751,15 @@ type AiProviderKeyTestResultReason string
 // AiProviderSettings One provider's configuration. An entry no lane binds is held to its shape only, so a
 // host can be set before anything is bound to it.
 type AiProviderSettings struct {
-	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`.
+	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. On `azure_openai` it is required while a lane binds it and is the resource endpoint, `https://<resource>.openai.azure.com`.
 	BaseUrl *string `json:"base_url,omitempty"`
 
-	// Location The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
-	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-	// while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
-	// Google about each bound model at the new location first; one it does not serve is a 422.
+	// Location Where the provider processes the call. On `gemini_vertex` the Vertex AI location: `eu`,
+	// `us`, `global`, or a region such as `europe-west4`. Moving it asks Google about each
+	// bound model at the new location first; one it does not serve is a 422. On `azure_openai`
+	// the Azure region of the resource, such as `swedencentral`; a region this build does not
+	// know is a 422, and under the `eu_hosted` profile so is a region outside the EU.
+	// Required while a lane binds either provider, and refused on every other provider.
 	Location *string `json:"location,omitempty"`
 
 	// Upstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
@@ -35784,8 +35795,10 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
-	// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-	// connection's and the location's to say.
+	// `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+	// `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+	// Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+	// the location's to say.
 	Profile AiRoutingProfile `json:"profile"`
 
 	// Providers Provider name to what that provider is configured with, independent of any lane: its
@@ -35800,8 +35813,10 @@ type AiRouting struct {
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
-// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-// connection's and the location's to say.
+// `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+// `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+// Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+// the location's to say.
 type AiRoutingProfile string
 
 // AiRoutingEffective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
@@ -35984,18 +35999,18 @@ type AiTierBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// Location On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
 	// it is accepted only when empty or equal to the provider's, and a different one is a 422
 	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
 	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-	// Refused on every provider but `gemini_vertex`.
+	// Refused on every provider but `gemini_vertex` and `azure_openai`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini | gemini_vertex. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
@@ -41002,6 +41017,11 @@ type CitedProvision struct {
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
 // names the gap in `gaps` rather than substituting a plausible value.
 type ClaimEvidence struct {
+	// ClaimVersion The version of the stored claim this receipt was built from, the same number the claim's
+	// list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+	// receipt shows.
+	ClaimVersion *int64 `json:"claim_version,omitempty"`
+
 	// Confidence The model's confidence. ABSENT for the `connector`, `human` and `migration` kinds — none
 	// of them carries a model confidence, and printing one would fabricate a number
 	// (DOSS-AC-16).

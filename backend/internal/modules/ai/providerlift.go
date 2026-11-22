@@ -58,6 +58,7 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 	}
 	for name, settings := range lift.providers {
 		settings.BaseURL = hostRoot(name, settings.BaseURL)
+		settings.Location = canonicalLocation(name, settings.Location)
 		lift.providers[name] = settings
 		if settings.BaseURL != "" {
 			lift.hostFrom[name] = providerEntryLabel
@@ -153,6 +154,7 @@ func (l providerLift) host(label, provider, baseURL string) {
 // location, warns for each later tier naming another, and returns the tier's
 // copy cleared.
 func (l providerLift) location(label, provider, location string) string {
+	location = canonicalLocation(provider, location)
 	if location == "" {
 		return ""
 	}
@@ -174,6 +176,7 @@ func (l providerLift) location(label, provider, location string) string {
 // the lane may sit elsewhere, as it may sit on a server of its own; it decides
 // the provider's location only when neither a tier nor the stored entry has.
 func (l providerLift) embeddingsLocation(provider, location string) string {
+	location = canonicalLocation(provider, location)
 	if _, decided := l.placeFrom[provider]; !decided && !l.tierBound[provider] {
 		return l.location(embeddingsLaneLabel, provider, location)
 	}
