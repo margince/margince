@@ -1240,7 +1240,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.questionBoundPeriod":
     "Câu hỏi này có bộ lọc. Các kỳ của nó giữ nguyên ngày như lúc được đặt vào: năm tài chính bắt đầu vào {month}, theo {zone}.",
   "reporting.fiscalQuarterNote":
-    "Quý này theo năm tài chính bắt đầu vào {month}.",
+    "Quý và năm ở đây theo năm tài chính bắt đầu vào {month}.",
   "reporting.previewChart": "Xem trước",
   "reporting.previewLoading": "Đang tải bản xem trước…",
   "reporting.previewEmpty":
@@ -1595,9 +1595,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mục tiêu được đặt bằng một đồng tiền không còn là tiền tệ cơ sở. Đặt lại mục tiêu để so sánh.",
   "reporting.this_week": "Tuần này",
   "reporting.this_month": "Tháng này",
-  "reporting.last_month": "Tháng trước",
+  "reporting.last_month": "Tháng đã hoàn tất gần nhất",
   "reporting.last_week": "Tuần đã hoàn tất gần nhất",
   "reporting.this_quarter": "Quý tài chính này",
+  "reporting.last_quarter": "Quý đã hoàn tất gần nhất",
+  "reporting.last_year": "Năm đã hoàn tất gần nhất",
   "reporting.custom": "Khoảng tùy chỉnh",
   "reporting.start": "Ngày bắt đầu",
   "reporting.end": "Ngày kết thúc (không bao gồm)",
@@ -2771,6 +2773,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
   "history.field.acquisition_request_retracted":
     "Yêu cầu khi thu nhận đã bị rút lại",
+  "history.field.impersonation_warning_cleared": "Đã gỡ cảnh báo mạo danh",
+  "history.field.impersonation_warning_carried":
+    "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
   "history.field.reason": "Lý do",
   "history.field.recorded_at_level": "Ghi nhận ở cấp",
   "history.field.relationship_types": "Loại quan hệ",
@@ -2810,6 +2815,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.value.meeting_status.canceled": "Đã hủy",
   "history.value.relationship_mark.vendor_marketing":
     "Quảng cáo từ nhà cung cấp",
+  "history.value.impersonation.punycode_domain": "Tên miền thư mã hóa",
+  "history.value.impersonation.display_name_other_domain":
+    "Tên miền khác trong tên hiển thị",
+  "history.value.impersonation.unrecorded": "Không ghi lại dấu hiệu",
 
   "confidence.high": "cao",
   "confidence.med": "trung bình",
@@ -2842,6 +2851,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn điều hướng",
   "shell.back": "Quay lại",
+  "shell.backToSetup": "Quay lại thiết lập",
   "shell.license.none": "Chưa có giấy phép",
   "shell.license.refused": "Giấy phép bị từ chối",
   "shell.signOutAria": "Đăng xuất",
@@ -3964,6 +3974,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.overview.for": "cho {name}",
   "co.overview.noDate": "Chưa có ngày",
   "co.overview.allDeals": "Tất cả deal",
+  "co.overview.allContacts": "Tất cả liên hệ",
   "co.overview.noWork": "Không có deal hay dự án nào đang mở",
   "co.overview.project": "Dự án",
   "co.overview.ends": "kết thúc {date}",
@@ -4965,7 +4976,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.deals.col.close": "Chốt",
   "co.deals.col.status": "Trạng thái",
   "co.rail.contacts.empty": "Chưa có liên hệ nào.",
-  "co.rail.contacts.add": "Thêm liên hệ",
 
   "co.commercial.title": "Thương mại",
   "linkedinImport.title": "Kết nối LinkedIn",
@@ -5255,6 +5265,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.details": "Chi tiết",
   "email.thread.textForwarded":
     "Nội dung bên dưới là thư được chuyển tiếp, không phải lời của chính bên gửi.",
+  "email.thread.noText": "Thư này không có văn bản.",
   "email.thread.textPartial": "Không đọc được một phần nội dung của thư này.",
   "email.thread.textUnassessed": "Nội dung email chưa được xác minh",
   "email.thread.textUnassessedHint":
@@ -5854,6 +5865,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.source.referral": "Giới thiệu",
   "lead.source.import": "Nhập dữ liệu",
   "lead.source.crawl": "Tìm hiểu trên web",
+  "lead.source.api": "Tích hợp",
+  "lead.source.automation": "Tự động hóa",
+  "lead.source.capture": "Ghi nhận từ một cuộc trao đổi",
   "lead.source.siteread": "Từ trang web công ty",
   "lead.source.unknown": "Nguồn không rõ",
   "leadSources.removeOnlyTitle":
@@ -8634,6 +8648,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
+  "tasks.remind.menu": "Nhắc tôi",
+  "tasks.remind.inAnHour": "Sau 1 giờ",
+  "tasks.remind.tomorrowMorning": "Sáng mai",
+  "tasks.remind.beforeDue": "1 giờ trước hạn",
+  "tasks.remind.pick": "Chọn thời gian",
+  "tasks.remind.remove": "Xóa lời nhắc",
+  "tasks.remind.current": "Đã đặt lời nhắc lúc {when}",
+  "tasks.remind.set": "Đã đặt lời nhắc lúc {when}.",
+  "tasks.remind.removed": "Đã xóa lời nhắc.",
+  "tasks.remind.failed": "Chưa lưu được lời nhắc. Hãy thử lại.",
+  "tasks.remind.pickTitle": "Nhắc tôi lúc",
+  "tasks.remind.day": "Ngày",
+  "tasks.remind.time": "Giờ",
+  "tasks.remind.save": "Đặt lời nhắc",
+  "tasks.remind.needsTime": "Hãy nhập ngày và giờ.",
+  "tasks.remind.past": "Hãy chọn một thời điểm chưa qua.",
   "tasks.log.action": "Ghi lại kết quả",
   "tasks.log.record": "Hoạt động này thuộc bản ghi nào?",
   "tasks.log.chooseRecord": "Chọn bản ghi khác",
@@ -8787,7 +8817,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.upcomingTitle": "Cuộc họp sắp tới",
   "analytics.prospect.cohortTitle": "Bàn giao của bạn đã ra sao",
   "analytics.prospect.cohortPeriods":
-    "Chỉ hiện cho một tuần hoặc một tháng. Hãy chọn một trong các kỳ đó.",
+    "Không hiện cho quý tài chính này hoặc khoảng tùy chỉnh. Hãy chọn kỳ khác.",
   "analytics.prospect.cohortCaption_one":
     "{count} bàn giao bạn gửi trong {period}, theo tình trạng hiện tại",
   "analytics.prospect.cohortCaption_other":
@@ -9470,6 +9500,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "explain.col.stage": "Giai đoạn",
   "explain.col.owner": "Người chịu trách nhiệm",
   "explain.col.pipeline": "Pipeline",
+  "explain.col.inCurrency": "{label} ({currency})",
 
   "settings.profileTitle": "Hồ sơ",
   "unsaved.title": "Bỏ thay đổi chưa lưu?",
@@ -10327,7 +10358,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tierWait": "Bổ sung dữ liệu từ web: chờ trong Phê duyệt.",
   "settings.tierAdvance":
     "Chuyển giai đoạn hoặc chốt deal, gắn hoạt động vào dự án: chạy ngay nếu trợ lý có quyền đó.",
-  "settings.locked": "Đã khóa",
   "settings.purposes": "Mục đích xin sự đồng ý",
   "settings.purposesSub":
     "Các mục đích mà bản cài đặt này xin sự đồng ý, và mục đích nào cần xác nhận kép.",
@@ -16033,6 +16063,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.teamParent": "Thuộc {name}",
   "users.teamRename": "Đổi tên",
   "users.teamArchive": "Chuyển vào kho lưu trữ",
+  "users.teamRestore": "Khôi phục",
+  "users.teamArchivedBadge": "Trong kho lưu trữ",
+  "users.showArchivedTeams": "Hiển thị nhóm trong kho lưu trữ",
+  "users.showArchivedTeamsSub":
+    "Nhóm trong kho lưu trữ không cho thành viên quyền truy cập nào cho đến khi bạn khôi phục.",
+  "users.archiveTeamTitle": "Chuyển “{name}” vào kho lưu trữ?",
+  "users.archiveTeamBody_one":
+    "Nhóm có {count} thành viên. Họ mất quyền truy cập mà nhóm mang lại: hồ sơ được chia sẻ với nhóm, và hồ sơ của nhóm đối với trưởng nhóm. Bạn có thể khôi phục nhóm trong “Hiển thị nhóm trong kho lưu trữ”.",
+  "users.archiveTeamBody_other":
+    "Nhóm có {count} thành viên. Họ mất quyền truy cập mà nhóm mang lại: hồ sơ được chia sẻ với nhóm, và hồ sơ của nhóm đối với trưởng nhóm. Bạn có thể khôi phục nhóm trong “Hiển thị nhóm trong kho lưu trữ”.",
   "users.teamRenameTitle": "Đổi tên nhóm",
   "users.teamRenameSave": "Lưu tên",
   "users.teamRenamed": "Đã đổi tên nhóm thành “{name}”",
@@ -16288,9 +16328,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.companyManualSub":
     "Bản cài đặt này chưa bật đọc trang web. 3 câu trả lời này tạo bối cảnh công ty dùng được mà không gọi mô hình hay gửi yêu cầu ra bên ngoài.",
   "settings.companyCreateWorkspace": "Tạo bối cảnh công ty",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Mọi hành động",
+  "settings.auditAnyActor": "Bất kỳ ai",
+  "settings.auditActorDelegated": "Gồm cả việc trợ lý AI đã làm thay họ.",
+  "settings.auditAnyEntity": "Mọi loại",
+  "settings.auditEntityIdHint":
+    "Dán toàn bộ ID đối tượng. Dùng Sao chép ID đối tượng trên một dòng.",
+  "settings.auditRangeReversed": "Chọn ngày Đến bằng hoặc sau ngày Từ.",
   "product.title": "Sản phẩm",
   "product.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi sản phẩm.",
@@ -16683,9 +16727,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.fiscalImpactKept_other":
     "{count} báo cáo có thẻ lọc theo một kỳ. Các báo cáo giữ nguyên ngày.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+    "{count} báo cáo đọc quý này, quý hoặc năm đã hoàn tất gần nhất, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+    "{count} báo cáo đọc quý này, quý hoặc năm đã hoàn tất gần nhất, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
   "installationSettings.fiscalImpactLoading":
     "Đang đếm các phần đã lưu mà thay đổi này liên quan…",
   "installationSettings.forwardMeasure": "Cơ sở tính dự kiến",
@@ -21820,6 +21864,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.follow.stopped": "Bạn đã ngừng theo dõi liên hệ này.",
   "contact.follow.setAside": "Bạn đã gác lại liên hệ này đến {date}.",
   "contact.follow.resume": "Theo dõi lại",
+  "contact.impersonation.title":
+    "Bên gửi này có thể đang mạo danh một bên khác",
+  "contact.impersonation.clear": "Có vẻ ổn",
+  "contact.impersonation.reason.punycodeDomain":
+    "Tên miền thư dùng cách viết mã hóa, có thể trông giống một tên miền khác.",
+  "contact.impersonation.reason.displayNameOtherDomain":
+    "Tên hiển thị chứa một địa chỉ thuộc tên miền khác với tên miền đã gửi thư.",
+  "contact.impersonation.reason.unrecorded":
+    "Không có ghi nhận về dấu hiệu đã phát hiện.",
   "worklist.verb.completeUndo": "Hoàn tác",
   "worklist.verb.completeUndoFailed": "Không thể mở lại việc cần làm. Thử lại.",
   "worklist.source.failed": "Không thể tải nguồn: {source}",

@@ -114,6 +114,19 @@ describe("the added-via reader", () => {
     expect(writtenByLabel(null, t)).toBe("lead.shortfall.noSource");
   });
 
+  it("reads each channel a record's source may hold as a label", () => {
+    for (const channel of [
+      "api",
+      "automation",
+      "capture",
+      "import",
+      "manual",
+      "webform",
+    ]) {
+      expect(writtenByLabel(channel, t)).toBe(`lead.source.${channel}`);
+    }
+  });
+
   it("names a system a record came from as its maker spells it", () => {
     expect(writtenByLabel("hubspot", t)).toBe("HubSpot");
     expect(writtenByLabel("connector:salesforce:s-1", t)).toBe("Salesforce");

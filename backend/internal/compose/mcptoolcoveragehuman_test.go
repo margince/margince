@@ -75,16 +75,19 @@ func writeCoverageAssistants(p *strings.Builder, r mcpToolCoverage) {
 		return
 	}
 	titles := caseTitles(r.Cases)
-	p.WriteString("| Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |\n")
-	p.WriteString("|---|---|---:|---|---|\n")
+	p.WriteString("| Assistant | How we connected it | Jobs tried | Can I trust it? | Calls per job | Turns per job | In plain words |\n")
+	p.WriteString("|---|---|---:|---|---:|---:|---|\n")
 	for _, m := range r.Models {
-		fmt.Fprintf(p, "| `%s` | %s | %d of %d | %s | %s |\n", m.Name, m.Route,
-			m.CasesRecorded, len(r.Cases), m.Trust, plainWords(m, titles))
+		fmt.Fprintf(p, "| `%s` | %s | %d of %d | %s | %s | %s | %s |\n", m.Name, m.Route,
+			m.CasesRecorded, len(r.Cases), m.Trust, m.MedianCalls, m.MedianTurns, plainWords(m, titles))
 	}
 	p.WriteString("\nAn assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was " +
 		"reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough " +
 		"tested yet** when we tried it on under half the jobs.\n\n*Reliably* means it got the job right in most of its tries: " +
 		"each job is tried several times, because an assistant does not answer the same way twice.\n\n")
+	p.WriteString("**Calls per job** and **turns per job** are the middle value over the jobs tried: how " +
+		"directly the assistant finished. They are a score and never fail a job. The Codex CLI reports " +
+		"no turn count, so its turns show `-`.\n\n")
 	p.WriteString("**How we connected it** matters. *Claude Code CLI* and *Codex CLI* are each vendor's own " +
 		"assistant, with its own instructions. The *neutral harness* gives every model the same " +
 		"tools and the same instructions, so it is the only route that compares one model with another.\n\n")

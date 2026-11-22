@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -523,9 +524,9 @@ describe("onboarding gate", () => {
     },
   );
 
-  // Sign out stands in the onboarding band, so a reader stuck mid-journey can
-  // still leave, and an address that outlived a sign-out opens setup again.
-  it("sends a non-admin mid-journey from Settings > Account to setup, Sign out in reach", async () => {
+  // The band links to Settings > Account, so a reader mid-journey can fix
+  // their language or password there and find the way back to setup.
+  it("lets a non-admin mid-journey open Settings > Account and return to setup", async () => {
     window.location.hash = "#/settings/account";
     stubCompany(
       403,
@@ -535,12 +536,15 @@ describe("onboarding gate", () => {
       },
     );
     mount();
+    const back = await screen.findByRole("link", { name: "Back to setup" });
+    expect(window.location.hash).toBe("#/settings/account");
+    expect(screen.queryByRole("button", { name: /^Notifications/ })).toBeNull();
+    await userEvent.setup().click(back);
     await waitFor(() =>
       expect(window.location.hash).toMatch(/^#\/onboarding\//),
     );
-    expect(
-      await screen.findByRole("button", { name: "Sign out" }),
-    ).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "Account" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
   });
 
   it("still sends a non-admin mid-journey away from any other settings page", async () => {

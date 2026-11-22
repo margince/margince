@@ -54,7 +54,7 @@ func olderReview(t *testing.T, env captureEnv) (meeting, colleague ids.UUID, syn
 	sync := connectFeed(t, env, feed)
 	sync()
 	meeting = gcalMeeting(t, env.e)
-	ownerExec(t, env.e, `UPDATE activity_participant SET roster_seat = NULL WHERE activity_id = $1`, meeting)
+	ownerExec(t, env.e, `UPDATE activity_participant SET roster_seats = NULL WHERE activity_id = $1`, meeting)
 	return meeting, colleague, func() {
 		t.Helper()
 		feed.set(lateGuestEvent("review", "confirmed", start, guestUnread, ownerEntry("accepted"), guestEntry(guestUnread, "accepted")))
@@ -65,7 +65,7 @@ func olderReview(t *testing.T, env captureEnv) (meeting, colleague ids.UUID, syn
 func namedRows(t *testing.T, e *integration.SearchEnv, meeting ids.UUID, address string) int {
 	t.Helper()
 	return countRows(t, e, `SELECT count(*) FROM activity_participant WHERE activity_id = '`+meeting.String()+
-		`' AND address = '`+address+`' AND roster_seat = '`+e.Rep1.String()+`'`)
+		`' AND address = '`+address+`' AND '`+e.Rep1.String()+`' = ANY(roster_seats)`)
 }
 
 func TestAColleagueRemovedFromAnOlderEventLosesTheMeetingOnceItsRosterIsNamed(t *testing.T) {

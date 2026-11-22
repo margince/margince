@@ -10,6 +10,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -74,6 +75,9 @@ func OfferCreationInput(ctx context.Context, raw []byte) (CreateOfferInput, erro
 	}
 	source, err := httperr.RequireNonBlank("source", req.Source)
 	if err != nil {
+		return CreateOfferInput{}, err
+	}
+	if err := provenance.AdmitRecordSource(source); err != nil {
 		return CreateOfferInput{}, err
 	}
 	in := CreateOfferInput{

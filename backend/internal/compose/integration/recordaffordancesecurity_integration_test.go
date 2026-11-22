@@ -32,7 +32,8 @@ func TestRecordAffordancesKeepArchivedUpdateAuthorityForMasks(t *testing.T) {
 	amount, arr, currency := int64(250000), int64(90000), "EUR"
 	owner := ids.From[ids.UserKind](e.Rep1)
 	made, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Archived authority", PipelineID: pipeline, StageID: open, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Archived authority", PipelineID: pipeline, StageID: open, OwnerID: &owner,
 		AmountMinor: &amount, ExpectedArrMinor: &arr, Currency: &currency,
 	})
 	if err != nil {

@@ -85,7 +85,7 @@ func TestMailOnAnOpenDealAgesOut(t *testing.T) {
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Aged renewal', 'open', $2, $3, $4, 'seed', 'system')`, deal, e.rep, pipeline, stage)
+		VALUES ($1, 'Aged renewal', 'open', $2, $3, $4, 'manual', 'system')`, deal, e.rep, pipeline, stage)
 	activity := e.seedWait(t, "Old question on the deal", "deal_id", deal)
 	e.directlyTo(t, activity, e.rep)
 	e.exec(t, `UPDATE activity SET occurred_at = now() - interval '200 days' WHERE id = $1`, activity)

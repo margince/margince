@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -152,37 +151,6 @@ func nameColumn(part string) *string {
 		return nil
 	}
 	return &part
-}
-
-// quarantineSuspect flags the cheap impersonation tells (ADR-0063): a
-// punycode domain (homoglyph vector) or a display name that embeds an
-// address on a DIFFERENT domain ("ceo@acme.com <attacker@evil.example>").
-// Flagged rows carry quarantined_at for the review surface; capture still
-// records them — hiding suspicious mail would be worse than labeling it.
-//
-// Both tells are statements ABOUT the sender's mail domain, so with no domain
-// there is nothing for either to contradict and the answer is no. Without that
-// floor the second tell compares an embedded address against "" and matches
-// every display name that merely contains an "@" — quarantining a record for a
-// reason that cannot apply to it.
-func quarantineSuspect(displayName, domain string) bool {
-	if domain == "" {
-		return false
-	}
-	if strings.HasPrefix(domain, "xn--") || strings.Contains(domain, ".xn--") {
-		return true
-	}
-	name := strings.ToLower(displayName)
-	_, after, ok := strings.Cut(name, "@")
-	if !ok {
-		return false
-	}
-	embedded := after
-	if end := strings.IndexAny(embedded, " >,;"); end >= 0 {
-		embedded = embedded[:end]
-	}
-	embedded = strings.Trim(embedded, ".")
-	return embedded != "" && embedded != strings.ToLower(domain)
 }
 
 // acquiredFromCapture names what capture actually observed.

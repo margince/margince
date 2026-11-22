@@ -57,4 +57,16 @@ describe("the onboarding band", () => {
       expect(requestsTo(calls, "/auth/logout", "POST")).toHaveLength(1);
     });
   });
+
+  it("links to Settings > Account from the band", async () => {
+    stubApi();
+    render(
+      <VoiceHarness initial={{ ...collectingState(), memberPath: true }} />,
+    );
+
+    const account = await screen.findByRole("link", {
+      name: en["settings.tab.account"],
+    });
+    expect(account.getAttribute("href")).toMatch(/#\/settings\/account$/);
+  });
 });

@@ -85,9 +85,9 @@ function renderPalette() {
 
 async function typeAndSettle(words: string) {
   const user = steppedClock();
-  await user.type(screen.getByRole("searchbox"), words);
+  await user.type(screen.getByRole("combobox"), words);
   await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
-  await screen.findByRole("button", { name: /Acme renewal/ });
+  await screen.findByRole("option", { name: /Acme renewal/ });
   return user;
 }
 
@@ -123,13 +123,13 @@ describe("the palette's type strip", () => {
     const fetchMock = renderPalette();
     const user = await typeAndSettle("acme");
     await user.click(strip().getByRole("button", { name: /Deals/ }));
-    await screen.findByRole("button", { name: /Acme fleet/ });
+    await screen.findByRole("option", { name: /Acme fleet/ });
 
     const narrowed = searchParams(fetchMock.mock.calls.at(-1)?.[0] ?? "");
     expect(narrowed.get("types")).toBe("deal");
     expect(narrowed.get("per_type")).toBe("8");
-    expect(screen.queryByRole("button", { name: /Dana Acme/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Deals Screen/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Dana Acme/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /^Deals Screen/ })).toBeNull();
     expect(
       strip()
         .getByRole("button", { name: /Deals/ })

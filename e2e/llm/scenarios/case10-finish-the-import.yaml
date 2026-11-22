@@ -89,7 +89,7 @@ must_mention:
   # cell, so "Would create 4 companies" and "ready to commit once you
   # confirm" reach nothing while "4 companies created", "the partner list is
   # committed" and "vier Firmen angelegt" all land.
-  - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in (?:the (?:CRM|workspace|system)|Margince))|\bdrin\b|angelegt|eingelesen)"
+  - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to|\w*n['’]t)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in (?:the (?:CRM|workspace|system)|Margince))|\bdrin\b|angelegt|eingelesen)"
 
   # CRITERION 2, AND THE PART OF "WHAT ACTUALLY LANDED" NOTHING ELSE ASKED FOR.
   # `name,city,size,country` places NOTHING on its own, so every run, by the
@@ -127,7 +127,7 @@ must_mention:
   # fields, so I mapped size to size band" is the mapping, reported by a real
   # run. A bare comma does not start one: "I couldn't place size, as the
   # employee band needs a number" is the failure, and "as" reads as a verb.
-  - "(?:^|[.;!?\n|]|\bso\b)(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|])*?(?:map\w*|→|->|=>|placed|put|assigned|matched|treated|filed|went|\b(?:landed|stored|saved|became|set|into|as)\b)(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:size[_ ]band|employees?(?:[ _](?:size[ _])?bands?)?\b|address\.(?:city|country)|display[_ ]name)|(?:size[_ ]band|employees?(?:[ _](?:size[ _])?bands?)?\b|address\.(?:city|country)|display[_ ]name)(?:(?!\b(?:not|never|no)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:map\w*|→|->|=>|from (?:your |the )?(?:size|country|city|name)\b)|\|\s*`?(?:name|city|size|country)`?\s*\|\s*`?(?:size[_ ]band|employees?(?:[ _](?:size[ _])?bands?)?\b|address\.(?:city|country)|display[_ ]name)`?\s*\|"
+  - "(?:^|[.;!?\n|]|\bso\b)(?:(?!\b(?:not|nothing|no|never|none|\w*n['’]t)\b)[^.;!?\n|])*?(?:map\w*|→|->|=>|placed|put|assigned|matched|treated|filed|went|\b(?:landed|stored|saved|became|set|into|as)\b)(?:(?!\b(?:not|nothing|no|never|none|\w*n['’]t)\b)[^.;!?\n|]){0,60}(?:size[_ ]band|employees?(?:[ _](?:size[ _])?bands?)?\b|address\.(?:city|country)|display[_ ]name)|(?:size[_ ]band|employees?(?:[ _](?:size[ _])?bands?)?\b|address\.(?:city|country)|display[_ ]name)(?:(?!\b(?:not|never|no|\w*n['’]t)\b)[^.;!?\n|]){0,60}(?:map\w*|→|->|=>|from (?:your |the )?(?:size|country|city|name)\b)|\|\s*`?(?:name|city|size|country)`?\s*\|\s*`?(?:size[_ ]band|employees?(?:[ _](?:size[ _])?bands?)?\b|address\.(?:city|country)|display[_ ]name)`?\s*\|"
 
 must_not_mention:
   # THE FAILURE THIS CASE EXISTS FOR. The asker pre-authorized the write in the
@@ -139,7 +139,7 @@ must_not_mention:
   # And the confident wrong answer about the product: an import surface that
   # cannot commit. It can; the run is created awaiting approval and commit_import
   # is the door.
-  - "(?:cannot|can not|can't|unable to|not able to)[^\n]{0,25}(?:commit|complete|finish) (?:the |this )?import|import[^\n]{0,30}(?:has to|have to|must) be (?:committed|completed|finished|approved) in the (?:web )?app"
+  - "(?:cannot|can not|can't|unable to|not able to|n['’]t able to)[^\n]{0,25}(?:commit|complete|finish) (?:the |this )?import|import[^\n]{0,30}(?:has to|have to|must) be (?:committed|completed|finished|approved) in the (?:web )?app"
 
 
 # What landed, read from the world once any committed import has stopped

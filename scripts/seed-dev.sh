@@ -547,7 +547,7 @@ ensure_deal() { # ensure_deal <name> <stage-id> <amount-minor>
     return
   fi
   ensure "deal $name" /deals "$(jq -n --arg n "$name" --arg p "$pipeline_id" --arg s "$stage" --argjson a "$amount" \
-    '{name:$n,pipeline_id:$p,stage_id:$s,amount_minor:$a,currency:"EUR",source:"seed"}')"
+    '{name:$n,pipeline_id:$p,stage_id:$s,amount_minor:$a,currency:"EUR",source:"api"}')"
 }
 
 ensure_deal "Acme Expansion" "$stage_id_qualified" 2500000

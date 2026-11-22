@@ -588,7 +588,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-46 columns · primary key `(id)` · referenced by 50 foreign keys
+49 columns · primary key `(id)` · referenced by 50 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -614,6 +614,9 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `photo_object_key` | `text` |  |  |
 | `photo_origin` | `text` |  |  |
+| `quarantine_cleared_at` | `timestamp with time zone` |  |  |
+| `quarantine_cleared_by` | `text` |  |  |
+| `quarantine_reason` | `text` |  | One of `punycode_domain`, `display_name_other_domain`. |
 | `quarantined_at` | `timestamp with time zone` |  |  |
 | `relationship_mark` | `text` |  | Set when the workspace's relationship to this contact is not an ordinary one. |
 | `relationship_mark_set_by` | `text` |  |  |
@@ -655,6 +658,10 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_narrowing_reason_check`: `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided'])))`
 - `contact_narrowing_reason_only_when_owner`: `CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner')))`
 - `contact_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
+- `contact_quarantine_cleared_by_pairs`: `CHECK (((quarantine_cleared_at IS NULL) = (quarantine_cleared_by IS NULL)))`
+- `contact_quarantine_cleared_needs_a_verdict`: `CHECK (((quarantine_cleared_at IS NULL) OR (quarantined_at IS NOT NULL)))`
+- `contact_quarantine_reason_check`: `CHECK ((quarantine_reason = ANY (ARRAY['punycode_domain', 'display_name_other_domain'])))`
+- `contact_quarantine_reason_needs_a_verdict`: `CHECK (((quarantine_reason IS NULL) OR (quarantined_at IS NOT NULL)))`
 - `contact_relationship_mark_check`: `CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'])))`
 - `contact_relationship_mark_set_by_pairs`: `CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL)))`
 - `contact_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
@@ -693,8 +700,8 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `contact_strength_dates_archive`: `BEFORE UPDATE OF archived_at FOR EACH ROW WHEN ((old.archived_at IS DISTINCT FROM new.archived_at)) EXECUTE FUNCTION trg_contact_strength_dates_archive()`
 - `home_read_fence_contact_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "quarantine_reason": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "quarantine_cleared_by": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"quarantine_cleared_by":20000,"quarantine_reason":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "quarantine_reason": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "quarantine_cleared_by": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"quarantine_cleared_by":20000,"quarantine_reason":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
 - `trg_contact_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()`
 - `trg_contact_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -1870,7 +1877,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | One of `api`, `automation`, `capture`, `import`, `manual`, `webform`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -1894,6 +1901,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `partner_partner_fit_score_computed_check`: `CHECK (((partner_fit_score_computed IS NULL) OR ((partner_fit_score_computed >= 0) AND (partner_fit_score_computed <= 100))))`
 - `partner_partner_kinds_check`: `CHECK ((partner_kinds <@ ARRAY['hosting', 'consulting', 'strategic', 'referral']))`
 - `partner_retention_rate_check`: `CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))`
+- `partner_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform'])))`
 - `partner_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

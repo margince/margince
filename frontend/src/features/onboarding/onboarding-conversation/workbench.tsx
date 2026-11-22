@@ -14,7 +14,7 @@ import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCan } from "../../../lib/capability";
 import { labelFor } from "../../../lib/labelfor";
 import { throwProblem, unwrap } from "../../../lib/problem";
-import { OnboardingSignOut } from "../onboarding-signout";
+import { OnboardingAccount } from "../onboarding-account";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
 
@@ -284,7 +284,7 @@ export function ConversationWorkbench({
             />
           )
         }
-        account={<OnboardingSignOut />}
+        account={<OnboardingAccount />}
         progress={stageProgress}
         where={bandWhere}
         eyebrow={eyebrow}

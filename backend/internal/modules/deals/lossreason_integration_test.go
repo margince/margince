@@ -55,7 +55,8 @@ func (p lossPipeline) deal(t *testing.T, e *configEnv, name string) ids.DealID {
 	t.Helper()
 	owner := ids.From[ids.UserKind](e.admin)
 	made, err := e.store.CreateDeal(e.asLossAdmin(), CreateDealInput{
-		Name: name, PipelineID: p.pipeline, StageID: p.open, OwnerID: &owner, OwnerExact: true,
+		Source: "manual",
+		Name:   name, PipelineID: p.pipeline, StageID: p.open, OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {
 		t.Fatalf("seeding deal %s: %v", name, err)

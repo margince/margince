@@ -15,7 +15,7 @@ package capture_test
 // ladder were ever widened to swallow channel records, its address-keyed
 // deferral would fail inside the gate savepoint and leave exactly such an
 // artifact behind. The fourth gate — the impersonation quarantine — lives in
-// contacts and is proved there (TestQuarantineSuspectNeedsADomainToJudge).
+// contacts and is proved there (TestAnImpersonationSignNeedsADomainToJudge).
 
 import (
 	"context"

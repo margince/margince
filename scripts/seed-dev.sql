@@ -480,8 +480,8 @@ BEGIN
     RETURN;
   END IF;
   INSERT INTO capture_connection (provider, user_id, connected_by, reader_team_id, account_label,
-                                  mail_posture, status, scopes, auth, share_acknowledged_at)
-  VALUES ('test_mailbox', NULL, admin_id, dach_team_id, 'sales@demo.test', 'held', 'connected', '{read}',
+                                  mail_posture, status, auth, share_acknowledged_at)
+  VALUES ('test_mailbox', NULL, admin_id, dach_team_id, 'sales@demo.test', 'held', 'connected',
           convert_to('{"user_id":"00000000-0000-0000-0000-000000000000"}', 'UTF8'), now())
   ON CONFLICT (provider, lower(account_label)) WHERE user_id IS NULL DO NOTHING;
   RAISE NOTICE 'seed-dev.sql: shared mailbox sales@demo.test, read by DACH Sales';

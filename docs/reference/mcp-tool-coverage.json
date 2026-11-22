@@ -19,13 +19,12 @@
       "name": "claude-sonnet-5-5",
       "trust": "🟡 Mostly",
       "cases_with_a_committed_run": 81,
-      "cases_that_reached_their_bar": 77,
-      "cases_below_their_bar": 4,
-      "runs": 165,
-      "passed": 157,
-      "reliability": 0.9515151515151515,
+      "cases_that_reached_their_bar": 78,
+      "cases_below_their_bar": 3,
+      "runs": 166,
+      "passed": 159,
+      "reliability": 0.9578313253012049,
       "cases_below_their_bar_named": [
-        "case64_catch_me_up_and_the_brief",
         "case75_sofia_is_leaving",
         "case88_send_it_anyway",
         "case91_add_a_review_stage"
@@ -33,7 +32,9 @@
       "route": "Claude Code CLI",
       "self_judged": true,
       "calls_per_case": "4.5 over 81",
-      "slow_cases": []
+      "slow_cases": [],
+      "median_calls_per_case": "4.5",
+      "median_turns_per_case": "5.5"
     },
     {
       "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -42,9 +43,9 @@
       "cases_with_a_committed_run": 81,
       "cases_that_reached_their_bar": 79,
       "cases_below_their_bar": 2,
-      "runs": 167,
+      "runs": 168,
       "passed": 160,
-      "reliability": 0.9580838323353293,
+      "reliability": 0.9523809523809523,
       "cases_below_their_bar_named": [
         "case78_she_asked_us_to_stop",
         "case88_send_it_anyway"
@@ -52,26 +53,36 @@
       "route": "Antigravity CLI",
       "self_judged": false,
       "calls_per_case": "8.5 over 81",
-      "slow_cases": []
+      "slow_cases": [],
+      "median_calls_per_case": "8.5",
+      "median_turns_per_case": "6.5"
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
       "name": "gpt-5.6-sol",
-      "trust": "⚪ Not enough tested yet",
-      "cases_with_a_committed_run": 36,
-      "cases_that_reached_their_bar": 34,
-      "cases_below_their_bar": 2,
-      "runs": 78,
-      "passed": 68,
-      "reliability": 0.8717948717948718,
+      "trust": "🟡 Mostly",
+      "cases_with_a_committed_run": 82,
+      "cases_that_reached_their_bar": 74,
+      "cases_below_their_bar": 8,
+      "runs": 174,
+      "passed": 150,
+      "reliability": 0.8620689655172413,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room",
-        "case10_finish_the_import"
+        "case10_finish_the_import",
+        "case46_get_us_in_a_room",
+        "case47_tidy_the_fair_list",
+        "case49_who_can_introduce_us",
+        "case75_sofia_is_leaving",
+        "case86_tell_her_what_we_hold",
+        "case88_send_it_anyway"
       ],
       "route": "Codex CLI",
       "self_judged": false,
-      "calls_per_case": "9.75 over 36",
-      "slow_cases": []
+      "calls_per_case": "10 over 82",
+      "slow_cases": [],
+      "median_calls_per_case": "10",
+      "median_turns_per_case": "-"
     }
   ],
   "rest_door": {
@@ -84,19 +95,21 @@
         "cases_that_reached_their_bar": 15,
         "cases_below_their_bar": 5,
         "runs": 42,
-        "passed": 31,
-        "reliability": 0.7380952380952381,
+        "passed": 32,
+        "reliability": 0.7619047619047619,
         "cases_below_their_bar_named": [
           "case10_finish_the_import",
           "case20_put_it_in_the_board_pack",
-          "case40_sort_the_queue",
           "case5_before_the_meeting",
+          "case64_catch_me_up_and_the_brief",
           "case6_ask_the_company"
         ],
         "route": "Claude Code CLI",
         "self_judged": true,
-        "calls_per_case": "12 over 20",
-        "slow_cases": []
+        "calls_per_case": "13.25 over 20",
+        "slow_cases": [],
+        "median_calls_per_case": "13.25",
+        "median_turns_per_case": "14.25"
       }
     ],
     "cases": [
@@ -154,27 +167,26 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 0,
+            "runs": 3,
+            "passed": 1,
             "pass_at": 2,
             "held": false,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 2,
+              "runs": 3,
               "calls": {
-                "median": 16,
+                "median": 14,
                 "min": 14,
-                "max": 18
+                "max": 17
               },
               "turns": {
-                "median": 17,
+                "median": 15,
                 "min": 15,
-                "max": 19
+                "max": 18
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -239,17 +251,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 10,
-                "min": 10,
+                "median": 9.5,
+                "min": 9,
                 "max": 10
               },
               "turns": {
-                "median": 11,
-                "min": 11,
+                "median": 10.5,
+                "min": 10,
                 "max": 11
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -380,27 +391,26 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 3,
-            "passed": 1,
+            "runs": 2,
+            "passed": 2,
             "pass_at": 2,
-            "held": false,
+            "held": true,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 3,
+              "runs": 2,
               "calls": {
                 "median": 22,
-                "min": 19,
-                "max": 22
+                "min": 21,
+                "max": 23
               },
               "turns": {
                 "median": 23,
-                "min": 20,
-                "max": 23
+                "min": 22,
+                "max": 24
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -720,26 +730,25 @@
           {
             "model": "claude-sonnet-5-5@claude-cli",
             "runs": 3,
-            "passed": 2,
+            "passed": 1,
             "pass_at": 2,
-            "held": true,
+            "held": false,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
               "runs": 3,
               "calls": {
-                "median": 9,
-                "min": 6,
-                "max": 13
+                "median": 14,
+                "min": 11,
+                "max": 16
               },
               "turns": {
-                "median": 10,
-                "min": 7,
-                "max": 14
+                "median": 15,
+                "min": 12,
+                "max": 17
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -1070,9 +1079,9 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 7,
-              "max": 13
+              "median": 12.5,
+              "min": 6,
+              "max": 19
             },
             "turns": null
           },
@@ -1924,6 +1933,25 @@
               "max": 4
             }
           }
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 6,
+              "min": 4,
+              "max": 8
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -3331,13 +3359,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 15,
-              "min": 14,
-              "max": 16
+              "median": 13,
+              "min": 11,
+              "max": 15
             },
             "turns": {
-              "median": 9,
-              "min": 8,
+              "median": 8.5,
+              "min": 7,
               "max": 10
             }
           },
@@ -3354,8 +3382,8 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 16,
-              "min": 15,
+              "median": 12.5,
+              "min": 8,
               "max": 17
             },
             "turns": null
@@ -3537,15 +3565,15 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 3,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
               "median": 2,
               "min": 2,
@@ -3570,32 +3598,32 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 3,
+              "median": 2.5,
+              "min": 2,
               "max": 3
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
+              "median": 5.5,
+              "min": 5,
+              "max": 6
             }
           },
           "regraded": true
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 3,
+              "median": 3.5,
               "min": 3,
-              "max": 6
+              "max": 4
             },
             "turns": null
           },
@@ -3904,6 +3932,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 19,
+              "min": 19,
+              "max": 19
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -3964,6 +4011,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 16.5,
+              "min": 13,
+              "max": 20
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -3991,14 +4057,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 10,
-              "max": 10
+              "median": 14,
+              "min": 13,
+              "max": 15
             },
             "turns": {
-              "median": 11,
-              "min": 11,
-              "max": 11
+              "median": 15,
+              "min": 14,
+              "max": 16
             }
           },
           "regraded": true
@@ -4014,15 +4080,34 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 15.5,
+              "median": 14,
               "min": 14,
-              "max": 17
+              "max": 14
             },
             "turns": {
-              "median": 8,
-              "min": 8,
+              "median": 7.5,
+              "min": 7,
               "max": 8
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 25.5,
+              "min": 25,
+              "max": 26
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -4085,6 +4170,24 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 11.5,
+              "min": 9,
+              "max": 14
+            },
+            "turns": null
+          }
         }
       ]
     },
@@ -4150,6 +4253,24 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 8.5,
+              "min": 7,
+              "max": 10
+            },
+            "turns": null
+          }
         }
       ]
     },
@@ -4210,6 +4331,24 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 13.5,
+              "min": 11,
+              "max": 16
+            },
+            "turns": null
+          }
         }
       ]
     },
@@ -4273,6 +4412,24 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 25.5,
+              "min": 25,
+              "max": 26
+            },
+            "turns": null
+          }
         }
       ]
     },
@@ -4335,6 +4492,24 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 12,
+              "min": 11,
+              "max": 13
+            },
+            "turns": null
+          }
         }
       ]
     },
@@ -4398,6 +4573,24 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 1,
+          "pass_at": 2,
+          "held": false,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 3,
+            "calls": {
+              "median": 14,
+              "min": 10,
+              "max": 15
+            },
+            "turns": null
+          }
         }
       ]
     },
@@ -4412,7 +4605,26 @@
       ],
       "requires": [],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 23,
+              "min": 21,
+              "max": 25
+            },
+            "turns": null
+          }
+        }
+      ]
     },
     {
       "name": "case48_that_whole_thread_is_filed_wrong",
@@ -4470,6 +4682,24 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 9,
+              "min": 7,
+              "max": 11
+            },
+            "turns": null
+          }
         }
       ]
     },
@@ -4500,14 +4730,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 12,
+              "median": 12.5,
               "min": 12,
-              "max": 12
+              "max": 13
             },
             "turns": {
-              "median": 13,
+              "median": 13.5,
               "min": 13,
-              "max": 13
+              "max": 14
             }
           },
           "regraded": true
@@ -4523,15 +4753,34 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 20,
-              "min": 20,
-              "max": 20
+              "median": 22.5,
+              "min": 22,
+              "max": 23
             },
             "turns": {
-              "median": 7.5,
+              "median": 8.5,
               "min": 7,
-              "max": 8
+              "max": 10
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 1,
+          "pass_at": 2,
+          "held": false,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 3,
+            "calls": {
+              "median": 24,
+              "min": 24,
+              "max": 26
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -4596,6 +4845,24 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 3,
+            "calls": {
+              "median": 20,
+              "min": 16,
+              "max": 24
+            },
+            "turns": null
+          }
         }
       ]
     },
@@ -4623,13 +4890,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 5,
+              "median": 4.5,
+              "min": 4,
               "max": 5
             },
             "turns": {
-              "median": 6,
-              "min": 6,
+              "median": 5.5,
+              "min": 5,
               "max": 6
             }
           },
@@ -4646,15 +4913,34 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11,
-              "min": 11,
-              "max": 11
+              "median": 9,
+              "min": 9,
+              "max": 9
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 6,
+              "min": 6,
+              "max": 6
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 10.5,
+              "min": 8,
+              "max": 13
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -4716,6 +5002,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 6.5,
+              "min": 4,
+              "max": 9
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -4745,14 +5050,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 7,
+              "min": 6,
+              "max": 8
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
+              "median": 8,
+              "min": 7,
+              "max": 9
             }
           },
           "regraded": true
@@ -4768,8 +5073,8 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 6,
+              "median": 8,
+              "min": 8,
               "max": 8
             },
             "turns": {
@@ -4777,6 +5082,25 @@
               "min": 7,
               "max": 8
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 6.5,
+              "min": 5,
+              "max": 8
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -4838,6 +5162,24 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 5.5,
+              "min": 3,
+              "max": 8
+            },
+            "turns": null
+          }
         }
       ]
     },
@@ -4896,6 +5238,25 @@
               "min": 7,
               "max": 10
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 21.5,
+              "min": 18,
+              "max": 25
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -4957,6 +5318,25 @@
               "min": 8,
               "max": 11
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 35,
+              "min": 27,
+              "max": 43
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -5026,6 +5406,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 25,
+              "min": 16,
+              "max": 34
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -5083,6 +5482,25 @@
               "min": 8,
               "max": 12
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 6,
+              "min": 5,
+              "max": 7
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -5149,6 +5567,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 4.5,
+              "min": 4,
+              "max": 5
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -5208,6 +5645,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 7,
+              "min": 6,
+              "max": 8
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -5223,24 +5679,24 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
-          "passed": 1,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
               "median": 6,
-              "min": 4,
-              "max": 10
+              "min": 6,
+              "max": 6
             },
             "turns": {
               "median": 7,
-              "min": 5,
-              "max": 11
+              "min": 7,
+              "max": 7
             }
           },
           "regraded": true
@@ -5256,15 +5712,34 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11.5,
-              "min": 10,
+              "median": 12.5,
+              "min": 12,
               "max": 13
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
+              "median": 6,
+              "min": 6,
               "max": 6
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 16,
+              "min": 14,
+              "max": 18
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -5324,6 +5799,25 @@
               "min": 9,
               "max": 10
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 3,
+            "calls": {
+              "median": 12,
+              "min": 10,
+              "max": 14
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -5386,6 +5880,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 5,
+              "min": 4,
+              "max": 6
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -5443,6 +5956,25 @@
               "min": 5,
               "max": 5
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 2,
+              "min": 2,
+              "max": 2
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -5504,6 +6036,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 7.5,
+              "min": 7,
+              "max": 8
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -5561,6 +6112,25 @@
               "min": 7,
               "max": 7
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 5,
+              "min": 4,
+              "max": 6
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -5622,6 +6192,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 7.5,
+              "min": 6,
+              "max": 9
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -5679,6 +6268,25 @@
               "min": 6,
               "max": 6
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 3,
+            "calls": {
+              "median": 10,
+              "min": 9,
+              "max": 11
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -5740,6 +6348,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 14,
+              "min": 13,
+              "max": 15
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -5797,6 +6424,25 @@
               "min": 6,
               "max": 7
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 10.5,
+              "min": 9,
+              "max": 12
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -5858,6 +6504,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 5.5,
+              "min": 5,
+              "max": 6
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -5915,6 +6580,25 @@
               "min": 6,
               "max": 7
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 5.5,
+              "min": 5,
+              "max": 6
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -5976,6 +6660,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 6.5,
+              "min": 5,
+              "max": 8
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -6035,6 +6738,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 6,
+              "min": 6,
+              "max": 6
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -6050,7 +6772,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -6058,15 +6780,15 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 10.5,
-              "min": 10,
+              "median": 9,
+              "min": 7,
               "max": 11
             },
             "turns": {
-              "median": 11.5,
-              "min": 11,
+              "median": 10,
+              "min": 8,
               "max": 12
             }
           },
@@ -6074,24 +6796,43 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 20,
+              "median": 21,
               "min": 20,
-              "max": 20
+              "max": 22
             },
             "turns": {
-              "median": 7,
-              "min": 7,
-              "max": 7
+              "median": 9,
+              "min": 8,
+              "max": 9
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 24.5,
+              "min": 14,
+              "max": 35
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -6151,6 +6892,25 @@
               "min": 8,
               "max": 8
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 24.5,
+              "min": 24,
+              "max": 25
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -6216,6 +6976,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 18.5,
+              "min": 18,
+              "max": 19
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -6277,6 +7056,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 7,
+              "min": 7,
+              "max": 7
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -6334,6 +7132,25 @@
               "min": 3,
               "max": 3
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 3,
+              "min": 2,
+              "max": 4
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -6395,6 +7212,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 11,
+              "min": 10,
+              "max": 12
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -6454,6 +7290,25 @@
             }
           },
           "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 3.5,
+              "min": 3,
+              "max": 4
+            },
+            "turns": null
+          },
+          "regraded": true
         }
       ]
     },
@@ -6511,6 +7366,25 @@
               "min": 7,
               "max": 8
             }
+          },
+          "regraded": true
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic",
+          "efficiency": {
+            "runs": 2,
+            "calls": {
+              "median": 5,
+              "min": 5,
+              "max": 5
+            },
+            "turns": null
           },
           "regraded": true
         }
@@ -7426,11 +8300,13 @@
         "case116_the_rate_and_the_logo",
         "case118_is_the_crane_job_at_risk",
         "case31_wrong_word_on_the_record",
+        "case40_sort_the_queue",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
         "case50_what_moved_my_quarter",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case6_ask_the_company",
+        "case64_catch_me_up_and_the_brief",
         "case76_she_said_yes_at_the_fair",
         "case77_record_her_yes",
         "case78_she_asked_us_to_stop",
@@ -7481,8 +8357,8 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
+          "runs": 4,
+          "passed": 4,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -7522,6 +8398,7 @@
         "case130_put_the_offer_link_on_the_deal",
         "case42_can_i_answer_on_whatsapp",
         "case44_chase_what_is_slipping",
+        "case45_move_the_deal_on",
         "case46_get_us_in_a_room",
         "case48_that_whole_thread_is_filed_wrong",
         "case59_file_it_on_the_meeting_and_the_contract",
@@ -7547,12 +8424,18 @@
           "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
     {
       "name": "read_reports",
-      "tokens": 2825,
+      "tokens": 2831,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -7587,6 +8470,14 @@
           "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case49_who_can_introduce_us"
+          ]
         }
       }
     },
@@ -7666,10 +8557,12 @@
         "case130_put_the_offer_link_on_the_deal",
         "case20_put_it_in_the_board_pack",
         "case22_can_i_trust_the_numbers",
+        "case3_spreadsheet",
         "case31_wrong_word_on_the_record",
         "case33_two_cards_for_one_company",
         "case4_use_the_moment",
         "case40_sort_the_queue",
+        "case41_close_the_project",
         "case42_can_i_answer_on_whatsapp",
         "case43_the_fair_leads_are_prospects",
         "case45_move_the_deal_on",
@@ -7915,7 +8808,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 1920,
+      "tokens": 1921,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -8036,6 +8929,12 @@
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
           "runs": 2,
           "passed": 2,
           "reliability": 1,
@@ -8194,7 +9093,9 @@
       ],
       "called_in_held_runs": [
         "case20_put_it_in_the_board_pack",
-        "case22_can_i_trust_the_numbers"
+        "case22_can_i_trust_the_numbers",
+        "case45_move_the_deal_on",
+        "case62_held_meetings_to_opportunities"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -8290,6 +9191,12 @@
           "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -8344,7 +9251,9 @@
       "permitted_in_cases": [
         "case47_tidy_the_fair_list"
       ],
-      "called_in_held_runs": null,
+      "called_in_held_runs": [
+        "case65_clear_out_the_dead_deals"
+      ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [],
@@ -8432,6 +9341,7 @@
       "called_in_held_runs": [
         "case1_log_it",
         "case33_two_cards_for_one_company",
+        "case40_sort_the_queue",
         "case43_the_fair_leads_are_prospects"
       ],
       "driven": true,
@@ -8446,6 +9356,12 @@
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
           "runs": 2,
           "passed": 2,
           "reliability": 1,
@@ -8481,6 +9397,12 @@
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
           "runs": 4,
           "passed": 4,
           "reliability": 1,
@@ -8521,6 +9443,12 @@
           "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -8550,6 +9478,14 @@
           "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case46_get_us_in_a_room"
+          ]
         }
       }
     },
@@ -8574,6 +9510,7 @@
         "case120_what_the_pump_customer_wants",
         "case125_what_waits_for_my_approval",
         "case126_file_it_i_approve",
+        "case41_close_the_project",
         "case44_chase_what_is_slipping"
       ],
       "driven": true,
@@ -8658,6 +9595,7 @@
         "case42_can_i_answer_on_whatsapp",
         "case43_the_fair_leads_are_prospects",
         "case44_chase_what_is_slipping",
+        "case45_move_the_deal_on",
         "case46_get_us_in_a_room",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
@@ -8676,7 +9614,8 @@
         "case79_put_it_on_hold",
         "case81_she_wants_her_data",
         "case86_tell_her_what_we_hold",
-        "case9_filed_in_the_wrong_place"
+        "case9_filed_in_the_wrong_place",
+        "case99_they_raised_money"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -8757,16 +9696,23 @@
         "case125_what_waits_for_my_approval",
         "case128_is_she_here_twice",
         "case129_move_it_to_service",
+        "case20_put_it_in_the_board_pack",
         "case22_can_i_trust_the_numbers",
+        "case33_two_cards_for_one_company",
         "case4_use_the_moment",
+        "case40_sort_the_queue",
+        "case41_close_the_project",
         "case44_chase_what_is_slipping",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
+        "case50_what_moved_my_quarter",
+        "case56_not_the_same",
         "case58_quiet_for_three_weeks",
         "case6_ask_the_company",
         "case61_what_have_i_promised",
         "case64_catch_me_up_and_the_brief",
-        "case65_clear_out_the_dead_deals"
+        "case65_clear_out_the_dead_deals",
+        "case81_she_wants_her_data"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -8792,6 +9738,7 @@
       "called_in_held_runs": [
         "case108_ask_sofia_for_an_intro",
         "case124_log_it_with_read_access",
+        "case44_chase_what_is_slipping",
         "case49_who_can_introduce_us",
         "case6_ask_the_company",
         "case63_is_she_already_here"
@@ -9002,10 +9949,13 @@
         "case4_use_the_moment",
         "case40_sort_the_queue",
         "case41_close_the_project",
+        "case43_the_fair_leads_are_prospects",
         "case44_chase_what_is_slipping",
+        "case45_move_the_deal_on",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
         "case50_what_moved_my_quarter",
+        "case56_not_the_same",
         "case58_quiet_for_three_weeks",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case6_ask_the_company",
@@ -9015,6 +9965,10 @@
         "case63_is_she_already_here",
         "case64_catch_me_up_and_the_brief",
         "case65_clear_out_the_dead_deals",
+        "case66_what_are_these_two_worth",
+        "case76_she_said_yes_at_the_fair",
+        "case77_record_her_yes",
+        "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
         "case81_she_wants_her_data",
         "case86_tell_her_what_we_hold",

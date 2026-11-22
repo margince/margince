@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/meetingrosters"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
 	"github.com/margince/margince/backend/internal/compose/qualifytasks"
+	"github.com/margince/margince/backend/internal/compose/recordsources"
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
 	"github.com/margince/margince/backend/internal/compose/strengthdates"
@@ -147,7 +148,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		provensenders.DataTask(),
 		importscopes.DataTask(),
 		invitationsenders.DataTask(),
-		meetingrosters.GraphGuestsDataTask(identity.NewService(pool), installationContext(pool)), meetingrosters.BirthRostersDataTask(),
+		meetingrosters.GraphGuestsDataTask(identity.NewService(pool), installationContext(pool)), meetingrosters.BirthRostersDataTask(), meetingrosters.SeatSetsDataTask(),
 		credentialrepair.DataTask(capture.NewPendingStore(InstallationDB(pool)).PurgeRawCaptureTx),
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
@@ -156,6 +157,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
-		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(),
+		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(),
 	}
 }

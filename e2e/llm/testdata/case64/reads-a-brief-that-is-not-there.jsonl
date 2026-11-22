@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__read_context"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_context", "input": {"about": "brief"}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "No such record in this workspace (or it is outside the acting user's row scope). (not_found: not found)", "is_error": true}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Vietnam Partner: Mai Nguyen still owes the appendix. Your morning brief is available and lists three calls."}

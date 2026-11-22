@@ -199,7 +199,7 @@ func seedProjectForTierFloor(as context.Context, t *testing.T, p *Provider, comp
 	ref, err := p.Create(as, datasource.CreateInput{
 		EntityType: datasource.EntityProject,
 		Fields:     json.RawMessage(`{"name":"Tier floor project","company_id":"` + company.String() + `"}`),
-		Source:     "test",
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the project: %v", err)
@@ -214,7 +214,7 @@ func seedCompanyForTierFloor(as context.Context, t *testing.T, p *Provider) ids.
 	ref, err := p.Create(as, datasource.CreateInput{
 		EntityType: datasource.EntityCompany,
 		Fields:     json.RawMessage(`{"display_name":"Tier floor anchor"}`),
-		Source:     "test",
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the anchor company: %v", err)

@@ -66,8 +66,7 @@ func (r *Registry) Grant(ctx context.Context, name string, auth connector.Auth, 
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return ids.Nil, fmt.Errorf("only a human grants a connector: %w", apperrors.ErrPermissionDenied)
 	}
-	scopes, err := grantedScopes(c, actor, name)
-	if err != nil {
+	if err := requireDeclaredScopes(c, actor, name); err != nil {
 		return ids.Nil, err
 	}
 	ws, ok := principal.WorkspaceID(ctx)
@@ -101,7 +100,6 @@ func (r *Registry) Grant(ctx context.Context, name string, auth connector.Auth, 
 	row := connectionUpsert{
 		userID:         actor.UserID,
 		provider:       name,
-		scopes:         scopes,
 		ref:            ref,
 		accountLabel:   accountLabelFor(ctx, c, auth, name),
 		providerScopes: providerScopesFor(ctx, c, auth, name),
@@ -190,21 +188,17 @@ func (r *Registry) requireCapturingGrantor(ctx context.Context, ws, userID ids.U
 	return CaptureRefusal(rbac.Permissions, seat)
 }
 
-// grantedScopes runs the grant-time scope intersection and returns the
-// connector's declared scopes as the strings the row freezes. A connector
+// requireDeclaredScopes runs the grant-time scope intersection. A connector
 // demanding a scope the granting human does not hold is refused here rather
 // than discovered at 3am mid-sync.
-func grantedScopes(c connector.Connector, actor principal.Principal, name string) ([]string, error) {
-	declared := c.Descriptor().Scopes
-	out := make([]string, 0, len(declared))
-	for _, scope := range declared {
+func requireDeclaredScopes(c connector.Connector, actor principal.Principal, name string) error {
+	for _, scope := range c.Descriptor().Scopes {
 		if !actor.Scopes.Has(scope) {
-			return nil, fmt.Errorf("the connector %s needs the scope %q, which the granting human does not hold: %w",
+			return fmt.Errorf("the connector %s needs the scope %q, which the granting human does not hold: %w",
 				name, scope, apperrors.ErrScopeExceeded)
 		}
-		out = append(out, string(scope))
 	}
-	return out, nil
+	return nil
 }
 
 // accountLabelFor asks the connector to name the account it just authorized.
@@ -228,11 +222,10 @@ func accountLabelFor(ctx context.Context, c connector.Connector, auth connector.
 }
 
 // providerScopesFor asks the connector what the PROVIDER granted — the
-// provider's own vocabulary, distinct from the internal scopes the row freezes
-// alongside it. A connector with no consent step to read implements no such
-// seam, and a connector that cannot parse its own bundle is a bug worth a log
-// line, not a reason to refuse a grant the human already completed: both leave
-// the column NULL, which reads as "not known" rather than "nothing granted".
+// provider's own vocabulary, distinct from the internal scopes the grant
+// checks. A connector with no consent step implements no such seam. A
+// connector that cannot parse its own bundle is logged and the grant stands.
+// Both leave the column NULL, which reads as "not known".
 func providerScopesFor(ctx context.Context, c connector.Connector, auth connector.Auth, name string) []string {
 	scoper, ok := c.(connector.GrantedScoper)
 	if !ok {
@@ -257,14 +250,11 @@ func otherAccount(prior, next *string) bool {
 	return !strings.EqualFold(*prior, *next)
 }
 
-// connectionUpsert is one connect transaction's write: the granting human, the
-// provider, the internal scopes frozen at grant time and the provider scopes
-// actually granted, the ref naming the freshly sealed credential, and the
-// display-only account label.
+// connectionUpsert is one connect transaction's write. The ref names the
+// freshly sealed credential, and the account label is for display only.
 type connectionUpsert struct {
 	userID   ids.UUID
 	provider string
-	scopes   []string
 	// providerScopes is the provider's own vocabulary; nil when the connector
 	// cannot report it, and stored as NULL rather than an empty list so
 	// "unknown" never reads as "nothing".
@@ -299,10 +289,10 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert, targe
 	granted := pgx.StrictNamedArgs{"ref": string(in.ref), "label": in.accountLabel, "provider_scopes": in.providerScopes}
 	var id ids.UUID
 	if prior.id.IsZero() {
-		granted[sqlArgProvider], granted["user"], granted["scopes"] = in.provider, in.userID, in.scopes
+		granted[sqlArgProvider], granted["user"] = in.provider, in.userID
 		err = tx.QueryRow(ctx, `
-		INSERT INTO capture_connection (provider, user_id, scopes, credential_ref, status, account_label, provider_scopes, share_acknowledged_at, legal_entity_id)
-		VALUES (@provider, @user, @scopes, @ref, 'connected', @label, @provider_scopes, now(), `+storekit.LegalEntityOfSQL("@user")+`)
+		INSERT INTO capture_connection (provider, user_id, credential_ref, status, account_label, provider_scopes, share_acknowledged_at, legal_entity_id)
+		VALUES (@provider, @user, @ref, 'connected', @label, @provider_scopes, now(), `+storekit.LegalEntityOfSQL("@user")+`)
 		ON CONFLICT `+memberMailboxConflict+` DO UPDATE SET `+grantSet+`
 		RETURNING id`, granted).Scan(&id)
 	} else {

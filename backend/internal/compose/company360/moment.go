@@ -82,6 +82,9 @@ func (a *assembly) readMoment() error {
 		return err
 	}
 	said := momentCopyFor(string(a.recordLanguage()))
+	if said.zone, err = a.zone(); err != nil {
+		return err
+	}
 	moment, err := askDone(a.ctx, a.tx, a.now, said, items, said.momentOf(a.now, items))
 	if err != nil {
 		return err
@@ -289,7 +292,7 @@ func (said momentCopy) owedWhyNow(now time.Time, due *time.Time) string {
 	if due == nil {
 		return said.Say(momentWords.PromiseUndated)
 	}
-	return owedwork.DeadlineWords(*due, now, string(said.Lang()))
+	return owedwork.DeadlineWords(*due, now, said.zone, string(said.Lang()))
 }
 
 // accountNothingNeeded is the quiet success state — an answer, not a blank

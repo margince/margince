@@ -34,7 +34,8 @@ func TestTheReviewPackReadsOnlyTheDealsOwnAgreementsTouchesAndTasks(t *testing.T
 	seedDeal := func(name string, company ids.UUID) ids.UUID {
 		companyID := ids.From[ids.CompanyKind](company)
 		created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: name, PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+			Source: "manual",
+			Name:   name, PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 		})
 		if err != nil {
 			t.Fatalf("seeding %q: %v", name, err)
@@ -104,7 +105,8 @@ func packDeal(t *testing.T, e *Env) ids.UUID {
 	// Rep1 owns it, so Rep1 may file mail onto it.
 	owner := ids.From[ids.UserKind](e.Rep1)
 	created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Audience renewal", PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Audience renewal", PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: &owner,
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)
@@ -190,7 +192,8 @@ func TestAFrozenAgreementOpensPastTheDealsNewestPage(t *testing.T) {
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Paper Holdings", nil))
 	seedDeal := func(name string) ids.UUID {
 		created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: name, PipelineID: pipeline, StageID: open, CompanyID: &company,
+			Source: "manual",
+			Name:   name, PipelineID: pipeline, StageID: open, CompanyID: &company,
 		})
 		if err != nil {
 			t.Fatalf("seeding %q: %v", name, err)

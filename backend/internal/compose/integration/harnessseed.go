@@ -94,7 +94,8 @@ func (e *Env) SeedEmployedAccount(t *testing.T, contact, owner ids.UUID, pipelin
 		t.Fatalf("employing the contact at the account: %v", err)
 	}
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Account rollout", PipelineID: pipeline, StageID: stage, CompanyID: &companyID, OwnerID: new(ids.From[ids.UserKind](owner)),
+		Source: provenance.RecordSourceManual,
+		Name:   "Account rollout", PipelineID: pipeline, StageID: stage, CompanyID: &companyID, OwnerID: new(ids.From[ids.UserKind](owner)),
 	}); err != nil {
 		t.Fatalf("opening the account's deal: %v", err)
 	}
@@ -150,7 +151,8 @@ func (e *Env) SeedCompanyAs(ctx context.Context, t *testing.T, ws ids.UUID, name
 func (e *Env) SeedDeal(t *testing.T, name string, pipeline ids.PipelineID, stage ids.StageID, owner *ids.UUID) ids.UUID {
 	t.Helper()
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: pipeline, StageID: stage, OwnerID: userIDPtr(owner),
+		Source: provenance.RecordSourceManual,
+		Name:   name, PipelineID: pipeline, StageID: stage, OwnerID: userIDPtr(owner),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -165,7 +167,8 @@ func (e *Env) SeedOpenDealOn(t *testing.T, name string, company ids.UUID) ids.UU
 	pipeline, open, _ := DealFixture(t, e)
 	companyID := ids.From[ids.CompanyKind](company)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+		Source: provenance.RecordSourceManual,
+		Name:   name, PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 	})
 	if err != nil {
 		t.Fatal(err)

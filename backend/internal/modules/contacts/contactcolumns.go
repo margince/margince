@@ -25,6 +25,7 @@ func contactColumns(ctx context.Context, arg func(any) int) (string, error) {
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("contact") + `,
 	version, created_at, updated_at, archived_at, last_activity_at, legal_hold, relationship_mark, greeting_register,
+	` + impersonationWarningColumns + `,
 	` + source + ` AS created_from_activity_id`, nil
 }
 

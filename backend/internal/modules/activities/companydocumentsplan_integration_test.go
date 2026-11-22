@@ -54,7 +54,7 @@ func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID
 	INSERT INTO stage (id, pipeline_id, name, "position")
 	  VALUES ('00000000-0000-7000-8000-00000000d0c6', '00000000-0000-7000-8000-00000000d0c5', 'Open', 1);
 	INSERT INTO deal (name, status, pipeline_id, stage_id, company_id, source, captured_by)
-	  SELECT 'Deal '||n, 'open', '00000000-0000-7000-8000-00000000d0c5', '00000000-0000-7000-8000-00000000d0c6', id, 'seed', 'system'
+	  SELECT 'Deal '||n, 'open', '00000000-0000-7000-8000-00000000d0c5', '00000000-0000-7000-8000-00000000d0c6', id, 'manual', 'system'
 	    FROM seeded_company;
 	CREATE TEMP TABLE seeded_mail AS
 	  SELECT gen_random_uuid() id, s.i g, c.id contact_id, c.company_id

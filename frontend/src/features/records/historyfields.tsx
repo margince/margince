@@ -21,7 +21,7 @@ import {
   ProvenanceTag,
   toEvidence,
 } from "../../design-system/trust";
-import { formatDateTime } from "../../format/format";
+import { formatDateTimeAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
@@ -155,7 +155,7 @@ function FieldGroupSection({
               values={valueCtx}
             />
             <span className="tl-meta">
-              {formatDateTime(change.changed_at, locale, readerZone)}
+              {formatDateTimeAbbrev(change.changed_at, locale, readerZone)}
             </span>
             <ChangeWho change={change} />
           </li>

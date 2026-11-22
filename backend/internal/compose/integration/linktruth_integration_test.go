@@ -22,23 +22,17 @@ import (
 	"testing"
 )
 
-// linkRow is what the token row records about being fetched.
-type linkRow struct {
-	opened       *string
-	firstFetched *string
-	fetchCount   int
-}
-
-func readLinkRow(t *testing.T, c *consentEnv) linkRow {
+// linkOpened is when the newest token row says its link was opened, nil when
+// it records no opening.
+func linkOpened(t *testing.T, c *consentEnv) *string {
 	t.Helper()
-	var row linkRow
+	var opened *string
 	if err := c.Owner.QueryRow(context.Background(), `
-		SELECT opened_at::text, first_fetched_at::text, fetch_count
-		  FROM confirm_token ORDER BY issued_at DESC LIMIT 1`).
-		Scan(&row.opened, &row.firstFetched, &row.fetchCount); err != nil {
+		SELECT opened_at::text FROM confirm_token ORDER BY issued_at DESC LIMIT 1`).
+		Scan(&opened); err != nil {
 		t.Fatalf("reading the link row: %v", err)
 	}
-	return row
+	return opened
 }
 
 // askForALink has the workspace mail a confirm link and returns its token.
@@ -66,20 +60,9 @@ func TestAScannerFetchingTheLinkIsNotAnOpening(t *testing.T) {
 		t.Fatalf("the scanner's fetch → %d, want 200 — the page still has to serve", status)
 	}
 
-	row := readLinkRow(t, c)
-	if row.opened != nil {
+	if linkOpened(t, c) != nil {
 		t.Error("a prefetch was recorded as the subject opening their consent link, which puts " +
 			"a moment that did not happen into the evidence for their grant")
-	}
-	// THE FETCH IS STILL RECORDED, which is the other half: a link that is
-	// fetched and never answered says something operationally, and dropping the
-	// fact entirely would trade one untruth for a blind spot.
-	if row.firstFetched == nil {
-		t.Error("the fetch went unrecorded entirely, so nothing distinguishes a link nobody " +
-			"received from one nobody answered")
-	}
-	if row.fetchCount != 1 {
-		t.Errorf("fetch_count reads %d, want 1", row.fetchCount)
 	}
 }
 
@@ -98,52 +81,25 @@ func TestSomebodyOpeningTheLinkIsRecordedAsOne(t *testing.T) {
 		t.Fatalf("the subject opening their link → %d, want 200", status)
 	}
 
-	row := readLinkRow(t, c)
-	if row.opened == nil {
+	if linkOpened(t, c) == nil {
 		t.Error("somebody navigated to their own confirm page and it was not recorded as an " +
 			"opening, so the ask-to-click chain has no middle")
 	}
-	if row.firstFetched == nil {
-		t.Error("the fetch was not recorded")
-	}
 }
 
-// A SECOND FETCH COUNTS AND DOES NOT MOVE THE FIRST.
-func TestRepeatedFetchesCountWithoutRewritingTheFirst(t *testing.T) {
+// Repeated scanner fetches do not add up to an opening.
+func TestRepeatedScannerFetchesNeverBecomeAnOpening(t *testing.T) {
 	c := setupConsent(t)
 	token := askForALink(t, c)
 
 	scanner := map[string]string{"Sec-Purpose": "prefetch"}
-	for range 3 {
+	for range 4 {
 		if status := publicCall(t, c.AppEnv, "GET", "/v1/public/confirm/"+token, nil,
 			scanner, nil); status != http.StatusOK {
 			t.Fatalf("fetching the link → %d", status)
 		}
 	}
-
-	row := readLinkRow(t, c)
-	// THE FIRST FETCH IS NOT MOVED by the ones after it. A column that took the
-	// latest fetch would say the link was first seen at whatever moment the
-	// most recent scanner happened to run, which is a different fact wearing
-	// the same name.
-	if row.firstFetched == nil {
-		t.Fatal("no first fetch was recorded")
-	}
-	first := *row.firstFetched
-	if status := publicCall(t, c.AppEnv, "GET", "/v1/public/confirm/"+token, nil,
-		scanner, nil); status != http.StatusOK {
-		t.Fatalf("a fourth fetch → %d", status)
-	}
-	if again := readLinkRow(t, c); again.firstFetched == nil || *again.firstFetched != first {
-		t.Errorf("first_fetched_at moved from %q to %v on a later fetch", first, again.firstFetched)
-	}
-	row = readLinkRow(t, c)
-	if row.fetchCount != 4 {
-		t.Errorf("fetch_count reads %d after four fetches, want 4 — a link fetched many times "+
-			"in seconds was not read that many times by a human, and the count is what says so",
-			row.fetchCount)
-	}
-	if row.opened != nil {
-		t.Error("three machine fetches produced an opening")
+	if linkOpened(t, c) != nil {
+		t.Error("four machine fetches produced an opening")
 	}
 }

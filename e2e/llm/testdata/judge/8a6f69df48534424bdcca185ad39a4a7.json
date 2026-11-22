@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer gives the opening EUR 179,000 and closing EUR 164,500 figures and attributes the EUR 14,500 drop to the EUR 5,000 Vorort repricing and the EUR 9,500 valantic loss, with no other figures or causes.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 3. The answer gives the opening and closing open-pipeline figures, EUR 179,000 and EUR 164,500, and accounts for the EUR 14,500 between them by the EUR 5,000 repricing of the Vorort deal and the EUR 9,500 of the valantic deal. Answer no if it gives other figures, names a cause beyond those two, or says it cannot explain the change.",
+  "answer": "Open pipeline fell from EUR 179,000 to EUR 164,500. Vorort Systeme Ausbau was repriced down by EUR 5,000, from EUR 31,000 to EUR 26,000, and valantic Migrationsprojekt (EUR 9,500) was lost, which is why the open number dropped."
+}

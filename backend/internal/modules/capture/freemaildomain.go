@@ -202,11 +202,11 @@ func (s *FreemailDomainStore) AddConfirmed(ctx context.Context, domain, kind str
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO capture_freemail_domain (domain, kind, created_by)
-			VALUES ($1, $2, $3)
+			INSERT INTO capture_freemail_domain (domain, kind)
+			VALUES ($1, $2)
 			ON CONFLICT (domain) DO UPDATE SET kind = EXCLUDED.kind
 			RETURNING id, domain, kind, created_at`,
-			base, kind, freemailEntryAuthor(ctx)).
+			base, kind).
 			Scan(&out.ID, &out.Domain, &out.Kind, &out.CreatedAt); err != nil {
 			return err
 		}
@@ -281,16 +281,6 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 // domain writer, which takes the same lock.
 func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
 	return storekit.LockConsumerDomain(ctx, tx, domain)
-}
-
-// freemailEntryAuthor is the human an entry is attributed to, NULL for a system
-// actor. The list is workspace-shared, so this is provenance for the audit
-// trail and never a scope.
-func freemailEntryAuthor(ctx context.Context) *ids.UUID {
-	if author := actorUserID(ctx); !author.IsZero() {
-		return &author
-	}
-	return nil
 }
 
 // MatcherTx builds the consumer-mail matcher this workspace's mail is judged

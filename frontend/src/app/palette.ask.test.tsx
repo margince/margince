@@ -206,8 +206,8 @@ describe("asking the handbook from the search box", () => {
       allow: { ...ASKER, activity: ["read", "create"] },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", {
+    await user.type(screen.getByRole("combobox"), QUESTION);
+    await screen.findByRole("option", {
       name: /^Ask the handbook: “How do I change my time zone\?”/,
     });
     await user.keyboard("{Enter}");
@@ -234,8 +234,8 @@ describe("asking the handbook from the search box", () => {
       }),
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", {
+    await user.type(screen.getByRole("combobox"), QUESTION);
+    await screen.findByRole("option", {
       name: /^Ask the handbook: “How do I change my time zone\?”/,
     });
     await user.keyboard("{Enter}");
@@ -254,11 +254,11 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     expect(await screen.findByText("Question not answered")).toBeVisible();
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("option", {
         name: /^See all results for “How do I change my time zone\?”/,
       }),
     ).toBeVisible();
@@ -273,7 +273,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     expect(within(panel).getByText("From Sales playbook")).toBeVisible();
@@ -284,7 +284,7 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     const asked = backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     await answerPanel();
     await user.keyboard("{Enter}");
@@ -302,8 +302,8 @@ describe("asking the handbook from the search box", () => {
       }),
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", { name: /^Ask the handbook:/ });
+    await user.type(screen.getByRole("combobox"), QUESTION);
+    await screen.findByRole("option", { name: /^Ask the handbook:/ });
     await user.keyboard("{Enter}");
     arrive();
     expect(await screen.findByText("No document sets")).toBeVisible();
@@ -314,11 +314,11 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     await answerPanel();
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("option", {
         name: /^See all results for “How do I change my time zone\?”/,
       }),
     ).toBeVisible();
@@ -337,7 +337,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     expect(
@@ -358,7 +358,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     expect(await screen.findByText("Question not answered")).toBeVisible();
     expect(
@@ -380,7 +380,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     expect(
@@ -402,7 +402,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     await answerPanel();
     expect(asked).toEqual([HANDBOOK_ID]);
@@ -418,7 +418,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     expect(
@@ -430,10 +430,10 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     await answerPanel();
-    await user.type(screen.getByRole("searchbox"), " now");
+    await user.type(screen.getByRole("combobox"), " now");
     expect(
       screen.queryByRole("region", { name: "Answer from Margince" }),
     ).toBeNull();
@@ -443,12 +443,12 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     backend({ allow: {} });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", {
+    await user.type(screen.getByRole("combobox"), QUESTION);
+    await screen.findByRole("option", {
       name: /^See all results for “How do I change my time zone\?”/,
     });
     expect(
-      screen.queryByRole("button", { name: /^Ask the handbook:/ }),
+      screen.queryByRole("option", { name: /^Ask the handbook:/ }),
     ).toBeNull();
   });
 
@@ -456,7 +456,7 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     const asked = backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), "Acme GmbH");
+    await user.type(screen.getByRole("combobox"), "Acme GmbH");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/search/Acme%20GmbH");
     expect(asked).toEqual([]);
@@ -466,7 +466,7 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     await user.click(
@@ -485,7 +485,7 @@ it("offers Analytics for a data question the handbook does not cover", async () 
   });
   renderPalette();
   const clock = steppedClock();
-  await clock.type(screen.getByRole("searchbox"), "How many deals did I win?");
+  await clock.type(screen.getByRole("combobox"), "How many deals did I win?");
   await clock.keyboard("{Enter}");
   expect(
     await screen.findByRole("button", { name: "Open in Analytics" }),
@@ -512,7 +512,7 @@ it("answers a Vietnamese data question with no question mark from the data reade
   });
   renderPalette(() => {}, "vi");
   const clock = steppedClock();
-  await clock.type(screen.getByRole("searchbox"), question);
+  await clock.type(screen.getByRole("combobox"), question);
   expect(
     await screen.findByText(`Hỏi dữ liệu CRM: “${question}”`),
   ).toBeVisible();

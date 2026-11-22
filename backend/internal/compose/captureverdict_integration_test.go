@@ -48,11 +48,7 @@ import (
 type scriptedVerdictBrain struct {
 	verdicts   map[string]string  // by disposition id; default the contact kind
 	confidence map[string]float64 // by disposition id; default 0.95
-	// servedModel is which model the response says answered; default a stand-in
-	// name. The ledger records it, so a test can assert the provenance rather
-	// than only the answer.
-	servedModel string
-	calls       int
+	calls      int
 	// fresh records, call by call, whether the caller asked for a fresh answer.
 	fresh []bool
 }
@@ -86,11 +82,7 @@ func (s *scriptedVerdictBrain) Complete(ctx context.Context, req model.Request) 
 	if err != nil {
 		return model.Response{}, err
 	}
-	served := s.servedModel
-	if served == "" {
-		served = "test-local-small"
-	}
-	return model.Response{Text: string(payload), ServedModel: served}, nil
+	return model.Response{Text: string(payload), ServedModel: "test-local-small"}, nil
 }
 
 // A `real` verdict creates the records capture withheld, and does so on the
@@ -703,34 +695,24 @@ func TestAnInstallationWithNoModelStillAnswersItsSenders(t *testing.T) {
 	}
 }
 
-// The ledger records HOW SURE the answer was and WHICH MODEL gave it.
-//
-// Neither survived the decision before: the engine compared the confidence
-// against a floor and dropped it, so a 0.86 answer and a 0.99 one were
-// indistinguishable afterwards. An operator asking why a department was filed
-// as a contact could see the answer and never how close it came to being
-// refused, nor which of the deployment's models to distrust.
-func TestTheLedgerRecordsHowSureTheVerdictWasAndWhoAnswered(t *testing.T) {
+// The ledger records how sure the answer was, so a 0.86 answer and a 0.99 one
+// stay apart after the floor judged them.
+func TestTheLedgerRecordsHowSureTheVerdictWas(t *testing.T) {
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "ada@realco.example", "quote request")
 	dispositionID := seedPendingDisposition(t, e, "ada@realco.example", "realco.example", activityID)
 	brain := &scriptedVerdictBrain{
-		verdicts:    map[string]string{dispositionID.String(): capture.KindContact},
-		confidence:  map[string]float64{dispositionID.String(): 0.91},
-		servedModel: "some-local-model:8b",
+		verdicts:   map[string]string{dispositionID.String(): capture.KindContact},
+		confidence: map[string]float64{dispositionID.String(): 0.91},
 	}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
-	confidence, servedModel := dispositionProvenance(t, e, dispositionID)
+	confidence := dispositionConfidence(t, e, dispositionID)
 	if confidence == nil || *confidence != 0.91 {
 		t.Errorf("stored confidence = %v, want 0.91 — the floor comparison must not be the only thing that reads it", confidence)
-	}
-	if servedModel != "some-local-model:8b" {
-		t.Errorf("served model = %q, want the model that answered — a wrong answer is evidence "+
-			"about a model only if the model is named", servedModel)
 	}
 }
 
@@ -753,12 +735,8 @@ func TestADeterministicAnswerRecordsNoConfidence(t *testing.T) {
 	if brain.calls != 0 {
 		t.Fatalf("%d model calls for a role mailbox, want 0 — the fixture never reaches the case under test", brain.calls)
 	}
-	confidence, servedModel := dispositionProvenance(t, e, dispositionID)
-	if confidence != nil {
+	if confidence := dispositionConfidence(t, e, dispositionID); confidence != nil {
 		t.Errorf("stored confidence = %v, want none — no model was asked", *confidence)
-	}
-	if servedModel != "" {
-		t.Errorf("served model = %q, want none — no model answered this", servedModel)
 	}
 }
 
@@ -812,18 +790,15 @@ func TestAWeakContactAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
 	})
 }
 
-// dispositionProvenance reads what the ledger kept about how an answer was
-// reached.
-func dispositionProvenance(t *testing.T, e *integration.Env, id ids.UUID) (*float64, string) {
+// dispositionConfidence reads how sure the ledger says an answer was.
+func dispositionConfidence(t *testing.T, e *integration.Env, id ids.UUID) *float64 {
 	t.Helper()
 	var confidence *float64
-	var served string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT confidence, COALESCE(served_model, '')
-			  FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&confidence, &served)
+			SELECT confidence FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&confidence)
 	}); err != nil {
-		t.Fatalf("reading the verdict's provenance: %v", err)
+		t.Fatalf("reading the verdict's confidence: %v", err)
 	}
-	return confidence, served
+	return confidence
 }
