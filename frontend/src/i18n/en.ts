@@ -19310,6 +19310,7 @@ export const en = {
   "contact.enriched.field.company_name": "Company",
   "contact.enriched.field.address": "Address",
   "contact.enriched.field.website": "Website",
+  "contact.enriched.field.email": "Email",
   "contact.enriched.readFrom": "Read from {source} on {when}",
   "contact.enriched.source.capture_enrich": "their email signature",
   "contact.enriched.source.site_read": "their company website",
