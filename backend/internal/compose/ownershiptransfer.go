@@ -11,8 +11,6 @@ package compose
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,12 +20,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/recordowner"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -88,7 +88,7 @@ func (e *ownershipNoteError) FieldFault() (field, code, message string) {
 // FieldMax is the note's limit.
 func (e *ownershipNoteError) FieldMax() int { return ownershipNoteMaxRunes }
 
-var errOwnerUnavailable = &contacts.TransferRefusal{
+var errOwnerUnavailable = &contacts.OwnerAskRefusal{
 	Code:    "owner_unavailable",
 	Message: "The owner of this record cannot be asked, because they are suspended or have left. Ask an administrator to hand it over.",
 }
@@ -102,7 +102,12 @@ func (t ownershipTransfers) Request(ctx context.Context, recordType string, id i
 	var out ownershipRequestView
 	created := false
 	err := t.db.Tx(ctx, func(tx pgx.Tx) error {
-		record, err := contacts.TransferRequestableTx(ctx, tx, recordType, id)
+		if !transferRecords[recordType] {
+			return &contacts.InvalidRecordTypeError{RecordType: recordType}
+		}
+		record, err := contacts.OwnerAskableTx(ctx, tx, recordType, id, func() (*ids.UUID, string, error) {
+			return recordowner.ReadTx(ctx, tx, recordType, id)
+		})
 		if err != nil {
 			return err
 		}
@@ -130,51 +135,30 @@ func (t ownershipTransfers) stageRequestTx(ctx context.Context, tx pgx.Tx, recor
 	if !ok {
 		return errors.New("compose: a handover request without a caller")
 	}
-	askable, err := approvals.CanBeAsked(ctx, tx, owner)
-	if err != nil {
-		return err
+	err := recordowner.AskableTx(ctx, tx, owner)
+	if err == nil {
+		err = t.fileTx(ctx, tx, approvalsubject.OwnershipTransfer{
+			RecordType: recordType, RecordID: id, FromID: owner, ToID: asker.UserID,
+			RequestedBy: asker.UserID, DeciderID: owner, Note: note,
+		})
 	}
-	if !askable {
-		return errOwnerUnavailable
-	}
-	err = t.stageTx(ctx, tx, approvalsubject.OwnershipTransfer{
-		RecordType: recordType, RecordID: id, FromID: owner, ToID: asker.UserID,
-		RequestedBy: asker.UserID, DeciderID: owner, Note: note,
-	})
-	if errors.Is(err, approvals.ErrNoDecider) {
+	if errors.Is(err, recordowner.ErrOwnerCannotBeAsked) {
 		return errOwnerUnavailable
 	}
 	return err
 }
 
-// stageTx files a transfer in its decider's inbox. A second press by the same
+// fileTx files a transfer in its decider's inbox. A second press by the same
 // colleague for the same receiver joins the open one.
-func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) error {
-	body, err := json.Marshal(transfer)
-	if err != nil {
-		return fmt.Errorf("compose: encoding the handover request: %w", err)
-	}
-	identityKey, err := json.Marshal(map[string]ids.UUID{"requested_by": transfer.RequestedBy, "to_id": transfer.ToID})
-	if err != nil {
-		return fmt.Errorf("compose: encoding the handover request's identity: %w", err)
-	}
+func (t ownershipTransfers) fileTx(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) error {
 	summary, metadata, err := t.askedSummary(ctx, tx, transfer)
 	if err != nil {
 		return err
 	}
-	digest := sha256.Sum256(body)
-	window := ownershipTransferWindow
-	_, err = t.staging.StageOrJoinPendingInTx(ctx, tx, approvals.StageInput{
-		Kind:           ownershipTransferKind,
-		ProposedChange: body,
-		DiffHash:       hex.EncodeToString(digest[:]),
-		TargetType:     transfer.RecordType,
-		TargetID:       transfer.RecordID,
-		Summary:        summary,
-		SystemText:     metadata,
-		JoinPending:    true,
-		Identity:       identityKey,
-		TTL:            &window,
+	_, err = recordowner.FileTx(ctx, tx, t.staging, recordowner.Request{
+		Kind: ownershipTransferKind, RecordType: transfer.RecordType, RecordID: transfer.RecordID,
+		Payload: transfer, Identity: map[string]ids.UUID{"requested_by": transfer.RequestedBy, "to_id": transfer.ToID},
+		Summary: summary, SystemText: metadata, TTL: ownershipTransferWindow,
 	})
 	return err
 }
@@ -183,7 +167,7 @@ func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, transfer app
 // record. The counts are the giver's, read when the transfer is filed through
 // the selectors the move itself uses.
 func (t ownershipTransfers) askedSummary(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) (string, *systemtext.Message, error) {
-	asker, err := colleagueName(ctx, tx, transfer.RequestedBy)
+	asker, err := recordowner.ColleagueNameTx(ctx, tx, transfer.RequestedBy)
 	if err != nil {
 		return "", nil, err
 	}
@@ -248,6 +232,9 @@ func (t ownershipTransfers) Withdraw(ctx context.Context, recordType string, id 
 // ownRequestTx answers the caller's open transfer on the record when it runs
 // in direction, else apperrors.ErrNotFound.
 func ownRequestTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, direction transferDirection) (ownershipRequestView, error) {
+	if err := auth.EnsureVisibleLive(ctx, tx, recordType, id); err != nil {
+		return ownershipRequestView{}, err
+	}
 	own, err := approvals.OwnRequestForTargetTx(ctx, tx, ownershipTransferKind, recordType, id)
 	if err != nil {
 		return ownershipRequestView{}, err
@@ -260,13 +247,4 @@ func ownRequestTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID
 		return ownershipRequestView{}, apperrors.ErrNotFound
 	}
 	return out, nil
-}
-
-// colleagueName is a member's display name, for a sentence naming them.
-func colleagueName(ctx context.Context, tx pgx.Tx, member ids.UUID) (string, error) {
-	var name string
-	if err := tx.QueryRow(ctx, `SELECT display_name FROM app_user WHERE id = $1`, member).Scan(&name); err != nil {
-		return "", fmt.Errorf("compose: naming a colleague in a handover: %w", err)
-	}
-	return name, nil
 }

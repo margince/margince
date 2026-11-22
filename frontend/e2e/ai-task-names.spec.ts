@@ -5,7 +5,7 @@ import { expect, type Page, test } from "@playwright/test";
 import type { components } from "../src/api/schema";
 import { meFixture } from "../src/testing/mefixture";
 import { aiAdminFixture } from "./ai-admin-fixture";
-import { aiRouting, aiUsage } from "./mockapi/fixtures";
+import { aiRouting, aiUsage } from "./mockapi/adminfixtures";
 import { mockApi, servePrincipal } from "./seed";
 import { signIn } from "./waits";
 

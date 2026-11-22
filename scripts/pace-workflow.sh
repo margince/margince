@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# pace-workflow.sh <workflow file> <interval seconds> — start a workflow on main
-# once its newest run is at least that old.
+# pace-workflow.sh <workflow file> <interval seconds> <branch> — start a workflow
+# on that branch once its newest run there is at least that old.
 #
-# GitHub's scheduler can run a cron hours late or not at all, and it never
-# reports a run it skips. A push to main is delivered, so each push asks this one
-# question and the cadence holds while main is moving. pace.yml names each
-# workflow it paces and that workflow's interval.
+# GitHub's scheduler can run a cron hours late or not at all, it never reports a
+# run it skips, and it runs a cron only on the default branch. A push is
+# delivered, so each push asks this one question and the cadence holds while the
+# branch is moving. pace.yml names each workflow it paces, its interval and its
+# branches.
 #
 # It reads the newest run of ANY event, because a run started by hand or by the
 # cron answers the same question as one started from here.
@@ -13,11 +14,11 @@ set -euo pipefail
 
 : "${GH_TOKEN:?the pacer needs a token to read and start workflow runs}"
 : "${REPO:?REPO must name the repository}"
-(($# == 2)) && [[ "$2" =~ ^[1-9][0-9]*$ ]] || {
-  echo "usage: pace-workflow.sh <workflow file> <interval seconds>" >&2
+(($# == 3)) && [[ "$2" =~ ^[1-9][0-9]*$ ]] && [[ -n "$3" ]] || {
+  echo "usage: pace-workflow.sh <workflow file> <interval seconds> <branch>" >&2
   exit 2
 }
-readonly WORKFLOW="$1" INTERVAL_SECONDS="$2"
+readonly WORKFLOW="$1" INTERVAL_SECONDS="$2" BRANCH="$3"
 
 # Injected so a case can pin the clock.
 now_epoch="${NOW_EPOCH:-$(date -u +%s)}"
@@ -32,7 +33,7 @@ to_epoch() {
 last_created="$(gh run list \
   --repo "$REPO" \
   --workflow "$WORKFLOW" \
-  --branch main \
+  --branch "$BRANCH" \
   --limit 1 \
   --json createdAt \
   --jq '.[0].createdAt // empty')"
@@ -43,10 +44,10 @@ if [[ -n "$last_created" ]]; then
   last_epoch="$(to_epoch "$last_created")"
   age_seconds=$((now_epoch - last_epoch))
   if ((age_seconds < INTERVAL_SECONDS)); then
-    echo "pace-workflow: $WORKFLOW last ran ${age_seconds}s ago, under ${INTERVAL_SECONDS}s; nothing to start"
+    echo "pace-workflow: $WORKFLOW last ran on $BRANCH ${age_seconds}s ago, under ${INTERVAL_SECONDS}s; nothing to start"
     exit 0
   fi
 fi
 
-gh workflow run "$WORKFLOW" --repo "$REPO" --ref main
-echo "pace-workflow: started $WORKFLOW; last run ${last_created:-is not on record}"
+gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$BRANCH"
+echo "pace-workflow: started $WORKFLOW on $BRANCH; last run ${last_created:-is not on record}"

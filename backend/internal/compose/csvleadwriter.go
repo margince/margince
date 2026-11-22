@@ -51,8 +51,8 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed ma
 	if _, held := errors.AsType[*contacts.DuplicateLeadError](err); held || errors.Is(err, errImportReplayed) {
 		return skippedFor(naturalKeyTakenWhy), nil
 	}
-	if importkeys.LinkedInClaimed(err) {
-		return skippedFor(linkedInClaimedWhy), nil
+	if why, held := importkeys.StoreKeyWhy(err); held {
+		return skippedFor(why), nil
 	}
 	if refusedAsErased(err) {
 		return skippedFor(addressErasedWhy), nil

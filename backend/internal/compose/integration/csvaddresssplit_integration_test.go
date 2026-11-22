@@ -144,3 +144,53 @@ func TestCSVUpdateWithASplitLineOneClearsTheStaleParts(t *testing.T) {
 		t.Fatal("the company was not found")
 	}
 }
+
+const countryNameFile = "Company,Country\nNamewerk Eins,Germany\nNamewerk Zwei,Deutschland\nNamewerk Drei,de\n"
+
+func assertCountryNamesStoredAsDE(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	for _, name := range []string{"Namewerk Eins", "Namewerk Zwei", "Namewerk Drei"} {
+		if got := partText(importedAddressOf(t, e, name).Country); got != "DE" {
+			t.Errorf("%s country = %s, want DE", name, got)
+		}
+	}
+}
+
+func TestCSVImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *testing.T) {
+	e := setupImportApp(t)
+	profile, _ := importjobtest.UploadCSV(t, e, "company", countryNameFile)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
+		map[string]string{"Company": "display_name", "Country": "address.country"})
+	if report := readImportReport(t, e, run.ID); len(report.Issues) != 0 {
+		t.Fatalf("issues = %+v, want none for country names the import can read", report.Issues)
+	}
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+	assertCountryNamesStoredAsDE(t, e)
+}
+
+func TestZipImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *testing.T) {
+	e := setupImportApp(t)
+	upload := uploadZip(t, e, "names.zip", zipBytes(t, map[string]string{"companies.csv": countryNameFile}))
+	run := stageBundle(t, e, upload.SourceRef, "names", []AnyMap{{
+		"file": "companies.csv", "object": "company",
+		"mapping": AnyMap{"Company": "display_name", "Country": "address.country"},
+	}})
+	if report := readImportReport(t, e, run.ID); len(report.Issues) != 0 {
+		t.Fatalf("issues = %+v, want none for country names the import can read", report.Issues)
+	}
+	approveAndRead(t, e, run.ID)
+	assertCountryNamesStoredAsDE(t, e)
+}
+
+func TestCSVImportRefusesAnUnknownCountryNameNamingItsRowAndColumn(t *testing.T) {
+	e := setupImportApp(t)
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Company,Country\nLostwerk,Atlantis\n")
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
+		map[string]string{"Company": "display_name", "Country": "address.country"})
+	issue := issueOf(readImportReport(t, e, run.ID), "invalid_value", "Atlantis")
+	if issue == nil || issue.Column != "Country" || issue.Line != 2 {
+		t.Errorf("issue = %+v, want Atlantis refused on line 2, column Country", issue)
+	}
+}

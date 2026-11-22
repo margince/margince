@@ -9,6 +9,7 @@ import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import type { ContactTab } from "../../lib/contacttab";
 import { navigate } from "../../lib/router";
 import { latestWord } from "../../lib/standinglatest";
@@ -45,19 +46,24 @@ export function ContactHowItStands({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const words: StandingWords = { t, locale, zone };
+  const companyZone = useCompanyZone();
+  const words: StandingWords = { t, locale, zone, companyZone };
   // The 360's page seeds the line; a wider zoom pages older rows from the list.
   const history = useRecordTimeline("contact", view.contact.id, {
     firstPage: view.activities,
     enabled: Boolean(view.activities),
   });
   const openHistory = () => onOpenTab("timeline");
-  const peeks = contactPeeks(view, { t, plural, locale, zone }, openHistory);
+  const peeks = contactPeeks(
+    view,
+    { t, plural, locale, zone, companyZone },
+    openHistory,
+  );
   const verdict = contactVerdict(view, t) ?? {
     word: t("record.notShown"),
     tone: "neutral" as const,
   };
-  const dims = contactDims(view, t, locale);
+  const dims = contactDims(view, t, locale, { zone, companyZone });
   return (
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}

@@ -1,10 +1,13 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button, Textarea, TextInput } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { useFieldFaults } from "../../design-system/savepage";
 import { ordinalNumber } from "../../format/format";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { blankRequired } from "../../lib/problem";
 import {
   type CompanyFieldName,
   type CompanyForm,
@@ -155,6 +158,8 @@ export function ManualCompanyInterview({
   onComplete: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
   const [questionIndex, setQuestionIndex] = useState(0);
   const question = MANUAL_QUESTIONS[questionIndex];
   const answerID = `manual-question-${question?.field ?? "unavailable"}-answer`;
@@ -170,7 +175,11 @@ export function ManualCompanyInterview({
   const value = values[question.field];
   const last = questionIndex === MANUAL_QUESTIONS.length - 1;
   const advance = () => {
-    if (required && value.trim() === "") {
+    // The heading names the box, so the sentence needs no field name.
+    const blank = required
+      ? blankRequired(locale, { [question.field]: [undefined, value] })
+      : new Map<string, string>();
+    if (faults.show(blank)) {
       return;
     }
     onPersist();
@@ -190,6 +199,8 @@ export function ManualCompanyInterview({
   };
   const promptID = `manual-question-${question.field}`;
   const hintID = `${promptID}-hint`;
+  const errorID = `${promptID}-error`;
+  const fault = faults.of(question.field);
   // The answer box is the design system's, but NOT inside a `Field`: this board
   // asks one question at a time and that question is its <h1>, so a `Field`
   // would draw a second name for the same control — the same words a rung
@@ -198,16 +209,21 @@ export function ManualCompanyInterview({
   const answer = {
     id: answerID,
     "aria-labelledby": promptID,
-    "aria-describedby": hintID,
+    "aria-describedby": fault ? `${hintID} ${errorID}` : hintID,
+    "aria-invalid": fault ? true : undefined,
     value,
     required,
-    onChange: (event: { target: { value: string } }) =>
-      setField(question.field, event.target.value),
+    onChange: (event: { target: { value: string } }) => {
+      faults.edited(question.field);
+      setField(question.field, event.target.value);
+    },
     onBlur: onPersist,
   };
 
   return (
     <form
+      ref={faultsRoot}
+      noValidate
       className="ob-core-dialog ob-manual-question"
       onSubmit={(event) => {
         event.preventDefault();
@@ -232,15 +248,12 @@ export function ManualCompanyInterview({
       ) : (
         <TextInput {...answer} />
       )}
+      <ErrorLine id={errorID}>{fault}</ErrorLine>
       <div className="ob-manual-actions">
         <Button variant="link" type="button" onClick={back}>
           <ArrowLeft aria-hidden /> {t("ob.back")}
         </Button>
-        <Button
-          variant="primary"
-          type="submit"
-          disabled={required && value.trim() === ""}
-        >
+        <Button variant="primary" type="submit">
           {last
             ? t("ob.manualReview")
             : !required && value.trim() === ""

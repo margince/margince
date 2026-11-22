@@ -78,15 +78,18 @@ const posted = (written: readonly Sent[], path: string) =>
 
 describe("saving with lists switched off", () => {
   it("asks for a name only, and refuses a blank one", async () => {
-    mount();
+    const { written } = mount();
     const user = userEvent.setup();
     const dialog = await openSave(user);
 
     expect(dialog).toHaveTextContent(en["filters.saveTitle"]);
     expect(screen.queryByRole("radio")).toBeNull();
-    expect(screen.getByRole("button", { name: SAVE_VIEW })).toBeDisabled();
-    await user.type(screen.getByRole("textbox", { name: NAME }), "   ");
-    expect(screen.getByRole("button", { name: SAVE_VIEW })).toBeDisabled();
+    const name = screen.getByRole("textbox", { name: NAME });
+    await user.type(name, "   ");
+    await user.click(screen.getByRole("button", { name: SAVE_VIEW }));
+    expect(screen.getByText(`${NAME} is required.`)).toBeInTheDocument();
+    expect(name).toHaveFocus();
+    expect(posted(written, "/views")).toEqual([]);
   });
 
   it("saves the tree as a view and opens it", async () => {

@@ -353,7 +353,7 @@ function ExcludeDialog({
   return (
     <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {t("captureExclusions.addLabel")}
+        {t(`captureExclusions.title.${kind}`)}
       </Heading>
       <form
         id={formId}
@@ -410,7 +410,7 @@ function ExcludeDialog({
           </Field>
         ) : (
           <Field
-            label={t("captureExclusions.addLabel")}
+            label={t(`captureExclusions.field.${kind}`)}
             labelHidden
             hint={t("captureExclusions.notRetroactive")}
           >
@@ -446,7 +446,13 @@ function ExcludeDialog({
           !folders.isPending &&
           !folders.isError &&
           folders.options.length === 0 && (
-            <p>{t("captureExclusions.noContainers")}</p>
+            <p>
+              {t(
+                folders.mailboxCount === 0
+                  ? "captureExclusions.noMailbox"
+                  : "captureExclusions.noContainers",
+              )}
+            </p>
           )}
         {/* A list that stopped short is still worth showing, and saying so is
             what keeps a missing folder from reading as a folder that does not

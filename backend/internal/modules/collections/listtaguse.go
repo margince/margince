@@ -8,11 +8,7 @@ package collections
 // selects nothing while the list still evaluates: only the list can say so.
 
 import (
-	"context"
-	"fmt"
 	"slices"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -20,37 +16,6 @@ import (
 
 // tagIDsArg names the bind parameter holding the tag ids a list names.
 const tagIDsArg = "tag_ids"
-
-// retiredTagsOf is the archived tags a Live List's filter names. A Shortlist
-// names none.
-func (s *Store) retiredTagsOf(ctx context.Context, l listRow) ([]ids.UUID, error) {
-	if l.ListType != listTypeDynamic {
-		return nil, nil
-	}
-	pred, err := predicateFromDefinition(l.Definition)
-	if err != nil {
-		return nil, err
-	}
-	named := tagIDsNamed(pred, tagFieldsOf(l.EntityType))
-	if len(named) == 0 {
-		return nil, nil
-	}
-	var retired []ids.UUID
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			"SELECT id FROM tag WHERE id = ANY(@"+tagIDsArg+") AND archived_at IS NOT NULL ORDER BY id",
-			pgx.StrictNamedArgs{tagIDsArg: named})
-		if err != nil {
-			return err
-		}
-		retired, err = storekit.ScanUUIDColumn(rows, "retired tags of a list")
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("read the archived tags a list names: %w", err)
-	}
-	return retired, nil
-}
 
 // tagFieldsOf is the filter fields of one record type that hold tag ids,
 // read off the vocabulary itself so a tag field added to it is judged too.

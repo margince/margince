@@ -252,14 +252,6 @@ func adminRBAC() authz.RBAC {
 	}}
 }
 
-// adminAuthority answers a live admin; repAuthority a live member who may not
-// connect an integration.
-type adminAuthority struct{ liveAuthority }
-
-func (adminAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
-	return adminRBAC(), nil
-}
-
 func extAdminCtx() context.Context {
 	ctx := humanCtx()
 	actor, _ := principal.Actor(ctx)
@@ -292,7 +284,7 @@ func newExtFlow(t *testing.T, v *vendor, onGrantErr error) *extFlow {
 	setComposedExtensions([]extension.Extension{{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{app}}})
 	t.Cleanup(func() { setComposedExtensions(nil) })
 	f.h = connectorHandlers{
-		authority:      adminAuthority{},
+		authority:      grantedAuthority{rbac: adminRBAC(), seat: principal.SeatFull},
 		signer:         newStateSigner([]byte(testStateKey)),
 		publicBaseURL:  "https://app.test",
 		apiBaseURL:     "https://api.test",
@@ -502,18 +494,10 @@ func TestAUnitCannotReachAnotherUnitsOAuthGrant(t *testing.T) {
 	}
 }
 
-// readSeatAdminAuthority answers a member whose role holds the integration
-// grant but whose seat is a read seat.
-type readSeatAdminAuthority struct{ adminAuthority }
-
-func (readSeatAdminAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
-	return principal.SeatRead, nil
-}
-
 func TestAReadSeatCannotConnectAnExtension(t *testing.T) {
 	f := newExtFlow(t, &vendor{exchange: `{"access_token":"a1","refresh_token":"r1"}`}, nil)
 	consent, cookie := f.connect(t)
-	f.h.authority = readSeatAdminAuthority{}
+	f.h.authority = grantedAuthority{rbac: adminRBAC(), seat: principal.SeatRead}
 
 	got := f.callback(t, url.Values{"code": {"the-code"}, "state": {consent.Query().Get("state")}}, cookie)
 

@@ -9,7 +9,7 @@ workflow is outside the gate:
 | Workflow | What starts it | Blocks a merge? |
 |---|---|---|
 | `cla.yml` | `pull_request_target` (`opened`, `reopened`, `synchronize`, `closed`); a PR comment that contains `recheck` or `Contributor License Agreement`; `merge_group` | Yes, for an author outside the Margince team |
-| `cache-warm.yml` | `pace.yml`, `main` every three hours, manual dispatch | No |
+| `cache-warm.yml` | `pace.yml` on `main` and `develop`, `main` every three hours, manual dispatch | No |
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
@@ -17,7 +17,7 @@ workflow is outside the gate:
 | `mcp-e2e-stale.yml` | pull request events that touch the MCP catalog or the e2e lane | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
 | `main-health.yml` | `pace.yml`, `main` every six hours, manual dispatch | No |
-| `pace.yml` | every push to `main` | No (runs after the merge) |
+| `pace.yml` | every push to `main` or `develop` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `mcp-sweep.yml` | manual dispatch only | No |
 | `_records.yml` | called by `scheduled.yml` and `mcp-sweep.yml` | No |
@@ -40,15 +40,22 @@ recording needs a secret a fork run never gets, and so it never checks out the p
 
 ## `cache-warm.yml`
 
-The only writer of the Go build cache and of the frontend cache. It is also one of the writers of
-the golangci analysis cache and of the gate binaries. A red or cancelled run makes the next lane slower, and costs nothing else. It is a
-separate workflow because a merge queue build cannot fill the cache. `actions/cache` scopes a write
-to the branch that writes plus the default branch, and a queue ref does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
+The writer of the `plain` and `integration` Go build caches and of the frontend cache. It is also one
+of the writers of the golangci analysis cache and of the gate binaries. A red or cancelled run makes
+the next lane slower, and costs nothing else. It is a separate workflow because a merge queue build
+cannot fill the cache. `actions/cache` scopes a write to the branch that writes, and a queue ref does
+not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
 for why it does not run on each push.
 
-GitHub drops some of the cron runs. So `pace.yml` starts it from a push to `main` once the newest run is
-three hours old, as it does for `main-health.yml`. Why `ci.yml` saves neither lint cache: [The lint
-caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-and-the-golangci-one-on-develop-too).
+It writes on `main` and on `develop`, so a pull request reads the entry of the branch it merges into.
+`integration` and `integration-timing` run on `main` only, and gate binaries are saved on `main` only.
+Its `prune` job then deletes the older entries of its own ref (`REF=<ref> scripts/reap-build-caches.sh`).
+
+GitHub runs a cron only on the default branch, and drops some of those runs. So `pace.yml` starts it
+from a push to `main` or `develop` once that branch's newest run is three hours old. It does the same
+for `main-health.yml` on `main`. Why `ci.yml` saves neither lint cache: [The lint caches are saved on
+`main` and `develop`](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-and-develop).
+
 Its `ci-image` job builds the [CI image](../explanation/ci-image.md), and `plain` warms the caches of
 the runner and, if the image can be pulled, of the image. `lint-cache.yml` lints in it, or else on the runner.
 `integration-timing` saves the test times the integration shards split by (cache `integration-test-timing-<run>`), each test's mean over the five newest `test-timing-integration` artifacts.
@@ -69,14 +76,12 @@ It says nothing about a result that was only *missing* at merge time. A reposito
 past `ci` is a standing decision here, so a missing result is expected. A warning on the expected
 state gets turned off, and would hide the two findings above.
 
-It runs after the merge, so it cannot stop one. It shows a bad result at once, at push time, and names who caused
-it. That way the cost does not show up two hours later on the pull request of someone
-else. To stop such merges is a decision about branch rules
-([#2496](https://github.com/margince/margince/issues/2496)).
-[`scripts/check-merge-verdict.sh`](../../scripts/check-merge-verdict.sh) makes the call. It reads
-its evidence from the environment, so a fixture can drive every case (`make test-merge-verdict`).
-Each finding goes in one issue per pull request that caused it, through the same reporter the health check
-uses.
+It runs after the merge, so it cannot stop one. It shows a bad result at once, at push time, and
+names who caused it. Then the cost does not show up two hours later on the pull request of another.
+To stop such merges is a decision about branch rules ([#2496](https://github.com/margince/margince/issues/2496)).
+[`scripts/check-merge-verdict.sh`](../../scripts/check-merge-verdict.sh) makes the call. It reads its
+evidence from the environment, so a fixture can drive every case (`make test-merge-verdict`). Each
+finding goes in one issue per pull request that caused it, through the reporter the health check uses.
 
 ## `review-coverage.yml`
 
@@ -130,16 +135,14 @@ requests close no issue. Without a way to say so, the check would warn them, or 
 It does not decide whether a pull request fixes an issue it did not name. A machine cannot decide
 that; the declaration asks a human to answer it.
 
-It warns and never fails, because a job that failed on a finding would be a gate, no matter what its name
-said. `edited` is a trigger so the comment is deleted as soon as the author adds the line. The
-comment is deleted, not changed into a note that says it passed, so a finding that is fixed leaves nothing
-behind.
+It warns and never fails, because a job that failed on a finding would be a gate, no matter what its
+name said. `edited` is a trigger so the comment is deleted as soon as the author adds the line. The
+comment is deleted, not changed into a note that it passed, so a fixed finding leaves nothing behind.
 
 A failed query for the pull request data stops without a comment. To read it as an empty list
-would warn a pull request whose closing data is right. The check is made blocking only if it is measured
-that users do not read the warning.
-[`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh) makes the
-report. It reads its evidence from the environment, so a fixture can drive every case
+would warn a pull request whose closing data is right. The check is made blocking only if it is
+measured that users do not read the warning. [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh)
+makes the report. It reads its evidence from the environment, so a fixture can drive every case
 (`make test-closing-declaration`).
 
 ## `docs-describing.yml`
@@ -211,18 +214,16 @@ will keep happening. This workflow makes the delay shorter and names the cause. 
 finds a break when a pull request that has nothing to do with it goes red.
 
 On failure it files one issue per broken lane. The issue carries the commits that landed since the
-health check was last green, with their authors
-([`scripts/main-health-range.sh`](../../scripts/main-health-range.sh)). That range names more
-commits than the real cause, by design. A list of 12 commits that may have caused it helps,
-and a guess at one sends the wrong colleague looking.
+health check was last green, with their authors ([`scripts/main-health-range.sh`](../../scripts/main-health-range.sh)).
+That range names more commits than the real cause, by design. A list of 12 commits that may have
+caused it helps, and a guess at one sends the wrong colleague looking.
 
 As the only workflow that publishes the SonarCloud analysis of `main`, the scan job `needs` every
-coverage lane (backend, real-Postgres, SPA). It runs only when all three pass, because a scan
-missing a report would publish 0% for that tree. A stored analysis stays as it
-was while the nightly quality gate job keeps reporting it as current. So a red lane leaves the
-analysis old for two hours, and the report job files an issue about it. The report job also files
-an issue when the scan itself fails, because a failed publish leaves the last analysis looking
-current.
+coverage lane (backend, real-Postgres, SPA). It runs only when all three pass, because a scan missing
+a report would publish 0% for that tree. A stored analysis stays as it was while the nightly quality
+gate job keeps reporting it as current. So a red lane leaves the analysis old for two hours, and the
+report job files an issue about it. The report job also files an issue when the scan itself fails,
+because a failed publish leaves the last analysis looking current.
 
 How often it runs is the setting that matters. Every two hours costs ~15 jobs a run. At 8 merges
 an hour, it cuts the list of commits that may have caused a red to about 12.
@@ -372,9 +373,8 @@ test dist release, and needs only `sbom`. So an open blocker holds the GitHub re
 and a failed dist release leaves the GitHub release alone. A failed SBOM job stops both.
 
 The tag is the version, read and checked by [`scripts/release-tag-version.sh`](../../scripts/release-tag-version.sh)
-(`make test-release-tag-version`). A plain `v1.0.0` becomes the download the page offers by
-default; a tag with an ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A tag the script cannot
-read is refused in seconds, before anything is published.
+(`make test-release-tag-version`). A plain `v1.0.0` becomes the download the page offers by default; a tag with an
+ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A tag the script cannot read is refused in seconds, before anything is published.
 
 More checks share that first job. The tag points at a commit on `main`, and Go recorded no other commit for it
 ([`scripts/release-tag-go-proxy.sh`](../../scripts/release-tag-go-proxy.sh)). `LICENSE` carries the release's Change Date
@@ -386,8 +386,7 @@ The same job reads the `source-checked` date of each messaging policy layer ([`s
 The `draft` job then checks that a plain tag has a draft release with notes. It holds
 `contents: write` only to read: GitHub shows a draft to no token that cannot write.
 
-The `verdict` check picks releases, and does not gate merges. To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
-but is not done yet refuses.
+The `verdict` check picks releases, and does not gate merges. To merge past `ci` is a standing decision here, so a missing result passes. A result that exists but is not done yet refuses.
 
 The release job publishes the draft, or creates the release for a pre-release that has no draft. The `sign`
 job alone holds `id-token: write`, and runs no build code.

@@ -40,7 +40,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 
 ## import_run
 
-34 columns · primary key `(id)` · referenced by 1 foreign key
+35 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -54,6 +54,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `connector` | `text` | yes | One of `csv`, `salesforce`. |
 | `draft_step` | `text` |  | One of `files`, `map`. |
 | `error` | `text` |  | Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. |
+| `error_refusal` | `jsonb` |  | `error` as the field error an upload refusal carries, for a draft whose test run refused its file: a screen words it in the reader's language and keeps `error` for a code it does not know. |
 | `finished_at` | `timestamp with time zone` |  | When the run reached a final status: complete, undone or cancelled. |
 | `heartbeat_at` | `timestamp with time zone` |  |  |
 | `job_attempt` | `integer`, default `0` | yes |  |

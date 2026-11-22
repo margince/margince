@@ -88,7 +88,7 @@ func compiledInCodes() []string {
 func NewInstallationSettingsFor(pool *pgxpool.Pool) *identity.InstallationSettingsStore {
 	return identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool)).
 		WithCountryChange(carryFloorOnCountryChange).
-		WithCalendarChange(keepSavedPeriodsOnCalendarChange)
+		WithCalendarChange(keepSavedPeriodsOnCalendarChange).WithZoneChange(contacts.UnfoldStrengthDatesTx)
 }
 
 // carryFloorOnCountryChange is the hook a jurisdiction change runs: privacy

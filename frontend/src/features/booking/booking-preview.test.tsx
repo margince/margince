@@ -379,6 +379,8 @@ it("returns from settings to a preview with the newly saved values in a fresh ca
         { id: "primary", name: "Work", primary: true, writable: true },
       ]),
     "GET /scheduling/profile": () => jsonResponse(latest),
+    "GET /scheduling/team-candidates": () => jsonResponse([]),
+    "GET /scheduling/team-requests": () => jsonResponse([]),
     "GET /availability": () =>
       jsonResponse({ slots: bookingSlots, truncated: false }),
     "PUT /scheduling/profile": (body) => {

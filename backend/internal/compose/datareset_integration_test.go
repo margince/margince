@@ -329,6 +329,10 @@ const settlementEvidenceShare = "the settlement evidence generation, not a guard
 // replySettledClear is the reason for the triggers that clear the stamp the owed check reads first.
 const replySettledClear = "clears the reply-settled stamps on the deleted rows' threads so the stamping job reads them again, and refuses no delete. Its UPDATE skips restricted rows, so the restricted-row guard never fires; the sweep deletes every stamped message too, so no stale stamp survives a reset"
 
+// strengthDatesRecompute is the reason for the triggers that refold a
+// contact's stored strength dates when a row they were read from goes.
+const strengthDatesRecompute = "recomputes the stored strength dates of the contacts the deleted rows reached, and refuses no delete; `contact` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them"
+
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	"raw_capture raw_original_object_retired":  "records retired object keys and refuses no delete; reset preserves stored_object_intent so the cleanup worker can remove their bytes",
 	"activity reopen_deleted_signature_source": "Maintains signature read requests and refuses no delete. Reset removes the contacts and their requests by cascade; TestSweepWorkspaceDataClearsDomainKeepsIdentity proves it with an actual mail source and read watermark.",
@@ -371,9 +375,15 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	"activity_link settlement_evidence_share":              settlementEvidenceShare,
 	"contact_email settlement_evidence_share":              settlementEvidenceShare,
 
-	"activity deleted_mail_clears_reply_settled":            replySettledClear,
-	"activity_participant participant_clears_reply_settled": replySettledClear,
-	"contact_email contact_email_clears_reply_settled":      replySettledClear,
+	"activity deleted_mail_clears_reply_settled":                    replySettledClear,
+	"activity_participant deleted_participant_clears_reply_settled": replySettledClear,
+	"contact_email deleted_contact_email_clears_reply_settled":      replySettledClear,
+
+	"activity_link activity_link_strength_dates_removed":                   strengthDatesRecompute,
+	"activity_participant activity_participant_strength_dates_removed":     strengthDatesRecompute,
+	"contact_email contact_email_strength_dates_removed":                   strengthDatesRecompute,
+	"capture_import capture_import_strength_dates_removed":                 strengthDatesRecompute,
+	"capture_thread_verdict capture_thread_verdict_strength_dates_removed": strengthDatesRecompute,
 
 	"relationship relationship_last_activity": "a clock-maintenance trigger, not a guard: it recomputes the employer's last_activity_at and refuses no delete",
 	// Also not a guard (migration 1787226902): BEFORE DELETE ON company, it

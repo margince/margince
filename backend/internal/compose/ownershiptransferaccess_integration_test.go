@@ -24,7 +24,7 @@ import (
 )
 
 func transferRefusalCode(err error) string {
-	if refusal, ok := errors.AsType[*contacts.TransferRefusal](err); ok {
+	if refusal, ok := errors.AsType[*contacts.OwnerAskRefusal](err); ok {
 		return refusal.Code
 	}
 	return ""

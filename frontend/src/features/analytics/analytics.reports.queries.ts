@@ -75,19 +75,16 @@ const REPORT_AGGREGATES: Record<CardKey, ReportAggregate[]> = {
     { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
     { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
-    { fn: "count", field: "amount_base_minor", as: "priced_deals" },
   ],
   "pipeline-current": [
     { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
     { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
-    { fn: "count", field: "amount_base_minor", as: "priced_deals" },
   ],
   forecast: [
     { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
     { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
-    { fn: "count", field: "amount_base_minor", as: "priced_deals" },
   ],
   "open-deals-per-company": [
     { fn: "sum", field: "amount_minor", as: "raw_minor" },

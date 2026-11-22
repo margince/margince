@@ -167,8 +167,7 @@ func (l crmLanding) company(ctx context.Context, key string, f extension.Company
 		}
 		skipped = left
 		in.AdoptSource = adopt
-		_, err = l.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
-		return err
+		return l.contacts.ApplyCompanyUpdate(ctx, ids.From[ids.CompanyKind](id), in)
 	}
 	id, err := upsertByOutsideID(find, create, update)
 	if err == nil {
@@ -367,7 +366,7 @@ func (l crmLanding) moveDeal(ctx context.Context, id, stage ids.UUID, f extensio
 	}
 	in.CustomFields = custom
 	skipped = append(skipped, heldBack...)
-	if _, err := l.deals.UpdateDeal(ctx, dealID, in); err != nil {
+	if err := l.deals.ApplyDealUpdate(ctx, dealID, in); err != nil {
 		return nil, err
 	}
 	return skipped, l.advanceDeal(ctx, dealID, current, stage, f)

@@ -57,6 +57,8 @@ var internalColumns = map[string]map[string]bool{
 	typeContact: setOf(
 		"anonymized_address_hashes", "anonymized_address_key_id", "converted_from_lead_id", "created_from_activity_id",
 		"photo_object_key", "photo_origin", "relationship_mark_set_by",
+		"strength_folded", "strength_last_engaged_at", "strength_last_inbound_at", "strength_last_inbound_day",
+		"strength_last_interaction_at", "strength_last_outbound_at", "strength_last_outbound_day",
 	),
 	typeCompany: setOf(
 		"geocode_input_hash", "geocode_lat", "geocode_lon", "geocode_provider", "geocode_status",

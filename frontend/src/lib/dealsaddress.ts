@@ -31,6 +31,8 @@ export const ADDRESSABLE_DEAL_DIALS = [
   "stage_id",
   "company_id",
   "status",
+  "owner_id",
+  "owner_team_id",
   WIN_PROBABILITY_DIAL,
 ] as const;
 
@@ -43,4 +45,18 @@ export function dealsFilteredBy(
 ): string {
   const dials = new URLSearchParams({ [param]: value, ...extra });
   return `${routeHash({ screen: "deals" })}?${dials.toString()}`;
+}
+
+/**
+ * The deals-list dials that narrow the list to the owners a scope counts, so a
+ * count's link opens the deals the count held. Null when the list cannot say it:
+ * a manager's own set of teams has no single owner or team to name.
+ */
+export function scopeDealDials(
+  scope: { kind: string; id?: string } | undefined,
+): Readonly<Partial<Record<DealDial, string>>> | null {
+  if (!scope || scope.kind === "workspace") return {};
+  if (scope.kind === "owner" && scope.id) return { owner_id: scope.id };
+  if (scope.kind === "team" && scope.id) return { owner_team_id: scope.id };
+  return null;
 }

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 51581,
+    "tokens": 51732,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1074
+    "mean_tool_tokens": 1077
   },
   "agents": [
     {
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4459
+      "tokens": 4494
     },
     {
       "name": "change_settings",
@@ -113,7 +113,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 1915
+      "tokens": 1920
     },
     {
       "name": "change_capture",
@@ -140,12 +140,12 @@
       "tokens": 1274
     },
     {
-      "name": "change_offers",
-      "tokens": 1096
+      "name": "change_access",
+      "tokens": 1152
     },
     {
-      "name": "change_access",
-      "tokens": 1074
+      "name": "change_offers",
+      "tokens": 1096
     },
     {
       "name": "read_analytics",
@@ -228,6 +228,10 @@
       "tokens": 395
     },
     {
+      "name": "check_availability",
+      "tokens": 375
+    },
+    {
       "name": "read_attention",
       "tokens": 365
     },
@@ -238,10 +242,6 @@
     {
       "name": "read_tags",
       "tokens": 358
-    },
-    {
-      "name": "check_availability",
-      "tokens": 342
     },
     {
       "name": "list_documents",

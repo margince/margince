@@ -29,6 +29,7 @@ import { Badge, Card } from "../../design-system/atoms";
 import { IconAction } from "../../design-system/iconaction";
 import { Chip } from "../../design-system/readings";
 import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
+import { taskDueOnDay } from "../../format/calendarday";
 import {
   calendarDaysBetween,
   formatDayMonthNearYear,
@@ -334,10 +335,16 @@ export function cardWhen(
   const { t, plural, locale } = words;
   // Only a task's due day counts days late; a meeting's time is its own read.
   if (item.source === "task" && item.overdue === true && item.due_at) {
-    const late = calendarDaysBetween(new Date(item.due_at), now, recordZone);
+    const dueDay = taskDueOnDay(
+      item.due_at,
+      item.due_has_time,
+      item.due_intent,
+      recordZone,
+    );
+    const late = calendarDaysBetween(new Date(dueDay), now, recordZone);
     if (late > 0)
       return [
-        formatDayMonthNearYear(item.due_at, locale, recordZone, now),
+        formatDayMonthNearYear(dueDay, locale, recordZone, now),
         plural("co.next.daysLate", late, { days: formatNumber(late, locale) }),
       ].join(" · ");
   }

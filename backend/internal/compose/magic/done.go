@@ -58,12 +58,16 @@ type entry struct {
 	// retention action, the page a fact was read from.
 	Evidence []byte
 	// BatchID is the bulk change the row belongs to. A data task stamps its
-	// step's run id here (datatask.Execute), so two runs of one correction are
-	// told apart. Nil on rows no batch wrote.
+	// step's run id here (datatask.Execute). A retry of a finished step keeps
+	// that id, so its rerun reads as the same correction. Nil on rows no batch wrote.
 	BatchID *ids.UUID
 	// ActivityKind is what a placed activity is (email, meeting, ...), so a
 	// create says "saved an email" rather than "an email or a meeting".
 	ActivityKind *string
+	// ParentType and ParentID name the record a placed child belongs to
+	// (placement.go). Nil on a row about a record with its own page.
+	ParentType *string
+	ParentID   *ids.UUID
 }
 
 // recordLabels is the name column of each placed record, the expression the
@@ -150,6 +154,14 @@ func doneSince(
 			capped[armOf(typeActivity, bulk)] = true
 		}
 		found = append(found, activities...)
+		children, err := doneForPlacements(ctx, tx, since, actions, width)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(children) == width {
+			capped[armOf(armPlaced, bulk)] = true
+		}
+		found = append(found, children...)
 	}
 	return found, capped, nil
 }
@@ -186,6 +198,9 @@ func armOf(entityType string, bulk bool) string {
 
 // armOfEntry names the read one entry came from.
 func armOfEntry(e entry) string {
+	if e.ParentType != nil {
+		return armOf(armPlaced, bulkActions[e.Action])
+	}
 	return armOf(e.EntityType, bulkActions[e.Action])
 }
 
@@ -260,7 +275,7 @@ func doneForType(
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
 		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
-		       NULLIF(%s, ''), a.evidence, a.batch_id, NULL::text
+		       NULLIF(%s, ''), a.evidence, a.batch_id, NULL::text, NULL::text, NULL::uuid
 		  FROM audit_log a
 		  JOIN %s e ON e.id = a.entity_id
 		 WHERE %s
@@ -321,7 +336,7 @@ func doneForActivities(
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
 		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
-		       NULLIF(%s, ''), a.evidence, a.batch_id, e.kind
+		       NULLIF(%s, ''), a.evidence, a.batch_id, e.kind, NULL::text, NULL::uuid
 		  FROM audit_log a
 		  JOIN activity e ON e.id = a.entity_id
 		 WHERE %s
@@ -338,9 +353,9 @@ var groupingImages = fmt.Sprintf(
 	`CASE WHEN a.action = '%[1]s' THEN a.before END, CASE WHEN a.action = '%[1]s' THEN a.after END`, actionUpdate)
 
 // imagesDeferred reports a row whose images groupingImages left unread and a
-// line still shows. A bulk verb's images are never shown.
-func imagesDeferred(action string) bool {
-	return action != actionUpdate && !bulkActions[action]
+// line still shows. A bulk verb's images are never shown, nor a placed child's.
+func imagesDeferred(e entry) bool {
+	return e.Action != actionUpdate && !bulkActions[e.Action] && e.ParentType == nil
 }
 
 // loadDeferredImages reads the images the arms left unread, for the entries a
@@ -350,7 +365,7 @@ func imagesDeferred(action string) bool {
 func loadDeferredImages(ctx context.Context, tx pgx.Tx, entries []entry) error {
 	at := map[ids.UUID]int{}
 	for i, e := range entries {
-		if imagesDeferred(e.Action) {
+		if imagesDeferred(e) {
 			at[e.ID] = i
 		}
 	}
@@ -401,7 +416,7 @@ func scanEntries(ctx context.Context, tx pgx.Tx, query string, args []any) ([]en
 		if err := rows.Scan(
 			&e.ID, &e.OccurredAt, &e.Action, &e.EntityType, &e.EntityID,
 			&e.ActorType, &e.ActorID, &e.OnBehalfOf, &e.Before, &e.After,
-			&e.Label, &e.Evidence, &e.BatchID, &e.ActivityKind,
+			&e.Label, &e.Evidence, &e.BatchID, &e.ActivityKind, &e.ParentType, &e.ParentID,
 		); err != nil {
 			return nil, fmt.Errorf("read a machine action: %w", err)
 		}

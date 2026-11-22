@@ -54,17 +54,14 @@ func (s *Store) CloseTasksAnsweredByBookingTx(ctx context.Context, tx pgx.Tx, me
 	}
 	args := schedulingArgs{}
 	booked := args.add(meeting)
+	onRecord := `t.lead_id=ANY(` + args.add(leads) + `) OR t.contact_id=ANY(` + args.add(contacts) + `)`
 	query := `SELECT task.id FROM activity task JOIN activity booked ON booked.id=` + booked + `
- WHERE task.kind='task' AND NOT task.is_done AND task.archived_at IS NULL AND task.created_at < booked.created_at
- AND task.assignee_id=` + args.add(host) + `
- AND NOT (task.source=` + args.add(systemSource) + ` AND ` + systemCapturedSQL("task", args.add(systemCapturedBy), args.add(systemCapturedByPattern)) + `)
- AND EXISTS (SELECT 1 FROM activity_link t WHERE t.activity_id=task.id AND (t.lead_id=ANY(` + args.add(leads) + `) OR t.contact_id=ANY(` + args.add(contacts) + `)))
- AND NOT ` + reopenedAfterAnswerSQL("task") + ` ORDER BY task.id FOR UPDATE OF task`
+ WHERE ` + answerableTaskSQL(&args, "booked", args.add(host), onRecord) + ` ORDER BY task.id FOR UPDATE OF task`
 	tasks, err := collectTaskIDs(ctx, tx, query, args)
 	if err != nil {
 		return 0, err
 	}
-	return s.closeAnsweredTasksTx(ctx, tx, meeting, tasks)
+	return s.closeAnsweredTasksTx(ctx, tx, meeting, tasks, nil)
 }
 
 // answeredByCalledOffMeetingSQL admits a done task whose latest system answer

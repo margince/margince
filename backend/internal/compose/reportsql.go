@@ -238,7 +238,8 @@ func scanReportRows(pgRows pgx.Rows, columns []string) ([]map[string]any, error)
 	// "unknown". Normalized here so no transport can put null on the wire —
 	// reportOutcome.Rows is marshalled straight through on the tool surface.
 	rows := []map[string]any{}
-	reader := rowvalue.NewReader()
+	// Instants, as report rows have always been: the report screens and the model read them so.
+	reader := rowvalue.NewInstantReader()
 	for pgRows.Next() {
 		values, err := reader.Values(pgRows)
 		if err != nil {

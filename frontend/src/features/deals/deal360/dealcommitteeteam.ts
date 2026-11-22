@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../../api/schema";
-import { INTL_LOCALE } from "../../../format/intllocale";
+import { listFormat } from "../../../format/formatters";
 import type { Locale, Translator } from "../../../i18n";
 import { shippedLabel } from "../../../lib/shippedlabels";
 
@@ -67,7 +67,7 @@ export function committeeTeam({
   if (carrier && carrierName && !rows.has(carrier)) {
     add(carrier, carrierName);
   }
-  const jobs = new Intl.ListFormat(INTL_LOCALE[locale], {
+  const jobs = listFormat(locale, {
     style: "short",
     type: "unit",
   });

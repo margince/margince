@@ -9,6 +9,7 @@ import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { SourceLink } from "../../design-system/sourcelink";
+import { taskDueOnDay, taskDueZone } from "../../format/calendarday";
 import { daysPast } from "../../format/lateness";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { latePromise } from "../../lib/latepromise";
@@ -27,6 +28,7 @@ import {
 import { momentTask, owedLateness, recordsTheMoveNames } from "./contactowed";
 import { momentDrafts } from "./contactpage.drawers";
 import "../records/record360/record360.css";
+import { useCompanyZone } from "../../lib/companyzone";
 import { useViewerZone } from "../../lib/viewerzone";
 import { openContactTab } from "../worklist/worklist.return";
 
@@ -88,6 +90,7 @@ export function ContactToday({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const { move, task, rest } = nextBarChoice(moment, view);
   // The tasks behind "+N tasks": a row leads to the queue, which holds them all.
   const more = (rows: readonly Activity[]) =>
@@ -100,11 +103,23 @@ export function ContactToday({
               id: row.id,
               subject: row.subject ?? t("task.untitled"),
               dueAt: row.due_at,
+              dueHasTime: row.due_has_time,
+              dueIntent: row.due_intent,
               overdue: row.due_at
-                ? daysPast(Date.parse(row.due_at), Date.parse(view.as_of)).late
+                ? daysPast(
+                    Date.parse(
+                      taskDueOnDay(
+                        row.due_at,
+                        row.due_has_time,
+                        row.due_intent,
+                        taskDueZone(row.due_has_time, zone, companyZone),
+                      ),
+                    ),
+                    Date.parse(view.as_of),
+                  ).late
                 : false,
             })),
-            { t, plural, locale, zone },
+            { t, plural, locale, zone, companyZone },
             rows.length,
             onOpenTasks,
           ),
@@ -279,9 +294,16 @@ function TaskBar({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const dayZone = taskDueZone(task.due_has_time, zone, useCompanyZone());
   const late =
     task.due_at &&
-    latePromise(task.due_at, view.as_of, zone, "task", { t, plural, locale });
+    latePromise(
+      taskDueOnDay(task.due_at, task.due_has_time, task.due_intent, dayZone),
+      view.as_of,
+      dayZone,
+      "task",
+      { t, plural, locale },
+    );
   return (
     <RecordNextBar
       title={displayedSubject(task) ?? t("task.untitled")}

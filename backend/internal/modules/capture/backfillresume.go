@@ -86,7 +86,7 @@ func resumeFailedBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, win
 	err := tx.QueryRow(ctx, `
 		UPDATE capture_backfill
 		   SET status = 'queued', completed_at = NULL, consecutive_failures = 0,
-		       last_error_class = NULL, window_restarts = 0`+clearBackfillAdmission+resetInflightProgress+`
+		       last_error_class = NULL`+clearBackfillAdmission+resetInflightProgress+`
 		 WHERE id = (
 		         SELECT b.id FROM capture_backfill b
 		           JOIN capture_connection c ON c.id = b.connection_id
@@ -97,11 +97,11 @@ func resumeFailedBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, win
 		RETURNING id, connection_id, window_months, after_date, status, cursor,
 		          total_estimate, total_estimate_is_floor,
 		          scanned, captured, skipped, failed, contacts_created, companies_created,
-		          started_at, updated_at`,
+		          started_at, updated_at, window_restarts`,
 		connID, windowMonths).Scan(&run.ID, &run.ConnectionID, &run.WindowMonths, &run.AfterDate, &run.Status, &run.Cursor,
 		&run.Estimate, &run.EstimateIsFloor,
 		&run.Scanned, &run.Captured, &run.Skipped, &run.Failed, &run.Contacts, &run.Companies,
-		&run.StartedAt, &run.UpdatedAt)
+		&run.StartedAt, &run.UpdatedAt, &run.WindowRestarts)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // no resumable run is the ordinary answer: the caller starts a new one
 	}

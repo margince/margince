@@ -4,6 +4,7 @@ import { calendarDaysUntil } from "../../format/daysuntil";
 import { displayDay } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
 import { valueFor } from "../../lib/labelfor";
+import { dueOnDay } from "../../lib/standingpeeks";
 import type { ProjectHealthState } from "./projecthealth.queries";
 
 // What "How it stands" reads off one Project360, as data rather than words:
@@ -221,7 +222,10 @@ export type NextCommitment = Readonly<{
 }>;
 
 /** The soonest-due open task, which the server already sorts first. */
-export function nextCommitment(view: Project360): NextCommitment | undefined {
+export function nextCommitment(
+  view: Project360,
+  words?: Readonly<{ zone: string; companyZone?: string }>,
+): NextCommitment | undefined {
   const rows = view.commitments?.data ?? [];
   const first = rows[0];
   if (!first) {
@@ -238,7 +242,19 @@ export function nextCommitment(view: Project360): NextCommitment | undefined {
     overdue: first.overdue,
     daysLate:
       first.overdue && first.due_at
-        ? daysPast(Date.parse(first.due_at), Date.parse(view.as_of)).days
+        ? daysPast(
+            Date.parse(
+              words
+                ? dueOnDay(
+                    words,
+                    first.due_at,
+                    first.due_has_time,
+                    first.due_intent,
+                  ).at
+                : first.due_at,
+            ),
+            Date.parse(view.as_of),
+          ).days
         : 0,
     assigneeId: first.assignee_id,
     assigneeName: first.assignee_name,

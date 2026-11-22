@@ -175,6 +175,49 @@ func TestACachedFirstPageKeepsTheWalkItsDefaultSpellingStarted(t *testing.T) {
 	}
 }
 
+// A kept first page outlives the walk it started. It is served without that
+// walk, and its cursor pages on into the day.
+func TestACachedFirstPagePagesOnAfterItsWalkEnds(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Home Walk Ended", "admin@homewalkended.test", "Admin")
+	var admin ids.UUID
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT id FROM app_user WHERE email = 'admin@homewalkended.test'`).Scan(&admin); err != nil {
+		t.Fatal(err)
+	}
+	overdueTask(t, e, admin, "First of two")
+	overdueTask(t, e, admin, "Second of two")
+
+	const onePage = "/v1/worklist?filter=all&relationships=omit&view=today&limit=1"
+	type page struct {
+		NextCursor *string          `json:"next_cursor"`
+		Walk       *json.RawMessage `json:"walk"`
+		Queue      []struct {
+			ID string `json:"id"`
+		} `json:"queue"`
+	}
+	var first, kept, next page
+	if status := e.Call(t, "GET", onePage, nil, nil, &first); status != http.StatusOK || first.NextCursor == nil || first.Walk == nil {
+		t.Fatalf("first page → %d with cursor %v, want 200 and a walk to continue", status, first.NextCursor)
+	}
+	if _, err := e.Owner.Exec(context.Background(), `UPDATE worklist_snapshot SET created_at = created_at - interval '5 hours', expires_at = expires_at - interval '5 hours'`); err != nil {
+		t.Fatal(err)
+	}
+	if status := e.Call(t, "GET", onePage, nil, nil, &kept); status != http.StatusOK {
+		t.Fatalf("the cached first page → %d", status)
+	}
+	if kept.Walk != nil || kept.NextCursor == nil || *kept.NextCursor == *first.NextCursor {
+		t.Fatalf("the cached page after its walk ended has walk %v and cursor %v; want no walk and a cursor without it",
+			kept.Walk != nil, kept.NextCursor)
+	}
+	if status := e.Call(t, "GET", onePage+"&cursor="+*kept.NextCursor, nil, nil, &next); status != http.StatusOK {
+		t.Fatalf("the cached page's cursor → %d, want the day to page on", status)
+	}
+	if len(first.Queue) != 1 || len(next.Queue) != 1 || next.Queue[0].ID == first.Queue[0].ID {
+		t.Errorf("page two holds %+v after page one %+v, want the other task", next.Queue, first.Queue)
+	}
+}
+
 func receiptComputedAt(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
 	var raw json.RawMessage

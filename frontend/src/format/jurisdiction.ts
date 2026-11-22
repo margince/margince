@@ -1,27 +1,18 @@
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { INTL_LOCALE } from "./format";
+import { displayNames } from "./formatters";
 
 // A jurisdiction pack is named by its ISO 3166-1 alpha-2 code. The reader sees
 // the country's own name in their language, from the platform's region table,
 // so no list of countries lives in this tree.
 
-const regionNames = new Map<Locale, Intl.DisplayNames>();
-
-function regionNamesFor(locale: Locale): Intl.DisplayNames {
-  const held = regionNames.get(locale);
-  if (held) {
-    return held;
-  }
-  const made = new Intl.DisplayNames(INTL_LOCALE[locale], { type: "region" });
-  regionNames.set(locale, made);
-  return made;
-}
-
 /** The country a pack code names, in the reader's language. */
 export function jurisdictionName(code: string, locale: Locale): string {
   try {
-    return regionNamesFor(locale).of(code.toUpperCase()) ?? code.toUpperCase();
+    return (
+      displayNames(locale, { type: "region" }).of(code.toUpperCase()) ??
+      code.toUpperCase()
+    );
   } catch {
     // A code the platform table does not know (a reserved one in a test
     // build) is still a code the reader can quote.

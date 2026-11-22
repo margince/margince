@@ -317,6 +317,16 @@ describe("ConnectFlow from the start", () => {
     expect(requests).toHaveLength(0);
   });
 
+  it("asks to tick Mail alone on the IMAP path, where Calendar cannot be ticked", async () => {
+    const user = userEvent.setup();
+    render();
+    await user.click(screen.getByRole("radio", { name: /^Another mail host/ }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("checkbox", { name: /^Mail/ }));
+    expect(screen.getByText("Tick Mail.")).toBeTruthy();
+    expect(screen.queryByText(/Calendar or both/)).toBeNull();
+  });
+
   it("goes back to the account with the pick kept", async () => {
     const user = userEvent.setup();
     render();

@@ -196,6 +196,7 @@ func caseOwners(c contactCase) []crmcontracts.ContactCaseOwner {
 			if m.OwnerLive && *m.OwnerID == owner {
 				entry.MemberIds = append(entry.MemberIds, openapi_types.UUID(m.ID))
 				entry.Seat = crmcontracts.ContactCaseOwnerSeat(m.OwnerSeat)
+				entry.Status = crmcontracts.ContactCaseOwnerStatus(m.OwnerStatus)
 				if m.OwnerName != nil {
 					entry.Name = *m.OwnerName
 				}

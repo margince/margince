@@ -5,43 +5,26 @@ import {
 } from "@tanstack/react-query";
 import { type ReactNode, useId, useMemo, useRef, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
-import type { components } from "../../api/schema";
-import {
-  Button,
-  EmptyState,
-  Field,
-  TextInput,
-} from "../../design-system/atoms";
+import { EmptyState } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import {
   ConfirmPhraseBox,
   phraseMatches,
 } from "../../design-system/confirmphrase";
-import { ErrorLine } from "../../design-system/errorline";
 import { FilterPills } from "../../design-system/filterpills";
-import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { PanelBody, PanelIntro } from "../../design-system/panel";
 import {
   LoadMoreButton,
   QueryGate,
   QueryStates,
 } from "../../design-system/querystates";
-import {
-  RecordPicker,
-  type RecordPickerCandidate,
-} from "../../design-system/recordpicker";
-import { Select } from "../../design-system/select";
 import { Stack } from "../../design-system/stack";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
-import { labelFor } from "../../lib/labelfor";
-import { isOption } from "../../lib/options";
 import {
   closingBody,
-  DSR_KIND_LABEL,
   DSR_STATUS_FACETS,
   DSR_STATUS_LABEL,
   type DsrClosing,
@@ -50,24 +33,10 @@ import {
   isLegalHold,
 } from "../../lib/privacy.logic";
 import { useLinkedCase } from "../../lib/privacycaselink";
-import {
-  ProblemError,
-  problemFieldErrorsOf,
-  problemMessageOf,
-  unwrap,
-} from "../../lib/problem";
+import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { useViewerZone } from "../../lib/viewerzone";
 import { dsrsKey } from "../../lib/workkeys";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
-import {
-  type DeadlineDraft,
-  DsrDeadlineFields,
-  deadlineBody,
-  EMPTY_DEADLINE,
-  earlierDueFault,
-  useRequestDeadline,
-} from "./privacy.deadline";
 import { ErasureRefusals } from "./privacy.notices";
 import {
   type DataSubjectRequest,
@@ -76,194 +45,8 @@ import {
 } from "./privacy.requests";
 import "./privacy.css";
 
-type CreateDataSubjectRequest =
-  components["schemas"]["CreateDataSubjectRequest"];
-type DsrKind = CreateDataSubjectRequest["kind"];
-type RequestDeadline = components["schemas"]["RequestDeadline"];
-
-const DSR_KINDS: readonly DsrKind[] = [
-  "access",
-  "rectify",
-  "erasure",
-  "restriction",
-];
-
-// The kinds whose fulfilment acts on one contact record, so they are opened
-// against a picked contact, each with the hint that says why.
-const CONTACT_KIND_HINT: Partial<Record<DsrKind, MessageKey>> = {
-  erasure: "privacy.erasureNeedsContact",
-  restriction: "privacy.restrictionNeedsContact",
-  access: "privacy.accessPicksContact",
-};
-
-async function searchContactCandidates(
-  q: string,
-): Promise<RecordPickerCandidate[]> {
-  const data = unwrap(
-    await api.GET("/contacts", {
-      params: { query: { q, limit: 10 } },
-    }),
-  );
-  return data.data.map((contact) => ({
-    id: contact.id,
-    name: contact.full_name,
-  }));
-}
-
-type DsrDraft = Readonly<{
-  kind: DsrKind;
-  subjectRef: string;
-  contact: RecordPickerCandidate | null;
-  deadline: DeadlineDraft;
-}>;
-
-const EMPTY_DSR: DsrDraft = {
-  kind: "access",
-  subjectRef: "",
-  contact: null,
-  deadline: EMPTY_DEADLINE,
-};
-
-// Kind flips the subject field: a contact kind locks onto a picked contact.
-export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [draft, setDraft] = useState<DsrDraft>(EMPTY_DSR);
-  const formId = useId();
-  // Minted in the operator's zone, the one the row renders it back in. A bare
-  // `new Date(day)` reads the day as UTC midnight and rolls it back west of UTC.
-  const tz = useViewerZone();
-
-  const deadline = useRequestDeadline(draft.kind, draft.deadline, tz);
-
-  const create = useMutation({
-    mutationFn: async ({
-      request,
-      computed,
-    }: {
-      request: DsrDraft;
-      computed: RequestDeadline;
-    }) => {
-      const body: CreateDataSubjectRequest = {
-        kind: request.kind,
-        subject_ref: request.subjectRef.trim(),
-        ...deadlineBody(request.deadline, computed, tz),
-      };
-      return unwrap(
-        await api.POST("/data-subject-requests", {
-          body,
-        }),
-      );
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: dsrsKey });
-      setDraft(EMPTY_DSR);
-      onDone();
-    },
-  });
-
-  function edit(next: Partial<DsrDraft>) {
-    setDraft((was) => ({ ...was, ...next }));
-    if (create.isError) {
-      create.reset();
-    }
-  }
-
-  const dueRefused = problemFieldErrorsOf(create.error).some(
-    (problem) => problem.field === "due_at",
-  );
-  const computed = deadline.data;
-  const contactHint = CONTACT_KIND_HINT[draft.kind];
-  const ready =
-    draft.subjectRef.trim() !== "" &&
-    computed !== undefined &&
-    earlierDueFault(draft.deadline, computed, tz) === undefined;
-  return (
-    <>
-      <form
-        id={formId}
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (
-            ready &&
-            !create.isPending &&
-            !refuseUnreadableField(event.currentTarget)
-          )
-            create.mutate({ request: draft, computed });
-        }}
-      >
-        <Field label={t("privacy.kind")}>
-          {(control) => (
-            <Select
-              {...control}
-              options={DSR_KINDS.map((value) => ({
-                value,
-                label: t(labelFor(DSR_KIND_LABEL, value)),
-              }))}
-              value={draft.kind}
-              onChange={(value) => {
-                // Neither subject shape carries across: a stale value of the
-                // other shape would ride into the request unnoticed.
-                if (isOption(value, DSR_KINDS)) {
-                  edit({ kind: value, subjectRef: "", contact: null });
-                }
-              }}
-            />
-          )}
-        </Field>
-
-        {contactHint ? (
-          <Field label={t("privacy.contact")} hint={t(contactHint)}>
-            {(control) => (
-              <RecordPicker
-                id={control.id}
-                aria-describedby={control["aria-describedby"]}
-                searchTargets={searchContactCandidates}
-                selected={draft.contact}
-                onPick={(candidate) =>
-                  edit({ contact: candidate, subjectRef: candidate.id })
-                }
-              />
-            )}
-          </Field>
-        ) : (
-          <Field label={t("privacy.subjectRef")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={draft.subjectRef}
-                onChange={(event) => edit({ subjectRef: event.target.value })}
-              />
-            )}
-          </Field>
-        )}
-
-        <DsrDeadlineFields
-          draft={draft.deadline}
-          query={deadline}
-          refused={dueRefused}
-          zone={tz}
-          onChange={(next) =>
-            edit({ deadline: { ...draft.deadline, ...next } })
-          }
-        />
-
-        {!dueRefused && <ErrorLine error={create.error} />}
-      </form>
-      <div className="actions">
-        <Button
-          type="submit"
-          form={formId}
-          variant="primary"
-          disabled={!ready || create.isPending}
-        >
-          {t("privacy.openRequest")}
-        </Button>
-      </div>
-    </>
-  );
-}
+// The settings screen reaches the privacy feature through this file alone.
+export { NewDsrForm } from "./privacy.newrequest";
 
 // The word that fulfils an erasure. It stays English in every locale.
 const ERASE_PHRASE = "ERASE";

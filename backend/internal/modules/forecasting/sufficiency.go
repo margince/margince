@@ -88,6 +88,9 @@ type Sufficiency struct {
 	// ratio without this package choosing a rounding for them. Zero needed is
 	// full coverage rather than a division by zero.
 	CoverageBp int64
+	// ComparableUnpriced is, for a historical median, the won deals each of
+	// its comparable periods leaves out. Empty for any other basis.
+	ComparableUnpriced []int
 }
 
 // ConversionHistory is what the sufficiency read needs from outside itself.
@@ -104,6 +107,9 @@ type ConversionHistory struct {
 	// ComparableWon is the actual Won of completed comparable periods, newest
 	// first. Four are needed for a median.
 	ComparableWon []int64
+	// ComparableUnpriced is, per period of ComparableWon, how many won deals
+	// its total leaves out for want of an amount or an exchange rate.
+	ComparableUnpriced []int
 }
 
 // AssessSufficiency answers whether the open pipeline supports the reference.
@@ -155,6 +161,9 @@ func AssessSufficiency(
 		RemainingToSupportMinor: remaining,
 		NeededOpenMinor:         needed,
 		CurrentOpenMinor:        readings.OpenMinor,
+	}
+	if basis == BasisHistoricalMedian {
+		out.ComparableUnpriced = history.ComparableUnpriced[:min(len(history.ComparableUnpriced), comparablePeriods)]
 	}
 	if needed == 0 {
 		// Nothing needed is covered, whatever is open. Reported as full rather

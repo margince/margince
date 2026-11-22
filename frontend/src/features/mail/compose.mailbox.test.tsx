@@ -66,6 +66,18 @@ function stubRoutes(
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       const override = overrides[key];
       if (override) return override();
+      if (key === "GET /connectors") {
+        return jsonResponse({
+          data: [
+            {
+              id: "conn-1",
+              provider: "gmail",
+              status: "connected",
+              scopes: [],
+            },
+          ],
+        });
+      }
       return jsonResponse({});
     }),
   );

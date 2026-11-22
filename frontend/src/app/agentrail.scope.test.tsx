@@ -22,9 +22,9 @@ import { AgentRail } from "./agentrail";
 // the guarantee true and unstated. Nothing went red, which is why it stayed
 // gone. These assertions are the thing that goes red.
 //
-// The AC proper lives in `frontend/e2e/ac.spec.ts` beside the other shell ACs,
-// over the shipped surface. This is its fast half: it runs on every PR, where
-// the e2e lane does not, so the deletion is caught in the diff that makes it.
+// The AC proper lives in `frontend/e2e/ac.spec.ts`, over the shipped surface.
+// This is its fast half. It runs on every PR, where the e2e lane does not, so
+// the deletion is caught in the diff that makes it.
 //
 // They live apart from agentrail.test.tsx because that file is at the size a
 // test file may grow to.

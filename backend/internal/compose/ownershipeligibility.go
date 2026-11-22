@@ -25,13 +25,13 @@ import (
 var (
 	// errOfferGiverGone refuses an accept once the colleague who offered the
 	// record is suspended or departed, or may no longer change it.
-	errOfferGiverGone = &contacts.TransferRefusal{
+	errOfferGiverGone = &contacts.OwnerAskRefusal{
 		Code:    "owner_unavailable",
 		Message: "The colleague who offered this record can no longer hand it over. Decline the offer, or ask an administrator.",
 	}
 	// errReceiverUnavailable refuses an accept once the colleague receiving the
 	// record can no longer hold it.
-	errReceiverUnavailable = &contacts.TransferRefusal{
+	errReceiverUnavailable = &contacts.OwnerAskRefusal{
 		Code:    "receiver_unavailable",
 		Message: "The colleague receiving this record can no longer take it on: they must be an active colleague who may change records of this kind.",
 	}

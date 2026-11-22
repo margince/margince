@@ -32,6 +32,13 @@ import "./users-access.css";
 export type TeamUser = components["schemas"]["User"];
 type Team = components["schemas"]["Team"];
 
+/** A seat a team shows as a member: a human, active or invited. */
+export function isTeamSeat(user: TeamUser): boolean {
+  return (
+    !user.is_agent && (user.status === "active" || user.status === "invited")
+  );
+}
+
 /** The users of a team, off the roster's `team_ids`, in the reader's order. */
 export function membersOf(
   users: readonly TeamUser[],
@@ -39,7 +46,9 @@ export function membersOf(
   locale: Locale,
 ): TeamUser[] {
   return users
-    .filter((user) => (user.team_ids ?? []).includes(teamId))
+    .filter(
+      (user) => isTeamSeat(user) && (user.team_ids ?? []).includes(teamId),
+    )
     .sort((a, b) => forReader(a.display_name, b.display_name, locale));
 }
 
@@ -119,13 +128,10 @@ export function TeamMembersModal({
   // The rows shown, and the list the refocus below walks: a removal while a
   // search stands lands on the next row the reader can see.
   const members = matchingMembers(everyMember, search);
-  // SetTeamMember refuses an agent seat and a seat that is not active.
+  // SetTeamMember refuses an agent seat and a suspended or deactivated one.
   const candidates = users
     .filter(
-      (user) =>
-        !(user.team_ids ?? []).includes(team.id) &&
-        !user.is_agent &&
-        user.status === "active",
+      (user) => isTeamSeat(user) && !(user.team_ids ?? []).includes(team.id),
     )
     .sort((a, b) => forReader(a.display_name, b.display_name, locale));
 
@@ -223,7 +229,12 @@ export function TeamMembersModal({
                 />
                 <span className="users-team-member-name">
                   <span>{member.display_name}</span>
-                  <span className="t-caption">{member.email}</span>
+                  <span className="t-caption">
+                    {member.email}
+                    {member.status === "invited"
+                      ? ` · ${t("users.status.invited")}`
+                      : ""}
+                  </span>
                 </span>
                 {canEdit ? (
                   <IconAction

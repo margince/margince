@@ -266,6 +266,10 @@ func wireCoverage(
 		out.SectionsOmitted = append(out.SectionsOmitted,
 			crmcontracts.DealCoverageSectionsOmitted(section))
 	}
+	if len(c.SectionsOmitted) == 0 {
+		threshold := c.MaxEngagedSeats
+		out.MaxEngagedSeats = &threshold
+	}
 	for _, s := range c.Stakeholders {
 		seat := crmcontracts.DealCoverageSeat{
 			ContactId: openapi_types.UUID(s.ContactID), Role: s.Role, Engaged: s.Engaged,

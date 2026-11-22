@@ -64,13 +64,16 @@ func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, v
 	return err
 }
 
-func controlStatus(status, action string) (string, error) {
+func controlStatus(p Progress, action string) (string, error) {
+	status := p.Status
 	switch {
 	case action == "pause" && (status == Pending || status == Running):
 		return Paused, nil
 	case action == "resume" && status == Paused:
 		return Pending, nil
 	case action == "retry" && status == Failed:
+		return Pending, nil
+	case action == "retry" && status == Done && p.Action != nil && p.Activation == nil:
 		return Pending, nil
 	default:
 		return "", fmt.Errorf("refresh this correction before changing its state: %w", apperrors.ErrConflict)
@@ -123,15 +126,21 @@ func (e *Engine) refreshEstimate(ctx context.Context, tx pgx.Tx, task Task, step
 }
 
 func logControl(ctx context.Context, tx pgx.Tx, p Progress, action string) error {
-	_, err := storekit.LogSystem(ctx, tx, "data_task."+action,
-		map[string]any{paramTask: p.TaskID, paramStep: p.Step, "run_id": p.RunID, paramVersion: p.Version})
+	_, err := storekit.LogSystem(ctx, tx, "data_task."+action, controlPayload(p))
 	return err
 }
 
+func controlPayload(p Progress) map[string]any {
+	return map[string]any{paramTask: p.TaskID, paramStep: p.Step, "run_id": p.RunID, paramVersion: p.Version}
+}
+
 func (e *Engine) changeStatus(ctx context.Context, tx pgx.Tx, p Progress, action string) error {
-	status, err := controlStatus(p.Status, action)
+	status, err := controlStatus(p, action)
 	if err != nil {
 		return err
+	}
+	if p.Status == Done {
+		return e.rerunStep(ctx, tx, p, action)
 	}
 	failures := p.ConsecutiveFailures
 	if action == "retry" {
@@ -150,6 +159,30 @@ func (e *Engine) changeStatus(ctx context.Context, tx pgx.Tx, p Progress, action
 		return apperrors.ErrConflict
 	}
 	return logControl(ctx, tx, p, action)
+}
+
+// rerunStep starts a step that finished with action needed over from its first
+// row, under the same run ID. A step must replay safely from a nil cursor, so
+// handled records stay handled and only the open action is tried again.
+func (e *Engine) rerunStep(ctx context.Context, tx pgx.Tx, p Progress, action string) error {
+	tag, err := tx.Exec(ctx, `UPDATE data_task_run SET status = 'pending', cursor = NULL,
+ scanned = 0, changed = 0, batches = 0, estimate = NULL, estimate_capped = false, estimated_at = NULL,
+ consecutive_failures = 0, last_error_class = NULL, next_attempt_at = NULL, action_needed = NULL,
+ updated_at = @now, version = version + 1
+ WHERE task_id = @task AND step = @step AND version = @version`,
+		pgx.NamedArgs{paramNow: e.now(), paramTask: p.TaskID, paramStep: p.Step, paramVersion: p.Version})
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return apperrors.ErrConflict
+	}
+	// The rerun zeroes the first pass's counts, so its audit entry keeps them.
+	payload := controlPayload(p)
+	payload["scanned"], payload["changed"] = p.Scanned, p.Changed
+	payload["action_reason"], payload["action_count"] = p.Action.Reason, p.Action.Count
+	_, err = storekit.LogSystem(ctx, tx, "data_task."+action, payload)
+	return err
 }
 
 func (e *Engine) estimateStep(ctx context.Context, tx pgx.Tx, task Task, step Step, p Progress) (int64, bool, error) {

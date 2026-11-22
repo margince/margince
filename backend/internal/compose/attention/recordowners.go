@@ -5,6 +5,7 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -37,20 +38,52 @@ func (s *Service) recordOwners(ctx context.Context) (*storekit.OwnerSet, error) 
 	return &storekit.OwnerSet{IDs: append(slices.Clone(s.noticeOwners), former...), Unassigned: true}, nil
 }
 
-// Duplicate pairs and tag suggestions name no decider. Their rows belong to
-// Unassigned and team views.
+// Tag suggestions name no decider. Their rows belong to Unassigned and team
+// views.
 func (s *Service) unassignedDecisions() bool {
 	return s.taskScope != TasksMine && s.taskScope != TasksOwnedBy
 }
 
+// pairOwners narrows the duplicate pairs to the ones a personal or Unassigned
+// page is for. A pair is unassigned only when neither record has an owner.
+// The team view stays unrestricted.
+func (s *Service) pairOwners(ctx context.Context) (*storekit.OwnerSet, error) {
+	if s.taskScope == TasksMine || s.taskScope == TasksOwnedBy || s.taskScope == TasksUnassigned {
+		return s.recordOwners(ctx)
+	}
+	//nolint:nilnil // An absent owner set keeps the team view unrestricted.
+	return nil, nil
+}
+
+// pairRecipient is the owner a pair's card is raised for, by the rule a
+// contact case follows. A pair nobody owns names nobody.
+func (s *Service) pairRecipient(ctx context.Context, pair DuplicatePair) *ids.UUID {
+	q, err := s.caseQuery(ctx, 0)
+	if err != nil {
+		return nil
+	}
+	return s.caseRecipient(q, ContactCase{Owners: pair.Owners}, readerOf(ctx))
+}
+
 func (s *Service) duplicateCandidates(ctx context.Context, depth int) ([]DuplicatePair, int, error) {
-	if !s.unassignedDecisions() {
+	owners, err := s.pairOwners(ctx)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		// A personal page with no human behind it has no pair of its own.
 		return nil, 0, nil
 	}
-	pairs, err := s.duplicates.OpenCandidates(ctx, depth)
 	if err != nil {
 		return nil, 0, err
 	}
-	count, err := s.duplicates.CountOpen(ctx)
+	pairs, err := s.duplicates.OpenCandidates(ctx, depth, owners)
+	if errors.Is(err, apperrors.ErrPermissionDenied) && !s.unassignedDecisions() {
+		// A personal page holds pairs only for a reader who may read them. A
+		// reader without that grant keeps the rest of the decisions lane; the
+		// team and Unassigned views still name the whole lane as withheld.
+		return nil, 0, nil
+	}
+	if err != nil {
+		return nil, 0, err
+	}
+	count, err := s.duplicates.CountOpen(ctx, owners)
 	return pairs, count, err
 }

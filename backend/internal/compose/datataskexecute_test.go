@@ -18,6 +18,7 @@ import (
 func TestTheVerdictNamesEveryStepThatDidNotFinish(t *testing.T) {
 	verdict := DataTaskVerdictOf(DataTaskRun{Progress: []datatask.Progress{
 		{TaskID: "core/1_done", Step: "a", Status: datatask.Done, Scanned: 3, TaskVersion: 1},
+		{TaskID: "core/1_done", Step: "b", Status: datatask.Done, Scanned: 2, TaskVersion: 1, Action: &datatask.ActionNeeded{Reason: "privacy_reviewer_missing", Count: 2}},
 		{TaskID: "core/2_empty", Step: "a", Status: datatask.Done, TaskVersion: 1},
 		{TaskID: "core/3_review", Step: "a", Status: datatask.Pending, BlockedReason: datatask.ReviewRequired, TaskVersion: 1},
 		{TaskID: "core/4_failed", Step: "a", Status: datatask.Failed, BlockedReason: "earlier_step", TaskVersion: 1},
@@ -25,8 +26,8 @@ func TestTheVerdictNamesEveryStepThatDidNotFinish(t *testing.T) {
 		{TaskID: "core/6_pending", Step: "a", Status: datatask.Pending, TaskVersion: 1},
 		{TaskID: "core/7_stale", Step: "a", Status: datatask.Done, Scanned: 5, TaskVersion: 1},
 	}, Required: map[string]int{"core/6_pending": 2, "core/7_stale": 2}, LeftInScope: map[string]int64{"core/1_done/a": 4}})
-	if verdict.Finished || verdict.Done != 2 {
-		t.Errorf("verdict = %+v, want two done and not finished", verdict)
+	if verdict.Finished || verdict.Done != 3 || len(verdict.NeedsAction) != 1 || verdict.NeedsAction["core/1_done/b"] != 2 {
+		t.Errorf("verdict = %+v, want three done, one needing action, and not finished", verdict)
 	}
 	for name, c := range map[string]struct{ got, want []string }{
 		"nothing inspected": {verdict.NothingInspected, []string{"core/2_empty/a"}},

@@ -13,7 +13,7 @@ import {
 } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { WriteRefused } from "../design-system/querystates";
-import { INTL_LOCALE } from "../format/intllocale";
+import { listFormat } from "../format/formatters";
 import { useLocale, useT } from "../i18n";
 import { usePassports } from "../lib/passports.queries";
 import { unwrap } from "../lib/problem";
@@ -112,7 +112,7 @@ export function PassportAreasDrawer({
   const change = areasChange(subject.areas, draft, reachable);
   const refused = sampleRefusedArea(change, draft, reachable);
   const names = (areas: readonly WorkArea[]) =>
-    new Intl.ListFormat(INTL_LOCALE[locale], {
+    listFormat(locale, {
       style: "long",
       type: "conjunction",
     }).format(areas.map((area) => workAreaName(t, area)));

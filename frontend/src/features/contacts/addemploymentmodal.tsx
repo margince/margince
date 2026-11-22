@@ -12,16 +12,21 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
+import { useFieldFaults } from "../../design-system/savepage";
 import { stable } from "../../format/collate";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { stillHeld, useEmploymentZone } from "../../lib/employmentcurrency";
+import { fieldCheckSentence } from "../../lib/problem";
 import {
   type Employment,
   type EmploymentActions,
   searchCompanyCandidates,
 } from "./contactemployers";
-import { datePatch, validDateEntry } from "./employmentpatch";
-import { EmploymentStatusFields } from "./employmentstatusfields";
+import { datePatch } from "./employmentpatch";
+import {
+  EmploymentStatusFields,
+  employmentDateFaults,
+} from "./employmentstatusfields";
 import "../../design-system/querystates.css";
 
 // The "add a company" modal. It picks the company with RecordPicker (the shared
@@ -60,7 +65,9 @@ export function AddEmploymentModal({
   onLinked?: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const headingId = useId();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [company, setCompany] = useState<RecordPickerCandidate | null>(
     initialCompany,
   );
@@ -132,6 +139,7 @@ export function AddEmploymentModal({
     setStatus("current");
     setEnd("");
     setAllConnected(false);
+    faults.show(new Map());
     create.reset();
     onClose();
   }
@@ -141,16 +149,24 @@ export function AddEmploymentModal({
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("contact.rail.addEmployment")}
       </Heading>
-      <div className="form-stack">
-        <Field label={t("contact.rail.employer")}>
+      <div className="form-stack" ref={faultsRoot}>
+        <Field
+          label={t("contact.rail.employer")}
+          required
+          error={faults.of("company")}
+        >
           {(control) => (
             <>
               <RecordPicker
                 id={control.id}
                 aria-describedby={control["aria-describedby"]}
+                aria-invalid={control["aria-invalid"]}
                 searchTargets={searchTargets}
                 selected={company}
-                onPick={setCompany}
+                onPick={(next) => {
+                  setCompany(next);
+                  faults.edited("company");
+                }}
                 initialTerm={initialTerm}
                 disabled={create.isPending}
               />
@@ -170,13 +186,20 @@ export function AddEmploymentModal({
             />
           )}
         </Field>
-        <Field label={t("employment.start")} hint={t("employment.dateHint")}>
+        <Field
+          label={t("employment.start")}
+          hint={t("employment.dateHint")}
+          error={faults.of("start")}
+        >
           {(control) => (
             <TextInput
               {...control}
               value={start}
               disabled={create.isPending}
-              onChange={(event) => setStart(event.target.value)}
+              onChange={(event) => {
+                setStart(event.target.value);
+                faults.edited("start");
+              }}
             />
           )}
         </Field>
@@ -210,7 +233,11 @@ export function AddEmploymentModal({
             }
           }}
           end={end}
-          onEndChange={setEnd}
+          onEndChange={(next) => {
+            setEnd(next);
+            faults.edited("end");
+          }}
+          endError={faults.of("end")}
           disabled={create.isPending}
         />
         <Checkbox
@@ -227,10 +254,20 @@ export function AddEmploymentModal({
         </Button>
         <Button
           variant="primary"
-          disabled={!company || !validDateEntry(start) || !validDateEntry(end)}
           pending={create.isPending}
           onClick={async () => {
+            const found = employmentDateFaults(locale, t, { start, end });
             if (!company) {
+              found.set(
+                "company",
+                fieldCheckSentence(
+                  "required",
+                  locale,
+                  t("contact.rail.employer"),
+                ),
+              );
+            }
+            if (faults.show(found) || !company) {
               return;
             }
             const started = datePatch(start),

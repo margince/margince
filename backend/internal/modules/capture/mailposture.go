@@ -184,7 +184,10 @@ func replacePostureTx(ctx context.Context, tx pgx.Tx, match connectionMatch, pos
 		RETURNING (SELECT c.mail_posture
 		             FROM capture_connection c WHERE c.id = capture_connection.id)`,
 		args...).Scan(&before)
-	return before, err
+	if err != nil {
+		return before, err
+	}
+	return before, storekit.CaptureFactsChanged(ctx, tx)
 }
 
 // refuseSharedWithoutOptInTx is the workspace gate on `shared`.

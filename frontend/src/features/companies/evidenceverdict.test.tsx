@@ -149,7 +149,7 @@ describe("a human's verdict on a machine's claim", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Correct" }));
-    const input = screen.getByRole("textbox", { name: "Corrected value" });
+    const input = screen.getByRole("textbox", { name: /^Corrected value/ });
     await user.clear(input);
     await user.type(input, "Automotive");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -159,6 +159,28 @@ describe("a human's verdict on a machine's claim", () => {
     expect(calls[0].path).toBe("/v1/companies/o-1/profile-fields/industry");
     expect(calls[0].body).toEqual({ value: "Automotive" });
     expect(calls[0].ifMatch).toBe("3");
+  });
+
+  it("says the corrected value is required when emptied, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const calls = recordCalls();
+    wrap(
+      <EvidenceVerdict
+        companyId={COMPANY}
+        anchor={false}
+        claim={profileFieldClaim(COMPANY, field)}
+        canEdit
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Correct" }));
+    const input = screen.getByRole("textbox", { name: /^Corrected value/ });
+    await user.clear(input);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(screen.getByText("Corrected value is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(input);
+    expect(calls).toHaveLength(0);
   });
 
   it("addresses a single-value fact by its bare-colon key", async () => {
@@ -217,7 +239,7 @@ describe("a human's verdict on a machine's claim", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Correct" }));
-    const input = screen.getByRole("textbox", { name: "Corrected value" });
+    const input = screen.getByRole("textbox", { name: /^Corrected value/ });
     await user.clear(input);
     await user.type(input, "+49 30 9999");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -335,7 +357,7 @@ describe("a human's verdict on a machine's claim", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Correct" }));
-    const input = screen.getByRole("textbox", { name: "Corrected value" });
+    const input = screen.getByRole("textbox", { name: /^Corrected value/ });
     await user.clear(input);
     await user.type(input, "Automotive");
     await user.click(screen.getByRole("button", { name: "Save" }));

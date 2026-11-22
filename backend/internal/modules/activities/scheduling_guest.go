@@ -114,7 +114,7 @@ func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, p
 // reservePublicInvitation reserves the booked slot for the contact, or for the
 // lead the intent names, and writes the refusal when it cannot.
 func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, booking invitationIntent, marketing MarketingOutcome, length *int) (crmcontracts.MeetingInvitation, bool) {
-	profile, ok := h.openBookingPage(w, r, page)
+	profile, team, ok := h.openBookingPage(w, r, page)
 	if !ok {
 		return crmcontracts.MeetingInvitation{}, false
 	}
@@ -133,6 +133,7 @@ func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request
 	if booking.Public != nil {
 		booking.Public.Marketing = marketing
 	}
+	booking.Team = team
 	out, err := h.store.reserveAndQueueInvitation(r.Context(), page.HostUserID, in, booking)
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -154,22 +155,24 @@ func writePublicInvitation(w http.ResponseWriter, out crmcontracts.MeetingInvita
 // openBookingPage reads the profile of a page that takes bookings now. A
 // paused page answers as an unknown slug does. The slug is the capability,
 // and a paused one must not confirm that it exists.
-func (h Handlers) openBookingPage(w http.ResponseWriter, r *http.Request, page BookingPage) (crmcontracts.SchedulingProfile, bool) {
+func (h Handlers) openBookingPage(w http.ResponseWriter, r *http.Request, page BookingPage) (crmcontracts.SchedulingProfile, []teamCalendar, bool) {
 	profile, open := h.store.openForBooking(r.Context(), page)
 	if open.err != nil {
 		writeStoreErr(w, r, open.err)
-		return profile, false
+		return profile, nil, false
 	}
 	if open.paused {
 		httperr.Write(w, r, apperrors.ErrNotFound)
-		return profile, false
+		return profile, nil, false
 	}
-	return profile, true
+	return profile, open.team, true
 }
 
-// pageOpenness is whether a page takes bookings, or why that is unknown.
+// pageOpenness is whether a page takes bookings, or why that is unknown. An
+// open page carries the team it was opened with.
 type pageOpenness struct {
 	paused bool
+	team   []teamCalendar
 	err    error
 }
 
@@ -178,6 +181,6 @@ func (s *Store) openForBooking(ctx context.Context, page BookingPage) (crmcontra
 	if err != nil {
 		return profile, pageOpenness{err: err}
 	}
-	paused, err := s.pagePaused(ctx, page.HostUserID, profile)
-	return profile, pageOpenness{paused: paused, err: err}
+	paused, team, err := s.pagePaused(ctx, page.HostUserID, profile)
+	return profile, pageOpenness{paused: paused, team: team, err: err}
 }

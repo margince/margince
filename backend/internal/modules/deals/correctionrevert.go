@@ -92,15 +92,12 @@ func (s *Store) RevertCorrectionConfirmed(
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	// Resolved before the transaction opens: the catalog reads through its own
-	// connection, and a second connection inside a transaction can deadlock
-	// undetectably against a lock that transaction holds.
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return crmcontracts.Deal{}, err
-	}
 	var out crmcontracts.Deal
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		correction, err := s.revertCorrectionTx(ctx, tx, correctionID, ifVersion, evidence, active, archiveConfirmedFor)
 		if err != nil {
 			return err

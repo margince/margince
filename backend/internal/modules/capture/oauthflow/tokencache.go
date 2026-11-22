@@ -20,7 +20,8 @@ const refreshHeadway = 5 * time.Minute
 // runs outside the lock, so one slow token endpoint never holds up another
 // credential's sync; two callers on one cold key may both mint.
 type TokenCache struct {
-	now func() time.Time
+	now   func() time.Time
+	limit int
 
 	mu     sync.Mutex
 	tokens map[string]cachedToken
@@ -31,9 +32,11 @@ type cachedToken struct {
 	replaceAt   time.Time
 }
 
-// NewTokenCache builds a cache that reads the time from now.
-func NewTokenCache(now func() time.Time) *TokenCache {
-	return &TokenCache{now: now, tokens: map[string]cachedToken{}}
+// NewTokenCache builds a cache that reads the time from now and holds at most
+// limit tokens. Past it the token due soonest is dropped, which costs that
+// credential one extra mint and nothing else.
+func NewTokenCache(now func() time.Time, limit int) *TokenCache {
+	return &TokenCache{now: now, limit: max(limit, 1), tokens: map[string]cachedToken{}}
 }
 
 // CacheKey derives a key from the parts that decide which token a grant
@@ -43,37 +46,57 @@ func CacheKey(parts ...string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// maxCachedTokens bounds the cache. Past it the token due soonest is dropped,
-// which costs that credential one extra mint and nothing else.
-const maxCachedTokens = 128
+// SharedTokenLimit bounds a cache of shared-mailbox app tokens.
+const SharedTokenLimit = 128
 
 // Token returns the cached token for key, or mints, keeps and returns a new
 // one. A token with no stated lifetime is used once and not kept.
 func (c *TokenCache) Token(ctx context.Context, key string, mint func(context.Context) (MintedToken, error)) (string, error) {
-	now := c.now()
-	c.mu.Lock()
-	c.dropExpired(now)
-	cached, ok := c.tokens[key]
-	c.mu.Unlock()
-	if ok {
-		return cached.accessToken, nil
+	if cached, ok := c.lookup(key); ok {
+		return cached.AccessToken, nil
 	}
 	minted, err := mint(ctx)
 	if err != nil {
 		return "", err
 	}
-	if minted.ExpiresIn > 0 {
-		c.keep(key, cachedToken{accessToken: minted.AccessToken, replaceAt: now.Add(replaceAfter(minted.ExpiresIn))})
-	}
+	c.keep(key, minted)
 	return minted.AccessToken, nil
 }
 
-// keep stores one token, evicting the one due soonest when the cache is full.
-func (c *TokenCache) keep(key string, token cachedToken) {
+// lookup returns the token kept for key and the time left before it is due
+// for replacement.
+func (c *TokenCache) lookup(key string) (MintedToken, bool) {
+	now := c.now()
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.dropExpired(c.now())
-	if _, replacing := c.tokens[key]; !replacing && len(c.tokens) >= maxCachedTokens {
+	c.dropExpired(now)
+	cached, ok := c.tokens[key]
+	if !ok {
+		return MintedToken{}, false
+	}
+	return MintedToken{AccessToken: cached.accessToken, ExpiresIn: cached.replaceAt.Sub(now)}, true
+}
+
+// Drop forgets the token kept for key, for a token the provider stopped
+// accepting before its stated lifetime ran out.
+func (c *TokenCache) Drop(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.tokens, key)
+}
+
+// keep stores one minted token, evicting the one due soonest when the cache is
+// full. A token with no stated lifetime is not kept.
+func (c *TokenCache) keep(key string, minted MintedToken) {
+	if minted.ExpiresIn <= 0 {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	now := c.now()
+	token := cachedToken{accessToken: minted.AccessToken, replaceAt: now.Add(replaceAfter(minted.ExpiresIn))}
+	c.dropExpired(now)
+	if _, replacing := c.tokens[key]; !replacing && len(c.tokens) >= c.limit {
 		soonest := ""
 		for k, t := range c.tokens {
 			if soonest == "" || t.replaceAt.Before(c.tokens[soonest].replaceAt) {

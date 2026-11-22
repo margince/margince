@@ -46,8 +46,7 @@ func NewPartnerActivation(pool *pgxpool.Pool, partners *contacts.Store, log *slo
 // HandleEvent routes one envelope. Anything but a sourced win answers nil, so
 // the group keeps flowing past the rest of the deal stream.
 func (a *PartnerActivation) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.ID == ids.Nil || env.Entity.Type != commissionEntityDeal ||
-		env.Type != deals.EventDealStageChanged {
+	if !events.PartnerActivationTypes.Has(env.Type) || env.Entity.ID == ids.Nil || env.Entity.Type != commissionEntityDeal {
 		return nil
 	}
 	moved, err := deals.DecodeStageChanged(env.Payload)

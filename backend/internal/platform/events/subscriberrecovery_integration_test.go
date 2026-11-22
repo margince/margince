@@ -26,7 +26,7 @@ import (
 
 func TestSubscriberSurvivesItsGroupBeingPurged(t *testing.T) {
 	ctx, rdb := purgeTestRedis(t)
-	group := kevents.Groups()[0]
+	group := probeGroup(t)
 
 	delivered := make(chan kevents.Envelope, 1)
 	sub := NewSubscriber(rdb, group, func(_ context.Context, env kevents.Envelope) error {
@@ -75,6 +75,19 @@ func TestSubscriberSurvivesItsGroupBeingPurged(t *testing.T) {
 // publishProbe XAdds one valid, decodable envelope straight onto a stream —
 // bypassing the outbox and relay so the probe exercises only the
 // subscriber's own read loop, not everything upstream of it.
+// probeGroup is a catalog group that takes every type, so a probe reaches its
+// handler.
+func probeGroup(t *testing.T) kevents.Group {
+	t.Helper()
+	for _, group := range kevents.Groups() {
+		if !group.Types.Declared() {
+			return group
+		}
+	}
+	t.Fatal("every catalog group declares its types; no group takes the probe")
+	return kevents.Group{}
+}
+
 func publishProbe(ctx context.Context, t *testing.T, rdb *redis.Client, stream string) {
 	t.Helper()
 	const probeType = "activity.captured"

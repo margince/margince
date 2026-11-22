@@ -18,7 +18,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -118,7 +117,7 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 		in.Timeline = append(in.Timeline, actIn(a, f.now, f.loc))
 	}
 	for _, t := range f.openTasks {
-		in.OpenTasks = append(in.OpenTasks, taskIn(t, f.now))
+		in.OpenTasks = append(in.OpenTasks, taskIn(t))
 	}
 	in.Room = roomIn(f)
 	if inbound, ok := unansweredInbound(f); ok {
@@ -194,16 +193,16 @@ func withheld(a crmcontracts.Activity) bool {
 	return a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld
 }
 
-func taskIn(t activities.OpenTask, now time.Time) TaskIn {
+func taskIn(t activities.OpenTask) TaskIn {
 	out := TaskIn{ID: t.ID.String(), Subject: t.Subject, State: TaskStateOpen}
 	if t.DueAt != nil {
 		out.Due = t.DueAt.Format("2006-01-02")
+		if t.DueIntent != nil && !t.DueHasTime && len(t.DueIntent.WallClock) >= len(time.DateOnly) {
+			out.Due = t.DueIntent.WallClock[:len(time.DateOnly)]
+		}
 	}
-	// deadline.Passed, not a comparison of our own: whether a promise due at
-	// this instant is already late is ONE decision, and the surfaces that
-	// answered it separately disagreed with each other in front of the same
-	// reader.
-	if deadline.Passed(t.DueAt, now) {
+	// Lateness comes from the open-task read, which holds the one rule for it.
+	if t.Overdue {
 		out.State = TaskStateOverdue
 	}
 	return out

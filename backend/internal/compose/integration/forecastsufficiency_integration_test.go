@@ -176,3 +176,32 @@ func TestAComparablePeriodTotalsOnlyWhatItWon(t *testing.T) {
 			history.ComparableWon[0])
 	}
 }
+
+// A won deal with no amount is counted as left out of its period. A period
+// where nothing converts has no total, not a total of zero.
+func TestAComparablePeriodNamesTheWonDealsItLeavesOutAndNeverReadsNothingAsZero(t *testing.T) {
+	e := Setup(t)
+	st := seedForecastFXPipeline(t, e)
+	seedNoAmount := func(closedAt time.Time) {
+		e.WsExec(t, `INSERT INTO deal (id, name, expected_close_date, pipeline_id, stage_id, status, closed_at, source, captured_by)
+			VALUES ($1, 'No amount', $2, $3, $4, 'won', $5, 'manual', 'human:test')`,
+			ids.NewV7(), closedAt, st.pipeline, st.open, closedAt)
+	}
+	seedClosedDeal(t, e, st, "won", 5_000, time.Date(2025, 11, 10, 12, 0, 0, 0, time.UTC))
+	seedNoAmount(time.Date(2025, 11, 11, 12, 0, 0, 0, time.UTC))
+	seedNoAmount(time.Date(2025, 8, 11, 12, 0, 0, 0, time.UTC))
+
+	history := forecastHistory(t, e, midQuarter)
+
+	if len(history.ComparableWon) == 0 || history.ComparableWon[0] != 5_000 || history.ComparableUnpriced[0] != 1 {
+		t.Fatalf("newest period = %v with %v left out, want 5000 and one deal left out", history.ComparableWon, history.ComparableUnpriced)
+	}
+	for i, won := range history.ComparableWon[1:] {
+		if won == 0 && history.ComparableUnpriced[i+1] > 0 {
+			t.Errorf("a period whose only deal has no amount read as a total of zero: %v", history.ComparableWon)
+		}
+	}
+	if len(history.ComparableWon) != len(history.ComparableUnpriced) {
+		t.Errorf("totals %v and gaps %v are not one per period", history.ComparableWon, history.ComparableUnpriced)
+	}
+}

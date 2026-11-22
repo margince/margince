@@ -92,13 +92,33 @@ func refuseContactHolders(ctx context.Context, tx pgx.Tx, keys storekit.Identity
 	if err != nil {
 		return err
 	}
-	for _, contact := range holders.Contacts {
-		if workedFrom != nil && contact == *workedFrom {
-			continue
-		}
+	if contact, found := leadRivalContact(holders, workedFrom); found {
 		return contactHoldsRefusal(ctx, tx, holders, keys, contact)
 	}
 	return nil
+}
+
+// leadRivalContact is the first contact holding a key that a lead write gives
+// and the store refuses over. The contact the lead was worked from is no rival.
+func leadRivalContact(holders storekit.IdentityHolders, workedFrom *ids.ContactID) (ids.ContactID, bool) {
+	for _, contact := range holders.Contacts {
+		if workedFrom == nil || contact != *workedFrom {
+			return contact, true
+		}
+	}
+	return ids.ContactID{}, false
+}
+
+// LeadHasRivalContact reports whether an update of this stored lead would be
+// refused over a contact among holders, by the rule its writes use. An import
+// asks it to predict that refusal before it writes.
+func LeadHasRivalContact(ctx context.Context, tx pgx.Tx, lead ids.LeadID, holders storekit.IdentityHolders) (bool, error) {
+	workedFrom, err := workedFromContact(ctx, tx, lead)
+	if err != nil {
+		return false, err
+	}
+	_, found := leadRivalContact(holders, workedFrom)
+	return found, nil
 }
 
 // contactHoldsRefusal names the contact only to a caller who may read it, as

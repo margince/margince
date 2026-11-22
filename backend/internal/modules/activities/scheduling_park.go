@@ -53,6 +53,10 @@ func calendarAuthFailure(err error) bool {
 	if errors.Is(err, connector.ErrAuthRejected) {
 		return true
 	}
+	return isCalendarNotConnected(err)
+}
+
+func isCalendarNotConnected(err error) bool {
 	refusal, ok := errors.AsType[*SchedulingArgumentError](err)
 	return ok && *refusal == calendarNotConnected
 }

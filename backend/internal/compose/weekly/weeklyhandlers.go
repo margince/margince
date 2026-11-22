@@ -11,6 +11,7 @@ package weekly
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -108,6 +109,7 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		LeadsWithheld:    &review.LeadsWithheld,
 		Counts:           countsToWire(review.Counts),
 		Pipeline:         pipelineToWire(review.Money),
+		PipelineCoverage: pipelineCoverageToWire(review.Money),
 		Deals:            deals,
 	}
 	if review.DailyActivity != nil {
@@ -272,6 +274,22 @@ func countsToWire(c Counts) crmcontracts.WeeklyReviewCounts {
 // Absent rather than a block of zeros when the week could not be converted: a
 // reader cannot tell a zero that means "nothing happened" from one that means
 // "we could not work it out", and only one of those is true.
+// pipelineCoverageToWire says which deals the week's money leaves out. Absent
+// for a review frozen before it said so: coverage not assessed.
+func pipelineCoverageToWire(money Money) *crmcontracts.ReportRowCoverage {
+	if !money.Assessed {
+		return nil
+	}
+	currencies := []string{}
+	if money.MissingCurrencies != "" {
+		currencies = strings.Split(money.MissingCurrencies, ",")
+	}
+	return &crmcontracts.ReportRowCoverage{
+		Aggregates: []string{"created_minor", "won_minor", "lost_minor"}, Partial: money.NoValueDeals+money.NoRateDeals > 0,
+		NoValueDeals: money.NoValueDeals, NoRateDeals: money.NoRateDeals, MissingCurrencies: currencies,
+	}
+}
+
 func pipelineToWire(money Money) *crmcontracts.WeeklyReviewPipeline {
 	if !money.Known {
 		return nil

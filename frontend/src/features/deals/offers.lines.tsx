@@ -92,7 +92,12 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
     queryClient.setQueryData(["offer", offer.id], updated);
   };
 
+  // One scope per offer: the line writes carry no version, so the server
+  // keeps whichever request lands last. Running them in send order keeps the
+  // newest draft the last write and each answer newer than the one before.
+  const lineWrites = { id: `offer-lines:${offer.id}` };
   const addMutation = useMutation({
+    scope: lineWrites,
     mutationFn: async (input: OfferLineItemInput) => {
       return unwrap(
         await api.POST("/offers/{id}/line-items", {
@@ -115,8 +120,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   // header-level Offer PATCH, a line item's own `version` is not a
   // precondition the API accepts, and the generated client refuses one.
   const updateMutation = useMutation({
-    // One at a time, so a line's later edit is the one the server keeps.
-    scope: { id: `offer-lines:${offer.id}` },
+    scope: lineWrites,
     mutationFn: async (variables: {
       lineItemId: string;
       patch: UpdateOfferLineItemRequest;
@@ -132,10 +136,9 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       applyOffer(data);
       refusals.settle(lineItemId);
     },
-    onError: (error, { lineItemId, patch }) => {
+    onError: (error, { lineItemId }) => {
       refusals.refuse(
         lineItemId,
-        Object.keys(patch),
         problemCodeOf(error) === "conflict"
           ? t("offer.positionTaken")
           : problemMessageOf(error, t, undefined, labels),
@@ -144,6 +147,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   });
 
   const removeMutation = useMutation({
+    scope: lineWrites,
     mutationFn: async (lineItemId: string) => {
       return unwrap(
         await api.DELETE("/offers/{id}/line-items/{lineItemId}", {
@@ -156,7 +160,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       refusals.settle(lineItemId);
     },
     onError: (error, lineItemId) => {
-      refusals.refuse(lineItemId, [], problemMessageOf(error, t));
+      refusals.refuse(lineItemId, problemMessageOf(error, t));
     },
   });
 
@@ -172,10 +176,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           offer={offer}
           refusals={refusals}
           onSave={(lineItemId, patch) =>
-            // A refusal is shown in its row by the mutation itself.
-            updateMutation
-              .mutateAsync({ lineItemId, patch })
-              .catch(() => undefined)
+            updateMutation.mutateAsync({ lineItemId, patch })
           }
           onRemove={(lineItemId) => removeMutation.mutate(lineItemId)}
           removing={removeMutation.isPending}

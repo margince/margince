@@ -103,10 +103,7 @@ func NewApprovalNotify(pool *pgxpool.Pool, db *database.DB, mail noticeMailQueue
 // HandleEvent announces one staged approval. Anything else answers nil so the
 // group keeps flowing rather than wedging on traffic this consumer ignores.
 func (a *ApprovalNotify) HandleEvent(ctx context.Context, env events.Envelope) error {
-	// The generated constant, not a hand-typed event name: a spelling that
-	// drifts from the contract makes this consumer silently never fire, and
-	// nothing fails when a consumer does nothing.
-	if env.Type != string(crmcontracts.ApprovalRequested) || env.Entity.ID == ids.Nil {
+	if !events.ApprovalNotifyTypes.Has(env.Type) || env.Entity.ID == ids.Nil {
 		return nil
 	}
 	var staged crmcontracts.PublicEventApprovalRequested

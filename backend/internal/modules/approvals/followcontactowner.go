@@ -5,9 +5,9 @@ package approvals
 
 // A pending request follows the owner of the record it names.
 //
-// contact_share, employer_change and ownership_transfer name the owner read
-// when they were staged. Once the record changes hands, or its owner leaves,
-// that member may no longer answer, so the request is withdrawn on the
+// contact_share, employer_change, ownership_transfer and edit_access name the
+// owner read when they were staged. Once the record changes hands, or its owner
+// leaves, that member may no longer answer, so the request is withdrawn on the
 // writer's transaction.
 // Withdrawn is not declined: the colleague may ask the new owner.
 
@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,14 +29,23 @@ const (
 	contactShareOwnerMoved   = "the contact changed owner; the previous owner may no longer share it"
 	contactShareOwnerLeft    = "the contact's owner left; their share requests go with them"
 	transferOwnerMoved       = "the record changed owner; the colleague it names no longer holds it"
+	editAccessOwnerMoved     = "the record changed owner; the colleague it was put to may no longer share it"
+	editAccessOwnerLeft      = "the record's owner left; the edit access requests put to them go with them"
 )
 
 // ownerPutKinds are the contact questions put to its owner, each with why an
 // owner change and an owner's departure withdraw it.
-var ownerPutKinds = []struct{ kind, moved, left string }{
+var ownerPutKinds = []ownerPut{
 	{approvalsubject.KindContactShare, contactShareOwnerMoved, contactShareOwnerLeft},
 	{approvalsubject.KindEmployerChange, employerChangeOwnerMoved, employerChangeOwnerLeft},
 }
+
+type ownerPut struct{ kind, moved, left string }
+
+// leavingOwnerKinds are the requests withdrawn when the member they were put to
+// leaves: the contact questions, and edit access on any record type.
+var leavingOwnerKinds = append(slices.Clone(ownerPutKinds),
+	ownerPut{approvalsubject.KindEditAccess, editAccessOwnerMoved, editAccessOwnerLeft})
 
 // FollowContactOwnerInTx withdraws every pending share request and employer
 // question on the contact that names an owner other than to. to is nil for a
@@ -55,11 +65,11 @@ func FollowContactOwnerInTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID, 
 	return total, nil
 }
 
-// WithdrawSharesDecidedByInTx withdraws every pending share request and
-// employer question put to member, for the handover of a member who left.
+// WithdrawSharesDecidedByInTx withdraws every pending share request, employer
+// question and edit access request put to member, for a member who left.
 func WithdrawSharesDecidedByInTx(ctx context.Context, tx pgx.Tx, member ids.UUID) (int, error) {
 	total := 0
-	for _, put := range ownerPutKinds {
+	for _, put := range leavingOwnerKinds {
 		withdrawn, err := withdrawPending(ctx, tx, put.kind, put.left, func(arg func(any) int) string {
 			return fmt.Sprintf(`proposed_change->>'owner_id' = $%d::text`, arg(member.String()))
 		})
@@ -85,6 +95,16 @@ func FollowTransferOwnerInTx(ctx context.Context, tx pgx.Tx, recordType string, 
 	return withdrawPending(ctx, tx, approvalsubject.KindOwnershipTransfer, transferOwnerMoved, func(arg func(any) int) string {
 		return fmt.Sprintf(`target_entity_type = $%d AND target_entity_id = $%d
 			AND proposed_change->>'from_id' IS DISTINCT FROM $%d::text`, arg(recordType), arg(recordID), arg(nullUUIDText(to)))
+	})
+}
+
+// FollowEditAccessOwnerInTx withdraws every pending edit access request on one
+// record that was put to an owner other than to, and answers which it
+// withdrew. to is nil for a record nobody owns.
+func FollowEditAccessOwnerInTx(ctx context.Context, tx pgx.Tx, recordType string, recordID ids.UUID, to *ids.UUID) ([]WithdrawnRequest, error) {
+	return withdrawPending(ctx, tx, approvalsubject.KindEditAccess, editAccessOwnerMoved, func(arg func(any) int) string {
+		return fmt.Sprintf(`target_entity_type = $%d AND target_entity_id = $%d
+			AND proposed_change->>'owner_id' IS DISTINCT FROM $%d::text`, arg(recordType), arg(recordID), arg(nullUUIDText(to)))
 	})
 }
 

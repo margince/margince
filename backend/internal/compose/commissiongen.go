@@ -71,8 +71,7 @@ func NewCommissionGen(pool *pgxpool.Pool, ledger *commissions.Store, partner *co
 // answers nil, so the group keeps flowing rather than wedging on somebody
 // else's traffic.
 func (g *CommissionGen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.ID == ids.Nil || env.Entity.Type != commissionEntityDeal ||
-		env.Type != deals.EventDealStageChanged {
+	if !events.CommissionsTypes.Has(env.Type) || env.Entity.ID == ids.Nil || env.Entity.Type != commissionEntityDeal {
 		return nil
 	}
 	moved, err := deals.DecodeStageChanged(env.Payload)

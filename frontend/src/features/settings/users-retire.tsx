@@ -102,11 +102,10 @@ export function RetireMember({
         [t("users.work.alerts"), preview.data?.signal_count ?? 0],
       ]
     : [];
-  const ready =
-    preview.isSuccess &&
-    !preview.isFetching &&
-    preview.data.blockers.length === 0 &&
-    (!merge || target !== "");
+  // A blocker is said in the callout at the top, so the hold is explained. A
+  // merge with no survivor picked is one: the preview names it.
+  const blocked = Boolean(preview.data?.blockers.length);
+  const settled = preview.isSuccess && !preview.isFetching && !blocked;
   return (
     <ConfirmModal
       open
@@ -117,10 +116,10 @@ export function RetireMember({
       confirmLabel={t(merge ? "users.merge" : "users.remove")}
       confirmVariant="danger"
       pending={retire.isPending}
-      confirmDisabled={!ready}
+      confirmDisabled={!settled}
       error={retire.error ? problemMessageOf(retire.error, t) : null}
       onConfirm={() => {
-        if (ready) retire.mutate({ target, token: preview.data.token });
+        if (settled) retire.mutate({ target, token: preview.data.token });
       }}
       returnFocusTo={() =>
         document.getElementById(memberAnchorId(member.id)) ??

@@ -45,13 +45,13 @@ func (s *Store) AdvanceProjectPhase(ctx context.Context, id ids.ProjectID, in Ad
 	if err := in.normalize(); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Project{}, err
-	}
 
 	var out crmcontracts.Project
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}

@@ -47,7 +47,7 @@ const metricDateHeading: Partial<
   lead_cohort_outcomes: "reporting.arrivedOn",
   account_progression: "reporting.arrivedOn",
   source_quality: "reporting.arrivedOn",
-  introductions_made: "reporting.introducedOn",
+  introductions_made: "reporting.introductionCountedOn",
   meetings_booked_for_colleagues: "reporting.bookedOn",
 };
 

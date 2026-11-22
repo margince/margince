@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Locale } from "../i18n";
-import { INTL_LOCALE } from "./intllocale";
+import { zonelessDateTimeFormat } from "./formatters";
 import type { TimeFormat } from "./preferences";
 
 /** A wall-clock time as the contract and a `time` field spell it: `HH:MM`. */
@@ -65,14 +65,14 @@ export function timePattern(locale: Locale, format: TimeFormat): TimePattern {
 
 function localeCycle(locale: Locale): string {
   return (
-    new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    zonelessDateTimeFormat(locale, {
       hour: "numeric",
     }).resolvedOptions().hourCycle ?? "h23"
   );
 }
 
 function clockFormat(locale: Locale, twelveHours: boolean) {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return zonelessDateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: twelveHours ? "h12" : "h23",

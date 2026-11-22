@@ -230,6 +230,28 @@ describe("ConsumerMailDomainsCard", () => {
       return user;
     }
 
+    it("says the domain is required on Add, and sends nothing", async () => {
+      const posts = addingWith(() => json({}, 201));
+      const user = userEvent.setup();
+      render(
+        <Providers>
+          <ConsumerMailDomainsCard />
+        </Providers>,
+      );
+      await waitFor(() => expect(screen.getByText("gmx.test")).toBeTruthy());
+      await user.click(addButton());
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: en["consumerMail.add"],
+        }),
+      );
+      expect(screen.getByText("Domain is required.")).toBeTruthy();
+      expect(document.activeElement).toBe(
+        screen.getByTestId("consumer-mail-domain-input"),
+      );
+      expect(posts).toHaveLength(0);
+    });
+
     it("names the company and resends with confirm once the user says yes", async () => {
       const posts = addingWith((body) =>
         typeof body === "object" && body !== null && "confirm" in body

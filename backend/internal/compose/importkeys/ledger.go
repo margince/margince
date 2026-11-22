@@ -7,7 +7,11 @@
 // the same verdict for every row.
 package importkeys
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
 
 // Kind is one unique key a record holds.
 type Kind int
@@ -40,21 +44,39 @@ func keyOf(object string, kind Kind, value string) Key {
 	return Key{Object: object, Kind: kind, Value: value}
 }
 
+// spellingsOf are the spellings the store reads as one key. An address has the
+// Unicode and punycode forms of its domain, which storekit.EmailLookups lists
+// for every lookup the store makes.
+func spellingsOf(kind Kind, value string) []string {
+	if kind == Email {
+		return storekit.EmailLookups(value)
+	}
+	return []string{value}
+}
+
 // Claim records a landing row's keys. An empty value holds nothing.
 func (l Ledger) Claim(object string, values map[Kind]string) {
 	for kind, value := range values {
-		if value != "" {
-			l[keyOf(object, kind, value)] = true
+		if value == "" {
+			continue
+		}
+		for _, spelling := range spellingsOf(kind, value) {
+			l[keyOf(object, kind, spelling)] = true
 		}
 	}
 }
 
 // Held reports whether an earlier row of one of these record types holds the
-// value as a key of this kind.
+// value as a key of this kind. Any spelling the store reads as that key counts.
 func (l Ledger) Held(kind Kind, value string, holders ...string) bool {
+	if value == "" {
+		return false
+	}
 	for _, holder := range holders {
-		if value != "" && l[keyOf(holder, kind, value)] {
-			return true
+		for _, spelling := range spellingsOf(kind, value) {
+			if l[keyOf(holder, kind, spelling)] {
+				return true
+			}
 		}
 	}
 	return false

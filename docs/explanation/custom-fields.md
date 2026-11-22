@@ -54,7 +54,8 @@ schema, and `backend/gates/frontendcustomfieldtypes_test.go` holds `CF_TYPES` ag
 in either direction.
 
 The admin never names the column. `label` is the only text a caller supplies. The engine derives the
-slug from it, and the column from the slug.
+slug from it, and the column from the slug. When a retired field already owns that column, the new
+field takes the next free `cf_<slug>_<n>` instead.
 
 To make the slug, it runs `strings.ToLower` and turns
 each run of signs other than `a-z` and `0-9` into one `_`. Then it caps the length at 40. That keeps `cf_<slug>_check` under the
@@ -105,7 +106,8 @@ Inside one transaction on that pool:
 
 1. Cap every lock wait (`SET LOCAL lock_timeout = '2s'`), and take an **advisory lock keyed on the
    target table** that lasts for the transaction.
-2. Check that the column name is free, then run the statement that needs the owner role: the
+2. Pick the column: `cf_<slug>`, or the first `cf_<slug>_<n>` that no catalog row of the object owns.
+   Check that it is free, then run the statement that needs the owner role: the
    `ALTER TABLE`.
 3. Write the catalog `INSERT` (or options `UPDATE`) and the audit row, still as the owner role.
 
@@ -132,16 +134,18 @@ Two points count for more than their size shows:
 
 The schema pool is **not wired by default**. Without `--schema-dsn`, create and options edit answer
 501. They declare the gap by leaving it out, instead of following a `nil` value at request time. That is the
-same rule as the blob store when it is not wired. Once wired, it also gets a `/readyz` check. A slug
-already used by another field, a retired one included, answers 409 with the fix (`choose another
-label`).
+same rule as the blob store when it is not wired. Once wired, it also gets a `/readyz` check. A label
+or slug held by another live field answers 409 with the fix (`choose another label`).
 
 ## Retire, never drop
 
 **Retire is a status change.** The column and every value in it are kept; the engine never runs a
 `DROP COLUMN`. The field leaves record payloads and the sort and filter words; the row can still be
-fetched; `archived_at` stays `null` (retire is not an archive). Because the column lives on, the slug
-stays in use: the catalog's `UNIQUE` indexes cover retired rows too. The admin list does not leave them
+fetched; `archived_at` stays `null` (retire is not an archive). Because the column lives on, its name stays in use: `uq_custom_field_column` covers retired rows.
+
+The slug and the label are free again, because `uq_custom_field_slug` covers live fields only.
+A new field can take a retired field's name and gets its own column. A screen that still shows the retired
+field reads "Label (retired)". The admin list does not leave them
 out by default, because it is the one surface that still shows a retired field.
 
 Retiring is **for good**: a retired field refuses rename and options edits with a 409. Retiring it again

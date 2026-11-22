@@ -22,6 +22,8 @@ const (
 	TaskCertJudge Task = "cert_judge"
 	// TaskChatSummary is read one closed stretch of a linked chat channel's talk (the episode site): a run of messages that ended in 30 minutes of quiet or at the end of the day. It is read again from the chat when it closes and never stored. The model answers whether the talk matters to the record and, when it does, a title of at most 120 characters, a summary of at most 800, the decisions and the open questions. A relevant answer is filed as one note on the deal or project, keyed on the channel and the episode's first message, so a replay files nothing. An irrelevant answer files nothing and the channel's cursor moves past it. With no lane the episode is passed over the same way, so a channel never waits for a model. no_payload because the prompt carries the team's own chat messages.
 	TaskChatSummary Task = "chat_summary"
+	// TaskChatTaskReading is read one chat screenshot a user just filed on a contact, lead or deal (the chat_tasks site) against at most ten open tasks on that record that the user holds and may change. Margince's own tasks, a task the user reopened after an automatic answer, and a task this chat already changed are not asked about. Per task the model answers done, new_date with a day after today and within a year, or none, quoting the one chat line the answer rests on. A change needs confidence 0.8 or more and a quote the chat holds; anything else is unsure and changes nothing. A change is written by the chat task reader on the user's behalf, with the chat and the quote as evidence, so Done for you shows it with Undo, and the same chat never changes that task again. With no lane the chat is filed and no task changes. no_payload because the prompt carries the customer's own chat messages.
+	TaskChatTaskReading Task = "chat_task_reading"
 	// TaskColdStart is Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074. The two company conversations think at low: they share one prompt whose gate decides whether a yes authorizes a change, and gemini-3.1-flash-lite at its own default proposed a change after a plain question in five of six runs and in no run at low, for about 0.3s more at p50. acts and field_extract measured clean without it, so they keep the binding's level.
 	TaskColdStart Task = "cold_start"
 	// TaskCorpusAsk is corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung.
@@ -98,6 +100,7 @@ var taskDisplayNames = map[Task]string{
 	TaskCaptureCounterpartyVerdict:    "First-time sender check",
 	TaskCertJudge:                     "Certification judging",
 	TaskChatSummary:                   "Chat channel summary",
+	TaskChatTaskReading:               "Chat and open tasks",
 	TaskColdStart:                     "Onboarding read",
 	TaskCorpusAsk:                     "Document corpus question",
 	TaskDealHealth:                    "Deal status card",
@@ -146,6 +149,7 @@ var taskSummaries = map[Task]string{
 	TaskCaptureCounterpartyVerdict:    "Decides who a first-time sender is — an individual, a company mailbox, a newsletter, spam — before a contact is created.",
 	TaskCertJudge:                     "Grades model answers when a model is certified for a task. Used only in testing.",
 	TaskChatSummary:                   "Reads one stretch of talk in a deal's or project's chat channel and writes a short note when it matters.",
+	TaskChatTaskReading:               "Reads a filed chat screenshot against the open tasks on its record and finishes or moves the task it settles.",
 	TaskColdStart:                     "Runs the onboarding conversation that sets up your company profile.",
 	TaskCorpusAsk:                     "Answers questions from the documents your company filed, citing where each answer comes from.",
 	TaskDealHealth:                    "Writes the deal page's status card: where the deal stands and what could lose it.",
@@ -206,7 +210,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "2dd168f018d8b89c4cb65ebb13596d751780af69969d3c79fd7532d3f9107ab3"
+const TaskContractHash = "de35de79b13bcff314c0e60bf88afb9c9ec94a4f7902985678f2185332258f72"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -221,6 +225,7 @@ func AllTasks() []Task {
 		TaskCaptureCounterpartyVerdict,
 		TaskCertJudge,
 		TaskChatSummary,
+		TaskChatTaskReading,
 		TaskColdStart,
 		TaskCorpusAsk,
 		TaskDealHealth,
@@ -265,6 +270,7 @@ var taskLadders = map[Task][]Tier{
 	TaskCaptureCounterpartyVerdict:    {TierLocalSmall},
 	TaskCertJudge:                     {TierPremium, TierCheapCloud},
 	TaskChatSummary:                   {TierCheapCloud, TierPremium},
+	TaskChatTaskReading:               {TierLocalSmall, TierCheapCloud},
 	TaskColdStart:                     {TierCheapCloud, TierPremium},
 	TaskCorpusAsk:                     {TierPremium},
 	TaskDealHealth:                    {TierCheapCloud, TierPremium},
@@ -318,6 +324,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskCaptureCounterpartyVerdict:    ExecutionModeBackground,
 	TaskCertJudge:                     ExecutionModeBackground,
 	TaskChatSummary:                   ExecutionModeBackground,
+	TaskChatTaskReading:               ExecutionModeInteractive,
 	TaskColdStart:                     ExecutionModeInteractive,
 	TaskCorpusAsk:                     ExecutionModeInteractive,
 	TaskDealHealth:                    ExecutionModeInteractive,
@@ -390,6 +397,7 @@ var taskStatus = map[Task]string{
 	TaskCaptureCounterpartyVerdict:    "shipped",
 	TaskCertJudge:                     "shipped",
 	TaskChatSummary:                   "shipped",
+	TaskChatTaskReading:               "shipped",
 	TaskColdStart:                     "shipped",
 	TaskCorpusAsk:                     "shipped",
 	TaskDealHealth:                    "shipped",
@@ -470,6 +478,9 @@ var taskSites = map[Task][]Site{
 	},
 	TaskChatSummary: {
 		{Name: "episode", Kind: "one_shot"},
+	},
+	TaskChatTaskReading: {
+		{Name: "chat_tasks", Kind: "one_shot"},
 	},
 	TaskColdStart: {
 		{Name: "company_message", Kind: "multi_turn", Thinking: "low"},
@@ -618,6 +629,7 @@ var noPayloadTasks = map[Task]bool{
 	TaskCaptureConfidentialityVerdict: true,
 	TaskCaptureCounterpartyVerdict:    true,
 	TaskChatSummary:                   true,
+	TaskChatTaskReading:               true,
 	TaskDealVerdict:                   true,
 	TaskDocumentExtract:               true,
 	TaskOwedVerdict:                   true,
@@ -655,6 +667,7 @@ var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
 	TaskCaptureCounterpartyVerdict:    {Posture: "honour", Reason: ""},
 	TaskCertJudge:                     {Posture: "none", Reason: "grades certification corpus answers, never live records"},
 	TaskChatSummary:                   {Posture: "honour", Reason: ""},
+	TaskChatTaskReading:               {Posture: "honour", Reason: ""},
 	TaskColdStart:                     {Posture: "none", Reason: "reads our own company's website and what the admin types about our company"},
 	TaskCorpusAsk:                     {Posture: "none", Reason: "reads the documents our company filed in its knowledge base, not contact records or mail"},
 	TaskDealHealth:                    {Posture: "honour", Reason: ""},
@@ -738,6 +751,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskCaptureCounterpartyVerdict:    {TokenBudget: 0, Conditional: false},
 	TaskCertJudge:                     {TokenBudget: 0, Conditional: false},
 	TaskChatSummary:                   {TokenBudget: 0, Conditional: false},
+	TaskChatTaskReading:               {TokenBudget: 0, Conditional: false},
 	TaskColdStart:                     {TokenBudget: 0, Conditional: false},
 	TaskCorpusAsk:                     {TokenBudget: 0, Conditional: false},
 	TaskDealHealth:                    {TokenBudget: 0, Conditional: false},

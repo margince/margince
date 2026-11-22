@@ -238,7 +238,7 @@ func overdueTasksBy(
 		          LEFT JOIN app_user u ON u.id = a.assignee_id
 		                 AND `+identity.LiveMemberSQL("u")+`
 		         WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
-		           AND `+storekit.TaskDueSQL("a")+` IS NOT NULL AND `+storekit.TaskDueSQL("a")+` < $%[4]d
+		           AND `+storekit.TaskDueBeforeSQL("a", "$%[4]d")+`
 		           AND %[6]s AND %[7]s OFFSET 0) t
 		 ORDER BY t.key, t.visible DESC, t.due, t.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,

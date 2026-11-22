@@ -193,6 +193,20 @@ describe("the two-step sign-in row", () => {
     expect(screen.queryByRole("button", { name: "Set up" })).toBeNull();
   });
 
+  it("says the code is required on removal, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const server = serve(ON);
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: "Remove" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: /remove/i }));
+
+    expect(dialog.getByText("Code is required.")).toBeInTheDocument();
+    expect(codeField()).toHaveFocus();
+    expect(server.sent).toEqual([]);
+  });
+
   it("removes the factor with a code the server checks, submitted with Enter", async () => {
     const user = userEvent.setup();
     const server = serve(ON, {

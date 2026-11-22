@@ -10,12 +10,15 @@ import {
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
 import { stillHeld, useEmploymentZone } from "../../lib/employmentcurrency";
-import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
+import { blankRequired } from "../../lib/problem";
+import { datePatch, patchEmployment } from "./employmentpatch";
 import {
   type EmploymentStatusChoice,
   EmploymentStatusFields,
+  employmentDateFaults,
 } from "./employmentstatusfields";
 import "../../design-system/querystates.css";
 
@@ -42,7 +45,9 @@ export function EmploymentEdit({
   onSaved: () => Promise<void>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const id = useId();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const employmentZone = useEmploymentZone();
   const [primary, setPrimary] = useState(employment.is_current_primary);
   const [role, setRole] = useState(employment.role ?? "");
@@ -80,13 +85,12 @@ export function EmploymentEdit({
       onClose();
     },
   });
-  const valid = validDateEntry(start) && validDateEntry(end);
   return (
     <Modal open={open} onClose={onClose} labelledBy={id} intent="form">
       <Heading size="large" id={id} className="t-h2 modal-title">
         {t("employment.edit")}
       </Heading>
-      <div className="form-stack">
+      <div className="form-stack" ref={faultsRoot}>
         <Field label={t("rel.role")}>
           {(control) => (
             <TextInput
@@ -96,20 +100,35 @@ export function EmploymentEdit({
             />
           )}
         </Field>
-        <Field label={t("employment.start")} hint={t("employment.dateHint")}>
+        <Field
+          label={t("employment.start")}
+          hint={t("employment.dateHint")}
+          error={faults.of("start")}
+        >
           {(control) => (
             <TextInput
               {...control}
               value={start}
-              onChange={(e) => setStart(e.target.value)}
+              onChange={(e) => {
+                setStart(e.target.value);
+                faults.edited("start");
+              }}
             />
           )}
         </Field>
         <EmploymentStatusFields
           status={status}
-          onStatusChange={setStatus}
+          onStatusChange={(next) => {
+            setStatus(next);
+            faults.edited("status");
+          }}
           end={end}
-          onEndChange={setEnd}
+          onEndChange={(next) => {
+            setEnd(next);
+            faults.edited("end");
+          }}
+          statusError={faults.of("status")}
+          endError={faults.of("end")}
         />
         <Checkbox
           label={t("contact.rail.isPrimaryEmployer")}
@@ -125,8 +144,15 @@ export function EmploymentEdit({
         </Button>
         <Button
           variant="primary"
-          disabled={!valid || status === "" || saving.isPending}
+          disabled={saving.isPending}
           onClick={() => {
+            const found = new Map([
+              ...blankRequired(locale, {
+                status: [t("employment.statusLabel"), status],
+              }),
+              ...employmentDateFaults(locale, t, { start, end }),
+            ]);
+            if (faults.show(found)) return;
             const started = datePatch(start),
               ended = datePatch(end);
             const body: Patch = {

@@ -139,11 +139,9 @@ describe("a date field in a create form", () => {
       ),
     ).toBeTruthy();
     expect(close.getAttribute("aria-invalid")).toBe("true");
-    expect(
-      screen.getByRole<HTMLButtonElement>("button", { name: "Create" })
-        .disabled,
-    ).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Create" }));
     expect(create).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(close);
   });
 
   it("puts the server's range refusal on the date, focuses it, and drops it once the day changes", async () => {

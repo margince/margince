@@ -3,10 +3,11 @@
 
 package activities
 
-// Whether a chat screenshot shows the contact it was pasted on. The header's
-// name or number is compared with the contact's name parts and phones. One
-// agreeing part is a match, and nothing read is no warning. Anything else
-// shows someone else, and the user confirms it before it files.
+// Whether a chat screenshot shows the contact or lead it was pasted on. The
+// header's name or number is compared with the record's name parts and phones.
+// One agreeing part is a match, and nothing read is no warning. Anything else
+// shows someone else, and the user confirms it before it files. A deal has no
+// single counterparty, so a chat on a deal is never flagged.
 
 import (
 	"context"
@@ -30,8 +31,8 @@ import (
 const phoneTailDigits = 8
 
 // OtherChatCounterparty is what a chat reading's header shows when it names
-// someone other than the contact the screenshot hangs on, and "" otherwise.
-// A file that no longer hangs on a contact has nobody to compare with.
+// someone other than the contact or lead the screenshot hangs on, and ""
+// otherwise. A file on any other record has nobody to compare with.
 func (s *Store) OtherChatCounterparty(ctx context.Context, read ExtractionRead) (string, error) {
 	if read.Question != ExtractionQuestionChatCapture || read.Live() {
 		return "", nil
@@ -39,45 +40,67 @@ func (s *Store) OtherChatCounterparty(ctx context.Context, read ExtractionRead) 
 	var shows string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		parentType, err := resolveAttachmentParent(ctx, tx, read.AttachmentID, principal.ActionRead)
-		if err != nil || parentType != linkEntityContact {
-			return err
-		}
-		contactID, err := attachmentParentID(ctx, tx, read.AttachmentID)
 		if err != nil {
 			return err
 		}
-		shows, err = otherChatCounterparty(ctx, tx, contactID, read)
+		parentID, err := attachmentParentID(ctx, tx, read.AttachmentID)
+		if err != nil {
+			return err
+		}
+		shows, err = otherChatCounterparty(ctx, tx, parentType, parentID, read)
 		return err
 	})
 	return shows, err
 }
 
-func otherChatCounterparty(ctx context.Context, tx pgx.Tx, contactID ids.UUID, read ExtractionRead) (string, error) {
+func otherChatCounterparty(ctx context.Context, tx pgx.Tx, parentType string, parentID ids.UUID, read ExtractionRead) (string, error) {
 	name, phone := chatHeader(read)
-	if name == "" && phone == "" {
+	if (name == "" && phone == "") || (parentType != linkEntityContact && parentType != linkEntityLead) {
 		return "", nil
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+	names, phones, err := chatParentIdentity(ctx, tx, parentType, parentID)
+	if err != nil {
 		return "", err
 	}
-	var fullName, firstName, lastName *string
-	if err := tx.QueryRow(ctx, `SELECT full_name, first_name, last_name FROM contact WHERE id = $1`, contactID).
-		Scan(&fullName, &firstName, &lastName); err != nil {
-		return "", fmt.Errorf("activities: reading the contact a chat is filed on: %w", err)
-	}
-	rows, err := tx.Query(ctx, `SELECT phone FROM contact_phone WHERE contact_id = $1 AND archived_at IS NULL`, contactID)
-	if err != nil {
-		return "", fmt.Errorf("activities: reading the contact's phones: %w", err)
-	}
-	phones, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		return "", fmt.Errorf("activities: reading the contact's phones: %w", err)
-	}
-	names := []string{deref(fullName), deref(firstName), deref(lastName)}
 	if chatShowsContact(name, phone, names, phones) {
 		return "", nil
 	}
 	return strings.Join(slices.DeleteFunc([]string{name, phone}, func(v string) bool { return v == "" }), ", "), nil
+}
+
+// chatParentIdentity is the names and phones a chat header is compared with.
+// A lead stores one name and at most one phone.
+func chatParentIdentity(ctx context.Context, tx pgx.Tx, parentType string, parentID ids.UUID) (names, phones []string, err error) {
+	if parentType == linkEntityLead {
+		if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+			return nil, nil, err
+		}
+		var fullName, phone *string
+		if err := tx.QueryRow(ctx, `SELECT full_name, phone FROM lead WHERE id = $1`, parentID).Scan(&fullName, &phone); err != nil {
+			return nil, nil, fmt.Errorf("activities: reading the lead a chat is filed on: %w", err)
+		}
+		if phone != nil {
+			phones = []string{*phone}
+		}
+		return []string{deref(fullName)}, phones, nil
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, nil, err
+	}
+	var fullName, firstName, lastName *string
+	if err := tx.QueryRow(ctx, `SELECT full_name, first_name, last_name FROM contact WHERE id = $1`, parentID).
+		Scan(&fullName, &firstName, &lastName); err != nil {
+		return nil, nil, fmt.Errorf("activities: reading the contact a chat is filed on: %w", err)
+	}
+	rows, err := tx.Query(ctx, `SELECT phone FROM contact_phone WHERE contact_id = $1 AND archived_at IS NULL`, parentID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("activities: reading the contact's phones: %w", err)
+	}
+	phones, err = pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, nil, fmt.Errorf("activities: reading the contact's phones: %w", err)
+	}
+	return []string{deref(fullName), deref(firstName), deref(lastName)}, phones, nil
 }
 
 // chatHeader is the name and number the reading grounded from the header.

@@ -29,8 +29,10 @@ export function CountLink({
   count,
   href,
   title,
-}: Readonly<{ count: number; href: string; title: string }>) {
+}: Readonly<{ count: number; href: string | undefined; title: string }>) {
   const { locale } = useLocale();
+  // A count with no address is drawn plainly, never linked to a wider set.
+  if (!href) return <>{formatAnalyticsNumber(count, locale)}</>;
   return (
     <AppLink className="link-button" href={href} title={title}>
       {formatAnalyticsNumber(count, locale)}

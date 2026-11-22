@@ -27,6 +27,9 @@ type ListActivitiesInput struct {
 	ClockDirection     string
 	DirectionClockAsOf *time.Time
 	mailIdentities     map[string][]string
+	// foldBounds replaces the collapsed fold's bounds; a test reads the
+	// unbounded fold with []int{0} to compare it with the bounded one.
+	foldBounds []int
 	// onlyID narrows a read to one row, so a caller can ask whether this list
 	// returns it without a second spelling of the list's clauses.
 	onlyID *ids.ActivityID

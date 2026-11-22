@@ -23,7 +23,7 @@ import (
 
 // errTransferOwnerMoved refuses an accept the record has already left: the
 // giver the request names no longer owns it.
-var errTransferOwnerMoved = &contacts.TransferRefusal{
+var errTransferOwnerMoved = &contacts.OwnerAskRefusal{
 	Code:    "owner_changed",
 	Message: "This record has changed owner since the request was made, so it cannot be handed over from here. Decline the request.",
 }

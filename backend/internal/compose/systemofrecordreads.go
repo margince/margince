@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/editaccess"
 	"github.com/margince/margince/backend/internal/compose/recordreferences"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -60,7 +61,10 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.marginceChangeHandlers = newMarginceChangeHandlers(pool)
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
 	s.recordReferenceHandlers = recordreferences.NewHandlers(s.contactsStore, s.claimHandlers.deals, ProjectsStore(pool))
-	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
+	s.ownershipRequestHandlers = ownershipRequestHandlers{
+		transfers: newOwnershipTransfers(pool),
+		Requests:  editaccess.New(InstallationDB(pool), NewApprovalsService(InstallationDB(pool))),
+	}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
 	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)
 	// The importer maps only core columns (see importTargets for why custom

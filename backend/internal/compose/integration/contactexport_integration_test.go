@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -115,20 +116,21 @@ func TestContactExportCarriesTheReachableEmailAndPhone(t *testing.T) {
 		"filter": AnyMap{"field": "created_at", "op": "gte", "value": "2000-01-01"},
 	})
 
-	header := records[0]
-	emailAt, phoneAt, nameAt := slices.Index(header, "primary_email"), slices.Index(header, "primary_phone"), slices.Index(header, "full_name")
+	header := slices.Clone(records[0])
+	header[0] = strings.TrimPrefix(header[0], "\xEF\xBB\xBF")
+	emailAt, phoneAt, nameAt := slices.Index(header, "email"), slices.Index(header, "phone"), slices.Index(header, "full_name")
 	if emailAt < 0 || phoneAt < 0 || nameAt < 0 {
-		t.Fatalf("header %v lacks primary_email, primary_phone or full_name", header)
+		t.Fatalf("header %v lacks email, phone or full_name", header)
 	}
 	byName := map[string][]string{}
 	for _, row := range records[1:] {
 		byName[row[nameAt]] = row
 	}
 	if got := byName["Wilma Weber"][emailAt]; got != "wilma@corp.example" {
-		t.Errorf("primary_email = %q, want the primary address", got)
+		t.Errorf("email = %q, want the primary address", got)
 	}
 	if got := byName["Wilma Weber"][phoneAt]; got != "+4930123456" {
-		t.Errorf("primary_phone = %q, want the primary number as dialled", got)
+		t.Errorf("phone = %q, want the primary number as dialled", got)
 	}
 	if bare := byName["No Email Or Phone"]; bare[emailAt] != "" || bare[phoneAt] != "" {
 		t.Errorf("a contact with no channels exported %q / %q, want both empty", bare[emailAt], bare[phoneAt])

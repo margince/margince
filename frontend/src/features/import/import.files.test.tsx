@@ -158,7 +158,7 @@ describe("the files step of a single CSV", () => {
   it("states the source name rule and stops the field at 80 characters", async () => {
     await dropLeads();
     const field = screen.getByLabelText("Source name");
-    expect(field).toHaveAttribute("maxLength", "80");
+    expect(field).toHaveAttribute("data-character-limit", "80");
     expect(field).toHaveAccessibleDescription(
       /letters A to Z, digits, spaces, dots, underscores and hyphens/,
     );

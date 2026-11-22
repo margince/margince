@@ -38,26 +38,29 @@ ROOT="${FE_FILE_LENGTH_ROOT:-frontend/src}"
 # read by the same colleagues, and a gate reading only the screens let one of
 # them reach a thousand lines unremarked.
 SCRIPTS_ROOT="${FE_FILE_LENGTH_SCRIPTS_ROOT:-frontend/scripts}"
+# The browser specs and the helpers they share are test code, so every file
+# there takes the test ceiling.
+E2E_ROOT="${FE_FILE_LENGTH_E2E_ROOT:-frontend/e2e}"
 WAIVERS="${FE_FILE_LENGTH_WAIVERS:-scripts/fe-file-length-waivers.txt}"
 
 # A missing root is refused rather than walked past. `find` answers nothing for
 # a directory that is not there, and nothing is what a clean census looks like:
 # a renamed tree would report PASS over the half it could still see.
-for root in "$ROOT" "$SCRIPTS_ROOT"; do
+for root in "$ROOT" "$SCRIPTS_ROOT" "$E2E_ROOT"; do
   if [[ ! -d "$root" ]]; then
     echo "FAIL: fe-file-length — $root is not a directory, so this census would read short" >&2
     exit 1
   fi
 done
 
-find "$ROOT" "$SCRIPTS_ROOT" \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" \) \
+find "$ROOT" "$SCRIPTS_ROOT" "$E2E_ROOT" \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" \) \
     ! -name "*.d.ts" \
     ! -path "$ROOT/api/public-events.ts" \
     ! -path "$ROOT/i18n/en.ts" \
     ! -path "$ROOT/i18n/de.ts" \
     ! -path "$ROOT/i18n/vi.ts" \
     -exec wc -l {} + \
-| awk -v cap="$CAP" -v testcap="$TEST_CAP" -v waivers="$WAIVERS" '
+| awk -v cap="$CAP" -v testcap="$TEST_CAP" -v waivers="$WAIVERS" -v e2e="$E2E_ROOT/" '
 BEGIN {
   while ((getline line < waivers) > 0) {
     if (line ~ /^[[:space:]]*#/ || line ~ /^[[:space:]]*$/) continue
@@ -77,7 +80,8 @@ BEGIN {
 # fe-uat.test.mjs is a test by every reading but the extension. A `.sweep.ts`
 # is test code too, moved out of its test so it can run in a worker thread.
 function istest(f) {
-  return f ~ /\.test\.(tsx?|mjs)$/ ||
+  return index(f, e2e) == 1 ||
+         f ~ /\.test\.(tsx?|mjs)$/ ||
          f ~ /\.sweep\.ts$/ ||
          f ~ /\.stories\.(tsx?|mjs)$/ ||
          f ~ /\.testkit\.(tsx?|mjs)$/ ||

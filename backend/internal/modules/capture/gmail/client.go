@@ -173,6 +173,8 @@ type OAuthConfig struct {
 	Scopes       []string
 	AuthURL      string
 	TokenURL     string
+	// Tokens keeps access tokens for their lifetime; nil redeems on every call.
+	Tokens *oauthflow.TokenCache
 }
 
 // NewOAuth builds the OAuth client, applying Google's default endpoints when
@@ -206,6 +208,7 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		},
 		AuthRejected: ErrAuthRejected,
 		Unreachable:  ErrUnreachable,
+		Tokens:       cfg.Tokens,
 	})
 }
 

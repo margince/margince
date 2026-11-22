@@ -160,6 +160,13 @@ func (w *knowledgeIngestWorker) Work(ctx context.Context, job *river.Job[Knowled
 	if err == nil {
 		return nil
 	}
+	// A newer release replaced the page after this attempt began. Its own job
+	// reads the new bytes, so this one ends without writing anything.
+	if errors.Is(err, knowledge.ErrIngestSuperseded) {
+		w.log.InfoContext(wsCtx, "handbook page replaced mid-ingest; leaving it to the new job",
+			"document_id", job.Args.DocumentID)
+		return nil
+	}
 	// The document went away under us — archived, or its corpus was. Not a
 	// fault and not worth a retry: the work has no subject any more.
 	if errors.Is(err, apperrors.ErrNotFound) {
@@ -189,12 +196,12 @@ func (w *knowledgeIngestWorker) ingest(ctx context.Context, documentID ids.UUID)
 	if err != nil {
 		return err
 	}
-	text, err := w.readDocument(ctx, src.StorageKey)
+	text, err := w.readDocument(ctx, src)
 	if err != nil {
 		return err
 	}
 	chunks := knowledge.ChunkText(text)
-	if err := w.store.WriteChunks(ctx, documentID, src.CorpusID, chunks); err != nil {
+	if err := w.store.WriteChunks(ctx, documentID, src, chunks); err != nil {
 		return err
 	}
 	// Embedded before the document is called done: `done` is what readiness
@@ -205,15 +212,15 @@ func (w *knowledgeIngestWorker) ingest(ctx context.Context, documentID ids.UUID)
 			return err
 		}
 	}
-	return w.store.FinishIngest(ctx, documentID, len(chunks))
+	return w.store.FinishIngest(ctx, documentID, src, len(chunks))
 }
 
 // readDocument streams the stored file into memory. Whole, deliberately: the
 // chunker is a pure function over the text and the upload ceiling is what keeps
 // the size bounded — a streaming chunker would have to carry boundary state
 // across reads to gain nothing at these sizes.
-func (w *knowledgeIngestWorker) readDocument(ctx context.Context, key string) (string, error) {
-	body, err := w.store.OpenDocument(ctx, key)
+func (w *knowledgeIngestWorker) readDocument(ctx context.Context, src knowledge.IngestSource) (string, error) {
+	body, err := w.store.OpenDocument(ctx, src)
 	if err != nil {
 		return "", err
 	}
@@ -240,7 +247,7 @@ func ingestDetail(err error) string {
 		return unsupported.Error()
 	}
 	if errors.Is(err, knowledge.ErrHandbookPageGone) {
-		return "This handbook page is not in the handbook the worker holds, so it could not be indexed. An administrator has to update every worker to the current release, or the page has been withdrawn."
+		return knowledge.HandbookPageStaleDetail
 	}
 	if errors.Is(err, ai.ErrProviderThrottled) {
 		return "The AI provider was rate limiting this installation, so the document could not be indexed. Try uploading it again in a few minutes."

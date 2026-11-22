@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { useIdempotencyKey } from "../../api/idempotencykey";
-import { DealStatusBadge } from "../../components/dealstatusbadge";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -10,7 +10,6 @@ import {
 } from "../../components/latestinbound";
 import { useRailRename } from "../../components/railfield";
 import { RecordGone } from "../../components/recordgone";
-import { Badge } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
@@ -66,6 +65,7 @@ import type { Deal, Offer, Stage } from "./deals";
 import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
+import { DealPulsePills } from "./deals.pulsepills";
 import { useDealStatusCard } from "./dealstatus";
 import { offerWriteRefusal, settleUnsureOfferWrite } from "./offers.actions";
 
@@ -143,27 +143,10 @@ function dealBand({
   if (deal.archived_at) {
     return <ArchivedDealBand deal={deal} reason={reason} reasonId={reasonId} />;
   }
-  return <p id={reasonId}>{reason}</p>;
-}
-
-// The pills under the deal's name. They say whose move it is and when a buyer
-// is owed a reply. Then come the deal's status and, as on the board card,
-// whether it is archived.
-function DealPulsePills({
-  status,
-  archived,
-  yourMove,
-}: Readonly<{ status: Deal["status"]; archived: boolean; yourMove: boolean }>) {
-  const t = useT();
   return (
     <>
-      {yourMove && (
-        <Badge tone="warning" dot>
-          {t("deal.standing.teamReply")}
-        </Badge>
-      )}
-      <DealStatusBadge status={status} />
-      {archived && <Badge>{t("deal.archived")}</Badge>}
+      <p id={reasonId}>{reason}</p>
+      <EditAccessRequest kind="deal" record={deal} />
     </>
   );
 }

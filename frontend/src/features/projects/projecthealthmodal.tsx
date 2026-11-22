@@ -8,8 +8,10 @@ import {
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { useFieldFaults } from "../../design-system/savepage";
 import { trimServerSpace } from "../../format/servertrim";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   type ProjectHealthState,
@@ -32,10 +34,9 @@ const STATES: readonly ProjectHealthState[] = [
  * effective time — the server supplies it — so this form never offers to
  * change WHEN something was said, only what was said.
  *
- * The note is required unless the project is on track, and the save is
- * disabled until it is there. The server enforces the same rule; stating it in
- * the form is what stops a reader learning it from a refusal after they have
- * already written their judgement.
+ * The note is required unless the project is on track, and a save without it
+ * says so at the note. The server enforces the same rule; stating it in the
+ * form is what stops a reader learning it from a refusal.
  */
 export function ProjectHealthModal({
   open,
@@ -54,7 +55,9 @@ export function ProjectHealthModal({
   }>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const headingId = useId();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [state, setState] = useState<ProjectHealthState>("on_track");
   const [note, setNote] = useState("");
   // One id per OPENING. It is what tells a save that landed late apart from
@@ -73,6 +76,13 @@ export function ProjectHealthModal({
   // the objects would reset the form under the reader mid-edit.
   const resetRecord = record.reset;
   const resetCorrect = correct.reset;
+  // Each opening starts with no field sentence. Reset during render: `show`
+  // is new each render, so an effect listing it would run forever.
+  const [faultsOpen, setFaultsOpen] = useState(open);
+  if (open !== faultsOpen) {
+    setFaultsOpen(open);
+    faults.show(new Map());
+  }
 
   // Re-seeded on every opening, not once at mount. A correction starts from
   // what the reading actually said, so a reader fixing one word does not have
@@ -89,11 +99,15 @@ export function ProjectHealthModal({
   }, [open, correcting, resetRecord, resetCorrect]);
 
   const trimmed = trimServerSpace(note);
-  // The server's own rule, stated here rather than discovered through a 422.
-  const noteMissing = state !== "on_track" && trimmed === "";
+  const noteLabel = t("projectHealth.note");
 
   async function submit() {
-    if (noteMissing) {
+    // The server's own rule, stated here rather than discovered through a 422.
+    const blank =
+      state === "on_track"
+        ? new Map<string, string>()
+        : blankRequired(locale, { note: [noteLabel, trimmed] });
+    if (faults.show(blank)) {
       return;
     }
     const body = { state, note: trimmed ? trimmed : undefined };
@@ -119,12 +133,15 @@ export function ProjectHealthModal({
           ? t("projectHealth.correctTitle")
           : t("projectHealth.recordTitle")}
       </Heading>
-      <div className="form-stack">
+      <div className="form-stack" ref={faultsRoot}>
         <SegmentedControl
           label={t("projectHealth.stateLabel")}
           options={STATES}
           value={state}
-          onChange={setState}
+          onChange={(next) => {
+            setState(next);
+            faults.edited("note");
+          }}
           labels={{
             on_track: t("projectHealth.state.onTrack"),
             at_risk: t("projectHealth.state.atRisk"),
@@ -132,8 +149,9 @@ export function ProjectHealthModal({
           }}
         />
         <Field
-          label={t("projectHealth.note")}
+          label={noteLabel}
           required={state !== "on_track"}
+          error={faults.of("note")}
           hint={
             state === "on_track"
               ? t("projectHealth.noteOptionalHint")
@@ -147,7 +165,10 @@ export function ProjectHealthModal({
               rows={3}
               value={note}
               disabled={write.isPending}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(event) => {
+                setNote(event.target.value);
+                faults.edited("note");
+              }}
             />
           )}
         </Field>
@@ -160,10 +181,7 @@ export function ProjectHealthModal({
         <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
           {t("deals.cancel")}
         </Button>
-        <Button
-          onClick={() => void submit()}
-          disabled={write.isPending || noteMissing}
-        >
+        <Button onClick={() => void submit()} disabled={write.isPending}>
           {correcting
             ? t("projectHealth.saveCorrection")
             : t("projectHealth.saveReading")}
