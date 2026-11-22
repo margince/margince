@@ -402,6 +402,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Rules**
 
 - `uq_voice_learning_signal_draft`: `UNIQUE (draft_ref_hash)`
+- `voice_learning_signal_draft_ref_hash_check`: `CHECK ((octet_length(draft_ref_hash) = 32))`
 - `voice_learning_signal_outcome_check`: `CHECK ((outcome = ANY (ARRAY['drafted', 'accepted', 'edited_sent', 'rejected'])))`
 - `voice_learning_signal_profile_version_check`: `CHECK ((profile_version >= 1))`
 - `voice_learning_signal_qualifies_check`: `CHECK (((NOT qualifies_as_source) OR ((outcome = 'edited_sent') AND (final_text IS NOT NULL) AND (final_captured_by ~~ 'human:%'))))`

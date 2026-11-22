@@ -83,7 +83,7 @@ func TestTheConnectionHolderBackfillMovesOnlyLiveConnectedRows(t *testing.T) {
 func seedHolderPassport(t *testing.T, conn *pgx.Conn, user string, grant *string) string {
 	t.Helper()
 	return seedValue(t, conn, `INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
-		VALUES ($1, $1, 'backfill', ARRAY['read'], gen_random_uuid()::text, now() + interval '1 day', $2) RETURNING id::text`, user, grant)
+		VALUES ($1, $1, 'backfill', ARRAY['read'], encode(sha256(gen_random_uuid()::text::bytea), 'hex'), now() + interval '1 day', $2) RETURNING id::text`, user, grant)
 }
 
 // seedValue runs one statement and answers the single text value it returns.

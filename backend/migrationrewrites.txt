@@ -212,3 +212,4 @@
 1795299767_a_contact_stores_its_strength_dates.up.sql | * | the bodies are two read functions and the trigger functions that keep the new columns; the migration adds columns with a constant default and changes no existing row, and the contact_strength_dates data task fills them
 1795319280_the_text_limits_follow_the_unread_columns.up.sql | * | replaces the two text-bound triggers on five tables, which act on later writes only; no existing row is changed
 1795319280_the_text_limits_follow_the_unread_columns.down.sql | * | restores the two text-bound triggers on five tables as they stood before; no existing row is changed
+1795329559_the_token_hash_format_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

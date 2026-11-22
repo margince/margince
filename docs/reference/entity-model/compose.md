@@ -243,6 +243,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `analytics_share_scope_kind_check`: `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`
 - `analytics_share_scope_shape`: `CHECK (((scope_id IS NULL) OR (num_nonnulls(scope_team_id, scope_user_id) = 1)))`
 - `analytics_share_snapshot_matches_kind`: `CHECK (((kind = 'snapshot') = (snapshot_id IS NOT NULL)))`
+- `analytics_share_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `analytics_share_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_analytics_share_token`: `UNIQUE (token_hash)`
 
@@ -389,6 +390,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `bulk_confirmation_expiry_after_creation`: `CHECK ((expires_at > created_at))`
+- `bulk_confirmation_token_hash_check`: `CHECK ((octet_length(token_hash) = 32))`
 
 **Indexes**
 
