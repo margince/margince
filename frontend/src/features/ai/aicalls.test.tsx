@@ -11,7 +11,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
+import { de } from "../../i18n/de";
 import { en } from "../../i18n/en";
+import { vi as viCatalog } from "../../i18n/vi";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiCallsCard, useLastCallAt } from "./aicalls";
 
@@ -699,7 +701,7 @@ it("shows the request settings the attempts were sent with, and the host that se
     ],
   });
   const drawer = await openCall(user);
-  expect(await within(drawer).findByText("Configured request settings")).toBeTruthy();
+  expect(await within(drawer).findByText("Settings this call was configured with")).toBeTruthy();
   expect(within(drawer).getByText(/"deadline_ms": 30000/)).toBeTruthy();
   expect(within(drawer).getByText(/served by Cerebras/)).toBeTruthy();
   expect(
@@ -811,4 +813,13 @@ it("says in the drawer when the AI budget demoted the call", async () => {
   mount();
   const drawer = await openCall(user);
   expect(within(drawer).getByText("Budget degraded")).toBeTruthy();
+});
+
+it("names the call detail settings as the call's configured settings in every language", () => {
+  const titles = [en, de, viCatalog].map((catalog) => catalog["aicalls.detail.settings"]);
+  expect(new Set(titles).size).toBe(3);
+  const old = ["Request settings sent", "Gesendete Anfrage-Einstellungen", "Cài đặt yêu cầu đã gửi"];
+  for (const text of old) {
+    expect(titles).not.toContain(text);
+  }
 });
