@@ -50305,10 +50305,7 @@ components:
       required: [entity_type, action, count]
       properties:
         entity_type: {type: string}
-        action:
-          type: string
-          description: >-
-            The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`.
+        action: {type: string, description: The audit action.}
         count: {type: integer, minimum: 1}
     HealthFinding:
       type: object

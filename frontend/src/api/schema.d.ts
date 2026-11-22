@@ -52708,7 +52708,7 @@ export interface components {
         };
         HealthUnplacedChange: {
             entity_type: string;
-            /** @description The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`. */
+            /** @description The audit action. */
             action: string;
             count: number;
         };
