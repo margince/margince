@@ -213,3 +213,4 @@
 1795319280_the_text_limits_follow_the_unread_columns.up.sql | * | replaces the two text-bound triggers on five tables, which act on later writes only; no existing row is changed
 1795319280_the_text_limits_follow_the_unread_columns.down.sql | * | restores the two text-bound triggers on five tables as they stood before; no existing row is changed
 1795329559_the_token_hash_format_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795331712_the_meeting_proposal_hash_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

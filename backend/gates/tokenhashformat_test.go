@@ -5,10 +5,10 @@
 
 package gates
 
-// A column that stores the hash of a token states its format with a CHECK, or
-// formatNotHeld names it with what else it holds. The format is 64 lower-case
-// hex characters as text and 32 bytes as bytea. Without it a writer can store
-// base64 or a prefixed value, and a lookup by hash never matches.
+// A column that stores the hash of a token states its format with a CHECK.
+// The format is 64 lower-case hex characters as text and 32 bytes as bytea,
+// and a column an erasure marks names that mark as its second shape. Without
+// it a writer can store base64 or a prefixed value, and no lookup matches.
 //
 // The corpus derives from the head catalog: each column named token_hash, and
 // the columns hashColumnsByAnotherName lists.
@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasedmark"
 )
 
 // catalogColumnLine reads a column: its table, its name and its type.
@@ -34,22 +35,26 @@ var hashColumnsByAnotherName = []string{
 	"voice_learning_signal.draft_ref_hash",
 }
 
-// formatNotHeld records each hash column that carries no format CHECK, with
-// why. An unlisted column must carry it.
-var formatNotHeld = gatekit.Waive(map[string]string{
-	"meeting_proposal.token_hash": "erasure replaces the hash with a mark that names the activity, so a row holds one of two shapes",
-})
+// erasedHashColumns also hold the mark an erasure writes in place of the hash:
+// the erased prefix and the row's activity id. Their CHECK names both shapes.
+var erasedHashColumns = []string{
+	"meeting_proposal.token_hash",
+}
 
 // tokenHashFormat is the CHECK definition the catalog prints for a hash column
 // of this type, and false for a type that has no stated format.
-func tokenHashFormat(column, columnType string) (string, bool) {
-	switch columnType {
-	case "text":
-		return "((" + column + " ~ '^[0-9a-f]{64}$'::text))", true
-	case "bytea":
+func tokenHashFormat(key, columnType string) (string, bool) {
+	_, column, _ := strings.Cut(key, ".")
+	switch {
+	case columnType == "bytea":
 		return "((octet_length(" + column + ") = 32))", true
+	case columnType != "text":
+		return "", false
+	case slices.Contains(erasedHashColumns, key):
+		return "(((" + column + " ~ '^[0-9a-f]{64}$'::text) OR (" + column + " ~ '^" +
+			erasedmark.Prefix + "[0-9a-f-]{36}$'::text)))", true
 	}
-	return "", false
+	return "((" + column + " ~ '^[0-9a-f]{64}$'::text))", true
 }
 
 // hashColumnsWithoutFormat answers each hash column of a catalog that no
@@ -75,8 +80,8 @@ func hashColumnsWithoutFormat(catalog string) (off map[string]string, seen []str
 	off = map[string]string{}
 	for key, columnType := range types {
 		seen = append(seen, key)
-		table, column, _ := strings.Cut(key, ".")
-		want, known := tokenHashFormat(column, columnType)
+		table, _, _ := strings.Cut(key, ".")
+		want, known := tokenHashFormat(key, columnType)
 		switch {
 		case !known:
 			off[key] = "is " + columnType + ", and a token hash is stored as bytea"
@@ -90,7 +95,6 @@ func hashColumnsWithoutFormat(catalog string) (off map[string]string, seen []str
 
 func TestEveryTokenHashColumnStatesItsFormat(t *testing.T) {
 	t.Parallel()
-	defer formatNotHeld.AssertAllMatched(t)
 	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
@@ -100,14 +104,14 @@ func TestEveryTokenHashColumnStatesItsFormat(t *testing.T) {
 	if len(seen) < 17 {
 		t.Fatalf("read %d hash columns from the catalog, and the schema has at least 17: %v", len(seen), seen)
 	}
-	for _, key := range hashColumnsByAnotherName {
+	for _, key := range slices.Concat(hashColumnsByAnotherName, erasedHashColumns) {
 		if !slices.Contains(seen, key) {
-			t.Errorf("hashColumnsByAnotherName lists %s, and the catalog has no such column", key)
+			t.Errorf("the gate lists %s, and the catalog has no such hash column", key)
 		}
 	}
 	for _, key := range seen {
 		fault, bad := off[key]
-		if !bad || formatNotHeld.Waived(t, key) {
+		if !bad {
 			continue
 		}
 		t.Errorf("%s %s. A reader cannot tell what the column holds, and a writer may store "+
@@ -133,15 +137,20 @@ func TestTheTokenHashReaderSeesEachMissingFormat(t *testing.T) {
 		"public.swapped.token_hash text NOT NULL gen=- def=-",
 		"public.typed.token_hash character varying(64) NOT NULL gen=- def=-",
 		"public.oauth_authorization_code.code_hash text NOT NULL gen=- def=-",
+		"public.meeting_proposal.meeting_proposal_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))",
+		"public.meeting_proposal.token_hash text NOT NULL gen=- def=-",
+		"public.marked.marked_token_hash_check CHECK (((token_hash ~ '^[0-9a-f]{64}$'::text) OR (token_hash ~ '^erased:[0-9a-f-]{36}$'::text)))",
+		"public.marked.token_hash text NOT NULL gen=- def=-",
 		"public.other.content_hash text NOT NULL gen=- def=-",
 	}, "\n")
 	off, seen := hashColumnsWithoutFormat(catalog)
-	if len(seen) != 8 {
-		t.Fatalf("the reader saw %d hash columns, want 8: %v", len(seen), seen)
+	if len(seen) != 10 {
+		t.Fatalf("the reader saw %d hash columns, want 10: %v", len(seen), seen)
 	}
 	for _, key := range []string{
 		"bare.token_hash", "short.token_hash", "pending.token_hash", "swapped.token_hash",
 		"typed.token_hash", "oauth_authorization_code.code_hash",
+		"meeting_proposal.token_hash", "marked.token_hash",
 	} {
 		if _, bad := off[key]; !bad {
 			t.Errorf("the reader passed %s, which does not state its format", key)

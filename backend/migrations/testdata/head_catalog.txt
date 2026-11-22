@@ -7922,6 +7922,7 @@ public.meeting_proposal.meeting_proposal_host_user_id_fkey FOREIGN KEY (host_use
 public.meeting_proposal.meeting_proposal_host_user_id_retirement_guard CREATE TRIGGER meeting_proposal_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_proposal FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
 public.meeting_proposal.meeting_proposal_invitation_id_fkey FOREIGN KEY (invitation_id) REFERENCES meeting_invitation(activity_id) ON DELETE SET NULL
 public.meeting_proposal.meeting_proposal_pkey PRIMARY KEY (activity_id)
+public.meeting_proposal.meeting_proposal_token_hash_check CHECK (((token_hash ~ '^[0-9a-f]{64}$'::text) OR (token_hash ~ '^erased:[0-9a-f-]{36}$'::text)))
 public.meeting_proposal.meeting_proposal_token_hash_key UNIQUE (token_hash)
 public.meeting_proposal.request jsonb NOT NULL gen=- def=-
 public.meeting_proposal.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.meeting_proposal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"link_ref": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"link_ref":20000,"token_hash":20000}')
