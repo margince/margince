@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 2,
+  "passed": 0,
   "runs": 2,
   "pass_at": 2,
   "driver": "gemini:cli",
@@ -11,13 +11,106 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "a4c706099e75c9c6",
+    "tools": "647e2136a01f59e1",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "7696013c3ccfe98088de10eea2a7682d01573fd9",
+    "ran_at": "2026-11-21T19:58:17Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:29Z"
+  },
   "usage": {
-    "input_tokens": 65399,
-    "output_tokens": 16255,
+    "input_tokens": 82128,
+    "output_tokens": 14891,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 260830,
+    "cache_read_input_tokens": 293959,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_brief",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "get_record_history",
+        "list_contact_overrides",
+        "list_contact_stops",
+        "list_held_threads",
+        "list_records",
+        "list_scheduled_sends",
+        "read_context",
+        "read_details",
+        "read_installation_jurisdiction",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "export_contact_optout_records",
+        "find_records",
+        "get_contact_brief",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "get_record_history",
+        "get_worklist",
+        "list_approvals",
+        "list_audit_log",
+        "list_contact_overrides",
+        "list_contact_stops",
+        "list_held_threads",
+        "list_notice_case_reviews",
+        "list_notice_cases",
+        "list_scheduled_sends",
+        "read_context",
+        "read_details",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 23,
+      "min": 21,
+      "max": 25
+    },
+    "turns": {
+      "median": 8,
+      "min": 8,
+      "max": 8
+    },
+    "refused": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 188043.5,
+      "min": 172208,
+      "max": 203879
+    },
+    "output_tokens": {
+      "median": 7445.5,
+      "min": 7335,
+      "max": 7556
+    }
   }
 }

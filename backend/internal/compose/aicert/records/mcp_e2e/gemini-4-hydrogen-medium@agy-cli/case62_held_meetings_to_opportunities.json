@@ -11,13 +11,88 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "d47f8a817c6ab591",
+    "tools": "8abecad6c4de3657",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T18:58:33Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:26Z"
+  },
   "usage": {
-    "input_tokens": 78000,
-    "output_tokens": 14899,
+    "input_tokens": 97172,
+    "output_tokens": 16474,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 254817,
+    "cache_read_input_tokens": 321706,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_report_vocabulary",
+        "find_records",
+        "list_records",
+        "read_reports",
+        "read_workspace",
+        "run_report",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_analytics_vocabulary",
+        "describe_list_filters",
+        "describe_report_vocabulary",
+        "find_records",
+        "get_sdr_summary",
+        "list_colleagues",
+        "list_records",
+        "list_sdr_upcoming_meetings",
+        "list_sdr_waiting_handoffs",
+        "read_context",
+        "read_record",
+        "read_reporting",
+        "read_reports",
+        "read_workspace",
+        "run_report",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 14.5,
+      "min": 6,
+      "max": 23
+    },
+    "turns": {
+      "median": 7.5,
+      "min": 6,
+      "max": 9
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 209439,
+      "min": 98083,
+      "max": 320795
+    },
+    "output_tokens": {
+      "median": 8237,
+      "min": 5108,
+      "max": 11366
+    }
   }
 }

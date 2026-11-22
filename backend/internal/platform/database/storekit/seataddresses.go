@@ -178,14 +178,11 @@ func LockSeatAddressChecks(ctx context.Context, tx pgx.Tx, addresses ...string) 
 	return nil
 }
 
-// LockSeatAddressClaims is taken by every writer that adds, moves or withdraws
-// a seat's claim, over every address the change touches: the old and the new.
-// It waits for every check of them in flight. Take it before any row lock, and
-// wait on no contact row under it.
-//
-// A claim changes the members' addresses, a capture fact. So it takes the facts
-// lock first, in the order a capture takes both, and a capture waiting on this
-// claim's address lock cannot hold the facts lock the claim then needs.
+// LockSeatAddressClaims locks the old and new addresses of a seat claim that is
+// added, moved or withdrawn, and waits for their checks in flight. Take it before
+// any row lock, and wait on no contact row under it. A claim changes a capture
+// fact, so it takes the facts lock first, in the order a capture takes both. A
+// capture that waits on this address lock then cannot hold the facts lock.
 func LockSeatAddressClaims(ctx context.Context, tx pgx.Tx, addresses ...string) error {
 	if err := CaptureFactsChanged(ctx, tx); err != nil {
 		return err

@@ -12,13 +12,81 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "4cab916d7aa3f0e5",
+    "tools": "6a95babb9d657feb",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T18:12:36Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:33:16Z"
+  },
   "usage": {
-    "input_tokens": 49611,
-    "output_tokens": 17145,
+    "input_tokens": 40683,
+    "output_tokens": 12093,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 162843,
+    "cache_read_input_tokens": 101850,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "advance_project_phase",
+        "change_state",
+        "find_records",
+        "read_project",
+        "read_project_360",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "advance_project_phase",
+        "catch_me_up_on",
+        "change_state",
+        "find_records",
+        "read_context",
+        "read_project",
+        "read_project_360",
+        "read_record",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5,
+      "min": 4,
+      "max": 6
+    },
+    "turns": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 71266.5,
+      "min": 59307,
+      "max": 83226
+    },
+    "output_tokens": {
+      "median": 6046.5,
+      "min": 4863,
+      "max": 7230
+    }
   }
 }

@@ -368,10 +368,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if err := database.WithSavepoint(ctx, func(ctx context.Context) error {
 		return w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID))
 	}); err != nil {
-		// A corrected file moving an address onto a contact who is not its owner
-		// is one bad row, not a failed run: skip it with the reason and let the
-		// rest of the file land. Unhandled, this error aborts the whole
-		// migration, which is the wrong answer to a typo in a spreadsheet.
+		// A corrected file that moves an address onto another contact has one bad
+		// row. It is skipped with its reason, and the rest of the file lands. A
+		// typo in a spreadsheet must not abort the whole migration.
 		if contacts.IsClaimedEmail(err) {
 			return skippedFor(duplicateEmailWhy), nil
 		}
