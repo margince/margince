@@ -21,10 +21,10 @@ func writeEditionContributions(ctx context.Context, tx pgx.Tx, edition openapi_t
 			if err != nil {
 				return err
 			}
-			values := []string{b.add(edition), b.add(fact.Metric), b.add(fact.ContextID), b.add(fact.Row.Key), b.add(fact.GroupKey), b.add(fact.SourceType), b.add(fact.SourceID), b.add(fact.OwnerID), b.add(raw)}
+			values := []string{b.add(edition), b.add(fact.Metric), b.add(fact.ContextID), b.add(fact.Row.Key), b.add(fact.SourceType), b.add(fact.SourceID), b.add(raw)}
 			tuples = append(tuples, "("+strings.Join(values, ",")+")")
 		}
-		if _, err := tx.Exec(ctx, "INSERT INTO report_edition_contribution(edition_id,metric,context_id,contribution_key,group_key,source_type,source_id,owner_id,fact) VALUES "+strings.Join(tuples, ","), b.values...); err != nil {
+		if _, err := tx.Exec(ctx, "INSERT INTO report_edition_contribution(edition_id,metric,context_id,contribution_key,source_type,source_id,fact) VALUES "+strings.Join(tuples, ","), b.values...); err != nil {
 			return err
 		}
 	}

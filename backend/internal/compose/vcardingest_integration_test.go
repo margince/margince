@@ -55,9 +55,9 @@ func seedCardMail(ctx context.Context, t *testing.T, e *integration.Env, grantor
 	err := pgx.BeginFunc(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO capture_connection
-			  (id, provider, user_id, scopes, status, sync_cursor, credential_ref,
+			  (id, provider, user_id, status, sync_cursor, credential_ref,
 			   account_label, share_acknowledged_at, mail_posture)
-			VALUES ($1, 'gmail', $2, '{read}', 'connected', '{}', 'ref', 'rep@demo.test', now(), 'shared')
+			VALUES ($1, 'gmail', $2, 'connected', '{}', 'ref', 'rep@demo.test', now(), 'shared')
 			ON CONFLICT DO NOTHING`, ids.NewV7(), grantor); err != nil {
 			return err
 		}

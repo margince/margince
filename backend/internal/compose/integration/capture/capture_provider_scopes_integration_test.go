@@ -5,12 +5,9 @@
 
 package capture
 
-// Two scope vocabularies, two columns. capture_connection.scopes is this
-// system's internal permission set, frozen at grant time; provider_scopes is
-// what the provider says it granted, in the provider's own words. The list
-// surface serves the second — that is the question a human asking "what can
-// this connection do to my mailbox?" is actually asking — and a connection
-// whose connector cannot report it serves absence, never an empty grant.
+// provider_scopes is what the provider says it granted, in its own words. The
+// list surface serves it. A connector that cannot report it serves absence,
+// never an empty grant.
 
 import (
 	"context"
@@ -46,15 +43,12 @@ func TestConnectPersistsTheProviderGrantedScopes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var internal, provider []string
+	var provider []string
 	if err := database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT scopes, provider_scopes FROM capture_connection WHERE id = $1`, connID).Scan(&internal, &provider)
+			`SELECT provider_scopes FROM capture_connection WHERE id = $1`, connID).Scan(&provider)
 	}); err != nil {
 		t.Fatal(err)
-	}
-	if len(internal) != 1 || internal[0] != string(principal.ScopeRead) {
-		t.Errorf("the internal scopes column = %v, want the unchanged [read]", internal)
 	}
 	if len(provider) != len(granted) {
 		t.Fatalf("provider_scopes = %v, want %v", provider, granted)

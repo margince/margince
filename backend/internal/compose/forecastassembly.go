@@ -59,7 +59,7 @@ func assembleForecast(
 	}
 	out := forecasting.Assembly{
 		Readings: readings, Scope: resolved, Limited: limited,
-		SelfCorrecting: model.SelfCorrecting, EvidenceCutoff: model.Cutoff,
+		SelfCorrecting: model.SelfCorrecting,
 	}
 	if model.SelfCorrecting {
 		out.RiskSignalsVersion = assurance.RiskSignalsVersion

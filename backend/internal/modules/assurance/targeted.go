@@ -93,7 +93,7 @@ func (s *Scanner) scanOneDeal(
 			return err
 		}
 	}
-	if err := s.store.RecordReceipts(ctx, tx, runID, now, s.cfg.ReceiptLifetime, subjects); err != nil {
+	if err := s.store.RecordReceipts(ctx, tx, runID, subjects); err != nil {
 		return err
 	}
 	if err := s.store.RecordRunFindings(ctx, tx, runID, pass.seen); err != nil {
