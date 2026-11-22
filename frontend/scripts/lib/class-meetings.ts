@@ -70,7 +70,7 @@ export function classMeetings(path: string, text: string): ClassMeeting[] {
 
 /**
  * Each member, and beside it the same member carrying every class a markup
- * site lists next to one of its own, typed as that site's element. An open
+ * site lists next to one of its own. The copy takes that site's element type. An open
  * prefix adds the sheet classes it reaches. A bare slot such as `panel-${tone}`
  * adds none: it cannot tell a variant from a part like `panel-head`.
  */
