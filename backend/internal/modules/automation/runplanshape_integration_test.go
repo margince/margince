@@ -8,13 +8,17 @@ package automation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -50,6 +54,47 @@ func (fx *autoFixture) explain(t *testing.T, sql string, args ...any) planNode {
 	}
 	return wrapped[0].Plan
 }
+
+var errRollbackPlanProbe = errors.New("rolling the plan probe back")
+
+// explainGeneric explains the statement as the production pool runs it: cached
+// on the backend that prepared it, under a generic plan, which a hot statement
+// switches to after a few executions. EXPLAIN ANALYZE executes the write, so
+// the transaction is rolled back.
+func (fx *autoFixture) explainGeneric(t *testing.T, sql string, args ...any) planNode {
+	t.Helper()
+	ctx := context.Background()
+	var raw []byte
+	err := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)).Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, sql, args...); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `SET LOCAL plan_cache_mode = force_generic_plan`); err != nil {
+			return err
+		}
+		var err error
+		raw, err = testdb.ExplainCachedStatement(ctx, tx, sql, args)
+		if err != nil {
+			return err
+		}
+		return errRollbackPlanProbe
+	})
+	if !errors.Is(err, errRollbackPlanProbe) {
+		t.Fatalf("explaining the cached statement failed: %v\nstatement: %s", err, sql)
+	}
+	var wrapped []struct {
+		Plan planNode `json:"Plan"`
+	}
+	if err := json.Unmarshal(raw, &wrapped); err != nil || len(wrapped) != 1 {
+		t.Fatalf("unreadable EXPLAIN output %s: %v", raw, err)
+	}
+	return wrapped[0].Plan
+}
+
+// wantRunOutcomes is the number of terminal writes the engine has. A new one
+// raises it here on purpose; the workflowrunwriters gate catches a write that
+// bypasses runOutcomeSQL altogether.
+const wantRunOutcomes = 5
 
 // TestRunClaimAndOutcomeStatementsReachTheirRowByTheUniqueIndex holds the cost
 // of a firing without reading a clock. A firing touches workflow_run once to
@@ -99,19 +144,27 @@ func TestRunClaimAndOutcomeStatementsReachTheirRowByTheUniqueIndex(t *testing.T)
 		statements = append(statements, statement{"run outcome " + name, sql, args[:strings.Count(sql, "$")]})
 	}
 
+	if len(statements) != 2+wantRunOutcomes {
+		t.Fatalf("explaining %d statements, want 2 claims and %d outcomes: the census is short", len(statements), wantRunOutcomes)
+	}
 	for _, s := range statements {
 		t.Run(s.name, func(t *testing.T) {
-			plan := fx.explain(t, s.sql, s.args...)
-			var problems []string
-			if strings.HasPrefix(s.name, "run claim") {
-				if !slices.Contains(plan.ArbiterIndexes, "workflow_run_unique") {
-					problems = append(problems, fmt.Sprintf("conflict arbiter is %v", plan.ArbiterIndexes))
-				}
-			} else {
-				problems = append(problems, scanProblems(plan)...)
+			plans := map[string]planNode{
+				"custom plan":  fx.explain(t, s.sql, s.args...),
+				"generic plan": fx.explainGeneric(t, s.sql, s.args...),
 			}
-			if len(problems) > 0 {
-				t.Errorf("%q lost its index path: %s\nstatement: %s", s.name, strings.Join(problems, "; "), s.sql)
+			for kind, plan := range plans {
+				var problems []string
+				if strings.HasPrefix(s.name, "run claim") {
+					if !slices.Contains(plan.ArbiterIndexes, "workflow_run_unique") {
+						problems = append(problems, fmt.Sprintf("conflict arbiter is %v", plan.ArbiterIndexes))
+					}
+				} else {
+					problems = append(problems, scanProblems(plan)...)
+				}
+				if len(problems) > 0 {
+					t.Errorf("%q lost its index path under its %s: %s\nstatement: %s", s.name, kind, strings.Join(problems, "; "), s.sql)
+				}
 			}
 		})
 	}
