@@ -1352,7 +1352,7 @@ var readViewQueries = map[string][]viewQuery{
 	"GET /v1/stages":                                        {{Name: "include_archived", Type: "boolean"}, {Name: "pipeline_id", Type: "string", Format: "uuid"}},
 	"GET /v1/stages/{id}":                                   {},
 	"GET /v1/stages/{id}/exit-criteria":                     {{Name: "include_archived", Type: "boolean"}},
-	"GET /v1/teams":                                         {{Name: "cursor", Type: "string"}, {Name: "limit", Type: "integer"}, {Name: "q", Type: "string"}},
+	"GET /v1/teams":                                         {{Name: "cursor", Type: "string"}, {Name: "include_archived", Type: "boolean"}, {Name: "limit", Type: "integer"}, {Name: "q", Type: "string"}},
 	"GET /v1/users/names":                                   {{Name: "id", Type: "array", Required: true}},
 }
 

@@ -10,6 +10,9 @@ act on the mail by itself.
 
 - **The text could not be read.** The text is in a form Margince cannot read,
   such as an Outlook `winmail.dat` file. Only the From and To lines are stored.
+- **This message has no text.** The mail holds no words, only its From and
+  To lines. **Show in my language** is not offered, because there is nothing
+  to show.
 - **Part of the text could not be read.** Only the first part of the text could
   be read, or the mail was too long to store whole.
 - **The text is the forwarded mail.** A forward that adds no words of its own
