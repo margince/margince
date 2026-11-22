@@ -4,7 +4,11 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { stable } from "../../format/collate";
-import { formatDate, formatMoney, formatNumber } from "../../format/format";
+import {
+  formatDateAbbrev,
+  formatMoneyWhole,
+  formatNumber,
+} from "../../format/format";
 import { offerStatusLabel } from "../../format/offerstatus";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
@@ -98,7 +102,7 @@ export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
         {offer.valid_until && (
           <span>
             {t("commercial.validUntil", {
-              when: formatDate(offer.valid_until, locale, readerZone),
+              when: formatDateAbbrev(offer.valid_until, locale, readerZone),
             })}
           </span>
         )}
@@ -154,7 +158,7 @@ export function offerAmount(
   if (offer.money_withheld || !offer.currency) {
     return "—";
   }
-  return formatMoney(offer.gross_minor, offer.currency, locale);
+  return formatMoneyWhole(offer.gross_minor, offer.currency, locale);
 }
 
 const OFFER_TONE: Record<
@@ -230,7 +234,7 @@ export function CompanyContractState({
           contracts.cancellation_effective_on && (
             <Badge tone="warning">
               {t("contracts.state.endsOn", {
-                when: formatDate(
+                when: formatDateAbbrev(
                   contracts.cancellation_effective_on,
                   locale,
                   readerZone,
@@ -241,7 +245,7 @@ export function CompanyContractState({
         {contracts.nearest_renewal_on && (
           <span>
             {t("contracts.state.renewsOn", {
-              when: formatDate(
+              when: formatDateAbbrev(
                 contracts.nearest_renewal_on,
                 locale,
                 readerZone,
@@ -272,13 +276,21 @@ export function contractValues(
   const figures: string[] = [];
   if (contracts.total_basis_value_minor_base != null) {
     figures.push(
-      formatMoney(contracts.total_basis_value_minor_base, currency, locale),
+      formatMoneyWhole(
+        contracts.total_basis_value_minor_base,
+        currency,
+        locale,
+      ),
     );
   }
   if (contracts.annualized_value_minor_base != null) {
     figures.push(
       perYear(
-        formatMoney(contracts.annualized_value_minor_base, currency, locale),
+        formatMoneyWhole(
+          contracts.annualized_value_minor_base,
+          currency,
+          locale,
+        ),
       ),
     );
   }

@@ -6,7 +6,11 @@ import { CoverageNote, PartialMark } from "../../components/partialmark";
 import { EmptyState, Skeleton } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Stack } from "../../design-system/stack";
-import { formatDateTime, formatMoney, formatNumber } from "../../format/format";
+import {
+  formatDateTimeAbbrev,
+  formatMoneyWhole,
+  formatNumber,
+} from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { coverageOfWire, hasGap } from "../../lib/moneycoverage";
@@ -80,7 +84,7 @@ export function HierarchyRollupPanel({
   const closedWonCoverage = coverageOfWire(rollup.closed_won_coverage);
   const money = (value: CompanyHierarchyRollup["weighted_pipeline"]) =>
     value.amount_minor != null && value.currency
-      ? formatMoney(value.amount_minor, value.currency, locale)
+      ? formatMoneyWhole(value.amount_minor, value.currency, locale)
       : "—";
 
   return (
@@ -138,7 +142,7 @@ export function HierarchyRollupPanel({
         </p>
         <p className="t-caption co-rollup-note">
           {t("rollup.computedAt", {
-            when: formatDateTime(rollup.computed_at, locale, recordZone),
+            when: formatDateTimeAbbrev(rollup.computed_at, locale, recordZone),
           })}
         </p>
       </PanelBody>

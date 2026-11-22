@@ -1,7 +1,7 @@
 import { StatCard } from "../../design-system/atoms";
 import type { PeekContent } from "../../design-system/peek";
 import {
-  formatDate,
+  formatDateAbbrev,
   formatMoneyCompact,
   formatNumber,
 } from "../../format/format";
@@ -126,7 +126,7 @@ export function PipelineCard({
     commercial.converted_count > 0 && commercial.fx_as_of
       ? t("co.strip.convertedAsOf", {
           count: formatNumber(commercial.converted_count, locale),
-          date: formatDate(commercial.fx_as_of, locale, recordZone),
+          date: formatDateAbbrev(commercial.fx_as_of, locale, recordZone),
         })
       : undefined;
   return (

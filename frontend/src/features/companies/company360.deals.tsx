@@ -10,9 +10,11 @@ import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import {
   formatDayMonth,
-  formatMoneyOrAbsent,
+  formatMoneyWhole,
   formatNumber,
+  MONEY_ABSENT,
 } from "../../format/format";
+import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
 import { openValue } from "../../lib/openvalue";
@@ -22,6 +24,7 @@ import type { Company360 } from "./company360";
 import "./company360.css";
 
 type Deal360 = components["schemas"]["Company360Deal"];
+type Money = components["schemas"]["Money"];
 
 /** DealsCard lists the open deals plus the two lifetime figures. */
 export function DealsCard({
@@ -133,7 +136,7 @@ function DealFigures({
       />
       <StatCard
         label={t("co.deals.wonLifetime")}
-        value={formatMoneyOrAbsent(won?.amount_minor, won?.currency, locale)}
+        value={wholeOrDash(won, locale)}
       />
       <StatCard
         label={t("co.deals.lost")}
@@ -141,6 +144,18 @@ function DealFigures({
         href={lostHref}
       />
     </StatStrip>
+  );
+}
+
+// The deals tab writes money as the deal page does: whole units, cents only
+// when the amount has them.
+function wholeOrDash(money: Money | null | undefined, locale: Locale) {
+  return formatMoneyOrWord(
+    money?.amount_minor,
+    money?.currency,
+    locale,
+    MONEY_ABSENT,
+    formatMoneyWhole,
   );
 }
 
@@ -179,11 +194,7 @@ function dealColumns(
       render: (deal) =>
         deal.amount?.amount_minor == null
           ? ""
-          : formatMoneyOrAbsent(
-              deal.amount.amount_minor,
-              deal.amount.currency,
-              locale,
-            ),
+          : wholeOrDash(deal.amount, locale),
     },
     {
       key: "close",

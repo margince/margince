@@ -11,7 +11,7 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate } from "../../format/format";
+import { formatDateAbbrev } from "../../format/format";
 import { webUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { problemCodeOf, unwrap } from "../../lib/problem";
@@ -131,7 +131,7 @@ export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
               <SourcePageLink signal={signal} />
             </span>
             <span className="co-row-meta t-caption">
-              {formatDate(signal.detected_at, locale, readerZone)}
+              {formatDateAbbrev(signal.detected_at, locale, readerZone)}
             </span>
           </PanelRow>
         ))
