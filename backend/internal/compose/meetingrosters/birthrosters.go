@@ -34,7 +34,7 @@ func BirthRostersDataTask() datatask.Task {
 				return storedmail.Count(ctx, q, unnamedBirthRosters, maximum)
 			},
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				return storedmail.Page(ctx, tx, in, "a.id, a.source_system, "+originalstore.SQL("rc"), unnamedBirthRosters,
+				return storedmail.AttendeePage(ctx, tx, in, "a.id, a.source_system, "+originalstore.SQL("rc"), unnamedBirthRosters,
 					func(row *calendarMeeting) (ids.UUID, *[]byte) { return row.ID, &row.Payload },
 					nameBirthRoster)
 			},

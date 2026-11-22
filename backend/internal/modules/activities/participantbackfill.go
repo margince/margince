@@ -128,6 +128,9 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 	if err != nil || len(batch.ids) == 0 {
 		return 0, err
 	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, batch.ids...); err != nil {
+		return 0, err
+	}
 	args := []any{limit}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	pinned := sprintf("AND a.id = ANY($%d)", arg(batch.ids))
