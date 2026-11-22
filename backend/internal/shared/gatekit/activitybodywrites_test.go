@@ -24,6 +24,8 @@ func TestAWriterOfAnActivityBodyIsCountedInEverySpelling(t *testing.T) {
 		{`UPDATE activity SET body = CASE WHEN $2::text IS NULL THEN body ELSE nullif($2, '') END, body_own_end = $3 WHERE id = $1`, 1, 0},
 		{`UPDATE activity SET subject = 'the body = gone, they said', body = $2`, 1, 1},
 		{`UPDATE activity SET (body, subject) = ($2, $3) WHERE id = $1`, 1, 1},
+		{`UPDATE activity SET body /* the text */ = $2 WHERE id = $1`, 1, 1},
+		{`INSERT INTO activity (id, body /* the text */, body_own_end) VALUES ($1, $2, $3)`, 1, 0},
 		{`UPDATE activity a SET ("body", body_own_end) = ($2, $3), language = NULL WHERE a.id = $1`, 1, 0},
 	} {
 		writers, unpaired := ActivityBodyWrites(tc.statement)

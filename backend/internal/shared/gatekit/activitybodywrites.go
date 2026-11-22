@@ -92,7 +92,7 @@ func assignedColumns(assignments []string) []string {
 func bareColumns(columns []string) []string {
 	bare := make([]string, 0, len(columns))
 	for _, column := range columns {
-		fields := strings.Fields(lineComment.ReplaceAllString(column, ""))
+		fields := strings.Fields(sqlComment.ReplaceAllString(column, " "))
 		if len(fields) == 0 {
 			continue
 		}
@@ -102,4 +102,5 @@ func bareColumns(columns []string) []string {
 	return bare
 }
 
-var lineComment = regexp.MustCompile(`--[^\n]*`)
+// sqlComment is a line comment or a block comment, which SQL reads as a space.
+var sqlComment = regexp.MustCompile(`(?s)--[^\n]*|/\*.*?\*/`)
