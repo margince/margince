@@ -2869,6 +2869,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Anfrage aus der Herkunft zurückgenommen",
   "history.field.impersonation_warning_cleared":
     "Warnung vor falscher Absendeadresse aufgehoben",
+  "history.field.impersonation_warning_carried":
+    "Warnung vor falscher Absendeadresse aus Zusammenführung übernommen",
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",

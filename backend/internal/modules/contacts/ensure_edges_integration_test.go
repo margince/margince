@@ -232,12 +232,12 @@ func TestEnsureCounterpartyAsksNothingAboutConsumerMail(t *testing.T) {
 	}
 }
 
-func TestEnsureCounterpartyQuarantinesImpersonationSuspects(t *testing.T) {
+func TestEnsureCounterpartyWarnsOfASenderShowingASign(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
 	// A display name embedding an address on a DIFFERENT domain — the
-	// classic spoof tell. The row still lands (hiding suspicious mail
+	// classic spoof sign. The row still lands (hiding suspicious mail
 	// would be worse), and wears the warning the contact read serves.
 	res, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t,
 		"boss@spoof.test", "ceo@real-corp.example", "spoof.test"))
@@ -251,7 +251,7 @@ func TestEnsureCounterpartyQuarantinesImpersonationSuspects(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !quarantined {
-		t.Fatal("an embedded-foreign-address display name must land quarantined")
+		t.Fatal("an embedded-foreign-address display name must land with the warning")
 	}
 
 	if _, err := e.store.EnsureCounterparty(ctx, EnsureCounterpartyInput{Email: "  "}); err == nil {

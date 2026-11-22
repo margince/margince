@@ -60,7 +60,7 @@ const MEETING_STATUS_WORDS: Readonly<
   canceled: "history.value.meeting_status.canceled",
 };
 
-// The reason a cleared impersonation warning names. `unrecorded` is the
+// The reason a cleared or carried impersonation warning names. `unrecorded` is the
 // audit's own word for a warning stored without one.
 const IMPERSONATION_WORDS: Readonly<
   Record<
@@ -124,6 +124,7 @@ const HISTORY_VALUE_LABELS = new Map<
   ["greeting_register", GREETING_REGISTER_LABEL],
   ["relationship_mark", MARK_WORDS],
   ["impersonation_warning_cleared", IMPERSONATION_WORDS],
+  ["impersonation_warning_carried", IMPERSONATION_WORDS],
   ["visibility", VISIBILITY_WORDS],
   ["direction", DIRECTION_WORDS],
   ["meeting_status", MEETING_STATUS_WORDS],

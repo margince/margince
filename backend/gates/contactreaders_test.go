@@ -241,7 +241,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/employerchangeapply.go:requireContactOwner":          "Called only by ApplyEmployerChangeTx after auth.HoldWritableLive on the contact. It reads owner_id to compare with the deciding member and returns no contact field.",
-	"internal/modules/contacts/impersonationwarning.go:carryImpersonationWarningTx": "Called only by mergeContactCarryingTx, after MergeContact asks the contact update grant and the merge locks and admits both rows. It copies the open verdict from the merged-away row to the survivor and returns no contact data.",
+	"internal/modules/contacts/impersonationwarning.go:carryImpersonationWarningTx": "Called only by mergeContactCarryingTx, after MergeContact asks the contact update grant and the merge locks and admits both rows. It copies the open verdict from the merged-away row to the survivor and returns only its reason code to the audit row.",
 	"internal/modules/contacts/signaturerole.go:roleFromSignatureTitleTx":           "Called only by applySignature after contact.update and HoldWritableLive. It reads the persisted title for the gated relationship writer and returns no contact data.",
 
 	"internal/modules/activities/meetingfollowup.go:meetingAttendeesSQL":            "meetingFollowUpsPage supplies addressableContactClause from the reader's contact grant and row scope. The recipient aggregate filters by that predicate before returning any contact id; names and other contact fields are never selected",

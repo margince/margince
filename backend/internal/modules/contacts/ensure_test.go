@@ -24,7 +24,7 @@ func TestAnImpersonationSignNeedsADomainToJudge(t *testing.T) {
 	}{
 		{"a punycode domain is a homoglyph vector", "Acme Billing", "xn--80ak6aa92e.com", impersonationPunycodeDomain},
 		{"a punycode label below the apex counts too", "Acme Billing", "mail.xn--80ak6aa92e.com", impersonationPunycodeDomain},
-		{"an embedded address on a foreign domain is the spoof tell", "ceo@real-corp.example", "spoof.test", impersonationDisplayNameOtherDomain},
+		{"an embedded address on a foreign domain is the spoof sign", "ceo@real-corp.example", "spoof.test", impersonationDisplayNameOtherDomain},
 		{"an embedded address on the sending domain is just a signature", "ceo@acme.test", "acme.test", ""},
 		{"an ordinary name on an ordinary domain", "Carol Example", "acme.test", ""},
 		{"a channel sender's name that happens to contain an address", "ceo@real-corp.example", "", ""},

@@ -2772,6 +2772,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.acquisition_request_retracted":
     "Yêu cầu khi thu nhận đã bị rút lại",
   "history.field.impersonation_warning_cleared": "Đã gỡ cảnh báo mạo danh",
+  "history.field.impersonation_warning_carried":
+    "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
   "history.field.reason": "Lý do",
   "history.field.recorded_at_level": "Ghi nhận ở cấp",
   "history.field.relationship_types": "Loại quan hệ",

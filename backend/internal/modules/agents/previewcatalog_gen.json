@@ -418,6 +418,8 @@
      "href",
     "html_body":
      "Formatted message",
+    "impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
     "impersonation_warning_cleared":
      "Impersonation warning cleared",
     "import_apply_tag":
@@ -5562,6 +5564,26 @@
      "Unknown",
     "html_body/boolean/true":
      "Yes",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Customer",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Disqualified",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Former customer",
+    "impersonation_warning_carried/lifecycle/live":
+     "Live",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Opportunity",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Prospect",
+    "impersonation_warning_carried/lifecycle/target":
+     "Target",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Unknown",
+    "impersonation_warning_carried/boolean/true":
+     "Yes",
     "impersonation_warning_cleared/lifecycle/customer":
      "Customer",
     "impersonation_warning_cleared/lifecycle/disqualified":
@@ -9372,6 +9394,8 @@
      "History",
     "merge_profile_field/text/icp":
      "Ideal customer profile",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
     "merge_profile_field/text/impersonation_warning_cleared":
      "Impersonation warning cleared",
     "merge_profile_field/text/industry":
@@ -9734,6 +9758,8 @@
      "History",
     "merge_profile_field/lifecycle/icp":
      "Ideal customer profile",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
     "merge_profile_field/lifecycle/impersonation_warning_cleared":
      "Impersonation warning cleared",
     "merge_profile_field/lifecycle/industry":
@@ -17466,6 +17492,12 @@
      "Not set",
     "html_body/execution":
      "Set when applied",
+    "impersonation_warning_carried/boolean":
+     "No",
+    "impersonation_warning_carried/empty":
+     "Not set",
+    "impersonation_warning_carried/execution":
+     "Set when applied",
     "impersonation_warning_cleared/boolean":
      "No",
     "impersonation_warning_cleared/empty":
@@ -20760,6 +20792,8 @@
      "href",
     "html_body":
      "Formatierte Nachricht",
+    "impersonation_warning_carried":
+     "Warnung vor falscher Absendeadresse aus Zusammenführung übernommen",
     "impersonation_warning_cleared":
      "Warnung vor falscher Absendeadresse aufgehoben",
     "import_apply_tag":
@@ -25904,6 +25938,26 @@
      "Unbekannt",
     "html_body/boolean/true":
      "Ja",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Kunde",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Disqualifiziert",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "impersonation_warning_carried/lifecycle/live":
+     "Live",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Chance",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Interessent",
+    "impersonation_warning_carried/lifecycle/target":
+     "Zielunternehmen",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Unbekannt",
+    "impersonation_warning_carried/boolean/true":
+     "Ja",
     "impersonation_warning_cleared/lifecycle/customer":
      "Kunde",
     "impersonation_warning_cleared/lifecycle/disqualified":
@@ -29714,6 +29768,8 @@
      "Geschichte",
     "merge_profile_field/text/icp":
      "Ideales Kundenprofil",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Warnung vor falscher Absendeadresse aus Zusammenführung übernommen",
     "merge_profile_field/text/impersonation_warning_cleared":
      "Warnung vor falscher Absendeadresse aufgehoben",
     "merge_profile_field/text/industry":
@@ -30076,6 +30132,8 @@
      "Geschichte",
     "merge_profile_field/lifecycle/icp":
      "Ideales Kundenprofil",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Warnung vor falscher Absendeadresse aus Zusammenführung übernommen",
     "merge_profile_field/lifecycle/impersonation_warning_cleared":
      "Warnung vor falscher Absendeadresse aufgehoben",
     "merge_profile_field/lifecycle/industry":
@@ -37808,6 +37866,12 @@
      "Nicht gesetzt",
     "html_body/execution":
      "Wird beim Anwenden festgelegt",
+    "impersonation_warning_carried/boolean":
+     "Nein",
+    "impersonation_warning_carried/empty":
+     "Nicht gesetzt",
+    "impersonation_warning_carried/execution":
+     "Wird beim Anwenden festgelegt",
     "impersonation_warning_cleared/boolean":
      "Nein",
     "impersonation_warning_cleared/empty":
@@ -41102,6 +41166,8 @@
      "href",
     "html_body":
      "Nội dung có định dạng",
+    "impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
     "impersonation_warning_cleared":
      "Đã gỡ cảnh báo mạo danh",
     "import_apply_tag":
@@ -46246,6 +46312,26 @@
      "Chưa rõ",
     "html_body/boolean/true":
      "Có",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Khách hàng",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Đã loại",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "impersonation_warning_carried/lifecycle/live":
+     "Đang vận hành",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Đang triển khai",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Cơ hội",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Tiềm năng",
+    "impersonation_warning_carried/lifecycle/target":
+     "Mục tiêu",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Chưa rõ",
+    "impersonation_warning_carried/boolean/true":
+     "Có",
     "impersonation_warning_cleared/lifecycle/customer":
      "Khách hàng",
     "impersonation_warning_cleared/lifecycle/disqualified":
@@ -50056,6 +50142,8 @@
      "Lịch sử",
     "merge_profile_field/text/icp":
      "Hồ sơ khách hàng lý tưởng",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
     "merge_profile_field/text/impersonation_warning_cleared":
      "Đã gỡ cảnh báo mạo danh",
     "merge_profile_field/text/industry":
@@ -50418,6 +50506,8 @@
      "Lịch sử",
     "merge_profile_field/lifecycle/icp":
      "Hồ sơ khách hàng lý tưởng",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
     "merge_profile_field/lifecycle/impersonation_warning_cleared":
      "Đã gỡ cảnh báo mạo danh",
     "merge_profile_field/lifecycle/industry":
@@ -58149,6 +58239,12 @@
     "html_body/empty":
      "Chưa đặt",
     "html_body/execution":
+     "Được xác định khi áp dụng",
+    "impersonation_warning_carried/boolean":
+     "Không",
+    "impersonation_warning_carried/empty":
+     "Chưa đặt",
+    "impersonation_warning_carried/execution":
      "Được xác định khi áp dụng",
     "impersonation_warning_cleared/boolean":
      "Không",

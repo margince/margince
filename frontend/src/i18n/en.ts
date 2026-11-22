@@ -2750,6 +2750,8 @@ export const en = {
     "Acquisition request withdrawn",
   "history.field.impersonation_warning_cleared":
     "Impersonation warning cleared",
+  "history.field.impersonation_warning_carried":
+    "Impersonation warning kept from merged contact",
   "history.field.reason": "Reason",
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",

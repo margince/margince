@@ -87,8 +87,8 @@ func impersonationWarningOf(detectedAt *time.Time, reason *string) *crmcontracts
 
 // ClearImpersonationWarning records a user's answer that the sender is fine.
 //
-// The verdict stays on the row beside the answer, so a later verdict can be
-// compared with what was cleared. A contact with no open warning writes nothing.
+// The verdict stays on the row beside the answer, as the record of what was
+// answered and by whom. A contact with no open warning writes nothing.
 // Human-only: mail an agent reads could ask it to clear the warning about its sender.
 func (s *Store) ClearImpersonationWarning(ctx context.Context, id ids.ContactID) error {
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -129,23 +129,42 @@ func (s *Store) ClearImpersonationWarning(ctx context.Context, id ids.ContactID)
 	})
 }
 
+// auditImpersonationWarningCarried keys the audit image of a warning a merge
+// moved to the survivor. Its value is the reason, as for a cleared one.
+const auditImpersonationWarningCarried = "impersonation_warning_carried"
+
 // carryImpersonationWarningTx moves an open warning from a merged-away contact
 // to the survivor, whose addresses now include the suspect one.
 //
-// Without it a merge would answer the warning, and an agent may merge. The
-// survivor's own cleared verdict yields, because the open one is unanswered.
+// Without it a merge would answer the warning, and an agent may merge. A
+// survivor with an open warning keeps its own. A cleared one yields, and the
+// audit row of that clear still names who answered it.
 func carryImpersonationWarningTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
-	_, err := tx.Exec(ctx, `
+	var reason string
+	err := tx.QueryRow(ctx, `
 		UPDATE contact survivor
 		   SET quarantined_at = merged.quarantined_at, quarantine_reason = merged.quarantine_reason,
 		       quarantine_cleared_at = NULL, quarantine_cleared_by = NULL
 		  FROM contact merged
 		 WHERE survivor.id = $2 AND survivor.archived_at IS NULL AND merged.id = $1
 		   AND merged.quarantined_at IS NOT NULL AND merged.quarantine_cleared_at IS NULL
-		   AND (survivor.quarantined_at IS NULL OR survivor.quarantine_cleared_at IS NOT NULL)`,
-		sourceID, targetID)
+		   AND (survivor.quarantined_at IS NULL OR survivor.quarantine_cleared_at IS NOT NULL)
+		RETURNING coalesce(survivor.quarantine_reason, $3)`,
+		sourceID, targetID, impersonationUnrecorded).Scan(&reason)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("contacts: carrying the impersonation warning to the survivor: %w", err)
 	}
-	return nil
+	// An occurrence on the survivor: the merge raised a warning its own
+	// fields never held, so no before-image exists to name.
+	auditID, err := storekit.AuditEvent(ctx, tx, "update", entityContact, targetID.UUID,
+		map[string]any{auditImpersonationWarningCarried: reason})
+	if err != nil {
+		return fmt.Errorf("contacts: recording the carried impersonation warning: %w", err)
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, targetID.UUID, crmcontracts.PublicEventContactUpdated{
+		ChangedFields: map[string]any{fieldImpersonationWarning: reason},
+	})
 }

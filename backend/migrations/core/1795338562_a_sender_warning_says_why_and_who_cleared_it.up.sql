@@ -5,7 +5,7 @@
 -- A verdict older than this column has no reason, and no existing row is changed.
 --
 -- A user who checks the sender clears the warning. The verdict stays, with the
--- time and the user (in the grammar of captured_by), so a later one can be compared.
+-- time and the user (in the grammar of captured_by), as the record of the answer.
 --
 -- The constraints are added NOT VALID; the next migration validates them.
 SET LOCAL lock_timeout = '3s';

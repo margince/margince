@@ -76,7 +76,6 @@ Also called: read-only record, edit greyed out, cannot change.
 ### What does "This sender may be pretending to be someone else" mean?
 The warning shows on a contact whose first email carried a sign that its sender is someone else. The warning names the sign, such as a mail domain in a coded spelling that can look like another domain. Check the address, then press **Looks fine** if the sender is right. The warning then goes for all users, and the **History** tab records who cleared it. Only a user who can edit the contact can clear it, and an agent cannot.
 Also called: wrong sender, sender warning.
-
 ### How do I link a contact to a company?
 New contacts use the same company check from every source. A company name can find or create the employer; a work address can find a company or wait for a site check. Personal email domains create no company.
 To link a contact to a company in Margince, open the contact's **Companies** tab and choose **Add company** under **Work history**. The same list shows the companies they worked at before, with role and dates. When the first page holds the whole list, the number on the tab counts them.
@@ -305,6 +304,7 @@ Also called: tag a teammate, @mention, leave a comment, notify a colleague.
 A note, call or meeting you log in Margince can be read by anyone who can open at least one record it is linked to. One with no links can be read by everyone. To see who may read it, open **More actions** (⋯) on it in the timeline and press **Change visibility**. Choose **Participants only** or name the colleagues and teams who may read it, and press **Save visibility**. Colleagues not in that group see that it is there, not what it says, and an admin's wider access does not change that. Captured mail works in another way: see [Who can see an email](who-can-see-an-email.md).
 
 Also called: private note, who sees my notes, hide a call, make a note private.
+
 Who can see a captured message comes from the mailbox it was brought in from. A new mailbox holds its mail until Margince judges the thread to be ordinary. Change it by sharing the thread; the message itself has no visibility setting.
 
 ## Putting a change back

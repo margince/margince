@@ -187,20 +187,83 @@ func TestOnlyAUserWhoMayEditTheContactClearsTheWarning(t *testing.T) {
 	}
 }
 
+// mergeAsAgent merges source into target as an agent acting for the admin,
+// the principal that must not be able to answer a warning.
+func mergeAsAgent(t *testing.T, e *Env, source, target ids.ContactID) {
+	t.Helper()
+	agent := e.AgentFor(t, e.AdminUser, nil, AdminPerms)
+	if _, err := e.Contacts.MergeContact(agent, source, target, nil); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+}
+
+// carriedAudits counts the survivor's audit rows of a carried warning whose
+// contact.updated event names them.
+func carriedAudits(t *testing.T, e *Env, survivor ids.ContactID) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM audit_log a
+		  JOIN event_outbox o ON o.envelope->'trace'->>'audit_log_id' = a.id::text
+		 WHERE a.entity_type = 'contact' AND a.entity_id = $1 AND a.action = 'update'
+		   AND a.after ? 'impersonation_warning_carried' AND o.envelope->>'type' = 'contact.updated'`,
+		survivor.UUID)
+}
+
 // A merge moves the suspect address onto the survivor, so the open warning
 // goes with it. An agent may merge, and must not answer the warning that way.
 func TestAMergeCarriesAnOpenWarningToTheSurvivor(t *testing.T) {
+	const otherDomain = crmcontracts.ContactImpersonationWarningReasonDisplayNameOtherDomain
 	e := Setup(t)
 	suspect := captureSuspectSender(t, e, "ceo@real-corp.example", "boss@spoof.test", "spoof.test")
 	trusted := captureSuspectSender(t, e, "Carol Example", "carol@acme.test", "acme.test")
-	agent := e.AgentFor(t, e.AdminUser, nil, AdminPerms)
 
-	if _, err := e.Contacts.MergeContact(agent, suspect, trusted, nil); err != nil {
-		t.Fatalf("merging the suspect into the trusted contact: %v", err)
-	}
+	mergeAsAgent(t, e, suspect, trusted)
+
 	got := warningOn(e.Admin(), t, e, trusted)
+	if got == nil || got.Reason == nil || *got.Reason != otherDomain {
+		t.Fatalf("the survivor serves warning %+v, want the merged-away contact's open one", got)
+	}
+	if n := carriedAudits(t, e, trusted); n != 1 {
+		t.Errorf("%d audit rows with an event for the carried warning, want 1", n)
+	}
+}
+
+// A survivor whose own warning a user cleared wears the merged-away contact's
+// open one: the answer was about another sender.
+func TestAMergeReopensASurvivorWhoseOwnWarningWasCleared(t *testing.T) {
+	e := Setup(t)
+	suspect := captureSuspectSender(t, e, "ceo@real-corp.example", "boss@spoof.test", "spoof.test")
+	answered := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
+	if err := e.Contacts.ClearImpersonationWarning(e.Admin(), answered); err != nil {
+		t.Fatalf("clearing the survivor's own warning: %v", err)
+	}
+
+	mergeAsAgent(t, e, suspect, answered)
+
+	got := warningOn(e.Admin(), t, e, answered)
 	if got == nil || got.Reason == nil ||
 		*got.Reason != crmcontracts.ContactImpersonationWarningReasonDisplayNameOtherDomain {
 		t.Fatalf("the survivor serves warning %+v, want the merged-away contact's open one", got)
+	}
+	if audits, _ := clearedAudits(t, e, answered); audits != 1 {
+		t.Errorf("%d audit rows of the earlier clear, want the 1 that names who answered", audits)
+	}
+}
+
+// A survivor with an open warning keeps it, and a merge that carries nothing
+// writes no audit row for a carry.
+func TestAMergeKeepsTheSurvivorsOwnOpenWarning(t *testing.T) {
+	e := Setup(t)
+	suspect := captureSuspectSender(t, e, "ceo@real-corp.example", "boss@spoof.test", "spoof.test")
+	warned := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
+
+	mergeAsAgent(t, e, suspect, warned)
+
+	got := warningOn(e.Admin(), t, e, warned)
+	if got == nil || got.Reason == nil ||
+		*got.Reason != crmcontracts.ContactImpersonationWarningReasonPunycodeDomain {
+		t.Fatalf("the survivor serves warning %+v, want its own open one", got)
+	}
+	if n := carriedAudits(t, e, warned); n != 0 {
+		t.Errorf("%d audit rows for a carry, want none", n)
 	}
 }

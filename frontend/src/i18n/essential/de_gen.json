@@ -1595,6 +1595,7 @@
   "history.field.qualifying_event_retracted": "Erfasster Austausch zurückgenommen",
   "history.field.acquisition_request_retracted": "Anfrage aus der Herkunft zurückgenommen",
   "history.field.impersonation_warning_cleared": "Warnung vor falscher Absendeadresse aufgehoben",
+  "history.field.impersonation_warning_carried": "Warnung vor falscher Absendeadresse aus Zusammenführung übernommen",
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",

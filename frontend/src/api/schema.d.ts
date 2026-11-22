@@ -19839,7 +19839,7 @@ export interface paths {
         /**
          * Answer a contact's impersonation warning as fine.
          * @description Clears the warning `impersonation_warning` serves on the contact. The verdict stays on the
-         *     record with the moment and the user who cleared it, so a later one can be compared with it.
+         *     record with the moment and the user who cleared it, as the record of what was answered.
          *     Requires permission to update the contact. A contact the caller cannot see answers `404`.
          *     A contact with no warning, or one already cleared, answers `204` and writes nothing.
          *     One transaction: the row, its audit row and its `contact.updated` event.
