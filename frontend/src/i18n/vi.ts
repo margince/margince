@@ -16468,7 +16468,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aicalls.detail.source": "Nguồn danh tính phục vụ: {source}",
   "aicalls.detail.attempts": "Lần thử",
   "aicalls.detail.request": "Nội dung yêu cầu",
-  "aicalls.detail.settings": "Cài đặt yêu cầu đã gửi",
+  "aicalls.detail.settings": "Cài đặt mà lệnh gọi này đã được cấu hình",
   "aicalls.detail.servedBy": "do {host} phục vụ",
   "aicalls.detail.response": "Nội dung phản hồi",
   "aicalls.payload.off":
