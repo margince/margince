@@ -320,6 +320,40 @@ describe("the week ahead", () => {
     });
   });
 
+  // Cancel is the explicit discard, as in every dialog of the app: only Escape,
+  // the X and the backdrop ask. The next opening starts from what is stored.
+  it("drops a help request cancelled in the dialog and reopens empty", async () => {
+    const calls = stubApi({
+      ...KEEPS_A_PLAN,
+      "GET /weekly-plans/current": () => jsonResponse(plan()),
+    });
+    render(<PlanSection />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["plan.help.ask"] }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: en["plan.help.label"] }),
+      "Half a thought",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: en["create.cancel"] }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await userEvent.click(
+      screen.getByRole("button", { name: en["plan.help.ask"] }),
+    );
+
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: en["plan.help.label"],
+        }) as HTMLInputElement
+      ).value,
+    ).toBe("");
+    expect(writes(calls)).toHaveLength(0);
+  });
+
   // A standing ask with no answer yet says so. Silence where an answer will go
   // reads as an answer of "nothing", which is not what happened.
   it("shows a standing request as waiting until the lead answers", async () => {

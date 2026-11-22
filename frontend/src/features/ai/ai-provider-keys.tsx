@@ -266,6 +266,26 @@ function CredentialName({
   );
 }
 
+function credentialTitleKey(kind: CredentialKind): MessageKey {
+  return kind === "service_account"
+    ? "serviceAccountKey.label"
+    : "aiProviderKeys.field";
+}
+
+function SaveFailure({ failure }: Readonly<{ failure: Error | null }>) {
+  const t = useT();
+  if (!failure) return null;
+  return (
+    <Callout
+      tone="danger"
+      kind="outcome"
+      title={t("aiProviderKeys.saveFailed")}
+    >
+      {problemMessageOf(failure, t)}
+    </Callout>
+  );
+}
+
 // The credential controls for ONE vendor, drawn inside its sheet: whether it is
 // keyed, the test, and the paste field that adds, replaces or removes the key.
 function ProviderConnection({
@@ -339,6 +359,13 @@ function ProviderConnection({
     setRefusal(undefined);
     setEditing(false);
   };
+  // A boot-set key that locks the field while its dialog is open closes the
+  // dialog the same way Cancel does, so the typed secret does not wait in state
+  // for the lock to lift.
+  if (editing && lock.disabled) {
+    closeEntry();
+  }
+  const failureCallout = <SaveFailure failure={failure} />;
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // The other mutation's failure is no longer the current story; without
@@ -436,18 +463,19 @@ function ProviderConnection({
         </div>
         <KeyTestOutcome test={test} keyHeld={status.configured} />
         <RecordFormDialog
-          open={editing && !lock.disabled}
-          title={t(
-            kind === "service_account"
-              ? "serviceAccountKey.label"
-              : "aiProviderKeys.field",
-          )}
+          open={editing}
+          title={t(credentialTitleKey(kind))}
           onClose={closeEntry}
           fieldCount={1}
           unsaved={value !== ""}
           closeDisabled={busy}
           form={
-            <form id={formId} noValidate onSubmit={submit}>
+            <form
+              id={formId}
+              className="form-stack"
+              noValidate
+              onSubmit={submit}
+            >
               <KeyEntry
                 kind={kind}
                 configured={status.configured}
@@ -460,19 +488,12 @@ function ProviderConnection({
                   setValue(next);
                 }}
               />
+              {failureCallout}
             </form>
           }
           actions={verbs}
         />
-        {failure ? (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("aiProviderKeys.saveFailed")}
-          >
-            {problemMessageOf(failure, t)}
-          </Callout>
-        ) : null}
+        {!editing && failureCallout}
       </div>
       <ConfirmModal
         open={confirming}

@@ -336,6 +336,76 @@ describe("AiProviderKeysCard", () => {
     expect(backend.puts).toHaveLength(0);
   });
 
+  it("shows a refused save inside the key dialog, where the reader is looking", async () => {
+    const backend = backendFor(KEY_EDITOR);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.method === "PUT") {
+          return jsonResponse(
+            { title: "Refused", status: 409, detail: "The vault is sealed." },
+            409,
+          );
+        }
+        return backend.fetchMock(input, init);
+      }),
+    );
+    render(<AiProviderKeysCard />);
+
+    const user = userEvent.setup();
+    const entry = await openKey(user, "openai");
+    await user.type(
+      within(entry).getByPlaceholderText(/paste api key/i),
+      "sk-openai",
+    );
+    await user.click(within(entry).getByRole("button", { name: /save key/i }));
+
+    expect(
+      await within(entry).findByText("The vault is sealed."),
+    ).toBeVisible();
+    expect(within(entry).getByText("Provider not updated")).toBeVisible();
+  });
+
+  it("drops a typed key when the environment locks the field under an open dialog", async () => {
+    const listed: typeof LISTED & { locks?: unknown } = { ...LISTED };
+    vi.stubGlobal("fetch", backendFor(KEY_EDITOR, listed).fetchMock);
+    const { client } = render(<AiProviderKeysCard />);
+
+    const user = userEvent.setup();
+    const entry = await openKey(user, "openai");
+    await user.type(
+      within(entry).getByPlaceholderText(/paste api key/i),
+      "sk-typed-secret",
+    );
+
+    listed.locks = [
+      {
+        key: "ai.provider_keys_openai",
+        origin: { source: "env", name: "OPENAI_API_KEY" },
+      },
+    ];
+    await client.invalidateQueries();
+    await waitFor(() =>
+      expect(screen.queryByPlaceholderText(/paste/i)).toBeNull(),
+    );
+
+    delete listed.locks;
+    await client.invalidateQueries();
+    const sheet = await screen.findByTestId("ai-provider-key-openai");
+    await waitFor(() =>
+      expect(
+        within(sheet).getByRole("button", { name: /^add$/i }),
+      ).toBeEnabled(),
+    );
+    expect(screen.queryByPlaceholderText(/paste/i)).toBeNull();
+    await user.click(within(sheet).getByRole("button", { name: /^add$/i }));
+    expect(await screen.findByPlaceholderText(/paste api key/i)).toHaveValue(
+      "",
+    );
+  });
+
   it("offers Remove only where a key is held", async () => {
     const user = userEvent.setup();
     const backend = backendFor(KEY_EDITOR);

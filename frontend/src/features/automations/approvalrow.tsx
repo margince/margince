@@ -100,6 +100,15 @@ function statusLabels(
   };
 }
 
+function findEditOpener(cardTestId: string, editLabel: string) {
+  const card = `[data-testid="${cardTestId}"]`;
+  return (
+    document.querySelector<HTMLElement>(
+      `${card} [aria-label="${editLabel}"]`,
+    ) ?? document.querySelector<HTMLElement>(`${card} button`)
+  );
+}
+
 function DecidableApprovalRow({
   approval,
   decided,
@@ -293,10 +302,25 @@ function DecidableApprovalRow({
     decide.reset();
   };
 
+  const outcomeShown = (shown: boolean) => (
+    <DecideOutcome
+      shown={shown}
+      decide={decide}
+      skewKey={skewKey}
+      alreadyDecided={alreadyDecided}
+      onReRead={reRead}
+    />
+  );
+  const cardTestId = `approval-card-${approval.id}`;
+  // The card's verbs are not mounted while the editor is open, so the dialog
+  // names the Edit control it will find once they are back.
+  const editOpener = () => findEditOpener(cardTestId, t("trust.edit"));
+
   return (
     <DecisionCard
       approval={approval}
       layout="row"
+      testId={cardTestId}
       className="approval-row"
       display={display}
       detail={
@@ -355,6 +379,8 @@ function DecidableApprovalRow({
       editor={
         editing ? (
           <StagedEditDialog
+            outcome={outcomeShown(true)}
+            returnFocusTo={editOpener}
             unsaved={editedAwayFromProposal(editing, strings, change, draft)}
             disabled={!acceptable}
             required={required}
@@ -418,12 +444,7 @@ function DecidableApprovalRow({
               unanswered={permission.unanswered}
             />
           )}
-          <DecideOutcome
-            decide={decide}
-            skewKey={skewKey}
-            alreadyDecided={alreadyDecided}
-            onReRead={reRead}
-          />
+          {outcomeShown(!editing)}
         </>
       }
     >

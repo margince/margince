@@ -1,4 +1,4 @@
-import { useId, useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
 import {
   RosterFailedLine,
@@ -20,8 +20,7 @@ import {
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
-import { Heading } from "../../design-system/heading";
-import { Modal } from "../../design-system/modal";
+import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { focusFirstRefused } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { isRealCalendarDay } from "../../format/calendarday";
@@ -44,7 +43,10 @@ export function DecideOutcome({
   skewKey,
   alreadyDecided,
   onReRead,
+  shown = true,
 }: Readonly<{
+  /** False while a dialog over the card draws the same outcome itself. */
+  shown?: boolean;
   decide: { isError: boolean; error: unknown };
   skewKey: MessageKey | null;
   alreadyDecided: boolean;
@@ -52,6 +54,7 @@ export function DecideOutcome({
 }>) {
   const t = useT();
   const generic = decide.isError && !skewKey && !alreadyDecided;
+  if (!shown) return null;
   return (
     <>
       {generic && <ErrorLine error={decide.error} />}
@@ -95,18 +98,7 @@ export function editableSeed(entry: EditableField, staged: unknown): string {
   return entry.as === "date" && !isRealCalendarDay(staged) ? "" : staged;
 }
 
-/**
- * The staged-draft editor: the string fields of the proposed_change, in
- * the shape the kind declared for them, going up as `edited_payload`.
- *
- * It is handed to the card as its `editor` slot rather than living inside the
- * primitive, and that boundary is the point: an edit re-enters the admission
- * gate from scratch on the server (re-tiered, re-RBAC'd, new diff_hash —
- * ADR-0036), so what it may offer is a question about THIS kind and this
- * contract, which is screen knowledge. The card knows how to draw a decision;
- * it does not know what this installation lets a contact change.
- */
-export function StagedEditor({
+function useStagedParts({
   disabled,
   required = [],
   acceptLabel,
@@ -117,25 +109,12 @@ export function StagedEditor({
   onApprove,
   onCancel,
   records,
-}: Readonly<{
-  /** The records the proposed work is about; their named colleagues lead the doer picker. */
-  records?: readonly AssignedRecord[];
-  disabled?: boolean;
-  /** Fields that may not be sent blank. */
-  required?: readonly string[];
-  acceptLabel?: string;
-  fields: readonly EditableField[];
-  draft: Record<string, string>;
-  onChange: (field: string, value: string) => void;
-  pending: boolean;
-  onApprove: () => void;
-  onCancel: () => void;
-}>) {
+}: StagedEditorProps) {
   const t = useT();
   const blank = required.some((field) => isBlank(draft[field]));
   const root = useRef<HTMLDivElement>(null);
-  return (
-    <div className="form-stack approval-editor" data-date-scope ref={root}>
+  const fieldControls = (
+    <>
       {fields.map((entry) =>
         entry.as === "doer" ? (
           <DoerField
@@ -167,69 +146,122 @@ export function StagedEditor({
           </Field>
         ),
       )}
+    </>
+  );
+  const approve = (
+    <Button
+      variant="primary"
+      pending={pending}
+      disabled={disabled}
+      onClick={(event) => {
+        // Each blank required field already says so; the press goes there.
+        if (blank) {
+          focusFirstRefused(root.current);
+        } else if (!refuseUnreadableField(event.currentTarget)) {
+          onApprove();
+        }
+      }}
+    >
+      {acceptLabel ?? t("decision.approveEdited")}
+    </Button>
+  );
+  const cancel = (
+    <Button disabled={pending} onClick={onCancel}>
+      {t("deals.cancel")}
+    </Button>
+  );
+  return { root, fieldControls, approve, cancel };
+}
+
+type StagedEditorProps = Readonly<{
+  /** The records the proposed work is about; their named colleagues lead the doer picker. */
+  records?: readonly AssignedRecord[];
+  disabled?: boolean;
+  /** Fields that may not be sent blank. */
+  required?: readonly string[];
+  acceptLabel?: string;
+  fields: readonly EditableField[];
+  draft: Record<string, string>;
+  onChange: (field: string, value: string) => void;
+  pending: boolean;
+  onApprove: () => void;
+  onCancel: () => void;
+}>;
+
+/**
+ * The staged-draft editor: the string fields of the proposed_change, in
+ * the shape the kind declared for them, going up as `edited_payload`.
+ *
+ * It is handed to the card as its `editor` slot rather than living inside the
+ * primitive, and that boundary is the point: an edit re-enters the admission
+ * gate from scratch on the server (re-tiered, re-RBAC'd, new diff_hash —
+ * ADR-0036), so what it may offer is a question about THIS kind and this
+ * contract, which is screen knowledge. The card knows how to draw a decision;
+ * it does not know what this installation lets a contact change.
+ */
+export function StagedEditor(props: StagedEditorProps) {
+  const { root, fieldControls, approve, cancel } = useStagedParts(props);
+  return (
+    <div className="form-stack approval-editor" data-date-scope ref={root}>
+      {fieldControls}
       <ActionRow
         primary={
           /* The edited approve is the same write as the plain one and was the
              one path with no gate at all, so a second press sent a second
              verdict. */
-          <Button
-            variant="primary"
-            pending={pending}
-            disabled={disabled}
-            onClick={(event) => {
-              // Each blank required field already says so; the press goes there.
-              if (blank) {
-                focusFirstRefused(root.current);
-              } else if (!refuseUnreadableField(event.currentTarget)) {
-                onApprove();
-              }
-            }}
-          >
-            {acceptLabel ?? t("decision.approveEdited")}
-          </Button>
+          approve
         }
       >
         {/* Cancel keeps its word: leaving the editor without a verdict is not a
             verb any glyph says, and an X here would be read as Reject. */}
-        <Button disabled={pending} onClick={onCancel}>
-          {t("deals.cancel")}
-        </Button>
+        {cancel}
       </ActionRow>
     </div>
   );
 }
 
 /**
- * The staged-draft editor in the app's one dialog. It stays mounted only while
- * the caller is editing, so each opening starts from the draft the caller seeds.
- * Escape, the X and the backdrop ask first when `unsaved`, and wait while the
- * decision is out.
+ * The staged-draft editor in the app's one form dialog. The caller mounts it
+ * only while editing, so each opening starts from the draft the caller seeds.
+ * `outcome` is the decision's refusal, drawn inside because the dialog covers
+ * the card that would otherwise show it.
  */
 export function StagedEditDialog({
   unsaved,
+  outcome,
+  returnFocusTo,
   ...editor
-}: Readonly<
-  Parameters<typeof StagedEditor>[0] & {
+}: StagedEditorProps &
+  Readonly<{
     /** Typed text the dialog's Escape, X and backdrop must ask about. */
     unsaved: boolean;
-  }
->) {
+    outcome?: ReactNode;
+    returnFocusTo?: () => HTMLElement | null;
+  }>) {
   const t = useT();
-  const headingId = useId();
+  const { root, fieldControls, approve, cancel } = useStagedParts(editor);
   return (
-    <Modal
+    <RecordFormDialog
       open
+      title={t("trust.edit")}
       onClose={editor.onCancel}
-      labelledBy={headingId}
-      intent="drawer"
+      fieldCount={editor.fields.length}
       unsaved={unsaved}
       closeDisabled={editor.pending}
-    >
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {t("trust.edit")}
-      </Heading>
-      <StagedEditor {...editor} />
-    </Modal>
+      returnFocusTo={returnFocusTo}
+      form={
+        <div className="form-stack approval-editor" data-date-scope ref={root}>
+          {fieldControls}
+          {outcome}
+        </div>
+      }
+      actions={
+        <>
+          {cancel}
+          {approve}
+        </>
+      }
+    />
   );
 }
 
