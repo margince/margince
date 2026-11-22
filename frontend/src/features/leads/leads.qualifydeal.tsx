@@ -6,6 +6,7 @@ import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import {
   type FieldLabel,
   faultSentenceFor,
@@ -227,7 +228,7 @@ export function amountRefusal(
 }
 
 export function openStagesOf(pipeline: Pipeline | undefined) {
-  return [...(pipeline?.stages ?? [])]
-    .filter((stage) => stage.semantic === "open")
-    .sort((a, b) => a.position - b.position);
+  return inPositionOrder(
+    (pipeline?.stages ?? []).filter((stage) => stage.semantic === "open"),
+  );
 }

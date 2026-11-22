@@ -37,38 +37,18 @@ import { ConversationWorkbench } from "./workbench";
 // board's own content; the room asks one question at a time, so there is no
 // separate rail transcript to keep in step with it.
 
-type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
-type CorpusSource = components["schemas"]["VoiceCorpusSource"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
 
 type VoiceActProps = Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
-  /** The restore probe's server meter for a resumed session; null fresh. */
-  initialSummary?: CorpusSummary | null;
-  /** The samples that meter counts; empty fresh. */
-  initialSources?: readonly CorpusSource[];
-  /** Whether that meter is unknown since a removal; false fresh. */
-  initialMeterStale?: boolean;
 }>;
 
-export function VoiceAct({
-  state,
-  dispatch,
-  initialSummary,
-  initialSources,
-  initialMeterStale,
-}: VoiceActProps) {
+export function VoiceAct({ state, dispatch }: VoiceActProps) {
   const t = useT();
   const machine = useRef(state);
   machine.current = state;
-  const corpus = useVoiceCorpus({
-    state,
-    dispatch,
-    initialSummary,
-    initialSources,
-    initialMeterStale,
-  });
+  const corpus = useVoiceCorpus({ state, dispatch });
   const build = useVoiceBuild({
     dispatch,
     machine,

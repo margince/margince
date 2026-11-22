@@ -9,7 +9,7 @@ import { Button, Card, EmptyState } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { ProvenanceTag } from "../../design-system/trust";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatDateTimeAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { EntityKind } from "../../lib/entity";
@@ -312,7 +312,9 @@ function HistoryEntryRow({
       <span className="tl-body">
         <span className="tl-title">{historyLine(entry, t)}</span>
         <span className="tl-meta">
-          <span>{formatDateTime(entry.occurred_at, locale, readerZone)}</span>
+          <span>
+            {formatDateTimeAbbrev(entry.occurred_at, locale, readerZone)}
+          </span>
           <ProvenanceTag
             provenance={provenanceOfEntry(entry, viewerId)}
             // The design system has no record lookups, so the resolved name

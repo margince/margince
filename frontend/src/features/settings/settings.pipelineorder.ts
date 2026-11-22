@@ -17,6 +17,7 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
 
 type Pipeline = components["schemas"]["Pipeline"];
@@ -80,9 +81,7 @@ function putPipeline(queryClient: QueryClient, next: Pipeline) {
 }
 
 function stageIdsOf(pipeline: Pipeline): string[] {
-  return [...(pipeline.stages ?? [])]
-    .sort((a, b) => a.position - b.position)
-    .map((stage) => stage.id);
+  return inPositionOrder(pipeline.stages ?? []).map((stage) => stage.id);
 }
 
 function useRefusal() {

@@ -1267,7 +1267,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.questionBoundPeriod":
     "Diese Frage hat Filter. Die Zeiträume darin behalten die Daten vom Zeitpunkt des Platzierens: ein Geschäftsjahr ab {month}, in {zone}.",
   "reporting.fiscalQuarterNote":
-    "Dieses Quartal folgt dem Geschäftsjahr, das im {month} beginnt.",
+    "Quartale und Jahre folgen hier dem Geschäftsjahr, das im {month} beginnt.",
   "reporting.previewChart": "Vorschau",
   "reporting.previewLoading": "Vorschau wird geladen…",
   "reporting.previewEmpty":
@@ -1627,9 +1627,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wurde in einer Währung festgelegt, die nicht mehr die Basiswährung ist. Lege das Ziel neu fest, um zu vergleichen.",
   "reporting.this_week": "Diese Woche",
   "reporting.this_month": "Dieser Monat",
-  "reporting.last_month": "Letzter Monat",
+  "reporting.last_month": "Letzter abgeschlossener Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",
   "reporting.this_quarter": "Dieses Geschäftsquartal",
+  "reporting.last_quarter": "Letztes abgeschlossenes Quartal",
+  "reporting.last_year": "Letztes abgeschlossenes Jahr",
   "reporting.custom": "Eigener Zeitraum",
   "reporting.start": "Startdatum",
   "reporting.end": "Enddatum (nicht eingeschlossen)",
@@ -2937,6 +2939,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
   "shell.back": "Zurück",
+  "shell.backToSetup": "Zurück zur Einrichtung",
   "shell.license.none": "Keine Lizenz",
   "shell.license.refused": "Lizenz abgelehnt",
   "shell.signOutAria": "Abmelden",
@@ -4095,6 +4098,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.for": "für {name}",
   "co.overview.noDate": "Kein Datum",
   "co.overview.allDeals": "Alle Deals",
+  "co.overview.allContacts": "Alle Kontakte",
   "co.overview.noWork": "Kein offener Deal und kein Projekt",
   "co.overview.project": "Projekt",
   "co.overview.ends": "endet {date}",
@@ -5104,7 +5108,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.deals.col.close": "Abschluss",
   "co.deals.col.status": "Status",
   "co.rail.contacts.empty": "Noch keine Kontakte.",
-  "co.rail.contacts.add": "Kontakt hinzufügen",
 
   "co.commercial.title": "Geschäftliches",
   "linkedinImport.title": "LinkedIn-Verbindungen",
@@ -5398,6 +5401,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.thread.details": "Details",
   "email.thread.textForwarded":
     "Der Text unten stammt aus der weitergeleiteten Mail, nicht vom Verfasser selbst.",
+  "email.thread.noText": "Diese Nachricht hat keinen Text.",
   "email.thread.textPartial":
     "Ein Teil des Textes dieser Mail konnte nicht gelesen werden.",
   "email.thread.textUnassessed": "E-Mail-Text nicht geprüft",
@@ -8868,6 +8872,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
+  "tasks.remind.menu": "Erinnerung",
+  "tasks.remind.inAnHour": "In 1 Stunde",
+  "tasks.remind.tomorrowMorning": "Morgen früh",
+  "tasks.remind.beforeDue": "1 Stunde vor Fälligkeit",
+  "tasks.remind.pick": "Zeit wählen",
+  "tasks.remind.remove": "Erinnerung entfernen",
+  "tasks.remind.current": "Erinnerung am {when}",
+  "tasks.remind.set": "Erinnerung am {when} gesetzt.",
+  "tasks.remind.removed": "Erinnerung entfernt.",
+  "tasks.remind.failed":
+    "Die Erinnerung wurde nicht gespeichert. Versuche es erneut.",
+  "tasks.remind.pickTitle": "Erinnerung am",
+  "tasks.remind.day": "Tag",
+  "tasks.remind.time": "Uhrzeit",
+  "tasks.remind.save": "Erinnerung setzen",
+  "tasks.remind.needsTime": "Gib einen Tag und eine Uhrzeit ein.",
+  "tasks.remind.past": "Wähle eine Zeit, die noch bevorsteht.",
   "tasks.log.action": "Ergebnis erfassen",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
@@ -9030,7 +9051,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.upcomingTitle": "Anstehende Termine",
   "analytics.prospect.cohortTitle": "Was aus deinen Übergaben wurde",
   "analytics.prospect.cohortPeriods":
-    "Für eine Woche oder einen Monat angezeigt. Wähle einen dieser Zeiträume.",
+    "Für dieses Geschäftsquartal und einen eigenen Zeitraum nicht angezeigt. Wähle einen anderen Zeitraum.",
   "analytics.prospect.cohortCaption_one":
     "{count} Übergabe, die du {period} eingereicht hast, nach aktuellem Stand",
   "analytics.prospect.cohortCaption_other":
@@ -9731,6 +9752,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "explain.col.stage": "Phase",
   "explain.col.owner": "Verantwortlich",
   "explain.col.pipeline": "Pipeline",
+  "explain.col.inCurrency": "{label} ({currency})",
 
   "settings.profileTitle": "Profil",
   "unsaved.title": "Ungespeicherte Änderungen verwerfen?",
@@ -10621,7 +10643,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tierWait": "Anreicherung aus dem Web: wartet in Freigaben.",
   "settings.tierAdvance":
     "Deal-Phase ändern oder Deal abschließen, Aktivitäten einem Projekt zuordnen: läuft sofort, wenn der Agent die Berechtigung hat.",
-  "settings.locked": "Gesperrt",
   "settings.purposes": "Einwilligungszwecke",
   "settings.purposesSub":
     "Wofür diese Installation Einwilligungen einholt und welche Zwecke ein Double-Opt-in brauchen.",
@@ -16488,6 +16509,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.teamParent": "Teil von {name}",
   "users.teamRename": "Umbenennen",
   "users.teamArchive": "Archivieren",
+  "users.teamRestore": "Wiederherstellen",
+  "users.teamArchivedBadge": "Archiviert",
+  "users.showArchivedTeams": "Archivierte Teams anzeigen",
+  "users.showArchivedTeamsSub":
+    "Ein archiviertes Team gibt seinen Mitgliedern keinen Zugriff, bis du es wiederherstellst.",
+  "users.archiveTeamTitle": "„{name}“ archivieren?",
+  "users.archiveTeamBody_one":
+    "Das Team hat {count} Mitglied. Es verliert den Zugriff, den das Team gibt: mit dem Team geteilte Datensätze und, als Teamleitung, die Datensätze des Teams. Du kannst es unter „Archivierte Teams anzeigen“ wiederherstellen.",
+  "users.archiveTeamBody_other":
+    "Das Team hat {count} Mitglieder. Diese verlieren den Zugriff, den das Team gibt: mit dem Team geteilte Datensätze und, als Teamleitung, die Datensätze des Teams. Du kannst es unter „Archivierte Teams anzeigen“ wiederherstellen.",
   "users.teamRenameTitle": "Team umbenennen",
   "users.teamRenameSave": "Namen speichern",
   "users.teamRenamed": "Team in „{name}“ umbenannt",
@@ -16745,9 +16776,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companyManualSub":
     "Die Website-Analyse ist für diese Installation nicht aktiviert. Diese 3 Antworten ergeben einen nutzbaren Unternehmenskontext, ohne Modellaufruf und ohne externe Anfrage.",
   "settings.companyCreateWorkspace": "Unternehmenskontext erstellen",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Alle Aktionen",
+  "settings.auditAnyActor": "Alle",
+  "settings.auditActorDelegated":
+    "Mit allem, was ein KI-Assistent in ihrem Auftrag getan hat.",
+  "settings.auditAnyEntity": "Alle Typen",
+  "settings.auditEntityIdHint":
+    "Füge die ganze Datensatz-ID ein. Nutze dafür „Datensatz-ID kopieren“ in einer Zeile.",
+  "settings.auditRangeReversed":
+    "Wähle ein Bis-Datum am oder nach dem Von-Datum.",
   "product.title": "Produkte",
   "product.readOnly":
     "Nur Lesezugriff. Deine Rolle darf keine Produkte ändern.",
@@ -17147,9 +17184,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.fiscalImpactKept_other":
     "{count} Berichte haben eine Karte, die nach einem Zeitraum filtert, und behalten ihre Daten.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} Bericht liest dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgt dem neuen Beginn.",
+    "{count} Bericht liest dieses Quartal, das letzte abgeschlossene Quartal oder Jahr, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgt dem neuen Beginn.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} Berichte lesen dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgen dem neuen Beginn.",
+    "{count} Berichte lesen dieses Quartal, das letzte abgeschlossene Quartal oder Jahr, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgen dem neuen Beginn.",
   "installationSettings.fiscalImpactLoading":
     "Gespeicherte Arbeit, die diese Änderung betrifft, wird gezählt…",
   "installationSettings.forwardMeasure": "Grundlage der Hochrechnung",

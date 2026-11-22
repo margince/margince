@@ -21,6 +21,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { blockLabel } from "./reporting.model";
+import { PRESET_PERIODS } from "./reporting.selection";
 
 export type SetupProposal = components["schemas"]["ReportSetupProposal"];
 export type SetupSite = components["schemas"]["ReportSetupRequest"]["site"];
@@ -246,13 +247,7 @@ function valueName(
   }
 }
 
-const PERIODS: readonly Period[] = [
-  "this_week",
-  "last_week",
-  "this_month",
-  "last_month",
-  "this_quarter",
-];
+const PERIODS: readonly Period[] = PRESET_PERIODS;
 
 function periodName(value: string, t: Translator): string {
   const period = PERIODS.find((known) => known === value);

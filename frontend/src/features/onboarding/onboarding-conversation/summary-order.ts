@@ -1,5 +1,5 @@
 /**
- * The order of one voice step's corpus writes, and which summary the meter
+ * The order of the voice corpus writes, and which summary the meter
  * may still take. Writes settle out of order, and only the newest by issue
  * order may move the meter. An ingest issued before a removal that landed may
  * still count the removed sample, so it never outranks that removal.

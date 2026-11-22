@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 
 type Stage = components["schemas"]["Stage"];
 type PipelineStages = {
@@ -43,13 +44,11 @@ export function stagesOfEveryPipeline(
     const archived = Boolean(pipeline.archived_at);
     const owner =
       pipeline.name && archived ? archivedName(pipeline.name) : pipeline.name;
-    return [...(pipeline.stages ?? [])]
-      .sort((a, z) => a.position - z.position)
-      .map((stage) =>
-        owner && (archived || (owners.get(stage.name)?.size ?? 0) > 1)
-          ? { ...stage, name: `${owner} · ${stage.name}` }
-          : stage,
-      );
+    return inPositionOrder(pipeline.stages ?? []).map((stage) =>
+      owner && (archived || (owners.get(stage.name)?.size ?? 0) > 1)
+        ? { ...stage, name: `${owner} · ${stage.name}` }
+        : stage,
+    );
   });
   return distinctNames(ladder).map((stage, place) => ({
     ...stage,

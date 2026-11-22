@@ -21,7 +21,7 @@ export const Tiers: Story = {};
 
 export const TiersDark: Story = { globals: { theme: "dark" } };
 
-// At 390px the dot keeps its word on its line, and Locked wraps as a whole.
+// At 390px each dot keeps its word on its line.
 export const TiersPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

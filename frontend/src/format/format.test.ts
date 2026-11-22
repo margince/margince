@@ -7,8 +7,10 @@ import {
   formatAnalyticsPercentPoints,
   formatBytes,
   formatDate,
+  formatDateAbbrev,
   formatDateAbbrevRange,
   formatDateTime,
+  formatDateTimeAbbrev,
   formatDayMonth,
   formatDayMonthNearYear,
   formatDayRange,
@@ -575,6 +577,21 @@ describe("formatDateAbbrevRange", () => {
         "Europe/Berlin",
       ),
     ).toMatch(/^1 Oct\s*[–-]\s*31 Dec 2026$/);
+  });
+});
+
+describe("formatDateTimeAbbrev", () => {
+  it("writes the short month with the time after it, in the reader's zone", () => {
+    const at = "2026-11-16T12:49:00Z";
+    expect(formatDateTimeAbbrev(at, "en", "Europe/Berlin")).toBe(
+      "16 Nov 2026, 13:49",
+    );
+    expect(formatDateTimeAbbrev(at, "de", "Europe/Berlin")).toBe(
+      "16. Nov. 2026, 13:49",
+    );
+    expect(formatDateTimeAbbrev(at, "en", "Europe/Berlin")).toContain(
+      formatDateAbbrev(at, "en", "Europe/Berlin"),
+    );
   });
 });
 

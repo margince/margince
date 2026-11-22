@@ -113,7 +113,7 @@ Team lead, Management, Ops and Admin may archive a contact, company or deal. So 
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
-An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags and pipelines have their own **Restore**; an archived team comes back with **Undo** on the "Team archived" notice.
+An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags, pipelines and teams have their own **Restore**; for a team, an Admin turns on **Show archived teams** first.
 Also called: unarchive, undelete, recover.
 
 ### How do I change how long Margince keeps data?
@@ -377,7 +377,7 @@ An agent can record consent for its user, and it asks them first. It cannot reco
 
 The audit trail, **Settings → Audit log**, records "Every action, attributed to a user, agent or connector."
 
-You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
+You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Pick a member in **Actor** to see what they did, and what an AI assistant did for them. **Entity ID** takes a record's full ID: use **Copy record ID** on an entry. The address keeps your filters, so you can share the link. Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
 
 Only an admin can read the full trail: "Your role cannot read the full audit log. It records every actor and every record they accessed."
 

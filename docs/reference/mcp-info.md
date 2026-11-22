@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 276.3 KB |
+| Tool catalog | 276.4 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 72145 |
+| Approx. wire tokens | 72154 |
 | Largest tool | `read_details` (17.6 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.0 KB | 19% | Yes, every step |
-| Input schemas | 158.8 KB | 57% | Yes, every step |
+| Input schemas | 158.9 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **212.8 KB** | **77%** | **the recurring cost** |
+| **Description + input schema** | **212.9 KB** | **77%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -102,9 +102,9 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 318 |
 | [`read_record`](#read_record) | Read a record | yes |  | 284 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2825 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2831 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1920 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1921 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
@@ -11017,7 +11017,9 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
         "this_week",
         "last_week",
         "this_month",
-        "last_month"
+        "last_month",
+        "last_quarter",
+        "last_year"
       ],
       "type": "string"
     },
@@ -11598,7 +11600,7 @@ find_records to find or list records, and read_reports for the standard metrics 
       "type": "string"
     },
     "include_archived": {
-      "description": "views: lists, relationships, signals, stage_exit_criteria, stages",
+      "description": "views: lists, relationships, signals, stage_exit_criteria, stages, teams",
       "type": "boolean"
     },
     "include_hidden": {

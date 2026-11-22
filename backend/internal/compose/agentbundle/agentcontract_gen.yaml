@@ -4651,12 +4651,13 @@ paths:
       operationId: advanceDeal
       summary: Advance a deal to a new stage (audit-logged with prior + next stage).
       description: |-
-        The `advance_deal` MCP verb. A move with a closed-won/closed-lost stage at EITHER end is confirm-first
-        (irreversible / touches money) — for an agent caller this requires an approval
-        token. Closing a deal is the obvious half; REOPENING one is the other, and it is
-        the same money: moving a won deal back to an open stage clears its close date,
-        its lost reason and the FX rate frozen at close, and takes revenue out of a
-        quarter that has already been reported.
+        The `advance_deal` MCP verb. An agent on a user's passport moves the deal at once, closing or reopening it
+        included: it may do unaided what its user may do. A move with a closed-won/closed-lost
+        stage at EITHER end is confirm-first only for automatic work with no passport and
+        no user behind it, which needs an approval token. Closing a deal is the obvious half;
+        REOPENING one is the other, and it is the same money: moving a won deal back to an
+        open stage clears its close date, its lost reason and the FX rate frozen at close,
+        and takes revenue out of a quarter that has already been reported.
 
         Needs the passport permission Change records.
 
@@ -4675,7 +4676,7 @@ paths:
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c2
               closeWon:
-                summary: Closing won (requires approval token for agents)
+                summary: Closing won (runs at once for a passport agent; approval token for passportless automatic work)
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c9
                   status: won
@@ -4687,7 +4688,7 @@ paths:
               schema: {$ref: '#/components/schemas/DealAdvanced'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403':
-          description: RBAC denied, or a transition attempted without an approval token.
+          description: RBAC denied, or passportless automatic work attempted a transition without an approval token.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -10936,6 +10937,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -11113,6 +11116,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -11272,6 +11277,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -20558,7 +20565,8 @@ paths:
       summary: List workspace teams — cursor-paginated. Read-only.
       description: |-
         Teams available as record-share subjects, with a member count. Any authenticated member may read.
-        Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
+        Excludes archived teams unless `include_archived` is true, which needs `team_admin.read`.
+        Bounded by authenticated membership, like the member roster beside it.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -20566,6 +20574,11 @@ paths:
           in: query
           schema: {type: string}
           description: Case-insensitive match over team name that ignores diacritics on both sides.
+        - name: include_archived
+          in: query
+          required: false
+          schema: {type: boolean, default: false}
+          description: True also lists archived teams, each carrying `archived_at`, so an admin can restore one.
       responses:
         '200':
           description: A page of teams.
@@ -20573,6 +20586,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/TeamListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Identity]
@@ -23801,7 +23815,7 @@ paths:
           description: The team or owner named by `scope_kind`.
         - name: period
           in: query
-          schema: {type: string, enum: [this_week, last_week, this_month, last_month], default: this_week}
+          schema: {type: string, enum: [this_week, last_week, this_month, last_month, last_quarter, last_year], default: this_week}
           description: The period, in the installation's reporting zone.
       responses:
         '200':
@@ -38755,7 +38769,7 @@ components:
         country: {$ref: '#/components/schemas/ReportingCountry'}
         period:
           type: string
-          enum: [this_week, this_month, last_month, last_week, this_quarter]
+          enum: [this_week, this_month, last_month, last_week, this_quarter, last_quarter, last_year]
         metrics:
           type: array
           maxItems: 8
@@ -45937,12 +45951,16 @@ components:
             - last_month
             - last_week
             - this_quarter
+            - last_quarter
+            - last_year
             - custom
           description: |-
             `this_week` runs from Monday 00:00 in the installation zone to the
             evaluation time. Read at that exact moment, the week holds no time
             yet and the context's interval starts where it ends. A month target
             beside it still counts the whole month up to the evaluation time.
+            `last_quarter` and `last_year` are the last completed fiscal quarter
+            and fiscal year, in the installation's fiscal calendar.
         interval:
           $ref: '#/components/schemas/ReportingWindow'
         target_basis:

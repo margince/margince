@@ -21406,7 +21406,9 @@ func (e ReportSetupRequestSite) Valid() bool {
 // Defines values for ReportSetupSelectionPeriod.
 const (
 	ReportSetupSelectionPeriodLastMonth   ReportSetupSelectionPeriod = "last_month"
+	ReportSetupSelectionPeriodLastQuarter ReportSetupSelectionPeriod = "last_quarter"
 	ReportSetupSelectionPeriodLastWeek    ReportSetupSelectionPeriod = "last_week"
+	ReportSetupSelectionPeriodLastYear    ReportSetupSelectionPeriod = "last_year"
 	ReportSetupSelectionPeriodThisMonth   ReportSetupSelectionPeriod = "this_month"
 	ReportSetupSelectionPeriodThisQuarter ReportSetupSelectionPeriod = "this_quarter"
 	ReportSetupSelectionPeriodThisWeek    ReportSetupSelectionPeriod = "this_week"
@@ -21417,7 +21419,11 @@ func (e ReportSetupSelectionPeriod) Valid() bool {
 	switch e {
 	case ReportSetupSelectionPeriodLastMonth:
 		return true
+	case ReportSetupSelectionPeriodLastQuarter:
+		return true
 	case ReportSetupSelectionPeriodLastWeek:
+		return true
+	case ReportSetupSelectionPeriodLastYear:
 		return true
 	case ReportSetupSelectionPeriodThisMonth:
 		return true
@@ -22040,7 +22046,9 @@ func (e ReportingSelectionCloseWindow) Valid() bool {
 const (
 	ReportingSelectionPeriodCustom      ReportingSelectionPeriod = "custom"
 	ReportingSelectionPeriodLastMonth   ReportingSelectionPeriod = "last_month"
+	ReportingSelectionPeriodLastQuarter ReportingSelectionPeriod = "last_quarter"
 	ReportingSelectionPeriodLastWeek    ReportingSelectionPeriod = "last_week"
+	ReportingSelectionPeriodLastYear    ReportingSelectionPeriod = "last_year"
 	ReportingSelectionPeriodThisMonth   ReportingSelectionPeriod = "this_month"
 	ReportingSelectionPeriodThisQuarter ReportingSelectionPeriod = "this_quarter"
 	ReportingSelectionPeriodThisWeek    ReportingSelectionPeriod = "this_week"
@@ -22053,7 +22061,11 @@ func (e ReportingSelectionPeriod) Valid() bool {
 		return true
 	case ReportingSelectionPeriodLastMonth:
 		return true
+	case ReportingSelectionPeriodLastQuarter:
+		return true
 	case ReportingSelectionPeriodLastWeek:
+		return true
+	case ReportingSelectionPeriodLastYear:
 		return true
 	case ReportingSelectionPeriodThisMonth:
 		return true
@@ -29990,7 +30002,9 @@ func (e EvaluateReportingParamsScopeKind) Valid() bool {
 const (
 	EvaluateReportingParamsPeriodCustom      EvaluateReportingParamsPeriod = "custom"
 	EvaluateReportingParamsPeriodLastMonth   EvaluateReportingParamsPeriod = "last_month"
+	EvaluateReportingParamsPeriodLastQuarter EvaluateReportingParamsPeriod = "last_quarter"
 	EvaluateReportingParamsPeriodLastWeek    EvaluateReportingParamsPeriod = "last_week"
+	EvaluateReportingParamsPeriodLastYear    EvaluateReportingParamsPeriod = "last_year"
 	EvaluateReportingParamsPeriodThisMonth   EvaluateReportingParamsPeriod = "this_month"
 	EvaluateReportingParamsPeriodThisQuarter EvaluateReportingParamsPeriod = "this_quarter"
 	EvaluateReportingParamsPeriodThisWeek    EvaluateReportingParamsPeriod = "this_week"
@@ -30003,7 +30017,11 @@ func (e EvaluateReportingParamsPeriod) Valid() bool {
 		return true
 	case EvaluateReportingParamsPeriodLastMonth:
 		return true
+	case EvaluateReportingParamsPeriodLastQuarter:
+		return true
 	case EvaluateReportingParamsPeriodLastWeek:
+		return true
+	case EvaluateReportingParamsPeriodLastYear:
 		return true
 	case EvaluateReportingParamsPeriodThisMonth:
 		return true
@@ -30080,7 +30098,9 @@ func (e ExportReportingEvaluationParamsScopeKind) Valid() bool {
 const (
 	ExportReportingEvaluationParamsPeriodCustom      ExportReportingEvaluationParamsPeriod = "custom"
 	ExportReportingEvaluationParamsPeriodLastMonth   ExportReportingEvaluationParamsPeriod = "last_month"
+	ExportReportingEvaluationParamsPeriodLastQuarter ExportReportingEvaluationParamsPeriod = "last_quarter"
 	ExportReportingEvaluationParamsPeriodLastWeek    ExportReportingEvaluationParamsPeriod = "last_week"
+	ExportReportingEvaluationParamsPeriodLastYear    ExportReportingEvaluationParamsPeriod = "last_year"
 	ExportReportingEvaluationParamsPeriodThisMonth   ExportReportingEvaluationParamsPeriod = "this_month"
 	ExportReportingEvaluationParamsPeriodThisQuarter ExportReportingEvaluationParamsPeriod = "this_quarter"
 	ExportReportingEvaluationParamsPeriodThisWeek    ExportReportingEvaluationParamsPeriod = "this_week"
@@ -30093,7 +30113,11 @@ func (e ExportReportingEvaluationParamsPeriod) Valid() bool {
 		return true
 	case ExportReportingEvaluationParamsPeriodLastMonth:
 		return true
+	case ExportReportingEvaluationParamsPeriodLastQuarter:
+		return true
 	case ExportReportingEvaluationParamsPeriodLastWeek:
+		return true
+	case ExportReportingEvaluationParamsPeriodLastYear:
 		return true
 	case ExportReportingEvaluationParamsPeriodThisMonth:
 		return true
@@ -30170,7 +30194,9 @@ func (e GetReportingEvidenceParamsScopeKind) Valid() bool {
 const (
 	GetReportingEvidenceParamsPeriodCustom      GetReportingEvidenceParamsPeriod = "custom"
 	GetReportingEvidenceParamsPeriodLastMonth   GetReportingEvidenceParamsPeriod = "last_month"
+	GetReportingEvidenceParamsPeriodLastQuarter GetReportingEvidenceParamsPeriod = "last_quarter"
 	GetReportingEvidenceParamsPeriodLastWeek    GetReportingEvidenceParamsPeriod = "last_week"
+	GetReportingEvidenceParamsPeriodLastYear    GetReportingEvidenceParamsPeriod = "last_year"
 	GetReportingEvidenceParamsPeriodThisMonth   GetReportingEvidenceParamsPeriod = "this_month"
 	GetReportingEvidenceParamsPeriodThisQuarter GetReportingEvidenceParamsPeriod = "this_quarter"
 	GetReportingEvidenceParamsPeriodThisWeek    GetReportingEvidenceParamsPeriod = "this_week"
@@ -30183,7 +30209,11 @@ func (e GetReportingEvidenceParamsPeriod) Valid() bool {
 		return true
 	case GetReportingEvidenceParamsPeriodLastMonth:
 		return true
+	case GetReportingEvidenceParamsPeriodLastQuarter:
+		return true
 	case GetReportingEvidenceParamsPeriodLastWeek:
+		return true
+	case GetReportingEvidenceParamsPeriodLastYear:
 		return true
 	case GetReportingEvidenceParamsPeriodThisMonth:
 		return true
@@ -30435,10 +30465,12 @@ func (e GetSdrTeamReviewParamsScopeKind) Valid() bool {
 
 // Defines values for GetSdrTeamReviewParamsPeriod.
 const (
-	GetSdrTeamReviewParamsPeriodLastMonth GetSdrTeamReviewParamsPeriod = "last_month"
-	GetSdrTeamReviewParamsPeriodLastWeek  GetSdrTeamReviewParamsPeriod = "last_week"
-	GetSdrTeamReviewParamsPeriodThisMonth GetSdrTeamReviewParamsPeriod = "this_month"
-	GetSdrTeamReviewParamsPeriodThisWeek  GetSdrTeamReviewParamsPeriod = "this_week"
+	GetSdrTeamReviewParamsPeriodLastMonth   GetSdrTeamReviewParamsPeriod = "last_month"
+	GetSdrTeamReviewParamsPeriodLastQuarter GetSdrTeamReviewParamsPeriod = "last_quarter"
+	GetSdrTeamReviewParamsPeriodLastWeek    GetSdrTeamReviewParamsPeriod = "last_week"
+	GetSdrTeamReviewParamsPeriodLastYear    GetSdrTeamReviewParamsPeriod = "last_year"
+	GetSdrTeamReviewParamsPeriodThisMonth   GetSdrTeamReviewParamsPeriod = "this_month"
+	GetSdrTeamReviewParamsPeriodThisWeek    GetSdrTeamReviewParamsPeriod = "this_week"
 )
 
 // Valid indicates whether the value is a known member of the GetSdrTeamReviewParamsPeriod enum.
@@ -30446,7 +30478,11 @@ func (e GetSdrTeamReviewParamsPeriod) Valid() bool {
 	switch e {
 	case GetSdrTeamReviewParamsPeriodLastMonth:
 		return true
+	case GetSdrTeamReviewParamsPeriodLastQuarter:
+		return true
 	case GetSdrTeamReviewParamsPeriodLastWeek:
+		return true
+	case GetSdrTeamReviewParamsPeriodLastYear:
 		return true
 	case GetSdrTeamReviewParamsPeriodThisMonth:
 		return true
@@ -44334,7 +44370,7 @@ type ConfirmSubmissionReceipt struct {
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
 type ConnectChannelRequest struct {
-	// Address The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+	// Address The chat's web address, such as `https://chat.example.com`; a bare host means https. Required for Dispact, which every team hosts itself; refused for Telegram.
 	Address *string `json:"address,omitempty"`
 
 	// BotToken The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back.
@@ -54614,7 +54650,7 @@ type InstallationFiscalYearImpact struct {
 	// ReportsWithKeptPeriods Live reports with a card whose saved question filters on a period.
 	ReportsWithKeptPeriods int `json:"reports_with_kept_periods" minimum:"0"`
 
-	// ReportsWithRelativePeriods Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
+	// ReportsWithRelativePeriods Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window.
 	ReportsWithRelativePeriods int `json:"reports_with_relative_periods" minimum:"0"`
 
 	// SavedQuestions Saved questions, of every member, that filter on a period.
@@ -58194,6 +58230,9 @@ type MeResponse struct {
 
 	// ReaderRenderingAvailable Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
 	ReaderRenderingAvailable *bool `json:"reader_rendering_available,omitempty"`
+
+	// RoleNames The name an admin gave each live role in `roles`, keyed by role key. A member may not read the role directory, so this is how a screen shows a custom role by its name. A client may still show a seeded role in its own translation. Absent from an older server; a key it does not name is shown as the key.
+	RoleNames *map[string]string `json:"role_names,omitempty"`
 
 	// Roles Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact.
 	Roles []string `json:"roles"`
@@ -64711,6 +64750,8 @@ type ReportingSelection struct {
 	// evaluation time. Read at that exact moment, the week holds no time
 	// yet and the context's interval starts where it ends. A month target
 	// beside it still counts the whole month up to the evaluation time.
+	// `last_quarter` and `last_year` are the last completed fiscal quarter
+	// and fiscal year, in the installation's fiscal calendar.
 	Period      ReportingSelectionPeriod      `json:"period"`
 	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
 	ProductId   *ReportingProductId           `json:"product_id,omitempty"`
@@ -64728,6 +64769,8 @@ type ReportingSelectionCloseWindow string
 // evaluation time. Read at that exact moment, the week holds no time
 // yet and the context's interval starts where it ends. A month target
 // beside it still counts the whole month up to the evaluation time.
+// `last_quarter` and `last_year` are the last completed fiscal quarter
+// and fiscal year, in the installation's fiscal calendar.
 type ReportingSelectionPeriod string
 
 // ReportingSelectionTargetBasis defines model for ReportingSelection.TargetBasis.
@@ -84124,6 +84167,9 @@ type ListTeamsParams struct {
 
 	// Q Case-insensitive match over team name that ignores diacritics on both sides.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// IncludeArchived True also lists archived teams, each carrying `archived_at`, so an admin can restore one.
+	IncludeArchived *bool `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 }
 
 // ListUsersParams defines parameters for ListUsers.
@@ -155680,6 +155726,19 @@ func (siw *ServerInterfaceWrapper) ListTeams(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
 		}
 		return
 	}

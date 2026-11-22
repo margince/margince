@@ -214,7 +214,7 @@ func TestSilenceCountsCalendarDaysAcrossTheShortDay(t *testing.T) {
 	}
 }
 
-func TestAnEligibleAssessmentNamesTheDayItsSilenceCrossesTheThreshold(t *testing.T) {
+func TestAnEligibleDealNeedsAReviewOnTheDayItsSilenceCrossesTheThreshold(t *testing.T) {
 	t.Parallel()
 	zone := time.UTC
 	asOf := time.Date(2026, time.October, 29, 12, 0, 0, 0, zone)
@@ -223,14 +223,14 @@ func TestAnEligibleAssessmentNamesTheDayItsSilenceCrossesTheThreshold(t *testing
 		CreatedAt: wrote.AddDate(0, -1, 0), LastCustomerProgressAt: &wrote, MailCovered: true, HasNextStep: true,
 		ExpectedClose: new(wrote.AddDate(1, 0, 0)),
 	}, asOf, zone)
-	want := time.Date(2026, time.December, 1, 0, 0, 0, 0, zone)
-	if got.Outcome != viability.OutcomeEligible || got.NextChange == nil || !got.NextChange.Equal(want) {
-		t.Fatalf("got %s next change %v, want eligible until %v", got.Outcome, got.NextChange, want)
+	crossing := time.Date(2026, time.December, 1, 0, 0, 0, 0, zone)
+	if got.Outcome != viability.OutcomeEligible {
+		t.Fatalf("got %s, want eligible until %v", got.Outcome, crossing)
 	}
 	if after := AssessViability(ViabilityInput{
 		CreatedAt: wrote.AddDate(0, -1, 0), LastCustomerProgressAt: &wrote, MailCovered: true, HasNextStep: true,
 		ExpectedClose: new(wrote.AddDate(1, 0, 0)),
-	}, want, zone); after.Outcome != viability.OutcomeReviewRequired {
+	}, crossing, zone); after.Outcome != viability.OutcomeReviewRequired {
 		t.Fatalf("at the named day the deal reads %s, want review_required", after.Outcome)
 	}
 }
@@ -244,9 +244,8 @@ func TestAnEarlierAnswerDefersTheReviewUntilItRunsOut(t *testing.T) {
 		ExpectedClose: new(asOf.AddDate(0, 3, 0)), MailCovered: true, EarlierAnswerUntil: &until,
 	}
 	got := AssessViability(in, asOf, time.UTC)
-	if got.Outcome != viability.OutcomeWaiting || !slices.Equal(got.Reasons, []viability.Reason{viability.ReasonEarlierAnswer}) ||
-		got.NextChange == nil || !got.NextChange.Equal(until) {
-		t.Fatalf("got %s %v until %v, want waiting on the earlier answer until %s", got.Outcome, got.Reasons, got.NextChange, until)
+	if got.Outcome != viability.OutcomeWaiting || !slices.Equal(got.Reasons, []viability.Reason{viability.ReasonEarlierAnswer}) {
+		t.Fatalf("got %s %v, want waiting on the earlier answer until %s", got.Outcome, got.Reasons, until)
 	}
 	if after := AssessViability(in, until, time.UTC); after.Outcome != viability.OutcomeReviewRequired {
 		t.Fatalf("once the answer ran out the deal reads %s, want a review", after.Outcome)

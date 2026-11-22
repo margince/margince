@@ -44,6 +44,9 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	if err := TransferIdentities(ctx, tx, duplicate, survivor); err != nil {
 		return err
 	}
+	if err := carryRostersTx(ctx, tx, duplicate, survivor); err != nil {
+		return err
+	}
 	carried, err := carryMissingParticipantsTx(ctx, tx, duplicate, survivor)
 	if err != nil {
 		return err
@@ -129,6 +132,27 @@ func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, surv
 	return storekit.EmitEvent(ctx, tx, auditID, survivor.UUID, crmcontracts.PublicEventActivityUpdated{})
 }
 
+// carryRostersTx adds the copy's calendars to the survivor's roster rows that
+// hold the same address. The calendar that listed a guest on the copy lists them
+// on the survivor too, so that guest stays until it drops them. A colleague's
+// own row is left alone: their own calendar decides it.
+func carryRostersTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE activity_participant s SET `+storekit.StoreRosterSeatsSQL("listed.seats")+`
+		  FROM (SELECT kept.id, array_agg(DISTINCT listing.seat ORDER BY listing.seat) AS seats
+		          FROM activity_participant kept
+		          JOIN activity_participant d ON d.activity_id = $1 AND lower(d.address) = lower(kept.address)
+		         CROSS JOIN LATERAL unnest(`+storekit.RosterSeatsSQL("kept")+` || `+storekit.RosterSeatsSQL("d")+`) AS listing(seat)
+		         WHERE kept.activity_id = $2 AND `+storekit.OnACalendarRosterSQL("kept")+`
+		           AND NOT (kept.user_id IS NOT NULL AND `+storekit.RosterListsSQL("kept", "kept.user_id")+`)
+		         GROUP BY kept.id) listed
+		 WHERE s.id = listed.id AND NOT listed.seats <@ `+storekit.RosterSeatsSQL("s"), duplicate, survivor)
+	if err != nil {
+		return fmt.Errorf("activities: carrying a meeting copy's calendars: %w", err)
+	}
+	return nil
+}
+
 // carryMissingParticipantsTx copies onto the survivor each party of the copy
 // it does not list yet. A party is matched by address, else seat, else contact.
 // The survivor's guest list and the seats it holds busy stay whole. A party a
@@ -136,9 +160,9 @@ func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, surv
 func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, address_domain_folded, channel_user_id,
-		                                  role, display_name, roster_seat, response, past_party_cap, relinked_at)
+		                                  role, display_name, roster_seats, response, past_party_cap, relinked_at)
 		SELECT $2, d.user_id, d.contact_id, d.address, d.address_domain_folded, d.channel_user_id,
-		       d.role, d.display_name, d.roster_seat, d.response, d.past_party_cap, d.relinked_at
+		       d.role, d.display_name, NULLIF(`+storekit.RosterSeatsSQL("d")+`, '{}'), d.response, d.past_party_cap, d.relinked_at
 		  FROM activity_participant d
 		 WHERE d.activity_id = $1
 		   AND NOT EXISTS (SELECT 1 FROM activity_participant s WHERE s.activity_id = $2 AND CASE
