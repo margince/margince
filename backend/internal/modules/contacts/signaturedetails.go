@@ -97,6 +97,7 @@ func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 // signatureSource is what the mail a signature was read from proves about its
 // sender, read once for the writes that reach past the contact's own columns.
 type signatureSource struct {
+	activity ids.UUID
 	// authenticated is an inbound mail whose sender's domain vouched for its From.
 	authenticated bool
 	workspace     bool
@@ -122,7 +123,7 @@ func readSignatureSourceTx(ctx context.Context, tx pgx.Tx, activity ids.UUID) (s
 	if err != nil {
 		return signatureSource{}, fmt.Errorf("contacts: reading who sent a signature's mail: %w", err)
 	}
-	src.senderDomain, src.parties = owndomain.OfAddress(sender), map[string]bool{}
+	src.activity, src.senderDomain, src.parties = activity, owndomain.OfAddress(sender), map[string]bool{}
 	for _, party := range parties {
 		src.parties[party] = true
 	}
@@ -293,9 +294,12 @@ func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		 WHERE j.contact_id = $1 AND `+employment.CurrentMembershipSQL("j")+`
 		   AND (f_fold_import_name(o.display_name) = f_fold_import_name($2)
 		        OR f_fold_import_name(o.legal_name) = f_fold_import_name($2))
-		   AND EXISTS (SELECT 1 FROM company_domain cd WHERE cd.company_id = o.id AND cd.archived_at IS NULL
-		                 AND `+owndomain.CoversSQL("$3::text", "cd.domain_folded")+`)`,
-		contactID, employerName, src.senderDomain).Scan(&employers, &employer); err != nil {
+		   AND EXISTS (SELECT 1 FROM activity_participant fp
+		                 JOIN contact_email fe ON fe.contact_id = j.contact_id AND fe.archived_at IS NULL AND fe.email = lower(fp.address)
+		                 JOIN company_domain cd ON cd.company_id = o.id AND cd.archived_at IS NULL
+		                  AND `+owndomain.CoversSQL("fe.email_domain_folded", "cd.domain_folded")+`
+		                WHERE fp.activity_id = $3 AND fp.role = 'from')`,
+		contactID, employerName, src.activity).Scan(&employers, &employer); err != nil {
 		return fmt.Errorf("contacts: reading the employer a signature names: %w", err)
 	}
 	if employers != 1 || employer == nil {

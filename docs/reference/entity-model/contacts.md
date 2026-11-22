@@ -639,7 +639,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `last_activity_at` | `timestamp with time zone` |  | When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts. |
 | `last_name` | `text` |  |  |
 | `merged_into_id` | `uuid` |  | Set when this row was merged away. |
-| `narrowing_reason` | `text` |  | One of `awaiting_verdict`, `outbound_no_answer`, `confidentiality_hold`, `advisor`, `human_decided`. |
+| `narrowing_reason` | `text` |  | One of `awaiting_verdict`, `outbound_no_answer`, `confidentiality_hold`, `advisor`, `human_decided`, `shared_mailbox`. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `photo_object_key` | `text` |  |  |
 | `photo_origin` | `text` |  |  |
@@ -681,7 +681,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `contact_greeting_register_check`: `CHECK ((greeting_register = ANY (ARRAY['formal', 'familiar'])))`
-- `contact_narrowing_reason_check`: `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided'])))`
+- `contact_narrowing_reason_check`: `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided', 'shared_mailbox'])))`
 - `contact_narrowing_reason_only_when_owner`: `CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner')))`
 - `contact_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
 - `contact_relationship_mark_check`: `CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'])))`

@@ -48,6 +48,7 @@ const wantMinimumShareableWriters = 15
 // merely inconvenient: where the probe is simply a no-op today it was added
 // instead, because a no-op costs nothing and closes the drift.
 var writesWithoutARowProbe = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:withdrawEmployerStreetTx":            "takes back the street a signature filled on its signer's employer when the mail is narrowed or the fill undone, matched by the fill's own audit row. The seat who narrowed the mail may lack write on the company, and a probe would then leave the narrowed mail's content on a record every seat reads",
 	"internal/modules/contacts:withdrawSignatureAddress":            "takes back the address parts a signature filled when its mail is narrowed or the fill undone, as the title beside it is. The seat who narrowed the mail may lack write on the contact, and a probe would then leave the narrowed mail's content on a record every seat reads",
 	"internal/modules/contacts:ClearSiteOfferDuplicatesTx":          "the system-only company profile correction selects rows by stored duplicate values and provenance, not caller identity; a row-scope write probe would leave stale mirrors outside that identity’s scope. Each company is locked and audited through the ordinary company update tail",
 	"internal/modules/contacts:clearSiteOfferDuplicate":             "the locked per-company step of ClearSiteOfferDuplicatesTx, reachable only from that system-only correction; it preserves user-authored fields and writes through the ordinary company audit and event tail",
