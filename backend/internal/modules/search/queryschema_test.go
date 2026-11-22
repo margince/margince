@@ -195,8 +195,8 @@ func TestACatalogFaultRefusesThePublishedRead(t *testing.T) {
 	}
 }
 
-// The plan line names every member a Plan decodes, read off its json tags, so
-// a member added to Plan cannot leave callers guessing its name.
+// The plan line names every member a Plan decodes, read off its json tags. A
+// member added to Plan then cannot leave callers guessing its name.
 func TestThePublishedPlanNamesEveryPlanMember(t *testing.T) {
 	doc := readSchema(readerFor("deal"), t, NewQuerySchemaResource(NewVocabularyResolver()))
 	plan := reflect.TypeFor[Plan]()

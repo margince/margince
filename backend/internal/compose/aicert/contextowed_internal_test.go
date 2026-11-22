@@ -16,8 +16,8 @@ import (
 )
 
 // Every scenario whose request production prepends company context to is
-// certified with that context: the case serves the demo company through the
-// production provider, so the stamp and the record describe the prompt an
+// certified with that context. The case serves the demo company through the
+// production provider. So the stamp and the record describe the prompt an
 // installation with its own company record sends.
 func TestEveryCaseProductionSendsCompanyContextToIsServedIt(t *testing.T) {
 	census, err := compose.NewTaskCensus()
@@ -72,8 +72,8 @@ func TestARequestOwesContextOnlyWhereProductionSendsIt(t *testing.T) {
 	}
 }
 
-// summarize declares a conditional identity scope and no site of it asks, so
-// the report has nothing to say about it; the tasks whose callers ask are owed.
+// summarize declares a conditional identity scope that no site of it asks for.
+// So the report says nothing about it, and the tasks whose callers ask are owed.
 func TestContextOwedTasksReadsTheCallSites(t *testing.T) {
 	census, err := compose.NewTaskCensus()
 	if err != nil {

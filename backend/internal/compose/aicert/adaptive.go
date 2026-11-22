@@ -127,9 +127,10 @@ func caseBorderline(c caseStats) bool {
 }
 
 // poolUndecided says the pooled evidence meets a certified bar on its point
-// estimate but not on its bound: pass rate ≥ certifiedPassPercent with a Wilson
-// lower bound under certifiedPassBoundPercent or fewer than certifiedMinRuns
-// runs, or a mean certified_min margin ≥ 0 with a lower bound under 0.
+// estimate but not on its bound. One case is a pass rate ≥ certifiedPassPercent
+// whose Wilson lower bound is under certifiedPassBoundPercent. Another is the
+// same rate on fewer than certifiedMinRuns runs. The last is a mean
+// certified_min margin ≥ 0 whose lower bound is under 0.
 func poolUndecided(cases []caseStats) bool {
 	runs, passed := 0, 0
 	for _, c := range cases {

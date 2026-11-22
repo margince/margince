@@ -192,9 +192,9 @@ func TestEveryRecordNamesTheCompanyContextItsTaskWentWithout(t *testing.T) {
 	}
 }
 
-// context_applied is a claim about EVERY run production prepends the company
-// context to: one served it among several that were not still certifies a
-// prompt production never sends as though it were the one it does. A run owed
+// context_applied is a claim about every run production prepends the company
+// context to. One run served it among several that were not would still certify
+// a prompt production never sends. A run owed
 // none, a site whose caller never asks, neither earns nor costs the claim, and
 // a record with no owed run claims nothing.
 func TestContextAppliedHoldsOnlyWhenEveryRunWasServedTheContext(t *testing.T) {

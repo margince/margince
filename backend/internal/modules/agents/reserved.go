@@ -88,8 +88,8 @@ type reserved struct {
 }
 
 // WithoutReservedArgs is a call's arguments as its handler decodes them, with
-// the surface's own members popped, for a caller that answers a tool without
-// going through the surface, as a certification case does.
+// the surface's own members popped. It serves a caller that answers a tool
+// without the surface, as a certification case does.
 func WithoutReservedArgs(in json.RawMessage) (json.RawMessage, error) {
 	split, err := splitReserved(in)
 	if err != nil {

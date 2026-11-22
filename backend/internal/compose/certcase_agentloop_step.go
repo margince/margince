@@ -4,8 +4,9 @@
 package compose
 
 // The arguments a fixture's tool answer is matched on. An answer pins only the
-// arguments that tell two calls of one tool apart — which record a read_record
-// is about — and a call carrying those is that answer whatever else it passes.
+// arguments that tell two calls of one tool apart, such as the record a
+// read_record is about. A call carrying those gets that answer, whatever else it
+// passes.
 
 import (
 	"bytes"
@@ -70,17 +71,12 @@ func agentLoopArgDisagreements(want map[string]json.RawMessage, called json.RawM
 	return out
 }
 
-// agentLoopSameJSON compares two encoded values by what they mean rather than
-// how they were written, so a fixture neither fails on re-ordered object keys
-// nor passes on a different value that happens to share a prefix.
+// agentLoopSameJSON compares two encoded values by what they mean, not how they
+// were written. A fixture then neither fails on re-ordered keys nor passes on a
+// different value that shares a prefix.
 //
-// Numbers are read as json.Number and compared as exact rationals, which is the
-// only reading that answers both halves of "what they mean". Decoding into any
-// yields float64, and two integers a scenario could legitimately pin — a limit
-// past 2^53 — collapse onto the same float and would be graded equal while
-// differing. Comparing the literals instead trades that for the opposite error,
-// where a call passing 5.0 against a pinned 5 reads as a disagreement about a
-// value both sides agree on.
+// Numbers are compared as exact rationals. Decoding into float64 would grade two
+// integers past 2^53 equal. Comparing literals would read 5.0 and 5 as two values.
 func agentLoopSameJSON(want, got json.RawMessage) bool {
 	wantValue, err := agentLoopDecode(want)
 	if err != nil {

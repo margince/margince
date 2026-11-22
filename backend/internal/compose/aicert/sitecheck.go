@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-// siteChecksGolden is one line per shipped site, "task/variant digest": the
-// digest of the Go code its case's Evaluate reaches, which decides whether a
-// reply is right. sitecheck_test.go derives it from the source and fails when
-// the two differ, so an edit to a site's check moves the stamp of its records.
+// siteChecksGolden is one line per shipped site, "task/variant digest". The
+// digest covers the Go code its case's Evaluate reaches, which decides whether a
+// reply is right. sitecheck_test.go derives it from the source and fails when the
+// two differ, so an edit to a site's check moves the stamp of its records.
 //
 //go:embed testdata/site_checks.golden
 var siteChecksGolden string

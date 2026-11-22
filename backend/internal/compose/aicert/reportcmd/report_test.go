@@ -231,8 +231,8 @@ func TestReadinessReportShowsTheScopeACaseNarrowedItselfTo(t *testing.T) {
 	}
 }
 
-// A record keeps one scope for its whole task, the narrowest any of its sites
-// reached, so a measured row prints its own site's scope as the page does.
+// A record keeps one scope for its whole task, the narrowest any site reached.
+// A measured row prints its own site's scope, as the page does.
 func TestAMeasuredRowPrintsItsOwnSitesScopeNotItsTasksNarrowest(t *testing.T) {
 	whole := aitasks.Site{Task: ai.TaskCaptureClassify, Variant: "deal_topic", Kind: ai.SiteKindOneShot}
 	narrow := aitasks.Site{Task: ai.TaskCaptureClassify, Variant: "classify", Kind: ai.SiteKindOneShot}

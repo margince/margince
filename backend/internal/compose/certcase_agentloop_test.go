@@ -3,11 +3,11 @@
 
 package compose
 
-// What an agent_loop site's case owes the certification lane: it sends the
-// window the runner builds for THAT scheduled agent — its goal, its tools and
-// nothing else, this run's boundary, the seed context fenced the way retrieval
-// seeds it — it runs the loop to its end on the tools' fixture answers, and it
-// grades what the run wrote against the list the agent works from.
+// What an agent_loop site's case owes the certification lane. It sends the
+// window the runner builds for that scheduled agent. That is its goal and
+// tools, this run's boundary, and the seed context fenced as retrieval fences it. It runs
+// the loop to its end on the fixture's answers. It grades what the run wrote
+// against the list the agent works from.
 
 import (
 	"context"
@@ -211,9 +211,9 @@ func TestEveryScheduledAgentHasAGradableWork(t *testing.T) {
 	}
 }
 
-// The window is the whole security perimeter of the first turn: retrieved text
-// reaches the model unedited, and the only thing that stops it ending its span
-// is a marker minted for THIS run and named in THIS run's system prompt.
+// The window is the whole security perimeter of the first turn. Retrieved text
+// reaches the model unedited. Only a marker minted for this run, and named in
+// this run's system prompt, stops it ending its span.
 func TestAgentLoopCaseSendsTheWindowTheRunnerBuilds(t *testing.T) {
 	_, trace := runAgentLoopScript(t, agentLoopAgent, agentLoopBaseFixture(t), agentLoopFinalStep, agentLoopFinalReply)
 	req := trace.Requests[0]
@@ -230,8 +230,8 @@ func TestAgentLoopCaseSendsTheWindowTheRunnerBuilds(t *testing.T) {
 	}
 }
 
-// The scope this site is certified at, made a test rather than a sentence: the
-// run is driven turn after turn, each observation fed back, to its end.
+// The scope this site is certified at, as a test. The run is driven turn after
+// turn, each observation fed back, to its end.
 func TestAgentLoopCaseRunsTheLoopToItsEnd(t *testing.T) {
 	outcome, trace := runAgentLoopScript(t, agentLoopAgent, agentLoopBaseFixture(t), agentLoopWriteTool,
 		agentLoopReadBriefStep, agentLoopReadEvidenceStep(), annotation(agentLoopItemID, agentLoopActivityID), agentLoopFinalReply)
@@ -260,9 +260,9 @@ func agentLoopOutcome(t *testing.T, agent string, fixture agentLoopFixture, expe
 	}
 }
 
-// A write the store refuses changed nothing, and a run that never corrects it
-// ended without doing its work; a write about a subject off the list, or one
-// leaving a listed subject unwritten, is the wrong work.
+// A write the store refuses changed nothing, so a run that never corrects it
+// did not do its work. A write about a subject off the list is the wrong work,
+// and so is a run that leaves a listed subject unwritten.
 func TestAgentLoopCaseGradesTheWriteNotTheSteps(t *testing.T) {
 	stranger := ids.MustParse("0198f3a1-7c42-7e0b-9d51-2a6f4b8c2a99")
 	t.Run("a citation outside the item's evidence is refused and the run wrote nothing", func(t *testing.T) {

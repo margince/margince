@@ -52,8 +52,8 @@ func main() {
 	}
 }
 
-// renderStock writes the presets that reorder a task's rungs as Go strings, so
-// an install already bound to one of them, tier for tier, can adopt the order
+// renderStock writes the presets that reorder a task's rungs as Go strings. An
+// install already bound to one of them, tier for tier, can then adopt the order
 // a later release gave it (ai.RoutingConfig.WithStockTaskLadders).
 func renderStock(dir string) ([]byte, error) {
 	entries, err := os.ReadDir(dir)

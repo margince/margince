@@ -6,8 +6,8 @@ package aicert
 import "time"
 
 // recordMaxAge is how long a record stays current for STALE_ONLY. A vendor can
-// change the weights behind a model name with no stamp moving, so a sweep
-// measures a record this old again even when nothing in the build changed.
+// change the weights behind a model name with no stamp moving. So a sweep
+// measures a record this old again, even when nothing in the build changed.
 const recordMaxAge = 60 * 24 * time.Hour
 
 // recordsWithin keeps the records run within maxAge of now. A record whose run

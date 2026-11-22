@@ -15,9 +15,9 @@
  * remain available in Settings → AI, where an operator who already has two
  * vendor accounts can bind the lanes separately.
  *
- * WHY A PRESET. Onboarding binds the tiers of the preset named in `setup`,
- * one model per tier as the certification graded it (modelsetups.gen.ts is
- * generated from config/presets). One model on every tier is the advanced
+ * Why a preset: onboarding binds the tiers of the preset named in `setup`.
+ * That is one model per tier, as the certification graded it
+ * (modelsetups.gen.ts is generated from config/presets). One model on every tier is the advanced
  * choice, and the setup the tests graded is not that one.
  *
  * WHY DEFAULTS AND NOT A LIST. The two models named here are where each field

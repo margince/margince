@@ -196,8 +196,8 @@ func dateFields(vocabulary string) (map[string]bool, error) {
 }
 
 // halfOpenDateBound writes a closed bound on a date field as the half-open one
-// it equals, "lte 30 Nov" as "lt 1 Dec", so two plans that select one set of
-// days compare equal. An operand that is not a day is left as written.
+// it equals: "lte 30 Nov" as "lt 1 Dec". Two plans that select one set of days
+// then compare equal. An operand that is not a day is left as written.
 func halfOpenDateBound(predicate map[string]json.RawMessage, dates map[string]bool) {
 	var field, op, day string
 	if json.Unmarshal(predicate["field"], &field) != nil || !dates[field] ||

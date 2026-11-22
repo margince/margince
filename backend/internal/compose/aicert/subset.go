@@ -111,8 +111,8 @@ func mergeIntoCommitted(dir string, measured Record, corpus []Scenario) (Record,
 	regradeFromRows(&merged)
 	merged.CertifiedScope = aitasks.NarrowerScope(prior.CertifiedScope, measured.CertifiedScope)
 	merged.ContextApplied = prior.ContextApplied && measured.ContextApplied
-	// Every row the record pools vouches for these, so each reads the worse run:
-	// a judge of the candidate's family, and the oldest row it still keeps.
+	// Every row the record pools vouches for these, so each reads the worse run.
+	// That is a judge of the candidate's family, and the oldest row it keeps.
 	merged.SelfJudged = prior.SelfJudged || measured.SelfJudged
 	if len(rows) > len(measured.Scenarios) {
 		merged.RanAt = olderRanAt(prior.RanAt, measured.RanAt)

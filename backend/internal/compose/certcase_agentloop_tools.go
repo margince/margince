@@ -3,15 +3,13 @@
 
 package compose
 
-// The tool surface a certification run of a scheduled agent calls: every read
-// answered from the scenario's fixture, and the agent's one write checked the
-// way its store checks it and then acknowledged, never performed.
+// The tool surface a certification run of a scheduled agent calls. Every read
+// is answered from the scenario's fixture. The agent's one write is checked as
+// its store checks it, then acknowledged and never performed.
 //
-// The answers are fixture data for the reason every other site's input is: the
-// lane has no database, and what is certified is what the model does with what
-// the tools said. The list the agent works from is decoded into the production
-// result type and re-encoded, so a fixture cannot hand the model a shape the
-// tool never serves.
+// The lane has no database, and what is certified is what the model does with
+// what the tools said. The worklist is decoded into the production result type
+// and re-encoded, so a fixture cannot serve a shape the tool never does.
 
 import (
 	"bytes"
@@ -27,7 +25,7 @@ import (
 )
 
 // agentLoopToolAnswer is what one tool call is answered with. Args, when set,
-// is a subset the call must carry to be this answer, so two reads of one tool
+// is a subset the call must carry to get this answer. So two reads of one tool
 // on two records are two entries.
 type agentLoopToolAnswer struct {
 	Tool   string                     `json:"tool"`
@@ -36,9 +34,8 @@ type agentLoopToolAnswer struct {
 }
 
 // agentLoopToolSurface is the tool surface a certification run is offered. It
-// advertises the registered surface, as a passport admitting every scope would,
-// and the runner narrows it to the agent's allowlist exactly as it narrows a
-// production run's. It holds no state, so a replay of the same replies meets
+// advertises the registered surface, as a passport admitting every scope would.
+// The runner narrows it to the agent's allowlist as it narrows a production run's. It holds no state, so a replay of the same replies meets
 // the same answers.
 type agentLoopToolSurface struct {
 	work    agentLoopWork
@@ -88,8 +85,8 @@ func (s agentLoopToolSurface) fixedAnswer(tool string, args json.RawMessage) jso
 }
 
 // refuseUnanswerableTools names a fixture answer no call of this run could
-// reach: one for a tool the agent is not offered, or one pinning an argument
-// the tool's schema does not declare.
+// reach. That is an answer for a tool the agent is not offered, or one pinning
+// an argument the tool's schema does not declare.
 func refuseUnanswerableTools(answers []agentLoopToolAnswer, specs []mcp.ToolSpec) error {
 	offered := map[string]mcp.ToolSpec{}
 	for _, spec := range specs {
@@ -111,9 +108,9 @@ func refuseUnanswerableTools(answers []agentLoopToolAnswer, specs []mcp.ToolSpec
 	return nil
 }
 
-// listAnswer is the fixture's answer to the agent's list read: exactly one
-// entry for it, since the list is the run's whole worklist and two would leave
-// the grade to whichever the model's arguments matched.
+// listAnswer is the fixture's one answer to the agent's list read. The list is
+// the run's whole worklist, and two answers would leave the grade to whichever
+// the model's arguments matched.
 func listAnswer(answers []agentLoopToolAnswer, list string) (json.RawMessage, error) {
 	var found []json.RawMessage
 	for _, answer := range answers {

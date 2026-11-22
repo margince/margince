@@ -58,8 +58,8 @@ const defaultRepeats = 3
 const privacyMinRuns = 15
 
 // adaptiveRound is how many runs a borderline case gains per extension, and
-// adaptiveMaxRuns the most any case reaches, so a task of one case can still
-// reach certifiedMinRuns; each run costs at most maxJudgeOpinions judge calls.
+// adaptiveMaxRuns the most any case reaches. A task of one case can still reach
+// certifiedMinRuns. Each run costs at most maxJudgeOpinions judge calls.
 const (
 	adaptiveRound   = 3
 	adaptiveMaxRuns = certifiedMinRuns

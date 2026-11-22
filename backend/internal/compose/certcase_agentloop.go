@@ -3,7 +3,7 @@
 
 package compose
 
-// The certification case for one agent_loop site — one scheduled agent's run on
+// The certification case for one agent_loop site: one scheduled agent's run on
 // the Surface-B runner, from its first turn to the answer that ends it.
 //
 // WHAT IT CERTIFIES IS WHAT RUNS. agent_loop is the engine and each site is one
@@ -13,17 +13,17 @@ package compose
 // supplies only what varies between runs: the occurrence, what retrieval seeded,
 // and what each tool answers.
 //
-// WHAT IT EXERCISES. The loop, through runner.Run on the agent's own budget:
-// every turn's window, every observation fed back, the step protocol's retries
-// and the run's end. The tools are the fixture's (certcase_agentloop_tools.go),
+// What it exercises: the loop, through runner.Run on the agent's own budget.
+// That is every turn's window, every observation fed back, the step protocol's
+// retries and the run's end. The tools are the fixture's (certcase_agentloop_tools.go),
 // because the lane has no database; the write is checked as its store checks it
 // and acknowledged, never performed. Both agents' writes execute without an
 // approval in production, so a run never suspends and Resume is not on their
 // path.
 //
-// WHAT IT GRADES. The run's writes against the list its goal tells it to read
-// first (certcase_agentloop_work.go): every listed subject written about, none
-// outside the list, and a run that ends. A scenario expecting `final` expects
+// What it grades: the run's writes, against the list its goal tells it to read
+// first (certcase_agentloop_work.go). Every listed subject is written about,
+// none outside the list is, and the run ends. A scenario expecting `final` expects
 // the run to end without writing. What a write SAYS is the judge's to grade,
 // from the run Output records: every step, its observation, and the answer.
 
@@ -54,9 +54,9 @@ const agentLoopSite = "agent_loop"
 // give a tool — the two would be indistinguishable in an expectation.
 const agentLoopFinalStep = "final"
 
-// agentLoopFixture is ONE scheduled run, in the three things that vary between
-// runs of one agent: the occurrence that started it, the seed context retrieval
-// returned for it, and what each tool the run calls answers. Everything else the
+// agentLoopFixture is one scheduled run, in the three things that vary between
+// runs of one agent. They are the occurrence that started it, the seed context
+// retrieval returned for it, and what each tool the run calls answers. Everything else the
 // window carries is the agent's own and is looked up, never supplied.
 type agentLoopFixture struct {
 	TriggerRef string                `json:"trigger_ref"`
@@ -215,9 +215,9 @@ type agentLoopRunStep struct {
 // Run drives runner.Run on the agent's own budget and records every request it
 // issued and every reply it read.
 //
-// The loop does no I/O of its own — the window is built from the job and the
-// offered specs, and every outside reach is through the two seams handed to New —
-// so a run needs no database: the brain forwards to the completer, and the tool
+// The loop does no I/O of its own. The window is built from the job and the
+// offered specs, and every outside reach is through the two seams handed to New.
+// So a run needs no database: the brain forwards to the completer, and the tool
 // surface answers from the fixture.
 func (c *agentLoopCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	recorder := &agentLoopRecorder{completer: completer}
@@ -243,9 +243,9 @@ func (c *agentLoopCase) Run(ctx context.Context, completer aitasks.Completer) (a
 	return trace, nil
 }
 
-// agentLoopRecorder is the brain the loop reasons through: it prepares each
+// agentLoopRecorder is the brain the loop reasons through. It prepares each
 // request with the company context, as production's brain does, and records
-// each request the loop issued and each reply it read.
+// each request and reply.
 //
 // It reports an empty Meta because it knows nothing to put there. Meta is the
 // served model identity the router stamps on a trace step, and the cert lane's
@@ -286,7 +286,7 @@ func (r *agentLoopRecorder) Complete(ctx context.Context, req model.Request) (mo
 // the strict case: a prompt that fits here fits wherever this product runs.
 func (*agentLoopRecorder) PromptWindow() int { return runner.MinimumPromptWindow }
 
-// agentLoopReplay answers with the replies the run recorded, in order, so
+// agentLoopReplay answers with the replies the run recorded, in order. So
 // Evaluate reaches the step protocol the only way it is reachable: by running
 // the loop. A replay asked for more than was recorded fails the call, which the
 // loop reports as a degraded run.
@@ -329,9 +329,8 @@ func (c *agentLoopCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		}
 	}
 	if res.Outcome != runner.OutcomeCompleted {
-		// The report is an operator artifact whose whole subject is why the run
-		// did not end, so it takes the detail rather than the reason a contact's
-		// panel gets.
+		// The report is an operator artifact about why the run did not end. So it
+		// takes the detail, not the reason a contact's panel gets.
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: "the run did not end: " + res.DegradeDetail()}
 	}
 	return c.gradeRun(res)

@@ -22,8 +22,8 @@ type Vocabulary struct {
 	MinorUnitExceptions map[string]int                `json:"minor_unit_exceptions"`
 }
 
-// MarshalJSON adds the money operand rule the admission applies, so a field
-// named for the minor units it stores is not read as asking for them.
+// MarshalJSON adds the money operand rule the admission applies. A field named
+// for the minor units it stores is then not read as asking for them.
 func (v Vocabulary) MarshalJSON() ([]byte, error) {
 	type wire Vocabulary
 	return json.Marshal(struct {

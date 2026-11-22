@@ -4,7 +4,7 @@
 package ai
 
 // geminiWireRule versions how the Gemini adapters turn a request into what
-// Gemini decodes under, which decides what a model can answer; wirerule_test.go
+// Gemini decodes under, which decides what a model can answer. wirerule_test.go
 // fails an edit to that code that leaves it unbumped.
 const geminiWireRule = "gemini-wire-2"
 

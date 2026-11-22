@@ -248,9 +248,9 @@ func TestRecordForSiteAppliesTheSetRule(t *testing.T) {
 	}
 }
 
-// A site too small for the pooled bound is graded for what it measured: every
-// try right reads too few runs, never usable with care, and a case that fails
-// on its own still grades the site down.
+// A site too small for the pooled bound is graded for what it measured. Every
+// try right reads too few runs, never usable with care. A case that fails on
+// its own still grades the site down.
 func TestASiteWithTooFewRunsIsNotCalledWeak(t *testing.T) {
 	bands := &aicert.RowBands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}
 	right := aicert.ScenarioRecord{Site: "field_extract", Runs: 3, Passed: 3, JudgeScores: []int{95, 92, 95}, Bands: bands}

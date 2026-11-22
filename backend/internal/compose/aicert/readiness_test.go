@@ -160,9 +160,9 @@ func TestTheNamedScenariosAreOrdered(t *testing.T) {
 	}
 }
 
-// A new judge moves scores on its own, so a record another judge graded is stale
-// until this build's judge grades it, unless the candidate is of that judge's own
-// family, which another judge must grade.
+// A new judge moves scores on its own. So a record another judge graded is stale
+// until this build's judge grades it. The exception is a candidate of the judge's
+// own family, which another judge must grade.
 func TestARecordAnotherJudgeGradedIsStale(t *testing.T) {
 	stamped := func(served, judge string) aicert.Record {
 		return aicert.Record{

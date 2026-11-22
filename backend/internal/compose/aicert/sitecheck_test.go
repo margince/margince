@@ -3,10 +3,11 @@
 
 package aicert
 
-// The check digest of every shipped site, derived from the source: the case's
-// Evaluate method and everything it reaches in this module, by name. A method
-// call cannot be resolved without types, so it takes every method of that name
-// on a type the walk reached; the digest moves on more edits than it must.
+// The check digest of every shipped site, derived from the source. It covers
+// the case's Evaluate method and everything it reaches in this module, by name.
+// A method call cannot be resolved without types, so the walk takes every
+// method of that name on a type it reached. The digest moves on more edits than
+// it must.
 
 import (
 	"bytes"
@@ -44,8 +45,8 @@ const (
 )
 
 // TestEverySiteCheckIsStamped holds the golden to the source of every shipped
-// site's check, so editing what decides right from wrong moves that site's
-// stamp and its records read stale.
+// site's check. Editing what decides right from wrong moves that site's stamp,
+// and its records read stale.
 func TestEverySiteCheckIsStamped(t *testing.T) {
 	census, err := compose.NewTaskCensus()
 	if err != nil {

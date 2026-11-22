@@ -15,7 +15,6 @@ package aicert
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"sort"
 	"strings"
@@ -102,9 +101,9 @@ type Standing struct {
 	// holds. They do not make it stale — it is not wrong about what ships — but
 	// they are not coverage either, because nobody can re-run them.
 	Dropped []string
-	// GradedBy names the judge that graded a record when it is not the one this
-	// build grades with: a new judge moves scores on its own, so such a record
-	// is stale until that judge grades it again.
+	// GradedBy names the judge that graded a record when it is not this build's.
+	// A new judge moves scores on its own, so such a record is stale until this
+	// build's judge grades it again.
 	GradedBy string
 	// WireMoved says the provider's wire translation changed since the run, so
 	// the model was answering a request this build no longer sends it.
@@ -117,65 +116,6 @@ type Standing struct {
 	// staleness names no scenario. Such a record reports no counts, exactly as
 	// it did before per-scenario stamps landed.
 	TaskStampOnly bool
-}
-
-// StampParts says which of a scenario stamp's three digests moved. A stamp is
-// the scenario digested WHOLE, then the request its site builds, then how a run
-// is graded — three fixed-width hex digests concatenated
-// (ScenarioStamps), so which one differs is readable rather than inferred.
-type StampParts struct {
-	// Case is true when the test itself changed: its fixture, its expected
-	// answer, its rubric or its bands. Re-running measures a different question.
-	Case bool
-	// Prompt is true when the request this build sends changed while the test
-	// stayed put. The band that follows describes the NEW prompt, and a drop is
-	// a consequence of a product change rather than of the model.
-	Prompt bool
-	// Grader is true when how a run is graded changed: the judge's request or
-	// the scoring rule. A band can move with neither the test nor the product
-	// touched, which reads as a model regression and is not one.
-	Grader bool
-}
-
-// Describe names the moved halves in the order a reader acts on them.
-func (p StampParts) Describe() string {
-	var moved []string
-	if p.Case {
-		moved = append(moved, "the case")
-	}
-	if p.Prompt {
-		moved = append(moved, "the prompt this build sends")
-	}
-	if p.Grader {
-		moved = append(moved, "how a run is graded")
-	}
-	if len(moved) == 0 {
-		// A stamp this build cannot split — one written before the three-part
-		// layout, or a length it does not recognise. Saying so beats naming a
-		// half on a guess.
-		return "something this build cannot attribute"
-	}
-	return strings.Join(moved, " and ")
-}
-
-// stampSegment is the width of each digest in a scenario stamp, and three of
-// them is the whole stamp. Derived from sha256's hex width rather than written
-// as 64, so a digest change cannot leave this reading the wrong slice.
-const stampSegment = sha256.Size * 2
-
-// splitStampChange compares two stamps segment by segment. An unrecognised
-// length yields the zero value, whose Describe says it could not attribute the
-// change — under-reporting here is the one failure that must not look like an
-// answer.
-func splitStampChange(was, now string) StampParts {
-	if len(was) != stampSegment*3 || len(now) != stampSegment*3 {
-		return StampParts{}
-	}
-	return StampParts{
-		Case:   was[:stampSegment] != now[:stampSegment],
-		Prompt: was[stampSegment:stampSegment*2] != now[stampSegment:stampSegment*2],
-		Grader: was[stampSegment*2:] != now[stampSegment*2:],
-	}
 }
 
 // Reason states why the record is no longer current, in the terms a reader

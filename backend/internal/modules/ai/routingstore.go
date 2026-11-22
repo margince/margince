@@ -430,8 +430,8 @@ func canonicalEndpoint(raw string) string {
 }
 
 // AdoptStockTaskLaddersTx gives the stored binding the task order of the
-// committed preset it binds tier for tier, inside the caller's transaction and
-// under the routing lock; the settings store audits the write. A binding an
+// committed preset it binds tier for tier. It runs in the caller's transaction,
+// under the routing lock, and the settings store audits the write. A binding an
 // operator chose for themselves is left as it is, and so is one with no tiers.
 func (s *RoutingStore) AdoptStockTaskLaddersTx(ctx context.Context, tx pgx.Tx) (bool, error) {
 	if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {

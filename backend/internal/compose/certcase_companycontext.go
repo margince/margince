@@ -3,12 +3,11 @@
 
 package compose
 
-// The company context a certified prompt carries: production prepends it to
+// The company context a certified prompt carries. Production prepends it to
 // every call of a task whose contract declares scopes, read from the
-// installation's own company record. The lane has no database, so it serves one
-// fixed demo company instead, through the same provider and the same assembler
-// a production read goes through. What a record then measures is the prompt an
-// installation with a company record sends.
+// installation's own company record. The lane has no database, so it serves a
+// fixed demo company through the provider and assembler production uses. A
+// record then measures the prompt an installation with a company record sends.
 
 import (
 	"context"
@@ -26,9 +25,8 @@ import (
 var certCompanyWebsite = "northwind-ledger.example"
 
 // certCompany is the demo installation's own company. It sells subscription
-// software with onboarding services, which is what the drafting and offer
-// scenarios assume of the sender, and it states no tier, price or feature a
-// scenario's rubric could read as invented.
+// software with onboarding services, as the drafting and offer scenarios assume
+// of the sender. It states no tier, price or feature a rubric could read as invented.
 var certCompany = contacts.Company{
 	CompanyID:     ids.From[ids.CompanyKind](ids.MustParse("0190d7a4-6c1e-7a3b-9f2d-4c5e6f7a8b9c")),
 	DisplayName:   "Northwind Ledger",
@@ -51,8 +49,8 @@ var certCompany = contacts.Company{
 	},
 }
 
-// certCompanyReader stands where the store's read stands: it assembles the
-// scopes the provider asks for from the demo company, at a fixed instant so two
+// certCompanyReader stands where the store's read stands. It assembles the
+// scopes the provider asks for from the demo company, at a fixed instant, so two
 // runs of one case send one prompt.
 type certCompanyReader struct{}
 
@@ -71,8 +69,8 @@ func withCertCompanyContext(ctx context.Context, task ai.Task, req model.Request
 }
 
 // certContextBrain is the brain a drafter that calls the model several times
-// writes through: like routerBrain, it prepares each call before it is sent, so
-// a recorder below it records the request the model is actually shown.
+// writes through. Like routerBrain, it prepares each call before it is sent. A
+// recorder below it then records the request the model is shown.
 type certContextBrain struct {
 	task ai.Task
 	next aitasks.Completer

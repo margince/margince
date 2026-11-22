@@ -3,10 +3,10 @@
 
 package compose
 
-// What a scenario owes this site before a paid run: an expectation a run of the
-// agent could meet, tool answers a call could reach, and a fixture shaped like
-// what the scheduler, retrieval and the tools hand a run. Each refusal names
-// what is wrong, because finding it later costs a run.
+// What a scenario owes this site before a paid run. Its expectation is one a
+// run could meet, and its tool answers are ones a call could reach. Its fixture
+// has the shape the scheduler, retrieval and the tools hand a run. Each refusal
+// names what is wrong, because finding it later costs a run.
 
 import (
 	"encoding/json"
@@ -95,9 +95,8 @@ func TestAgentLoopCaseRefusesToolAnswersNoCallCouldReach(t *testing.T) {
 	})
 }
 
-// A window the scheduler and retrieval would never have produced for this site
-// is a prompt the product never sends, so whatever a model says to it measures
-// nothing.
+// A window the scheduler and retrieval would never produce for this site is a
+// prompt the product never sends. What a model says to it measures nothing.
 func TestAgentLoopCaseRefusesAWindowTheLoopIsNeverHanded(t *testing.T) {
 	withRef := func(ref string) json.RawMessage {
 		return agentLoopFixtureWith(t, func(f *agentLoopFixture) { f.TriggerRef = ref })
@@ -134,8 +133,8 @@ func TestAgentLoopCaseRefusesAWindowTheLoopIsNeverHanded(t *testing.T) {
 	})
 }
 
-// agentLoopRawFixture is the base fixture with one top-level key set to value,
-// so a test can hand this site a shape the Go type cannot hold.
+// agentLoopRawFixture is the base fixture with one top-level key set to value.
+// A test can then hand this site a shape the Go type cannot hold.
 func agentLoopRawFixture(t *testing.T, key, value string) json.RawMessage {
 	t.Helper()
 	var fields map[string]json.RawMessage
@@ -146,9 +145,9 @@ func agentLoopRawFixture(t *testing.T, key, value string) json.RawMessage {
 	return fixtureJSON(t, fields)
 }
 
-// A fixture answer pins only what tells two calls apart, as a subset, with
-// numbers compared by what they mean: float64 would make two integers past
-// 2^53 one answer, and comparing literals would make 5 and 5.0 two.
+// A fixture answer pins, as a subset, only what tells two calls apart. Numbers
+// compare by meaning: float64 would merge two integers past 2^53, and literals
+// would split 5 and 5.0.
 func TestAToolAnswerMatchesTheCallsItsPinnedArgumentsName(t *testing.T) {
 	pinned := map[string]json.RawMessage{"record_id": json.RawMessage(`"d1"`), "max_items": json.RawMessage(`5`)}
 	for _, tc := range []struct {

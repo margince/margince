@@ -3,10 +3,10 @@
 
 package compose
 
-// What each scheduled agent's run is FOR, as a grader can check it: the list
-// its goal tells it to read first, the subjects that list names, and which of
-// them one write is about. A run is right when its writes cover the list and
-// nothing outside it, which is the boundary both goals state.
+// What each scheduled agent's run is for, in terms a grader can check. That is
+// the list its goal tells it to read first, the subjects that list names, and
+// which of them one write is about. A run is right when its writes cover the
+// list and nothing outside it, the boundary both goals state.
 
 import (
 	"encoding/json"
@@ -35,8 +35,8 @@ type agentLoopWorklist struct {
 type agentLoopWork struct {
 	list  string
 	write string
-	// onceEach says a subject takes exactly one write: a sweep logs one note per
-	// deal, where a later brief pass replaces an earlier finding.
+	// onceEach says a subject takes one write and no more. A sweep logs one note
+	// per deal, where a later brief pass replaces an earlier finding.
 	onceEach bool
 	read     func(json.RawMessage) (agentLoopWorklist, error)
 	// wrote is the subjects one write names, refusing what the store refuses.
@@ -133,9 +133,9 @@ type agentLoopLoggedNote struct {
 	} `json:"links"`
 }
 
-// loggedDeals is the deals one note is about. It refuses what the activity
-// store refuses of a scheduled run's note, a missing body, and nothing more, so
-// a note on the wrong deal is acknowledged and graded wrong.
+// loggedDeals is the deals one note is about. It refuses only what the activity
+// store refuses of a scheduled run's note, a missing body. So a note on the
+// wrong deal is acknowledged and graded wrong.
 func loggedDeals(args json.RawMessage, _ agentLoopWorklist) ([]string, error) {
 	var note agentLoopLoggedNote
 	if err := json.Unmarshal(args, &note); err != nil {
@@ -162,8 +162,8 @@ func acknowledgeLoggedNote(_, fixed json.RawMessage) (json.RawMessage, error) {
 	return fixed, nil
 }
 
-// gradeWrites holds the writes a run made to its worklist: every subject
-// written about, none outside the list, and once each where the agent logs once.
+// gradeWrites holds the writes a run made to its worklist. Every subject is
+// written about, none outside the list is, and each once where the agent logs once.
 func (w agentLoopWork) gradeWrites(writes []json.RawMessage, list agentLoopWorklist) []string {
 	listed := map[string]bool{}
 	for _, subject := range list.subjects {

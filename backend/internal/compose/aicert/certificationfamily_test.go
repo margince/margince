@@ -190,9 +190,9 @@ func countAICertFamily(fam *aiCertFamily) {
 	fam.Answer = familyAnswer(fam)
 }
 
-// familyAnswer grades a family, and both halves of the page state its rule: not enough tested
-// when the family covers under half the features, yes when every graded one is
-// ready, mostly when at least familyMostlyPercent are usable, not yet otherwise.
+// familyAnswer grades a family, and both halves of the page state its rule.
+// Under half the features covered reads not enough tested. Every graded one
+// ready reads yes, familyMostlyPercent usable reads mostly, else not yet.
 // A place with too few tries to grade alone counts toward coverage and no grade.
 func familyAnswer(fam *aiCertFamily) string {
 	graded := fam.SitesMeasured - fam.TooFewRuns

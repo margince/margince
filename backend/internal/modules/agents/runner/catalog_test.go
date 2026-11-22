@@ -8,10 +8,10 @@ import (
 	"testing"
 )
 
-// Each scheduled agent's goal states the shape of its one write, so a run that
-// nobody watches writes what the store accepts and a reader can find: the brief
-// in one call holding every finding, a sweep note linked to its deal with the
-// finding in its body.
+// Each scheduled agent's goal states the shape of its one write. A run nobody
+// watches then writes what the store accepts and a reader can find. The brief
+// is one call holding every finding. A sweep note is linked to its deal, with
+// the finding in its body.
 func TestEachScheduledGoalStatesTheShapeOfItsWrite(t *testing.T) {
 	want := map[string][]string{
 		"morning_brief":           {"annotate_brief ONCE", "every item in that same call"},

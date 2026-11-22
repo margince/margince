@@ -64,7 +64,7 @@ func TestTheRouterWalksTheConfigsOrder(t *testing.T) {
 	}
 }
 
-// An order naming no task, or not exactly the task's own rungs, is refused.
+// An order naming no task, or other than the task's own rungs, is refused.
 func TestATaskLadderOrderMustReorderARealTasksOwnRungs(t *testing.T) {
 	for name, order := range map[string]string{
 		"an unknown task":    "  no_such_task: [premium, cheap_cloud]",
@@ -79,8 +79,8 @@ func TestATaskLadderOrderMustReorderARealTasksOwnRungs(t *testing.T) {
 	}
 }
 
-// An installation bound tier for tier to a committed preset takes that preset's
-// task order; one bound otherwise, or already ordering its tasks, keeps its own.
+// An installation bound tier for tier to a committed preset takes its task
+// order. One bound otherwise, or already ordering its tasks, keeps its own.
 func TestAStockBindingAdoptsItsPresetsTaskOrderAndACustomOneDoesNot(t *testing.T) {
 	stock, err := ParsePreset([]byte(stockPresets["gemini_cloud.yaml"]))
 	if err != nil {

@@ -206,9 +206,9 @@ func TestLookupFindsARegisteredSite(t *testing.T) {
 	}
 }
 
-// An agent loop's case drives the whole run, its tools answered from the
-// fixture, while a multi-turn site's scenarios seed the history and grade ONE
-// reply. The scope is derived from the kind rather than left to a reader to infer.
+// An agent loop's case drives the whole run on the fixture's tool answers. A
+// multi-turn site's scenarios seed the history and grade one reply. The scope is
+// derived from the kind, not left to a reader to infer.
 func TestAgentLoopCertifiesTheRunAndAConversationOneTurn(t *testing.T) {
 	loop := aitasks.Site{Task: ai.TaskAgentLoop, Variant: "loop", Kind: ai.SiteKindAgentLoop}
 	if got := loop.CertifiedScope(); got != aitasks.ScopeFullInvocation {

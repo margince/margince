@@ -70,9 +70,9 @@ type providerDescriptor struct {
 	// serviceAccountKey marks an adapter whose key credential is a Google
 	// service-account JSON rather than an API key.
 	serviceAccountKey bool
-	// wireRule versions how the adapter translates a request for its decoder,
-	// so a certification record measured through another translation reads
-	// stale (WireRule); empty for an adapter that declares none.
+	// wireRule versions how the adapter translates a request for its decoder.
+	// A record measured through another translation reads stale (WireRule).
+	// It is empty for an adapter that declares none.
 	wireRule string
 	// measuredBy is the provider whose certification records grade this one:
 	// an adapter sending the same request to the same weights through another

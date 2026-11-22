@@ -32,7 +32,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/account_scan/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "account_scan", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/agent_loop/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "agent_loop", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "current"},
+	{Task: "agent_loop", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
 	// records/agent_loop/gemini_gemini-3.5-flash_cloud_frontier.json
 	{Task: "agent_loop", Provider: "gemini", Model: "gemini-3.5-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/agent_loop/gemini_gemini-3.5-flash-lite_cloud_frontier.json
@@ -40,7 +40,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/agent_loop/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "agent_loop", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/agent_loop/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "agent_loop", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
+	{Task: "agent_loop", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
 	// records/agent_loop/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "agent_loop", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/agent_loop/openai_compatible_mistralai_ministral-14b-2512_eu_hosted.json
@@ -228,7 +228,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/deal_health/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "deal_health", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
 	// records/deal_health/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "deal_health", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "deal_health", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/deal_health/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "deal_health", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/deal_health/openai_compatible_mistralai_ministral-14b-2512_eu_hosted.json
@@ -260,7 +260,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/document_extract/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "document_extract", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/document_extract/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "document_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "document_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/draft_reply/gemini_gemini-3.1-flash-lite_cloud_frontier.json
 	{Task: "draft_reply", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
 	// records/draft_reply/gemini_gemini-3.1-pro-preview_cloud_frontier.json
@@ -308,7 +308,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/enrich/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "enrich", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/growth_fit/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "growth_fit", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
+	{Task: "growth_fit", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
 	// records/growth_fit/gemini_gemini-3.5-flash_cloud_frontier.json
 	{Task: "growth_fit", Provider: "gemini", Model: "gemini-3.5-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/growth_fit/gemini_gemini-3.5-flash-lite_cloud_frontier.json
@@ -316,7 +316,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/growth_fit/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "growth_fit", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/growth_fit/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "growth_fit", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "growth_fit", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/growth_fit/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "growth_fit", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/growth_fit/openai_compatible_mistralai_ministral-14b-2512_eu_hosted.json
@@ -360,7 +360,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/nl_search/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "nl_search", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "not_supported", State: "absent"},
 	// records/offer_draft/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "offer_draft", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "offer_draft", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/offer_draft/gemini_gemini-3.5-flash_cloud_frontier.json
 	{Task: "offer_draft", Provider: "gemini", Model: "gemini-3.5-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/offer_draft/gemini_gemini-3.5-flash-lite_cloud_frontier.json
@@ -368,7 +368,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/offer_draft/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "offer_draft", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/offer_draft/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "offer_draft", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "offer_draft", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/offer_draft/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "offer_draft", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/offer_draft/openai_compatible_mistralai_ministral-14b-2512_eu_hosted.json
@@ -386,7 +386,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/offer_draft/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "offer_draft", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/owed_verdict/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "owed_verdict", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "owed_verdict", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/owed_verdict/gemini_gemini-3.5-flash-lite_cloud_frontier.json
 	{Task: "owed_verdict", Provider: "gemini", Model: "gemini-3.5-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
 	// records/owed_verdict/openai_compatible_google_gemma-4-26b-a4b-it_cloud_frontier.json
@@ -404,7 +404,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/owed_verdict/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "owed_verdict", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/propose_roles/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "propose_roles", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
+	{Task: "propose_roles", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/propose_roles/gemini_gemini-3.5-flash_cloud_frontier.json
 	{Task: "propose_roles", Provider: "gemini", Model: "gemini-3.5-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/propose_roles/gemini_gemini-3.5-flash-lite_cloud_frontier.json
@@ -412,7 +412,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/propose_roles/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "propose_roles", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/propose_roles/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "propose_roles", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "propose_roles", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/propose_roles/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "propose_roles", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/propose_roles/openai_compatible_mistralai_ministral-14b-2512_eu_hosted.json
@@ -430,7 +430,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/propose_roles/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "propose_roles", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/rate_extract/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "rate_extract", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "rate_extract", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/rate_extract/gemini_gemini-3.5-flash_cloud_frontier.json
 	{Task: "rate_extract", Provider: "gemini", Model: "gemini-3.5-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/rate_extract/gemini_gemini-3.5-flash-lite_cloud_frontier.json
@@ -438,7 +438,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/rate_extract/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "rate_extract", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/rate_extract/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "rate_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "rate_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/rate_extract/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "rate_extract", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/rate_extract/openai_compatible_mistralai_ministral-14b-2512_eu_hosted.json
@@ -458,13 +458,13 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/rate_extract/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "rate_extract", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/reader_rendering/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "reader_rendering", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "reader_rendering", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
 	// records/reader_rendering/gemini_gemini-3.5-flash-lite_cloud_frontier.json
 	{Task: "reader_rendering", Provider: "gemini", Model: "gemini-3.5-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
 	// records/reader_rendering/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "reader_rendering", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/reader_rendering/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "reader_rendering", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "reader_rendering", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/reader_rendering/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "reader_rendering", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/reader_rendering/openai_compatible_openai_gpt-oss-120b_cloud_frontier.json
@@ -472,13 +472,13 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/reader_rendering/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "reader_rendering", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/report_interpret/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "report_interpret", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
+	{Task: "report_interpret", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/report_interpret/gemini_gemini-3.5-flash-lite_cloud_frontier.json
 	{Task: "report_interpret", Provider: "gemini", Model: "gemini-3.5-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
 	// records/report_interpret/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "report_interpret", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
 	// records/report_interpret/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "report_interpret", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
+	{Task: "report_interpret", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
 	// records/report_interpret/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "report_interpret", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "not_supported", State: "absent"},
 	// records/report_interpret/openai_compatible_mistralai_mistral-medium-3-5_cloud_frontier.json
@@ -488,13 +488,13 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/report_interpret/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "report_interpret", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "not_supported", State: "absent"},
 	// records/report_setup/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "report_setup", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "report_setup", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/report_setup/gemini_gemini-3.5-flash-lite_cloud_frontier.json
 	{Task: "report_setup", Provider: "gemini", Model: "gemini-3.5-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
 	// records/report_setup/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "report_setup", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
 	// records/report_setup/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "report_setup", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "report_setup", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/report_setup/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "report_setup", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "not_supported", State: "absent"},
 	// records/report_setup/openai_compatible_mistralai_mistral-medium-3-5_cloud_frontier.json
@@ -504,7 +504,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/report_setup/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "report_setup", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "not_supported", State: "absent"},
 	// records/request_settlement/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "request_settlement", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "request_settlement", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "current"},
 	// records/request_settlement/gemini_gemini-3.5-flash-lite_cloud_frontier.json
 	{Task: "request_settlement", Provider: "gemini", Model: "gemini-3.5-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
 	// records/request_settlement/openai_compatible_google_gemma-4-26b-a4b-it_cloud_frontier.json
@@ -522,13 +522,13 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/request_settlement/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "request_settlement", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/rewrite/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "rewrite", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
+	{Task: "rewrite", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "current"},
 	// records/rewrite/gemini_gemini-3.5-flash-lite_cloud_frontier.json
 	{Task: "rewrite", Provider: "gemini", Model: "gemini-3.5-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
 	// records/rewrite/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "rewrite", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
 	// records/rewrite/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "rewrite", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
+	{Task: "rewrite", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
 	// records/signal_extract/gemini_gemini-3.1-flash-lite_cloud_frontier.json
 	{Task: "signal_extract", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
 	// records/signal_extract/gemini_gemini-3.1-pro-preview_cloud_frontier.json
@@ -684,7 +684,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/summarize/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "summarize", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/tag_suggest/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "tag_suggest", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "tag_suggest", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/tag_suggest/gemini_gemini-3.5-flash-lite_cloud_frontier.json
 	{Task: "tag_suggest", Provider: "gemini", Model: "gemini-3.5-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/tag_suggest/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json

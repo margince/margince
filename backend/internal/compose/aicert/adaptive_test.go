@@ -50,9 +50,9 @@ func TestABorderlineCaseIsExtendedAndASettledOneIsNot(t *testing.T) {
 	}
 }
 
-// A pool that meets 90% on its point estimate but not on its bound, or on
-// fewer runs than a certified grade rests on, is a question only more runs
-// answer, so every case extends — and stops once both clear.
+// A pool that meets 90% on its point estimate but not on its bound is a
+// question only more runs answer. So is one with fewer runs than a certified
+// grade rests on. Every case extends, and stops once both clear.
 func TestAnUndecidedPoolExtendsEveryCase(t *testing.T) {
 	for _, tc := range []struct {
 		name string

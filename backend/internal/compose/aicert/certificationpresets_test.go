@@ -114,8 +114,8 @@ type aiCertPresetTask struct {
 	// Unmeasured names the task's sites no record of this rung measured. Any
 	// one leaves the whole task not measured, as the report reads it.
 	Unmeasured []string `json:"unmeasured_sites,omitempty"`
-	// Scope is the narrowest scope any of the task's sites claims, so a grade
-	// on one model call or one turn does not read as one on the whole feature.
+	// Scope is the narrowest scope any of the task's sites claims. A grade on one
+	// model call or one turn then does not read as one on the whole feature.
 	Scope string `json:"scope"`
 	// Judge scored the answers behind the grade; empty where every case was
 	// checked mechanically.
@@ -241,10 +241,9 @@ func tiersOfPreset(cfg ai.RoutingConfig) []aiCertPresetTier {
 }
 
 // attributeAICertPresets fills in each preset's per-task verdict from the
-// records the document's site tables carry, so the by-preset section can never
-// claim a band for a pair those tables do not show. The grade and its state are
-// aicert.RungGrade's over the readiness rows, the rule `make e2e-ai-report`
-// prints, so a task with a site no record measured reads not measured.
+// records the site tables carry. The by-preset section then never claims a band
+// those tables do not show. The grade is aicert.RungGrade's, the rule
+// `make e2e-ai-report` prints, so a task with an unmeasured site reads not measured.
 func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc, records []aicert.Record,
 	rows []aicert.ReadinessRow, corpus []aicert.Scenario,
 ) []aiCertPreset {
@@ -312,8 +311,8 @@ type aiCertRungGrades struct {
 	contextOwed map[string]bool
 }
 
-// of is the band and state of the record grading binding on task, both empty
-// when a site of the task has no such record, with the sites that have none.
+// of is the band and state of the record grading binding on task, with the
+// sites that have no such record. Both are empty when any site has none.
 func (g aiCertRungGrades) of(task string, binding ai.ProviderConfig, profile string) (band, state string, unmeasured []string) {
 	scenarios := g.scenarios[task]
 	state, verdict := aicert.RungGrade(g.rows, scenarios, binding, ai.Profile(profile), ai.Task(task))
@@ -629,10 +628,10 @@ func assertAICertPresetsReadTheRecords(t *testing.T, presets []aiCertPreset, rec
 	}
 }
 
-// presetReportDisagreements holds every preset row to aicert.PresetRungs, the
-// function `make e2e-ai-report` prints its preset tables from: the page's grade
-// and state for the answering rung and its fallback are the report's, and a
-// rung the report reads as absent is one the page calls not measured.
+// presetReportDisagreements holds every preset row to aicert.PresetRungs, which
+// `make e2e-ai-report` prints its preset tables from. The page's grade and state
+// for each rung are the report's. A rung the report reads as absent is one the
+// page calls not measured.
 func presetReportDisagreements(p aiCertPreset, rungs []aicert.PresetRungState) []string {
 	byTask := map[string]aicert.PresetRungState{}
 	for _, rung := range rungs {
@@ -712,8 +711,8 @@ func TestThePresetGateFailsARowTheReportGradesOtherwise(t *testing.T) {
 	}
 }
 
-// A task one of whose sites no record measured is not measured on the page, as
-// in the report, however good the record of its other site is.
+// A task with a site no record measured reads not measured on the page, as in
+// the report. The record of its other site does not change that.
 func TestATaskWithAnUnmeasuredSiteReadsNotMeasured(t *testing.T) {
 	task := ai.TaskSummarize
 	binding := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/m"}

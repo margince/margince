@@ -13,11 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// An agent_loop case is graded on the run's writes, and a judge shown the whole
-// run — every read, every observation, the answer — grades whatever it notices
-// unless the rubric names what is graded. So a judged rubric names the write
-// tool its scenario expects. A case its mechanical check grades alone has no
-// rubric to say it in.
+// An agent_loop case is graded on the run's writes. A judge shown the whole run
+// (every read, observation and answer) grades whatever it notices, unless the
+// rubric names what is graded. So a judged rubric names the write tool its
+// scenario expects. A case graded by its mechanical check alone has no rubric.
 func TestEveryAgentLoopRubricNamesTheWriteItGrades(t *testing.T) {
 	census, err := compose.NewTaskCensus()
 	if err != nil {

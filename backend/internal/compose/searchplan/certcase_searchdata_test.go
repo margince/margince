@@ -9,7 +9,7 @@ const datedVocabulary = `{"record_vocabulary":{"targets":[{"target":"deal","fiel
 {"name":"expected_close_date","kind":"date"},{"name":"created_at","kind":"timestamp"}]}]}}`
 
 // A closed bound on a date selects the days the half-open one does, so the two
-// are one plan; on an instant, or past the day, they are not.
+// are one plan. On an instant, or past the day, they are not.
 func TestAClosedDateBoundIsTheHalfOpenPlanItEquals(t *testing.T) {
 	plan := func(where string) Plan {
 		return Plan{Engine: EngineRecords, Arguments: `{"plan":{"version":"v1","target":"deal","where":[` + where + `]}}`}

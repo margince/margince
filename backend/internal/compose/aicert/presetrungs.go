@@ -87,10 +87,9 @@ func presetRungState(routing ai.RoutingConfig, task ai.Task, scenarios []Scenari
 	return state
 }
 
-// RungGrade is the state and verdict of the record grading binding on task, as
-// every surface that grades a rung reads them: the report, the certification
-// page and the product's own grade table. rows are task's readiness rows and
-// scenarios its corpus.
+// RungGrade is the state and verdict of the record grading binding on task. The
+// report, the certification page and the product's grade table all read it.
+// rows are task's readiness rows and scenarios its corpus.
 func RungGrade(rows []ReadinessRow, scenarios []Scenario, binding ai.ProviderConfig, profile ai.Profile, task ai.Task) (state, verdict string) {
 	return rungState(rows, scenarios, binding, profile, task), rungVerdict(rows, scenarios, binding, profile, task)
 }

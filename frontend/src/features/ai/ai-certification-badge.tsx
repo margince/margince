@@ -8,8 +8,8 @@ import type { MessageKey } from "../../i18n/en";
 
 type Certification = components["schemas"]["AiTaskCertification"];
 
-// The certification grade of the model that answers a task, as the server reads
-// it from the committed records: the same grade the test results page prints.
+// The certification grade of the model that answers a task. The server reads it
+// from the committed records, and it is the grade the test results page prints.
 const GRADES: Readonly<
   Record<Certification["grade"], { kind: StatusKind; label: MessageKey }>
 > = {

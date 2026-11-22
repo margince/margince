@@ -63,10 +63,9 @@ func TestACaseIsReadAtTheScopeItDeclares(t *testing.T) {
 	}
 }
 
-// A declaration exists to narrow. One that claims MORE than its site's kind
-// allows — a whole invocation from a case that grades one turn of a conversation — would
-// make the record's most cautious number come from its least cautious source,
-// and no reader could tell which claim to believe.
+// A declaration exists to narrow. Take one claiming more than its site's kind
+// allows, such as a whole invocation from a case grading one turn. The record's
+// most cautious number would then come from its least cautious source.
 func TestValidateRefusesAScopeThatIsNotANarrowing(t *testing.T) {
 	conversation := aitasks.Site{Task: ai.TaskColdStart, Variant: "acts", Kind: ai.SiteKindMultiTurn}
 	cases := []struct {

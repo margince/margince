@@ -3,8 +3,8 @@
 
 package compose
 
-// The overnight sweep's run, graded on its notes: one per listed deal, none on
-// a deal the retrieved context names, each with the body its goal requires.
+// The overnight sweep's run, graded on its notes. There is one per listed deal,
+// none on a deal the retrieved context names, and each has the body its goal requires.
 
 import (
 	"encoding/json"
@@ -73,8 +73,8 @@ func TestAgentLoopSweepIsGradedOnItsNotes(t *testing.T) {
 			"written about 2 times", agentLoopSlippingStep, agentLoopNote(agentLoopSlippingDeal, quiet),
 			agentLoopNote(agentLoopSlippingDeal, quiet), agentLoopFinalReply)
 	})
-	// The store refuses a scheduled run's note with no body, so the run sees the
-	// refusal and can write it again; one that does not has written nothing.
+	// The store refuses a scheduled run's note with no body. The run sees the
+	// refusal and can write again; a run that does not has written nothing.
 	t.Run("a note without a body is refused", func(t *testing.T) {
 		agentLoopOutcome(t, agentLoopSweep, agentLoopSweepFixture(t), "log_activity", aitasks.OutcomeWrongAnswer,
 			"ended without writing", agentLoopSlippingStep, agentLoopNote(agentLoopSlippingDeal, " "), agentLoopFinalReply)

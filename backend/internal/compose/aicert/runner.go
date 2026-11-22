@@ -407,8 +407,8 @@ type taskAccumulation struct {
 	anyRunGraded bool
 	identitySet  bool
 	// contextOwed counts the runs production prepends company context to, and
-	// contextServed those of them served it, so the record claims the context
-	// only when every run owed it was served it.
+	// contextServed those served it. The record claims the context only when
+	// every run owed it was served it.
 	contextOwed, contextServed int
 	// certifiedScope is the narrowest scope any run's site covered. A task is
 	// one record but not always one site — cold_start ships a one-shot

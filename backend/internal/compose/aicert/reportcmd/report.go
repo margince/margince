@@ -111,10 +111,9 @@ func summarize(rows []aicert.ReadinessRow) string {
 }
 
 // taskContextsNotServed names every certified task production prepends company
-// context to, with the scopes its runs went without — each task once, however
-// many of its sites have rows. A task owed none is left out, even when its
-// contract declares a conditional policy no site asks for: nothing was missing
-// from it, and listing it would bury the ones where something was.
+// context to, with the scopes its runs went without, each task once. A task owed
+// none is left out, even with a conditional policy no site asks for. Nothing was
+// missing from it, and listing it would bury the ones where something was.
 func taskContextsNotServed(rows []aicert.ReadinessRow, contextOwed map[string]bool) []string {
 	named := map[string]bool{}
 	var out []string

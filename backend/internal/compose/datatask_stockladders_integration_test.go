@@ -18,8 +18,8 @@ import (
 )
 
 // storeGeminiRouting saves gemini_cloud's binding with no task order of its
-// own, as an install the setup screen bound before presets ordered tasks;
-// customise rebinds premium to the cheap model, as an admin might.
+// own, as the setup screen bound it before presets ordered tasks. customise
+// rebinds premium to the cheap model, as an admin might.
 func storeGeminiRouting(t *testing.T, e *integration.Env, routing *ai.RoutingStore, customise bool) {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "config", "presets", "gemini_cloud.yaml"))

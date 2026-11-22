@@ -105,8 +105,8 @@ func TestAListThatOnlyResemblesAWonCountStaysAList(t *testing.T) {
 	}
 }
 
-// The vocabulary a planner reads says the unit admission scales from: a field
-// it scales reads major units in the vocabulary's words, and a 50k threshold on
+// The vocabulary a planner reads says the unit admission scales from. A field it
+// scales reads major units in the vocabulary's words. A 50k threshold on
 // amount_minor crosses into the stored minor units once, never twice.
 func TestTheVocabularySaysTheUnitAdmissionScalesFrom(t *testing.T) {
 	encoded, err := json.Marshal(Vocabulary{})

@@ -164,9 +164,9 @@ func searchMoneyFilters(held json.RawMessage, baseCurrency string) (json.RawMess
 	return json.Marshal(filters)
 }
 
-// The suffixes of the money fields whose planner operand is a major-unit number
-// the admission scales into the stored minor units: in the row's own currency,
-// or for baseMoneySuffix in the base currency.
+// The suffixes of the money fields whose planner operand is a major-unit number.
+// Admission scales it into the stored minor units: of the row's own currency, or
+// of the base currency for baseMoneySuffix.
 const (
 	moneySuffix     = "_minor"
 	baseMoneySuffix = "_minor_base"

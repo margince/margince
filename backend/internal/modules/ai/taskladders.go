@@ -38,9 +38,9 @@ func (cfg RoutingConfig) validateTaskLadders() error {
 	return nil
 }
 
-// WithStockTaskLadders gives a stored binding the task order of the committed
-// preset it binds tier for tier (provider, model and thinking level on every
-// tier, its own location aside), when it reorders no task itself. A binding an
+// WithStockTaskLadders gives a stored binding that reorders no task the task
+// order of the committed preset it binds tier for tier. Tier for tier means the
+// provider, model and thinking level match on every tier; location may differ. A binding an
 // operator chose for themselves answers false and is left as it is.
 func (cfg RoutingConfig) WithStockTaskLadders() (RoutingConfig, bool) {
 	if len(cfg.TaskLadders) > 0 {

@@ -96,11 +96,11 @@ export function useBindModels() {
 type ChatTiers = components["schemas"]["AiRouting"]["tiers"];
 
 /**
- * Every chat tier, bound. A tier left unbound degrades honestly at runtime, but
- * an onboarding that bound only some would have the product answer for one task
- * and refuse another with no way for the reader to tell which they configured.
- * The graded preset binds each tier to its own model, at the location the
- * reader chose; the advanced choice puts the one model on all four.
+ * Every chat tier, bound. A tier left unbound degrades openly at runtime. But an
+ * onboarding that bound only some would answer one task and refuse another, and
+ * the reader could not tell which they configured. The graded preset binds each
+ * tier to its own model, at the reader's location. The advanced choice puts one
+ * model on all four.
  */
 export function chatTiers(
   vars: Readonly<{
@@ -136,8 +136,8 @@ export function chatTiers(
 }
 
 /**
- * The graded preset's reordering of a task's rungs, which belongs to the setup
- * as much as its tiers do; nothing when the reader put one model on every tier.
+ * The graded preset's reordering of a task's rungs, part of the setup as its
+ * tiers are. It is nothing when the reader put one model on every tier.
  */
 export function taskLadders(vars: Readonly<{ setup?: ModelSetupId }>): {
   task_ladders?: Record<string, string[]>;
