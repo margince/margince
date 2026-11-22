@@ -3370,6 +3370,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.company": "Công ty",
   "partner.certStatus": "Trạng thái chứng nhận",
   "partner.certStatusAll": "Tất cả trạng thái",
+  "partner.listEmptyNote": "Mở một công ty và chọn {more} → {setUp}.",
   "partner.marginTier": "Mức hoa hồng đối tác",
   "partner.marginTierHint":
     "Tỷ lệ đối tác nhận trên mỗi deal thắng do đối tác mang về. Giới thiệu: đối tác chỉ giới thiệu khách hàng. Hợp tác tích cực: hai bên cùng làm deal. Đối tác tự chốt: đối tác tự bán. Để trống khi thỏa thuận với đối tác trả theo cách khác.",

@@ -3474,6 +3474,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.company": "Unternehmen",
   "partner.certStatus": "Zertifizierungsstatus",
   "partner.certStatusAll": "Alle Status",
+  "partner.listEmptyNote": "Öffne ein Unternehmen und wähle {more} → {setUp}.",
   "partner.marginTier": "Margenstaffel",
   "partner.marginTierHint":
     "Der Anteil, den der Partner an jedem gewonnenen Deal erhält, den er gebracht hat. Intro: Er hat den Kunden nur vorgestellt. Aktive Zusammenarbeit: Der Deal wurde gemeinsam bearbeitet. Abschluss durch Partner: Er hat ihn selbst verkauft. Leer lassen, wenn die Vereinbarung mit ihm anders vergütet.",

@@ -3369,6 +3369,7 @@ export const en = {
   "partner.company": "Company",
   "partner.certStatus": "Certification status",
   "partner.certStatusAll": "All statuses",
+  "partner.listEmptyNote": "Open a company and choose {more} → {setUp}.",
   "partner.marginTier": "Margin tier",
   "partner.marginTierHint":
     "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",

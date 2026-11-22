@@ -248,6 +248,17 @@ const RESERVED_PAGE_TITLES: Readonly<Record<ReservedPageScreen, MessageKey>> = {
   contacts: "vcardImport.title",
 };
 
+// Off-rail screens that belong to a rail destination: the rail marks the
+// destination, and the trail leads back to it.
+const PARENT_SCREENS: Readonly<Partial<Record<Screen, Screen>>> = {
+  partners: "companies",
+};
+
+// The rail destination an off-rail screen belongs to, if it has one.
+export function parentScreenOf(route: Route): Screen | undefined {
+  return PARENT_SCREENS[route.screen];
+}
+
 // The trail, the agent's subject and the rail read a reserved page's name here.
 export function reservedPageTitle(route: Route): MessageKey | undefined {
   const page = reservedPageOf(route);
@@ -412,6 +423,7 @@ function opensAPageBelow(route: Route): boolean {
   return (
     recordKindOf(route) !== undefined ||
     reservedPageTitle(route) !== undefined ||
+    parentScreenOf(route) !== undefined ||
     opensAFocusedFiltersPage(route)
   );
 }
@@ -437,6 +449,10 @@ function activeRowFor(route: Route): string {
   // no screen and marks no row, which is the honest answer for one.
   if (route.screen === CUSTOM_SCREEN) {
     return route.id ?? route.screen;
+  }
+  const parent = parentScreenOf(route);
+  if (parent) {
+    return parent;
   }
   // One list is a page of the library that lists it, and has no row of its own.
   if (route.screen === "lists") {
