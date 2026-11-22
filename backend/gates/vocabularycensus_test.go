@@ -487,7 +487,7 @@ const repeatedVocabulariesCeiling = 9
 // list this census does not read as a column's vocabulary. Each states a
 // condition inside a wider rule, such as finance_invoice_credit_note_status.
 // The ceiling rises only for such a rule.
-const unreadArrayCheckCeiling = 29
+const unreadArrayCheckCeiling = 30
 
 // TestNoVocabularyCheckHidesFromTheCensus fails when a CHECK with a value
 // list stops being read, so a catalog format change cannot shrink the census.

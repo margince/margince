@@ -4086,7 +4086,7 @@ public.contact.contact_converted_from_lead_id_fkey FOREIGN KEY (converted_from_l
 public.contact.contact_created_from_activity_id_fkey FOREIGN KEY (created_from_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.contact.contact_greeting_register_check CHECK ((greeting_register = ANY (ARRAY['formal'::text, 'familiar'::text])))
 public.contact.contact_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES contact(id) ON DELETE SET NULL (merged_into_id)
-public.contact.contact_narrowing_reason_check CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict'::text, 'outbound_no_answer'::text, 'confidentiality_hold'::text, 'advisor'::text, 'human_decided'::text])))
+public.contact.contact_narrowing_reason_check CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict'::text, 'outbound_no_answer'::text, 'confidentiality_hold'::text, 'advisor'::text, 'human_decided'::text, 'shared_mailbox'::text])))
 public.contact.contact_narrowing_reason_only_when_owner CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner'::text)))
 public.contact.contact_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.contact.contact_owner_id_retirement_guard CREATE TRIGGER contact_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.contact FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
@@ -4363,15 +4363,16 @@ public.contact_profile_field.confidence numeric(4,3) gen=- def=-
 public.contact_profile_field.contact_id uuid NOT NULL gen=- def=-
 public.contact_profile_field.contact_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
 public.contact_profile_field.contact_profile_field_contact_fk FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
-public.contact_profile_field.contact_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'company_name'::text, 'address'::text, 'website'::text, 'first_name'::text, 'last_name'::text])))
+public.contact_profile_field.contact_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'company_name'::text, 'address'::text, 'website'::text, 'first_name'::text, 'last_name'::text, 'email'::text])))
 public.contact_profile_field.contact_profile_field_pkey PRIMARY KEY (id)
-public.contact_profile_field.contact_profile_field_value_key_cardinality CHECK (((field = 'phone'::text) = (value_key <> ''::text)))
+public.contact_profile_field.contact_profile_field_value_key_cardinality CHECK (((field = ANY (ARRAY['phone'::text, 'email'::text])) = (value_key <> ''::text)))
 public.contact_profile_field.contact_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact_profile_field.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_profile_field.evidence_snippet text NOT NULL gen=- def=-
 public.contact_profile_field.field text NOT NULL gen=- def=-
 public.contact_profile_field.id uuid NOT NULL gen=- def=uuidv7()
 public.contact_profile_field.observed_at timestamp with time zone NOT NULL gen=- def=now()
+public.contact_profile_field.signature_support jsonb NOT NULL gen=- def='{}'::jsonb
 public.contact_profile_field.source text NOT NULL gen=- def=-
 public.contact_profile_field.source_ref text NOT NULL gen=- def=-
 public.contact_profile_field.superseded_captured_by text gen=- def=-

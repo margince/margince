@@ -194,7 +194,9 @@ func endOfBlockComment(statement string, i int) int {
 // tree today reaches it. The map exists so that adding an entry is a visible
 // decision with a reason beside it, instead of a silent edit to the pattern
 // above — which is how a gate stops meaning anything.
-var remembersTheRecheckItself = gatekit.Waive(map[string]string{})
+var remembersTheRecheckItself = gatekit.Waive(map[string]string{
+	"writeCompanyAddress": "runs only the address statement of companyColumnWrites, so it never renames; the legal_name statement this graph folds in from the shared map is not one it can run",
+})
 
 func TestEveryCompanyRenameReachesTheDuplicateRecheck(t *testing.T) {
 	t.Parallel()

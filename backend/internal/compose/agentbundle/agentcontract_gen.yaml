@@ -26986,7 +26986,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website]
+        enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website, email]
       description: The profile field's key — the same closed vocabulary `ContactProfileField.field` carries.
     ProfileFieldKey:
       name: field
@@ -34934,18 +34934,19 @@ components:
       type: object
       description: |-
         One enriched field with the evidence it was read from. Evidence-or-omit: a row
-        exists only where a verbatim snippet was captured. A phone is a list, so a contact
-        has one `phone` row per number, told apart by `value_key`; every other field has at
-        most one row.
+        exists only where a verbatim snippet was captured. A phone and an email are lists,
+        so a contact has one `phone` row per number and one `email` row per further address,
+        told apart by `value_key`; every other field has at most one row.
       required: [field, value, evidence_snippet, source, captured_by, captured_at]
       properties:
-        field: {type: string, enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website]}
+        field: {type: string, enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website, email]}
         value: {type: string}
         value_key:
           type: string
           description: |-
-            What tells two rows of one field apart: the E.164 number for a `phone` row, empty
-            for every other field. Pass it to the restore to name which number to undo.
+            What tells two rows of one field apart: the E.164 number for a `phone` row, the
+            lowercased address for an `email` row, empty for every other field. Pass it to the
+            restore to name which number to undo.
         superseded_value:
           type: [string, 'null']
           description: |-
@@ -57284,6 +57285,8 @@ components:
             The exact number of admitted items in this category for this read's scope and
             owner. Absent when that population has not been counted exactly; a client then
             reads `considered` with `more_available` as today. Absent never means zero.
+            For `decisions` it counts only what this reader can settle, as the readings'
+            `review` does, so a duplicate pair without verbs is left out.
     WorklistSummary:
       type: object
       description: |-

@@ -9272,6 +9272,7 @@ func (e ContactPhoneInputPhoneType) Valid() bool {
 const (
 	ContactProfileFieldFieldAddress     ContactProfileFieldField = "address"
 	ContactProfileFieldFieldCompanyName ContactProfileFieldField = "company_name"
+	ContactProfileFieldFieldEmail       ContactProfileFieldField = "email"
 	ContactProfileFieldFieldFirstName   ContactProfileFieldField = "first_name"
 	ContactProfileFieldFieldLastName    ContactProfileFieldField = "last_name"
 	ContactProfileFieldFieldLinkedin    ContactProfileFieldField = "linkedin"
@@ -9287,6 +9288,8 @@ func (e ContactProfileFieldField) Valid() bool {
 	case ContactProfileFieldFieldAddress:
 		return true
 	case ContactProfileFieldFieldCompanyName:
+		return true
+	case ContactProfileFieldFieldEmail:
 		return true
 	case ContactProfileFieldFieldFirstName:
 		return true
@@ -29498,6 +29501,7 @@ func (e CapturedByKind) Valid() bool {
 const (
 	ContactProfileFieldKeyAddress     ContactProfileFieldKey = "address"
 	ContactProfileFieldKeyCompanyName ContactProfileFieldKey = "company_name"
+	ContactProfileFieldKeyEmail       ContactProfileFieldKey = "email"
 	ContactProfileFieldKeyFirstName   ContactProfileFieldKey = "first_name"
 	ContactProfileFieldKeyLastName    ContactProfileFieldKey = "last_name"
 	ContactProfileFieldKeyLinkedin    ContactProfileFieldKey = "linkedin"
@@ -29513,6 +29517,8 @@ func (e ContactProfileFieldKey) Valid() bool {
 	case ContactProfileFieldKeyAddress:
 		return true
 	case ContactProfileFieldKeyCompanyName:
+		return true
+	case ContactProfileFieldKeyEmail:
 		return true
 	case ContactProfileFieldKeyFirstName:
 		return true
@@ -46045,9 +46051,9 @@ type ContactPhoneInput struct {
 type ContactPhoneInputPhoneType string
 
 // ContactProfileField One enriched field with the evidence it was read from. Evidence-or-omit: a row
-// exists only where a verbatim snippet was captured. A phone is a list, so a contact
-// has one `phone` row per number, told apart by `value_key`; every other field has at
-// most one row.
+// exists only where a verbatim snippet was captured. A phone and an email are lists,
+// so a contact has one `phone` row per number and one `email` row per further address,
+// told apart by `value_key`; every other field has at most one row.
 type ContactProfileField struct {
 	CapturedAt time.Time `json:"captured_at"`
 
@@ -46085,8 +46091,9 @@ type ContactProfileField struct {
 	SupersededValue *string `json:"superseded_value,omitempty"`
 	Value           string  `json:"value"`
 
-	// ValueKey What tells two rows of one field apart: the E.164 number for a `phone` row, empty
-	// for every other field. Pass it to the restore to name which number to undo.
+	// ValueKey What tells two rows of one field apart: the E.164 number for a `phone` row, the
+	// lowercased address for an `email` row, empty for every other field. Pass it to the
+	// restore to name which number to undo.
 	ValueKey *string `json:"value_key,omitempty"`
 
 	// Verdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
@@ -74173,6 +74180,8 @@ type WorklistCount struct {
 	// Total The exact number of admitted items in this category for this read's scope and
 	// owner. Absent when that population has not been counted exactly; a client then
 	// reads `considered` with `more_available` as today. Absent never means zero.
+	// For `decisions` it counts only what this reader can settle, as the readings'
+	// `review` does, so a duplicate pair without verbs is left out.
 	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
@@ -75211,10 +75220,12 @@ type WorklistReadings struct {
 	// them as one row — the strip says how much work there is, and the queue says
 	// how much reading it costs.
 	//
-	// Only rows carrying a verb the reader may press. A duplicate pair whose two
-	// records the reader cannot both write is somebody else's decision, and
-	// counting it here tells them a contact is waiting on an answer they are not
-	// able to give.
+	// The same population as the `decisions` count's `total`, and that total
+	// wherever it is stated, so Home and the Worklist read one number. An approval
+	// requested of the reader counts also while its preview is stale, not ready or
+	// blocked by a conflict: the reader can refresh it. Any other row counts only
+	// where it carries a verb the reader may press. A duplicate pair whose two
+	// records the reader cannot both write is somebody else's decision.
 	Review int `json:"review" minimum:"0"`
 
 	// SoonestLeadDue When the nearest open task on a lead is due, over every task this read weighed.

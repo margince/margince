@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 62,
-    "sites_best_current": 58,
+    "sites_best_current": 57,
     "sites_best_partial": 0,
-    "sites_best_stale": 2,
+    "sites_best_stale": 3,
     "sites_absent": 2,
     "scenarios": 342,
     "records": 400,
@@ -437,7 +437,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -447,7 +447,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -1623,7 +1623,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -1633,7 +1633,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.1-flash-lite",
@@ -8647,7 +8647,7 @@
       "ready": 47,
       "usable_with_care": 12,
       "not_reliable_yet": 1,
-      "recheck_pending": 2,
+      "recheck_pending": 3,
       "models": [
         {
           "binding": {
@@ -8656,9 +8656,9 @@
             "env": "cloud_frontier"
           },
           "sites": 53,
-          "sites_current": 51,
+          "sites_current": 50,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 3,
           "runs": 1236,
           "passed": 1219,
           "reliability": 0.9862459546925566,
@@ -9067,7 +9067,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 1
@@ -11347,9 +11347,9 @@
         "env": "cloud_frontier"
       },
       "sites": 56,
-      "sites_current": 51,
+      "sites_current": 50,
       "sites_partial": 0,
-      "sites_stale": 5,
+      "sites_stale": 6,
       "runs": 1395,
       "passed": 1361,
       "reliability": 0.9756272401433692,
@@ -22534,23 +22534,8 @@
       "key": "enrich/signature",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "runs": 12,
-        "passed": 12,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.879604,
-          "upper": 1
-        },
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "contact_fields_from_a_mail_signature",
@@ -22584,9 +22569,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -22603,7 +22588,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends): contact_fields_from_a_mail_signature, every_number_a_signature_lists, signature_prints_the_family_name_first, signature_prints_the_given_name_first",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_fields_from_a_mail_signature",
+              "every_number_a_signature_lists",
+              "signature_prints_the_family_name_first",
+              "signature_prints_the_given_name_first"
+            ]
+          }
         },
         {
           "binding": {

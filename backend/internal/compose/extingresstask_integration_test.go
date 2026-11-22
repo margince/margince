@@ -77,7 +77,7 @@ func TestATaskForASeatThatCannotHoldWorkLandsNothing(t *testing.T) {
 		want     error
 	}{
 		"an agent seat":      {agent, extension.ErrInvalid},
-		"a user not on file": {ids.NewV7(), extension.ErrNotFound},
+		"a user not on file": {ids.NewV7(), extension.ErrInvalid},
 	} {
 		if _, err := e.ingest(t, e.member, taskRecord("remind-2", tc.assignee)); !errors.Is(err, tc.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, tc.want)

@@ -97,6 +97,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:memberMayReadTx":               "Asks whether some member of a shared mailbox's reader team may see the contact or lead before the mail is filed under it. Filing shared mail where its readers can find it is a read decision about the mail, and the record itself does not change.",
 	"internal/modules/contacts:visibleCompanyDomainsTx":       "Asks whether the caller may see an employer before the import test run reads its domains for the duplicate check. It decides what the batch is told, and no company changes.",
 	"internal/modules/contacts:ownerSeesCompanies":            "Asks whether the contact's OWNER may open the two companies an employer question names, so the card never shows them a name they could not read. It narrows what is staged; the accept writes through EnsureLinkTarget and the relationship writers, and no company changes.",
 	"internal/modules/capture:companyOfDomainTx":              "names the company a domain belongs to in a refusal, and only when the caller may read it. The write is a capture list entry; no company changes.",
@@ -106,7 +107,6 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 
 	"internal/modules/contacts:LockInquiryLeadTx":          "holds the lead or contact a website inquiry names while its task is assigned, so the record and task lock in one order. Nothing on the record changes here; a lead owner change is gated in the assignment plan by auth.EnsureClaimable or auth.EnsureAssignable, and the visibility probe hides a record the caller cannot see",
 	"internal/modules/contacts:LockInquiryContactTx":       "holds the lead or contact a website inquiry names while its task is assigned, so the record and task lock in one order. Nothing on the record changes here; a lead owner change is gated in the assignment plan by auth.EnsureClaimable or auth.EnsureAssignable, and the visibility probe hides a record the caller cannot see",
-	"internal/modules/contacts:readableByATeamMemberTx":    "asks whether a reader-team member may read the contact a shared mailbox's mail would be filed under. The link is the capture connector's write, behind its own gate; nothing on the contact changes",
 	"internal/modules/introductions:prepareAskRouteTx":     "the introduction writer names the contact and intermediary but changes neither. Create and Replace both write intro_request; the contact probes enforce disclosure, not authority to change either contact",
 	"internal/modules/activities:offeredDeals":             "reads which deals a deal question offered, to decline them on the message. Nothing on a deal changes; the scope only leaves out a deal the caller cannot see",
 	"internal/modules/activities:RecentTaskCompletions":    "Reads completion receipts and visible contact names; it changes no record. WritableTasks separately controls the offered Undo.",

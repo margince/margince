@@ -36,7 +36,7 @@ import "../../design-system/querystates.css";
 // change — and the row is already the longest thing on the surface.
 
 /** Outcomes that keep the row mounted. Already-decided is not one: its refetch
- *  unmounts the row, so `useDecisionSink` says it at screen level. */
+ *  unmounts the row, so the screen says it. */
 export function DecideOutcome({
   decide,
   skewKey,

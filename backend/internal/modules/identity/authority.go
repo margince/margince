@@ -97,6 +97,13 @@ func EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (aut
 	return readEffectiveAuthorityTx(ctx, tx, humanID)
 }
 
+// ReadAuthorityTx reads a member's authority without the authorization lock,
+// for a read check that runs after its transaction locked rows. It holds
+// nothing, so a role change may commit before the caller does.
+func ReadAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return readEffectiveAuthorityTx(ctx, tx, humanID)
+}
+
 func readEffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	seatType, err := liveSeatType(ctx, tx, humanID)
 	if err != nil {
@@ -243,6 +250,12 @@ func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids
 // authorization lock alone still holds the authority until commit: every
 // authorization change takes it exclusively.
 func (*Service) HeldAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return HeldAuthorityTx(ctx, tx, humanID)
+}
+
+// HeldAuthorityTx is the method of the same name for a caller that holds no
+// Service, such as a verdict deciding inside another module's transaction.
+func HeldAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	if err := HoldAuthorizationTx(ctx, tx); err != nil {
 		return authz.RBAC{}, "", err
 	}

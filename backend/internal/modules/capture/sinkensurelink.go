@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -32,6 +33,7 @@ func (s *Sink) ensureCounterpartyTx(ctx context.Context, tx pgx.Tx, rec connecto
 	if !landed.created || landed.internal || !decision.ensuresMail() {
 		return mailEnsure{}, nil
 	}
+	ctx = decision.mintContext(ctx)
 	sp, err := tx.Begin(ctx)
 	if err != nil {
 		return mailEnsure{}, fmt.Errorf("capture: opening the counterparty-ensure savepoint: %w", err)
@@ -54,6 +56,24 @@ func (s *Sink) ensureCounterpartyTx(ctx context.Context, tx pgx.Tx, rec connecto
 
 // ensuresMail says the mail ensure later in the capture transaction will run.
 func (d counterpartyDecision) ensuresMail() bool { return (d.create || d.linkOnly) && !d.channel }
+
+// mintContext is ctx acting as the seat a shared mailbox mints for, so the
+// contact's audit row and authority checks name that seat.
+func (d counterpartyDecision) mintContext(ctx context.Context) context.Context {
+	if d.acting == nil {
+		return ctx
+	}
+	return principal.WithActor(ctx, *d.acting)
+}
+
+// mintOwner is who a created record belongs to. A link-only ensure mints only
+// what the ladder said to create.
+func (d counterpartyDecision) mintOwner() ids.UUID {
+	if d.linkOnly && !d.create {
+		return ids.Nil
+	}
+	return d.owner
+}
 
 // lockMailReachTx locks every contact this mail is about to be filed under,
 // with what they reach, in the order every writer shares
@@ -109,7 +129,7 @@ func (s *Sink) mailEnsureRequest(rec connector.NormalizedRecord, ref datasource.
 		Email:           cp.Email,
 		DisplayName:     cp.DisplayName,
 		Domain:          cp.Domain,
-		OwnerID:         decision.owner,
+		OwnerID:         decision.mintOwner(),
 		ActivityID:      ref.ID,
 		Source:          captureSource(rec),
 		CapturedBy:      decision.capturedBy,
@@ -134,7 +154,7 @@ func (s *Sink) settleCounterparty(ctx context.Context, rec connector.NormalizedR
 		s.logEnsureFault(ctx, rec, ensured.fault)
 		return
 	}
-	ensured.outcome.afterCommit(ctx)
+	ensured.outcome.afterCommit(decision.mintContext(ctx))
 	// Nil unless a backfill page is running: incremental sync creates
 	// counterparties too, and they belong to no run.
 	pageProgressFrom(ctx).counted(ctx, ensured.outcome)

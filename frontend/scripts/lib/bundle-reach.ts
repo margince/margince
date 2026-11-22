@@ -46,7 +46,8 @@ export type Program = {
 
 export type Module = {
   readonly specifiers: readonly string[];
-  readonly globs: readonly string[];
+  /** One list per `import.meta.glob` call: its patterns, `!` ones excluding. */
+  readonly globs: readonly (readonly string[])[];
   readonly literals: readonly string[];
   readonly stems: readonly string[];
 };
@@ -74,8 +75,8 @@ function resolveModule(
     : moduleAt(aliased, inTree);
 }
 
-function globMatches(tree: SourceTree, from: string, glob: string): string[] {
-  if (!glob.startsWith(".")) return [];
+function globMatcher(from: string, glob: string): RegExp | null {
+  if (!glob.startsWith(".")) return null;
   const pattern = resolve(dirname(from), glob)
     .split(/(\*\*\/|\*)/)
     .map((part) => {
@@ -84,8 +85,28 @@ function globMatches(tree: SourceTree, from: string, glob: string): string[] {
       return part.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
     })
     .join("");
-  const matcher = new RegExp(`^${pattern}$`);
-  return [...tree.keys()].filter((path) => matcher.test(path));
+  return new RegExp(`^${pattern}$`);
+}
+
+/** The paths one `import.meta.glob` call loads: its patterns less its `!` ones. */
+export function globTargets(
+  paths: Iterable<string>,
+  from: string,
+  patterns: readonly string[],
+): string[] {
+  const matchers = (negated: boolean) =>
+    patterns
+      .filter((pattern) => pattern.startsWith("!") === negated)
+      .flatMap((pattern) => {
+        const matcher = globMatcher(from, negated ? pattern.slice(1) : pattern);
+        return matcher === null ? [] : [matcher];
+      });
+  const [included, excluded] = [matchers(false), matchers(true)];
+  return [...paths].filter(
+    (path) =>
+      included.some((matcher) => matcher.test(path)) &&
+      !excluded.some((matcher) => matcher.test(path)),
+  );
 }
 
 function stringsOf(node: ts.Node | undefined): string[] {
@@ -96,7 +117,7 @@ function stringsOf(node: ts.Node | undefined): string[] {
     : [];
 }
 
-function isMetaGlob(callee: ts.Expression): boolean {
+export function isMetaGlob(callee: ts.Expression): boolean {
   return (
     ts.isPropertyAccessExpression(callee) &&
     callee.name.text === "glob" &&
@@ -105,7 +126,15 @@ function isMetaGlob(callee: ts.Expression): boolean {
   );
 }
 
-// A property name is a lookup key, not copy handed to `t()`.
+/** The patterns of an `import.meta.glob(...)` call, or undefined for any other node. */
+export function metaGlobPatterns(node: ts.Node): readonly string[] | undefined {
+  return ts.isCallExpression(node) && isMetaGlob(node.expression)
+    ? stringsOf(node.arguments[0])
+    : undefined;
+}
+
+// A property name is a lookup key, and a module specifier a path; neither is
+// copy handed to `t()`.
 function isPropertyName(node: ts.Node): boolean {
   const parent = node.parent;
   return (
@@ -118,30 +147,49 @@ function isPropertyName(node: ts.Node): boolean {
   );
 }
 
+function isModuleSpecifier(node: ts.Node): boolean {
+  const parent = node.parent;
+  return (
+    ((ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent)) &&
+      parent.moduleSpecifier === node) ||
+    (ts.isCallExpression(parent) &&
+      parent.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      parent.arguments[0] === node)
+  );
+}
+
+/** A string that can be a catalog key: not a property name, not a module path. */
+export function isKeyLiteral(node: ts.Node): node is ts.StringLiteralLike {
+  return (
+    ts.isStringLiteralLike(node) &&
+    !isPropertyName(node) &&
+    !isModuleSpecifier(node)
+  );
+}
+
 // Comments are trivia and types are erased, so a key named only there is unseen.
 function readModule(path: string, text: string, dynamicImports = true): Module {
   const source = parseSource(path, text);
-  const found: { [field in keyof Module]: string[] } = {
-    specifiers: moduleSpecifiers(source, dynamicImports ? "values" : "static"),
-    globs: [],
-    literals: [],
-    stems: [],
-  };
+  const globs: (readonly string[])[] = [];
+  const literals: string[] = [];
+  const stems: string[] = [];
   const walk = (node: ts.Node): void => {
     if (ts.isTypeNode(node)) return;
-    if (ts.isCallExpression(node) && isMetaGlob(node.expression)) {
-      found.globs.push(...stringsOf(node.arguments[0]));
-    }
-    if (ts.isStringLiteralLike(node) && !isPropertyName(node)) {
-      found.literals.push(node.text);
-    }
+    const patterns = metaGlobPatterns(node);
+    if (patterns !== undefined) globs.push(patterns);
+    if (isKeyLiteral(node)) literals.push(node.text);
     if (ts.isTemplateExpression(node) && KEY_STEM.test(node.head.text)) {
-      found.stems.push(node.head.text);
+      stems.push(node.head.text);
     }
     ts.forEachChild(node, walk);
   };
   walk(source);
-  return found;
+  return {
+    specifiers: moduleSpecifiers(source, dynamicImports ? "values" : "static"),
+    globs,
+    literals,
+    stems,
+  };
 }
 
 export type ModuleGraph = {
@@ -170,7 +218,9 @@ export function moduleGraph(program: Program): ModuleGraph {
       const target = resolveModule(program, path, specifier);
       return target === null ? [] : [target];
     }),
-    ...module.globs.flatMap((glob) => globMatches(program.tree, path, glob)),
+    ...module.globs.flatMap((glob) =>
+      globTargets(program.tree.keys(), path, glob),
+    ),
   ];
   const reach = (roots: readonly string[]): ReadonlyMap<string, Module> => {
     const reached = new Map<string, Module>();
@@ -244,6 +294,13 @@ export function buildScriptEntries(): string[] {
   );
 }
 
+/** Every module the shipped bundle starts from. */
+export const bundleEntries = (): string[] => [
+  ...documentEntries(),
+  ...surfaceEntries(),
+  ...buildScriptEntries(),
+];
+
 // Not vite.config.ts: loading it runs the composition switch. tsconfig.app.json
 // carries the same vanilla-lane mapping for the compiler.
 export function aliases(): Map<string, string> {
@@ -287,11 +344,7 @@ export function reachedModules(
 export function reachedModulesIn(
   tree: SourceTree,
   extra: { readonly catalogs?: ReadonlySet<string> } = {},
-  entries: readonly string[] = [
-    ...documentEntries(),
-    ...surfaceEntries(),
-    ...buildScriptEntries(),
-  ],
+  entries: readonly string[] = bundleEntries(),
 ): ReadonlyMap<string, Module> {
   const graph = moduleGraph({
     tree,

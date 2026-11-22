@@ -62,7 +62,7 @@ var companyFactCategories = []string{"company", "offering", "market", "signal"}
 
 var companyFactFields = []string{"founded_year", "employee_range", "phone", "contact_email", "location", "service", "product", "capability", "served_industry", "company_size", "geography", "language", "certification", "partner", "named_customer", "technology", "quantified_outcome", "mail_provider", "email_security", "hosting_provider", "operated_service"}
 
-var contactProfileFieldKeys = []string{"first_name", "last_name", "title", "phone", "role", "linkedin", "company_name", "address", "website"}
+var contactProfileFieldKeys = []string{"first_name", "last_name", "title", "phone", "role", "linkedin", "company_name", "address", "website", "email"}
 
 // listRecordFilters is the CONTRACT half of what list_records may be asked to
 // filter by, per record_type: each list operation's OWN declared query
