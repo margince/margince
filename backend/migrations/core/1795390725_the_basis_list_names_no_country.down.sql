@@ -1,9 +1,9 @@
--- Restores the retired value to both lists. Rows moved onto `consent` stay
--- there: the mapping cannot be told apart from a row that was always consent.
+-- Restores the retired value to both lists. Either rule may be absent: the
+-- validating migration drops one that a row broke.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE communication_basis
-    DROP CONSTRAINT communication_basis_kind,
+    DROP CONSTRAINT IF EXISTS communication_basis_kind,
     ADD CONSTRAINT communication_basis_kind
         CHECK (kind = ANY (ARRAY[
             'contract'::text, 'precontract_request'::text,
@@ -13,7 +13,7 @@ ALTER TABLE communication_basis
         ]));
 
 ALTER TABLE communication_decision
-    DROP CONSTRAINT communication_decision_basis,
+    DROP CONSTRAINT IF EXISTS communication_decision_basis,
     ADD CONSTRAINT communication_decision_basis
         CHECK (basis IS NULL OR basis = ANY (ARRAY[
             'contract'::text, 'precontract_request'::text,

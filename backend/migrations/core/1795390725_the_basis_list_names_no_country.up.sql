@@ -1,16 +1,14 @@
 -- The lawful-basis list names no country. `vn_subject_agreement` was the
 -- subject's own agreement under one market's advertising law, which core must
--- not know; the grant that rests on it is `consent`, and the pack that grants
--- it supplies the citation.
---
--- Both tables take the same list, the Go set `commsauthz.Basis`. A
+-- not know. Both tables take the same list, the Go set `commsauthz.Basis`; a
 -- communication_basis row never carried `consent` before (consent lives in
--- consent_event), so the list there gains it; a row that held the retired
--- value moves onto it. No code path wrote the value, so the UPDATEs touch
--- no rows on a database that only ran this code.
+-- consent_event), so its list gains it.
 --
--- The new rules are NOT VALID and are validated by the next migration, which
--- runs under a lighter lock because it is a transaction of its own.
+-- No row is rewritten. A communication_decision row is evidence of the basis a
+-- decision was made under, and relabelling another basis as consent would
+-- falsify it. The new rules are NOT VALID; the next migration validates each
+-- one when no row holds the retired value, and drops it with a notice when one
+-- does. No code path wrote the value, so the second case is not expected.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE communication_basis
@@ -22,7 +20,6 @@ ALTER TABLE communication_basis
             'legal_obligation'::text, 'vital_or_security_interest'::text,
             'consent'::text, 'existing_customer_exception'::text
         ])) NOT VALID;
-UPDATE communication_basis SET kind = 'consent' WHERE kind = 'vn_subject_agreement';
 
 ALTER TABLE communication_decision
     DROP CONSTRAINT communication_decision_basis,
@@ -33,4 +30,3 @@ ALTER TABLE communication_decision
             'legal_obligation'::text, 'vital_or_security_interest'::text,
             'consent'::text, 'existing_customer_exception'::text
         ])) NOT VALID;
-UPDATE communication_decision SET basis = 'consent' WHERE basis = 'vn_subject_agreement';

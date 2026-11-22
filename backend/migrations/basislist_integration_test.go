@@ -5,15 +5,17 @@
 
 package migrations_test
 
-// A row that holds the retired country-named basis moves onto `consent`.
+// The retired country-named basis leaves the list without rewriting evidence.
 //
-// The test puts the two basis checks back to the list they had before, writes
-// rows under that list, then applies the real migration files. Seeding after
-// the migration would pass for a migration that moves nothing.
+// Each test puts the two basis checks back to the list they had before, then
+// applies the real migration files. Seeding after the migration would pass for
+// a migration that mishandles the rows it finds.
 
 import (
 	"context"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -22,15 +24,15 @@ const (
 	retiredBasis            = "vn_subject_agreement"
 )
 
-func TestARowHoldingTheRetiredBasisMovesOntoConsent(t *testing.T) {
-	ownerDSN, _ := dsns(t)
-	conn := connect(t, ownerDSN)
-	headSchema(t, conn)
-	ctx := context.Background()
-
+func asTheBasisListWasBefore(t *testing.T, conn *pgx.Conn) {
+	t.Helper()
 	applyMigrationFile(t, conn, basisListCheckMigration+".down.sql")
 	applyMigrationFile(t, conn, basisListMigration+".down.sql")
+}
 
+func seedContactWithRetiredBasis(t *testing.T, conn *pgx.Conn) string {
+	t.Helper()
+	ctx := context.Background()
 	var contact string
 	if err := conn.QueryRow(ctx,
 		`INSERT INTO contact (full_name, source, captured_by)
@@ -55,6 +57,28 @@ func TestARowHoldingTheRetiredBasisMovesOntoConsent(t *testing.T) {
 		    'allow', 'test', $1, 'enforce', 'test')`, retiredBasis); err != nil {
 		t.Fatalf("seeding a decision row under the old list: %v", err)
 	}
+	return contact
+}
+
+func basisConstraintCount(t *testing.T, conn *pgx.Conn, validated bool) int {
+	t.Helper()
+	var n int
+	if err := conn.QueryRow(context.Background(),
+		`SELECT count(*) FROM pg_constraint
+		  WHERE conname IN ('communication_basis_kind', 'communication_decision_basis')
+		    AND convalidated = $1`, validated).Scan(&n); err != nil {
+		t.Fatalf("reading the constraint state: %v", err)
+	}
+	return n
+}
+
+func TestAnOldBasisRowStaysAsItWasAndTheUpgradeGoesOn(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	ctx := context.Background()
+	asTheBasisListWasBefore(t, conn)
+	contact := seedContactWithRetiredBasis(t, conn)
 
 	applyMigrationFile(t, conn, basisListMigration+".up.sql")
 	applyMigrationFile(t, conn, basisListCheckMigration+".up.sql")
@@ -67,20 +91,40 @@ func TestARowHoldingTheRetiredBasisMovesOntoConsent(t *testing.T) {
 		if err := conn.QueryRow(ctx, q).Scan(&got); err != nil {
 			t.Fatalf("%s: %v", q, err)
 		}
-		if got != "consent" {
-			t.Errorf("%s = %q, want consent: the agreement is what the retired value meant", q, got)
+		if got != retiredBasis {
+			t.Errorf("%s = %q, want %q: a row is never relabelled as another basis", q, got, retiredBasis)
 		}
 	}
-
-	var unvalidated int
-	if err := conn.QueryRow(ctx,
-		`SELECT count(*) FROM pg_constraint
-		  WHERE conname IN ('communication_basis_kind', 'communication_decision_basis') AND NOT convalidated`).
-		Scan(&unvalidated); err != nil {
-		t.Fatalf("reading the constraint state: %v", err)
+	if n := basisConstraintCount(t, conn, true) + basisConstraintCount(t, conn, false); n != 0 {
+		t.Errorf("%d basis checks remain although rows break them; they must be dropped so the rows stay updatable", n)
 	}
-	if unvalidated != 0 {
-		t.Errorf("%d basis checks are still unvalidated after the validating migration", unvalidated)
+	if _, err := conn.Exec(ctx,
+		`UPDATE communication_basis SET revoked_at = now() WHERE contact_id = $1`, contact); err != nil {
+		t.Errorf("a row holding the old value can no longer change: %v", err)
+	}
+}
+
+func TestACleanTableRefusesTheRetiredBasisInTheDatabase(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	ctx := context.Background()
+	asTheBasisListWasBefore(t, conn)
+
+	applyMigrationFile(t, conn, basisListMigration+".up.sql")
+	applyMigrationFile(t, conn, basisListCheckMigration+".up.sql")
+
+	if n := basisConstraintCount(t, conn, false); n != 0 {
+		t.Errorf("%d basis checks are still unvalidated on a table with no old rows", n)
+	}
+	if n := basisConstraintCount(t, conn, true); n != 2 {
+		t.Errorf("%d basis checks are validated, want 2", n)
+	}
+	var contact string
+	if err := conn.QueryRow(ctx,
+		`INSERT INTO contact (full_name, source, captured_by)
+		 VALUES ('Clean Subject', 'manual', 'human:seed') RETURNING id`).Scan(&contact); err != nil {
+		t.Fatalf("seeding the contact: %v", err)
 	}
 	if _, err := conn.Exec(ctx,
 		`INSERT INTO communication_basis (contact_id, kind, captured_by) VALUES ($1, $2, 'test')`,
