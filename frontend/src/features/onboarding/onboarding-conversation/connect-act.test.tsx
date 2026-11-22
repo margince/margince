@@ -112,7 +112,9 @@ it("refuses a provider this deployment does not serve", async () => {
 
   expect(await screen.findByText(/does not serve Microsoft/)).toBeTruthy();
   expect(screen.getByRole("radio", { name: /Microsoft/ })).toBeDisabled();
-  expect(screen.queryByRole("link")).toBeNull();
+  expect(
+    screen.queryAllByRole("link").map((link) => link.getAttribute("href")),
+  ).toEqual(["/#/settings/account"]);
 });
 
 // An account left pickable while the roster is unread would let a reader
