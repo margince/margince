@@ -1,6 +1,11 @@
 import { expect, it } from "vitest";
 import { scopeDealDials } from "./dealsaddress";
-import { addCoverage, coverageOf, hasGap } from "./moneycoverage";
+import {
+  addCoverage,
+  coverageOf,
+  coverageOfMeasure,
+  hasGap,
+} from "./moneycoverage";
 
 const stated = (
   noValue: number,
@@ -45,4 +50,11 @@ it("names the deals-list dials a scope counts, and none where the list cannot sa
   expect(scopeDealDials(scope("owner", "u1"))).toEqual({ owner_id: "u1" });
   expect(scopeDealDials(scope("team", "t1"))).toEqual({ owner_team_id: "t1" });
   expect(scopeDealDials(scope("managed_teams"))).toBeNull();
+});
+
+it("reads a typed answer's coverage only for the sums it names", () => {
+  const row = { _coverage: stated(1, 2, ["JPY"]).coverage };
+  expect(hasGap(coverageOfMeasure(row, "raw"))).toBe(true);
+  expect(coverageOfMeasure(row, "other")).toBeNull();
+  expect(coverageOfMeasure({}, "raw")).toBeNull();
 });

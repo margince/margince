@@ -36069,7 +36069,7 @@ type AnalyticsAnswer struct {
 	// RateDate Reference instant used to select conversion rates for this answer.
 	RateDate *time.Time `json:"rate_date,omitempty"`
 
-	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+	// Rows One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// RunId Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
