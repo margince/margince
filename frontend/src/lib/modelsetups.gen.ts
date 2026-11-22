@@ -85,6 +85,9 @@ export const MODEL_SETUPS = {
         provider: "gemini",
       },
       profile: "cloud_frontier",
+      task_ladders: {
+        agent_loop: ["premium", "cheap_cloud"],
+      },
       tiers: {
         cheap_cloud: {
           model: "gemini-3.1-flash-lite",
@@ -121,6 +124,9 @@ export const MODEL_SETUPS = {
         gemini_vertex: {
           location: "eu",
         },
+      },
+      task_ladders: {
+        agent_loop: ["premium", "cheap_cloud"],
       },
       tiers: {
         cheap_cloud: {

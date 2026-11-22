@@ -152,10 +152,11 @@ func TestEveryRoutingFieldSurvivesTheRoundTrip(t *testing.T) {
 		},
 	}
 	full := ai.RoutingConfig{
-		Profile:    ai.ProfileEUHosted,
-		Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierPremium: openRouter},
-		Embeddings: ai.EmbeddingsConfig{ProviderConfig: openRouter, Dimensions: 768},
-		Decisions:  &ai.DecisionsConfig{Provider: "jev_compatible", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api/alpha/decisions"},
+		Profile:     ai.ProfileEUHosted,
+		Tiers:       map[ai.Tier]ai.ProviderConfig{ai.TierPremium: openRouter},
+		Embeddings:  ai.EmbeddingsConfig{ProviderConfig: openRouter, Dimensions: 768},
+		Decisions:   &ai.DecisionsConfig{Provider: "jev_compatible", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api/alpha/decisions"},
+		TaskLadders: map[ai.Task][]ai.Tier{ai.TaskAgentLoop: {ai.TierPremium, ai.TierCheapCloud}},
 		Providers: map[string]ai.ProviderSettings{
 			"openai_compatible": {
 				BaseURL: "https://openrouter.ai/api",

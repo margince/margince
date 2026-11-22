@@ -28038,6 +28038,16 @@ components:
           $ref: '#/components/schemas/AiEmbeddingsBinding'
         decisions:
           $ref: '#/components/schemas/AiDecisionsBinding'
+        task_ladders:
+          type: object
+          additionalProperties:
+            type: array
+            items: {type: string}
+          description: |-
+            A task name to the order its rungs are walked in under this binding, for a task this
+            binding walks otherwise than the task contract does. The order must name exactly the
+            task's own rungs; anything else is refused with a 422. A task left out keeps its
+            contract order.
         providers:
           type: object
           additionalProperties: {$ref: '#/components/schemas/AiProviderSettings'}

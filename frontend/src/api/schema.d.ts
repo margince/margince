@@ -29183,6 +29183,15 @@ export interface components {
             embeddings: components["schemas"]["AiEmbeddingsBinding"];
             decisions?: components["schemas"]["AiDecisionsBinding"];
             /**
+             * @description A task name to the order its rungs are walked in under this binding, for a task this
+             *     binding walks otherwise than the task contract does. The order must name exactly the
+             *     task's own rungs; anything else is refused with a 422. A task left out keeps its
+             *     contract order.
+             */
+            task_ladders?: {
+                [key: string]: string[];
+            };
+            /**
              * @description Provider name to what that provider is configured with, independent of any lane: its
              *     host and the broker's upstream pins. Every lane binding a provider reads them from
              *     here. A client that omits the field keeps the stored entries; one that sends it owns

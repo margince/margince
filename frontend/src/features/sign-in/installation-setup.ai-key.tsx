@@ -64,6 +64,7 @@ export function useBindModels() {
             // cannot yet answer a location ladder before binding anything.
             profile: vars.profile,
             tiers: chatTiers(vars, host),
+            ...taskLadders(vars),
             embeddings: {
               provider: vars.provider,
               model: vars.embedModel,
@@ -132,6 +133,19 @@ export function chatTiers(
     premium: binding,
     frontier: binding,
   };
+}
+
+/**
+ * The graded preset's reordering of a task's rungs, which belongs to the setup
+ * as much as its tiers do; nothing when the reader put one model on every tier.
+ */
+export function taskLadders(vars: Readonly<{ setup?: ModelSetupId }>): {
+  task_ladders?: Record<string, string[]>;
+} {
+  const routing = vars.setup ? MODEL_SETUPS[vars.setup].routing : undefined;
+  return routing && "task_ladders" in routing
+    ? { task_ladders: routing.task_ladders }
+    : {};
 }
 
 // A choice that keeps processing in the EU says so in its name: it is the one

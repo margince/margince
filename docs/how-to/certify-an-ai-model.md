@@ -209,7 +209,7 @@ There are four states, and each one means something different:
 - **`partial`**: all that the record measured is still current, but the corpus has new cases since then.
   It is wrong about nothing, and to fix it costs only the new scenarios.
 - **`stale`**: a scenario the record *measured* has changed since then. Or the prompt code or how a
-  run is graded changed. Or a judge other than the default graded it. Certify that task again.
+  run is graded changed. Or another judge graded it, or the provider's wire changed (`wire_rule`). Certify it again.
 - **`absent`**: the run has measured nothing yet. The columns show `-`, not `0`, because a `0` would be a
   result.
 

@@ -70,6 +70,9 @@ type aiCertPreset struct {
 	// zero today; a nonzero one means the verdict vocabulary grew and this
 	// section is reporting less than it reads.
 	Unrecognised int `json:"unrecognised"`
+	// taskLadders is the preset's reordering of a task's rungs, which the
+	// router walks in place of the contract's order.
+	taskLadders map[ai.Task][]ai.Tier
 }
 
 type aiCertPresetTier struct {
@@ -169,6 +172,7 @@ func loadAICertPresets(t *testing.T) []aiCertPreset {
 		}
 		preset := aiCertPreset{
 			File: entry.Name(), Title: string(title[1]), Profile: string(cfg.Profile), Tiers: tiersOfPreset(cfg),
+			taskLadders: cfg.TaskLadders,
 		}
 		preset.WhereDataGoes = aiCertWhereDataGoes(preset)
 		presets = append(presets, preset)
@@ -385,7 +389,7 @@ func presetBindingRef(binding ai.ProviderConfig, profile string) aiCertBindingRe
 
 // routing is the preset as the router reads it: its profile and its rungs.
 func (p aiCertPreset) routing() ai.RoutingConfig {
-	cfg := ai.RoutingConfig{Profile: ai.Profile(p.Profile), Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	cfg := ai.RoutingConfig{Profile: ai.Profile(p.Profile), Tiers: map[ai.Tier]ai.ProviderConfig{}, TaskLadders: p.taskLadders}
 	for _, tier := range p.Tiers {
 		cfg.Tiers[ai.Tier(tier.Tier)] = tier.binding
 	}

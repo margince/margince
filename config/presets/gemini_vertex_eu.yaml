@@ -41,6 +41,11 @@ seeds:
       cheap_cloud: { provider: gemini_vertex, model: gemini-3.1-flash-lite }
       premium:     { provider: gemini_vertex, model: gemini-3.8-flash, thinking_level: low }
       frontier:    { provider: gemini_vertex, model: gemini-3.8-flash, thinking_level: low }
+    # The scheduled agents answer on premium first: on Flash-Lite a line
+    # planted in a CRM record reached the morning brief's saved findings, and
+    # on Flash it mostly did not. Every agent step pays premium tokens.
+    task_ladders:
+      agent_loop: [premium, cheap_cloud]
     # The width is asked of the model as outputDimensionality, as on gemini.
     # The embedder keeps a location of its own, which overrides the provider's
     # for this lane alone.

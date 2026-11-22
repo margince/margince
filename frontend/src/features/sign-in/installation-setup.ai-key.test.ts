@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MODEL_SETUPS } from "../../lib/modelsetups.gen";
 import { SETUP_PROVIDERS } from "../../lib/setup-providers";
-import { chatTiers } from "./installation-setup.ai-key";
+import { chatTiers, taskLadders } from "./installation-setup.ai-key";
 
 // Onboarding binds the graded preset's own model on each tier, so a new
 // installation runs the setup the certification measured.
@@ -33,11 +33,12 @@ describe("chatTiers", () => {
       },
       {},
     );
+    const preset = new Map(
+      Object.entries(MODEL_SETUPS.gemini_vertex_eu.routing.tiers),
+    );
     for (const [tier, binding] of Object.entries(tiers)) {
       expect(binding.location, tier).toBe("europe-west4");
-      expect(binding.model, tier).toBe(
-        MODEL_SETUPS.gemini_vertex_eu.routing.tiers[tier]?.model,
-      );
+      expect(binding.model, tier).toBe(preset.get(tier)?.model);
     }
   });
 
@@ -59,5 +60,18 @@ describe("chatTiers", () => {
         base_url: "https://openrouter.ai/api",
       });
     }
+  });
+});
+
+describe("taskLadders", () => {
+  it("carries the graded preset's task order, and none for one model on every tier", () => {
+    const gemini = SETUP_PROVIDERS.gemini;
+    expect(taskLadders({ setup: gemini.setup })).toEqual({
+      task_ladders: MODEL_SETUPS.gemini_cloud.routing.task_ladders,
+    });
+    expect(
+      MODEL_SETUPS.gemini_cloud.routing.task_ladders?.agent_loop?.[0],
+    ).toBe("premium");
+    expect(taskLadders({})).toEqual({});
   });
 });

@@ -699,11 +699,12 @@ describe("the first-run setup gate", () => {
     ]);
     // The graded preset, tier by tier: the setup the certification measured,
     // which binds a stronger model above the cheap tiers.
+    const preset = new Map(
+      Object.entries(MODEL_SETUPS.gemini_cloud.routing.tiers),
+    );
     for (const [tier, bound] of Object.entries(routing.tiers)) {
       expect(bound.provider).toBe("gemini");
-      expect(bound.model, tier).toBe(
-        MODEL_SETUPS.gemini_cloud.routing.tiers[tier]?.model,
-      );
+      expect(bound.model, tier).toBe(preset.get(tier)?.model);
     }
     expect(new Set(Object.values(routing.tiers).map((b) => b.model)).size).toBe(
       2,

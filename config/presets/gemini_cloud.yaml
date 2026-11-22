@@ -38,6 +38,11 @@ seeds:
       # reasoning tokens against the ~8k output cap, which cut one call in eight short.
       premium:     { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
       frontier:    { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
+    # The scheduled agents answer on premium first: on Flash-Lite a line
+    # planted in a CRM record reached the morning brief's saved findings, and
+    # on Flash it mostly did not. Every agent step pays premium tokens.
+    task_ladders:
+      agent_loop: [premium, cheap_cloud]
     # The embed lane rides the SAME provider as the tiers above, so this preset
     # needs one credential rather than two.
     #

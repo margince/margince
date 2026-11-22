@@ -74,7 +74,7 @@ func boundPlan(cfg RoutingConfig, task Task, band string) ([]plannedBinding, boo
 		return []plannedBinding{{tier: TierEmbedLane, config: cfg.Embeddings.ProviderConfig, dimensions: cfg.Embeddings.Dimensions}}, false
 	}
 	// Only the disposition matters in a preview; the response has its own reset clock.
-	ladder, _, err := budgetLadder(task, taskLadders[task], band, time.Time{})
+	ladder, _, err := budgetLadder(task, cfg.Ladder(task), band, time.Time{})
 	if err != nil {
 		return nil, true
 	}
