@@ -18,6 +18,7 @@ export {
   formatDateAbbrev,
   formatDateAbbrevRange,
   formatDateTime,
+  formatDateTimeAbbrev,
   formatDayLong,
   formatDayMonth,
   formatDayMonthNearYear,

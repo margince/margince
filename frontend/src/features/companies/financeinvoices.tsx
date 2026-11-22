@@ -2,7 +2,11 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel } from "../../design-system/panel";
-import { formatDate, formatMoney, formatNumber } from "../../format/format";
+import {
+  formatDateAbbrev,
+  formatMoneyWhole,
+  formatNumber,
+} from "../../format/format";
 import {
   type Locale,
   type PluralBase,
@@ -81,14 +85,14 @@ function invoiceColumns(cells: Cells): DataTableColumn<FinanceInvoice>[] {
     {
       key: "issued",
       header: t("finance.col.issued"),
-      render: (invoice) => formatDate(invoice.issued_at, locale, zone),
+      render: (invoice) => formatDateAbbrev(invoice.issued_at, locale, zone),
     },
     {
       key: "amount",
       header: t("finance.col.amount"),
       align: "end",
       render: (invoice) =>
-        formatMoney(invoice.gross_minor, invoice.currency, locale),
+        formatMoneyWhole(invoice.gross_minor, invoice.currency, locale),
     },
     {
       key: "due",
@@ -97,12 +101,12 @@ function invoiceColumns(cells: Cells): DataTableColumn<FinanceInvoice>[] {
       // An unpaid invoice has no date to put there.
       render: (invoice) => (
         <span>
-          {invoice.due_at ? formatDate(invoice.due_at, locale, zone) : ""}
+          {invoice.due_at ? formatDateAbbrev(invoice.due_at, locale, zone) : ""}
           {invoice.paid_at && (
             <span className="t-caption">
               {invoice.due_at ? " · " : ""}
               {t("finance.paidOn", {
-                when: formatDate(invoice.paid_at, locale, zone),
+                when: formatDateAbbrev(invoice.paid_at, locale, zone),
               })}
             </span>
           )}

@@ -9,7 +9,7 @@ import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Popover } from "../../design-system/popover";
-import { formatDate } from "../../format/format";
+import { formatDateAbbrev } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../../lib/problem";
@@ -62,7 +62,7 @@ const VERDICTS: Readonly<
 
 /** isConsultation reports whether a body carries the three things the contract
  * makes required. The date is checked for PARSEABILITY rather than presence:
- * `formatDate` throws on a value `Date` cannot read, and a throw here would
+ * `formatDateAbbrev` throws on a value `Date` cannot read. A throw here would
  * take the whole rail down rather than one mark. */
 function isConsultation(body: VatCheck | undefined): body is VatCheck {
   return (
@@ -296,7 +296,7 @@ function VatReceipt({
       )}
       <div>
         <dt>{t("co.vat.checkedAt")}</dt>
-        <dd>{formatDate(check.checked_at, locale, zone)}</dd>
+        <dd>{formatDateAbbrev(check.checked_at, locale, zone)}</dd>
       </div>
       <div>
         <dt>{t("co.vat.receipt")}</dt>
