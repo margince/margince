@@ -93,6 +93,7 @@ func TestAdmittedInternalMailIsFiledUnderNoProject(t *testing.T) {
 				stamps++
 				return nil
 			},
+			File: activities.FileOnProjectTx,
 		})
 	var captured ids.UUID
 	reg := capture.NewRegistry(db, sink, projectFilingAuthority{}, vault)

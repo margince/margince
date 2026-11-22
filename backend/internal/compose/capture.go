@@ -315,6 +315,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithProjectAttribution(capture.ProjectAttribution{
 			Keys:  ProjectsStore(pool),
 			Stamp: activities.StampCorrespondenceForProject,
+			File:  activities.FileOnProjectTx,
 		}).
 		// The deal rule reads its candidates from the module that owns `deal`,
 		// and asks its one question through the store that owns tasks.
