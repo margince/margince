@@ -12,7 +12,7 @@ import {
   useClearVanishedChoice,
   useSoleProjectDefault,
 } from "../../design-system/projectpicker";
-import { formatDate } from "../../format/format";
+import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -164,7 +164,11 @@ export function AskSection({
             <WrittenBy by={readable.generated_by} />
             <span>
               {t("co.brief.generatedAt", {
-                when: formatDate(readable.generated_at, locale, readerZone),
+                when: formatDateAbbrev(
+                  readable.generated_at,
+                  locale,
+                  readerZone,
+                ),
               })}
             </span>
           </p>

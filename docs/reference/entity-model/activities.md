@@ -548,7 +548,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_participant
 
-18 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -568,6 +568,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `response` | `text` |  | One of `accepted`, `declined`, `tentative`, `needs_action`. |
 | `role` | `text` | yes | One of `from`, `to`, `cc`, `bcc`, `attendee`, `organizer`. |
 | `roster_seat` | `uuid` |  | Points at `app_user.id`. |
+| `roster_seats` | `uuid[]` |  |  |
 | `user_id` | `uuid` |  | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -592,6 +593,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_participant_pkey`: `unique, btree (id)`
 - `idx_aparticipant_address`: `btree (lower(address)) WHERE (address IS NOT NULL)`
 - `idx_aparticipant_contact`: `btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)`
+- `idx_aparticipant_one_roster_seat`: `btree (id) WHERE (roster_seat IS NOT NULL)`
 - `idx_aparticipant_sender_domain_reversed`: `btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from') AND (address_domain_folded IS NOT NULL))`
 - `idx_aparticipant_user`: `btree (user_id, activity_id) WHERE (user_id IS NOT NULL)`
 - `idx_aparticipant_waiting_address_time`: `btree (lower(address), domain_evidence_at DESC) WHERE ((role = 'to') AND (address IS NOT NULL))`

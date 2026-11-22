@@ -148,7 +148,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		provensenders.DataTask(),
 		importscopes.DataTask(),
 		invitationsenders.DataTask(),
-		meetingrosters.GraphGuestsDataTask(identity.NewService(pool), installationContext(pool)), meetingrosters.BirthRostersDataTask(),
+		meetingrosters.GraphGuestsDataTask(identity.NewService(pool), installationContext(pool)), meetingrosters.BirthRostersDataTask(), meetingrosters.SeatSetsDataTask(),
 		credentialrepair.DataTask(capture.NewPendingStore(InstallationDB(pool)).PurgeRawCaptureTx),
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
