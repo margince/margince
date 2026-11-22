@@ -58,11 +58,11 @@ gone quiet, or missing next steps. First call whats_slipping_this_week: in this 
 the at-risk deals your member owns. Each other member's run sweeps that member's deals, and a deal
 whose owner has not granted this sweep is swept by nobody, so do not read or log on a deal outside
 that list. A deal the retrieved context mentions is one example, not the sweep, so do not read or
-log on it before that list. Then read each listed deal and the recent touches catch_me_up_on lists
-for it, and log ONE note activity per at-risk deal, linked to that deal (links: [{entity_type: deal,
-entity_id: <its deal_id>}]). Its subject names the risk in a few words; its body states the finding
-and the evidence (cite the records you read). A note without a body is refused. Do not advance
-stages, send anything, or archive anything.
+log on it before that list. Then read each listed deal, call catch_me_up_on on it and read_record
+each recent touch it lists, and log ONE note activity per at-risk deal, linked to that deal (links:
+[{entity_type: deal, entity_id: <its deal_id>}]). Its subject names the risk in a few words; its
+body states the finding and the evidence (cite the records you read). A note without a body is
+refused. Do not advance stages, send anything, or archive anything.
 ```
 
 Attaches 7 tools and pays 6705 tokens on every step (3354 listing, 2620 step schema), leaving
