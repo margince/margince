@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/owedverdict"
+	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -304,11 +305,15 @@ func (c *OwedClassifier) predictBatch(ctx context.Context, batch []owedCandidate
 	for _, m := range batch {
 		byID[m.ID.String()] = m
 	}
+	// A message with no usable answer is retried alone like a below-floor one.
+	// Otherwise bad answers at the front of the backlog would starve the rest.
+	answered := make(map[string]bool, len(verdicts))
 	for _, v := range verdicts {
 		msg, ok := byID[v.ID]
 		if !ok {
 			continue // the validator guarantees this; belt and braces
 		}
+		answered[v.ID] = true
 		if v.Confidence < owedConfidenceFloor {
 			retry = append(retry, msg)
 			continue
@@ -319,6 +324,11 @@ func (c *OwedClassifier) predictBatch(ctx context.Context, batch []owedCandidate
 		}
 		if applied {
 			judged++
+		}
+	}
+	for _, m := range batch {
+		if !answered[m.ID.String()] {
+			retry = append(retry, m)
 		}
 	}
 	solo, err := c.predictEach(ctx, retry, calls, sink)
@@ -401,7 +411,7 @@ func (c *OwedClassifier) ask(ctx context.Context, batch []owedCandidate) ([]owed
 	if msg := validateOwedPayload(payload, batch); msg != "" {
 		return nil, fmt.Errorf("owed classify: %s", msg)
 	}
-	return resolveBatchRefs(payload.Results, owedverdict.Refs(batch)), nil
+	return resolveOwedResults(payload, batch), nil
 }
 
 // owedShapeValid is the deterministic hard floor beneath the response schema:
@@ -429,15 +439,28 @@ func validateOwedPayload(payload owedPayload, batch []owedCandidate) string {
 	// the shared contract: "is this a verdict" and "is this a label" are
 	// different questions, and an error naming the wrong closed set sends a
 	// reader to the wrong prompt.
-	for _, r := range payload.Results {
-		if !owedVerdicts[r.Verdict] {
-			return fmt.Sprintf("verdict %q is not asks_us|informs_us", clampToken(r.Verdict))
-		}
-		if r.Confidence < 0 || r.Confidence > 1 {
-			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
-		}
+	return ""
+}
+
+// usable is whether the answer names a verdict of this site and a confidence in
+// [0,1]. An answer that does not is dropped and its message asked again alone.
+func (r owedResult) usable() bool { return r.fault() == "" }
+
+// fault says what makes the answer unusable, or "" when it is usable.
+func (r owedResult) fault() string {
+	switch {
+	case !owedVerdicts[r.Verdict]:
+		return fmt.Sprintf("verdict %q is not asks_us|informs_us", clampToken(r.Verdict))
+	case !usableanswer.ConfidenceInRange(r.Confidence):
+		return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
 	}
 	return ""
+}
+
+// resolveOwedResults reads the payload back to activity ids and drops the
+// results that are not usable.
+func resolveOwedResults(payload owedPayload, batch []owedCandidate) []owedResult {
+	return resolveBatchRefs(usableanswer.Keep(payload.Results, owedResult.usable), owedverdict.Refs(batch))
 }
 
 func (r owedResult) answeredID() string { return r.ID }
