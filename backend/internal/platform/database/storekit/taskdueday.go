@@ -80,6 +80,12 @@ func TaskDueFromInSQL(alias, instant, zoneSQL string) string {
 // the last microsecond before that start. Any other task sorts by its due
 // instant. The Go form is deadline.TaskDueOn, and a shared table holds them equal.
 func TaskDueOrderSQL(alias string) string {
+	return TaskDueOrderInSQL(alias, occurredday.InstallationZoneSQL)
+}
+
+// TaskDueOrderInSQL is TaskDueOrderSQL with the chosen date ending in zoneSQL,
+// the same zone the list's overdue test counts days in (DayZoneSQL).
+func TaskDueOrderInSQL(alias, zoneSQL string) string {
 	return `CASE WHEN ` + datedOnlySQL(alias) + ` THEN (((` + alias + `.due_wall::date + 1)::timestamp AT TIME ZONE ` +
-		occurredday.InstallationZoneSQL + `) - interval '1 microsecond') ELSE ` + TaskDueSQL(alias) + ` END`
+		zoneSQL + `) - interval '1 microsecond') ELSE ` + TaskDueSQL(alias) + ` END`
 }

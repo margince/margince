@@ -29,10 +29,18 @@ var personalPackages = []string{"internal/compose/briefs/"}
 // minimumRuleReaders fails the census when the walk finds fewer files that
 // pick a surface than the routing needs. A walk that finds too few reads a
 // smaller tree and reports a pass.
-const minimumRuleReaders = 8
+const minimumRuleReaders = 10
+
+// mustPickSurface are readers known to serve a person's own list and a combined
+// screen from one code path. Each must go through the rule.
+var mustPickSurface = []string{
+	"internal/compose/slipping.go", "internal/compose/attentionseam.go",
+	"internal/compose/briefjobs.go", "internal/compose/briefs/briefday.go",
+}
 
 func TestEveryReaderOfALocalDayPicksItsSurfaceThroughTheDayRule(t *testing.T) {
 	picksSurface := 0
+	picked := map[string]bool{}
 	walkHandWrittenGoFiles(t, "internal", func(path, text string) {
 		if strings.HasSuffix(path, "_test.go") {
 			return
@@ -43,6 +51,7 @@ func TestEveryReaderOfALocalDayPicksItsSurfaceThroughTheDayRule(t *testing.T) {
 		usesRule := strings.Contains(text, "compose/dayrule\"") || strings.Contains(text, "occurredday.Personal")
 		if usesRule {
 			picksSurface++
+			picked[path] = true
 		}
 		inPersonalPackage := false
 		for _, pkg := range personalPackages {
@@ -57,6 +66,11 @@ func TestEveryReaderOfALocalDayPicksItsSurfaceThroughTheDayRule(t *testing.T) {
 			}
 		}
 	})
+	for _, path := range mustPickSurface {
+		if !picked[path] {
+			t.Errorf("%s no longer picks a surface through the day rule", path)
+		}
+	}
 	if picksSurface < minimumRuleReaders {
 		t.Fatalf("found %d files that pick a surface through the day rule, want at least %d: the census is too short", picksSurface, minimumRuleReaders)
 	}

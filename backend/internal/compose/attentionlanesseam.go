@@ -276,9 +276,9 @@ func rankReconnects(lapsed []attention.QuietRelationship) []attention.QuietRelat
 type attentionDealFacts struct{ store *deals.Store }
 
 func (f attentionDealFacts) Figures(
-	ctx context.Context, dealIDs []ids.UUID,
+	ctx context.Context, dealIDs []ids.UUID, zone *time.Location,
 ) (map[ids.UUID]attention.DealFigures, error) {
-	found, err := f.store.Figures(ctx, dealIDs)
+	found, err := f.store.FiguresIn(ctx, dealIDs, zone)
 	if err != nil {
 		return nil, err
 	}

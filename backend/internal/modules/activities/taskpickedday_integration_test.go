@@ -262,3 +262,35 @@ func TestADateOnlyTaskIsJudgedInTheZoneTheListIsReadIn(t *testing.T) {
 	combined := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf}
 	wantWindow(t, "combined list", p.window(t, combined), []ids.UUID{onThe15th}, onThe16th, onThe17th)
 }
+
+// The due order ends a chosen date in the same zone the overdue test counts it
+// in. A task dated the 16th ends at 17:00 UTC for Ho Chi Minh City and at 22:00
+// UTC for Berlin. So it sorts before a task timed 17:30 UTC on the person's own
+// list, and after it on a combined one.
+func TestTheDueOrderEndsAChosenDateInTheZoneTheListIsReadIn(t *testing.T) {
+	p := newPickedDayEnv(t, "Europe/Berlin")
+	until := time.Date(2026, 6, 18, 0, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
+	dated := p.dated(t, "Dated the 16th", "2026-06-16", "Europe/Berlin")
+	timed := p.timed(t, "Timed 17:30 UTC on the 16th", time.Date(2026, 6, 16, 17, 30, 0, 0, time.UTC))
+
+	order := func(zone string) []ids.UUID {
+		rows, _, err := p.store.ListActivities(p.ctx, ListActivitiesInput{
+			OpenAndDueBy: &until, WorklistAsOf: &asOf, DayZone: zone, Sort: new("due_at"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := make([]ids.UUID, len(rows))
+		for i, row := range rows {
+			got[i] = ids.UUID(row.Id)
+		}
+		return got
+	}
+	if got := order("Asia/Ho_Chi_Minh"); len(got) != 2 || got[0] != dated || got[1] != timed {
+		t.Errorf("own list order = %v, want the dated task %s first, then %s", got, dated, timed)
+	}
+	if got := order(""); len(got) != 2 || got[0] != timed || got[1] != dated {
+		t.Errorf("combined list order = %v, want the timed task %s first, then %s", got, timed, dated)
+	}
+}

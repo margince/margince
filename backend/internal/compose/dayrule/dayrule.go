@@ -58,15 +58,34 @@ func DayAt(
 // with the installation's zone as fallback.
 func ActingReaderZone(pool *pgxpool.Pool) func(context.Context) (*time.Location, error) {
 	return func(ctx context.Context) (*time.Location, error) {
-		user := ActingUser(ctx)
-		var loc *time.Location
-		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-			var err error
-			loc, err = Zone(ctx, tx, occurredday.Personal, user)
-			return err
-		})
-		return loc, err
+		return zoneIn(ctx, pool, occurredday.Personal)
 	}
+}
+
+// SurfaceOf is the surface of a read narrowed by owners. Only the acting
+// person's own records make their own list. Any other set, or none, is a screen
+// that combines colleagues.
+func SurfaceOf(ctx context.Context, owners *storekit.OwnerSet) occurredday.Surface {
+	user := ActingUser(ctx)
+	if owners == nil || owners.Unassigned || user.IsZero() || len(owners.IDs) != 1 || owners.IDs[0] != user {
+		return occurredday.Combined
+	}
+	return occurredday.Personal
+}
+
+// ZoneForOwners is the zone the day is read in for a read narrowed by owners.
+func ZoneForOwners(ctx context.Context, pool *pgxpool.Pool, owners *storekit.OwnerSet) (*time.Location, error) {
+	return zoneIn(ctx, pool, SurfaceOf(ctx, owners))
+}
+
+func zoneIn(ctx context.Context, pool *pgxpool.Pool, surface occurredday.Surface) (*time.Location, error) {
+	var loc *time.Location
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		loc, err = Zone(ctx, tx, surface, ActingUser(ctx))
+		return err
+	})
+	return loc, err
 }
 
 // ActingUser is the signed-in person, or the zero id when nobody is.
@@ -76,4 +95,27 @@ func ActingUser(ctx context.Context) ids.UUID {
 		return ids.Nil
 	}
 	return actor.UserID
+}
+
+// InstallationZone loads the zone the installation's days are counted in.
+func InstallationZone(ctx context.Context, pool *pgxpool.Pool) (*time.Location, error) {
+	var name string
+	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		name, err = identity.TimezoneOf(ctx, tx)
+		return err
+	}); err != nil {
+		return nil, fmt.Errorf("read the installation's timezone: %w", err)
+	}
+	return zoneNamed(name), nil
+}
+
+// zoneNamed resolves a stored zone name, answering UTC for one Go cannot load.
+// The deals module makes the same fallback for a nil zone. A setting nobody can
+// load then leaves both surfaces wrong about the day in the same direction.
+func zoneNamed(name string) *time.Location {
+	if zone, err := time.LoadLocation(name); err == nil {
+		return zone
+	}
+	return time.UTC
 }
