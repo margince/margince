@@ -15,19 +15,19 @@ AI works with Margince in two ways. **Margince AI** is the AI inside the product
 | How we test it | Each feature, on the product's real prompts, many tries | Everyday jobs, done from start to end, several tries |
 
 ### Which AI model should I choose for Margince?
-For Margince AI, choose the model setup with the most features ready. Today that is **Google Gemini**, with 27 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
+For Margince AI, choose the model setup with the most features ready. Today that is **Google Gemini**, with 27 of its 39 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
 Also called: which model should I use, best model, recommended model, which LLM, which provider, model tiers.
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 27 | 9 | 1 | 1 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 27 | 9 | 1 | 1 |
-| OpenAI GPT-6, through OpenRouter | global cloud | 21 | 3 | 4 | 10 |
-| Open models from OpenAI and Mistral, through OpenRouter | global cloud | 13 | 12 | 8 | 5 |
-| Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 1 | 4 | 32 |
-| Mistral models in the EU, through OpenRouter | EU-hosted cloud | 12 | 2 | 14 | 10 |
-| Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
-| Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
+| Google Gemini | global cloud | 27 | 9 | 1 | 2 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 27 | 9 | 1 | 2 |
+| OpenAI GPT-6, through OpenRouter | global cloud | 21 | 3 | 4 | 11 |
+| Open models from OpenAI and Mistral, through OpenRouter | global cloud | 13 | 12 | 8 | 6 |
+| Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 1 | 4 | 33 |
+| Mistral models in the EU, through OpenRouter | EU-hosted cloud | 12 | 2 | 14 | 11 |
+| Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 39 |
+| Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 39 |
 
 78 of these 169 grades were measured on an older version of Margince and wait for a re-check.
 
@@ -68,7 +68,7 @@ Also called: untested assistant, another AI tool, my own agent.
 The job by job results are in [Your AI assistant: test results](mcp-tool-coverage.md).
 
 ### What did you test, and what not?
-For Margince AI we ran 342 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
+For Margince AI we ran 344 test cases. Each one is an example with a known right answer, in one of the 63 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
 Also called: how is the AI tested, test coverage, certification.
 
 ## Where to go next
