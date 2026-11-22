@@ -101,11 +101,16 @@ func metricReferenceSchema() json.RawMessage {
 	delete(shape.Properties["selection"].Properties, "layout")
 	shape.Description = pipelineIDProvenance
 	noteTimestamps(shape, windowRule)
+	if err := noteContractEnums(reflect.TypeFor[crmcontracts.ReportMetricReference](), shape); err != nil {
+		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; an enum the contract table lacks must fail boot.
+		panic(fmt.Sprintf("note metric reference enums: %v", err))
+	}
 	raw, err := json.Marshal(shape)
 	if err != nil {
 		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; a shape that cannot marshal must fail boot.
 		panic(fmt.Sprintf("render metric reference: %v", err))
 	}
+	recordReflectedInput(reflect.TypeFor[crmcontracts.ReportMetricReference](), raw)
 	return raw
 }
 
@@ -117,10 +122,15 @@ func describedSchema[T any](description, rule string) json.RawMessage {
 	}
 	shape.Description = description
 	noteTimestamps(shape, rule)
+	if err := noteContractEnums(reflect.TypeFor[T](), shape); err != nil {
+		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; an enum the contract table lacks must fail boot.
+		panic(fmt.Sprintf("note tool input enums: %v", err))
+	}
 	raw, err := json.Marshal(shape)
 	if err != nil {
 		//craft:ignore panic-in-domain A schema encoding failure is a composition defect, before any request is admitted.
 		panic(fmt.Sprintf("encode tool input: %v", err))
 	}
+	recordReflectedInput(reflect.TypeFor[T](), raw)
 	return raw
 }
