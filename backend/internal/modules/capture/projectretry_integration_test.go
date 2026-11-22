@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -64,6 +65,7 @@ func TestAFailedAttributionIsRetriedByTheNextCapture(t *testing.T) {
 			Stamp: func(context.Context, pgx.Tx, ids.ActivityID, ids.UUID) error {
 				return nil
 			},
+			File: activities.FileOnProjectTx,
 		})
 
 	record := aProjectSubjectRecord()
@@ -155,8 +157,10 @@ func aProjectSubjectRecord() connector.NormalizedRecord {
 func captureSinkContextFor(ctx context.Context, ws ids.UUID) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalConnector,
-		ID:   "connector:gmail",
+		Type:     principal.PrincipalConnector,
+		ID:       "connector:gmail",
+		UserID:   ids.NewV7(),
+		SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"connector"},
 			Objects: map[string]principal.ObjectGrant{
@@ -216,6 +220,7 @@ func TestACaptureOfAnAlreadyFiledActivityStillStamps(t *testing.T) {
 				stamped = append(stamped, on)
 				return nil
 			},
+			File: activities.FileOnProjectTx,
 		})
 
 	record := aProjectSubjectRecord()
@@ -250,5 +255,111 @@ func TestACaptureOfAnAlreadyFiledActivityStillStamps(t *testing.T) {
 	if stamped[0] != project {
 		t.Errorf("the stamp names project %s, want the one the activity is filed under (%s)",
 			stamped[0], project)
+	}
+}
+
+// projectFilingEvents counts the activity.updated events the outbox holds for
+// activities, and the relink audit rows naming a project.
+func projectFilingEvents(t *testing.T, owner *pgx.Conn) (events, audits int) {
+	t.Helper()
+	ctx := context.Background()
+	if err := owner.QueryRow(ctx, `SELECT count(*) FROM event_outbox
+		WHERE envelope->>'type' = 'activity.updated'`).Scan(&events); err != nil {
+		t.Fatalf("counting the relink events: %v", err)
+	}
+	if err := owner.QueryRow(ctx, `SELECT count(*) FROM audit_log
+		WHERE action = 'activity_relink' AND after->>'entity_type' = 'project'`).Scan(&audits); err != nil {
+		t.Fatalf("counting the relink audit rows: %v", err)
+	}
+	return events, audits
+}
+
+// A retried attribution announces its link once. The first pass writes nothing
+// and the retry files the activity and emits the relink event. A third capture
+// finds the link and emits nothing more.
+func TestARetriedAttributionAnnouncesItsLinkOnce(t *testing.T) {
+	owner, pool := setupCaptureDB(t)
+	ctx := context.Background()
+	ws := ids.NewV7()
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+		t.Fatalf("seeding workspace: %v", err)
+	}
+	project := seedProjectForCapture(t, owner, "retry")
+	sink := capture.NewSink(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))).
+		WithProjectAttribution(capture.ProjectAttribution{
+			Keys:  &failingOnceMatcher{project: project},
+			Stamp: activities.StampCorrespondenceForProject,
+			File:  activities.FileOnProjectTx,
+		})
+	record := aProjectSubjectRecord()
+	sinkCtx := captureSinkContextFor(ctx, ws)
+
+	for pass, want := range []int{0, 1, 1} {
+		if _, err := sink.Upsert(sinkCtx, record); err != nil {
+			t.Fatalf("capture pass %d failed: %v", pass+1, err)
+		}
+		events, audits := projectFilingEvents(t, owner)
+		if events != want || audits != want {
+			t.Fatalf("after capture pass %d: %d relink event(s) and %d audit row(s), want %d of each",
+				pass+1, events, audits, want)
+		}
+	}
+	var stamped int
+	if err := owner.QueryRow(ctx, `SELECT count(*) FROM activity_retention_evidence
+		WHERE basis = 'project_linked' AND project_id = $1`, project).Scan(&stamped); err != nil {
+		t.Fatalf("counting the correspondence stamps: %v", err)
+	}
+	if stamped != 1 {
+		t.Errorf("the filing left %d correspondence stamp(s), want 1", stamped)
+	}
+}
+
+// An activity a human already filed under a project is not refiled by the
+// ladder: no second link, no audit row and no event.
+func TestAnActivityAlreadyFiledIsNotRefiledByTheLadder(t *testing.T) {
+	owner, pool := setupCaptureDB(t)
+	ctx := context.Background()
+	ws := ids.NewV7()
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+		t.Fatalf("seeding workspace: %v", err)
+	}
+	mine := seedProjectForCapture(t, owner, "mine")
+	other := seedProjectForCapture(t, owner, "other")
+	matcher := &failingOnceMatcher{project: other, calls: 1}
+	sink := capture.NewSink(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))).
+		WithProjectAttribution(capture.ProjectAttribution{
+			Keys:  matcher,
+			Stamp: activities.StampCorrespondenceForProject,
+			File:  activities.FileOnProjectTx,
+		})
+	// A subject naming no key, so the first capture files nothing.
+	record := aProjectSubjectRecord()
+	fields, _ := record.Fields.(capture.ActivityFields)
+	fields.Subject = "the rollout plan"
+	record.Fields = fields
+	sinkCtx := captureSinkContextFor(ctx, ws)
+	if _, err := sink.Upsert(sinkCtx, record); err != nil {
+		t.Fatalf("the first capture failed: %v", err)
+	}
+	if _, err := owner.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, project_id)
+		SELECT id, 'project', $1 FROM activity`, mine); err != nil {
+		t.Fatalf("filing the activity by hand: %v", err)
+	}
+
+	fields.Subject = "[other] the rollout plan"
+	record.Fields = fields
+	if _, err := sink.Upsert(sinkCtx, record); err != nil {
+		t.Fatalf("the replay failed: %v", err)
+	}
+	var onMine, total int
+	if err := owner.QueryRow(ctx, `SELECT count(*) FILTER (WHERE project_id = $1), count(*)
+		FROM activity_link WHERE entity_type = 'project'`, mine).Scan(&onMine, &total); err != nil {
+		t.Fatalf("reading the project links: %v", err)
+	}
+	if onMine != 1 || total != 1 {
+		t.Errorf("the activity carries %d project link(s), %d on its first project, want 1 and 1", total, onMine)
+	}
+	if events, audits := projectFilingEvents(t, owner); events != 0 || audits != 0 {
+		t.Errorf("a filed activity produced %d event(s) and %d audit row(s), want none", events, audits)
 	}
 }

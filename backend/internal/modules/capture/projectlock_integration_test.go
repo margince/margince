@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -85,6 +86,7 @@ func projectSink(t *testing.T, matcher capture.ProjectKeyMatcher) (*capture.Sink
 		WithProjectAttribution(capture.ProjectAttribution{
 			Keys:  matcher,
 			Stamp: func(context.Context, pgx.Tx, ids.ActivityID, ids.UUID) error { return nil },
+			File:  activities.FileOnProjectTx,
 		})
 	return sink, captureSinkContextFor(context.Background(), ws), owner
 }

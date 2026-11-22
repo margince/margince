@@ -61,18 +61,28 @@ type ProjectKeyMatcher interface {
 // ProjectKeyMatcher is one.
 type StampProjectCorrespondence func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID) error
 
-// ProjectAttribution is the ladder's two halves, which are one seam because
-// they are one obligation: deciding a message belongs to a project and
-// classifying the correspondence that decision qualifies (D5).
+// ProjectAttribution is the ladder's parts, which are one seam because they are
+// one obligation. It decides a message belongs to a project, writes that link
+// and classifies the correspondence the decision qualifies (D5).
 //
-// They are ONE struct rather than two parameters so a caller cannot supply the
-// first without the second. The two failure modes are not comparable —
-// attributing nothing is an ordinary configuration, attributing without
-// classifying leaves a Handelsbrief the next erasure destroys — so the wiring
-// that could get it wrong does not exist rather than being checked for.
+// They are one struct so a caller cannot supply the first without the others.
+// Attributing nothing is an ordinary configuration. Attributing without
+// classifying leaves a Handelsbrief the next erasure destroys, so that wiring
+// cannot be built.
 type ProjectAttribution struct {
 	Keys  ProjectKeyMatcher
 	Stamp StampProjectCorrespondence
+	// File is the activities module's automatic project filing, the write the
+	// deal and lead filings use too. Compose injects it.
+	File FileOnProject
+}
+
+// FileOnProject writes the project link under the activity's lock only while it
+// has none. It answers whether the link landed.
+type FileOnProject func(ctx context.Context, tx pgx.Tx, id ids.ActivityID, project ids.UUID, evidence map[string]any) (bool, error)
+
+func (a ProjectAttribution) complete() bool {
+	return a.Keys != nil && a.Stamp != nil && a.File != nil
 }
 
 // WithProjectAttribution returns a copy that files captured activities under a
@@ -82,8 +92,7 @@ type ProjectAttribution struct {
 // special-case the absence.
 func (s *Sink) WithProjectAttribution(attribution ProjectAttribution) *Sink {
 	c := *s
-	c.projectKeys = attribution.Keys
-	c.stampProject = attribution.Stamp
+	c.projectAttribution = attribution
 	return &c
 }
 
@@ -151,7 +160,7 @@ func (s *Sink) settleProject(ctx context.Context, rec connector.NormalizedRecord
 // attributesProject says whether the ladder applies. A project is something an
 // ACTIVITY is filed under, so any other record skips the transaction.
 func (s *Sink) attributesProject(ref datasource.EntityRef) bool {
-	return s.projectKeys != nil && s.stampProject != nil && ref.Type == datasource.EntityActivity
+	return s.projectAttribution.complete() && ref.Type == datasource.EntityActivity
 }
 
 // fileUnderProjectTx is the ladder and its one link, on the caller's
@@ -174,7 +183,7 @@ func (s *Sink) fileUnderProjectTx(ctx context.Context, tx pgx.Tx, rec connector.
 			return err
 		}
 	}
-	return linkActivityToProject(ctx, tx, activityID, projectFiling{project: projectID, rung: rung}, s.stampProject)
+	return linkActivityToProject(ctx, tx, activityID, projectFiling{project: projectID, rung: rung}, s.projectAttribution)
 }
 
 // alreadyFiledUnderAProject is what makes the ladder safe to run on a REPLAY, and
@@ -307,7 +316,7 @@ func (s *Sink) subjectProject(ctx context.Context, tx pgx.Tx, fields ActivityFie
 	if len(tokens) == 0 {
 		return ids.Nil, nil
 	}
-	return s.projectKeys.MatchProjectKey(ctx, tx, tokens)
+	return s.projectAttribution.Keys.MatchProjectKey(ctx, tx, tokens)
 }
 
 // threadProject is the stickiness rung: a conversation is about one body of
