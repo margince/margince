@@ -15,7 +15,13 @@ import {
   formatDateTime,
 } from "../../format/format";
 import { zoneLabelAt } from "../../format/timezone";
-import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { translatedPipeline } from "../../lib/labeltranslation";
 import { unwrap } from "../../lib/problem";
@@ -110,7 +116,7 @@ const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
   owner_id: "explain.col.owner",
   pipeline_id: "explain.col.pipeline",
   company_id: "analytics.company",
-  partner_company_id: "analytics.company",
+  partner_company_id: "analytics.field.partner_company_id",
 };
 
 // What a source row IS, per report: the label names the record the row stands
@@ -121,16 +127,22 @@ const RECORD_NOUN: Readonly<Record<string, MessageKey>> = {
   "projects-gone-quiet": "analytics.project",
 };
 
+// A converted money column names the base currency, because the row's own
+// `currency` column beside it names the deal's.
 function derivationHeader(
   col: string,
   report: string,
-  t: (key: MessageKey) => string,
+  baseCurrency: string | null,
+  t: Translator,
 ): string {
   const key =
     col === "label"
       ? (RECORD_NOUN[report] ?? "explain.col.record")
       : DERIVATION_HEADERS[col];
-  return key ? t(key) : col;
+  const label = key ? t(key) : col;
+  return baseCurrency && countsInBase(col)
+    ? t("explain.col.inCurrency", { label, currency: baseCurrency })
+    : label;
 }
 
 // The id is noise beside a name, but only once EVERY row has one: a name is
@@ -154,25 +166,22 @@ export function derivationColumns(
 
 const IDENTITY_COLUMNS = ["label", "id"];
 
-// Which currency a money cell is counted in.
-//
-// Read from the declared native set rather than from the column's name.
-//
-// Two project measures are named `_minor` and are already folded into the base
-// currency. A name-based rule labelled them with whatever currency the row
-// carried beside them.
-//
-// A `_base_minor` name still answers base: it says so, and nothing native is
-// spelled that way.
+// Whether a money column is counted in the base currency, read from the
+// declared native set: two project measures named `_minor` are already base.
+// A `_base_minor` name answers base too, and nothing native is spelled so.
+function countsInBase(col: string): boolean {
+  return (
+    col.endsWith("_base_minor") ||
+    (isMoneyField(col) && !isNativeMoneyField(col))
+  );
+}
+
 export function derivationCellCurrency(
   col: string,
   row: Record<string, unknown>,
   baseCurrency: string | null,
 ): string | null {
-  if (col.endsWith("_base_minor")) {
-    return baseCurrency;
-  }
-  if (isMoneyField(col) && !isNativeMoneyField(col)) {
+  if (countsInBase(col)) {
     return baseCurrency;
   }
   const own = row.currency;
@@ -269,7 +278,7 @@ function DerivationRows({
             label={t("explain.sources")}
             columns={columns.map((col) => ({
               key: col,
-              header: derivationHeader(col, derivation.report, t),
+              header: derivationHeader(col, derivation.report, baseCurrency, t),
               render: (row: Record<string, unknown>) =>
                 renderDerivationCell(col, row, baseCurrency, locale),
             }))}

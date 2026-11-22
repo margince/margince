@@ -3963,6 +3963,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.overview.for": "cho {name}",
   "co.overview.noDate": "Chưa có ngày",
   "co.overview.allDeals": "Tất cả deal",
+  "co.overview.allContacts": "Tất cả liên hệ",
   "co.overview.noWork": "Không có deal hay dự án nào đang mở",
   "co.overview.project": "Dự án",
   "co.overview.ends": "kết thúc {date}",
@@ -4964,7 +4965,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.deals.col.close": "Chốt",
   "co.deals.col.status": "Trạng thái",
   "co.rail.contacts.empty": "Chưa có liên hệ nào.",
-  "co.rail.contacts.add": "Thêm liên hệ",
 
   "co.commercial.title": "Thương mại",
   "linkedinImport.title": "Kết nối LinkedIn",
@@ -9469,6 +9469,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "explain.col.stage": "Giai đoạn",
   "explain.col.owner": "Người chịu trách nhiệm",
   "explain.col.pipeline": "Pipeline",
+  "explain.col.inCurrency": "{label} ({currency})",
 
   "settings.profileTitle": "Hồ sơ",
   "unsaved.title": "Bỏ thay đổi chưa lưu?",
@@ -10326,7 +10327,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tierWait": "Bổ sung dữ liệu từ web: chờ trong Phê duyệt.",
   "settings.tierAdvance":
     "Chuyển giai đoạn hoặc chốt deal, gắn hoạt động vào dự án: chạy ngay nếu trợ lý có quyền đó.",
-  "settings.locked": "Đã khóa",
   "settings.purposes": "Mục đích xin sự đồng ý",
   "settings.purposesSub":
     "Các mục đích mà bản cài đặt này xin sự đồng ý, và mục đích nào cần xác nhận kép.",

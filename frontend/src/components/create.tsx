@@ -283,7 +283,10 @@ export function CreateAction<Created extends { id: string }>({
         mutation.error,
         (extra) => {
           const last = mutation.variables;
-          if (last) mutation.mutate({ ...last, extra });
+          // Another body under the spent key is refused by the server.
+          if (last) {
+            mutation.mutate({ ...last, extra, idempotencyKey: renew() });
+          }
         },
         mutation.isPending,
       )

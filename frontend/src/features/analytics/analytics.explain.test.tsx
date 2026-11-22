@@ -462,6 +462,41 @@ describe("what the explanation owns up to", () => {
     ).toBeTruthy();
   });
 
+  it("heads the partner column apart from the company column", async () => {
+    const drawer = await drawerWith({
+      columns: ["label", "company_id", "partner_company_id"],
+      rows: [{ label: "Fleet retrofit" }],
+    });
+    const headers = within(drawer)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    expect(headers).toEqual(["Deal", "Company", "Partner company"]);
+  });
+
+  // The row's `currency` is the deal's own, so a converted column says it is not.
+  it("names the base currency over converted money and only there", async () => {
+    const drawer = await drawerWith({
+      columns: ["label", "amount_base_minor", "amount_minor", "currency"],
+      rows: [
+        {
+          label: "Fleet retrofit",
+          amount_base_minor: 736000,
+          amount_minor: 800000,
+          currency: "USD",
+        },
+      ],
+    });
+    const headers = within(drawer)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    expect(headers).toEqual([
+      "Deal",
+      "Deal value (EUR)",
+      "Deal value",
+      "Currency",
+    ]);
+  });
+
   // The server caps the rows and still counts them all; a capped list that
   // did not say so would read as the whole set.
   it("states the rows the cap left off", async () => {
