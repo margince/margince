@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind falsification H2
+
 package gates
 
 import (
@@ -23,6 +25,7 @@ import (
 // model clear is never written for it. A rewrite the walk does not
 // undo fails here.
 func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
+	t.Parallel()
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
 	if len(specs) < 100 {
 		t.Fatalf("the registry offered %d tools; the census lost its subject", len(specs))
@@ -76,7 +79,7 @@ func leastValue(schema map[string]any) any {
 	switch firstType(schema) {
 	case "object":
 		out := map[string]any{}
-		props, _ := schema["properties"].(map[string]any) //nolint:errcheck // a schema with no properties answers {}
+		props, _ := schema["properties"].(map[string]any)
 		required := stringsOf(schema["required"])
 		// A conditional requirement is the decoder's to meet too: the least
 		// value is the one its own enums put on the if's side.
@@ -89,7 +92,7 @@ func leastValue(schema map[string]any) any {
 			conditional = stringsOf(extra["required"])
 		}
 		for _, key := range append(required, conditional...) {
-			prop, _ := props[key].(map[string]any) //nolint:errcheck // an undeclared required key is written as null
+			prop, _ := props[key].(map[string]any)
 			if prop != nil && slices.Contains(conditional, key) {
 				out[key] = leastValue(withoutNull(prop))
 				continue
@@ -102,18 +105,18 @@ func leastValue(schema map[string]any) any {
 		}
 		return out
 	case "array":
-		items, _ := schema["items"].(map[string]any) //nolint:errcheck // an untyped item is written as null
-		least, _ := schema["minItems"].(float64)     //nolint:errcheck // no floor writes none
+		items, _ := schema["items"].(map[string]any)
+		least, _ := schema["minItems"].(float64)
 		out := make([]any, int(least))
 		for i := range out {
 			out[i] = leastValue(items)
 		}
 		return out
 	case "string":
-		least, _ := schema["minLength"].(float64) //nolint:errcheck // no floor writes one character
+		least, _ := schema["minLength"].(float64)
 		return strings.Repeat("x", max(1, int(least)))
 	case "integer", "number":
-		least, _ := schema["minimum"].(float64) //nolint:errcheck // no floor writes zero
+		least, _ := schema["minimum"].(float64)
 		return least
 	case "boolean":
 		return false
@@ -125,11 +128,11 @@ func leastValue(schema map[string]any) any {
 // conditionHolds says an if-schema's enums admit the least value of each
 // property it names, which is the value leastValue writes.
 func conditionHolds(condition, props map[string]any) bool {
-	named, _ := condition["properties"].(map[string]any) //nolint:errcheck // an if with no properties holds
+	named, _ := condition["properties"].(map[string]any)
 	for key, rule := range named {
-		ruleNode, _ := rule.(map[string]any)   //nolint:errcheck // a rule that is not an object constrains nothing
-		prop, _ := props[key].(map[string]any) //nolint:errcheck // an undeclared key's least value is null
-		values, _ := ruleNode["enum"].([]any)  //nolint:errcheck // a rule with no enum admits any value
+		ruleNode, _ := rule.(map[string]any)
+		prop, _ := props[key].(map[string]any)
+		values, _ := ruleNode["enum"].([]any)
 		if len(values) > 0 && prop != nil && !slices.Contains(values, leastValue(prop)) {
 			return false
 		}
@@ -140,7 +143,7 @@ func conditionHolds(condition, props map[string]any) bool {
 // withoutNull is the non-null side of a padded property, which a key the
 // schema's own condition requires must take.
 func withoutNull(schema map[string]any) map[string]any {
-	branches, _ := schema["anyOf"].([]any) //nolint:errcheck // a property with no branches is its own side
+	branches, _ := schema["anyOf"].([]any)
 	for _, branch := range branches {
 		if node, ok := branch.(map[string]any); ok && !nullable(node) {
 			return node
@@ -153,7 +156,7 @@ func nullable(schema map[string]any) bool {
 	if slices.Contains(stringsOf(schema["type"]), "null") {
 		return true
 	}
-	branches, _ := schema["anyOf"].([]any) //nolint:errcheck // a schema with no branches has none that is null
+	branches, _ := schema["anyOf"].([]any)
 	return slices.ContainsFunc(branches, func(branch any) bool {
 		node, ok := branch.(map[string]any)
 		return ok && nullable(node)
@@ -198,7 +201,7 @@ func clearableKeys(t *testing.T, raw json.RawMessage) []string {
 	if err := json.Unmarshal(raw, &schema); err != nil {
 		t.Fatal(err)
 	}
-	props, _ := schema["properties"].(map[string]any) //nolint:errcheck // a schema with no properties has none to clear
+	props, _ := schema["properties"].(map[string]any)
 	required := stringsOf(schema["required"])
 	var keys []string
 	for key, prop := range props {
