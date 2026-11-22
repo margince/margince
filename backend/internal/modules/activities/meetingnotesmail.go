@@ -1,0 +1,149 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package activities
+
+// The notes Gemini mails to a meeting's guests, landed as the transcript of
+// that meeting. They reach the transcript reading as a notes Doc does
+// (meetingnotes.go), so their next steps become proposals through one path.
+// Capture decides the mail is Google's own. This side finds the meeting it
+// names and writes the transcript.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+)
+
+// meetingNotesMailSource is the source of a transcript landed from a notes mail.
+const meetingNotesMailSource = "meeting_notes_mail"
+
+// meetingNotesMailRawKey preserves which mail the transcript was read from.
+const meetingNotesMailRawKey = "notes_mail"
+
+// notesMailWindow is how long before a notes mail its meeting may have started.
+// Gemini sends the notes after the call, on the day it was held.
+const notesMailWindow = 24 * time.Hour
+
+// MeetingNotesMailInput is one Gemini notes mail, for the meeting it names.
+type MeetingNotesMailInput struct {
+	// MessageID is the mail's own identity and keys the transcript it becomes.
+	MessageID string
+	Owner     ids.UserID
+	Subject   string
+	SentAt    time.Time
+	Text      string
+}
+
+// notesMailMeetingSQL lists the live meetings the mailbox owner is on whose
+// title the mail's subject names and which started within notesMailWindow
+// before the mail. A transcript is not a meeting of its own.
+const notesMailMeetingSQL = `
+	SELECT a.id FROM activity a
+	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.restricted_at IS NULL
+	   AND a.source_system IS DISTINCT FROM '` + transcriptSourceSystem + `'
+	   AND btrim(coalesce(a.subject, '')) <> ''
+	   AND strpos(lower(@subject), lower(btrim(a.subject))) > 0
+	   AND a.occurred_at <= @sent AND a.occurred_at > @earliest
+	   AND EXISTS (SELECT 1 FROM activity_participant o WHERE o.activity_id = a.id AND o.user_id = @owner)
+	 ORDER BY a.occurred_at DESC, a.id
+	 LIMIT 2`
+
+// notesMailMeetingTx answers the one meeting a notes mail names. Two candidates
+// name none: the mail cannot say which meeting it is about.
+func notesMailMeetingTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMailInput) (ids.ActivityID, bool, error) {
+	rows, err := tx.Query(ctx, notesMailMeetingSQL, pgx.NamedArgs{
+		"subject": in.Subject, "sent": in.SentAt, "earliest": in.SentAt.Add(-notesMailWindow), "owner": in.Owner,
+	})
+	if err != nil {
+		return ids.ActivityID{}, false, fmt.Errorf("activities: finding the meeting a notes mail names: %w", err)
+	}
+	candidates, err := pgx.CollectRows(rows, pgx.RowTo[ids.ActivityID])
+	if err != nil {
+		return ids.ActivityID{}, false, fmt.Errorf("activities: reading the meetings a notes mail may name: %w", err)
+	}
+	if len(candidates) != 1 {
+		return ids.ActivityID{}, false, nil
+	}
+	return candidates[0], true, nil
+}
+
+// meetingHoldsTranscriptTx reports whether a live transcript already records
+// the meeting. One transcript reads a meeting, so a second copy of its notes
+// proposes every next step twice.
+func meetingHoldsTranscriptTx(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) (bool, error) {
+	var held bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity t JOIN activity m ON m.id = $1
+		 WHERE `+recordingTranscriptSQL+`)`, meeting).Scan(&held)
+	if err != nil {
+		return false, fmt.Errorf("activities: reading whether a meeting has a transcript: %w", err)
+	}
+	return held, nil
+}
+
+// LandMeetingNotesMailTx lands a Gemini notes mail as the transcript of the one
+// meeting it names, and answers whether it landed. Nothing lands when no single
+// meeting matches, the meeting already has a transcript, or the text is blank
+// or too large to read.
+//
+// The transcript takes the meeting's audience, parties and contact links, as a
+// notes Doc does. The meeting is locked before the transcript check, so two
+// colleagues' copies of one notes mail land one transcript.
+func (s *Store) LandMeetingNotesMailTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMailInput) (bool, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return false, err
+	}
+	body, err := normalizeTranscript(in.Text)
+	if errors.Is(err, ErrBlankTranscript) || errors.As(err, new(oversizedTranscriptError)) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	id, found, err := notesMailMeetingTx(ctx, tx, in)
+	if err != nil || !found {
+		return false, err
+	}
+	key := "mail:" + in.MessageID
+	if err := storekit.LockWriteIdentity(ctx, tx, "activity_source", transcriptSourceSystem+":"+key); err != nil {
+		return false, err
+	}
+	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+		return false, err
+	}
+	if held, err := meetingHoldsTranscriptTx(ctx, tx, id); err != nil || held {
+		return false, err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, id.UUID); err != nil {
+		return false, err
+	}
+	meeting, err := readActivityContent(ctx, tx, id, storekit.LiveOnly)
+	if err != nil {
+		return false, err
+	}
+	subject := strings.TrimSpace(in.Subject)
+	transcript := LogActivityInput{
+		Kind: KindMeeting, Subject: &subject, Body: &body, OccurredAt: &meeting.OccurredAt,
+		SourceSystem: new(transcriptSourceSystem), SourceID: &key,
+		Source: meetingNotesMailSource, Links: linksOfKinds(meeting, []string{linkEntityContact}),
+		recordsMeeting: &id, keepRecordedOutcome: true, continues: &id.UUID,
+		Raw: &map[string]any{meetingNotesMailRawKey: map[string]any{"meeting_id": id.String()}},
+		// Both are Google's own words, quoted rather than written by the product.
+		SystemText: &systemtext.Message{
+			Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, ""),
+		},
+		audienceOf: &id,
+	}
+	_, created, err := s.LogActivityTx(ctx, tx, transcript)
+	return created, err
+}
