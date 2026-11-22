@@ -116,16 +116,16 @@ describe("the palette, by a setting's name", () => {
   it("lists Configuration for words inside a key but leaves Enter to the results", async () => {
     const user = userEvent.setup();
     mount(INSTALLATION_WRITER);
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
     await user.type(box, "auto_enrich");
-    await screen.findByRole("button", { name: /^Configuration/ });
+    await screen.findByRole("option", { name: /^Configuration/ });
 
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/search/auto_enrich");
 
     await user.clear(box);
     await user.type(box, "auto_enrich");
-    await screen.findByRole("button", { name: /^Configuration/ });
+    await screen.findByRole("option", { name: /^Configuration/ });
     await user.keyboard("{ArrowUp}{Enter}");
     expect(window.location.hash).toBe("#/settings/configuration?q=auto_enrich");
   });
@@ -156,13 +156,13 @@ describe("the palette, by half a word", () => {
   it("leaves a settings page whose keyword only holds the letters to the results", async () => {
     const user = userEvent.setup();
     mount({ custom_field: ["read"] });
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
     await user.type(box, "qualif");
-    await screen.findByRole("button", { name: /^Leads/ });
+    await screen.findByRole("option", { name: /^Leads/ });
     await user.clear(box);
     await user.type(box, "ali");
 
-    expect(screen.queryByRole("button", { name: /^Leads/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /^Leads/ })).toBeNull();
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/search/ali");
   });
