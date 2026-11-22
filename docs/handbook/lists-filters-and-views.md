@@ -267,9 +267,7 @@ Also called: bulk reassign, hand over accounts, transfer deals, a colleague left
 ### What can I do to several records at once?
 The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage** (open stages only). On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**). **Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do. Your own company is never archived.
 
-A change of more than 10 records shows a "Large change" warning. On **Leads**, **Assign** and **Disqualify** ask first and name how many leads change, with the same warning above 10. You cannot win or lose many deals at once or change custom fields on many records at once. After a change, the message that says how many changed has an **Undo** button. **Disqualify** has no bulk **Undo**.
-
-**Move to stage** first lists the deals it will move and the ones it leaves alone. A deal already on that stage or in another pipeline is left alone. **Undo** moves each deal back to the stage it left, as a new move in the deal's stage history. The first move stays in the history. A deal that changed after the move is left where it is.
+A change of more than 10 records shows a "Large change" warning. On **Leads**, **Assign** and **Disqualify** ask first and name how many leads change, with the same warning above 10. You cannot win or lose many deals at once or change custom fields on many records at once. After a change, the message that says how many changed has an **Undo** button. **Disqualify** has no bulk **Undo**. **Move to stage** lists the deals it leaves alone first, and its **Undo** moves each deal back as a new move in the stage history.
 
 Also called: bulk actions, mass archive, bulk disqualify.
 
