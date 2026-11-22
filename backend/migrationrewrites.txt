@@ -224,3 +224,4 @@
 1795339926_every_foreign_key_states_its_delete_rule_6_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795339928_cited_evidence_outlives_its_source_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795339927_cited_evidence_outlives_its_source.up.sql | * | the procedural body is a trigger function that writes no row; the migration adds one column with a constant default, which rewrites nothing, and changes no existing row
+1795351214_the_target_type_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
