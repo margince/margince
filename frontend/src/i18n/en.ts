@@ -888,7 +888,6 @@ export const en = {
     "The AI budget has reached its limit. This work resumes automatically when budget is available.",
   "reporting.latestSnapshot": "Latest snapshot",
   "reporting.contextDetails": "Reporting details",
-  "reporting.pipelineFilter": "Open pipeline · expected close",
   "reporting.targetRemaining": "{amount} remaining",
   "reporting.targetExceeded": "{amount} above target",
   "reporting.targetPeriodSummary": "{actual} of {target} · {percent}%",
@@ -935,7 +934,6 @@ export const en = {
   "reporting.commissionAmount": "Commission",
   "reporting.hoursUnit": "Hours",
   "reporting.outOf": "Out of {total}",
-  "reporting.valueChanges": "Value changes",
   "reporting.movement.new": "New deals",
   "reporting.movement.pulled_in": "Pulled into the period",
   "reporting.movement.pushed_out": "Pushed out of the period",
@@ -1027,8 +1025,6 @@ export const en = {
   "reporting.attainment": "{percent}% of target",
   "reporting.remaining": "Remaining",
   "reporting.ownerMetric": "{metric} by team member",
-  "reporting.quarterStart": "Choose the first month of the fiscal quarter.",
-  "reporting.additional": "More analysis",
   "reporting.settings": "Reporting settings",
   "reporting.execution.skipped": "Skipped",
   "reporting.execution.suspended": "Paused",
@@ -1038,7 +1034,6 @@ export const en = {
   "reporting.execution.running": "Capturing…",
   "reporting.execution.pending": "Queued",
   "reporting.targetHistory": "Target history",
-  "reporting.unit": "Unit",
   "reporting.amountUnit": "Value",
   "reporting.daysUnit": "Days",
   "reporting.countUnit": "Count",
@@ -1106,7 +1101,6 @@ export const en = {
   "reporting.status.ok": "Complete coverage",
   "retention.scopeReportEdition": "Saved report editions",
   "reporting.lastCapture": "Last successful capture {at}",
-  "reporting.allocationDifference": "Team target minus allocated targets",
   "reporting.fromDate": "From",
   "reporting.throughDate": "Through",
   "reporting.chooseDates": "Choose a start and end date to view this period.",
@@ -1246,10 +1240,8 @@ export const en = {
   "reporting.monthly": "Monthly",
   "reporting.day": "Run day",
   "reporting.time": "Local time",
-  "reporting.timezone": "Reporting timezone",
   "reporting.nextRun": "Next run: {at}",
   "reporting.pause": "Paused",
-  "reporting.resume": "Resume",
   "reporting.compare": "Compare snapshots",
   "reporting.left": "Earlier snapshot",
   "reporting.right": "Later snapshot",
@@ -1257,12 +1249,8 @@ export const en = {
   "reporting.value": "Target",
   "reporting.newTarget": "Set target",
   "reporting.revise": "Revise target",
-  "reporting.up": "Move up",
-  "reporting.down": "Move down",
-  "reporting.periodStart": "First day of target period",
   "reporting.noComparison":
     "Choose two snapshots with matching scopes from consecutive completed periods.",
-  "reporting.noSource": "Source details are unavailable.",
   "reporting.framework": "Reporting setup",
   "reporting.template": "Default view",
   "reporting.sales": "Sales",
@@ -1432,38 +1420,6 @@ export const en = {
     "Forecast for the end of the fiscal quarter, as of {date}: {amount}.",
   "reporting.writtenOpen_one": "Open on {date}: {amount} in {count} deal.",
   "reporting.writtenOpen_other": "Open on {date}: {amount} in {count} deals.",
-  "reporting.writtenSomeFailed":
-    "Some figures could not be read just now, so this summary leaves them out.",
-  "reporting.writtenTargetReached":
-    "Sales won in {quarter} have reached the {target} goal.",
-  "reporting.writtenNoTarget":
-    "No sales goal is set for {quarter}, so there is no gap to show.",
-  "reporting.writtenFinish": "Expected finish for {quarter}: {amount}.",
-  "reporting.writtenFinishShort":
-    "Expected finish for {quarter}: {amount}, {gap} short of the {target} goal.",
-  "reporting.writtenFinishAhead":
-    "Expected finish for {quarter}: {amount}, {gap} above the {target} target.",
-  "reporting.writtenFinishOnTarget":
-    "Expected finish for {quarter}: {amount}, exactly the {target} goal.",
-  "reporting.writtenCoverage":
-    "Open deals expected to close this quarter cover {ratio}× of the {remaining} still to win.",
-  "reporting.writtenAccepted_one": "{count} handoff accepted in {period}.",
-  "reporting.writtenAccepted_other": "{count} handoffs accepted in {period}.",
-  "reporting.writtenAcceptedNone": "No handoffs accepted in {period}.",
-  "reporting.writtenQualified_one": "{count} lead qualified in {period}.",
-  "reporting.writtenQualified_other": "{count} leads qualified in {period}.",
-  "reporting.writtenQualifiedNone": "No leads qualified in {period}.",
-  "reporting.writtenMeetings_one": "{count} meeting held in {period}.",
-  "reporting.writtenMeetings_other": "{count} meetings held in {period}.",
-  "reporting.writtenMeetingsNone": "No meetings held in {period}.",
-  "reporting.writtenLeadsWaiting_one":
-    "{count} lead is still waiting for a first reply.",
-  "reporting.writtenLeadsWaiting_other":
-    "{count} leads are still waiting for a first reply.",
-  "reporting.writtenHandoffsWaiting_one":
-    "{count} handoff is waiting for a decision from sales.",
-  "reporting.writtenHandoffsWaiting_other":
-    "{count} handoffs are waiting for a decision from sales.",
   "reporting.prepared.prospectingTitle": "My prospecting progress",
   "reporting.prepared.prospectingPurpose":
     "This week’s meetings held, accepted handoffs and qualified leads, against monthly targets.",
@@ -1563,8 +1519,6 @@ export const en = {
   "reporting.last_week": "Last completed week",
   "reporting.this_quarter": "This fiscal quarter",
   "reporting.custom": "Custom interval",
-  "reporting.start": "Start date",
-  "reporting.end": "End date (exclusive)",
   "reporting.bookings_trend": "Sales won over time",
   "reporting.stage_distribution": "Open pipeline by stage",
   "reporting.owner_attainment": "Sales won by team member",
@@ -1660,7 +1614,6 @@ export const en = {
   "reporting.metrics": "Metrics",
   "reporting.metric": "Metric",
   "reporting.cancel": "Cancel",
-  "reporting.saved": "Report saved",
   "reporting.live": "Live report",
   "reporting.opening": "Opening",
   "reporting.closing": "Closing",
@@ -1683,8 +1636,6 @@ export const en = {
   "scheduling.pickAgreed": "Pick the agreed time",
   "scheduling.openTimes": "Your open times",
   "scheduling.guestPicks": "{name} picks the time",
-  "scheduling.guestPicksHelp":
-    "You send one personal link. They see your open times and book one.",
   "scheduling.guestPicksOne":
     "They book one of the open times in the calendar.",
   "scheduling.guest": "Your guest",
@@ -1726,27 +1677,7 @@ export const en = {
   "scheduling.linkReplaced":
     "You changed this proposal, so it gets a new link. The earlier link stays open until you withdraw it under the contact’s Meetings.",
   "scheduling.bookWith": "Book a meeting with {name}",
-  "scheduling.setupTitle": "Finish setting up booking · {done} of {total} done",
-  "scheduling.stepCalendar": "A calendar that can send invites",
-  "scheduling.stepHours": "Your hours and timezone",
-  "scheduling.stepLink": "Your booking link turned on",
-  "scheduling.stepDone": "Done",
-  "scheduling.stepOpen": "Still to do",
   "scheduling.calendarTitle": "Calendar",
-  "scheduling.calendarIntro":
-    "Where invites are sent from and where your busy time is read.",
-  "scheduling.availabilityTitle": "Availability",
-  "scheduling.defaultsTitle": "Meeting defaults",
-  "scheduling.defaultsIntro":
-    "Used for every new meeting. You can change them when you book.",
-  "scheduling.videoDefaultGoogle": "Add a Google Meet link to new meetings",
-  "scheduling.videoDefaultTeams": "Add a Microsoft Teams link to new meetings",
-  "scheduling.videoDefaultGeneric": "Add a video call link to new meetings",
-  "scheduling.videoDefaultHelp":
-    "Created with each calendar invite, including bookings from your link. You can switch it off for a single meeting when you book.",
-  "scheduling.videoTeamsHelp": "Needs a work or school Microsoft 365 account.",
-  "scheduling.unsaved": "You have unsaved changes",
-  "scheduling.discard": "Discard",
   "scheduling.back": "Back to Margince",
   "scheduling.prepare": "Prepare for this meeting",
   "scheduling.timezone": "Time zone",
@@ -1771,29 +1702,13 @@ export const en = {
   "scheduling.proposalChoose": "Choose a time here, or find another opening:",
   "scheduling.proposalReply":
     "You can also reply with a time that works for you.",
-  "scheduling.proposalHelp":
-    "These options do not reserve your calendar. The personal link can book once and expires after seven days or the last offered time.",
-  "scheduling.createPersonalLink": "Create personal link",
-  "scheduling.reviewProposal": "Create proposal",
-  "scheduling.personalLink": "Open personal invitation",
-  "scheduling.expires": "Expires {date}",
-  "scheduling.reviewEmail": "Review email",
   "scheduling.method": "How to arrange the meeting",
   "scheduling.propose": "Propose times",
   "scheduling.sharePersonal": "Share a personal link",
-  "scheduling.selectOptions_one":
-    "Choose two or three options · {count} selected",
-  "scheduling.selectOptions_other":
-    "Choose two or three options · {count} selected",
-  "scheduling.blockingCalendars": "Other calendars that block time",
-  "scheduling.blockingHelp":
-    "The event calendar always blocks time. Private event names stay in your calendar.",
   "scheduling.savedRequest":
     "Your meeting request is saved. Open it to check the invitation, change the time or cancel.",
   "scheduling.openMeeting": "View your meeting",
   "scheduling.emailReminder": "Email reminder one hour before",
-  "scheduling.reminderHelp":
-    "Applies to future meetings. Uses your connected mailbox and checks email permissions before sending.",
   "scheduling.reminder.pending": "Email reminder scheduled.",
   "scheduling.reminder.queued": "Email reminder queued for delivery.",
   "scheduling.reminder.unavailable":
@@ -1808,7 +1723,6 @@ export const en = {
   "scheduling.copyFallback": "Select and copy the link below.",
   "scheduling.preview": "Preview public page",
   "scheduling.settings": "Meeting settings",
-  "scheduling.save": "Save settings",
   "settings.tab.meetings": "Meetings",
   "settings.page.meetings.sub":
     "Working hours, calendars and booking preferences.",
@@ -1836,17 +1750,8 @@ export const en = {
   "scheduling.findNext": "Find next available times",
   "scheduling.noTimesHorizon":
     "No available times within the booking horizon. Review meeting settings and calendar events.",
-  "scheduling.allDayBlocks":
-    "All-day events marked busy also block available times.",
-  "scheduling.effectiveHours": "Bookable hours: {start} to {end} ({zone}).",
   "scheduling.bookingUntil": "Bookings available through {date}.",
-  "scheduling.outsideHorizon":
-    "This date is outside the booking horizon. Choose an earlier date or update meeting settings.",
   "scheduling.provider": "Calendar provider",
-  "scheduling.proposalChanged":
-    "This link keeps the details you already created. You can create a new link for your changes; the previous link remains valid until it expires.",
-  "scheduling.proposalUpdate": "Create updated proposal",
-  "scheduling.calendar": "Event calendar",
   "scheduling.bookContact": "Book a meeting",
   "scheduling.bookPickContact": "Search this company’s contacts",
   "scheduling.setupCalendar": "Choose your booking calendar",
@@ -1855,10 +1760,6 @@ export const en = {
 
   "scheduling.readOnlyCalendar":
     "Your calendar is connected for reading events. Reconnect it and allow invitation access to create, reschedule and cancel meetings.",
-  "scheduling.disconnectedCalendar":
-    "Connect this calendar before sending invitations. If you connected only your mailbox, connect the calendar separately.",
-  "scheduling.expiredCalendar":
-    "Your calendar connection has expired. Reconnect it to send invitations.",
   "scheduling.bookRefused":
     "An administrator must grant permission to book meetings.",
   "scheduling.meetingChanged":
@@ -1867,28 +1768,16 @@ export const en = {
     "Choose a calendar in Settings → Meetings to preview available times.",
   "scheduling.publicCalendarUnavailable":
     "Your booking page is active, but calendar invitations are unavailable. Open meeting settings to check the connection or pause the page.",
-  "scheduling.manageConnection": "Open calendar connections",
-  "scheduling.calendarConnected":
-    "Connected: {account}. Invitation access granted.",
   "scheduling.noWritableCalendar":
     "No editable calendar is available. Choose another provider or check your calendar permissions.",
   "scheduling.finishSetup":
     "Complete calendar setup in meeting settings to choose available times.",
   "scheduling.readOnlyBadge": "Read-only calendar",
-  "scheduling.accountName":
-    "The name on your booking page comes from Account settings.",
   "scheduling.linkNotCreated":
     "Save meeting settings to create your booking link.",
   "scheduling.calendarSetupNeeded": "Choose and save a calendar first.",
-  "scheduling.noCalendar":
-    "No calendar connected. Connecting your mailbox does not connect its calendar.",
-  "scheduling.hostName": "Your public name",
   "scheduling.subject": "Meeting title",
   "scheduling.location": "Location or meeting link",
-  "scheduling.duration": "Meeting length",
-  "scheduling.noticeHelp": "24 hours means at least one full day ahead.",
-  "scheduling.anchorBrand":
-    "Company name and logo are taken from your company profile.",
   "scheduling.locationExample": "https://meet.google.com/abc-defg-hij",
   "scheduling.locationHelp":
     "Paste your Google Meet, Zoom or Teams link, or enter a meeting address. This is where the meeting takes place, not your booking page.",
@@ -1896,9 +1785,6 @@ export const en = {
     "Preview only. Your booking page is live; no invitations are sent from this preview.",
   "scheduling.previewPaused":
     "Preview only. Public booking is paused. Visitors cannot book until you enable your link in Meetings settings.",
-  "scheduling.notice": "Minimum notice in hours",
-  "scheduling.buffer": "Buffer in minutes",
-  "scheduling.horizon": "Booking horizon in days",
 
   "scheduling.invite": "Send an invite",
   "scheduling.contact": "Who are you meeting?",
@@ -2941,7 +2827,6 @@ export const en = {
   "search.group.showAllNamed": "Show all {group}",
   "search.kind.contact": "Contact",
   "search.kind.company": "Company",
-  "search.kind.partnerCompany": "Partner company",
   "search.kind.deal": "Deal",
   "search.kind.project": "Project",
   "search.kind.product": "Product",
@@ -7103,7 +6988,6 @@ export const en = {
   "decision.reject": "Reject",
   "decision.draftSubject": "Subject",
   "decision.draftBody": "Message",
-  "decision.dismiss": "Dismiss",
   "decision.versionSkew":
     "This record changed after it was staged. Stage it again before deciding.",
   "decision.fxRateMoved":
@@ -9392,7 +9276,6 @@ export const en = {
   "analytics.myPipeline": "My open deals",
   "analytics.sdrLeads": "My leads this month",
   "analytics.sdrReading.leads_promoted": "Leads qualified",
-  "analytics.sdrReading.leads_qualified": "Leads qualified",
   "analytics.sdrReading.lead_first_response":
     "First reply time, answered leads",
   "analytics.sdrReading.leads_awaiting_response":
@@ -12200,12 +12083,10 @@ export const en = {
     "No records held. Every erasure so far was completed in full.",
   "restricted.heldLabel": "Records held now",
   "restricted.kind": "Record",
-  "restricted.occurred": "Dated",
   "restricted.deals": "Deal or project",
   "restricted.noDeal": "No deal on record",
   "restricted.reason": "Held because",
   "restricted.until": "Held until",
-  "restricted.redacted": "Redacted",
   "restricted.since": "Since {date}",
   "restricted.nothingRedacted": "Nothing removed",
   "restricted.redactedCount_one": "{count} field removed",
@@ -12215,7 +12096,6 @@ export const en = {
   "restricted.kind.call": "Call",
   "restricted.kind.meeting": "Meeting",
   "restricted.kind.message": "Message",
-  "restricted.decide": "Decision",
   "restricted.reasonLabel": "Why",
   "restricted.reasonHint":
     "Recorded in the audit trail with your name. State what you decided and on what basis.",
@@ -12726,7 +12606,6 @@ export const en = {
   // already holds the kind of credential each one is configured with. The two
   // headings differ because the two pages mean different things: one is your
   // own account somewhere, the other is the installation's.
-  "extUnits.open": "Open",
 
   // The units an installation composed, offered on the settings page that
   // already holds the kind of credential each one is configured with. The two
@@ -14401,9 +14280,6 @@ export const en = {
   "deal360.verdict.drifting": "Slipping",
   "deal360.verdict.blocked": "Blocked",
   "deal360.verdict.cold": "Cold",
-  "recordmail.title": "Email",
-  "recordmail.reply": "Draft reply",
-  "recordmail.send": "Write email",
   "deal360.rewrite": "Regenerate",
   "deal360.readFull": "Read full brief",
   "deal360.openTask": "Open task",
@@ -15131,8 +15007,6 @@ export const en = {
     "What each role may do, and whose records it reaches.",
   "settings.page.seats.sub":
     "Seats in use against this installation’s entitlement.",
-  "settings.page.stageautomation.sub":
-    "The track record of each stage transition before it moves deals automatically.",
   "settings.page.leads.sub":
     "Where leads come from, why they are disqualified, and how fast they get a first reply.",
   "settings.page.products.sub":
@@ -15869,7 +15743,6 @@ export const en = {
     "Add writing samples to build your Voice DNA, which only you can see. It learns only from what you add, and a first build takes about a minute.",
   "settings.voice.privacy": "Only you can see your Voice DNA.",
   "settings.voice.status.collecting": "Collecting",
-  "settings.voice.status.ready": "Ready",
   "settings.voice.status.stale": "Rebuild needed",
   "settings.voice.bandThin": "thin",
   "settings.voice.bandGood": "good",
@@ -16455,7 +16328,6 @@ export const en = {
   "users.rolesReplace": "A role you choose replaces all current roles.",
   "users.deactivate": "Deactivate",
   "users.reactivate": "Reactivate",
-  "users.status.active": "Active",
   "users.status.invited": "Invited",
   "users.status.inviteMailFailed": "Invitation email failed",
   "users.status.deactivated": "Deactivated",
@@ -19727,7 +19599,6 @@ export const en = {
     "Moderate: you are in touch from time to time. Last contact was on {last}.",
   "contact.strength.sentence.strong":
     "Strong: you are in regular, two-way touch. Last contact was on {last}.",
-  "contact.bandBadge.none": "No contact",
   "contact.bandBadge.weak": "Weak",
   "contact.bandBadge.moderate": "Moderate",
   "contact.bandBadge.strong": "Strong",
@@ -19863,7 +19734,6 @@ export const en = {
   "contact.action.research": "Research",
   "contact.action.importActivities": "Import activities",
 
-  "contact.strip.never": "Never",
   "contact.strip.today": "Today",
   "contact.strip.yesterday": "Yesterday",
   "contact.strip.days": "{count} days",
@@ -22939,7 +22809,6 @@ export const en = {
   "scheduling.readsBusy": "Reads busy times",
   "scheduling.sendsInvites": "Sends invitations",
   "scheduling.syncedAgo": "Synced {ago}",
-  "scheduling.reconnectNeeded": "Reconnect needed",
   "scheduling.expiredRow":
     "The connection has expired. Margince cannot read your busy times or send invitations until you reconnect.",
   "scheduling.eventCalendar": "Add booked meetings to",
@@ -23820,17 +23689,6 @@ export const en = {
   "analytics.decision.unpriced_other": "{count} deals with no amount",
   "analytics.decision.fx_one": "{count} deal with no exchange rate",
   "analytics.decision.fx_other": "{count} deals with no exchange rate",
-  "reporting.writtenChecksFailed":
-    "The open checks could not be read, so nothing is said here about what needs attention.",
-  "reporting.writtenChecksNone": "No open checks need an answer.",
-  "reporting.writtenChecks_one":
-    "{count} open check on {deals} needs an answer.",
-  "reporting.writtenChecks_other":
-    "{count} open checks on {deals} need an answer.",
-  "reporting.writtenChecksOnly_one": "{count} open check needs an answer.",
-  "reporting.writtenChecksOnly_other": "{count} open checks need an answer.",
-  "reporting.writtenChecksDeals_one": "{count} deal",
-  "reporting.writtenChecksDeals_other": "{count} deals",
   "analytics.intervention.notPermitted":
     "Forecast checks are not available to you.",
   "health.needsFix": "Needs fixing",
@@ -24237,13 +24095,10 @@ export const en = {
     "Goals incomplete: at least one team member has no monthly goal yet, {subtotal} so far",
   "progress.goalIncompleteLine":
     "Goals incomplete: {set} of {needed} months set, {subtotal} so far",
-  "progress.goal.set": "Set",
-  "progress.goal.zero": "Zero",
   "progress.goal.missing": "No goal set",
   "progress.goal.incomplete": "Goals incomplete",
   "progress.goal.withheld": "Hidden",
   "progress.goal.other_currency": "In another currency",
-  "progress.goal.changed_outside_plan": "Changed outside the plan",
   "progress.goalChanged":
     "A month of this goal was changed outside the sales goals. A manager should review the plan.",
   "progress.completion": "{percent}% of the goal",

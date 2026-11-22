@@ -74153,6 +74153,8 @@ type WorklistCount struct {
 	// Total The exact number of admitted items in this category for this read's scope and
 	// owner. Absent when that population has not been counted exactly; a client then
 	// reads `considered` with `more_available` as today. Absent never means zero.
+	// For `decisions` it counts only what this reader can settle, as the readings'
+	// `review` does, so a duplicate pair without verbs is left out.
 	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
@@ -75191,10 +75193,12 @@ type WorklistReadings struct {
 	// them as one row — the strip says how much work there is, and the queue says
 	// how much reading it costs.
 	//
-	// Only rows carrying a verb the reader may press. A duplicate pair whose two
-	// records the reader cannot both write is somebody else's decision, and
-	// counting it here tells them a contact is waiting on an answer they are not
-	// able to give.
+	// The same population as the `decisions` count's `total`, and that total
+	// wherever it is stated, so Home and the Worklist read one number. An approval
+	// requested of the reader counts also while its preview is stale, not ready or
+	// blocked by a conflict: the reader can refresh it. Any other row counts only
+	// where it carries a verb the reader may press. A duplicate pair whose two
+	// records the reader cannot both write is somebody else's decision.
 	Review int `json:"review" minimum:"0"`
 
 	// SoonestLeadDue When the nearest open task on a lead is due, over every task this read weighed.
