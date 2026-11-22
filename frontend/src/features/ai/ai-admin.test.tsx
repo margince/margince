@@ -485,7 +485,7 @@ it("says per task what the records say about the model a tier serves", async () 
     "reduced quality. The record predates the current prompts.",
   );
   expect(await openTaskDetails(user, "Activity d")).toHaveTextContent(
-    "No certification record covers m-1 for this task.",
+    "m-1 has not been measured for this task with these settings.",
   );
 });
 

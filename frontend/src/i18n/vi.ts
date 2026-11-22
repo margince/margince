@@ -1966,7 +1966,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.certification.notSupported":
     "{model} chưa được chứng nhận cho tác vụ này. Mô hình vẫn được dùng, vì vậy hãy kiểm tra kết quả.",
   "aiAdmin.certification.unrecorded":
-    "Chưa có bản ghi chứng nhận nào cho {model} ở tác vụ này.",
+    "{model} chưa được đo cho tác vụ này với các cài đặt này.",
   "aiAdmin.certification.stale": "Bản ghi có trước các prompt hiện tại.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",

@@ -230,6 +230,11 @@ func (c *owedVerdictCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if msg := validateOwedPayload(payload, c.batch); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
+	// The engine drops an answer it cannot use and asks again; certification
+	// still counts that answer against the model.
+	if msg := firstFault(payload.Results, owedResult.fault); msg != "" {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
+	}
 	if disagreements := c.disagreements(payload); len(disagreements) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(disagreements, "; ")}
 	}

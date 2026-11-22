@@ -34,6 +34,36 @@ func TestOneOutOfRangeConfidenceDropsOnlyThatAnswerAtEveryBatchedSite(t *testing
 		}
 	})
 
+	t.Run("capture_classify drops an invalid label together with a bad confidence", func(t *testing.T) {
+		t.Parallel()
+		batch := []unlabeledMessage{{ID: ids.NewV7()}, {ID: ids.NewV7()}}
+		payload := classifyPayload{Results: []classifyResult{
+			{ID: "m1", Label: "spam", Confidence: bad},
+			{ID: "m2", Label: "other", Confidence: good},
+		}}
+		if msg := validateClassifyPayload(payload, batch); msg != "" {
+			t.Fatalf("an invalid label with a bad confidence refused the whole reply: %s", msg)
+		}
+		if got := resolveClassifyRefs(payload.Results, batch); len(got) != 1 || got[0].ID != batch[1].ID.String() {
+			t.Fatalf("kept %+v, want the second answer only", got)
+		}
+	})
+
+	t.Run("owed_verdict drops an invalid verdict together with a bad confidence", func(t *testing.T) {
+		t.Parallel()
+		batch := []owedCandidate{{ID: ids.NewV7()}, {ID: ids.NewV7()}}
+		payload := owedPayload{Results: []owedResult{
+			{ID: "m1", Verdict: "maybe", Confidence: bad},
+			{ID: "m2", Verdict: activities.OwedVerdictAsksUs, Confidence: good},
+		}}
+		if msg := validateOwedPayload(payload, batch); msg != "" {
+			t.Fatalf("an invalid verdict with a bad confidence refused the whole reply: %s", msg)
+		}
+		if got := resolveOwedResults(payload, batch); len(got) != 1 || got[0].ID != batch[1].ID.String() {
+			t.Fatalf("kept %+v, want the second answer only", got)
+		}
+	})
+
 	t.Run("owed_verdict", func(t *testing.T) {
 		t.Parallel()
 		batch := []owedCandidate{{ID: ids.NewV7()}, {ID: ids.NewV7()}, {ID: ids.NewV7()}}

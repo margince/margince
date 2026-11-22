@@ -2016,7 +2016,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.certification.notSupported":
     "{model} ist für diese Aufgabe nicht zertifiziert. Es wird trotzdem verwendet, prüfen Sie also, was es liefert.",
   "aiAdmin.certification.unrecorded":
-    "Für {model} liegt zu dieser Aufgabe kein Zertifizierungsnachweis vor.",
+    "{model} wurde für diese Aufgabe mit diesen Einstellungen nicht gemessen.",
   "aiAdmin.certification.stale": "Der Nachweis stammt aus früheren Prompts.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",

@@ -297,11 +297,15 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 	}
 	judged := 0
 	var retry []settleCandidate
+	// A conversation with no usable answer is retried alone like a below-floor
+	// one. Otherwise bad answers at the front of the queue would starve the rest.
+	answered := make(map[string]bool, len(verdicts.results))
 	for _, v := range verdicts.results {
 		candidate, ok := byID[v.ID]
 		if !ok {
 			continue // the validator guarantees this; belt and braces
 		}
+		answered[v.ID] = true
 		if v.Confidence < settleConfidenceFloor || !settleRemainderStands(v, batch) {
 			retry = append(retry, candidate)
 			continue
@@ -310,6 +314,11 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 			return judged, err
 		}
 		judged++
+	}
+	for _, c := range batch {
+		if !answered[c.Request.RequestID.String()] {
+			retry = append(retry, c)
+		}
 	}
 	solo, err := s.judgeEach(ctx, retry, calls)
 	return judged + solo, err

@@ -685,7 +685,40 @@ func TestAVerdictAboutAnEditedMessageStoresNeitherLabelNorReply(t *testing.T) {
 	}
 }
 
-func TestOneOutOfRangeConfidenceKeepsTheOtherLabelsAndIsAskedAgainNextPass(t *testing.T) {
+func TestABatchOfOnlyBadAnswersDoesNotStarveTheMessagesBehindIt(t *testing.T) {
+	e := integration.Setup(t)
+	confidence := map[string]float64{}
+	var bad []ids.UUID
+	for i := range classifyBatchSize {
+		subject := fmt.Sprintf("ninety percent %d", i)
+		confidence[subject] = 90
+		bad = append(bad, seedUnlabeledEmail(t, e, subject))
+	}
+	later := seedUnlabeledEmail(t, e, "after the bad batch")
+	brain := &scriptedClassifyBrain{confidence: confidence}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("a bad confidence failed the pass: %v", err)
+	}
+	if labelOf(t, e, later) == nil {
+		t.Error("the message behind a batch of bad answers was never reached")
+	}
+	for _, id := range bad {
+		if l := labelOf(t, e, id); l != nil {
+			t.Errorf("an out-of-range answer was stored as %q", *l)
+		}
+	}
+	calls := brain.calls
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("next pass: %v", err)
+	}
+	if brain.calls != calls {
+		t.Errorf("the next pass made %d model calls; a message already retried alone must leave the backlog", brain.calls-calls)
+	}
+}
+
+func TestOneBadAnswerKeepsTheOtherLabelsInItsBatch(t *testing.T) {
 	e := integration.Setup(t)
 	first := seedUnlabeledEmail(t, e, "first")
 	percent := seedUnlabeledEmail(t, e, "ninety percent")
@@ -703,16 +736,5 @@ func TestOneOutOfRangeConfidenceKeepsTheOtherLabelsAndIsAskedAgainNextPass(t *te
 	}
 	if l := labelOf(t, e, percent); l != nil {
 		t.Errorf("the out-of-range answer was stored as %q", *l)
-	}
-	if brain.calls != 2 {
-		t.Fatalf("model calls = %d, want 2: the batch, then the dropped message alone, which ends the pass", brain.calls)
-	}
-
-	brain.confidence["ninety percent"] = 0.9
-	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
-		t.Fatalf("next pass: %v", err)
-	}
-	if labelOf(t, e, percent) == nil {
-		t.Error("the dropped message was not asked again by the next pass")
 	}
 }

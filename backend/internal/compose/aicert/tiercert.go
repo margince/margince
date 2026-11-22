@@ -36,9 +36,9 @@ type TierCertRow struct {
 //
 // A task's verdict is the worst across its sites, and a site no record of that
 // model measured counts as not supported, for the reason rungVerdict gives.
-// Records of one model that differ only in thinking level or upstream
-// preference share a row, and the worst of them stands: the screen cannot see
-// those settings, and the sentence it prints must not be kinder than any record.
+// The key carries the thinking level, the site floors and the upstream
+// preference, as measuresExactly compares them, so a record never grades a
+// binding it did not measure.
 func TierCertTable(ctx context.Context, corpus []Scenario, census *aitasks.Registry, records []Record) ([]TierCertRow, error) {
 	byTask := map[ai.Task][]Scenario{}
 	for _, sc := range corpus {
@@ -94,7 +94,8 @@ func taskTierCerts(scenarios []Scenario, readiness []ReadinessRow) []TierCertRow
 }
 
 func tierKeyOf(rec Record) ai.TierCertKey {
-	return ai.TierCertKey{Task: ai.Task(rec.Task), Provider: rec.Provider, Model: rec.ServedModel, Profile: ai.Profile(rec.EnvClass)}
+	return ai.NewTierCertKey(ai.Task(rec.Task), rec.Provider, rec.ServedModel, ai.Profile(rec.EnvClass),
+		rec.ThinkingLevel, rec.SiteThinking, rec.CandidateUpstream)
 }
 
 func tierCertKeyLess(a, b ai.TierCertKey) bool {
@@ -107,7 +108,16 @@ func tierCertKeyLess(a, b ai.TierCertKey) bool {
 	if a.Model != b.Model {
 		return a.Model < b.Model
 	}
-	return a.Profile < b.Profile
+	if a.Profile != b.Profile {
+		return a.Profile < b.Profile
+	}
+	if a.Thinking != b.Thinking {
+		return a.Thinking < b.Thinking
+	}
+	if a.Floors != b.Floors {
+		return a.Floors < b.Floors
+	}
+	return a.Upstream < b.Upstream
 }
 
 // RenderTierCertTable is the generated file for rows, gofmt'd.
@@ -116,8 +126,9 @@ func RenderTierCertTable(rows []TierCertRow) ([]byte, error) {
 	src.WriteString(tierCertHeader)
 	src.WriteString("\nvar tierCertified = map[TierCertKey]TierCert{\n")
 	for _, row := range rows {
-		fmt.Fprintf(&src, "\t{Task: %q, Provider: %q, Model: %q, Profile: %q}: {Verdict: %q, Current: %t},\n",
-			row.Key.Task, row.Key.Provider, row.Key.Model, row.Key.Profile, row.Cert.Verdict, row.Cert.Current)
+		k := row.Key
+		fmt.Fprintf(&src, "\t{Task: %q, Provider: %q, Model: %q, Profile: %q, Thinking: %q, Floors: %q, Upstream: %q}: {Verdict: %q, Current: %t},\n",
+			k.Task, k.Provider, k.Model, k.Profile, k.Thinking, k.Floors, k.Upstream, row.Cert.Verdict, row.Cert.Current)
 	}
 	src.WriteString("}\n")
 	formatted, err := format.Source([]byte(src.String()))

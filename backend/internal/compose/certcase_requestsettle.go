@@ -263,6 +263,11 @@ func (c *requestSettleCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if msg := validateSettlePayload(payload, c.batch); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
+	// The engine drops an answer it cannot use and asks again; certification
+	// still counts that answer against the model.
+	if msg := firstFault(payload.Results, settleResult.fault); msg != "" {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
+	}
 	if faults := c.faults(payload); len(faults) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(faults, "; ")}
 	}

@@ -93,7 +93,15 @@ type settleResult struct {
 	Confidence schema.Confidence `json:"confidence"`
 }
 
-func (r settleResult) confidence() schema.Confidence { return r.Confidence }
+func (r settleResult) usable() bool { return r.fault() == "" }
+
+// fault says what makes the answer unusable, or "" when it is usable.
+func (r settleResult) fault() string {
+	if !confidenceInRange(r.Confidence) {
+		return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
+	}
+	return ""
+}
 
 func (r settleResult) answeredID() string { return r.ID }
 
@@ -253,7 +261,7 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 // resolveSettleResults reads the payload back to request ids and drops the
 // results whose confidence is outside [0,1].
 func resolveSettleResults(payload settlePayload, refs *promptref.Refs) []settleResult {
-	return resolveBatchRefs(keepInRange(payload.Results, settleResult.confidence), refs)
+	return resolveBatchRefs(keepUsable(payload.Results, settleResult.usable), refs)
 }
 
 // settleRemainderGrounded reports whether a still_owed result quotes the

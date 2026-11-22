@@ -114,9 +114,8 @@ func TestClassifyPayloadFidelity(t *testing.T) {
 			results: []classifyResult{ok(a, "other", 0.9), ok(a, "other", 0.9)},
 			wantErr: true,
 		},
-		"an out-of-vocabulary label fails": {
+		"an out-of-vocabulary label does not fail the reply": {
 			results: []classifyResult{ok(a, "spam", 0.9), ok(b, "other", 0.9)},
-			wantErr: true,
 		},
 		"an out-of-range confidence does not fail the reply": {
 			results: []classifyResult{ok(a, "other", 1.2), ok(b, "other", 0.9)},
@@ -142,9 +141,6 @@ func TestClassifyValidationMessagesDoNotEchoUnboundedModelText(t *testing.T) {
 	for name, msg := range map[string]string{
 		"an unrequested id": validateClassifyPayload(classifyPayload{
 			Results: []classifyResult{{ID: flood, Label: "other", Confidence: 0.9}},
-		}, batch),
-		"an out-of-vocabulary label": validateClassifyPayload(classifyPayload{
-			Results: []classifyResult{{ID: "m1", Label: flood, Confidence: 0.9}},
 		}, batch),
 	} {
 		t.Run(name, func(t *testing.T) {

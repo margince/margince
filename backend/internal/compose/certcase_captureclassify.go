@@ -258,6 +258,11 @@ func (c *captureClassifyCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if msg := validateClassifyPayload(payload, c.batch); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
+	// The engine drops an answer it cannot use and asks again; certification
+	// still counts that answer against the model.
+	if msg := firstFault(payload.Results, classifyResult.fault); msg != "" {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
+	}
 	// validateClassifyPayload admits exactly one result per requested id: every
 	// result carries a requested id, none repeats one, and none is missing.
 	if disagreements := c.disagreements(payload); len(disagreements) > 0 {

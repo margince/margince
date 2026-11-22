@@ -1938,7 +1938,7 @@ export const en = {
   "aiAdmin.certification.notSupported":
     "{model} is not certified for this task. It is still used, so check what it produces.",
   "aiAdmin.certification.unrecorded":
-    "No certification record covers {model} for this task.",
+    "{model} has not been measured for this task with these settings.",
   "aiAdmin.certification.stale": "The record predates the current prompts.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",

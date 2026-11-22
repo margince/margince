@@ -167,11 +167,16 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 	settled := 0
 	var retry []unlabeledMessage
 	byID := indexByID(batch)
+	// A message with no usable answer is retried alone like a below-floor one.
+	// Left out of the pass instead, a batch of bad answers at the front of the
+	// backlog would be read again first, forever.
+	answered := make(map[string]bool, len(verdicts))
 	for _, v := range verdicts {
 		msg, ok := byID[v.ID]
 		if !ok {
 			continue // validator guarantees this cannot happen; belt and braces
 		}
+		answered[v.ID] = true
 		if v.Confidence < classifyConfidenceFloor {
 			retry = append(retry, msg)
 			continue
@@ -182,6 +187,11 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 		}
 		if applied {
 			settled++
+		}
+	}
+	for _, msg := range batch {
+		if !answered[msg.ID.String()] {
+			retry = append(retry, msg)
 		}
 	}
 	solo, err := c.classifyEach(ctx, retry, calls)
@@ -300,9 +310,9 @@ func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) (
 }
 
 // resolveClassifyRefs rewrites each validated result's ref to its activity id
-// and drops the results whose confidence is outside [0,1].
+// and drops the results that are not usable.
 func resolveClassifyRefs(results []classifyResult, batch []unlabeledMessage) []classifyResult {
-	return resolveBatchRefs(keepInRange(results, classifyResult.confidence), capturelabel.Refs(batch))
+	return resolveBatchRefs(keepUsable(results, classifyResult.usable), capturelabel.Refs(batch))
 }
 
 // judgeOf names what actually answered.
@@ -350,10 +360,7 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 		inbound[refs.For(m.ID.String())] = m.Inbound
 	}
 	for _, r := range payload.Results {
-		if !classifyLabels[r.Label] {
-			return fmt.Sprintf("label %q is not commitment|meeting|other", clampToken(r.Label))
-		}
-		if !confidenceInRange(r.Confidence) {
+		if !r.usable() {
 			continue // dropped by resolveClassifyRefs; its other fields are never read
 		}
 		if r.Reply == "" {
@@ -373,7 +380,20 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 	return ""
 }
 
-func (r classifyResult) confidence() schema.Confidence { return r.Confidence }
+// usable is whether the answer names a label of this site and a confidence in
+// [0,1]. An answer that does not is dropped and its message asked again alone.
+func (r classifyResult) usable() bool { return r.fault() == "" }
+
+// fault says what makes the answer unusable, or "" when it is usable.
+func (r classifyResult) fault() string {
+	switch {
+	case !classifyLabels[r.Label]:
+		return fmt.Sprintf("label %q is not commitment|meeting|other", clampToken(r.Label))
+	case !confidenceInRange(r.Confidence):
+		return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
+	}
+	return ""
+}
 
 func (r classifyResult) answeredID() string { return r.ID }
 
