@@ -8,6 +8,7 @@ import { useReducer } from "react";
 import { expect, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
+import { SOURCE } from "../../../testing/voice-dna.testkit";
 import type { ConversationState } from "./conversation-machine";
 import {
   conversationReducer,
@@ -183,6 +184,8 @@ export type StubOptions = {
   afterRemove?: CorpusSummary;
   /** A failing status for that sources GET, after the DELETE landed. */
   afterRemoveStatus?: number;
+  /** Held until the test settles it, so that sources GET stays in flight. */
+  afterRemoveRelease?: Promise<void>;
   /** Held until the test settles it, so a removal stays in flight. */
   removeRelease?: Promise<void>;
 };
@@ -240,7 +243,13 @@ async function answerIngest(
   await ingest.release;
   return jsonResponse(
     {
-      source: { id: sourceId, version: 1 },
+      source: {
+        ...SOURCE,
+        id: sourceId,
+        source_label: label,
+        source_ref: typeof body.source_ref === "string" ? body.source_ref : "",
+        word_count: ingest.stats.kept_words,
+      },
       summary: ingest.summary,
       ingest_stats: ingest.stats,
     },
@@ -315,6 +324,7 @@ async function answerRemoval(
     return jsonResponse({ id: path.slice(path.lastIndexOf("/") + 1) });
   }
   if (method === "GET" && path.endsWith("/sources")) {
+    await options.afterRemoveRelease;
     if (options.afterRemoveStatus !== undefined) {
       return jsonResponse(
         { detail: "sources read failed" },

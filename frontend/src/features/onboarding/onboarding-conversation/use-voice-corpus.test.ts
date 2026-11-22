@@ -487,15 +487,8 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
     await waitFor(() => expect(first.result.current.meterStale).toBe(true));
     first.unmount();
 
-    const probe = client.getQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY);
     const again = renderHook(
-      () =>
-        useVoiceCorpus({
-          state: collectingState,
-          dispatch,
-          initialSummary: probe?.summary ?? null,
-          initialMeterStale: probe?.meterStale === true,
-        }),
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
       { wrapper },
     );
     expect(again.result.current.meterStale).toBe(true);
@@ -546,5 +539,160 @@ describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => 
     await waitFor(() => expect(result.current.manifest).toHaveLength(1));
     expect(result.current.meterStale).toBe(true);
     expect(result.current.busy).toBe(true);
+  });
+});
+
+// The screen keeps the probe while the reader walks to another step and back.
+// A write the closed step left in flight lands in it, and the step that opens
+// again follows it.
+describe("useVoiceCorpus — writes that settle across a step change", () => {
+  function emptyProbe() {
+    const client = new QueryClient();
+    client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, {
+      built: false,
+      summary: null,
+      sources: [],
+    });
+    const wrapper = ({ children }: Readonly<{ children: ReactNode }>) =>
+      createElement(QueryClientProvider, { client }, children);
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const open = () =>
+      renderHook(() => useVoiceCorpus({ state: collectingState, dispatch }), {
+        wrapper,
+      });
+    return { client, open };
+  }
+
+  it("lists a sample whose ingest settles after the step closed", async () => {
+    const ingest = gate();
+    stubApi({
+      ingests: [
+        { stats: documentStats, summary: summaryOf(900), release: ingest.held },
+      ],
+    });
+    const { open } = emptyProbe();
+    const first = open();
+    act(() => {
+      first.result.current.addPaste("A paragraph I actually wrote.", "Pasted");
+    });
+    first.unmount();
+
+    const again = open();
+    ingest.open();
+    await waitFor(() => expect(again.result.current.manifest).toHaveLength(1));
+    expect(again.result.current.summary?.total_words).toBe(900);
+  });
+
+  it("drops a sample whose removal settles after the step closed", async () => {
+    const removal = gate();
+    stubApi({
+      ingests: [{ stats: documentStats, summary: summaryOf(900) }],
+      afterRemove: summaryOf(0),
+      removeRelease: removal.held,
+    });
+    const { open } = emptyProbe();
+    const first = open();
+    act(() => {
+      first.result.current.addPaste("A paragraph I actually wrote.", "Pasted");
+    });
+    await waitFor(() => expect(first.result.current.manifest).toHaveLength(1));
+    const [added] = first.result.current.manifest;
+    if (added) {
+      act(() => first.result.current.removeSample(added));
+    }
+    first.unmount();
+
+    const again = open();
+    expect(again.result.current.manifest).toHaveLength(1);
+    removal.open();
+    await waitFor(() => expect(again.result.current.manifest).toEqual([]));
+    await waitFor(() =>
+      expect(again.result.current.summary?.total_words).toBe(0),
+    );
+  });
+
+  it("keeps the newer summary the step that opened again wrote over a late answer from the closed one", async () => {
+    const older = gate();
+    stubApi({
+      ingests: [
+        { stats: documentStats, summary: summaryOf(900), release: older.held },
+        { stats: documentStats, summary: summaryOf(1800) },
+      ],
+    });
+    const { client, open } = emptyProbe();
+    const first = open();
+    act(() => {
+      first.result.current.addPaste("The first paragraph I wrote.", "Pasted");
+    });
+    first.unmount();
+
+    const again = open();
+    act(() => {
+      again.result.current.addPaste("A second paragraph of mine.", "Pasted");
+    });
+    await waitFor(() =>
+      expect(again.result.current.summary?.total_words).toBe(1800),
+    );
+    older.open();
+    await waitFor(() => expect(again.result.current.manifest).toHaveLength(2));
+    expect(again.result.current.summary?.total_words).toBe(1800);
+    expect(
+      client.getQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY)?.summary
+        ?.total_words,
+    ).toBe(1800);
+  });
+
+  it("takes the read again after a failed removal read, though an ingest settled in between", async () => {
+    const failedRead = gate();
+    const reread = gate();
+    stubApi({
+      ingests: [
+        { stats: documentStats, summary: summaryOf(900) },
+        { stats: documentStats, summary: summaryOf(1800) },
+      ],
+      afterRemoveStatus: 500,
+      afterRemoveRelease: failedRead.held,
+    });
+    const { client } = emptyProbe();
+    const probe = vi.fn(async (): Promise<VoiceRestoreProbe> => {
+      await reread.held;
+      return { built: false, summary: summaryOf(900), sources: [] };
+    });
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result } = renderHook(
+      () => {
+        useQuery({
+          queryKey: VOICE_PROBE_KEY,
+          queryFn: probe,
+          staleTime: Infinity,
+        });
+        return useVoiceCorpus({ state: collectingState, dispatch });
+      },
+      {
+        wrapper: ({ children }) =>
+          createElement(QueryClientProvider, { client }, children),
+      },
+    );
+    act(() => {
+      result.current.addPaste("A paragraph I actually wrote.", "Pasted");
+    });
+    await waitFor(() => expect(result.current.manifest).toHaveLength(1));
+    const [added] = result.current.manifest;
+    if (added) {
+      act(() => result.current.removeSample(added));
+    }
+    await waitFor(() => expect(result.current.manifest).toEqual([]));
+    act(() => {
+      result.current.addPaste("Another paragraph of mine.", "Pasted");
+    });
+    await waitFor(() => expect(result.current.summary?.total_words).toBe(1800));
+
+    failedRead.open();
+    await waitFor(() => expect(probe).toHaveBeenCalledTimes(1));
+    expect(result.current.meterStale).toBe(true);
+    reread.open();
+    await waitFor(() => expect(result.current.meterStale).toBe(false));
+    expect(result.current.summary?.total_words).toBe(900);
+    expect(result.current.busy).toBe(false);
   });
 });

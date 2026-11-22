@@ -1,6 +1,6 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Dispatch } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
 import { formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
@@ -25,11 +25,11 @@ import type {
 } from "./conversation-machine";
 import { diffCorpus, useNarrationQueue } from "./narration";
 import {
-  type ProbeChange,
-  patchVoiceProbe,
   refreshedProbeSummary,
+  VOICE_PROBE_KEY,
+  type VoiceRestoreProbe,
+  voiceCorpusOwner,
 } from "./restore";
-import { SummaryOrder } from "./summary-order";
 import { excerptLines } from "./voice-excerpts";
 import { type CorpusManifestEntry, storedEntry } from "./voice-manifest";
 import { refusalEntry, skipKeys } from "./voice-refusal-line";
@@ -44,7 +44,6 @@ import { refusalEntry, skipKeys } from "./voice-refusal-line";
 
 type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
-type CorpusSource = components["schemas"]["VoiceCorpusSource"];
 type Ingested = Extract<IntakeOutcome, { kind: "ingested" }>;
 
 type SpeakerAsk = Readonly<{
@@ -65,32 +64,40 @@ export type VoiceIngestFailure = Readonly<{
 type UseVoiceCorpusArgs = Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
-  /** The restore probe's server meter, so a resumed session's word count
-   * (and the build gate) is honest before the first new ingest. */
-  initialSummary?: CorpusSummary | null;
-  /** The restore probe's samples, so the list a reload shows matches the
-   * meter. Only included rows: an excluded one is not in the count. */
-  initialSources?: readonly CorpusSource[];
-  /** The probe's word that the last summary read failed after a removal. */
-  initialMeterStale?: boolean;
 }>;
 
-export function useVoiceCorpus({
-  state,
-  dispatch,
-  initialSummary = null,
-  initialSources = [],
-  initialMeterStale = false,
-}: UseVoiceCorpusArgs) {
+export function useVoiceCorpus({ state, dispatch }: UseVoiceCorpusArgs) {
   const { locale } = useLocale();
   const t = useT();
   const queryClient = useQueryClient();
-  const [summary, setSummary] = useState<CorpusSummary | null>(initialSummary);
-  const [manifest, setManifest] = useState<readonly CorpusManifestEntry[]>(() =>
-    initialSources.filter((source) => source.included).map(storedEntry),
+  // The restore probe holds the meter and the samples, and outlives the step:
+  // a write that settles after Back reaches the step that opens again. Only
+  // the screen reads it; this observer follows it.
+  const probe = useQuery<VoiceRestoreProbe>({
+    queryKey: VOICE_PROBE_KEY,
+    enabled: false,
+  }).data;
+  const summary = probe?.summary ?? null;
+  const meterStale = probe?.meterStale === true;
+  // What this step learned of the samples it added itself: the stored row
+  // carries no pre-filter count and no text.
+  const [added, setAdded] = useState<ReadonlyMap<string, CorpusManifestEntry>>(
+    () => new Map(),
+  );
+  const sources = probe?.sources;
+  const manifest = useMemo(
+    () =>
+      (sources ?? [])
+        .filter((source) => source.included)
+        .map((source) => {
+          const own = added.get(source.source_ref);
+          return own?.id === source.id && own.version === source.version
+            ? own
+            : storedEntry(source);
+        }),
+    [sources, added],
   );
   const [removing, setRemoving] = useState<string | null>(null);
-  const [meterStale, setMeterStale] = useState(initialMeterStale);
   const [asks, setAsks] = useState<readonly SpeakerAsk[]>([]);
   const [probesInFlight, setProbesInFlight] = useState(0);
   const [failures, setFailures] = useState<readonly VoiceIngestFailure[]>([]);
@@ -102,7 +109,8 @@ export function useVoiceCorpus({
       failure,
     ]);
   }, []);
-  const summaryRef = useRef<CorpusSummary | null>(initialSummary);
+  // The meter the growth narration last spoke from.
+  const summaryRef = useRef<CorpusSummary | null>(summary);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -160,11 +168,10 @@ export function useVoiceCorpus({
 
   // Each write is stamped when issued; only the newest summary drives the
   // meter and the word-growth narration, so a late one never rolls it back.
-  const [order] = useState(() => new SummaryOrder());
-
-  const patchProbe = useCallback(
-    (change: ProbeChange) => patchVoiceProbe(queryClient, change),
-    [queryClient],
+  // The order is the corpus owner's, so a step that opens again ranks its
+  // writes against those the closed one left in flight.
+  const [{ order, patch: patchProbe }] = useState(() =>
+    voiceCorpusOwner(queryClient),
   );
 
   const recordIngest = useCallback(
@@ -184,9 +191,8 @@ export function useVoiceCorpus({
       if (!mounted.current) {
         return;
       }
-      setManifest((prev) => [
-        ...prev.filter((existing) => existing.ref !== ref),
-        {
+      setAdded((prev) =>
+        new Map(prev).set(ref, {
           ref,
           id: source.id,
           version: source.version,
@@ -195,8 +201,8 @@ export function useVoiceCorpus({
           inputWords: stats.input_words,
           transcript: outcome.transcript,
           lines: outcome.transcript ? [] : excerptLines(outcome.content),
-        },
-      ]);
+        }),
+      );
       say(`react:${ref}`, reactionKey, {
         kept: formatNumber(stats.kept_words, locale),
         total: formatNumber(stats.input_words, locale),
@@ -207,8 +213,6 @@ export function useVoiceCorpus({
       }
       queue.push(diffCorpus(summaryRef.current, next, locale));
       summaryRef.current = next;
-      setSummary(next);
-      setMeterStale(false);
     },
     [locale, queue, say, patchProbe, order],
   );
@@ -411,11 +415,7 @@ export function useVoiceCorpus({
         return;
       }
       patchProbe(() => ({ summary: next, meterStale: false }));
-      if (mounted.current) {
-        summaryRef.current = next;
-        setSummary(next);
-        setMeterStale(false);
-      }
+      summaryRef.current = next;
     },
     [patchProbe, order],
   );
@@ -434,19 +434,16 @@ export function useVoiceCorpus({
             patchProbe((old) => ({
               sources: old.sources.filter((source) => source.id !== entry.id),
             }));
-            if (mounted.current) {
-              setManifest((prev) =>
-                prev.filter((row) => row.ref !== entry.ref),
-              );
-            }
             return readCorpusSummary(profileId).then(
               (next) => applyRemovalSummary(seq, next),
               // The meter still counts the removed words, so Build waits for a fresh read.
               () => {
                 patchProbe(() => ({ meterStale: true }));
-                if (mounted.current) setMeterStale(true);
+                // Its own stamp, issued now: an ingest that settled since the
+                // DELETE must not make this newer read look stale.
+                const reread = order.issue();
                 return refreshedProbeSummary(queryClient).then(
-                  (next) => next && applyRemovalSummary(seq, next),
+                  (next) => next && applyRemovalSummary(reread, next),
                 );
               },
             );
