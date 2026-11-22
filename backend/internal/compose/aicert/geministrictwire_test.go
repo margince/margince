@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package aicert_test
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -19,10 +20,10 @@ import (
 // them, answered as a constrained decoder answers (every required key, null
 // wherever the key admits one), and taken back through the wire's undo. What
 // comes back must be valid under the tool's own schema, and a property the tool
-// lets the model clear is never written for it. So the rewrite and the walk
-// that undoes it cannot drift apart.
+// lets the model clear is never written for it. A rewrite the walk does not
+// undo fails here.
 func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
-	specs := NewRegistry(nil, SendPath{}).Specs()
+	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
 	if len(specs) < 100 {
 		t.Fatalf("the registry offered %d tools; the census lost its subject", len(specs))
 	}
