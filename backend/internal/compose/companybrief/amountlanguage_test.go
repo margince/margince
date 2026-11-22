@@ -73,7 +73,8 @@ func TestAGermanFigureTheModelCopiesIsGroundedInItsDeal(t *testing.T) {
 
 // cardView is a company 360 whose open deals are rows and whose state strip
 // carries the open total the card shows, in the workspace base currency.
-func cardView(rows []crmcontracts.Company360Deal, baseMinor int, base string) crmcontracts.Company360 {
+func cardView(rows []crmcontracts.Company360Deal, baseMinor int) crmcontracts.Company360 {
+	base := "EUR"
 	view := crmcontracts.Company360{Company: crmcontracts.Company{Id: openapi_types.UUID(ids.MustParse(briefCompanyID)), DisplayName: "Acme"}}
 	view.Deals = &crmcontracts.Company360Deals{Data: rows}
 	view.StateStrip = &crmcontracts.Company360StateStrip{Commercial: &struct {
@@ -104,7 +105,7 @@ func TestTheOpenTotalIsTheCardsOwnFigureNotASumOfThePage(t *testing.T) {
 		rows = append(rows, dealRow(n, 1_000_000, "EUR"))
 	}
 	// The card totals 26 deals; the page the brief reads holds 25 of them.
-	in := FromView(cardView(rows, 26_000_000, "EUR")).WordedIn("en")
+	in := FromView(cardView(rows, 26_000_000)).WordedIn("en")
 	known := knownRecords(in.ID, in)
 	if claims.Ungrounded(companySentence(in, "Open pipeline is 260,000.00 EUR."), known) != "" {
 		t.Error("the card's own open total was dropped")
@@ -116,7 +117,7 @@ func TestTheOpenTotalIsTheCardsOwnFigureNotASumOfThePage(t *testing.T) {
 
 func TestAMixedCurrencyAccountKeepsTheCardsConvertedTotal(t *testing.T) {
 	rows := []crmcontracts.Company360Deal{dealRow(1, 10_000_000, "EUR"), dealRow(2, 5_500_000, "USD")}
-	in := FromView(cardView(rows, 15_000_000, "EUR")).WordedIn("en")
+	in := FromView(cardView(rows, 15_000_000)).WordedIn("en")
 	known := knownRecords(in.ID, in)
 	if claims.Ungrounded(companySentence(in, "Open pipeline is 150,000.00 EUR."), known) != "" {
 		t.Error("the converted total the card shows was dropped")
@@ -128,7 +129,7 @@ func TestAMixedCurrencyAccountKeepsTheCardsConvertedTotal(t *testing.T) {
 
 func TestOnlyTheCardsTotalsAndACitedRowAnswerASum(t *testing.T) {
 	rows := []crmcontracts.Company360Deal{dealRow(1, 18_000_000, "EUR")}
-	in := FromView(cardView(rows, 18_000_000, "EUR")).WordedIn("en")
+	in := FromView(cardView(rows, 18_000_000)).WordedIn("en")
 	in.WonLifetime, in.WonCurrency = 3_000_000, "EUR"
 	known := knownRecords(in.ID, in)
 	deal := []Evidence{{EntityType: citeDeal, EntityID: rows[0].DealId.String()}}
@@ -151,7 +152,7 @@ func TestOnlyTheCardsTotalsAndACitedRowAnswerASum(t *testing.T) {
 }
 
 func TestBothParsersKeepTheCardsTotalAndRefuseAnyOtherSum(t *testing.T) {
-	in := FromView(cardView(nil, 12_000_000, "EUR")).WordedIn("en")
+	in := FromView(cardView(nil, 12_000_000)).WordedIn("en")
 	sentence := func(text string) string {
 		return `{"text":"` + text + `","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + in.ID + `"}]}`
 	}
