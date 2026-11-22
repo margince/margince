@@ -283,9 +283,8 @@ globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 // any suite that imports it, and a guard that skips where it thinks the defect
 // cannot be is how a census stops seeing its subject.
 //
-// The routes the stub answered with an empty list are cleared before each case
-// and printed only for a failing one, after every afterEach has run, so a hook
-// that throws cannot leak them into the next case.
+// The guessed routes are cleared before each case. They print only for a
+// failing case, after every afterEach, so a throwing hook cannot leak them.
 beforeEach(({ onTestFailed }) => {
   takeEmptyListAnswers();
   onTestFailed(() => {

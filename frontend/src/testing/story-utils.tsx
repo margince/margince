@@ -59,12 +59,10 @@ export type Fallback = (key: string) => Response;
 
 const SESSION_PROBE = "GET /me";
 
-// The default answer is an empty list, the honest guess for a read a story
-// does not care about. It is the wrong shape for any other read, and the
-// screen then dies on a TypeError that names no route. So the stub says what
-// it guessed: a console warning for the story gate, which appends it to a
-// failing story's errors, and a record the unit-test setup prints when a case
-// fails. Neither fails a story that renders, because most guesses are right.
+// The default answer is an empty list, the best guess for a read a story does
+// not care about. Any other read gets the wrong shape and dies on a TypeError
+// that names no route. So the stub records each guess: the story gate prints it
+// for a failing story, and the unit-test setup prints it for a failing case.
 export function emptyListFallback(key: string): Response {
   recordEmptyListAnswer(key);
   if (!emptyListAnswersAreQuiet()) console.warn(`${UNROUTED_WARNING} ${key}`);
@@ -86,9 +84,8 @@ export function emptyListAnswer(
   );
 }
 
-// A story that cannot stand any guess, because a wrong one draws a different
-// screen without failing, passes this as the second argument of
-// installFetchStub: every unrouted request is then refused, naming the route.
+// A story where a wrong guess draws another screen without failing passes this
+// to installFetchStub. Every unrouted request is then refused, naming the route.
 export function refuseUnrouted(key: string): Response {
   console.error(
     `story fetch stub: a component asked for ${key} and this story did not route it. ` +
@@ -104,12 +101,10 @@ export function refuseUnrouted(key: string): Response {
   );
 }
 
-// The session probe is the ONE route the fallback must not answer: `useMe`
-// rejects a body with no `user` as malformed, every capability hook then fails
-// closed, and the screen quietly renders its denied branch under a story named
-// for another one. There is also no correct guess, since a full-grant fixture
-// would make every unrouted story an admin. So say so loudly enough that the
-// render gate marks the story and the test runner fails the case.
+// The fallback must never answer the session probe. `useMe` rejects a body with
+// no `user`, every capability hook fails closed, and the screen draws its
+// denied branch. No guess is right either: a full-grant fixture makes every
+// story an admin. So the render gate marks the story and the case fails.
 function unroutedSessionProbe(): Response {
   recordUnroutedSessionProbe();
   console.error(
