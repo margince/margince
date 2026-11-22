@@ -145,40 +145,55 @@ describe("the nesting ladder has one painter", () => {
     ).toEqual([]);
   });
 
-  it("finds a member painted by a class that only markup joins to it", () => {
-    const source = `
-      const cardClass = ["pane", alert && "pane-alert", narrow && \`pane-narrow-\${narrow}\`]
-        .filter(Boolean)
-        .join(" ");
-      const a = <i className={\`pane \${extra}\`} />;
-      const b = <i className="pane-label t-eyebrow" />;
-      const c = <i className={\`pane-\${tone}\`} />;
-      const d = <i className="pane is-lifted pane-tail" />;`;
-    const members = withMeetings(
-      membersOf([".pane"]),
-      classMeetings("planted.tsx", source),
-      new Set([
-        "pane-narrow-row",
-        "pane-narrow-stack",
-        "pane-head",
-        "pane-tail",
-      ]),
+  const markup = (body: string) => classMeetings("planted.tsx", body);
+  const painted = (source: string, selector: string, body: string) =>
+    memberPaints(
+      [probe(selector, body)],
+      withMeetings(
+        membersOf([".pane"]),
+        markup(source),
+        new Set(["pane-narrow-row", "pane-narrow-stack", "pane-head"]),
+      ),
     );
-    const paint = (selector: string) =>
-      memberPaints([probe(selector, "background: var(--dangerBg)")], members);
-    expect(paint(".pane-alert")).toHaveLength(1);
-    expect(paint(".pane-narrow-row")).toHaveLength(1);
-    expect(paint(".pane-narrow-stack")).toHaveLength(1);
-    expect(paint(".pane-tail")).toHaveLength(1);
-    expect(paint(".pane-head")).toEqual([]);
-    expect(paint(".pane-label")).toEqual([]);
-    expect(paint(".is-lifted")).toEqual([]);
+  const red = "background: var(--dangerBg)";
+
+  it("reads the class lists a markup site can build, branch by branch", () => {
+    const sites = {
+      joined: `const c = ["pane", a && "pane-alert"].filter(Boolean).join(" ");
+        const x = <i className={c} />;`,
+      branched: `const c = cond ? "pane pane-alert" : "pane";
+        const x = <i className={c} />;`,
+      object: `const x = <i className={clsx({ pane: true, "pane-alert": a })} />;`,
+    };
+    for (const [name, source] of Object.entries(sites)) {
+      expect(painted(source, ".pane-alert", red), name).toHaveLength(1);
+    }
     expect(
-      memberPaints(
-        [probe(".pane.is-picked", "background: var(--dangerBg)")],
-        members,
+      painted(
+        ["const x = <i className={`pane pane-narrow-", "{n}`} />;"].join("$"),
+        ".pane-narrow-row",
+        red,
       ),
     ).toHaveLength(1);
+  });
+
+  it("holds a bare slot, another element and a plain part off a member", () => {
+    const slot = ["const x = <i className={`pane pane-", "{tone}`} />;"].join(
+      "$",
+    );
+    expect(painted(slot, ".pane-head", red)).toEqual([]);
+    const state = 'const x = <div className="pane is-hot" />;';
+    expect(painted(state, "tr.is-hot", red)).toEqual([]);
+    expect(painted(state, ".is-other", red)).toEqual([]);
+  });
+
+  it("finds a co-class that repaints the ground of a member", () => {
+    const state = 'const x = <div className="pane is-hot" />;';
+    expect(painted(state, ".is-hot", red)).toHaveLength(1);
+    expect(
+      painted(state, "div.is-hot", "--ground: var(--accent)"),
+    ).toHaveLength(1);
+    expect(painted(state, ".is-hot", "--ground: inherit")).toEqual([]);
   });
 
   it("finds a ladder class no other sheet styles", () => {
@@ -187,6 +202,34 @@ describe("the nesting ladder has one painter", () => {
 });
 
 describe("the surfaces rule", () => {
+  it("finds a member painted by a class that only markup joins to it", () => {
+    const tree = treeOf([
+      {
+        path: join(srcDir, "features", "planted.tsx"),
+        area: "src",
+        text: 'const x = (p: boolean) => <div className={p ? "card card-planted-alert" : "card"} />;',
+      },
+      {
+        path: join(srcDir, "features", "planted.css"),
+        area: "src",
+        text: ".card-planted-alert { background: var(--dangerBg); }",
+      },
+    ]);
+    const findings =
+      "across" in rule ? rule.across(rule.corpus(tree), tree) : [];
+    expect(findings).toContain(
+      "src/features/planted.css: .card-planted-alert { background: var(--dangerBg) }: not in the ledger",
+    );
+  });
+
+  it("fails its floor when no class list is read", () => {
+    const tree = treeOf([
+      { path: join(srcDir, "features", "planted.tsx"), area: "src", text: "" },
+    ]);
+    const floors = rule.floors?.(rule.corpus(tree), tree) ?? [];
+    expect(floors).toContain("only 0 class lists were read");
+  });
+
   it("reports a planted rung spelling through its own corpus and across", () => {
     const tree = treeOf([
       {

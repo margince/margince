@@ -53,6 +53,13 @@ import { sheetRules } from "../tree";
 // the ladder. The ledger lists the ones still standing; the ceiling only falls.
 const LEDGER_CEILING = { spellings: 0, states: 6 };
 
+const FLOOR = 900;
+
+const meetingsOf = (corpus: readonly CensusFile[]) =>
+  corpus
+    .filter(isScript)
+    .flatMap((file) => classMeetings(file.path, file.text));
+
 const ledgerPath = join(here, "surfaces.ledger.txt");
 export const tokensPath = join(here, "tokens.css");
 const TOKEN_SHEETS = new Set([tokensPath, join(here, "brand.css")]);
@@ -168,6 +175,9 @@ function ledger(): { spellings: string[]; states: string[] } {
 // A rule touches a member when its subject may be that element: it names the
 // member's class, or a classless member's element in its context.
 function touches(rule: Written, member: Written): boolean {
+  if (rule.type !== "" && member.type !== "" && rule.type !== member.type) {
+    return false;
+  }
   if (member.own.size === 0) {
     return rule.type === member.type && within(member.context, rule.context);
   }
@@ -206,6 +216,9 @@ function keepsTheGround(layer: string): boolean {
 type Paint = { allowed: boolean; resetsColour: boolean };
 
 function paintOf({ property, value }: Declaration): Paint | undefined {
+  if (property === "--ground") {
+    return { allowed: value === "inherit", resetsColour: false };
+  }
   if (!/^background(?:-color|-image)?$/.test(property)) return undefined;
   const layers = splitTopLevel(value, ",");
   if (property === "background-color") {
@@ -364,6 +377,9 @@ export const rule: CensusRule = {
       ...(corpus.filter(isScript).length > 500
         ? []
         : ["fewer than 500 scripts were read"]),
+      ...(meetingsOf(corpus).length > FLOOR
+        ? []
+        : [`only ${meetingsOf(corpus).length} class lists were read`]),
       ...(sheetRules(sheets).some((one) => !readsEveryCombination(one.selector))
         ? []
         : ["no selector past the cap was read"]),
@@ -399,9 +415,7 @@ export const rule: CensusRule = {
           all,
           withMeetings(
             MEMBERS,
-            corpus
-              .filter(isScript)
-              .flatMap((file) => classMeetings(file.path, file.text)),
+            meetingsOf(corpus),
             new Set(all.flatMap((one) => [...classesOf(one.selector)])),
           ),
         ),

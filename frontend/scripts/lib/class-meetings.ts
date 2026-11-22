@@ -2,118 +2,105 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import ts from "typescript";
+import { classVariants } from "../../src/testing/classnames";
 import { parseSource } from "./source-tree";
 import type { Written } from "./surface-sheets";
 
 // Classes that meet only in markup: one element's class list built in code,
 // such as `stat-card` with the `stat-card-narrow-${narrow}` statcard.tsx adds.
 // No stylesheet joins them, so a gate reading selectors alone misses the pair.
+// The lists come from the one reader of a `className` the markup gates share.
 
-export type ClassMeeting = { exact: readonly string[]; prefixes: string[] };
+export type ClassMeeting = {
+  exact: readonly string[];
+  /** Open ends such as `stat-card-narrow-`, from a token with a computed part. */
+  prefixes: readonly string[];
+  /** The element's tag when it is a plain HTML element. */
+  tag: string | undefined;
+};
 
-const CLASS_BUILDERS = new Set(["cn", "clsx", "classNames"]);
+// A class list can branch a lot; the reader throws past this, and the census fails loudly.
+const BRANCHES = 256;
 
-function isClassListSite(node: ts.Node): boolean {
-  if (ts.isJsxAttribute(node)) return node.name.getText() === "className";
-  if (!ts.isCallExpression(node)) return false;
-  const callee = node.expression;
-  if (ts.isIdentifier(callee)) return CLASS_BUILDERS.has(callee.text);
-  const [separator] = node.arguments;
-  return (
-    ts.isPropertyAccessExpression(callee) &&
-    callee.name.text === "join" &&
-    separator !== undefined &&
-    ts.isStringLiteralLike(separator) &&
-    separator.text === " "
-  );
-}
+const tagOf = (attribute: ts.Node): string | undefined => {
+  const element = attribute.parent.parent;
+  if (!ts.isJsxOpeningElement(element) && !ts.isJsxSelfClosingElement(element))
+    return undefined;
+  const tag = element.tagName.getText();
+  return /^[a-z]/.test(tag) ? tag : undefined;
+};
 
-function fragmentsOf(site: ts.Node): { text: string; open: boolean }[] {
-  const found: { text: string; open: boolean }[] = [];
-  const walk = (node: ts.Node) => {
-    if (ts.isStringLiteralLike(node)) {
-      found.push({ text: node.text, open: false });
-    } else if (ts.isTemplateHead(node) || ts.isTemplateMiddle(node)) {
-      found.push({ text: node.text, open: true });
-    } else if (ts.isTemplateTail(node)) {
-      found.push({ text: node.text, open: false });
-    }
-    ts.forEachChild(node, walk);
+function meetingOf(tag: string | undefined, tokens: string[]): ClassMeeting {
+  const open = tokens.filter((token) => token.includes("*"));
+  return {
+    exact: tokens.filter((token) => !token.includes("*")),
+    prefixes: open.flatMap((token) =>
+      token.endsWith("*") && !token.slice(0, -1).includes("*")
+        ? [token.slice(0, -1)]
+        : [],
+    ),
+    tag,
   };
-  walk(site);
-  return found;
 }
 
-function meetingOf(site: ts.Node): ClassMeeting {
-  const exact: string[] = [];
-  const prefixes: string[] = [];
-  for (const { text, open } of fragmentsOf(site)) {
-    const words = text.split(/\s+/).filter((word) => word !== "");
-    const last = words.at(-1);
-    const openEnded = open && last !== undefined && !/\s$/.test(text);
-    exact.push(...(openEnded ? words.slice(0, -1) : words));
-    if (openEnded && last !== undefined) prefixes.push(last);
-  }
-  return { exact, prefixes };
-}
-
-/** Each class list this file builds, as the literal classes and open prefixes it names. */
+/** Each class list the file's `className`s can produce, one per branch. */
 export function classMeetings(path: string, text: string): ClassMeeting[] {
-  if (!/className|\bcn\(|clsx\(|classNames\(|\.join\(/.test(text)) return [];
-  const meetings: ClassMeeting[] = [];
+  if (!text.includes("className")) return [];
+  const source = parseSource(path, text);
+  const meetings = new Map<string, ClassMeeting>();
   const walk = (node: ts.Node) => {
-    if (isClassListSite(node)) {
-      const meeting = meetingOf(node);
-      if (meeting.exact.length + meeting.prefixes.length > 1) {
-        meetings.push(meeting);
+    if (ts.isJsxAttribute(node) && node.name.getText() === "className") {
+      const value = node.initializer;
+      const read =
+        value !== undefined && ts.isJsxExpression(value)
+          ? value.expression
+          : value;
+      for (const tokens of classVariants(source, read, BRANCHES)) {
+        const meeting = meetingOf(tagOf(node), tokens);
+        if (meeting.exact.length + meeting.prefixes.length > 1) {
+          meetings.set(JSON.stringify(meeting), meeting);
+        }
       }
     }
     ts.forEachChild(node, walk);
   };
-  walk(parseSource(path, text));
-  return meetings;
+  walk(source);
+  return [...meetings.values()];
 }
 
 /**
- * Each member, and beside it the same member carrying the classes of its own
- * family that a markup site lists next to it, such as `stat-card-alert`. An
- * open prefix like `stat-card-narrow-` adds the sheet classes it reaches. A
- * state class like `is-lifted` joins no family: sheets use it on other
- * elements. A bare slot (`panel-${tone}`) is skipped, because it cannot tell
- * a variant from a part such as `panel-head`.
+ * Each member, and beside it the same member carrying every class a markup
+ * site lists next to one of its own, typed as that site's element. An open
+ * prefix adds the sheet classes it reaches, except a bare slot such as
+ * `panel-${tone}`: it cannot tell a variant from a part like `panel-head`.
  */
 export function withMeetings(
   members: readonly Written[],
   meetings: readonly ClassMeeting[],
   known: ReadonlySet<string>,
 ): Written[] {
-  const joined = members.flatMap((member) => {
-    const family = (name: string) =>
-      [...member.own].some((own) => name.startsWith(`${own}-`));
-    const names = meetings
+  const joined = members.flatMap((member) =>
+    meetings
       .filter((meeting) => meeting.exact.some((name) => member.own.has(name)))
-      .flatMap((meeting) => [
-        ...meeting.exact,
-        ...[...known].filter((name) =>
+      .map((meeting) => {
+        const reached = [...known].filter((name) =>
           meeting.prefixes.some(
             (prefix) =>
               name.startsWith(prefix) &&
               ![...member.own].some((own) => prefix === `${own}-`),
           ),
-        ),
-      ])
-      .filter(family);
-    if (names.length === 0) return [];
-    return [
-      {
-        ...member,
-        own: new Set([...member.own, ...names]),
-        ownSimples: new Set([
-          ...member.ownSimples,
-          ...names.map((name) => `.${name}`),
-        ]),
-      },
-    ];
-  });
+        );
+        const names = [...meeting.exact, ...reached];
+        return {
+          ...member,
+          type: member.type || (meeting.tag ?? ""),
+          own: new Set([...member.own, ...names]),
+          ownSimples: new Set([
+            ...member.ownSimples,
+            ...names.map((name) => `.${name}`),
+          ]),
+        };
+      }),
+  );
   return [...members, ...joined];
 }
