@@ -58,18 +58,7 @@ func (s *Store) CheckBulkStage(ctx context.Context, stage ids.StageID) error {
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		var semantic string
-		err := tx.QueryRow(ctx, `SELECT semantic FROM stage WHERE id = $1 AND archived_at IS NULL`, stage).Scan(&semantic)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return auth.NameMissingReference("stage_id", &StageGoneError{StageID: stage})
-		}
-		if err != nil {
-			return fmt.Errorf("read the stage a bulk move names: %w", err)
-		}
-		if StageSemantic(semantic) != SemanticOpen {
-			return errBulkStageNotOpen
-		}
-		return nil
+		return auth.NameMissingReference("stage_id", requireOpenStageLocked(ctx, tx, stage))
 	})
 }
 

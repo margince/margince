@@ -277,8 +277,9 @@ func TestBothDoorsCloseNothingOnUndoWhenTheUndoTargetWasRetypedAsWon(t *testing.
 		if _, err := e.Owner.Exec(t.Context(), `UPDATE stage SET semantic = 'open', win_probability = 0 WHERE id = $1`, from); err != nil {
 			t.Fatalf("%s: restoring the stage: %v", door.name, err)
 		}
-		if refusal != "" || undone.Changed != 0 || len(undone.Skipped) != 2 || undone.Skipped[0].Reason != "refused" {
-			t.Fatalf("%s: undo → %+v, refused %q; want both deals refused", door.name, undone, refusal)
+		if refusal != "" || undone.Changed != 0 || len(undone.Skipped) != 2 || undone.Skipped[0].Reason != "refused" ||
+			undone.Skipped[0].Code != "stage_not_open" || undone.Skipped[1].Code != "stage_not_open" {
+			t.Fatalf("%s: undo → %+v, refused %q; want both deals refused as stage_not_open, the writer's own check, not as a win without evidence", door.name, undone, refusal)
 		}
 		for _, item := range items {
 			if got := stageOfDeal(t, e, item.ID); got != to {

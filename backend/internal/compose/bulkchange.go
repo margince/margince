@@ -18,9 +18,7 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -31,13 +29,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -452,56 +448,4 @@ func appliedAt(
 		sample:  sample,
 		outcome: bulkOutcome{ID: sample.Id, Version: version, OwnerBefore: sample.Before.OwnerId},
 	}, crmcontracts.BulkSkip{}, nil
-}
-
-// bulkSkipFor turns a row's refusal into why it is left alone. A refusal a
-// single-record rule answers carries that rule's own code, so a client can say
-// it in the reader's language; the English message stays beside it for a code
-// the client does not know. An error that is no refusal — a lost connection, a
-// bug — is answered as itself, and aborts the change rather than being
-// reported as one row's fault.
-func bulkSkipFor(err error) (crmcontracts.BulkSkip, error) {
-	var anchor *contacts.AnchorProtectedError
-	if restore, ok := errors.AsType[*storekit.RestoreRefusal](err); ok {
-		return restoreSkip(restore), nil
-	}
-	switch {
-	case errors.Is(err, apperrors.ErrNotFound):
-		return skipped(crmcontracts.BulkSkipReasonNotFound), nil
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return skipped(crmcontracts.BulkSkipReasonNotWritable), nil
-	case errors.Is(err, apperrors.ErrVersionSkew):
-		return skipped(crmcontracts.BulkSkipReasonChangedSincePreview), nil
-	case errors.As(err, &anchor):
-		return skipped(crmcontracts.BulkSkipReasonAnchorCompany), nil
-	}
-	fault, classified := httperr.Classify(err)
-	if !classified || fault.Transient() || fault.Status < http.StatusBadRequest || fault.Status >= http.StatusInternalServerError {
-		return crmcontracts.BulkSkip{}, err
-	}
-	code := fault.Code
-	if len(fault.Fields) > 0 {
-		code = fault.Fields[0].Code
-	}
-	skip := crmcontracts.BulkSkip{Reason: crmcontracts.BulkSkipReasonRefused, Code: &code, Message: &fault.Detail}
-	if len(fault.Details) > 0 {
-		skip.Params = &fault.Details
-	}
-	return skip, nil
-}
-
-func affectedIDs(changed []crmcontracts.BulkSampleRow) []openapi_types.UUID {
-	out := make([]openapi_types.UUID, len(changed))
-	for i, row := range changed {
-		out[i] = row.Id
-	}
-	return out
-}
-
-func wireOwner(id *ids.UUID) *openapi_types.UUID {
-	if id == nil {
-		return nil
-	}
-	wire := openapi_types.UUID(*id)
-	return &wire
 }

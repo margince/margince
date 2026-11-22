@@ -190,7 +190,7 @@ describe("the bulk bar's roster caveat", () => {
   });
 });
 
-// A stage move is ONE preview and ONE change on the server, each deal carrying
+// A stage move is one preview and one change on the server, each deal carrying
 // its own version. A fan-out of one advance per deal from the browser is what
 // this replaced, and it left no Undo.
 describe("the bulk bar's stage move", () => {

@@ -33,6 +33,7 @@ type bulkItemDTO struct {
 type bulkSkipDTO struct {
 	ID     string `json:"id"`
 	Reason string `json:"reason"`
+	Code   string `json:"code"`
 }
 
 type bulkPreviewDTO struct {
