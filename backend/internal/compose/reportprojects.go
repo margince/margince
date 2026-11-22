@@ -65,9 +65,9 @@ var (
 )
 
 func projectDealMoneySQL(status string, unpriced bool) string {
-	expression := "coalesce(" + deals.BaseValueSumSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken) + ", 0)"
+	expression := "coalesce(" + deals.BaseValueSumAtSQL(reportAsOfToken, reportRatesAtToken, reportBaseCurrencyToken, "d", reportDealMaskToken) + ", 0)"
 	if unpriced {
-		expression = deals.UnpricedCountSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken)
+		expression = deals.UnpricedCountAtSQL(reportAsOfToken, reportRatesAtToken, reportBaseCurrencyToken, "d", reportDealMaskToken)
 	}
 	return "(SELECT " + expression +
 		" FROM deal d WHERE d.project_id = t.id AND d.status = '" + status +

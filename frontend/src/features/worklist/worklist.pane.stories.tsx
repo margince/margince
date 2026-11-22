@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import {
+  emptyListAnswer,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { WorklistPane } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -46,7 +50,7 @@ function contactRow(): WorklistItem {
 function stub360(answer: () => Promise<Response>) {
   globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
     const url = String(input instanceof Request ? input.url : input);
-    return url.includes("/360") ? answer() : jsonResponse({ data: [] });
+    return url.includes("/360") ? answer() : emptyListAnswer(input);
   }) as typeof fetch;
 }
 

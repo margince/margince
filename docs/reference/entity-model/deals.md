@@ -786,7 +786,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## fx_rate
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -794,16 +794,13 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `from_currency` | `currency_code` | yes |  |
 | `rate` | `numeric(20,10)` | yes | Decimal rate (from -> base), always positive. |
 | `rate_date` | `date` | yes |  |
+| `superseded_at` | `timestamp with time zone` |  |  |
 | `to_currency` | `currency_code` | yes | The workspace base currency. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
-**Rules**
-
-- `fx_rate_pair_day`: `UNIQUE (from_currency, to_currency, rate_date)`
-
 **Indexes**
 
-- `fx_rate_pair_day`: `unique, btree (from_currency, to_currency, rate_date)`
+- `fx_rate_current_pair_day`: `unique, btree (from_currency, to_currency, rate_date) WHERE (superseded_at IS NULL)`
 - `fx_rate_pkey`: `unique, btree (id)`
 
 ## legal_review

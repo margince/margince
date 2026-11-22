@@ -24,5 +24,11 @@ func closedDealWhere(alias string) string {
 // wonSalesValueSQL is one closed deal's money in the base currency. That is the
 // base amount frozen when it was won, or its own amount in the base currency.
 func wonSalesValueSQL(asOfSQL, baseSQL, alias string) string {
-	return deals.BaseValueSQL(asOfSQL, baseSQL, alias)
+	return wonSalesValueAtSQL(asOfSQL, "", baseSQL, alias)
+}
+
+// wonSalesValueAtSQL is wonSalesValueSQL reading the rate sheet as it stood at
+// ratesAtSQL, for a drill-through opened from an older figure.
+func wonSalesValueAtSQL(asOfSQL, ratesAtSQL, baseSQL, alias string) string {
+	return deals.BaseValueAtSQL(asOfSQL, ratesAtSQL, baseSQL, alias)
 }
