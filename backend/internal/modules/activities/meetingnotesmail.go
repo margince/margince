@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,9 +30,6 @@ import (
 
 // meetingNotesMailSource is the source of a transcript landed from a notes mail.
 const meetingNotesMailSource = "meeting_notes_mail"
-
-// argOwner names the mailbox owner in the match query.
-const argOwner = "owner"
 
 // meetingNotesMailRawKey preserves which mail the transcript was read from.
 const meetingNotesMailRawKey = "notes_mail"
@@ -65,18 +63,30 @@ func notesMailTitle(subject string) (string, bool) {
 	return title, title != ""
 }
 
-// notesMailMeetingSQL lists the live meetings the mailbox owner is on. Each
-// has the title the subject names, compared whole. Each started within
-// notesMailWindow before the mail. A transcript is not a meeting.
-var notesMailMeetingSQL = `
+// notesMailMeetingSQL lists the live meetings the mailbox owner is on, and may
+// read. Each has the title the subject names, compared whole. Each started
+// within notesMailWindow before the mail. A transcript is not a meeting.
+func notesMailMeetingSQL(ctx context.Context, in MeetingNotesMailInput, title string) (string, []any, error) {
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return "", nil, err
+	}
+	titleArg, ownerArg := "$"+strconv.Itoa(arg(title)), "$"+strconv.Itoa(arg(in.Owner))
+	from := "$" + strconv.Itoa(arg(in.SentAt.Add(-notesMailWindow))) + "::timestamptz"
+	until := "$" + strconv.Itoa(arg(in.SentAt.Add(time.Second))) + "::timestamptz"
+	return `
 	SELECT a.id FROM activity a
 	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	   AND a.source_system IS DISTINCT FROM '` + transcriptSourceSystem + `'
-	   AND lower(regexp_replace(btrim(coalesce(a.subject, '')), '\s+', ' ', 'g')) = @title
-	   AND ` + occurredday.WithinSQL("a", "@earliest::timestamptz", "@until::timestamptz") + `
-	   AND EXISTS (SELECT 1 FROM activity_participant o WHERE o.activity_id = a.id AND o.user_id = @owner)
+	   AND lower(regexp_replace(btrim(coalesce(a.subject, '')), '\s+', ' ', 'g')) = ` + titleArg + `
+	   AND ` + occurredday.WithinSQL("a", from, until) + `
+	   AND EXISTS (SELECT 1 FROM activity_participant o WHERE o.activity_id = a.id AND o.user_id = ` + ownerArg + `)
+	   AND ` + scope + `
 	 ORDER BY a.occurred_at DESC, a.id
-	 LIMIT 2`
+	 LIMIT 2`, args, nil
+}
 
 // notesMailMeetingTx answers the one meeting a notes mail names. Two candidates
 // name none: the mail cannot say which meeting it is about.
@@ -85,9 +95,11 @@ func notesMailMeetingTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMailInput
 	if !ok {
 		return ids.ActivityID{}, false, nil
 	}
-	rows, err := tx.Query(ctx, notesMailMeetingSQL, pgx.NamedArgs{
-		"title": title, "until": in.SentAt.Add(time.Second), "earliest": in.SentAt.Add(-notesMailWindow), argOwner: in.Owner,
-	})
+	query, args, err := notesMailMeetingSQL(ctx, in, title)
+	if err != nil {
+		return ids.ActivityID{}, false, err
+	}
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return ids.ActivityID{}, false, fmt.Errorf("activities: finding the meeting a notes mail names: %w", err)
 	}

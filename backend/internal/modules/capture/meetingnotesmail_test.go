@@ -61,3 +61,16 @@ func TestNotesTextDropsTheFromAndToLinesTheMapperAdds(t *testing.T) {
 		}
 	}
 }
+
+// The hold on a notes mail does not open when a record is later linked to it,
+// whatever reason the ladder gave. A ladder reason of no counterparty would.
+func TestANotesMailIsHeldAsNoRecordWhateverTheLadderSaid(t *testing.T) {
+	ladder := counterpartyDecision{traceReason: traceReasonNoCounterparty}
+	if got, err := linkLessReason(t.Context(), nil, connector.NormalizedRecord{}, meetingKind, ladder); err != nil || got != audienceReasonNoCounterparty {
+		t.Fatalf("an ordinary link-less record is held as %q (%v), want no_counterparty", got, err)
+	}
+	ladder.notesMail = true
+	if got, err := linkLessReason(t.Context(), nil, connector.NormalizedRecord{}, kindEmail, ladder); err != nil || got != audienceReasonNoRecord {
+		t.Errorf("a notes mail is held as %q (%v), want no_record", got, err)
+	}
+}
