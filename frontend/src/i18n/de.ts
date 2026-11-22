@@ -1267,7 +1267,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.questionBoundPeriod":
     "Diese Frage hat Filter. Die Zeiträume darin behalten die Daten vom Zeitpunkt des Platzierens: ein Geschäftsjahr ab {month}, in {zone}.",
   "reporting.fiscalQuarterNote":
-    "Dieses Quartal folgt dem Geschäftsjahr, das im {month} beginnt.",
+    "Quartale und Jahre folgen hier dem Geschäftsjahr, das im {month} beginnt.",
   "reporting.previewChart": "Vorschau",
   "reporting.previewLoading": "Vorschau wird geladen…",
   "reporting.previewEmpty":
@@ -1627,9 +1627,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wurde in einer Währung festgelegt, die nicht mehr die Basiswährung ist. Lege das Ziel neu fest, um zu vergleichen.",
   "reporting.this_week": "Diese Woche",
   "reporting.this_month": "Dieser Monat",
-  "reporting.last_month": "Letzter Monat",
+  "reporting.last_month": "Letzter abgeschlossener Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",
   "reporting.this_quarter": "Dieses Geschäftsquartal",
+  "reporting.last_quarter": "Letztes abgeschlossenes Quartal",
+  "reporting.last_year": "Letztes abgeschlossenes Jahr",
   "reporting.custom": "Eigener Zeitraum",
   "reporting.start": "Startdatum",
   "reporting.end": "Enddatum (nicht eingeschlossen)",
@@ -9030,7 +9032,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.upcomingTitle": "Anstehende Termine",
   "analytics.prospect.cohortTitle": "Was aus deinen Übergaben wurde",
   "analytics.prospect.cohortPeriods":
-    "Für eine Woche oder einen Monat angezeigt. Wähle einen dieser Zeiträume.",
+    "Für dieses Geschäftsquartal und einen eigenen Zeitraum nicht angezeigt. Wähle einen anderen Zeitraum.",
   "analytics.prospect.cohortCaption_one":
     "{count} Übergabe, die du {period} eingereicht hast, nach aktuellem Stand",
   "analytics.prospect.cohortCaption_other":

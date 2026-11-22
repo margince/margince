@@ -10936,6 +10936,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -11113,6 +11115,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -11272,6 +11276,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -23801,7 +23807,7 @@ paths:
           description: The team or owner named by `scope_kind`.
         - name: period
           in: query
-          schema: {type: string, enum: [this_week, last_week, this_month, last_month], default: this_week}
+          schema: {type: string, enum: [this_week, last_week, this_month, last_month, last_quarter, last_year], default: this_week}
           description: The period, in the installation's reporting zone.
       responses:
         '200':
@@ -38729,7 +38735,7 @@ components:
         country: {$ref: '#/components/schemas/ReportingCountry'}
         period:
           type: string
-          enum: [this_week, this_month, last_month, last_week, this_quarter]
+          enum: [this_week, this_month, last_month, last_week, this_quarter, last_quarter, last_year]
         metrics:
           type: array
           maxItems: 8
@@ -45911,12 +45917,16 @@ components:
             - last_month
             - last_week
             - this_quarter
+            - last_quarter
+            - last_year
             - custom
           description: |-
             `this_week` runs from Monday 00:00 in the installation zone to the
             evaluation time. Read at that exact moment, the week holds no time
             yet and the context's interval starts where it ends. A month target
             beside it still counts the whole month up to the evaluation time.
+            `last_quarter` and `last_year` are the last completed fiscal quarter
+            and fiscal year, in the installation's fiscal calendar.
         interval:
           $ref: '#/components/schemas/ReportingWindow'
         target_basis:

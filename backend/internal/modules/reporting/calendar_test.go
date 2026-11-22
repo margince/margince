@@ -154,3 +154,41 @@ func TestTheHorizonRunsPastTheCutoffToThePeriodsOwnEnd(t *testing.T) {
 		}
 	}
 }
+
+// Under a fiscal year that opens in April, the last quarter and year are the
+// last ones completed in that calendar, whole, and never the current one.
+func TestLastQuarterAndYearAreTheLastCompletedFiscalPeriods(t *testing.T) {
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	april := Calendar{Timezone: zone.String(), Currency: "EUR", FiscalStartMonth: 4}
+	local := func(year int, month time.Month, day int) time.Time { return time.Date(year, month, day, 0, 0, 0, 0, zone) }
+	for _, tc := range []struct {
+		name, period string
+		at, start    time.Time
+		end          time.Time
+	}{
+		{"quarter, mid fiscal Q3", "last_quarter", local(2026, 11, 22).Add(9 * time.Hour), local(2026, 7, 1), local(2026, 10, 1)},
+		{"quarter, in the quarter that ends the fiscal year", "last_quarter", local(2026, 2, 15), local(2025, 10, 1), local(2026, 1, 1)},
+		{"quarter, at the first instant of a quarter", "last_quarter", local(2026, 10, 1), local(2026, 7, 1), local(2026, 10, 1)},
+		{"year, mid fiscal year", "last_year", local(2026, 11, 22), local(2025, 4, 1), local(2026, 4, 1)},
+		{"year, before April in the calendar year", "last_year", local(2026, 2, 15), local(2024, 4, 1), local(2025, 4, 1)},
+		{"year, at the first instant of the fiscal year", "last_year", local(2026, 4, 1), local(2025, 4, 1), local(2026, 4, 1)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			selection := crmcontracts.ReportingSelection{Period: crmcontracts.ReportingSelectionPeriod(tc.period)}
+			interval, err := Interval(selection, april, tc.at)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !interval.StartAt.Equal(tc.start) || !interval.EndAt.Equal(tc.end) {
+				t.Fatalf("%s at %s = %s – %s, want %s – %s", tc.period, tc.at, interval.StartAt, interval.EndAt, tc.start, tc.end)
+			}
+			horizon, err := Horizon(selection, april, interval)
+			if err != nil || !horizon.StartAt.Equal(interval.StartAt) || !horizon.EndAt.Equal(interval.EndAt) {
+				t.Fatalf("a completed period's horizon = %+v (%v), want the interval itself", horizon, err)
+			}
+		})
+	}
+}

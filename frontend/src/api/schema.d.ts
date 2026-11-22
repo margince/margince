@@ -40869,7 +40869,7 @@ export interface components {
             industry?: components["schemas"]["ReportingIndustry"];
             country?: components["schemas"]["ReportingCountry"];
             /** @enum {string} */
-            period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter";
+            period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year";
             metrics?: components["schemas"]["ReportingMetricID"][];
             blocks?: components["schemas"]["ReportingBlockKind"][];
         };
@@ -49142,9 +49142,11 @@ export interface components {
              *     evaluation time. Read at that exact moment, the week holds no time
              *     yet and the context's interval starts where it ends. A month target
              *     beside it still counts the whole month up to the evaluation time.
+             *     `last_quarter` and `last_year` are the last completed fiscal quarter
+             *     and fiscal year, in the installation's fiscal calendar.
              * @enum {string}
              */
-            period: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+            period: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
             interval?: components["schemas"]["ReportingWindow"];
             /** @enum {string} */
             target_basis: "month" | "fiscal_quarter";
@@ -49242,7 +49244,7 @@ export interface components {
             saved_questions: number;
             /** @description Live reports with a card whose saved question filters on a period. */
             reports_with_kept_periods: number;
-            /** @description Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window. */
+            /** @description Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window. */
             reports_with_relative_periods: number;
         };
         ReportingCard: {
@@ -82354,7 +82356,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -82455,7 +82457,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -82503,7 +82505,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -101843,7 +101845,7 @@ export interface operations {
                 /** @description The team or owner named by `scope_kind`. */
                 scope_id?: string;
                 /** @description The period, in the installation's reporting zone. */
-                period?: "this_week" | "last_week" | "this_month" | "last_month";
+                period?: "this_week" | "last_week" | "this_month" | "last_month" | "last_quarter" | "last_year";
             };
             header?: never;
             path?: never;
