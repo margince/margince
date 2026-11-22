@@ -15,13 +15,13 @@ AI works with Margince in two ways. **Margince AI** is the AI inside the product
 | How we test it | Each feature, on the product's real prompts, many tries | Everyday jobs, done from start to end, several tries |
 
 ### Which AI model should I choose for Margince?
-For Margince AI, choose the model setup with the most features ready. Today that is **Google Gemini**, with 29 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
+For Margince AI, choose the model setup with the most features ready. Today that is **Google Gemini**, with 23 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
 Also called: which model should I use, best model, recommended model, which LLM, which provider, model tiers.
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 29 | 8 | 1 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 29 | 8 | 1 | 0 |
+| Google Gemini | global cloud | 23 | 12 | 3 | 0 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 23 | 12 | 3 | 0 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
 | Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
@@ -40,8 +40,8 @@ Also called: grade, rating, certified, how reliable is the AI.
 
 | Model setup | Not reliable yet |
 |---|---|
-| Google Gemini | Reply drafting |
-| Google Gemini in the EU, through Vertex AI | Reply drafting |
+| Google Gemini | Reply drafting<br>Natural-language search<br>Voice DNA build |
+| Google Gemini in the EU, through Vertex AI | Reply drafting<br>Natural-language search<br>Voice DNA build |
 | OpenAI GPT-6, through OpenRouter | Thread confidentiality check<br>First-time sender check<br>Meeting follow-up extraction |
 | Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Record summary<br>Tag suggestions<br>Meeting follow-up extraction |
 | Gemma 4 you could run yourself, through OpenRouter | First-time sender check<br>Signature enrichment<br>Unanswered-message triage<br>Checking whether the reply answered the request |

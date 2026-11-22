@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p9adcb36d98944e1e2cab6eba9dd21694",
+  "prompt_version": "pfa13f77dfd6efe44373039732afa1079",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 15,
@@ -16,35 +16,35 @@
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 98,
-  "judge_score_min": 96,
-  "latency_p50": 2370,
-  "latency_p95": 3427,
-  "mean_tokens": 627,
+  "judge_score_p50": 97,
+  "judge_score_min": 95,
+  "latency_p50": 2055,
+  "latency_p95": 3162,
+  "mean_tokens": 634,
   "mean_tokens_in": 591,
-  "mean_tokens_out": 35,
+  "mean_tokens_out": 43,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 574,
+  "est_cost_microusd": 604,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "wire_rule": "gemini-wire-4",
+  "wire_rule": "gemini-wire-5",
   "thinking_level": "low",
-  "ran_at": "2026-11-22T19:11:04Z",
+  "ran_at": "2026-11-22T22:48:12Z",
   "scenarios": [
     {
       "scenario": "a_one_contact_consultancy_is_still_a_company",
       "site": "triage",
-      "stamp": "99037ca954f1f6f25e0a308d795e2bfca2e58e96cc6ef3851a92216fb2a89c3c72231b0dc8f474ab501569faa4a89251155a8b5026943ebe61bc749d8d5ee0a9d4078266e636b1be10308f9d12fb1be8338d76bbaf3c2c6306aa795e00658c75",
+      "stamp": "99037ca954f1f6f25e0a308d795e2bfca2e58e96cc6ef3851a92216fb2a89c3c72231b0dc8f474ab501569faa4a89251155a8b5026943ebe61bc749d8d5ee0a97bdcbb082e69df4707af2d792d4edc5f6fd728d683966a792b55858696ff990b",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
         98,
-        98,
+        97,
         98
       ],
       "bands": {
@@ -60,14 +60,14 @@
     {
       "scenario": "a_mailbox_vendor_is_not_the_senders_employer",
       "site": "triage",
-      "stamp": "391283ba669b161902800353a71f4a116c15ca298f68cbae840d5b3b5cd397ef8181853a2fdf71f212fd1df3d561613f3c93a770244c2a728feffaea2fd90fd4426cd3d671323234e7384edad443b6cd35650675c8a64a82fd71db3cf59e53bd",
+      "stamp": "391283ba669b161902800353a71f4a116c15ca298f68cbae840d5b3b5cd397ef8181853a2fdf71f212fd1df3d561613f3c93a770244c2a728feffaea2fd90fd463fe0fdbbde88233e95bfabbc9b534c626d1c248b836ac8cf7b70b2d7f2c30ba",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
         97,
-        96,
+        95,
         97
       ],
       "bands": {
@@ -83,7 +83,7 @@
     {
       "scenario": "a_parked_domain_identifies_nobody",
       "site": "triage",
-      "stamp": "4c740e3e3508d75b0163b3fdd9d2397209c107d02f3658a4c84d3098770902d7ee694880c8c782587540a9aeed90895e3ddeb4b318e3fc8383a5cb463077e362a28a21c25987789674dace1e976eb4e0d711e01da6b83dc5a7e8bf5e9aea7b22",
+      "stamp": "4c740e3e3508d75b0163b3fdd9d2397209c107d02f3658a4c84d3098770902d7ee694880c8c782587540a9aeed90895e3ddeb4b318e3fc8383a5cb463077e36255542dbaaf63e90358416d5d8622e9584236d8f63627b0e6e54425396c50e5e9",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -91,7 +91,7 @@
       "judge_scores": [
         97,
         98,
-        98
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -106,13 +106,13 @@
     {
       "scenario": "a_personal_domain_is_not_a_company",
       "site": "triage",
-      "stamp": "899b89a99c1990b79c9c3725cb3bc0c50f05b9b06251c3d16c2853d2094a332118aa9ccad567d8f8438267949d178af2e8bce73983a235fd900e1ec59bfa9b703b16d2bce8ac48a869c1cb583d0d1215e9a57372c437cd169e3c6eb9c4f02f55",
+      "stamp": "899b89a99c1990b79c9c3725cb3bc0c50f05b9b06251c3d16c2853d2094a332118aa9ccad567d8f8438267949d178af2e8bce73983a235fd900e1ec59bfa9b70a3b4c8cf0638a3abdff652dbce4be05472e2c6c44a308317fe25f0bcf264d7eb",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        96,
+        97,
         96,
         96
       ],
@@ -129,7 +129,7 @@
     {
       "scenario": "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
       "site": "triage",
-      "stamp": "e73e2c1fd56bd0061691e9aa3710104807ce64e09f4deec74332354acdd6f75b24ac6430abaec93c346be8ae9072820a6e526fc05121e5552104b3611d82a51a08b301a2a547f1aef2de7f659a7df11905a76871b391e038474cc01b3e3b3118",
+      "stamp": "e73e2c1fd56bd0061691e9aa3710104807ce64e09f4deec74332354acdd6f75b24ac6430abaec93c346be8ae9072820a6e526fc05121e5552104b3611d82a51a25cc20386f35ae58651f666565019b1c524ccdcca64207e03f9c2e2ca7e776ff",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -137,7 +137,7 @@
       "judge_scores": [
         98,
         98,
-        98
+        97
       ],
       "bands": {
         "certified_min": 70,

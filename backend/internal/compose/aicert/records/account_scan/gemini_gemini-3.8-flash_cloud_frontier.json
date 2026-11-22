@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p0aa2b8625789bb9e0701826fcf308cf1",
+  "prompt_version": "pc0917ac4742e82440a26eba6b2a31719",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 18,
@@ -18,39 +18,40 @@
   "context_scopes": [
     "identity"
   ],
-  "judge_score_p50": 96,
+  "context_owed": 18,
+  "judge_score_p50": 95,
   "judge_score_min": 90,
-  "latency_p50": 2826,
-  "latency_p95": 4177,
-  "mean_tokens": 1921,
-  "mean_tokens_in": 1835,
-  "mean_tokens_out": 85,
+  "latency_p50": 4575,
+  "latency_p95": 12486,
+  "mean_tokens": 1920,
+  "mean_tokens_in": 1836,
+  "mean_tokens_out": 84,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 1695,
+  "est_cost_microusd": 1692,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "wire_rule": "gemini-wire-4",
+  "wire_rule": "gemini-wire-5",
   "thinking_level": "low",
-  "ran_at": "2026-11-22T17:53:50Z",
+  "ran_at": "2026-11-22T21:29:15Z",
   "scenarios": [
     {
       "scenario": "scan_reads_the_thread_past_an_answered_ask",
       "site": "company_scan",
-      "stamp": "f1f068d4bbf3b8db562bfa284017f85aa71ed5e64aa8154e97d516992e2732a0f38d4232f7af045b5f0e394cfce5ba385c6d9dd533a7a4330bbd57cd449eda5b183f6b1e8df9dc9bad3dd0332a6791e9cae8baa7fd6fcc40511985a7194191c7",
+      "stamp": "f1f068d4bbf3b8db562bfa284017f85aa71ed5e64aa8154e97d516992e2732a0f38d4232f7af045b5f0e394cfce5ba385c6d9dd533a7a4330bbd57cd449eda5b796f2117e3caf4442a534ce479d60ed5404866b3c91f320b75f89713a06dd8a8",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
       "passed": 6,
       "judge_scores": [
-        90,
-        95,
-        95,
         96,
         96,
-        93
+        96,
+        96,
+        95,
+        96
       ],
       "bands": {
         "certified_min": 70,
@@ -65,18 +66,18 @@
     {
       "scenario": "scan_finds_the_promise_we_did_not_keep",
       "site": "company_scan",
-      "stamp": "da80f10d083d0102f77c8fc54f297c1e9c8c088bb35663661e3da154a2093fd591c0ec6a2c02b9c51752b4ea6bae5e2b9450c23cfef19e05d2f290f14e7170ea791e9292a951350983d29f44fe4eedbe757c6cd1bbca8d716115b69833475387",
+      "stamp": "da80f10d083d0102f77c8fc54f297c1e9c8c088bb35663661e3da154a2093fd591c0ec6a2c02b9c51752b4ea6bae5e2b9450c23cfef19e05d2f290f14e7170ead852954dbb80a8dec461a9d859c172822933db8cf69c6fafdfb30fc5bc05ef1b",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
       "passed": 6,
       "judge_scores": [
+        95,
         90,
-        96,
-        96,
         93,
-        96,
-        96
+        95,
+        95,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -91,17 +92,17 @@
     {
       "scenario": "scan_finds_the_question_nobody_answered",
       "site": "company_scan",
-      "stamp": "02abd724d62c1287296db7f8dfa7aa23e9754cfe8e3c1d842c0f8beb83667670a57ad60e478c8e2d89b3faf53c019cb2b2dc26af9ea79553a878f91f20f71fdaf81d68af1acd08162c20db7519204a42205ef4509ad1066782a38371cdef5440",
+      "stamp": "02abd724d62c1287296db7f8dfa7aa23e9754cfe8e3c1d842c0f8beb83667670a57ad60e478c8e2d89b3faf53c019cb2b2dc26af9ea79553a878f91f20f71fda8a6c506c37f5ad937adfb4666b2849cd0e516102e9362656120647c8d9e89d2c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
       "passed": 6,
       "judge_scores": [
-        95,
         96,
         93,
         96,
         96,
+        95,
         96
       ],
       "bands": {
