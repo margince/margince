@@ -374,6 +374,9 @@ func (p *CapturePurger) sweepSeat(ctx context.Context, seat ids.UUID, windows ca
 	if outcome.Destroyed == 0 {
 		return outcome, nil
 	}
+	// Each destruction commits in its own transaction, so this row cannot join
+	// them. A failed write loses no evidence. Every destroyed message has its own
+	// erase audit row, and the kept counts are recomputed from current state.
 	if err := p.auditPersonalSweepReceipt(ctx, seat, outcome); err != nil {
 		return PurgeOutcome{}, fmt.Errorf("verdict: recording the personal sweep receipt: %w", err)
 	}

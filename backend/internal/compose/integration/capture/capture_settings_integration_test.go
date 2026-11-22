@@ -278,6 +278,17 @@ func TestTheOtherPassCapsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
 		if err != nil || tc.read(updated) != saved {
 			t.Errorf("%s: admin update returned %d (err %v), want %d", tc.name, tc.read(updated), err, saved)
 		}
+		var events int
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(context.Background(), `SELECT count(*) FROM event_outbox
+				 WHERE envelope->>'type' = 'capture_settings.updated' AND envelope::text LIKE '%' || $1 || '%'`,
+				tc.entry.Key()).Scan(&events)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if events != 1 {
+			t.Errorf("%s: saving the cap wrote %d capture_settings.updated events naming it, want 1", tc.name, events)
+		}
 		over := tc.mx + 1
 		var invalid settings.InvalidValue
 		if _, err := store.Update(admin, tc.patch(&over)); !errors.As(err, &invalid) || invalid.Setting != tc.entry.Key() {

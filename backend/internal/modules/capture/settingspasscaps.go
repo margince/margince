@@ -14,8 +14,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The defaults and the ceilings. A ceiling is five times the default, which
@@ -57,8 +60,17 @@ func definePassCap(key, env string, def, maxCap int, doc string) *config.Setting
 		Doc: doc,
 	}, config.Store{
 		RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
-		MachineryApplied: true,
+		MachineryApplied: true, Changed: emitSettingChanged(key),
 	})
+}
+
+// emitSettingChanged is the capture_settings.updated event for one key, in the
+// transaction of the write that changed it.
+func emitSettingChanged(key string) func(context.Context, pgx.Tx, ids.UUID) error {
+	return func(ctx context.Context, tx pgx.Tx, auditID ids.UUID) error {
+		return storekit.EmitEvent(ctx, tx, auditID, storekit.MustWorkspace(ctx),
+			crmcontracts.InternalEventCaptureSettingsUpdated{ChangedKeys: []string{key}})
+	}
 }
 
 // PassCaps reads the caps in force for the pass about to start.

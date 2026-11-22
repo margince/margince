@@ -338,7 +338,7 @@ func TestTheLabelRunSettlesNoMoreMessagesThanTheSavedCap(t *testing.T) {
 	for i := range 3 * classifyBatchSize {
 		seedUnlabeledEmail(t, e, fmt.Sprintf("Anfrage %d", i))
 	}
-	classifyCap := classifyBatchSize
+	classifyCap := 3
 	savePassCaps(t, e, capture.SettingsPatch{ClassifyPassCap: &classifyCap})
 	brain := &scriptedClassifyBrain{}
 
@@ -346,8 +346,8 @@ func TestTheLabelRunSettlesNoMoreMessagesThanTheSavedCap(t *testing.T) {
 		t.Fatalf("label run: %v", err)
 	}
 
-	if brain.calls != 1 {
-		t.Fatalf("a run under a saved cap of one batch made %d model calls, want 1", brain.calls)
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE capture_label IS NOT NULL`); n != classifyCap {
+		t.Fatalf("a run under a saved cap of %d labelled %d messages, want exactly %d", classifyCap, n, classifyCap)
 	}
 }
 
@@ -356,13 +356,13 @@ func TestTheOwedReplyRunJudgesNoMoreNewMailThanTheSavedCap(t *testing.T) {
 	for i := range 3 * owedBatchSize {
 		seedWaitingMail(t, e, fmt.Sprintf("Thread %d", i))
 	}
-	owedCap := owedBatchSize
+	owedCap := 3
 	savePassCaps(t, e, capture.SettingsPatch{OwedClassifyPassCap: &owedCap})
 	brain := &owedBrainStub{verdict: activities.OwedVerdictInformsUs, confidence: 0.95}
 
 	runOwedWorker(t, e, brain)
 
-	if len(brain.prompts) != 1 {
-		t.Fatalf("a run under a saved cap of one batch made %d model calls, want 1", len(brain.prompts))
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE owed_verdict IS NOT NULL`); n != owedCap {
+		t.Fatalf("a run under a saved cap of %d judged %d messages, want exactly %d", owedCap, n, owedCap)
 	}
 }

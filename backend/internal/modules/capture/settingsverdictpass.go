@@ -38,7 +38,7 @@ var ConfidentialityPassCap = config.DefineStored(config.Spec[int]{
 	Doc:     "Held mail threads one review pass may judge; the rest wait for the next pass.",
 }, config.Store{
 	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
-	MachineryApplied: true,
+	MachineryApplied: true, Changed: emitSettingChanged("capture.confidentiality_pass_cap"),
 })
 
 // PassCap is the cap in force for the pass about to start. It is read per pass

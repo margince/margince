@@ -181,13 +181,13 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 		}
 		maxVerdicts = passCap
 	}
-	if err := c.drain(ctx, maxVerdicts, "backlog", func() ([]owedCandidate, time.Time, error) {
-		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
+	if err := c.drain(ctx, maxVerdicts, "backlog", func(limit int) ([]owedCandidate, time.Time, error) {
+		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), limit, owedBodyLimit, owedPriorBodyLimit)
 	}); err != nil {
 		return err
 	}
-	return c.drain(ctx, owedRestaleCap, "re-judge", func() ([]owedCandidate, time.Time, error) {
-		return c.store.OwedRestale(ctx, owedverdict.Ruleset, owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
+	return c.drain(ctx, owedRestaleCap, "re-judge", func(limit int) ([]owedCandidate, time.Time, error) {
+		return c.store.OwedRestale(ctx, owedverdict.Ruleset, limit, owedBodyLimit, owedPriorBodyLimit)
 	})
 }
 
@@ -198,14 +198,14 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 // A message the models decline or stay unsure about is stamped and counts as
 // progress, so it is not read again under this prompt. sweepCalls still bounds
 // the calls, because a declined batch splits into one call per message.
-func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, next func() ([]owedCandidate, time.Time, error)) error {
+func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, next func(limit int) ([]owedCandidate, time.Time, error)) error {
 	judged := 0
 	calls := newSweepCalls(maxVerdicts, owedBatchSize)
 	for judged < maxVerdicts && calls.remain() {
 		// The instant this batch was READ, on the DATABASE's clock, which the
 		// write compares against so a slow call cannot overwrite a verdict
 		// reached while it was thinking.
-		batch, readAt, err := next()
+		batch, readAt, err := next(min(owedBatchSize, maxVerdicts-judged))
 		if err != nil {
 			return fmt.Errorf("owed classify: reading %s: %w", what, err)
 		}

@@ -120,7 +120,8 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 	calls := newSweepCalls(maxLabels, classifyBatchSize)
 	settled := 0
 	for settled < maxLabels && calls.remain() {
-		batch, err := c.store.UnlabeledCaptureMessages(ctx, capturelabel.Ruleset, classifyBatchSize, classifyBodyLimit)
+		batch, err := c.store.UnlabeledCaptureMessages(
+			ctx, capturelabel.Ruleset, min(classifyBatchSize, maxLabels-settled), classifyBodyLimit)
 		if err != nil {
 			return fmt.Errorf("classify: reading backlog: %w", err)
 		}
