@@ -23,6 +23,7 @@ import {
   type QuestionDraft,
   retarget,
 } from "./analytics.questions.draft";
+import { NO_MONEY } from "./analytics.questions.money";
 import {
   type AnalyticsEntity,
   analyticsFieldLabel,
@@ -36,7 +37,6 @@ import {
   fnLabel,
   fnsFor,
   type MeasureFn,
-  NO_MONEY,
   opLabel,
   QUESTION_OPS,
   type QuestionOp,

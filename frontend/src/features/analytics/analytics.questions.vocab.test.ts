@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { translate, translatePlural } from "../../i18n";
+import { measureReading } from "./analytics.questions.money";
 import {
   CUSTOM_DEALS,
   DEAL_MONEY,
@@ -17,7 +18,6 @@ import {
   explainGroup,
   fieldsForFn,
   fnsFor,
-  measureReading,
   refusalOf,
   valueControlOp,
   valueShape,

@@ -11,7 +11,8 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { AnswerTable, QuestionFailure } from "./analytics.questions.answer";
+import { AnswerTable } from "./analytics.questions.answer";
+import { QuestionFailure } from "./analytics.questions.failure";
 import {
   ANSWER,
   EMPTY_ANSWER,

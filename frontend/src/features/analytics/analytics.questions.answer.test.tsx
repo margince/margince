@@ -7,11 +7,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProblemError } from "../../lib/problem";
 import { meFixture } from "../../testing/mefixture";
-import {
-  AnswerTable,
-  type ExplainSource,
-  QuestionFailure,
-} from "./analytics.questions.answer";
+import { AnswerTable, type ExplainSource } from "./analytics.questions.answer";
+import { QuestionFailure } from "./analytics.questions.failure";
 import {
   ANSWER,
   EXPLANATION,

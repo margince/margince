@@ -29,7 +29,7 @@ import {
   scopeName,
   scopeQuery,
 } from "./analytics.context";
-import { AnswerTable, QuestionFailure } from "./analytics.questions.answer";
+import { AnswerTable } from "./analytics.questions.answer";
 import { QuestionBuilder } from "./analytics.questions.builder";
 import {
   draftFromQuery,
@@ -38,6 +38,13 @@ import {
   type QuestionDraft,
   toQuery,
 } from "./analytics.questions.draft";
+import { QuestionFailure } from "./analytics.questions.failure";
+import {
+  filterAmountCurrency,
+  type MoneyFields,
+  moneyFieldsOf,
+  NO_MONEY,
+} from "./analytics.questions.money";
 import { useValueNamer } from "./analytics.questions.names";
 import {
   SAVED_QUESTIONS_KEY,
@@ -50,11 +57,7 @@ import {
   type CustomLabels,
   customLabels,
   entityLabel,
-  filterAmountCurrency,
-  type MoneyFields,
   measureLabel,
-  moneyFieldsOf,
-  NO_MONEY,
   opLabel,
   takesValue,
 } from "./analytics.questions.vocab";

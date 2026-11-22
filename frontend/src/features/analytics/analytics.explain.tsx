@@ -26,7 +26,7 @@ import {
   isNativeMoneyField,
   type MoneyFields,
   moneyFieldsOf,
-} from "./analytics.questions.vocab";
+} from "./analytics.questions.money";
 import { useAnalyticsSchema } from "./analytics.schema";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE
