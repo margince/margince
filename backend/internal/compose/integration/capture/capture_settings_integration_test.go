@@ -258,15 +258,21 @@ func TestTheOtherPassCapsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
 		read    func(capturemod.Settings) int
 		patch   func(*int) capturemod.SettingsPatch
 	}{
-		{"verdict", capturemod.VerdictPassCap, capturemod.DefaultVerdictPassCap, capturemod.MaxVerdictPassCap,
+		{
+			"verdict", capturemod.VerdictPassCap, capturemod.DefaultVerdictPassCap, capturemod.MaxVerdictPassCap,
 			func(s capturemod.Settings) int { return s.VerdictPassCap },
-			func(v *int) capturemod.SettingsPatch { return capturemod.SettingsPatch{VerdictPassCap: v} }},
-		{"classify", capturemod.ClassifyPassCap, capturemod.DefaultClassifyPassCap, capturemod.MaxClassifyPassCap,
+			func(v *int) capturemod.SettingsPatch { return capturemod.SettingsPatch{VerdictPassCap: v} },
+		},
+		{
+			"classify", capturemod.ClassifyPassCap, capturemod.DefaultClassifyPassCap, capturemod.MaxClassifyPassCap,
 			func(s capturemod.Settings) int { return s.ClassifyPassCap },
-			func(v *int) capturemod.SettingsPatch { return capturemod.SettingsPatch{ClassifyPassCap: v} }},
-		{"owed", capturemod.OwedClassifyPassCap, capturemod.DefaultOwedClassifyPassCap, capturemod.MaxOwedClassifyPassCap,
+			func(v *int) capturemod.SettingsPatch { return capturemod.SettingsPatch{ClassifyPassCap: v} },
+		},
+		{
+			"owed", capturemod.OwedClassifyPassCap, capturemod.DefaultOwedClassifyPassCap, capturemod.MaxOwedClassifyPassCap,
 			func(s capturemod.Settings) int { return s.OwedClassifyPassCap },
-			func(v *int) capturemod.SettingsPatch { return capturemod.SettingsPatch{OwedClassifyPassCap: v} }},
+			func(v *int) capturemod.SettingsPatch { return capturemod.SettingsPatch{OwedClassifyPassCap: v} },
+		},
 	} {
 		if tc.read(got) != tc.def {
 			t.Errorf("%s: an untouched installation reads %d, want %d", tc.name, tc.read(got), tc.def)

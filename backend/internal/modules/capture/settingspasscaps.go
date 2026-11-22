@@ -57,7 +57,7 @@ var ClassifyPassCap = config.DefineStored(config.Spec[int]{
 	Default: config.Some(DefaultClassifyPassCap),
 	Min:     config.Some(1),
 	Max:     config.Some(MaxClassifyPassCap),
-	Doc:     "Captured messages one labeling run may settle; the rest wait for the next run.",
+	Doc:     "Captured messages one labeling run may handle; the rest wait for the next run.",
 }, config.Store{
 	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
 	MachineryApplied: true, Changed: emitSettingChanged("capture.classify_pass_cap"),

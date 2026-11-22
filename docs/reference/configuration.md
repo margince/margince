@@ -312,7 +312,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `capture.auto_enrich` | `MARGINCE_CAPTURE_AUTO_ENRICH` | — | `bool`, stored | `true` | api, worker | Read a new contact's company web page automatically. |
 | `capture.auto_enrich_daily_cap` | `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | — | `int`, `1` to `20000`, stored | `500` | api, worker | Automatic company web-page reads the installation may start in one UTC day. |
-| `capture.classify_pass_cap` | `MARGINCE_CAPTURE_CLASSIFY_PASS_CAP` | — | `int`, `1` to `2500`, stored | `500` | api, worker | Captured messages one labeling run may settle; the rest wait for the next run. |
+| `capture.classify_pass_cap` | `MARGINCE_CAPTURE_CLASSIFY_PASS_CAP` | — | `int`, `1` to `2500`, stored | `500` | api, worker | Captured messages one labeling run may handle; the rest wait for the next run. |
 | `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, `1` to `200`, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
 | `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
