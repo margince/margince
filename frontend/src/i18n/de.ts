@@ -8868,7 +8868,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
-  "tasks.remind.menu": "Erinnere mich",
+  "tasks.remind.menu": "Erinnerung",
   "tasks.remind.inAnHour": "In 1 Stunde",
   "tasks.remind.tomorrowMorning": "Morgen früh",
   "tasks.remind.beforeDue": "1 Stunde vor Fälligkeit",
@@ -8879,7 +8879,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.remind.removed": "Erinnerung entfernt.",
   "tasks.remind.failed":
     "Die Erinnerung wurde nicht gespeichert. Versuche es erneut.",
-  "tasks.remind.pickTitle": "Erinnere mich am",
+  "tasks.remind.pickTitle": "Erinnerung am",
   "tasks.remind.day": "Tag",
   "tasks.remind.time": "Uhrzeit",
   "tasks.remind.save": "Erinnerung setzen",

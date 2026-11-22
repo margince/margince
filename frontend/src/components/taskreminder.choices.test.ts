@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { FIXTURE_TIMEZONE } from "../testing/mefixture";
 import { reminderAtWallClock, reminderChoices } from "./taskreminder.choices";
 
-const ZONE = "Europe/Berlin";
+const ZONE = FIXTURE_TIMEZONE;
 // 14:00 in Berlin on 3 March 2026, winter time (UTC+1).
 const NOW = Date.parse("2026-03-03T13:00:00.000Z");
 

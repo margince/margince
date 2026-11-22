@@ -10,7 +10,7 @@ import { OverflowMenu } from "../../design-system/atoms";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
-import { meFixture } from "../../testing/mefixture";
+import { FIXTURE_TIMEZONE, meFixture } from "../../testing/mefixture";
 import { row } from "./worklist.fixtures";
 import { RowTaskReminder } from "./worklist.reminder";
 
@@ -59,7 +59,7 @@ function renderRowMenu(owner: { kind: "user"; id: string }) {
   client.setQueryData(["me"], meFixture({}));
   return render(
     <QueryClientProvider client={client}>
-      <ViewerZoneProvider zone="Europe/Berlin">
+      <ViewerZoneProvider zone={FIXTURE_TIMEZONE}>
         <LocaleProvider initial="en">
           <ToastProvider>
             <OverflowMenu label="Row actions">

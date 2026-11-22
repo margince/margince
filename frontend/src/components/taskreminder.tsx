@@ -12,19 +12,24 @@ import { useToast } from "../design-system/toast";
 import { calendarDay, dueDayBounds } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
 import { formatDue } from "../format/format";
+import { useNow } from "../format/now";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { useViewerZone } from "../lib/viewerzone";
 import { TaskTimeField } from "./followuptaskfields";
 import {
+  type ReminderChoice,
   type ReminderWrite,
   reminderAtWallClock,
+  reminderChoiceNow,
   reminderChoices,
 } from "./taskreminder.choices";
 import type { useTaskUpdate } from "./taskwrite";
 
 type Activity = components["schemas"]["Activity"];
+
+const MINUTE_MS = 60_000;
 
 /** The fields of a task its reminder lines read. */
 export type ReminderTask = Pick<
@@ -88,13 +93,18 @@ export function TaskReminderLines({
   const closeMenu = useCloseOverflowMenu();
   const remind = useReminderWrite(task, update);
   const [picking, setPicking] = useState(false);
-  const choices = reminderChoices(Date.now(), zone, {
-    at: task.due_at,
-    hasTime: task.due_has_time,
-  });
+  const due = { at: task.due_at, hasTime: task.due_has_time };
+  // The minute decides which choices stand; the press reads the clock again,
+  // so "In 1 hour" counts from the press and not from the last tick.
+  const choices = reminderChoices(useNow(MINUTE_MS), zone, due);
   const choose = (write: ReminderWrite | null) => {
     closeMenu();
     void remind(write);
+  };
+  const chooseNow = (key: ReminderChoice["key"]) => {
+    const fresh = reminderChoiceNow(key, zone, due);
+    if (fresh) choose(fresh.write);
+    else closeMenu();
   };
   return (
     <>
@@ -115,7 +125,7 @@ export function TaskReminderLines({
         <Button
           key={choice.key}
           disabled={update.isPending}
-          onClick={() => choose(choice.write)}
+          onClick={() => chooseNow(choice.key)}
         >
           {t(`tasks.remind.${choice.key}`)}
         </Button>
@@ -195,6 +205,7 @@ function ReminderTimeDialog({
   const t = useT();
   const zone = useViewerZone();
   const formId = useId();
+  const today = calendarDay(new Date(useNow(MINUTE_MS)), zone);
   const [day, setDay] = useState("");
   const [time, setTime] = useState("");
   const [fault, setFault] = useState<string | undefined>();
@@ -246,7 +257,7 @@ function ReminderTimeDialog({
               <DateInput
                 {...control}
                 value={isoOrBlank(day)}
-                min={calendarDay(new Date(), zone)}
+                min={today}
                 max={dueDayBounds(zone).max}
                 onChange={(event) => setDay(event.target.value)}
               />

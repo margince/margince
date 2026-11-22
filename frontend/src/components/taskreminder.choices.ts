@@ -65,3 +65,14 @@ export function reminderChoices(
   }
   return choices;
 }
+
+/** The quick choice `key` as it stands at the moment of the press, if still offered. */
+export function reminderChoiceNow(
+  key: ReminderChoice["key"],
+  zone: string,
+  due: Readonly<{ at?: string | null; hasTime?: boolean }>,
+): ReminderChoice | undefined {
+  return reminderChoices(Date.now(), zone, due).find(
+    (choice) => choice.key === key,
+  );
+}

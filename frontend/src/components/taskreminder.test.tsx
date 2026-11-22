@@ -9,11 +9,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { ViewerZoneProvider } from "../lib/viewerzone";
-import { meFixture } from "../testing/mefixture";
+import { FIXTURE_TIMEZONE, meFixture } from "../testing/mefixture";
 import { type ReminderTask, TaskRemindMenu } from "./taskreminder";
 import { useTaskUpdate } from "./taskwrite";
 
-const ZONE = "Europe/Berlin";
+const ZONE = FIXTURE_TIMEZONE;
 const TASK = "01a05500-0000-7000-8000-000000000b01";
 const ME = meFixture({}).user.id;
 const COLLEAGUE = "00000000-0000-4000-8000-0000000000c2";
