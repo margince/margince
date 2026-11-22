@@ -7,10 +7,11 @@ package integration
 
 // A running website read puts the pages it has committed on the AI activity
 // read, through the real writer (UpdateSiteReadProgress) and the real
-// projection. The crawl has no honest length, so the count never comes with a
+// projection. The crawl has no known length, so the count never comes with a
 // total and the rail's ring stays unmeasured.
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -58,7 +59,7 @@ func TestARunningWebsiteReadSurfacesItsPageCountWithoutATotal(t *testing.T) {
 		t.Fatal("a progress report dropped the read's lease, so a dead worker would render as live forever")
 	}
 
-	more := append(pages, contacts.SiteReadPage{URL: "https://acme.example/team", Kind: "team"})
+	more := append(slices.Clone(pages), contacts.SiteReadPage{URL: "https://acme.example/team", Kind: "team"})
 	if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, "crawling", more, siteReadLease); err != nil {
 		t.Fatalf("UpdateSiteReadProgress: %v", err)
 	}

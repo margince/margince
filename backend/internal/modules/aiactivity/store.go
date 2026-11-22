@@ -95,10 +95,9 @@ func NewStore(db *database.DB) *Store {
 // instant, a renewal delivered out of order carries an earlier one, and a
 // settled row carries none at all, and every one of those compares false.
 //
-// The other equal-tuple write is progress: the same attempt in the same state
-// reporting a higher processed count than the row holds. Redelivery and
-// out-of-order delivery carry an equal or lower count and compare false, and a
-// count never lowers while the attempt lives, so no ordering column is needed.
+// The other equal-tuple write is progress: the same attempt and state with a
+// higher processed count than the row holds. Redelivery and out-of-order
+// delivery carry an equal or lower count, so they compare false.
 //
 // Every column is written from EXCLUDED rather than merged: a reopened
 // occurrence must LOSE the previous attempt's finished_at, degrade_reason and

@@ -279,15 +279,13 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, companyID *ids.Company
 	return out, joined, nil
 }
 
-// UpdateSiteReadProgress records the worker's live position — the phase
-// and how many pages have committed — on a still-running dossier, so the
-// SPA's poll shows movement during the crawl and the model call instead
-// of a silent 'running'. Once a page has committed it also reports the count
-// to the AI-activity projection, under the same lease the claim announced:
-// a different one would move the instant the read stops being believed.
-// Best-effort by contract: a read that is no longer running is simply not
-// updated (the terminal write won), never an error. No auth.Require, same
-// rationale as BeginSiteRead.
+// UpdateSiteReadProgress records the phase and the committed page count on a
+// still-running dossier, so the SPA's poll shows movement during the crawl.
+// Once a page has committed it also reports the count to the AI-activity
+// projection under the lease the claim announced. A different lease would move
+// the instant the read stops being believed.
+// A read that is no longer running is not updated, and that is not an error:
+// the terminal write won. No auth.Require, same rationale as BeginSiteRead.
 func (s *Store) UpdateSiteReadProgress(ctx context.Context, readID ids.UUID, phase string, pages []SiteReadPage, lease time.Duration) error {
 	if phase != "crawling" && phase != "extracting" {
 		return fmt.Errorf("contacts: %q is not a site-read phase (crawling|extracting)", phase)

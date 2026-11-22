@@ -310,9 +310,8 @@ func logSiteReadActivity(ctx context.Context, tx pgx.Tx, sr SiteRead, lease time
 }
 
 // logSiteReadProgress announces how many pages a running read has committed.
-// No total goes with it: the crawl's queue grows as links are found and the
-// page cap is a ceiling the read often stops short of, so neither is a length
-// the rail could draw an arc against.
+// No total goes with it. The crawl's queue grows as links are found.
+// The page cap is a ceiling the read often stops short of, so neither is a length.
 func logSiteReadProgress(ctx context.Context, tx pgx.Tx, sr SiteRead, lease time.Duration) error {
 	payload, err := siteReadActivityPayload(ctx, tx, sr, lease)
 	if err != nil {

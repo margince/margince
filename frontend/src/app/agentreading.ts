@@ -3,8 +3,8 @@ import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { AgentEdgeRegister } from "./agent-edge-signal";
 import type { AgentFault } from "./agent-fault";
-import type { AiActivityItem, Signals } from "./agentrail-reads";
 import { RUNNING } from "./agentrail-copy";
+import type { AiActivityItem, Signals } from "./agentrail-reads";
 import type { RailWords } from "./agentrail-resting";
 import type { AiActivity } from "./ai-activity";
 import { laneFor } from "./ai-activity-orb";
@@ -122,9 +122,9 @@ export function derive(
 /**
  * How far the run the orb is about has got, as the share the ring fills.
  *
- * Only a running occurrence that reported BOTH counts is measured. With
- * `processed` alone, or neither, the answer is `undefined` and no ring is drawn:
- * a percentage derived from elapsed time would be the surface inventing the one
+ * Only a running occurrence that reported both counts is measured. With
+ * `processed` alone, or neither, the answer is `undefined` and no ring is drawn.
+ * A percentage derived from elapsed time would be the surface inventing the one
  * figure a reader trusts most. The share is clamped, because a source may count
  * past a total it estimated.
  */
