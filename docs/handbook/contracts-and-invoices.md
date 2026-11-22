@@ -152,7 +152,8 @@ missing while the company is a target, prospect or opportunity: an account
 nobody has ever invoiced has no money to report.
 
 You need finance read access to see the tab. It shows only on a company that
-you or your team own, or that someone shared with you. An invoice can carry
+you own or that someone shared with you, not on one a teammate owns. An admin
+who reads every record sees it on every company. An invoice can carry
 what a person is paid, so reading the company is not enough. The same rule decides who sees an
 invoice or payment on Home, in the Worklist and in a merge review.
 

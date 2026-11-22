@@ -156,29 +156,6 @@ func TestDoneForYouHidesASuggestionWhoseEvidenceTheReaderCannotRead(t *testing.T
 	}
 }
 
-// Customer payments reads a ledger only on a company the reader owns. A
-// finance reader on the owner's team, with an own row scope, works on the
-// company but sees no invoice or payment line. The owner does.
-func TestDoneForYouHidesTheLedgerOfACompanyTheReaderDoesNotOwn(t *testing.T) {
-	f := newPlacedFixture(t)
-	f.syncLedger(t)
-	own := withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})
-	own.RowScope = principal.RowScopeOwn
-	owner, _ := placedLines(f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, own), t, f.e)
-	if owner["magic.action.create_invoice"] != f.company {
-		t.Fatalf("the owner is not shown the invoice, so the case proves nothing: %v", owner)
-	}
-	home, worklist := placedLines(f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, own), t, f.e)
-	for _, key := range []string{"magic.action.create_invoice", "magic.action.create_payment"} {
-		if _, shown := home[key]; shown {
-			t.Errorf("Home shows %s on a company the reader does not own", key)
-		}
-		if _, shown := worklist[key]; shown {
-			t.Errorf("the Worklist shows %s on a company the reader does not own", key)
-		}
-	}
-}
-
 // ledgerReads are the reads of one company's invoices and payments, each
 // answering whether it showed the reader anything of the fixture's ledger.
 func (f placedFixture) ledgerReads(t *testing.T) map[string]func(ctx context.Context) bool {
@@ -227,7 +204,7 @@ func (f placedFixture) ledgerReads(t *testing.T) map[string]func(ctx context.Con
 			return shown(t, err)
 		},
 		// The attention feed's handled lane reads the Worklist's reader.
-		"Home and the Worklist": func(ctx context.Context) bool {
+		homeLedger: func(ctx context.Context) bool {
 			home, worklist := placedLines(ctx, t, f.e)
 			_, onHome := home["magic.action.create_invoice"]
 			_, onWorklist := worklist["magic.action.create_invoice"]
@@ -236,24 +213,38 @@ func (f placedFixture) ledgerReads(t *testing.T) map[string]func(ctx context.Con
 	}
 }
 
+// homeLedger names the read that shows only records the reader works on. An
+// admin reads every ledger but works on none of these records.
+const homeLedger = "Home and the Worklist"
+
 // An invoice can carry what a person is paid. A seat with the finance and
-// company grants may read the company without owning it. It is shown none of
-// the company's ledger anywhere, and the owner is shown all of it.
+// company grants reads a company's ledger only in three cases. It owns the
+// company, holds a record grant on it, or has every row in scope. A teammate of the owner and a seat
+// on another team read none of it, through any read; each is refused with 404.
 func TestOnlyTheOwnerReadsACompanysLedger(t *testing.T) {
 	f := newPlacedFixture(t)
 	f.syncLedger(t)
 	perms := withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})
-	owner := f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, perms)
 	stranger := f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, perms)
 	if _, err := f.e.Contacts.GetCompany(stranger, companyIDOf(f.company), storekit.LiveOnly); err != nil {
 		t.Fatalf("the non-owner cannot read the company at all, so the case proves nothing: %v", err)
 	}
-	for name, read := range f.ledgerReads(t) {
-		if !read(owner) {
-			t.Errorf("the owner is not shown %s", name)
-		}
-		if read(stranger) {
-			t.Errorf("a non-owner is shown %s", name)
+	reads := f.ledgerReads(t)
+	check := func(name string, ctx context.Context, sees bool) {
+		t.Helper()
+		for read, shows := range reads {
+			if name == "an admin" && read == homeLedger {
+				continue
+			}
+			if got := shows(ctx); got != sees {
+				t.Errorf("%s is shown %s: %v, want %v", name, read, got, sees)
+			}
 		}
 	}
+	check("the owner", f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, perms), true)
+	check("a teammate of the owner", f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, perms), false)
+	check("a seat on another team", stranger, false)
+	check("an admin", f.e.As(f.e.AdminUser, nil, withPlacedGrants(AdminPerms, principal.ObjectGrant{Read: true})), true)
+	f.e.ShareForWriting(t, "company", f.company, "user", f.e.Rep3)
+	check("a seat the company is shared with", stranger, true)
 }

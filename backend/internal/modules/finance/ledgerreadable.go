@@ -16,12 +16,13 @@ import (
 
 // LedgerVisibleClause is the predicate over a company alias for the companies
 // whose ledger the caller may read. An invoice can carry what a person is paid,
-// so the owner scope joins the read scope. A seat that may read the company
-// but does not own it reads no invoice or payment on it. Empty means unbounded.
+// so reading the company is not enough. The caller must own it, hold a record
+// grant on it, or read every row; a teammate of the owner reads no ledger.
+// Empty means unbounded.
 func LedgerVisibleClause(ctx context.Context, companyAlias string, arg func(any) int) (string, error) {
 	var clauses []string
 	for _, scope := range []func(context.Context, string, string, func(any) int) (string, error){
-		auth.ScopeClauseFor, auth.OwnerScopeClauseFor,
+		auth.ScopeClauseFor, auth.OwnedOrSharedClause,
 	} {
 		clause, err := scope(ctx, "company", companyAlias, arg)
 		if err != nil {
