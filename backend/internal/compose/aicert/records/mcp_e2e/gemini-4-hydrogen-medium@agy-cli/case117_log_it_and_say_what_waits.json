@@ -11,13 +11,80 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "90e30eab57051acd",
+    "tools": "c97d995627915544",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:27:02Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:31:59Z"
+  },
   "usage": {
-    "input_tokens": 50918,
-    "output_tokens": 27047,
+    "input_tokens": 49857,
+    "output_tokens": 17719,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 185204,
+    "cache_read_input_tokens": 137107,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_activities",
+        "find_records",
+        "log_activity",
+        "read_context",
+        "read_my_working_hours",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_activities",
+        "find_records",
+        "log_activity",
+        "read_context",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "turns": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 93482,
+      "min": 86967,
+      "max": 99997
+    },
+    "output_tokens": {
+      "median": 8859.5,
+      "min": 8718,
+      "max": 9001
+    }
   }
 }

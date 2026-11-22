@@ -11,13 +11,81 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "842d5644ddf2900b",
+    "tools": "b7d80230b27a9e8f",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:28:29Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:31:59Z"
+  },
   "usage": {
-    "input_tokens": 43826,
-    "output_tokens": 9143,
+    "input_tokens": 45230,
+    "output_tokens": 6741,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 85456,
+    "cache_read_input_tokens": 89247,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_field_history",
+        "read_attention",
+        "read_context",
+        "read_details",
+        "read_project",
+        "read_project_360",
+        "review_commitments",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_context",
+        "read_project",
+        "read_project_360",
+        "search_context",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "turns": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 67238.5,
+      "min": 64757,
+      "max": 69720
+    },
+    "output_tokens": {
+      "median": 3370.5,
+      "min": 3369,
+      "max": 3372
+    }
   }
 }

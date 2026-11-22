@@ -11,13 +11,84 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "aba6fbb15fbb54f7",
+    "tools": "1e9833108e9e886b",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T19:37:21Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:30Z"
+  },
   "usage": {
-    "input_tokens": 70855,
-    "output_tokens": 12319,
+    "input_tokens": 83728,
+    "output_tokens": 11341,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 286886,
+    "cache_read_input_tokens": 289728,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_attention",
+        "create_signal",
+        "describe_record_fields",
+        "describe_router_actions",
+        "find_records",
+        "get_lead_signal_catalog",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_attention",
+        "create_signal",
+        "describe_record_fields",
+        "describe_router_actions",
+        "find_records",
+        "get_lead_signal_catalog",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "turns": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 186728,
+      "min": 182720,
+      "max": 190736
+    },
+    "output_tokens": {
+      "median": 5670.5,
+      "min": 5438,
+      "max": 5903
+    }
   }
 }

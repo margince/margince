@@ -12,13 +12,72 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "c444ba642fed198b",
+    "tools": "b1ff58b347f273dc",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:57:29Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:32:53Z"
+  },
   "usage": {
-    "input_tokens": 44141,
-    "output_tokens": 7338,
+    "input_tokens": 49122,
+    "output_tokens": 7609,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 101538,
+    "cache_read_input_tokens": 118957,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_import_format",
+        "preview_import",
+        "read_import",
+        "read_import_report"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_import_format",
+        "preview_import",
+        "read_import",
+        "read_import_report"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "turns": {
+      "median": 6.5,
+      "min": 6,
+      "max": 7
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 84039.5,
+      "min": 65326,
+      "max": 102753
+    },
+    "output_tokens": {
+      "median": 3804.5,
+      "min": 3753,
+      "max": 3856
+    }
   }
 }
