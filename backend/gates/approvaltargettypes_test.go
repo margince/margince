@@ -36,20 +36,38 @@ var stagerTypes = map[string]bool{"StageInput": true, "StageInfo": true, "StageR
 
 // stagerCensusFloor sits just under the 16 distinct types the scan resolves. A
 // scan that resolves fewer has stopped reading the tree.
-const stagerCensusFloor = 2
+const stagerCensusFloor = 12
 
-// stagedTypeValues reads every TargetType and CoTargetType set in a stager
-// literal: a string literal, a constant of the same package, or string(constant).
-// It also reads a constant named like a target type when it is passed to a
-// call that stages, such as stageRateProposal. The literal there holds a
-// parameter. Values held in a variable are counted apart.
+// stringScan says where a vocabulary is written: the struct literals that carry
+// it under a key, and the calls that take it as an argument.
+type stringScan struct {
+	literals map[string]bool
+	keys     map[string]bool
+	// calls maps a callee name to the position of the argument that holds the value.
+	calls map[string]int
+	// stageCalls also reads a target type constant passed to any call that stages.
+	stageCalls bool
+}
+
+var stagerScan = stringScan{literals: stagerTypes, keys: map[string]bool{"TargetType": true, "CoTargetType": true}, stageCalls: true}
+
+// stagedTypeValues reads every TargetType and CoTargetType set in a stager.
 func stagedTypeValues(t *testing.T) (resolved map[string]string, unresolved int) {
+	t.Helper()
+	return scanStrings(t, stagerScan)
+}
+
+// scanStrings reads the values a scan's literals and calls hold: a string
+// literal, a constant of the same package, or string(constant). A value held in
+// a variable is counted apart.
+func scanStrings(t *testing.T, scan stringScan) (resolved map[string]string, unresolved int) {
 	t.Helper()
 	byDir := map[string]map[string]map[string]bool{}
 	global := map[string]map[string]bool{}
 	type source struct {
-		file *ast.File
-		path string
+		file    *ast.File
+		path    string
+		imports map[string]bool
 	}
 	var sources []source
 	err := gatekit.WalkDir("internal", func(p string, d fs.DirEntry, err error) error {
@@ -67,7 +85,7 @@ func stagedTypeValues(t *testing.T) (resolved map[string]string, unresolved int)
 		}
 		recordStringConsts(byDir[dir], file)
 		recordStringConsts(global, file)
-		sources = append(sources, source{file, p})
+		sources = append(sources, source{file, p, scanImportNames(file)})
 		return nil
 	})
 	if err != nil {
@@ -78,13 +96,24 @@ func stagedTypeValues(t *testing.T) (resolved map[string]string, unresolved int)
 		dir := path.Dir(src.path)
 		ast.Inspect(src.file, func(n ast.Node) bool {
 			if call, ok := n.(*ast.CallExpr); ok {
-				for _, value := range stagedCallArguments(call, byDir[dir]) {
-					resolved[value] = src.path
+				if scan.stageCalls {
+					for _, value := range stagedCallArguments(call, byDir[dir]) {
+						resolved[value] = src.path
+					}
+				}
+				if at, ok := scan.calls[stagerLiteralTypeName(call.Fun)]; ok && at < len(call.Args) {
+					values := resolveStringValue(call.Args[at], byDir[dir], global, src.imports)
+					if len(values) == 0 {
+						unresolved++
+					}
+					for _, value := range values {
+						resolved[value] = src.path
+					}
 				}
 				return true
 			}
 			lit, ok := n.(*ast.CompositeLit)
-			if !ok || !stagerTypes[stagerLiteralTypeName(lit.Type)] {
+			if !ok || !scan.literals[stagerLiteralTypeName(lit.Type)] {
 				return true
 			}
 			for _, elt := range lit.Elts {
@@ -93,10 +122,10 @@ func stagedTypeValues(t *testing.T) (resolved map[string]string, unresolved int)
 					continue
 				}
 				key, _ := kv.Key.(*ast.Ident)
-				if key == nil || (key.Name != "TargetType" && key.Name != "CoTargetType") {
+				if key == nil || !scan.keys[key.Name] {
 					continue
 				}
-				values := resolveStringValue(kv.Value, byDir[dir], global)
+				values := resolveStringValue(kv.Value, byDir[dir], global, src.imports)
 				if len(values) == 0 {
 					unresolved++
 				}
@@ -173,9 +202,22 @@ func recordStringConsts(out map[string]map[string]bool, file *ast.File) {
 	}
 }
 
+// scanImportNames are the package names a file can qualify an identifier with.
+func scanImportNames(file *ast.File) map[string]bool {
+	names := map[string]bool{}
+	for _, spec := range file.Imports {
+		if spec.Name != nil {
+			names[spec.Name.Name] = true
+			continue
+		}
+		names[path.Base(strings.Trim(spec.Path.Value, `"`))] = true
+	}
+	return names
+}
+
 // resolveStringValue reads an Ident from its own package. It reads a selector
 // from the constant of that name, only when one package declares it.
-func resolveStringValue(expr ast.Expr, local, global map[string]map[string]bool) []string {
+func resolveStringValue(expr ast.Expr, local, global map[string]map[string]bool, imports map[string]bool) []string {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		if value, ok := gatekit.StringExpr(e, nil, gatekit.FoldStrict); ok {
@@ -184,7 +226,7 @@ func resolveStringValue(expr ast.Expr, local, global map[string]map[string]bool)
 	case *ast.Ident:
 		return slices.Sorted(maps.Keys(local[e.Name]))
 	case *ast.SelectorExpr:
-		if _, qualified := e.X.(*ast.Ident); !qualified {
+		if pkg, qualified := e.X.(*ast.Ident); !qualified || !imports[pkg.Name] {
 			return nil
 		}
 		if values := global[e.Sel.Name]; len(values) == 1 {
@@ -192,7 +234,7 @@ func resolveStringValue(expr ast.Expr, local, global map[string]map[string]bool)
 		}
 	case *ast.CallExpr:
 		if fn, ok := e.Fun.(*ast.Ident); ok && fn.Name == "string" && len(e.Args) == 1 {
-			return resolveStringValue(e.Args[0], local, global)
+			return resolveStringValue(e.Args[0], local, global, imports)
 		}
 	}
 	return nil
@@ -272,4 +314,74 @@ func TestAFreeTextDiscriminatorHasNoVocabularyCheck(t *testing.T) {
 		}
 	}
 	freeTextDiscriminators.AssertAllMatched(t)
+}
+
+// noticeTargetScan is where a notice's target type is written: the Target
+// literal every notice carries.
+var noticeTargetScan = stringScan{literals: map[string]bool{"Target": true}, keys: map[string]bool{"Type": true}}
+
+// factSourceScan is where a metric names its source: the fact literal, and the
+// readers every metric reads its rows through, which take the source fifth.
+var factSourceScan = stringScan{
+	literals: map[string]bool{"Fact": true},
+	keys:     map[string]bool{"SourceType": true},
+	calls:    map[string]int{"readGroupedFacts": 4, "readGroupedFactsVia": 4, "readOutcomeFacts": 4, "scanOutcomeFacts": 4, "readColleagueWork": 4},
+}
+
+const (
+	noticeOwnTargetTypes  = "internal/modules/notices.OwnTargetType"
+	reportingSourceTypes  = "internal/modules/reporting.SourceType"
+	noticeCensusFloor     = 4
+	factSourceCensusFloor = 5
+	noticeTargetColumn    = "notice.target_type"
+)
+
+// A notice points at anything an approval can name, or at one of the three things
+// only a notice has. The CHECK is held to that union, so neither list is typed a
+// second time and a value dropped from either fails here.
+func TestNoticeTargetTypeIsTheApprovalListAndTheNoticeOwn(t *testing.T) {
+	t.Parallel()
+	vocabularies, typed := vocabularyCensusInputs(t)
+	want := asSet(append(slices.Clone(typed[approvalTargetTypes]), typed[noticeOwnTargetTypes]...))
+	if len(typed[approvalTargetTypes]) == 0 || len(typed[noticeOwnTargetTypes]) == 0 {
+		t.Fatalf("a source list is empty (%d approval, %d notice own): the derivation broke",
+			len(typed[approvalTargetTypes]), len(typed[noticeOwnTargetTypes]))
+	}
+	got, ok := vocabularies[noticeTargetColumn]
+	if !ok {
+		t.Fatalf("no CHECK vocabulary found for %s", noticeTargetColumn)
+	}
+	if setKey(asSet(got)) != setKey(want) {
+		t.Errorf("%s: the CHECK admits %v but approvals.TargetType plus notices.OwnTargetType hold %v. Change both together",
+			noticeTargetColumn, got, want)
+	}
+	resolved, _ := scanStrings(t, noticeTargetScan)
+	if len(resolved) < noticeCensusFloor {
+		t.Fatalf("the scan resolved %d distinct notice target types, floor %d: it has stopped reading the tree",
+			len(resolved), noticeCensusFloor)
+	}
+	for value, file := range resolved {
+		if !slices.Contains(want, value) && !extensionTable.MatchString(value) {
+			t.Errorf("%s writes notice target type %q, which the CHECK refuses", file, value)
+		}
+	}
+}
+
+func TestEveryMetricSourceNamesAReportingSourceType(t *testing.T) {
+	t.Parallel()
+	_, typed := vocabularyCensusInputs(t)
+	declared := typed[reportingSourceTypes]
+	if len(declared) == 0 {
+		t.Fatalf("no %s constants found: the derivation broke", reportingSourceTypes)
+	}
+	resolved, _ := scanStrings(t, factSourceScan)
+	if len(resolved) < factSourceCensusFloor {
+		t.Fatalf("the scan resolved %d distinct metric sources, floor %d: it has stopped reading the tree",
+			len(resolved), factSourceCensusFloor)
+	}
+	for value, file := range resolved {
+		if !slices.Contains(declared, value) {
+			t.Errorf("%s names metric source %q, which reporting.SourceType does not hold", file, value)
+		}
+	}
 }

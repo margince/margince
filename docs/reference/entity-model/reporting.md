@@ -137,13 +137,17 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 | `metric` | `text` | yes |  |
 | `owner_id` | `uuid` |  |  |
 | `source_id` | `uuid` | yes |  |
-| `source_type` | `text` | yes |  |
+| `source_type` | `text` | yes | One of `deal`, `activity`, `lead`, `company`, `sdr_handoff`, `intro_request` and 1 more. |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `edition_id` | `report_edition` | deleting the parent deletes this row |
+
+**Rules**
+
+- `report_edition_contribution_source_type_check`: `CHECK ((source_type = ANY (ARRAY['deal', 'activity', 'lead', 'company', 'sdr_handoff', 'intro_request', 'forecast_projection'])))`
 
 **Indexes**
 

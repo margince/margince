@@ -17,6 +17,9 @@ func writeEditionContributions(ctx context.Context, tx pgx.Tx, edition openapi_t
 		var b bindings
 		tuples := []string{}
 		for _, fact := range facts[start:min(start+250, len(facts))] {
+			if err := requireKnownSourceType(fact.SourceType); err != nil {
+				return err
+			}
 			raw, err := encode(fact)
 			if err != nil {
 				return err

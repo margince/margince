@@ -8,9 +8,36 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
+// OwnTargetType is a notice target type that an approval cannot name. The notice
+// points at a pending decision, a correction run, or retained content a privacy
+// review asks someone to check. A notice may also point at anything an approval
+// can, so the schema CHECK on notice.target_type is held equal to this set plus
+// approvals.TargetType.
+//
+// Held by: TestNoticeTargetTypeIsTheApprovalListAndTheNoticeOwn (backend/gates/approvaltargettypes_test.go)
+type OwnTargetType string
+
+const (
+	OwnTargetApproval               OwnTargetType = "approval"
+	OwnTargetDataTask               OwnTargetType = "data_task"
+	OwnTargetRetainedEmailSignature OwnTargetType = "retained_email_signature"
+	OwnTargetEmailSignature         OwnTargetType = "email_signature"
+	OwnTargetSignatureTemplate      OwnTargetType = "signature_template"
+	OwnTargetLegalEntity            OwnTargetType = "legal_entity"
+	OwnTargetKnowledgeDocument      OwnTargetType = "knowledge_document"
+	OwnTargetApprovalHistory        OwnTargetType = "approval_history"
+)
+
+// TargetApproval is the target type of a notice that opens a pending decision.
+const TargetApproval = string(OwnTargetApproval)
+
+// TargetDataTask is the target type of a notice about one background
+// correction run; a client opens System health on it.
+const TargetDataTask = string(OwnTargetDataTask)
+
 // TargetRetainedEmailSignature is the target type of a notice about a departed
 // member's signature. The frontend routes this value to the review screen.
-const TargetRetainedEmailSignature = "retained_email_signature"
+const TargetRetainedEmailSignature = string(OwnTargetRetainedEmailSignature)
 
 // Target is the record a notice is about, when it is about one.
 //
