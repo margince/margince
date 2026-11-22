@@ -237,7 +237,10 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 			func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 			func(tx pgx.Tx, page []crmcontracts.Deal) error {
 				if in.FactsOnly {
-					return maskDeals(ctx, tx, page)
+					if err := maskDeals(ctx, tx, page); err != nil {
+						return err
+					}
+					return s.stampWinChances(ctx, tx, page)
 				}
 				if err := finishDealPage(ctx, tx, page); err != nil {
 					return err
@@ -271,7 +274,10 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 		func(tx pgx.Tx, page []crmcontracts.Deal) error {
 			if in.FactsOnly {
-				return maskDeals(ctx, tx, page)
+				if err := maskDeals(ctx, tx, page); err != nil {
+					return err
+				}
+				return s.stampWinChances(ctx, tx, page)
 			}
 			if err := finishDealPage(ctx, tx, page); err != nil {
 				return err
@@ -306,6 +312,7 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 			return nil, nil, err
 		}
 	}
+	s.bindMembershipChance(ctx, tx, &in)
 	where, err := appendDealFilters(ctx, pre.Where(), in, pre.Arg)
 	if err != nil {
 		return nil, nil, err

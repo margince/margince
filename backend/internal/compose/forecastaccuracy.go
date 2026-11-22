@@ -46,20 +46,20 @@ var forecastSettledChancesSQL = `
 // with two freezes. One is the last freeze at least $3 days before the quarter
 // ended. The other is the first freeze after it ended.
 // freeze after it ended. Columns: period_start, period_end, currency, said,
-// said_on, landed.
+// said_on, landed, said snapshot, landed snapshot.
 const forecastLandingsSQL = `
-	SELECT p.period_start, p.period_end, p.base_currency, early.said, early.local_day, late.won_minor
+	SELECT p.period_start, p.period_end, p.base_currency, early.said, early.local_day, late.won_minor, early.id, late.id
 	  FROM (SELECT DISTINCT period_start, period_end, base_currency FROM forecast_snapshot
 	         WHERE scope_kind = $1 AND pipeline_id IS NULL
 	           AND period_end < $2::date AND period_end - period_start >= $4) p
 	  CROSS JOIN LATERAL (
-		SELECT f.won_minor + f.weighted_minor AS said, f.local_day FROM forecast_snapshot f
+		SELECT f.id, f.won_minor + f.weighted_minor AS said, f.local_day FROM forecast_snapshot f
 		 WHERE f.scope_kind = $1 AND f.pipeline_id IS NULL
 		   AND f.period_start = p.period_start AND f.period_end = p.period_end AND f.base_currency = p.base_currency
 		   AND f.local_day <= p.period_end - $3::int
 		 ORDER BY f.taken_at DESC, f.id DESC LIMIT 1) early
 	  CROSS JOIN LATERAL (
-		SELECT f.won_minor FROM forecast_snapshot f
+		SELECT f.id, f.won_minor FROM forecast_snapshot f
 		 WHERE f.scope_kind = $1 AND f.pipeline_id IS NULL
 		   AND f.period_start = p.period_start AND f.period_end = p.period_end AND f.base_currency = p.base_currency
 		   AND f.local_day > p.period_end
@@ -71,16 +71,20 @@ const forecastLandingsSQL = `
 // as of `at`.
 func forecastAccuracy(ctx context.Context, tx pgx.Tx, at time.Time) (forecasting.Accuracy, error) {
 	system := principal.SystemActing(ctx, forecastChanceActor)
+	zone, err := installationZoneTx(ctx, tx)
+	if err != nil {
+		return forecasting.Accuracy{}, err
+	}
 	settled, owners, err := forecastSettledChances(system, tx, at)
 	if err != nil {
 		return forecasting.Accuracy{}, err
 	}
 	calibration := forecasting.BinAccuracy(settled, ForecastEvaluationCohortFloor)
-	if err := requireNoLoneColleague(ctx, tx, owners); err != nil {
+	landings, landingOwners, err := forecastLandings(system, tx, forecasting.Period{Zone: zone}.LocalDay(at))
+	if err != nil {
 		return forecasting.Accuracy{}, err
 	}
-	landings, err := forecastLandings(system, tx, at)
-	if err != nil {
+	if err := requireNoLoneColleague(ctx, tx, append(owners, landingOwners...)); err != nil {
 		return forecasting.Accuracy{}, err
 	}
 	return forecasting.Accuracy{Calibration: calibration, Landings: landings}, nil
@@ -120,23 +124,50 @@ func forecastSettledChances(ctx context.Context, tx pgx.Tx, at time.Time) ([]for
 	return settled, groups, nil
 }
 
-func forecastLandings(ctx context.Context, tx pgx.Tx, at time.Time) ([]forecasting.AccuracyLanding, error) {
-	rows, err := tx.Query(ctx, forecastLandingsSQL, forecasting.ScopeWorkspace, at, accuracyLandingLeadDays,
+// forecastLandings answers the finished quarters before `today`, a local day,
+// and per landing the owners whose deals make up its two freezes.
+func forecastLandings(ctx context.Context, tx pgx.Tx, today time.Time) ([]forecasting.AccuracyLanding, [][]ids.UUID, error) {
+	rows, err := tx.Query(ctx, forecastLandingsSQL, forecasting.ScopeWorkspace, today.Format(time.DateOnly), accuracyLandingLeadDays,
 		accuracyQuarterMinDays, accuracyLandingQuarters)
 	if err != nil {
-		return nil, fmt.Errorf("compose: reading the forecast landings: %w", err)
+		return nil, nil, fmt.Errorf("compose: reading the forecast landings: %w", err)
 	}
 	defer rows.Close()
 	landings := []forecasting.AccuracyLanding{}
+	var snapshots [][2]ids.UUID
 	for rows.Next() {
 		var l forecasting.AccuracyLanding
-		if err := rows.Scan(&l.PeriodStart, &l.PeriodEnd, &l.Currency, &l.SaidMinor, &l.SaidOn, &l.LandedMinor); err != nil {
-			return nil, fmt.Errorf("compose: reading a forecast landing: %w", err)
+		var said, landed ids.UUID
+		if err := rows.Scan(&l.PeriodStart, &l.PeriodEnd, &l.Currency, &l.SaidMinor, &l.SaidOn, &l.LandedMinor, &said, &landed); err != nil {
+			return nil, nil, fmt.Errorf("compose: reading a forecast landing: %w", err)
 		}
 		landings = append(landings, l)
+		snapshots = append(snapshots, [2]ids.UUID{said, landed})
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("compose: reading the forecast landings: %w", err)
+		return nil, nil, fmt.Errorf("compose: reading the forecast landings: %w", err)
 	}
-	return landings, nil
+	rows.Close()
+	groups, err := snapshotOwnerGroups(ctx, tx, snapshots)
+	return landings, groups, err
+}
+
+// snapshotOwnerGroups answers, per pair of snapshots, the owners of the deals
+// that either one froze.
+func snapshotOwnerGroups(ctx context.Context, tx pgx.Tx, pairs [][2]ids.UUID) ([][]ids.UUID, error) {
+	groups := make([][]ids.UUID, 0, len(pairs))
+	for _, pair := range pairs {
+		rows, err := tx.Query(ctx, `
+			SELECT DISTINCT owner_id FROM forecast_contribution
+			 WHERE snapshot_id = ANY($1) AND owner_id IS NOT NULL AND (in_open OR in_won)`, pair[:])
+		if err != nil {
+			return nil, fmt.Errorf("compose: reading who a frozen landing counts: %w", err)
+		}
+		owners, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		if err != nil {
+			return nil, fmt.Errorf("compose: reading who a frozen landing counts: %w", err)
+		}
+		groups = append(groups, owners)
+	}
+	return groups, nil
 }

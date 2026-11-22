@@ -85,3 +85,9 @@ func dealWinChanceSQL(ctx context.Context, tx pgx.Tx, at time.Time, deal string,
 	}
 	return table.scalarSQL(deal, arg), nil
 }
+
+// dealWinChanceSQLNow is dealWinChanceSQL as of the current instant, for the
+// readers that carry no clock of their own.
+func dealWinChanceSQLNow(ctx context.Context, tx pgx.Tx, deal string, arg func(any) int) (string, error) {
+	return dealWinChanceSQL(ctx, tx, time.Now(), deal, arg)
+}

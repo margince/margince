@@ -12,8 +12,8 @@ package compose
 import (
 	"context"
 	"fmt"
-	"maps"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -45,6 +45,45 @@ type forecastChanceModel struct {
 // start of its as-of local day, stands on. While the installation switched
 // self-correction off it reads nothing.
 func readForecastChanceModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (forecastChanceModel, error) {
+	if model, ok := chanceModelMemo.get(tx, cutoff); ok {
+		return model, nil
+	}
+	model, err := buildForecastChanceModel(ctx, tx, cutoff)
+	if err == nil {
+		chanceModelMemo.put(tx, cutoff, model)
+	}
+	return model, err
+}
+
+// chanceModelMemo keeps the model one transaction last read. A request reads it
+// for its list page, its filter and its reports on one transaction. That
+// transaction sees one snapshot of the evidence, so the answer is the same each
+// time. It is not a cache across requests: another transaction never matches.
+var chanceModelMemo modelMemo
+
+type modelMemo struct {
+	mu     sync.Mutex
+	tx     pgx.Tx
+	cutoff time.Time
+	model  forecastChanceModel
+}
+
+func (m *modelMemo) get(tx pgx.Tx, cutoff time.Time) (forecastChanceModel, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.tx == nil || m.tx != tx || !m.cutoff.Equal(cutoff) {
+		return forecastChanceModel{}, false
+	}
+	return m.model, true
+}
+
+func (m *modelMemo) put(tx pgx.Tx, cutoff time.Time, model forecastChanceModel) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.tx, m.cutoff, m.model = tx, cutoff, model
+}
+
+func buildForecastChanceModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (forecastChanceModel, error) {
 	on, err := identity.ForecastSelfCorrectingTx(ctx, tx)
 	if err != nil {
 		return forecastChanceModel{}, err
@@ -214,13 +253,15 @@ func forecastRiskEffects(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[
 }
 
 // riskEffectsAndSamples turns each signal's tally into its odds ratio and the
-// count of settled deals that carried it.
-func riskEffectsAndSamples(tallies map[string]*forecasting.RiskTally) (map[string]float64, map[string]int) {
+// counts of settled deals that carried it and that did not.
+func riskEffectsAndSamples(tallies map[string]*forecasting.RiskTally) (map[string]float64, map[string]forecasting.RiskSample) {
 	effects := make(map[string]float64, len(tallies))
-	samples := make(map[string]int, len(tallies))
+	samples := make(map[string]forecasting.RiskSample, len(tallies))
 	for name, tally := range tallies {
 		effects[name] = forecasting.RiskEffect(*tally)
-		samples[name] = tally.PresentWon + tally.PresentLost
+		samples[name] = forecasting.RiskSample{
+			Present: tally.PresentWon + tally.PresentLost, Absent: tally.AbsentWon + tally.AbsentLost,
+		}
 	}
 	return effects, samples
 }
@@ -284,7 +325,7 @@ func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []fore
 	if err != nil {
 		return nil, err
 	}
-	subjects, err := assuranceSubjects(ctx, tx, at, AssuranceCoverage(ctx, tx, at), open)
+	subjects, err := assuranceEvidenceSubjects(ctx, tx, at, AssuranceCoverage(ctx, tx, at), open)
 	if err != nil {
 		return nil, err
 	}
@@ -304,25 +345,9 @@ func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []fore
 }
 
 // forecastStuckAfter reads the won-deal stage pace of every pipeline the deals
-// sit in, keyed by stage id.
+// sit in, keyed by stage id, in one read.
 func forecastStuckAfter(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID) (map[string]time.Duration, error) {
-	rows, err := tx.Query(ctx, `SELECT DISTINCT pipeline_id FROM deal WHERE id = ANY($1) AND pipeline_id IS NOT NULL`, dealIDs)
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading the forecast's pipelines: %w", err)
-	}
-	pipelines, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading the forecast's pipelines: %w", err)
-	}
-	out := map[string]time.Duration{}
-	for _, pipeline := range pipelines {
-		pace, err := deals.StuckAfter(ctx, tx, pipeline, analyticsquery.PercentileSampleFloor)
-		if err != nil {
-			return nil, err
-		}
-		maps.Copy(out, pace)
-	}
-	return out, nil
+	return deals.StuckAfterDealPipelines(ctx, tx, dealIDs, analyticsquery.PercentileSampleFloor)
 }
 
 // ForecastStageChances answers every live open stage's typed chance, its

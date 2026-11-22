@@ -13,8 +13,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
-// QuietSampleFloor is how many settled deals that carried the quiet signal the
-// installation needs before its own quiet effect replaces the fixed halving.
+// QuietSampleFloor is how many settled deals, both with and without the quiet
+// signal, the installation needs before its own quiet effect replaces the fixed
+// halving.
 const QuietSampleFloor = PriorStrength
 
 // ChanceModel is what an installation's own closed deals say about a stage's
@@ -28,10 +29,16 @@ type ChanceModel struct {
 	// Effects holds each risk signal's odds ratio; a signal missing is 1.
 	Effects map[string]float64
 	// Samples counts the settled frozen deals behind each signal's effect.
-	Samples map[string]int
+	Samples map[string]RiskSample
 	// QuietSignal is the code of the signal whose learned effect replaces the
 	// fixed halving.
 	QuietSignal string
+}
+
+// RiskSample counts the settled frozen deals that carried a signal and those
+// that did not. An effect is a contrast between the two, so it needs both.
+type RiskSample struct {
+	Present, Absent int
 }
 
 // ChanceInput is one deal as the resolver reads it.
@@ -81,7 +88,7 @@ func strongestEffect(model ChanceModel, signals []Signal, inUse int) (effect *fl
 	codes := SignalCodes(signals)
 	quietFallback := false
 	for _, code := range codes {
-		if code != model.QuietSignal || model.Samples[code] >= QuietSampleFloor {
+		if code != model.QuietSignal || model.Samples[code].Present >= QuietSampleFloor && model.Samples[code].Absent >= QuietSampleFloor {
 			continue
 		}
 		if half := halvingEffect(inUse); half != nil {
@@ -100,7 +107,7 @@ func strongestEffect(model ChanceModel, signals []Signal, inUse int) (effect *fl
 			break
 		}
 	}
-	return effect, signal, !(quietFallback && signal == model.QuietSignal), model.Samples[signal]
+	return effect, signal, !(quietFallback && signal == model.QuietSignal), model.Samples[signal].Present
 }
 
 // halvingEffect is the odds ratio that takes a chance to half of itself. A

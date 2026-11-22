@@ -15,11 +15,15 @@ func quietSignal(days int) []Signal {
 }
 
 func learnedModel(effect float64, sample int) ChanceModel {
+	return learnedModelOf(effect, RiskSample{Present: sample, Absent: sample})
+}
+
+func learnedModelOf(effect float64, sample RiskSample) ChanceModel {
 	return ChanceModel{
 		SelfCorrecting: true, QuietSignal: testQuiet,
 		Stages:  map[string]StageEvidence{"s1": {Resolved: 40, WonShare: 0.45}},
 		Effects: map[string]float64{testQuiet: effect},
-		Samples: map[string]int{testQuiet: sample},
+		Samples: map[string]RiskSample{testQuiet: sample},
 	}
 }
 
@@ -127,5 +131,14 @@ func TestBinAccuracyStatesAShareOnlyAboveTheFloor(t *testing.T) {
 	}
 	if top.To != 100 || top.WonPercent != nil {
 		t.Errorf("top band %+v, want 90 to 100 with no share under the floor", top)
+	}
+}
+
+func TestAQuietDealFallsBackToHalvingWhenNoDealWithoutTheSignalHasSettled(t *testing.T) {
+	t.Parallel()
+	model := learnedModelOf(1, RiskSample{Present: 3 * QuietSampleFloor})
+	got := ResolveWinChance(model, ChanceInput{StageID: "s1", Typed: 60, Source: SourceStage, Signals: quietSignal(12)})
+	if got.EffectLearned || got.Percent != 25 {
+		t.Fatalf("learned = %v, chance %d; want the halving to 25 with no contrast cohort", got.EffectLearned, got.Percent)
 	}
 }

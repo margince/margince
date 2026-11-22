@@ -59,8 +59,11 @@ A risk is shown at once. When a deal has several risks, only the one with the
 most effect counts.
 
 A quiet customer lowers the probability by what your own closed deals show. It
-needs 20 closed deals that were quiet when the forecast was frozen. With fewer,
-the probability is halved. The ⓘ then says too few closed deals show the real
+needs 20 closed deals that were quiet when the forecast was frozen, and 20 that
+were not. It learns from closed deals only, so deals still open do not count.
+With fewer, the probability is halved.
+
+When it is halved, the ⓘ says too few closed deals show the real
 effect. Margince no longer lowers the stored probability of a quiet deal each
 night. It still asks the owner whether the deal is still real.
 

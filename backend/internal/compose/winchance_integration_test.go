@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"math"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -65,6 +67,21 @@ func (f *stageCohortFixture) surfaceChances(t *testing.T, deal ids.UUID, today t
 		t.Fatal(err)
 	}
 	out["figures"] = *figures[deal].WinProbability
+	page, _, err := f.store.ListDeals(reader, deals.ListDealsInput{FactsOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range page {
+		if ids.UUID(d.Id) == deal {
+			out["list facts"] = *d.WinProbability
+		}
+	}
+	renamed := "Renamed in the write reply test"
+	echoed, err := f.store.UpdateDeal(f.writer, ids.From[ids.DealKind](deal), deals.UpdateDealInput{Name: &renamed})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out["write reply"] = *echoed.WinProbability
 	ranked, err := briefs.NewBriefEngine(f.env.Pool, contacts.NewStore(InstallationDB(f.env.Pool))).WithWinChances(dealWinChances).Rank(reader, today)
 	if err != nil {
 		t.Fatal(err)
@@ -79,8 +96,8 @@ func (f *stageCohortFixture) surfaceChances(t *testing.T, deal ids.UUID, today t
 
 func requireOneChance(t *testing.T, chances map[string]int, want int) {
 	t.Helper()
-	if len(chances) != 5 {
-		t.Fatalf("read the chance through %d surfaces, want 5: %v", len(chances), chances)
+	if len(chances) != 7 {
+		t.Fatalf("read the chance through %d surfaces, want 7: %v", len(chances), chances)
 	}
 	for surface, got := range chances {
 		if got != want {
@@ -106,6 +123,9 @@ func (f *stageCohortFixture) requireFilterAndReportAt(t *testing.T, deal ids.UUI
 			}
 		}
 		return n
+	}
+	if f.savedListCount(t, want) != 1 || f.savedListCount(t, want+1) != 0 {
+		t.Errorf("a saved list filtering on win_probability does not place the deal at exactly %d%%", want)
 	}
 	if listed(want, want) != 1 || listed(want+1, 100) != 0 || listed(0, want-1) != 0 {
 		t.Errorf("the win probability filter does not place the deal at exactly %d%%", want)
@@ -287,5 +307,109 @@ func TestTheAccuracyViewSetsAQuartersFrozenLandingAgainstWhatWasWon(t *testing.T
 	got := landings[0]
 	if got.SaidMinor != 500 || got.LandedMinor != 350 || got.Currency != "EUR" || got.SaidOn.Day() != 20 {
 		t.Fatalf("landing %+v, want said 500 on 20 May and landed 350", got)
+	}
+}
+
+// With individual performance off, a landing that one colleague's deals make
+// up is withheld. The totals would give that colleague's pipeline away.
+func TestTheAccuracyViewWithholdsALandingOfOneColleague(t *testing.T) {
+	f := newStageCohortFixture(t)
+	deal := f.deal(t, f.env.Rep3, f.stage(0))
+	day := func(month time.Month, d int) time.Time { return time.Date(2025, month, d, 12, 0, 0, 0, time.UTC) }
+	owned := []forecasting.Contribution{{DealID: deal.String(), Owner: f.env.Rep3.String(), InOpen: true}}
+	f.freezeAt(t, day(time.May, 20), forecasting.Readings{WonMinor: 100, WeightedMinor: 400, Contributions: owned})
+	f.freezeAt(t, day(time.July, 2), forecasting.Readings{WonMinor: 350, Contributions: owned})
+
+	f.env.showIndividualPerformance(t, true)
+	if got := f.accuracy(t, clocktest.Now(t)).Landings; len(got) != 1 {
+		t.Fatalf("with individual performance on, %d landings, want the one quarter", len(got))
+	}
+	f.env.showIndividualPerformance(t, false)
+	err := database.WithWorkspaceTx(f.forecastReader(), f.env.Pool, func(tx pgx.Tx) error {
+		_, err := forecastAccuracy(f.forecastReader(), tx, clocktest.Now(t))
+		return err
+	})
+	var off auth.IndividualPerformanceOffError
+	if !errors.As(err, &off) {
+		t.Fatalf("a landing of one colleague answered %v, want the individual performance refusal", err)
+	}
+}
+
+// savedListCount counts the deals a saved list filter on this win
+// probability alone selects.
+func (f *stageCohortFixture) savedListCount(t *testing.T, percent int) int {
+	t.Helper()
+	engine, ok, err := NewCollectionsStore(f.env.Pool).SegmentEngine(f.forecastReader(), "deal")
+	if err != nil || !ok {
+		t.Fatalf("no deal segment engine: %v", err)
+	}
+	var count int
+	err = database.WithWorkspaceTx(f.forecastReader(), f.env.Pool, func(tx pgx.Tx) error {
+		var err error
+		count, err = engine.CountMatching(f.forecastReader(), tx, storekit.Predicate{Field: "win_probability", Op: storekit.OpEq, Value: percent})
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return count
+}
+
+// The deal, the forecast and the nightly input check agree on whether a deal is
+// Likely, because all three read the one win chance.
+func TestAssuranceReadsTheWinChanceForLikely(t *testing.T) {
+	f := newStageCohortFixture(t)
+	for range 20 {
+		f.deal(t, f.env.Rep1, f.stage(0), f.won)
+	}
+	today := clocktest.Now(t)
+	f.at = today
+	deal := f.quietOpenDeal(t, today)
+	// At a threshold of 50 the stored 60% would be Likely and the 30% chance is not.
+	if _, err := f.env.owner.Exec(context.Background(), `INSERT INTO setting (key, value)
+		VALUES ('installation.forecast_likely_threshold', '50'::jsonb)`); err != nil {
+		t.Fatal(err)
+	}
+	var subject assurance.Subject
+	if err := database.WithWorkspaceTx(f.forecastReader(), f.env.Pool, func(tx pgx.Tx) error {
+		subjects, err := assuranceSubjects(f.forecastReader(), tx, today, nil, []ids.UUID{deal})
+		if len(subjects) == 1 {
+			subject = subjects[0]
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if subject.WinProbability != 30 || subject.Likely {
+		t.Fatalf("assurance sees %d%% (likely %v), want the win chance 30%% and not Likely", subject.WinProbability, subject.Likely)
+	}
+}
+
+// A quarter is finished when it ended on the installation's own calendar. At
+// 18:00 UTC on its last day it is already over in Tokyo and not yet in UTC.
+func TestTheAccuracyViewJudgesAFinishedQuarterByTheInstallationsDay(t *testing.T) {
+	f := newStageCohortFixture(t)
+	f.freezeAt(t, time.Date(2025, time.May, 20, 12, 0, 0, 0, time.UTC), forecasting.Readings{WonMinor: 100, WeightedMinor: 400})
+	f.freezeAt(t, time.Date(2025, time.July, 1, 2, 0, 0, 0, time.UTC), forecasting.Readings{WonMinor: 350})
+	lastEvening := time.Date(2025, time.June, 30, 18, 0, 0, 0, time.UTC)
+	setZone := func(zone string) {
+		t.Helper()
+		tag, err := f.env.owner.Exec(context.Background(), `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, zone)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tag.RowsAffected() == 0 {
+			if _, err := f.env.owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.timezone', to_jsonb($1::text))`, zone); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	setZone("UTC")
+	if got := f.accuracy(t, lastEvening).Landings; len(got) != 0 {
+		t.Fatalf("in UTC the quarter has not ended yet, but %d landings were read", len(got))
+	}
+	setZone("Asia/Tokyo")
+	if got := f.accuracy(t, lastEvening).Landings; len(got) != 1 {
+		t.Fatalf("in Tokyo the quarter ended, but %d landings were read", len(got))
 	}
 }

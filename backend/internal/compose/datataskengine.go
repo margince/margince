@@ -143,6 +143,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		keyedIdentifiersDataTask(),
 		mailCopiesDataTask(pool),
 		answeredTasksDataTask(pool),
+		halvedProbabilitiesDataTask(pool),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),
 		importscopes.DataTask(),

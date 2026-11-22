@@ -67,11 +67,52 @@ func (s *Store) getDealWithChance(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	one := []crmcontracts.Deal{deal}
+	return s.stampOne(ctx, tx, deal)
+}
+
+// readDealStamped is readDealForCaller for a deal about to leave the store in a
+// write reply. It carries the one win chance, as a read does.
+func (s *Store) readDealStamped(ctx context.Context, tx pgx.Tx, id ids.DealID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
+	deal, err := readDealForCaller(ctx, tx, id, archived, active)
+	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	return s.stampOne(ctx, tx, deal)
+}
+
+// finishDealStamped is finishDealForCaller with the one win chance.
+func (s *Store) finishDealStamped(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal) (crmcontracts.Deal, error) {
+	deal, err := finishDealForCaller(ctx, tx, d)
+	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	return s.stampOne(ctx, tx, deal)
+}
+
+func (s *Store) stampOne(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal) (crmcontracts.Deal, error) {
+	one := []crmcontracts.Deal{d}
 	if err := s.stampWinChances(ctx, tx, one); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 	return one[0], nil
+}
+
+// bindMembershipChance makes a live list narrowing the list read applies filter
+// on the win chance, as the read's own win probability filters do.
+func (s *Store) bindMembershipChance(ctx context.Context, tx pgx.Tx, in *ListDealsInput) {
+	inner := in.Membership
+	if inner == nil || s.winChanceSQL == nil {
+		return
+	}
+	in.Membership = func(idColumn string, arg func(any) int) (string, error) {
+		clause, err := inner(idColumn, arg)
+		if err != nil {
+			return "", err
+		}
+		return winprobability.Rebind(clause, "t", func() (string, error) {
+			return s.winChanceSQL(ctx, tx, s.clock(), "t", arg)
+		})
+	}
 }
 
 // wireWinChance carries the chance across to the contract, field for field.

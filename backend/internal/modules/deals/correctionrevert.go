@@ -110,7 +110,7 @@ func (s *Store) RevertCorrectionConfirmed(
 		if correction.Correction == DealOpenCorrection {
 			archived = storekit.IncludeArchived
 		}
-		out, err = readDealForCaller(ctx, tx, correction.DealID, archived, active)
+		out, err = s.readDealStamped(ctx, tx, correction.DealID, archived, active)
 		return err
 	})
 	return out, err
