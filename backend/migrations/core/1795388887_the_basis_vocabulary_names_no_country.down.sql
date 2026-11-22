@@ -1,7 +1,7 @@
 -- SPDX-License-Identifier: BUSL-1.1
 -- SPDX-FileCopyrightText: 2026 Gradion
 
--- Widens both lists again. Rows the up direction mapped to consent or removed
+-- Widens both lists again. Rows the up direction mapped to consent
 -- are not restored; this direction exists for a rollback that has not yet run
 -- in production.
 SET LOCAL lock_timeout = '5s';

@@ -5,10 +5,18 @@ SET LOCAL lock_timeout = '5s';
 
 -- vn_subject_agreement was the subject's own agreement under a named country's
 -- law. Nothing writes it; a stored row is mapped to consent, which is what it is.
--- communication_basis holds only non-consent grounds and has no consent kind,
--- so a row of that kind is removed; consent itself lives in the consent tables.
+-- A decision row is mapped to consent. A communication_basis row has no
+-- equivalent kind and is evidence the subject-access export reads, so it is
+-- never deleted here: the migration stops and a maintainer decides.
 UPDATE communication_decision SET basis = 'consent' WHERE basis = 'vn_subject_agreement';
-DELETE FROM communication_basis WHERE kind = 'vn_subject_agreement';
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM communication_basis WHERE kind = 'vn_subject_agreement') THEN
+        RAISE EXCEPTION 'communication_basis holds rows of the retired kind vn_subject_agreement; a maintainer must decide how to keep that evidence before this migration can run';
+    END IF;
+END
+$$;
 
 ALTER TABLE communication_decision DROP CONSTRAINT communication_decision_basis;
 ALTER TABLE communication_decision

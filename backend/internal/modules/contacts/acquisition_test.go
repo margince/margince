@@ -77,6 +77,7 @@ func TestNoAcquisitionKindIsALawfulBasis(t *testing.T) {
 		AcquiredPublicOrBusinessSource, AcquiredPurchasedOrImported, AcquiredUnknownLegacy,
 		AcquiredCRMMigration, AcquiredMailboxHistory,
 	}
+	// Hand list: commsauthz declares the bases as bare constants with no list to range over.
 	// The basis vocabulary lives in shared/ports/commsauthz. These are facts;
 	// those are conclusions argued from facts, and a value appearing in both
 	// would be a creation door granting itself permission.
