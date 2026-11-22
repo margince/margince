@@ -491,7 +491,7 @@ func TestTheSchemaAndTheParserAgreeOnEveryAzurePlacement(t *testing.T) {
 		"a listed region on the provider": {onProvider("swedencentral"), true, false},
 		"the embeddings lane":             {routing(embedder, lane("germanywestcentral")), true, false},
 		"a Vertex-spelled region":         {routing(lane("europe-west4"), embedder), false, false},
-		"an uppercase region":             {routing(lane("SwedenCentral"), embedder), false, false},
+		"a mixed-case region":             {routing(lane("SwedenCentral"), embedder), true, false},
 		"a host smuggled in":              {routing(lane("'sweden.attacker.example'"), embedder), false, false},
 		"a well-formed unlisted region":   {routing(lane("marscentral"), embedder), false, true},
 		"an unlisted region on the provider": {

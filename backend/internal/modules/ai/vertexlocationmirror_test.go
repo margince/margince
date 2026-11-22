@@ -21,7 +21,7 @@ import (
 // the count is pinned, so a copy moved or dropped fails instead of vanishing.
 // azureRegionSchemaPattern is the editor's spelling of an Azure region name. The
 // parser decides by lookup, so the pattern only has to admit every listed region.
-const azureRegionSchemaPattern = "^[a-z][a-z0-9]{2,30}$"
+const azureRegionSchemaPattern = "^[A-Za-z][A-Za-z0-9]{2,30}$"
 
 func TestEveryAzureRegionFitsTheSchemaPattern(t *testing.T) {
 	t.Parallel()

@@ -62,7 +62,7 @@ func validateAzurePlacement(label string, profile Profile, binding ProviderConfi
 // azureRegionError refuses a region core cannot place in a country. It runs on
 // every profile: where the data is processed is not something to guess.
 func azureRegionError(label, region string) error {
-	if region == "" {
+	if canonicalAzureRegion(region) == "" {
 		return fmt.Errorf("ai: routing config: %s: azure_openai needs a `location`: the Azure region of the resource, such as swedencentral", label)
 	}
 	if _, known := azureRegionCountry(region); !known {

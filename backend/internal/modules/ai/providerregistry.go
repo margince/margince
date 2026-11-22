@@ -89,6 +89,9 @@ type providerDescriptor struct {
 	// hostRequired marks an adapter with no default host: a lane binding it
 	// cannot be served until the provider names one.
 	hostRequired bool
+	// customModelIDs marks an adapter whose model ids are names the customer
+	// chose, so the vendor's own model list would offer ids no binding can use.
+	customModelIDs bool
 	// decisionDialect is which spelling of the decision wire the adapter
 	// speaks; the zero value is Jev's.
 	decisionDialect decisionDialect
@@ -205,7 +208,7 @@ var providerRegistry = []providerDescriptor{
 		priceSource: priceSource{kind: priceNotPublished},
 		name:        providerAzureOpenAI, caps: capChat, egress: egressPublicOnly, key: AzureOpenAIKey,
 		servedSource: servedIdentitySourceEcho, public: true, pricedBy: providerOpenAI,
-		carriage: carriesImages, hostRequired: true,
+		carriage: carriesImages, hostRequired: true, customModelIDs: true,
 		wildcardReason: "serves whichever model the deployment holds",
 	},
 	{

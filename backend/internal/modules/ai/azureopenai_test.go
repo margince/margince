@@ -249,3 +249,60 @@ func TestAzureProviderEntryAndRoutingDocumentCarryRegionAndEndpoint(t *testing.T
 		t.Fatalf("sovereign must refuse Azure as any cloud provider, got %v", err)
 	}
 }
+
+func TestAzureRegionIsAcceptedInAnyCaseAndStoredInLower(t *testing.T) {
+	t.Parallel()
+	doc := "profile: eu_hosted\nproviders:\n  azure_openai: {base_url: " + azureTestEndpoint + ", location: ' SwedenCentral '}\n" +
+		"tiers:\n  premium: {provider: azure_openai, model: my-gpt}\nembeddings: {provider: azure_openai, model: embed-dep}\n"
+	cfg, err := ParseRouting([]byte(doc))
+	if err != nil {
+		t.Fatalf("a mixed-case region: %v", err)
+	}
+	if got := cfg.Providers[providerAzureOpenAI].Location; got != azureTestRegion {
+		t.Errorf("stored location = %q, want %q", got, azureTestRegion)
+	}
+	if got := cfg.Tiers[TierPremium].Location; got != azureTestRegion {
+		t.Errorf("resolved lane location = %q, want %q", got, azureTestRegion)
+	}
+	if country, known := azureRegionCountry("  GermanyWestCentral"); !known || country != "DE" {
+		t.Errorf("azureRegionCountry mixed case = %q, %v", country, known)
+	}
+}
+
+// A deployment name is the customer's own. Azure's model list offers ids no
+// binding can use, so the list is not published and no suggestion is offered.
+func azureStoreAnswering(t *testing.T) (*RoutingStore, RoutingConfig, keyProbes) {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte(`{"data":[{"id":"gpt-4o"},{"id":"gpt-4o-mini"}]}`)); err != nil {
+			t.Errorf("writing the fixture body: %v", err)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	selector := brainSelector(func(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
+		return selectBrainOn(cfg, keys, &http.Client{Transport: azureFixture{base: srv.URL}})
+	})
+	cfg := RoutingConfig{
+		Profile:   ProfileCloudFrontier,
+		Providers: map[string]ProviderSettings{providerAzureOpenAI: {BaseURL: azureTestEndpoint, Location: azureTestRegion}},
+	}
+	return &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}, cfg, keyProbes{brain: selector.build}
+}
+
+func TestAzureOffersNoModelIDsAsSuggestions(t *testing.T) {
+	t.Parallel()
+	store, cfg, _ := azureStoreAnswering(t)
+	got := store.availableModels(context.Background(), cfg, AvailableModelsQuery{Provider: providerAzureOpenAI})
+	if got.Unavailable != AvailabilityNotPublished || len(got.Models) != 0 {
+		t.Fatalf("azure_openai list = %+v, want not_published with no models", got)
+	}
+}
+
+func TestAzureKeyTestPassesWithoutCountingModels(t *testing.T) {
+	t.Parallel()
+	_, cfg, probes := azureStoreAnswering(t)
+	got := probeProviderKey(context.Background(), cfg, providerAzureOpenAI, allCloudKeys(t), probes)
+	if !got.OK || got.Counted {
+		t.Fatalf("key test = %+v, want OK and not counted", got)
+	}
+}

@@ -84,7 +84,7 @@ const routingDefsTemplate = `{
     "properties": {
       "base_url": { "$ref": "#/$defs/providerSettings/properties/base_url" },
       "upstream": { "$ref": "#/$defs/providerSettings/properties/upstream" },
-      "location": { "type": "string", "pattern": "^[a-z][a-z0-9]{2,30}$", "description": "REQUIRED while a lane binds azure_openai: the Azure region of the resource (such as swedencentral). A region this build does not know is blocked." }
+      "location": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]{2,30}$", "description": "REQUIRED while a lane binds azure_openai: the Azure region of the resource (such as swedencentral). A region this build does not know is blocked." }
     }
   },
 
@@ -130,7 +130,7 @@ const routingDefsTemplate = `{
       },
       {
         "if":   { "properties": { "provider": { "const": "azure_openai" } }, "required": ["provider", "location"] },
-        "then": { "properties": { "location": { "pattern": "^[a-z][a-z0-9]{2,30}$" } } }
+        "then": { "properties": { "location": { "pattern": "^[A-Za-z][A-Za-z0-9]{2,30}$" } } }
       },
       {
         "if":   { "required": ["thinking_level"] },
@@ -397,7 +397,7 @@ const routingDefsTemplate = `{
       },
       {
         "if":   { "properties": { "provider": { "const": "azure_openai" } }, "required": ["provider", "location"] },
-        "then": { "properties": { "location": { "pattern": "^[a-z][a-z0-9]{2,30}$" } } }
+        "then": { "properties": { "location": { "pattern": "^[A-Za-z][A-Za-z0-9]{2,30}$" } } }
       }
     ]
   },

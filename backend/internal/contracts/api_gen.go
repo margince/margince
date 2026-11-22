@@ -35795,8 +35795,10 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
-	// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-	// connection's and the location's to say.
+	// `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+	// `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+	// Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+	// the location's to say.
 	Profile AiRoutingProfile `json:"profile"`
 
 	// Providers Provider name to what that provider is configured with, independent of any lane: its
@@ -35811,8 +35813,10 @@ type AiRouting struct {
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
-// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-// connection's and the location's to say.
+// `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+// `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+// Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+// the location's to say.
 type AiRoutingProfile string
 
 // AiRoutingEffective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.

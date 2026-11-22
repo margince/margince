@@ -3,6 +3,8 @@
 
 package ai
 
+import "strings"
+
 // azureRegionCountries is the ISO 3166 country each Azure region sits in, taken
 // from Microsoft's public list of Azure regions and geographies. A region this
 // build does not list is refused rather than guessed, so data cannot leave the
@@ -45,8 +47,23 @@ var euMemberCountries = map[string]bool{
 // azureRegionCountry is the country of an Azure region, and false for a region
 // this build does not know.
 func azureRegionCountry(region string) (string, bool) {
-	country, known := azureRegionCountries[region]
+	country, known := azureRegionCountries[canonicalAzureRegion(region)]
 	return country, known
+}
+
+// canonicalAzureRegion is the spelling a region is looked up and stored under.
+// Azure names regions in lower case; a pasted name may differ in case or padding.
+func canonicalAzureRegion(region string) string {
+	return strings.ToLower(strings.TrimSpace(region))
+}
+
+// canonicalLocation is the stored spelling of provider's location. Only Azure
+// regions are case-folded; a Vertex location stays as written.
+func canonicalLocation(provider, location string) string {
+	if provider == providerAzureOpenAI {
+		return canonicalAzureRegion(location)
+	}
+	return location
 }
 
 // azureRegionInEU reports whether a known Azure region sits in an EU member

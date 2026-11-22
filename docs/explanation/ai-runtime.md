@@ -125,9 +125,10 @@ embeddings:    {provider: gemini}
 - **`profile`** is the location ladder: where the model may run. `eu_hosted` means a partner runs the
   model in the EU. `sovereign` means no data leaves, by the way it is built. `cloud_frontier` means a
   vendor's cloud, where the vendor serves.
-- Only `sovereign` limits anything: it refuses a cloud provider. `eu_hosted` and `cloud_frontier` are
-  labels that refuse no binding on location grounds. Where a lane is served is the connection's choice
-  (`only` on the broker `upstream`, or a Vertex `location`).
+- `sovereign` refuses a cloud provider. `eu_hosted` refuses an `azure_openai` binding whose Azure region
+  is outside the EU; the regions of `GB`, `NO` and `CH` count as outside it. Otherwise
+  `eu_hosted` and `cloud_frontier` are labels that refuse no binding on location grounds. Where a lane is
+  served is the connection's choice (`only` on the broker `upstream`, or a Vertex `location`).
 - **No key ever sits in the binding.** A provider names only itself, and an `api_key:` left in it is a *boot
   error*. Where the key comes from depends on who asks. A served installation reads it from the **key
   vault**.
