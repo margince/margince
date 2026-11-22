@@ -11,13 +11,15 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { AnswerTable, QuestionFailure } from "./analytics.questions.answer";
+import { AnswerTable } from "./analytics.questions.answer";
+import { QuestionFailure } from "./analytics.questions.failure";
 import {
   ANSWER,
   EMPTY_ANSWER,
   EXPLANATION,
   QUERY,
   refusal,
+  SCHEMA,
   STAGES,
   USERS,
   WITHHELD_ANSWER,
@@ -45,6 +47,7 @@ function answerStory(
       "GET /stages": () => jsonResponse(STAGES),
       "GET /users": () => jsonResponse(USERS),
       "POST /analytics/explain": () => jsonResponse(EXPLANATION),
+      "GET /analytics/schema": () => jsonResponse(SCHEMA),
     });
     return (
       <StoryProviders>

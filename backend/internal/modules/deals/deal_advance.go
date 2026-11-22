@@ -435,10 +435,10 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// The won-without-contract reason is written only on a win, and cleared on
 	// every other landing, for the same reason.
 	if DealStatus(status) == DealWon {
-		p.Set("won_without_contract_reason", current.WonWithoutContractReason, in.WonWithoutContractReason)
+		p.Set(wonWithoutContractReasonField, current.WonWithoutContractReason, in.WonWithoutContractReason)
 		p.Set("won_without_contract_detail", current.WonWithoutContractDetail, in.WonWithoutContractDetail)
 	} else {
-		p.Set("won_without_contract_reason", current.WonWithoutContractReason, nil)
+		p.Set(wonWithoutContractReasonField, current.WonWithoutContractReason, nil)
 		p.Set("won_without_contract_detail", current.WonWithoutContractDetail, nil)
 	}
 	// Closing with an amount freezes the FX rate so base-currency roll-ups stay

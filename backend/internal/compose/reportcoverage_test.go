@@ -12,7 +12,7 @@ func TestEveryConvertedMoneyMeasureDeclaresCoverage(t *testing.T) {
 	checked := 0
 	for name, spec := range prebuiltReports {
 		for measure := range spec.measures {
-			if !strings.HasSuffix(measure, "_minor") || spec.nativeMeasures[measure] {
+			if !strings.HasSuffix(measure, "_minor") || spec.perRowCurrency(measure) != nil {
 				continue
 			}
 			checked++

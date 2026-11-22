@@ -93,7 +93,8 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 }
 
 // answerMoney reads a money measure the way the screen does. A converted
-// amount is in the base currency. A native one is in its row's own currency.
+// amount, one with a coverage count, is in the base currency. A native one is
+// in its row's own currency.
 type answerMoney struct {
 	spec reportSpec
 	base string
@@ -102,15 +103,18 @@ type answerMoney struct {
 // of gives a measure's unit and currency, or a coverage saying why no single
 // currency applies. A count of a money field is a count, not money.
 func (m answerMoney) of(measure analyticsquery.Measure, row map[string]any) (unit, currency, coverage string) {
-	if !strings.HasSuffix(measure.Field, "_minor") || measure.Fn == analyticsquery.CountAll || measure.Fn == analyticsquery.CountDistinct {
+	if measure.Fn == analyticsquery.CountAll || measure.Fn == analyticsquery.CountDistinct {
 		return "", "", "ok"
 	}
-	if m.spec.nativeMeasures[measure.Field] {
+	if m.spec.perRowCurrency(measure.Field) != nil {
 		own, _ := row[fieldCurrency].(string)
 		if own == "" {
 			return "", "", "mixed_currency"
 		}
 		return reportingMoney, own, "ok"
+	}
+	if _, converted := m.spec.sumCoverage[measure.Field]; !converted {
+		return "", "", "ok"
 	}
 	if m.base == "" {
 		return "", "", "no_base_currency"

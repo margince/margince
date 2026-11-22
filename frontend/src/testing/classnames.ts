@@ -212,6 +212,7 @@ function readerFor(
     if (ts.isIdentifier(n) || isMember(n)) {
       return followed(n, lists, [[]], words);
     }
+    if (ts.isObjectLiteralExpression(n)) return [keysOf(n).flatMap(words)];
     return ts.isBinaryExpression(n) ? binary(n) : compound(n);
   };
   const compound = (n: ts.Node): string[][] => {
@@ -240,6 +241,19 @@ function readerFor(
   // classes when `look` returns " b".
   const returnedTexts = (n: ts.Node) => throughBody(n, texts);
   return { texts, lists };
+}
+
+// `clsx({ pane: true, "pane-alert": alert })`: a key is a class unless its
+// value is the literal `false`.
+function keysOf(object: ts.ObjectLiteralExpression): string[] {
+  return object.properties.flatMap((property) => {
+    if (!ts.isPropertyAssignment(property)) return [];
+    if (property.initializer.kind === ts.SyntaxKind.FalseKeyword) return [];
+    const key = property.name;
+    return ts.isIdentifier(key) || ts.isStringLiteralLike(key)
+      ? [key.text]
+      : [];
+  });
 }
 
 type Member = ts.PropertyAccessExpression | ts.ElementAccessExpression;

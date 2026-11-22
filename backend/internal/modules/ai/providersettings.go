@@ -203,6 +203,11 @@ func (cfg RoutingConfig) canonical() RoutingConfig {
 	return cfg.liftLaneProviderFields(slog.New(slog.DiscardHandler))
 }
 
+// StoredShape is the document in the shape the presets ship in. Each provider
+// holds its host and pins, and no lane repeats them. A caller that builds a
+// config lane by lane writes it this way before serving it.
+func StoredShape(cfg RoutingConfig) RoutingConfig { return cfg.canonical() }
+
 // validateProviderEntries holds each provider entry to its shape. An entry no
 // lane binds gets only these checks, so an admin can set a host before binding
 // it; a bound host is left to the lane rules, which name the lane and the

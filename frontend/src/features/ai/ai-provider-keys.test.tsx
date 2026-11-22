@@ -152,8 +152,9 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
 
     // Both vendors are unbound in this fixture, so a held key reads Ready and a
-    // missing one Not active; the credential itself is one click deeper.
-    expect(await screen.findByText(/^ready$/i)).toBeTruthy();
+    // missing one Not active. The credential itself is one click deeper. The
+    // two local providers read Ready too, with no key to hold.
+    expect(await screen.findAllByText(/^ready$/i)).toHaveLength(3);
     expect(screen.getByText(/^not active$/i)).toBeTruthy();
     expect(
       within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(

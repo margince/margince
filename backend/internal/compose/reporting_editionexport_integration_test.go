@@ -16,9 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// exportedQuestionRows downloads an edition's CSV as reader and returns its
-// question card's rows.
-func exportedQuestionRows(reader context.Context, t *testing.T, q *questionEditions, edition crmcontracts.ReportingEdition) [][]string {
+// exportedEditionRows downloads an edition's CSV as reader and returns the
+// rows of its block, the header left out.
+func exportedEditionRows(reader context.Context, t *testing.T, q *questionEditions, edition crmcontracts.ReportingEdition, block string) [][]string {
 	t.Helper()
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/v1/analytics/editions/x/export.csv", nil).WithContext(reader)
@@ -32,7 +32,7 @@ func exportedQuestionRows(reader context.Context, t *testing.T, q *questionEditi
 	}
 	out := [][]string{}
 	for _, record := range records {
-		if record[1] == "question:open-deals" {
+		if record[1] == block {
 			out = append(out, record)
 		}
 	}
@@ -47,7 +47,7 @@ func TestAnEditionExportCarriesItsKeptAnswers(t *testing.T) {
 	q.keepForAYear(t)
 	edition := q.send(t)
 
-	sent := exportedQuestionRows(q.human, t, q, edition)
+	sent := exportedEditionRows(q.human, t, q, edition, "question:open-deals")
 	if len(sent) != 1 || sent[0][3] != "7" || sent[0][9] != "deals" || sent[0][10] != "ok" {
 		t.Fatalf("the sender's export carries %q, want the kept count of 7", sent)
 	}
@@ -57,7 +57,7 @@ func TestAnEditionExportCarriesItsKeptAnswers(t *testing.T) {
 	for _, object := range []string{"report_definition", "report_edition"} {
 		actor.Permissions.Objects[object] = principal.ObjectGrant{Read: true}
 	}
-	narrow := exportedQuestionRows(principal.WithActor(reader, actor), t, q, edition)
+	narrow := exportedEditionRows(principal.WithActor(reader, actor), t, q, edition, "question:open-deals")
 	if len(narrow) != 1 || narrow[0][3] != "" || narrow[0][10] != "withheld" {
 		t.Fatalf("the narrower reader's export carries %q, want one withheld row and no value", narrow)
 	}

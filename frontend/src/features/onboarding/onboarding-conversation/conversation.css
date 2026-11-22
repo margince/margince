@@ -457,7 +457,7 @@
   padding: 3px var(--space-2); /* ds:ignore the path chip's inset sits below the scale's first step */
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
+  background: var(--bgField);
 }
 
 /* The escape at the list's foot: present, dashed, never competing. */
@@ -778,7 +778,7 @@
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
   color: var(--textPrimary);
   font-family: var(--fontFamilyBody);
   resize: vertical;
@@ -1426,7 +1426,7 @@
   gap: var(--space-3);
   padding: var(--space-3) 0;
   border-top: 1px solid var(--borderSubtle);
-  background: var(--bgElevated);
+  background: var(--bgField);
   /*
    * The fill runs the width of the pane while the bar's own box does not — the
    * progress, the sentence and the button stay on exactly the measure every row
@@ -1450,7 +1450,7 @@
    * spread would paint over the rows the bar is pinned in front of.
    */
   box-shadow:
-    0 calc(100vw + 1px) 0 100vw var(--bgElevated),
+    0 calc(100vw + 1px) 0 100vw var(--bgField),
     0 0 0 100vw var(--borderSubtle);
   clip-path: inset(0 -100vw 0);
 }
@@ -2044,7 +2044,7 @@
   border: 1px solid var(--borderSubtle);
   border-top: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
   overflow: hidden;
 }
 

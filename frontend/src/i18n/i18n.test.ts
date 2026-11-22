@@ -179,6 +179,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiRouting.baseUrl.placeholder.gemini",
   "aiRouting.baseUrl.placeholder.anthropic",
   "aiRouting.baseUrl.placeholder.openai",
+  "aiRouting.baseUrl.placeholder.ollama",
+  "aiRouting.baseUrl.placeholder.vllm",
   // A pattern of placeholders with no words in it, and the EU's own
   // abbreviation, which Vietnamese writes the same way.
   "aiRouting.location.option",

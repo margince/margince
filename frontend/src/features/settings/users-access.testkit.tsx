@@ -21,9 +21,8 @@ export type Team = {
   member_count?: number;
   parent_team_id?: string;
 };
-// The roster row the membership editor reads. `team_ids` is the admin-only
-// field the server populates, and a fixture that omits it models a NON-admin
-// read — which is a different case, not a lighter one.
+// The roster row the membership editor reads. Only an admin read carries
+// `team_ids`, so a fixture without it models a reader who is not an admin.
 export type RosterUser = {
   id: string;
   email: string;
@@ -32,9 +31,6 @@ export type RosterUser = {
   is_agent: boolean;
   team_ids?: string[];
 };
-
-// Held in a constant rather than written inline: the prop is the seat's ROLE,
-// and a literal here reads to the a11y lint as an ARIA role on an element.
 
 export type Call = {
   method: string;
@@ -53,19 +49,15 @@ export function backend(
     /** Answers one write with a problem document, to drive the refusal arms. */
     refuse?: (call: Call) => boolean;
     /**
-     * The caller's own roles, off `/me` — admin by default, so the write
-     * assertions in this suite exercise the same seat they always have. A
-     * test naming `["ops"]` or `[]` here gets the read-only case, which is a
-     * different render entirely rather than the same one with fewer writes
-     * attempted.
+     * The caller's own roles, off `/me`. Admin by default, so the write cases
+     * run as an admin. `["ops"]` or `[]` gives the read-only screen.
      */
     me?: readonly string[];
     /**
-     * The grants this principal holds, when a case needs something other than
-     * the full pair. The card asks two DIFFERENT objects — `team_admin` for the
-     * verbs and `user_admin:read` for the membership the roster carries — so a
-     * case can now describe a reader who sees who is in a team and may not
-     * change it, which one admin check could not express.
+     * The grants this principal holds, when a case needs less than both. The
+     * card asks `team_admin` for its verbs and `user_admin:read` for the
+     * membership. So a case can describe a reader who sees a team's members and
+     * may not change them.
      */
     allow?: Record<string, Record<string, boolean>>;
     /** Held open until it settles, so a case can look at a write in flight. */
@@ -82,9 +74,8 @@ export function backend(
   const fetchMock = vi.fn(
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a stub of every read and write the access screens make; its branches are the route table
     async (input: RequestInfo | URL, init?: RequestInit) => {
-      // Built as a Request rather than read off `init`: openapi-fetch may pass a
-      // Request with no init at all, and a mock reading the method from init
-      // would answer every write as if it were a read.
+      // openapi-fetch may pass a Request with no `init`. Read off `init`, every
+      // write would answer as a read.
       const request =
         input instanceof Request ? input : new Request(String(input), init);
       const url = new URL(request.url, "http://localhost");
@@ -93,9 +84,8 @@ export function backend(
         method: request.method,
         path,
         query: Object.fromEntries(url.searchParams),
-        // A membership write carries NO body — the ids are the path. Reading
-        // one unconditionally throws, and the mock would then answer the
-        // write as a network failure that looks exactly like a refusal.
+        // A membership write has no body, because the ids are in the path.
+        // Reading one throws, and the write would look like a refusal.
         body:
           request.method === "GET" ||
           request.headers.get("content-type") === null
@@ -103,16 +93,9 @@ export function backend(
             : await request.clone().json(),
       });
       if (path.endsWith("/me")) {
-        // `user` is required on MeResponse — useMe() treats a payload
-        // without it as an availability failure and never resolves `.data`,
-        // which would silently read every seat here as non-admin.
-        //
-        // The GRANTS matter for the same reason, one level up: the card asks
-        // `team_admin` for its verbs and `user_admin:read` for the membership
-        // the roster carries, so a payload naming a role and no authorization
-        // describes a principal the API cannot produce — and every case here
-        // would pass with nothing rendered. `allow` lets a case withhold one
-        // of the two, which is the reader the split made possible.
+        // useMe() reads a payload without `user` as a failure, so every seat
+        // would read as not an admin. Without the grants, every case would pass
+        // with nothing drawn; `allow` withholds one of the two.
         return new Response(
           JSON.stringify({
             user: { email: "you@acme.test" },
@@ -150,12 +133,9 @@ export function backend(
         });
       }
       applyMembership(users, request.method, path);
-      // The teams list answers as the contract answers: a page, with the
-      // cursor of the next one. Without `page` the roster walk has nothing to
-      // read the end of the list from.
-      // Three reads answer here, and the roster two of them serve are
-      // DIFFERENT lists: a test that answered users with the team page would
-      // let a membership assertion pass against rows that carry no membership.
+      // The teams list answers as a page with the next cursor, as the contract
+      // does. The roster is a separate list, so a membership check reads rows
+      // that carry a membership.
       const body = path.endsWith("/users/access-preview")
         ? (opts.preview ?? { row_scope: "own" })
         : {
@@ -200,9 +180,8 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        {/* The region is the shell's in the running app (`main.tsx`), so a
-            suite whose subject includes what an archive SAYS mounts it the
-            same way — the Undo this card offers lives inside it. */}
+        {/* The running app mounts the region in the shell (`main.tsx`). It is
+            mounted here too, because the card's Undo lives inside it. */}
         <ToastProvider>
           {children}
           <ToastRegion />

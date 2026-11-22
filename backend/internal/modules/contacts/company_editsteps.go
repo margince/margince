@@ -20,8 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// readCompanyToEdit runs the checks an edit owes before it reads, then reads
-// the row it decides on and refuses what the edit may not do to it.
+// readCompanyToEdit runs the checks an edit owes before it reads. Then it reads
+// the row it decides on, and refuses what the edit may not do to it.
 func readCompanyToEdit(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
