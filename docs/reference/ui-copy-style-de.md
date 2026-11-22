@@ -57,17 +57,14 @@ deine, deinem, deinen, deiner, deines. Never Sie, Ihr or Ihnen to the user.
   statuses, table headers, menu items and most help text are impersonal. Use du
   only where the English says "you" or "your", or where an error or
   confirmation tells the reader what to do next.
-- **Five families keep Sie**, and they are the only Sie in the catalog:
-  `privacynotice.`, `confirm.`, `buyer.`, `prefs.` and `book.`. Each is read
-  by someone outside the installation: a stranger reading the privacy notice, a
+- **Five families keep Sie**, the only Sie in the catalog, and never say du:
+  `privacynotice.`, `confirm.`, `buyer.`, `prefs.` and `book.`. Each is read by
+  someone outside the installation: a stranger reading the privacy notice, a
   contact answering a consent question, a buyer in a Deal Room, a visitor
-  choosing what may still be sent, a guest booking a meeting. They never say
-  du. A screen that both host and guest open, such as the meeting page, takes
-  a `book.` key for the guest and a `scheduling.` key for the host. Outbound
-  mail to a contact is written in Sie, and the
-  consent question is published by the server in that wording, so a screen in
-  du would ask one question and record another. Their instructions take the
-  Sie imperative too: "Öffnen Sie Ihre Einstellungen".
+  choosing what may still be sent, a booking guest. A page host and guest both
+  open takes a `book.` key for the guest. Mail to a contact is in Sie, as is the
+  consent question the server publishes, so a du screen would record another
+  question. Instructions too: "Öffnen Sie Ihre Einstellungen".
 - **Sie copy is fuller, formal and courteous.** It uses the set phrases of
   legal German: "Reichen Sie eine Beschwerde … ein", "Die Änderung tritt
   sofort in Kraft". Courtesy adds no fact, qualifier or reassurance. It prefers
@@ -383,8 +380,8 @@ the test retires, and fails a difference in either direction.
 
 `frontend/census/rules/address-register.census.ts` holds the address: no Sie, Ihr or
 Ihnen outside the five outsider families, no du-pronoun inside them, and no
-capitalised du-pronoun mid-sentence. A sentence opening with "Sie" as she or they is rephrased, since
-the capital cannot be read off the page.
+capitalised du-pronoun mid-sentence. A sentence opening with "Sie" as she or
+they is rephrased, since the capital cannot be read off the page.
 
 `frontend/src/i18n/record-noun.test.ts` holds the record noun in `de.ts`. It
 fails a key that names the record type and does not say Kontakt. It fails the
