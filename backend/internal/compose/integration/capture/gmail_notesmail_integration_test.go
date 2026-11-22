@@ -12,13 +12,19 @@ package capture
 // transcript reading. The mail itself is filed under no contact.
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -100,7 +106,10 @@ func TestAGeminiNotesMailLandsAsTheTranscriptOfItsMeeting(t *testing.T) {
 	e := w.env.e
 	meeting := gcalMeeting(t, e)
 
-	w.env.sync(t, geminiNotesMail("notes1@google.com", start.Add(2*time.Hour), true))
+	// A known contact on the Cc line is a participant the mail would be filed
+	// under if it were ordinary mail.
+	w.env.sync(t, notesMailAbout("notes1@google.com", meetingTitle,
+		captureOwner+"\r\nCc: "+guestKnown, "", start.Add(2*time.Hour), true))
 
 	if got := notesTranscriptCount(t, e); got != 1 {
 		t.Fatalf("%d transcripts from the notes mail, want 1", got)
@@ -125,13 +134,26 @@ func TestAGeminiNotesMailLandsAsTheTranscriptOfItsMeeting(t *testing.T) {
 	if got := contactLinks(t, e, "email", "notes1@google.com"); got != 0 {
 		t.Errorf("the notes mail is filed under %d contacts, want none", got)
 	}
-	var audience string
+	var audience, reason string
 	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT audience FROM activity WHERE source_system = 'email' AND source_id = 'notes1@google.com'`).Scan(&audience); err != nil {
+		`SELECT audience, coalesce(audience_reason, '') FROM activity WHERE source_system = 'email' AND source_id = 'notes1@google.com'`).
+		Scan(&audience, &reason); err != nil {
 		t.Fatal(err)
 	}
-	if audience != "participants" {
-		t.Errorf("the notes mail audience is %q, want participants", audience)
+	if audience != "participants" || reason != "no_record" {
+		t.Errorf("the notes mail audience is %q for reason %q, want participants held as no_record", audience, reason)
+	}
+	var mail ids.UUID
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT id FROM activity WHERE source_system = 'email' AND source_id = 'notes1@google.com'`).Scan(&mail); err != nil {
+		t.Fatal(err)
+	}
+	outsider := readerCtx(e, e.Rep3)
+	err := database.WithWorkspaceTx(outsider, e.Pool, func(tx pgx.Tx) error {
+		return auth.EnsureActivityVisible(outsider, tx, mail)
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("a seat outside the participants opening the notes mail got %v, want not found", err)
 	}
 }
 

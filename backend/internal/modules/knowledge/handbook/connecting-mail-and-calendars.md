@@ -95,7 +95,7 @@ It says when your Google accounts differ. The message leaves once the transcript
 ### What happens to the "Notes by Gemini" email?
 Google emails the notes to the guests of the meeting. Margince keeps that email private to those guests. It files the email under no contact, so the contact with your own address does not hold every set of notes.
 
-When the subject names one of your meetings, Margince puts the notes on that meeting as its transcript. The meeting must have started in the 24 hours before the email, and the title must match exactly. The contacts and readers of the meeting get it, and Margince suggests the tasks it finds.
+When the subject names one of your meetings, Margince puts the notes on that meeting as its transcript. The meeting must have started in the 24 hours before the email, and the title must be the same, in any case. The contacts and readers of the meeting get it, and Margince suggests the tasks it finds.
 
 Margince adds nothing if two meetings fit, or if the meeting already has a transcript. It does the same for a forwarded email, or one sent to someone else. It does this only for email Gmail confirms came from Google. This needs no Meeting notes connection, only your connected mailbox and calendar.
 
