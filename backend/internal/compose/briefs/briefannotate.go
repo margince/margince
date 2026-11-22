@@ -80,7 +80,7 @@ func (e *BriefEngine) AnnotateCurrentRun(ctx context.Context, ann Annotation, no
 	}
 
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		day, _, err := LocalDayAt(ctx, tx, now)
+		day, _, err := LocalDayAt(ctx, tx, userID, now)
 		if err != nil {
 			return err
 		}

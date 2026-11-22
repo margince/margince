@@ -131,7 +131,7 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 
 		// The installation-zone day the timing factor measures against,
 		// resolved in this transaction so it is the same day the run is stamped.
-		out.today, err = localDay(ctx, tx, now)
+		out.today, err = localDay(ctx, tx, userID, now)
 		if err != nil {
 			return err
 		}

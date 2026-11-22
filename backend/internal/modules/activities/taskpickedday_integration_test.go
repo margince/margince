@@ -243,3 +243,22 @@ func TestTheSortKeyOfADateOnlyTaskMatchesTheGoDueRule(t *testing.T) {
 		t.Fatal("the shared table has no end_utc case, so this proves nothing")
 	}
 }
+
+// A person's own list counts a chosen date in their own zone. A list that
+// combines people counts it in the installation's. Berlin's day ends at 22:00
+// UTC and Ho Chi Minh City's at 17:00 UTC. So one bound ends the 16th for the
+// person and not for the installation.
+func TestADateOnlyTaskIsJudgedInTheZoneTheListIsReadIn(t *testing.T) {
+	p := newPickedDayEnv(t, "Europe/Berlin")
+	until := time.Date(2026, 6, 16, 17, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
+
+	onThe15th := p.dated(t, "Dated the 15th", "2026-06-15", "Europe/Berlin")
+	onThe16th := p.dated(t, "Dated the 16th", "2026-06-16", "Europe/Berlin")
+	onThe17th := p.dated(t, "Dated the 17th", "2026-06-17", "Europe/Berlin")
+
+	own := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf, DayZone: "Asia/Ho_Chi_Minh"}
+	wantWindow(t, "own list", p.window(t, own), []ids.UUID{onThe15th, onThe16th}, onThe17th)
+	combined := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf}
+	wantWindow(t, "combined list", p.window(t, combined), []ids.UUID{onThe15th}, onThe16th, onThe17th)
+}

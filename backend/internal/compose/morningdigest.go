@@ -10,11 +10,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 type morningDigest struct {
@@ -22,8 +23,11 @@ type morningDigest struct {
 	window notices.Window
 }
 
-func notificationWindow(ctx context.Context, tx pgx.Tx, now time.Time) (notices.Window, error) {
-	day, _, err := briefs.LocalDayAt(ctx, tx, now)
+// notificationWindow is the morning a digest covers. surface says whose clock
+// it is: a person's own digest reads their zone, the workspace-wide pass the
+// installation's.
+func notificationWindow(ctx context.Context, tx pgx.Tx, surface occurredday.Surface, user ids.UUID, now time.Time) (notices.Window, error) {
+	day, _, err := dayrule.DayAt(ctx, tx, surface, user, now)
 	if err != nil {
 		return notices.Window{}, err
 	}
@@ -41,7 +45,7 @@ func prepareRoutineDigest(ctx context.Context, pool *pgxpool.Pool, user ids.UUID
 	}
 	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
-		part.window, err = notificationWindow(ctx, tx, window.Open)
+		part.window, err = notificationWindow(ctx, tx, occurredday.Personal, user, window.Open)
 		return err
 	})
 	if err != nil {

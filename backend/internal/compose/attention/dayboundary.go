@@ -46,6 +46,22 @@ func WithZone(z Zone) Option {
 	return func(s *Service) { s.zone = z }
 }
 
+// WithZones is WithZone plus the zone a person's own list measures its day in
+// (dayrule.Zone). A list that combines several people stays on the installation
+// zone. With no personal zone bound, a personal list reads the installation's.
+func WithZones(installation, personal Zone) Option {
+	return func(s *Service) { s.zone, s.personalZone = installation, personal }
+}
+
+// dayZoneOf is the zone name a task read counts its chosen due dates in.
+// It is the reader's own zone on their own list, and empty elsewhere.
+func dayZoneOf(scope TaskScope, loc *time.Location) string {
+	if scope != TasksMine || loc == nil {
+		return ""
+	}
+	return loc.String()
+}
+
 // WithMeetingsAwaitingOutcome binds the lane of meetings that already happened.
 //
 // An Option rather than a twentieth constructor argument, for the reason above:

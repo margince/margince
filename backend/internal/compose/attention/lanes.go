@@ -161,7 +161,7 @@ type Tasks interface {
 	// which is not the page length: the lane is capped at a dozen, so a badge
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
-	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID, team []ids.UUID) (int, error)
+	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, zone string, owner ids.UUID, team []ids.UUID) (int, error)
 }
 
 // PlannedAsk is the planned lane's question. The day's work is due by

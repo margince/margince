@@ -29,7 +29,7 @@ func (s *Service) planned(
 	// Only the reader's own queue is reminded: a reminder is for its assignee,
 	// and a manager looking at a colleague's work is not its assignee.
 	read, err := s.tasks.PlannedForViewer(ctx, PlannedAsk{
-		Window:   TaskWindow{AsOf: asOf, Until: until, Scope: scope, Owner: s.taskOwner, Team: team},
+		Window:   TaskWindow{AsOf: asOf, Until: until, Scope: scope, Zone: dayZoneOf(scope, loc), Owner: s.taskOwner, Team: team},
 		Horizon:  until.AddDate(0, 0, upcomingHorizonDays),
 		DayLimit: plannedCap, UpcomingLimit: upcomingCap,
 		Reminders: scope == TasksMine,
@@ -42,7 +42,7 @@ func (s *Service) planned(
 	// badge of len(items) tells a reader with thirteen that they have twelve —
 	// and there is no second page on this lane to find the thirteenth by. The
 	// same reading needs_you has always had.
-	total, err := s.tasks.CountOpenForViewer(ctx, asOf, until, scope, s.taskOwner, team)
+	total, err := s.tasks.CountOpenForViewer(ctx, asOf, until, scope, dayZoneOf(scope, loc), s.taskOwner, team)
 	if err != nil {
 		return nil, 0, err
 	}
