@@ -6,7 +6,7 @@ package compose
 import (
 	"github.com/margince/margince/backend/internal/compose/metriccopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 // The words reporting says live in metriccopy; these names keep the
@@ -26,12 +26,12 @@ var (
 	reportingComponentKindLabels = metriccopy.ComponentKindLabels
 )
 
-// reportingMetricName names a metric in the reading's language. An edition
-// keeps no name, so a metric retired since it was captured says so.
-func reportingMetricName(frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID) string {
+// reportingMetricName names a metric in the language of names. An edition keeps no
+// name, so a metric retired since it was captured says so.
+func reportingMetricName(names langcopy.Spoken, metric crmcontracts.ReportingMetricID) string {
 	name, ok := reportingMetricNames[metric]
 	if !ok {
 		name = reportingLabelWords.MetricRetired
 	}
-	return reporting.ExplanationCopy(frame).Say(name)
+	return names.Say(name)
 }

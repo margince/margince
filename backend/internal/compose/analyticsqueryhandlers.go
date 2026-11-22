@@ -66,10 +66,21 @@ func (h analyticsQueryHandlers) GetAnalyticsSchema(w http.ResponseWriter, r *htt
 			Name:         name,
 			GroupBy:      entity.FieldNames(analyticsquery.KindDimension),
 			Measures:     entity.FieldNames(analyticsquery.KindMeasure),
+			Money:        analyticsMoneyOf(entity),
 			CustomFields: analyticsCustomFieldsOf(entity),
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// analyticsMoneyOf is Entity.Money in the contract's words, which spell the
+// same two values.
+func analyticsMoneyOf(entity analyticsquery.Entity) map[string]crmcontracts.AnalyticsEntityMoney {
+	out := map[string]crmcontracts.AnalyticsEntityMoney{}
+	for name, currency := range entity.Money() {
+		out[name] = crmcontracts.AnalyticsEntityMoney(currency)
+	}
+	return out
 }
 
 // RunAnalyticsQuery implements POST /analytics/query.

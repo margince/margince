@@ -51514,6 +51514,15 @@ export interface components {
             /** @description The fields this population can be aggregated over. */
             measures: string[];
             /**
+             * @description The measures that are amounts in minor units, and the currency each is in:
+             *     `row_currency` in each record's own currency, which a sum across currencies
+             *     refuses, or `base_currency` converted to the installation's base currency. A
+             *     measure not named here is a plain number, whatever its name.
+             */
+            money: {
+                [key: string]: "row_currency" | "base_currency";
+            };
+            /**
              * @description The installation's own fields among `group_by`, with the label and choices an
              *     administrator gave them. A field an administrator opted into reporting shows here, and
              *     only such a field: its label and choices are published to every reader of the population.
