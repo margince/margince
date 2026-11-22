@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturepurgebind"
+	"github.com/margince/margince/backend/internal/compose/personalsweep"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -327,60 +328,21 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 		return 0, fmt.Errorf("verdict: finding seats with personal mail due: %w", err)
 	}
 	destroyed := 0
+	sweeper := personalsweep.Sweeper{
+		Pool: p.pool, Batch: personalSweepBatch, Destroy: p.purgePersonalSelection,
+		Floor: func(ctx context.Context, tx pgx.Tx) (capture.StatutoryFloor, error) {
+			floor, _, err := purgeFloorTx(ctx, tx)
+			return floor, err
+		},
+	}
 	for _, seat := range seats {
-		outcome, err := p.sweepSeat(ctx, seat, windows)
+		n, err := sweeper.Seat(ctx, seat, windows)
 		if err != nil {
 			return destroyed, err
 		}
-		destroyed += outcome.Destroyed
+		destroyed += n
 	}
 	return destroyed, nil
-}
-
-// sweepSeat destroys one seat's due personal mail and writes the receipt for the
-// pass. A pass that destroyed nothing writes none, so a seat whose due mail the
-// shields keep does not add an audit row per tick.
-//
-// The kept numbers are counted over every due message of the seat, apart from
-// the batch the destroy reached.
-func (p *CapturePurger) sweepSeat(ctx context.Context, seat ids.UUID, windows capture.PersonalPurgeWindows) (PurgeOutcome, error) {
-	var subject capture.PurgeSubject
-	var kept capture.KeptCounts
-	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		floor, _, err := purgeFloorTx(ctx, tx)
-		if err != nil {
-			return err
-		}
-		if subject, err = capture.SelectPersonalPurgeTx(ctx, tx, seat, windows, floor, personalSweepBatch); err != nil {
-			return err
-		}
-		kept, err = capture.CountPersonalKeptTx(ctx, tx, seat, windows, floor)
-		return err
-	}); err != nil {
-		return PurgeOutcome{}, fmt.Errorf("verdict: selecting personal mail for one seat: %w", err)
-	}
-	// No contacts are anonymised here. A `personal` verdict creates no
-	// counterparty record, so there is nothing this sweep could match. A
-	// selector that looked for one could find a contact made for another reason.
-	n, err := p.purgePersonalSelection(ctx, subject, seat, windows)
-	if err != nil {
-		return PurgeOutcome{}, fmt.Errorf("verdict: destroying personal mail: %w", err)
-	}
-	outcome := PurgeOutcome{
-		Destroyed: n,
-		Skipped:   kept.UnderStatute + kept.UnderRequest + kept.UnderUndeterminedFloor,
-		Kept:      keptFromCounts(kept),
-	}
-	if outcome.Destroyed == 0 {
-		return outcome, nil
-	}
-	// Each destruction commits in its own transaction, so this row cannot join
-	// them. A failed write loses no evidence. Every destroyed message has its own
-	// erase audit row, and the kept counts are recomputed from current state.
-	if err := p.auditPersonalSweepReceipt(ctx, seat, outcome); err != nil {
-		return PurgeOutcome{}, fmt.Errorf("verdict: recording the personal sweep receipt: %w", err)
-	}
-	return outcome, nil
 }
 
 // purgeableRule reads the rule this caller may act on, and reports whether it is

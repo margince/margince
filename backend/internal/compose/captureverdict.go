@@ -59,9 +59,8 @@ const (
 
 // CounterpartyVerdictEngine drains the capture disposition ledger.
 type CounterpartyVerdictEngine struct {
-	pool    *pgxpool.Pool
-	pending *capture.PendingStore
-	// caps answers how many senders one run may judge: the admin's setting.
+	pool       *pgxpool.Pool
+	pending    *capture.PendingStore
 	caps       *capture.PassCaps
 	contacts   *contacts.Store
 	activities *activities.Store
@@ -183,11 +182,10 @@ type verdictPayload struct {
 // backlog consume the whole budget and starve every workspace after it.
 func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdicts int) error {
 	if maxVerdicts <= 0 {
-		passCap, err := e.caps.Verdict(ctx)
-		if err != nil {
+		var err error
+		if maxVerdicts, err = e.caps.Verdict(ctx); err != nil {
 			return err
 		}
-		maxVerdicts = passCap
 	}
 	budget := reAskBudgetFor(maxVerdicts)
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {

@@ -62,7 +62,6 @@ var replyVerdicts = map[string]bool{
 type CaptureClassifier struct {
 	pool  *pgxpool.Pool
 	store *activities.Store
-	// caps answers how many messages one run may settle: the admin's setting.
 	caps  *capture.PassCaps
 	brain completer
 	log   *slog.Logger
@@ -112,11 +111,10 @@ type classifyPayload struct {
 // workspace after it.
 func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) error {
 	if maxLabels <= 0 {
-		passCap, err := c.caps.Classify(ctx)
-		if err != nil {
+		var err error
+		if maxLabels, err = c.caps.Classify(ctx); err != nil {
 			return err
 		}
-		maxLabels = passCap
 	}
 	calls := newSweepCalls(maxLabels, classifyBatchSize)
 	settled := 0

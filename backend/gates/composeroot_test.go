@@ -33,8 +33,10 @@ const composeRootDir = "internal/compose"
 const (
 	composeRootProductionFiles = 1375
 	composeRootTestFiles       = 1902
-	composeRootProductionLines = 228_984
-	composeRootTestLines       = 357_833
+	// Raised by 7 for the pass-cap settings reads.
+	composeRootProductionLines = 228_991
+	// Raised by 61 for the pass-cap and personal sweep receipt tests.
+	composeRootTestLines = 357_894
 )
 
 // A read under these floors stopped early or read the wrong place, and would

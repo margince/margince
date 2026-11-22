@@ -21,16 +21,6 @@ type KeptCounts struct {
 	UnderUndeterminedFloor int
 }
 
-// KeptCounts is the subject's withheld messages, counted by reason.
-func (s PurgeSubject) KeptCounts() KeptCounts {
-	return KeptCounts{
-		Held:                   len(s.Held),
-		UnderStatute:           len(s.UnderStatute),
-		UnderRequest:           len(s.UnderRequest),
-		UnderUndeterminedFloor: len(s.UnderUndeterminedFloor),
-	}
-}
-
 // personalKeptByShield is the condition under which a due personal message is
 // kept rather than destroyed: the statutory shield or an open request.
 // SelectPersonalPurgeTx negates it and CountPersonalKeptTx asserts it, so the
