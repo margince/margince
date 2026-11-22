@@ -14,7 +14,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type { Middleware } from "openapi-fetch";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { api } from "../api/client";
 import { healthScope } from "./healthscopekey";
 import { endIdBatches } from "./idbatch";
@@ -55,36 +55,49 @@ export const sessionOptions = queryOptions({
   queryFn: ({ signal }) => readSession(signal),
 });
 
+// The last signed-in principal each client cleaned up for. It is kept across a
+// signed-out gap, because an expired session that ends in another seat's
+// sign-in reuses its QueryClient. One mark per client, not per useMe instance, so a
+// seat change clears the cache once. A late instance clearing it again would
+// drop the next seat's reads mid-flight, and their observers would ask twice.
+const seatSeen = new WeakMap<
+  QueryClient,
+  { scope: string; user: string | undefined }
+>();
+
+function forgetPreviousSeat(
+  client: QueryClient,
+  scope: string,
+  user: string | undefined,
+) {
+  const previous = seatSeen.get(client);
+  seatSeen.set(client, { scope, user });
+  if (previous === undefined) return;
+  if (previous.user !== user)
+    // Most record caches are keyed by record, not by reader. Only the
+    // snapshot itself (the bare ["me"] key) survives; ["me", ...] reads such
+    // as the reader's own sessions and two-step state belong to the seat.
+    client.removeQueries({
+      predicate: (entry) =>
+        entry.queryKey[0] !== "me" || entry.queryKey.length > 1,
+    });
+  else if (previous.scope !== scope)
+    client.removeQueries({
+      predicate: (entry) =>
+        entry.queryKey.includes(previous.scope) ||
+        entry.queryKey[0] === "reader-rendering" ||
+        entry.queryKey[0] === "scheduling-profile",
+    });
+}
+
 export function useMe(enabled = true) {
   const client = useQueryClient();
   const query = useQuery({ ...sessionOptions, enabled });
   const scope = healthScope(query.data);
-  // The last signed-in principal, kept across a signed-out gap: an expired
-  // session that ends in another seat's sign-in reuses this QueryClient.
-  const previousScope = useRef(scope);
-  const previousUser = useRef(query.data?.user?.id);
+  const user = query.data?.user?.id;
   useEffect(() => {
-    if (scope === undefined) return;
-    const previous = previousScope.current;
-    const user = query.data?.user?.id;
-    if (previousUser.current !== undefined && previousUser.current !== user)
-      // Most record caches are keyed by record, not by reader. Only the
-      // snapshot itself (the bare ["me"] key) survives; ["me", ...] reads such
-      // as the reader's own sessions and two-step state belong to the seat.
-      client.removeQueries({
-        predicate: (entry) =>
-          entry.queryKey[0] !== "me" || entry.queryKey.length > 1,
-      });
-    else if (previous !== undefined && previous !== scope)
-      client.removeQueries({
-        predicate: (entry) =>
-          entry.queryKey.includes(previous) ||
-          entry.queryKey[0] === "reader-rendering" ||
-          entry.queryKey[0] === "scheduling-profile",
-      });
-    previousScope.current = scope;
-    previousUser.current = user;
-  }, [client, scope, query.data?.user?.id]);
+    if (scope !== undefined) forgetPreviousSeat(client, scope, user);
+  }, [client, scope, user]);
   return query;
 }
 

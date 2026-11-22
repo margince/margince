@@ -327,7 +327,6 @@ function useRestore(
 
   return {
     existing,
-    voice,
     persistedRead,
     restoredReadId: wizard?.site_read_id ?? null,
     lookups: [existing, progress, voice, persistedRead],
@@ -341,8 +340,11 @@ export function OnboardingConversationScreen() {
     initialConversationState,
   );
   const { persist } = useWizardStatePersist();
-  const { existing, voice, persistedRead, restoredReadId, lookups } =
-    useRestore(state, dispatch, route.id === "connect");
+  const { existing, persistedRead, restoredReadId, lookups } = useRestore(
+    state,
+    dispatch,
+    route.id === "connect",
+  );
   useStepAddress(state, dispatch, route.id);
 
   // Act-transition checkpoints: the server remembers where the journey is,
@@ -385,7 +387,6 @@ export function OnboardingConversationScreen() {
             route={route}
             persist={persist}
             existing={existing}
-            voice={voice}
             persistedRead={persistedRead}
           />
         </WorkbenchEntranceScope>
@@ -404,7 +405,6 @@ function CurrentAct({
   route,
   persist,
   existing,
-  voice,
   persistedRead,
 }: Readonly<{
   state: ConversationState;
@@ -412,7 +412,6 @@ function CurrentAct({
   route: ReturnType<typeof useRoute>;
   persist: (input: WizardPersistInput) => Promise<boolean>;
   existing: ReturnType<typeof useCompany>;
-  voice: UseQueryResult<VoiceRestoreProbe>;
   persistedRead: UseQueryResult<CompanySiteRead | null>;
 }>) {
   const { navigateReplacing } = useAddressWriters();
@@ -433,15 +432,7 @@ function CurrentAct({
         />
       );
     case "voice":
-      return (
-        <VoiceAct
-          state={state}
-          dispatch={dispatch}
-          initialSummary={voice.data?.summary ?? null}
-          initialSources={voice.data?.sources ?? []}
-          initialMeterStale={voice.data?.meterStale === true}
-        />
-      );
+      return <VoiceAct state={state} dispatch={dispatch} />;
     case "basis":
       return <BasisAct state={state} dispatch={dispatch} />;
     case "invite":
