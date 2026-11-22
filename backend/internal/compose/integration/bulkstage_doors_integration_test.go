@@ -258,3 +258,62 @@ func TestBothDoorsRefuseAStageMoveWhoseTokenWasIssuedForAnotherStage(t *testing.
 		}
 	}
 }
+
+func TestBothDoorsCloseNothingOnUndoWhenTheUndoTargetWasRetypedAsWon(t *testing.T) {
+	e, doors := bulkUndoApp(t, "bulk-stage-undo-retyped")
+	pipeline, from, to := openStagePair(t, e)
+	for _, door := range doors {
+		items := seedStageDeals(t, e, pipeline, from, 2)
+		out, refusal := door.execute(t, moveDeals(to, items), "")
+		if refusal != "" || out.Changed != 2 {
+			t.Fatalf("%s: moving two deals → %+v, refused %q", door.name, out, refusal)
+		}
+		// An administrator retypes the emptied stage as won. The edit is written
+		// directly, standing in for the stage settings screen.
+		if _, err := e.Owner.Exec(t.Context(), `UPDATE stage SET semantic = 'won', win_probability = 100 WHERE id = $1`, from); err != nil {
+			t.Fatalf("%s: retyping the stage: %v", door.name, err)
+		}
+		undone, refusal := door.undo(t, out.BatchID, "")
+		if _, err := e.Owner.Exec(t.Context(), `UPDATE stage SET semantic = 'open', win_probability = 0 WHERE id = $1`, from); err != nil {
+			t.Fatalf("%s: restoring the stage: %v", door.name, err)
+		}
+		if refusal != "" || undone.Changed != 0 || len(undone.Skipped) != 2 || undone.Skipped[0].Reason != "refused" {
+			t.Fatalf("%s: undo → %+v, refused %q; want both deals refused", door.name, undone, refusal)
+		}
+		for _, item := range items {
+			if got := stageOfDeal(t, e, item.ID); got != to {
+				t.Errorf("%s: deal %s stands on %s after the undo, want it left on %s", door.name, item.ID, got, to)
+			}
+			if n := countOwned(t, e, `SELECT count(*) FROM deal WHERE id = $1 AND status = 'open'`, item.ID); n != 1 {
+				t.Errorf("%s: deal %s is no longer open", door.name, item.ID)
+			}
+		}
+	}
+}
+
+func TestBothDoorsSkipAsChangedSinceBatchADealAHumanMovedBackToTheUndoTarget(t *testing.T) {
+	e, doors := bulkUndoApp(t, "bulk-stage-undo-movedback")
+	pipeline, from, to := openStagePair(t, e)
+	for _, door := range doors {
+		items := seedStageDeals(t, e, pipeline, from, 1)
+		out, refusal := door.execute(t, moveDeals(to, items), "")
+		if refusal != "" || out.Changed != 1 {
+			t.Fatalf("%s: moving a deal → %+v, refused %q", door.name, out, refusal)
+		}
+		var current struct {
+			Version int64 `json:"version"`
+		}
+		if status := e.Call(t, "GET", "/v1/deals/"+items[0].ID, nil, nil, &current); status != http.StatusOK {
+			t.Fatalf("%s: reading the deal → %d", door.name, status)
+		}
+		if status := e.Call(t, "POST", "/v1/deals/"+items[0].ID+"/advance", AnyMap{"to_stage_id": from},
+			map[string]string{"If-Match": itoa(current.Version)}, nil); status != http.StatusOK {
+			t.Fatalf("%s: a human moving the deal back → %d", door.name, status)
+		}
+		undone, refusal := door.undo(t, out.BatchID, "")
+		if refusal != "" || undone.Changed != 0 || len(undone.Skipped) != 1 ||
+			undone.Skipped[0].ID != items[0].ID || undone.Skipped[0].Reason != "changed_since_batch" {
+			t.Fatalf("%s: undo → %+v, refused %q; want the deal skipped as changed_since_batch", door.name, undone, refusal)
+		}
+	}
+}

@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -72,6 +73,24 @@ func (s *Store) CheckBulkStage(ctx context.Context, stage ids.StageID) error {
 	})
 }
 
+// requireOpenStageLocked refuses a target that is no longer an open stage. The
+// stage is read under a share lock, so an edit of its semantic waits for this
+// move. An undo asks it too, because its target may have been retyped since.
+func requireOpenStageLocked(ctx context.Context, tx pgx.Tx, stage ids.StageID) error {
+	var semantic string
+	err := tx.QueryRow(ctx, `SELECT semantic FROM stage WHERE id = $1 AND archived_at IS NULL FOR SHARE`, stage).Scan(&semantic)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return &StageGoneError{StageID: stage}
+	}
+	if err != nil {
+		return fmt.Errorf("lock the stage a bulk move lands on: %w", err)
+	}
+	if StageSemantic(semantic) != SemanticOpen {
+		return errBulkStageNotOpen
+	}
+	return nil
+}
+
 // MoveStageForBulkTx moves one deal to the open stage to, conditioned on
 // version, through the advance every other stage move goes through. A move
 // that undoes an earlier one names its history row in reversalOf.
@@ -90,11 +109,19 @@ func (s *Store) MoveStageForBulkTx(
 	if err != nil {
 		return BulkStageMove{}, fmt.Errorf("read the stage of deal %s: %w", id, err)
 	}
+	// The version first: a deal that changed since the caller read it is
+	// skipped as changed, even when it stands on the target stage again.
+	if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, &version); err != nil {
+		return BulkStageMove{}, err
+	}
 	switch {
 	case DealStatus(status) != DealOpen:
 		return BulkStageMove{}, errBulkStageClosedDeal
 	case from == to.UUID:
 		return BulkStageMove{From: from}, nil
+	}
+	if err := requireOpenStageLocked(ctx, tx, to); err != nil {
+		return BulkStageMove{}, err
 	}
 	moved, err := s.advanceOnTx(ctx, tx, id, AdvanceDealInput{
 		ToStageID: to, IfVersion: &version, ReversalOf: reversalOf,
