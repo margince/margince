@@ -119,6 +119,9 @@ func (s *OwnerIdentityStore) RestoreRemoval(ctx context.Context, id ids.UUID) (O
 		if err := retirePendingForIdentityTx(ctx, tx, actor.UserID, out); err != nil {
 			return err
 		}
+		if err := s.addressClaimedTx(ctx, tx, out); err != nil {
+			return err
+		}
 		ws := storekit.MustWorkspace(ctx)
 		_, err = storekit.AuditEvent(storekit.WithReversal(ctx, captureSettingsObject, ws, withdrawn.auditID), tx,
 			"update", captureSettingsObject, ws, ownerIdentityAuditImage(out))

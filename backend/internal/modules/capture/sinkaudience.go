@@ -48,7 +48,7 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 	if decision.create || decision.linkOnly || len(rec.Links) > 0 || derivedLinks > 0 {
 		return nil
 	}
-	if decision.traceOutcome != TraceCaptured && decision.traceOutcome != TraceSuppressed {
+	if decision.traceOutcome != TraceCaptured && decision.traceOutcome != TraceSuppressed && !decision.notesMail {
 		return nil
 	}
 	// The row was inserted in this transaction, so the only way it is not
@@ -89,6 +89,9 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 // gives it: a later link does not open it, as it does a message that only named
 // nobody.
 func linkLessReason(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, kind string, decision counterpartyDecision) (string, error) {
+	if decision.notesMail {
+		return audienceReasonNoRecord, nil
+	}
 	if decision.traceReason != traceReasonNoCounterparty {
 		return audienceReasonNoRecord, nil
 	}

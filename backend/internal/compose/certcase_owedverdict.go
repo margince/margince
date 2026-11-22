@@ -26,7 +26,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
-	"github.com/margince/margince/backend/internal/compose/owedverdict"
+	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -231,6 +231,11 @@ func (c *owedVerdictCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if msg := validateOwedPayload(payload, c.batch); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
+	// The engine drops an answer it cannot use and asks again; certification
+	// still counts that answer against the model.
+	if msg := usableanswer.FirstFault(payload.Results, owedResult.fault); msg != "" {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
+	}
 	if disagreements := c.disagreements(payload); len(disagreements) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(disagreements, "; ")}
 	}
@@ -246,7 +251,7 @@ func (c *owedVerdictCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 // no business in a record.
 func (c *owedVerdictCase) disagreements(payload owedPayload) []string {
 	judged := make(map[string]string, len(payload.Results))
-	for _, r := range resolveBatchRefs(payload.Results, owedverdict.Refs(c.batch)) {
+	for _, r := range resolveOwedResults(payload, c.batch) {
 		judged[r.ID] = r.Verdict
 	}
 	var out []string

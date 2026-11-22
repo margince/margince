@@ -62,7 +62,8 @@ type Store struct {
 	startDeliveryForWonDeal StartDeliveryForWonDeal
 
 	// followOwner hands pending proposals to a deal's new owner (ownerfollow.go).
-	followOwner FollowOwner
+	followOwner   FollowOwner
+	managerOwners ManagerOwners
 	// ownDomains, when bound, lets the stage-move check judge activity
 	// evidence against the current own domains (WithOwnDomains).
 	ownDomains OwnDomainReader
@@ -134,6 +135,9 @@ type Installation struct {
 	// FollowOwner hands a deal's pending proposals to its new owner, in the
 	// transaction that reassigns it (ownerfollow.go).
 	FollowOwner FollowOwner
+	// ManagerOwners answers which owners the caller manages. `identity` owns
+	// teams and leads, so the edge is injected here.
+	ManagerOwners ManagerOwners
 	// ContractVisible is the contracts module's row rule, which stage
 	// evidence asks before it calls a cited contract openable.
 	ContractVisible ContractVisibleClause
@@ -158,6 +162,7 @@ func NewStore(db *database.DB, inst Installation) *Store {
 		ensureProjectAttachable: inst.EnsureProjectAttachable,
 		startDeliveryForWonDeal: inst.StartDeliveryForWonDeal,
 		followOwner:             inst.FollowOwner,
+		managerOwners:           inst.ManagerOwners,
 	}
 }
 
@@ -197,6 +202,11 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.ContractVisible == nil {
 		i.ContractVisible = refusingContractVisible()
+	}
+	if i.ManagerOwners == nil {
+		i.ManagerOwners = func(context.Context, pgx.Tx, []ids.UUID, *ids.UUID) (map[ids.UUID]bool, error) {
+			return nil, errEntitySeamUnwired("ManagerOwners")
+		}
 	}
 	if i.KnownCountry == nil {
 		i.KnownCountry = func(string) (bool, error) {

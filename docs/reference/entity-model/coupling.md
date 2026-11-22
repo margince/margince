@@ -25,12 +25,12 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
 | [compose](compose.md) | 47 | 433 | 3 | 40 | 36 |
 | [consent](consent.md) | 23 | 321 | 2 | 42 | 23 |
-| [contacts](contacts.md) | 49 | 715 | 77 | 35 | 12 |
+| [contacts](contacts.md) | 49 | 714 | 77 | 35 | 12 |
 | [continuity](continuity.md) | 1 | 8 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 95 | 0 | 8 | 1 |
-| [deals](deals.md) | 26 | 382 | 26 | 17 | 5 |
+| [deals](deals.md) | 26 | 386 | 26 | 17 | 2 |
 | [finance](finance.md) | 5 | 85 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 95 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 206 | 157 | 6 | 5 |
@@ -129,17 +129,17 @@ No outbound foreign keys.
 
 ### initiatives
 
-- `sales_initiative.sales_initiative_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
+- `sales_initiative.sales_initiative_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `sales_initiative_baseline.sales_initiative_baseline_deal_id_fkey`: `FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE`
 
 ### introductions
 
 - `intro_request.intro_request_contact_id_fkey`: `FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE`
-- `intro_request.intro_request_introducer_user_id_fkey`: `FOREIGN KEY (introducer_user_id) REFERENCES app_user(id)`
-- `intro_request.intro_request_requester_user_id_fkey`: `FOREIGN KEY (requester_user_id) REFERENCES app_user(id)`
+- `intro_request.intro_request_introducer_user_id_fkey`: `FOREIGN KEY (introducer_user_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `intro_request.intro_request_requester_user_id_fkey`: `FOREIGN KEY (requester_user_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `intro_request.intro_request_source_activity_id_fkey`: `FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL`
-- `intro_request.intro_request_suggested_user_id_fkey`: `FOREIGN KEY (suggested_user_id) REFERENCES app_user(id)`
-- `intro_request.intro_request_through_contact_id_fkey`: `FOREIGN KEY (through_contact_id) REFERENCES contact(id)`
+- `intro_request.intro_request_suggested_user_id_fkey`: `FOREIGN KEY (suggested_user_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `intro_request.intro_request_through_contact_id_fkey`: `FOREIGN KEY (through_contact_id) REFERENCES contact(id) ON DELETE RESTRICT`
 
 ### knowledge
 
@@ -165,16 +165,16 @@ No outbound foreign keys.
 
 ### reporting
 
-- `report_definition.report_definition_audience_team_id_fkey`: `FOREIGN KEY (audience_team_id) REFERENCES team(id)`
-- `report_definition.report_definition_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
-- `report_definition_revision.report_definition_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id)`
-- `report_execution.report_execution_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
-- `report_schedule.report_schedule_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
-- `reporting_framework_revision.reporting_framework_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id)`
+- `report_definition.report_definition_audience_team_id_fkey`: `FOREIGN KEY (audience_team_id) REFERENCES team(id) ON DELETE RESTRICT`
+- `report_definition.report_definition_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_definition_revision.report_definition_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_execution.report_execution_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_schedule.report_schedule_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `reporting_framework_revision.reporting_framework_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `sales_goal_plan.sales_goal_plan_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `sales_goal_plan_revision.sales_goal_plan_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
-- `sales_target.sales_target_pipeline_id_fkey`: `FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)`
-- `sales_target_revision.sales_target_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id)`
+- `sales_target.sales_target_pipeline_id_fkey`: `FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE RESTRICT`
+- `sales_target_revision.sales_target_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
 
 ### search
 
@@ -202,4 +202,4 @@ No outbound foreign keys.
 - `weekly_plan_commitment.weekly_plan_commitment_linked_deal_id_fkey`: `FOREIGN KEY (linked_deal_id) REFERENCES deal(id) ON DELETE SET NULL`
 - `weekly_plan_commitment.weekly_plan_commitment_linked_lead_id_fkey`: `FOREIGN KEY (linked_lead_id) REFERENCES lead(id) ON DELETE SET NULL`
 - `weekly_plan_commitment.weekly_plan_commitment_linked_project_id_fkey`: `FOREIGN KEY (linked_project_id) REFERENCES project(id) ON DELETE SET NULL`
-- `weekly_plan_commitment.weekly_plan_commitment_manager_fkey`: `FOREIGN KEY (manager_user_id) REFERENCES app_user(id)`
+- `weekly_plan_commitment.weekly_plan_commitment_manager_fkey`: `FOREIGN KEY (manager_user_id) REFERENCES app_user(id) ON DELETE RESTRICT`

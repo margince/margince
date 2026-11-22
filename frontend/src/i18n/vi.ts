@@ -1959,6 +1959,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Mô hình theo chính sách",
   "aiAdmin.decisionSkip.unbound":
     "Không dùng mô hình quyết định: chưa gán mô hình nào.",
+  "aiAdmin.certification.certified":
+    "{model} đã được chứng nhận cho tác vụ này.",
+  "aiAdmin.certification.degraded":
+    "{model} được hỗ trợ cho tác vụ này nhưng chất lượng giảm.",
+  "aiAdmin.certification.notSupported":
+    "{model} chưa được chứng nhận cho tác vụ này. Mô hình vẫn được dùng, vì vậy hãy kiểm tra kết quả.",
+  "aiAdmin.certification.unrecorded":
+    "{model} chưa được đo cho tác vụ này với các cài đặt này.",
+  "aiAdmin.certification.stale": "Bản ghi có trước các prompt hiện tại.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -13944,6 +13953,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal360.readFull": "Đọc bản tóm tắt đầy đủ",
   "deal360.openTask": "Mở việc cần làm",
   "deal360.createTask": "Tạo việc tiếp theo",
+  "deal360.bringInManager": "Mời quản lý tham gia",
+  "deal360.managerAsked": "Đã nhờ quản lý",
   "deal360.followUpCreated": "Đã tạo việc tiếp theo",
   "deal360.openBrief": "Mở bản tóm tắt cuộc họp",
   "deal360.unreadable":
@@ -16469,7 +16480,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aicalls.detail.source": "Nguồn danh tính phục vụ: {source}",
   "aicalls.detail.attempts": "Lần thử",
   "aicalls.detail.request": "Nội dung yêu cầu",
-  "aicalls.detail.settings": "Cài đặt yêu cầu đã gửi",
+  "aicalls.detail.settings": "Cài đặt mà lệnh gọi này đã được cấu hình",
   "aicalls.detail.servedBy": "do {host} phục vụ",
   "aicalls.detail.response": "Nội dung phản hồi",
   "aicalls.payload.off":
@@ -17411,6 +17422,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.jev":
     "URL endpoint đầy đủ. Để trống thì dùng API riêng của TypeSafe.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "Endpoint của tài nguyên, không có đường dẫn. Khóa API chỉ được gửi tới máy chủ có đuôi .openai.azure.com. Bắt buộc.",
+  "aiRouting.baseUrl.placeholder.azure":
+    "https://tai-nguyen-cua-toi.openai.azure.com",
+  "aiRouting.azureRegion.label": "Vùng Azure",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
+  "aiRouting.azureRegion.help":
+    "Vùng nơi tài nguyên chạy, ví dụ swedencentral. Vùng mà hệ thống không nhận ra sẽ bị chặn, để dữ liệu ở đúng nơi đã thỏa thuận.",
+  "aiRouting.model.help.azure":
+    "Nhập tên bạn đã đặt cho mô hình này trong Azure, không phải tên của chính mô hình.",
   "aiRouting.baseUrl.help.jevCompatible":
     "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -21170,6 +21191,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.gap.tab": "Thu hẹp khoảng cách",
   "worklist.gap.title": "Thu hẹp khoảng cách",
   "worklist.gap.loading": "Đang tải các deal đã xếp hạng…",
+  "worklist.gap.requested.title": "Được nhờ bạn hỗ trợ",
+  "worklist.gap.requested.done": "Đánh dấu đã xử lý",
+  "worklist.gap.reason.big_deal": "Giá trị cao hơn mức trung vị của nhóm",
+  "worklist.gap.reason.single_contact": "Chỉ có một liên hệ tham gia",
+  "worklist.gap.reason.stuck": "Đang bị kẹt ở giai đoạn hiện tại",
   "worklist.gap.empty":
     "Chưa nhóm nào có danh sách xếp hạng. Margince xếp hạng deal mỗi ngày một lần cho từng nhóm được ghi nhận.",
   "worklist.gap.behind":
@@ -21971,6 +21997,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviderSettings.service.otherChat": "Dịch vụ tương thích OpenAI khác",
   "aiProviderSettings.service.otherDecisions": "Máy chủ quyết định khác",
   "aiProviderSettings.service.otherAddress": "Địa chỉ khác",
+  "aiProviderSettings.service.azureResource": "Tài nguyên Azure OpenAI của bạn",
   "aiProviderSettings.service.learnMore": "Về OpenRouter EU",
   "aiProviderSettings.host.line": "Máy chủ: {host}",
   "aiProviderSettings.host.default": "Dùng địa chỉ riêng của dịch vụ.",
@@ -21981,6 +22008,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini trên Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Tương thích Jev",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",

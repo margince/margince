@@ -69,6 +69,9 @@ type MeetingNotesWriter interface {
 	// LandTx checks the meeting still carries the link and lands the text once.
 	// It answers false when nothing landed.
 	LandTx(ctx context.Context, tx pgx.Tx, in MeetingNotesLanding) (bool, error)
+	// LandMailTx lands a Gemini notes mail as the transcript of the one meeting
+	// it names, and answers false when no single meeting matches.
+	LandMailTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMail) (bool, error)
 }
 
 // WithNotesLanding returns a copy that reads meeting notes through notes.

@@ -74,6 +74,8 @@ type Movement struct {
 	ClosingMinor int64
 	Buckets      []Bucket
 	Deals        []DealDelta
+	// FocusActions is nil unless listed deals were worked in the window.
+	FocusActions *FocusAttribution
 }
 
 // Bucket is one named cause and what it moved.

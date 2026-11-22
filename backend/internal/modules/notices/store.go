@@ -203,6 +203,9 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	}
 	// Nil rather than the zero value on both halves, so the table's paired
 	// constraint sees a notice about no record as two NULLs.
+	if err := requireKnownTarget(in.Target); err != nil {
+		return Notice{}, false, err
+	}
 	var targetType *string
 	var targetID *ids.UUID
 	if in.Target.Named() {

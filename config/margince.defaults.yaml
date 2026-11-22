@@ -65,6 +65,7 @@ ai:
   capture_payloads: false
   price_sync: {"auto_sync":true}
   provider_keys_anthropic: ${file:/run/secrets/ai.provider_keys_anthropic}
+  provider_keys_azure_openai: ${file:/run/secrets/ai.provider_keys_azure_openai}
   provider_keys_gemini: ${file:/run/secrets/ai.provider_keys_gemini}
   provider_keys_gemini_vertex: ${file:/run/secrets/ai.provider_keys_gemini_vertex}
   provider_keys_jev: ${file:/run/secrets/ai.provider_keys_jev}

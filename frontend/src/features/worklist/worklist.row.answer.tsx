@@ -208,7 +208,9 @@ export function rowAnswer(
     return { primary: <WaitingReply item={item} to={replyTo} /> };
   }
   const primary =
-    item.move?.action === "create_task" && hasMoveControl(item.move) ? (
+    (item.move?.action === "create_task" ||
+      item.move?.action === "bring_in_manager") &&
+    hasMoveControl(item.move) ? (
       <MoveButton
         dealId={item.subject?.type === "deal" ? item.subject.id : undefined}
         move={item.move}

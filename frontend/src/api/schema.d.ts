@@ -13858,8 +13858,10 @@ export interface paths {
         /**
          * Declare another address as your own.
          * @description Takes a user or their agent and nothing more: claiming your own address needs no grant, and the claim
-         *     binds only your own mail. Not retroactive — mail already captured under the old reading
-         *     stays, and a contact already minted from an alias stays until it is merged or removed.
+         *     binds only your own mail. Mail already captured stays. When the address is one of your connected
+         *     mailboxes, the contact capture minted from it is also archived and its mail is taken off it and
+         *     kept as yours. Withdrawing the claim puts both back. A typed address proves nothing, so it
+         *     archives nothing. A contact a colleague owns or shares, or one with other mail on it, stays.
          *     Idempotent on the folded value.
          *
          *     A consumer-mail domain is refused with 422 `consumer_mail_domain` as a whole domain. A company's
@@ -24623,6 +24625,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/manager-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the team's manager to look at this deal.
+         * @description Accepting the Worklist's "bring in the manager" move. The deal then carries when it was
+         *     asked, by whom and why, and the team's leads see it on their focus list. It is one fact on
+         *     the deal, not a task per lead. Asking again changes nothing. A deal that is not open, or
+         *     one the caller may not change, answers 404.
+         */
+        post: operations["requestDealManager"];
+        /**
+         * Mark the manager request on this deal as handled.
+         * @description Clears the request. A team lead, or a seat with oversight of every team, may clear it. A
+         *     request also leaves the focus list by itself once the deal is no longer open. Idempotent:
+         *     a deal with no request answers the same success.
+         */
+        delete: operations["clearDealManagerRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/coverage": {
         parameters: {
             query?: never;
@@ -29332,8 +29366,10 @@ export interface components {
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
-             *     `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-             *     connection's and the location's to say.
+             *     `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+             *     `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+             *     Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+             *     the location's to say.
              * @enum {string}
              */
             profile: "eu_hosted" | "sovereign" | "cloud_frontier";
@@ -29358,14 +29394,16 @@ export interface components {
          *     host can be set before anything is bound to it.
          */
         AiProviderSettings: {
-            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. */
+            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. On `azure_openai` it is required while a lane binds it and is the resource endpoint, `https://<resource>.openai.azure.com`. */
             base_url?: string;
             upstream?: components["schemas"]["AiOpenRouterUpstream"];
             /**
-             * @description The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
-             *     processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-             *     while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
-             *     Google about each bound model at the new location first; one it does not serve is a 422.
+             * @description Where the provider processes the call. On `gemini_vertex` the Vertex AI location: `eu`,
+             *     `us`, `global`, or a region such as `europe-west4`. Moving it asks Google about each
+             *     bound model at the new location first; one it does not serve is a 422. On `azure_openai`
+             *     the Azure region of the resource, such as `swedencentral`; a region this build does not
+             *     know is a 422, and under the `eu_hosted` profile so is a region outside the EU.
+             *     Required while a lane binds either provider, and refused on every other provider.
              */
             location?: string;
         };
@@ -29398,7 +29436,7 @@ export interface components {
         AiTierBinding: {
             /**
              * @description The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-             *     | openai | gemini | gemini_vertex. The credential is never part of this document.
+             *     | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
              */
             provider: string;
             /** @description The provider-native model id. */
@@ -29411,11 +29449,11 @@ export interface components {
              */
             base_url?: string;
             /**
-             * @description On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+             * @description On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
              *     it is accepted only when empty or equal to the provider's, and a different one is a 422
              *     `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
              *     embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-             *     Refused on every provider but `gemini_vertex`.
+             *     Refused on every provider but `gemini_vertex` and `azure_openai`.
              */
             location?: string;
             /**
@@ -32628,6 +32666,17 @@ export interface components {
             model: string;
             /** @enum {string} */
             processing: "cloud_provider" | "configured_endpoint";
+            certification?: components["schemas"]["AiRouteCertification"];
+        };
+        /** @description What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified. */
+        AiRouteCertification: {
+            /**
+             * @description The worst verdict across the task's sites and across the records of this model.
+             * @enum {string}
+             */
+            verdict: "certified" | "supported_degraded" | "not_supported";
+            /** @description Every record behind the verdict still describes the prompts this build sends. */
+            current: boolean;
         };
         AiFeatureRoute: {
             task: string;
@@ -35865,6 +35914,13 @@ export interface components {
             entity_type: "company" | "fact" | "profile_field";
             /** Format: uuid */
             entity_id: string;
+            /**
+             * Format: int64
+             * @description The version of the stored claim this receipt was built from, the same number the claim's
+             *     list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+             *     receipt shows.
+             */
+            claim_version?: number;
             /**
              * @description How this record came to exist.
              *
@@ -50670,7 +50726,7 @@ export interface components {
             /** @enum {string} */
             inference_mode: "cloud" | "local" | "hybrid" | "none" | "development";
             /** @description Distinct configured provider keys, sorted; fake is never returned. */
-            providers: ("anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
+            providers: ("anthropic" | "azure_openai" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
         };
         AiProfile: {
             /** @enum {string} */
@@ -50682,7 +50738,7 @@ export interface components {
             /** @enum {string} */
             inference_mode: "cloud" | "local" | "hybrid" | "none" | "development";
             /** @description Distinct configured provider keys, sorted; fake is never returned. */
-            providers: ("anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
+            providers: ("anthropic" | "azure_openai" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
             /** @description Authenticated tier-to-model bindings. Credentials and endpoints never appear here. */
             configured_models: components["schemas"]["AssistantConfiguredModel"][];
         };
@@ -50690,7 +50746,7 @@ export interface components {
             /** @enum {string} */
             tier: "local_small" | "cheap_cloud" | "premium" | "frontier" | "local_large";
             /** @enum {string} */
-            provider: "anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm";
+            provider: "anthropic" | "azure_openai" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm";
             model: string;
         };
         /** @description The fixed answer of `GET /status`. */
@@ -50977,6 +51033,30 @@ export interface components {
             withheld: boolean;
             /** @description One entry per team with a daily freeze this quarter, ordered by team id. */
             teams: components["schemas"]["ForecastFocusTeam"][];
+            /** @description Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out. */
+            requests?: components["schemas"]["ForecastFocusRequested"][];
+        };
+        RequestDealManagerRequest: {
+            /** @description Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them. */
+            reasons: ("big_deal" | "single_contact" | "stuck")[];
+        };
+        ForecastFocusRequested: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /**
+             * Format: uuid
+             * @description Absent when individual performance is off.
+             */
+            owner_id?: string;
+            /**
+             * Format: uuid
+             * @description Absent when individual performance is off.
+             */
+            requested_by?: string;
+            /** Format: date-time */
+            requested_at: string;
+            reasons: ("big_deal" | "single_contact" | "stuck")[];
         };
         ForecastFocusTeam: {
             /** @description Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size. */
@@ -51345,6 +51425,36 @@ export interface components {
             buckets: components["schemas"]["ForecastMovementBucket"][];
             /** @description One row per deal that moved, each in exactly one bucket. */
             deals: components["schemas"]["ForecastMovementDeal"][];
+            /** @description How much of the change came from deals on the opening snapshot's stored focus list that were worked between the two snapshots. Absent when no listed deal was worked. It is a cause beside the buckets, not a bucket, so the buckets still add up. */
+            focus_actions?: components["schemas"]["ForecastMovementFocusActions"];
+        };
+        ForecastMovementFocusActions: {
+            /**
+             * Format: int64
+             * @description The change of the worked focus-list deals, in the reading drawn.
+             */
+            amount_minor: number;
+            /** @description That change as a share of the whole change, in basis points. Absent when the whole change is zero. */
+            share_bps?: number;
+            /** @description The worked deals, largest change first, each with links to what was done. */
+            deals: components["schemas"]["ForecastMovementFocusDeal"][];
+        };
+        ForecastMovementFocusDeal: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: int64 */
+            amount_minor: number;
+            /** @description Up to five of the actions, oldest first. */
+            actions: components["schemas"]["ForecastMovementFocusAction"][];
+        };
+        ForecastMovementFocusAction: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @enum {string} */
+            kind: "task_done" | "mail_sent" | "meeting_held";
+            /** Format: date-time */
+            at: string;
+            subject?: string;
         };
         ForecastMovementBucket: {
             /**
@@ -51377,7 +51487,7 @@ export interface components {
             /** Format: uuid */
             approval_id?: string;
             /** @description Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. */
-            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx")[];
+            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx" | "focus_actions")[];
         };
         NewForecastCall: {
             /**
@@ -64078,6 +64188,13 @@ export interface components {
              *     `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
              *     sends the reader to reauthorize a source that stopped answering.
              *
+             *     `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+             *     one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+             *     `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+             *     deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+             *     requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+             *     when one of those facts changes.
+             *
              *     `none` is a producer's answer that there is nothing to do — a closed deal has
              *     no next step. It is a member of this enum so a producer that computes one has
              *     a word for it, but NO row carries it: a step of "nothing" and no step at all
@@ -64085,7 +64202,9 @@ export interface components {
              *     client that meets one anyway draws nothing, which is the same outcome.
              * @enum {string}
              */
-            action: "draft_reply" | "draft_email" | "create_task" | "open_task" | "open_meeting_brief" | "reconnect" | "none";
+            action: "draft_reply" | "draft_email" | "create_task" | "open_task" | "open_meeting_brief" | "reconnect" | "bring_in_manager" | "none";
+            /** @description One sentence saying why this move is offered. Carried by `bring_in_manager`, whose reasons are facts about the deal; the other verbs leave it absent and the row's own reason stands. */
+            reason?: string;
             /**
              * Format: uuid
              * @description The record the verb acts on, where the verb acts on one: the message for
@@ -103200,6 +103319,60 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Back on the card, or was never off it. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    requestDealManager: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestDealManagerRequest"];
+            };
+        };
+        responses: {
+            /** @description Asked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    clearDealManagerRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared, or there was none. */
             204: {
                 headers: {
                     [name: string]: unknown;

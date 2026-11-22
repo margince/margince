@@ -140,6 +140,17 @@ func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	return out
 }
 
+// withCertification stamps each candidate with the verdict the certification
+// records give the model it names for task. A model no record measured keeps no
+// stamp, which the screen reads as not certified.
+func withCertification(candidates []crmcontracts.AiRouteCandidate, plan []plannedBinding, task Task, profile Profile) {
+	for i, binding := range plan {
+		if cert, ok := TierCertificationFor(task, binding.config, profile); ok {
+			candidates[i].Certification = &crmcontracts.AiRouteCertification{Verdict: cert.Verdict, Current: cert.Current}
+		}
+	}
+}
+
 // FeatureRoutes describes policy selection, not a promise that a provider will answer.
 func FeatureRoutes(normalConfig, effectiveConfig RoutingConfig, band string) []crmcontracts.AiFeatureRoute {
 	return compareFeatureRoutes(normalConfig, effectiveConfig, BandNormal, band)
@@ -175,6 +186,8 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 				DecisionTimeoutMs: int(defaults.DecisionTimeout.Milliseconds()), AttemptTimeoutMs: int(defaults.AttemptTimeout.Milliseconds()),
 			}
 		}
+		withCertification(row.NormalCandidates, normal, task, normalConfig.Profile)
+		withCertification(row.EffectiveCandidates, effective, task, effectiveConfig.Profile)
 		decisionRoute(&row, effectiveConfig, task, blocked)
 		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) {
 			row.Impact = withDecisionLeadChange(row.Impact)

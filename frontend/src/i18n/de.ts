@@ -2009,6 +2009,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
   "aiAdmin.decisionSkip.unbound":
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
+  "aiAdmin.certification.certified":
+    "{model} ist für diese Aufgabe zertifiziert.",
+  "aiAdmin.certification.degraded":
+    "{model} wird für diese Aufgabe mit verminderter Qualität unterstützt.",
+  "aiAdmin.certification.notSupported":
+    "{model} ist für diese Aufgabe nicht zertifiziert. Es wird trotzdem verwendet, prüfe also, was es liefert.",
+  "aiAdmin.certification.unrecorded":
+    "{model} wurde für diese Aufgabe mit diesen Einstellungen nicht gemessen.",
+  "aiAdmin.certification.stale": "Der Nachweis stammt aus früheren Prompts.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -14325,6 +14334,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal360.readFull": "Vollständigen Bericht lesen",
   "deal360.openTask": "Aufgabe öffnen",
   "deal360.createTask": "Folgeaufgabe erstellen",
+  "deal360.bringInManager": "Führungskraft einbinden",
+  "deal360.managerAsked": "Führungskraft gefragt",
   "deal360.followUpCreated": "Folgeaufgabe erstellt",
   "deal360.openBrief": "Terminvorbereitung öffnen",
   "deal360.unreadable":
@@ -16925,7 +16936,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aicalls.detail.source": "Quelle der ausgelieferten Identität: {source}",
   "aicalls.detail.attempts": "Versuche",
   "aicalls.detail.request": "Anfrage-Nutzdaten",
-  "aicalls.detail.settings": "Gesendete Anfrage-Einstellungen",
+  "aicalls.detail.settings":
+    "Einstellungen, mit denen dieser Aufruf konfiguriert war",
   "aicalls.detail.servedBy": "bedient von {host}",
   "aicalls.detail.response": "Antwort-Nutzdaten",
   "aicalls.payload.off":
@@ -17887,6 +17899,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.jev":
     "Vollständige Endpunkt-URL. Ohne Eintrag wird die API von TypeSafe selbst genutzt.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "Der Endpunkt der Ressource, ohne Pfad. Der API-Schlüssel geht nur an einen Host auf .openai.azure.com. Pflichtangabe.",
+  "aiRouting.baseUrl.placeholder.azure":
+    "https://meine-ressource.openai.azure.com",
+  "aiRouting.azureRegion.label": "Azure-Region",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
+  "aiRouting.azureRegion.help":
+    "Die Region, in der die Ressource läuft, etwa swedencentral. Eine unbekannte Region wird gesperrt, damit deine Daten dort bleiben, wo ihr es vereinbart habt.",
+  "aiRouting.model.help.azure":
+    "Gib den Namen ein, den du diesem Modell in Azure gegeben hast, nicht den Modellnamen.",
   "aiRouting.baseUrl.help.jevCompatible":
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -21746,6 +21768,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.gap.tab": "Lücke schließen",
   "worklist.gap.title": "Lücke schließen",
   "worklist.gap.loading": "Gereihte Deals werden geladen…",
+  "worklist.gap.requested.title": "Um deine Hilfe gebeten",
+  "worklist.gap.requested.done": "Als erledigt markieren",
+  "worklist.gap.reason.big_deal": "Wert über dem Median des Teams",
+  "worklist.gap.reason.single_contact": "Nur ein Kontakt eingebunden",
+  "worklist.gap.reason.stuck": "Steckt in seiner Phase fest",
   "worklist.gap.empty":
     "Noch kein Team hat eine gereihte Liste. Margince reiht die Deals jedes erfassten Teams einmal am Tag.",
   "worklist.gap.behind":
@@ -22567,6 +22594,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviderSettings.service.otherChat": "Anderer OpenAI-kompatibler Dienst",
   "aiProviderSettings.service.otherDecisions": "Anderer Entscheidungsserver",
   "aiProviderSettings.service.otherAddress": "Andere Adresse",
+  "aiProviderSettings.service.azureResource": "Deine Azure-OpenAI-Ressource",
   "aiProviderSettings.service.learnMore": "Über OpenRouter EU",
   "aiProviderSettings.host.line": "Host: {host}",
   "aiProviderSettings.host.default": "Nutzt die eigene Adresse des Dienstes.",
@@ -22577,6 +22605,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-kompatibel",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",

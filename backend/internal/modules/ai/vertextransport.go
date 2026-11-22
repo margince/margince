@@ -51,8 +51,8 @@ func vertexHost(location string) string {
 // and a base_url is refused because the host is derived, never supplied.
 func validateVertexPlacement(label string, binding ProviderConfig) error {
 	if binding.Provider != providerGeminiVertex {
-		if binding.Location != "" {
-			return fmt.Errorf("ai: routing config: %s: `location` applies only to gemini_vertex; provider %q is addressed by its base_url", label, binding.Provider)
+		if binding.Location != "" && binding.Provider != providerAzureOpenAI {
+			return fmt.Errorf("ai: routing config: %s: `location` applies only to gemini_vertex and azure_openai; provider %q is addressed by its base_url", label, binding.Provider)
 		}
 		return nil
 	}
