@@ -202,6 +202,19 @@ func NewSelfSetWithIdentityOnly(addresses, identityOnly, domains []string) SelfS
 // Plus-addressing is kept: `me+news@` is a different address.
 func foldAddress(address string) string { return mailidentity.FoldAddress(address) }
 
+// Addresses lists every exact address the seat is known by, proven or identity
+// only, in no particular order.
+func (s SelfSet) Addresses() []string {
+	out := make([]string, 0, len(s.addresses)+len(s.identityOnly))
+	for address := range s.addresses {
+		out = append(out, address)
+	}
+	for address := range s.identityOnly {
+		out = append(out, address)
+	}
+	return out
+}
+
 // Covers reports whether this address is one the seat declared as their own,
 // exactly or by one of their domains.
 // CoversAddressExactly is Covers restricted to the addresses a seat holds, with

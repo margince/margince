@@ -1095,6 +1095,18 @@ func (stubs) ReadCaptureTracePipeline(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "ReadCaptureTracePipeline")
 }
 
+func (stubs) ListUnroutedMail(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListUnroutedMail")
+}
+
+func (stubs) RestoreUnroutedAddress(w nethttp.ResponseWriter, r *nethttp.Request, address string) {
+	httperr.NotImplemented(w, r, "RestoreUnroutedAddress")
+}
+
+func (stubs) RefuseUnroutedAddress(w nethttp.ResponseWriter, r *nethttp.Request, address string) {
+	httperr.NotImplemented(w, r, "RefuseUnroutedAddress")
+}
+
 func (stubs) CatchUpOnRecord(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CatchUpOnRecordParams) {
 	httperr.NotImplemented(w, r, "CatchUpOnRecord")
 }
