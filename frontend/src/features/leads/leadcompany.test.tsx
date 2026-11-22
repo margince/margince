@@ -17,6 +17,7 @@ import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   LeadCompany,
+  LeadCompanyName,
   useLeadCompanyName,
   useLeadCompanyNameReading,
 } from "./leadcompany";
@@ -242,6 +243,24 @@ describe("LeadCompany", () => {
       lead: ["read"],
     });
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("LeadCompanyName", () => {
+  it("reads a company the reader may not see as if the lead were not linked", async () => {
+    stubServer();
+    render(<LeadCompanyName lead={{ ...lead, company_id: "c-hidden" }} />);
+    expect(await screen.findByText("Nordwind Logistik")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("names a company the reader may see by its own name", async () => {
+    stubServer();
+    render(<LeadCompanyName lead={{ ...lead, company_id: "c-7" }} />);
+    expect(
+      await screen.findByRole("link", { name: "Nordwind Holding SE" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Nordwind Logistik")).toBeNull();
   });
 });
 

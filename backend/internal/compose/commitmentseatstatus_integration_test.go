@@ -412,9 +412,8 @@ func TestAPrivatePromiseByItsInvitedOwnerIsTheirTask(t *testing.T) {
 
 // An AGENT seat cannot hold work or decide, and a promise naming one stages nothing.
 //
-// Its own case because an agent is refused by a different arm of the same check —
-// AgentAssigneeError rather than not-found — and a dispatcher reading only the
-// not-found answer would mint a task onto an agent seat that fails to move afterwards.
+// Its own case because an agent seat is otherwise live. A dispatcher asking only
+// whether the seat is active would mint a task onto it.
 func TestAPromiseNamingAnAgentSeatStagesNothing(t *testing.T) {
 	e, reply := seedMailedPromise(t, "active")
 	e.WsExec(t, `UPDATE app_user SET is_agent = true WHERE id = $1`, e.Rep2)

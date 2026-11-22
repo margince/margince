@@ -250,6 +250,11 @@ tail reaches every row it counts. A team page states no approval total, because 
 team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions state their stores' counts the
 same way, in scopes that include them.
 
+The decisions total and the readings' `review` count one population, by `readerSettles` in
+`attention/readings.go`. An approval counts also while its preview is stale or blocked, because the reader can
+refresh it. A duplicate pair without verbs waits on someone else and does not count. Where the total is stated,
+`review` is that total, so Home and the Worklist show one number.
+
 The changed-since-brief link ends at the ranked snapshot its badge counts. It counts the rows
 left after grouping and Done, and each page keeps their changed flags. Without that filter, the
 Worklist still loads later rows.

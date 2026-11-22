@@ -57277,6 +57277,8 @@ components:
             The exact number of admitted items in this category for this read's scope and
             owner. Absent when that population has not been counted exactly; a client then
             reads `considered` with `more_available` as today. Absent never means zero.
+            For `decisions` it counts only what this reader can settle, as the readings'
+            `review` does, so a duplicate pair without verbs is left out.
     WorklistSummary:
       type: object
       description: |-

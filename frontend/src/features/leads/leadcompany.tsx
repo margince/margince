@@ -103,12 +103,14 @@ function LinkCompanyOffer({
 
 // The company a lead names, without the offer: what a list row or a board card
 // draws. The link reads the company's own name, which a rename there may have
-// moved away from what the lead typed.
+// moved away from what the lead typed. A company the reader may not see reads
+// as if the lead were not linked, which is what the Company sort orders by.
 export function LeadCompanyName({
   lead,
   asText = false,
 }: Readonly<{ lead: Lead; asText?: boolean }>): ReactNode {
-  if (lead.company_id) {
+  const linked = useEntityName("company", lead.company_id);
+  if (lead.company_id && !linked.absent) {
     return <EntityRef kind="company" id={lead.company_id} asText={asText} />;
   }
   const name = lead.company_name?.trim();

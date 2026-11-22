@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -124,13 +125,10 @@ func mintBundleTask(
 	// A SEAT THAT CANNOT HOLD WORK COSTS THE TASK ITS ASSIGNEE, NOT ITS
 	// EXISTENCE.
 	//
-	// owner_id is a snapshot the scan took, and nothing revalidates it: a rep
-	// who has left the company still owns their open deals, and
-	// ensureAssigneeCanHoldWork refuses a seat that is deactivated, archived or
-	// an agent. Losing the task there would mean the deals of everyone who left
-	// silently stop being checked — the one population most likely to be
-	// carrying findings nobody is watching. Unassigned is where taskAssignee
-	// itself puts work nobody can be given, so this lands in the same queue.
+	// owner_id is a snapshot the scan took, and nothing revalidates it. A rep
+	// who has left still owns their open deals, and the task door refuses them.
+	// Losing the task would stop checking the deals of everyone who left.
+	// Unassigned is where taskAssignee puts work nobody can be given.
 	if in.AssigneeID == nil || !unassignableSeat(err) {
 		return ids.UUID{}, fmt.Errorf("compose: minting the task: %w", err)
 	}
@@ -152,14 +150,12 @@ func runTaskKey(subject subjectFindings, runID ids.UUID) string {
 // unassignableSeat reports whether the refusal was about WHO the task was aimed
 // at rather than about the task.
 //
-// The two shapes ensureAssigneeCanHoldWork answers with, and only those: a seat
-// that is missing, inactive or archived is ErrNotFound — deliberately
-// indistinguishable from a guessed id — and an agent seat is AgentAssigneeError.
+// The task door answers every seat it refuses with auth.AssigneeNotAllowedError.
 // Anything else is a real failure and must not be retried into a task nobody is
 // asked to do.
 func unassignableSeat(err error) bool {
-	var agent *activities.AgentAssigneeError
-	return errors.Is(err, apperrors.ErrNotFound) || errors.As(err, &agent)
+	_, refused := errors.AsType[*auth.AssigneeNotAllowedError](err)
+	return refused
 }
 
 // writeBundleTask mints the activity in the bundling store's transaction,

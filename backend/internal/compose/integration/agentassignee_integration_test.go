@@ -23,6 +23,9 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -48,15 +51,7 @@ func TestATaskCannotBeCreatedOnAnAgentSeat(t *testing.T) {
 	_, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "task", Subject: &subject, DueAt: &due, AssigneeID: &seat, Source: "manual",
 	})
-	var refusal *activities.AgentAssigneeError
-	if !errors.As(err, &refusal) {
-		t.Fatalf("creating a task on an agent seat got %v, want the field refusal", err)
-	}
-	// The FIELD, so the caller is sent to the thing they have to change rather
-	// than looking for a typo in an id that is perfectly real.
-	if field, _, _ := refusal.FieldFault(); field != "assignee_id" {
-		t.Errorf("the refusal names %q, want assignee_id", field)
-	}
+	assertSeatRefused(t, err, "assignee_id")
 }
 
 func TestATaskCannotBeReassignedToAnAgentSeat(t *testing.T) {
@@ -75,9 +70,7 @@ func TestATaskCannotBeReassignedToAnAgentSeat(t *testing.T) {
 
 	_, err = e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(task.Id)),
 		activities.UpdateActivityInput{AssigneeID: &seat})
-	if _, ok := errors.AsType[*activities.AgentAssigneeError](err); !ok {
-		t.Fatalf("moving a task onto an agent seat got %v, want the field refusal", err)
-	}
+	assertSeatRefused(t, err, "assignee_id")
 }
 
 // The admission case, over the same fixture: a CONTACT still takes the work.
@@ -96,5 +89,59 @@ func TestATaskStillReachesAContact(t *testing.T) {
 	}
 	if task.AssigneeId == nil || ids.UUID(*task.AssigneeId) != e.Rep1 {
 		t.Errorf("assignee = %v, want the contact it was written for", task.AssigneeId)
+	}
+}
+
+// A seat that cannot hold work gets one answer on every door: 422 on the field
+// the caller sent. An unknown id, a retired colleague and an agent read alike,
+// so the answer discloses nothing about the seat.
+func TestARefusedSeatGetsOneAnswerOnEveryDoor(t *testing.T) {
+	e := Setup(t)
+	retired := ids.NewV7()
+	if _, err := OwnerConn(t).Exec(t.Context(), `
+		INSERT INTO app_user (id, email, display_name, status) VALUES ($1, $2, 'Gone', 'deactivated')`,
+		retired, "gone-"+retired.String()+"@seat.test"); err != nil {
+		t.Fatalf("seeding the retired seat: %v", err)
+	}
+	seats := map[string]ids.UserID{
+		"an agent seat":       seedAgentSeat(t),
+		"a retired colleague": ids.From[ids.UserKind](retired),
+		"an unknown id":       ids.From[ids.UserKind](ids.NewV7()),
+	}
+	due := clocktest.Now(t).Add(24 * time.Hour)
+	mine := ids.From[ids.UserKind](e.Rep1)
+	subject := "Chase the renewal"
+	task, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due, AssigneeID: &mine, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("logging the task: %v", err)
+	}
+	for name, seat := range seats {
+		t.Run(name, func(t *testing.T) {
+			_, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+				Kind: "task", Subject: &subject, DueAt: &due, AssigneeID: &seat, Source: "manual",
+			})
+			assertSeatRefused(t, err, "assignee_id")
+			_, err = e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(task.Id)),
+				activities.UpdateActivityInput{AssigneeID: &seat})
+			assertSeatRefused(t, err, "assignee_id")
+			lead := "A lead for " + name
+			_, _, err = e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &lead, Source: "manual", OwnerID: &seat})
+			assertSeatRefused(t, err, "owner_id")
+		})
+	}
+}
+
+// assertSeatRefused holds a write to the one seat refusal, on the field the
+// caller has to change.
+func assertSeatRefused(t *testing.T, err error, field string) {
+	t.Helper()
+	refusal, ok := errors.AsType[*auth.AssigneeNotAllowedError](err)
+	if !ok {
+		t.Fatalf("got %v, want the seat refusal", err)
+	}
+	if got, code, _ := refusal.FieldFault(); got != field || code != "owner_not_assignable" {
+		t.Errorf("the refusal names %s/%s, want %s/owner_not_assignable", got, code, field)
 	}
 }

@@ -351,6 +351,7 @@ func (s *Service) worklistFrom(
 	// would be the one a reader sees while the filter used the other.
 	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
 	bands := bandsOf(ordered)
+	counts := withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope, considered), missing, scoped)
 	out := crmcontracts.Worklist{
 		AsOf:                               day.AsOf,
 		Queue:                              ordered,
@@ -380,7 +381,7 @@ func (s *Service) worklistFrom(
 		// The same accounting per kind of work. Both read the same two
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
-		Counts: withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope, considered), missing, scoped),
+		Counts: counts,
 		// The outcome figures beside the per-kind tallies, over the same
 		// snapshot: what the day's work is worth rather than how much of it
 		// there is.
@@ -391,7 +392,7 @@ func (s *Service) worklistFrom(
 		// merely convenient: DSR rows classify as `system` and feed none of the
 		// four readings, so a suppressed DSR lane hides no work these figures
 		// count. A lane whose rows DID feed one would have to be named.
-		Readings: readingsOf(considered, drawn, s.view, bounded, missing),
+		Readings: withDecisionsTotal(readingsOf(considered, drawn, s.view, bounded, missing), counts),
 	}
 	s.echoAsked(&out, filter)
 	// The token for the row this page stopped on, minted ONLY when there is more
