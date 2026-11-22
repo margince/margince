@@ -11,13 +11,85 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "bc3c36379b22a3ad",
+    "tools": "3e5ccbdf2a93806c",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:09:28Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:31:48Z"
+  },
   "usage": {
-    "input_tokens": 74508,
-    "output_tokens": 10350,
+    "input_tokens": 90542,
+    "output_tokens": 10360,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 305293,
+    "cache_read_input_tokens": 421123,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "describe_views",
+        "list_notices",
+        "list_notification_preferences",
+        "read_details",
+        "read_view",
+        "read_workspace",
+        "update_automation",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "describe_views",
+        "list_notices",
+        "list_notification_preferences",
+        "read_automatic_work_health",
+        "read_details",
+        "read_view",
+        "read_workspace",
+        "update_automation",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 9.5,
+      "min": 9,
+      "max": 10
+    },
+    "turns": {
+      "median": 9.5,
+      "min": 8,
+      "max": 11
+    },
+    "refused": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 255832.5,
+      "min": 169498,
+      "max": 342167
+    },
+    "output_tokens": {
+      "median": 5180,
+      "min": 4626,
+      "max": 5734
+    }
   }
 }

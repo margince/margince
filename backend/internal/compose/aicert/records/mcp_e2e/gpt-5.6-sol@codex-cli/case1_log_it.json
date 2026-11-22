@@ -4,20 +4,101 @@
     8
   ],
   "passed": 2,
-  "runs": 2,
+  "runs": 3,
   "pass_at": 2,
   "driver": "gpt:cli",
   "effort": "reasoning medium",
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "7d0dded48877cc77",
+    "tools": "609f93f8187483a3",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:03:46Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:35:51Z"
+  },
   "usage": {
-    "input_tokens": 124293,
-    "output_tokens": 10624,
+    "input_tokens": 111850,
+    "output_tokens": 10976,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 1492352,
-    "runs_measured": 2,
+    "cache_read_input_tokens": 1139840,
+    "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "change_activities",
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "log_activity",
+        "read_workspace",
+        "resolve_entities",
+        "search_records",
+        "update_record",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "read_workspace",
+        "resolve_entities",
+        "search_records",
+        "update_record",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_activities",
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "log_activity",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "resolve_entities",
+        "update_record",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 12,
+      "min": 10,
+      "max": 14
+    },
+    "refused": {
+      "median": 2,
+      "min": 1,
+      "max": 5
+    },
+    "prompt_tokens": {
+      "median": 413429,
+      "min": 402026,
+      "max": 436235
+    },
+    "output_tokens": {
+      "median": 3466,
+      "min": 3280,
+      "max": 4230
+    }
   }
 }

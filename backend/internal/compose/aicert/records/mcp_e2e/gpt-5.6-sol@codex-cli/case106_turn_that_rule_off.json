@@ -11,13 +11,72 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "bc3c36379b22a3ad",
+    "tools": "3e5ccbdf2a93806c",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:12:15Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:45Z"
+  },
   "usage": {
-    "input_tokens": 72319,
-    "output_tokens": 3601,
+    "input_tokens": 53790,
+    "output_tokens": 1758,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 1053568,
+    "cache_read_input_tokens": 452736,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "describe_views",
+        "list_notification_preferences",
+        "read_view",
+        "read_workspace",
+        "update_automation"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "describe_views",
+        "read_view",
+        "read_workspace",
+        "update_automation"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 253263,
+      "min": 240516,
+      "max": 266010
+    },
+    "output_tokens": {
+      "median": 879,
+      "min": 862,
+      "max": 896
+    }
   }
 }

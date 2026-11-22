@@ -11,13 +11,104 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "842d5644ddf2900b",
+    "tools": "b7d80230b27a9e8f",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T21:44:09Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:35:12Z"
+  },
   "usage": {
-    "input_tokens": 142648,
-    "output_tokens": 6142,
+    "input_tokens": 137897,
+    "output_tokens": 8495,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 1359360,
+    "cache_read_input_tokens": 1879040,
     "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_record_history",
+        "list_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "review_commitments",
+        "search_context",
+        "search_records",
+        "whats_slipping_this_week"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_record_history",
+        "list_records",
+        "prepare_handoff",
+        "read_attention",
+        "read_context",
+        "read_project",
+        "read_project_360",
+        "read_record",
+        "read_workspace",
+        "review_commitments",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "get_record_history",
+        "list_audit_log",
+        "list_records",
+        "prepare_handoff",
+        "read_attention",
+        "read_context",
+        "read_project",
+        "read_project_360",
+        "read_record",
+        "read_workspace",
+        "review_commitments",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 19,
+      "min": 17,
+      "max": 39
+    },
+    "refused": {
+      "median": 9,
+      "min": 4,
+      "max": 13
+    },
+    "prompt_tokens": {
+      "median": 592421,
+      "min": 492741,
+      "max": 931775
+    },
+    "output_tokens": {
+      "median": 2425,
+      "min": 2012,
+      "max": 4058
+    }
   }
 }
