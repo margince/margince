@@ -62,8 +62,8 @@ export function useTeamLifecycle() {
   return { archive, restore };
 }
 
-// The archive verb as the Teams page offers it: a team with members goes
-// through the confirmation, an empty one is archived at once with Undo.
+// The archive verb as the Teams page offers it. A team with members asks
+// first; an empty one is archived at once, with Undo.
 export function useArchiveFlow() {
   const { archive, restore } = useTeamLifecycle();
   const [confirming, setConfirming] = useState<ArchivableTeam | null>(null);

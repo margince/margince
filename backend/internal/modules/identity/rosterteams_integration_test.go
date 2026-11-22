@@ -281,8 +281,8 @@ func TestTeamSearchTreatsPercentAndUnderscoreAsTypedText(t *testing.T) {
 	}
 }
 
-// An archived team leaves the pickers' list, and only a team administrator may
-// ask for it back, with its archived_at, so the Teams page can restore it.
+// An archived team leaves the pickers' list. Only a team administrator may ask
+// for it back, with its archived_at, so the Teams page can restore it.
 func TestArchivedTeamsAreListedOnlyWhenATeamAdministratorAsks(t *testing.T) {
 	e := setupRevocationEnv(t, "roster-archived-teams")
 	live, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, "Sales South")

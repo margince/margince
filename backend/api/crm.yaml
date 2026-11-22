@@ -30986,6 +30986,7 @@ paths:
       tags: [Identity]
       operationId: listTeams
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      x-settings-audience: member
       summary: List workspace teams — cursor-paginated. Read-only.
       description: |
         Teams available as record-share subjects, with a member count. Any authenticated member may read.
