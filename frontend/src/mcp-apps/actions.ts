@@ -8,6 +8,7 @@
 // call arrives at the server as the connected assistant, through the same
 // passport, scope and approval checks as a call the model made.
 
+import { keyedIntents } from "../api/intentkeys";
 import {
   allowOutbound,
   MAX_MESSAGE_CHARS,
@@ -30,17 +31,18 @@ export type ActionOutcome =
 type Pending = {
   resolve: (outcome: ActionOutcome) => void;
   timer: ReturnType<typeof setTimeout>;
-  press: string;
 };
 
 const pending = new Map<number, Pending>();
 
-/** The retry key of each press whose write has not been confirmed, by the call
- *  it makes. The server replays the first answer to a repeated key, so a
- *  second click on the same button, or a click after a silent host, reuses the
- *  key and cannot write twice. A confirmed write forgets its key, so a later
- *  identical press (re-applying a tag that was removed) is a new write. */
-const retryKeys = new Map<string, string>();
+/** One key per call, kept while a press's outcome is unknown (silent host,
+ *  timeout) and dropped once the write landed or the server refused it. A
+ *  refused call is recorded against its key, so a retry under it would only
+ *  hear the same refusal. */
+const pressKeys = keyedIntents<ActionOutcome>(
+  (outcome) => outcome.ok || outcome.unknown !== true,
+);
+
 let declared: ReadonlySet<string> = new Set();
 let hostProxiesTools = false;
 
@@ -67,17 +69,10 @@ export function canCallTools(): boolean {
   return hostProxiesTools;
 }
 
-function pressOf(name: string, args: Record<string, unknown>): string {
-  return JSON.stringify([name, args]);
-}
-
-function newRetryKey(): string {
-  return globalThis.crypto.randomUUID();
-}
-
 /** callServerTool asks the host to run a declared tool and resolves with what
- *  it came to. Every call carries the press's `idempotency_key`. It never rejects: a refusal, a host error and a silence are all
- *  outcomes the card draws. */
+ *  it came to. Every call carries the press's `idempotency_key`. It never
+ *  rejects: a refusal, a host error and a silence are all outcomes the card
+ *  draws. */
 export function callServerTool(
   name: string,
   args: Record<string, unknown>,
@@ -94,13 +89,15 @@ export function callServerTool(
       reason: "This host does not run tools from a view.",
     });
   }
+  return pressKeys([name, args], (key) => sendCall(name, args, key));
+}
+
+function sendCall(
+  name: string,
+  args: Record<string, unknown>,
+  key: string,
+): Promise<ActionOutcome> {
   const id = nextRequestID();
-  const press = pressOf(name, args);
-  let key = retryKeys.get(press);
-  if (key === undefined) {
-    key = newRetryKey();
-    retryKeys.set(press, key);
-  }
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       pending.delete(id);
@@ -111,7 +108,7 @@ export function callServerTool(
         unknown: true,
       });
     }, CALL_TIMEOUT_MS);
-    pending.set(id, { resolve, timer, press });
+    pending.set(id, { resolve, timer });
     sendToHost({
       id,
       method: "tools/call",
@@ -179,9 +176,7 @@ function settle(message: Record<string, unknown>): void {
   if (waiting === undefined) return;
   clearTimeout(waiting.timer);
   pending.delete(id);
-  const outcome = outcomeOf(message);
-  if (outcome.ok) retryKeys.delete(waiting.press);
-  waiting.resolve(outcome);
+  waiting.resolve(outcomeOf(message));
 }
 
 function learnCapabilities(hostCapabilities: unknown): void {

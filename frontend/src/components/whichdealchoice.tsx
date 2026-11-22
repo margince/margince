@@ -8,8 +8,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Handshake } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
+import { intentKeys } from "../api/idempotencykey";
 import type { components } from "../api/schema";
 import { Button, Skeleton } from "../design-system/atoms";
 import { type Choice, ChoiceList } from "../design-system/choicelist";
@@ -188,21 +189,26 @@ function useFileOnDeal(taskId: string) {
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
+  const keyed = useRef(intentKeys());
   return useMutation({
     mutationKey: whichDealKey(taskId),
-    mutationFn: async ({ mail, deal }: { mail: string; deal: string }) =>
-      unwrap(
-        await api.POST("/activities/relink-thread", {
-          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
-          body: {
-            activity_id: mail,
-            entity_type: "deal",
-            entity_id: deal,
-            replace_existing_of_type: false,
-          },
-        }),
+    mutationFn: async ({ mail, deal }: { mail: string; deal: string }) => {
+      const body = {
+        activity_id: mail,
+        entity_type: "deal" as const,
+        entity_id: deal,
+        replace_existing_of_type: false,
+      };
+      return unwrap(
+        await keyed.current(body, (key) =>
+          api.POST("/activities/relink-thread", {
+            params: { header: { "Idempotency-Key": key } },
+            body,
+          }),
+        ),
         t,
-      ),
+      );
+    },
     onSuccess: async (_filed, { mail }) => {
       toast.show(t("tasks.whichDeal.filed"));
       // The thread's files now show on the deal it was filed under.

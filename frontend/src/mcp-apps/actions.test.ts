@@ -314,16 +314,33 @@ describe("a press carries one retry key", () => {
     expect(keyOf(retry)).toBe(keyOf(first));
   });
 
-  it("repeats the key after a refusal and while the first click is in flight", async () => {
+  it("sends a new key after the server refused, because the refused key only replays the refusal", async () => {
     const { parent, actions } = await ready();
     const refused = actions.callServerTool("merge_records", { source_id: "a" });
     reply(parent, callsSent(parent)[0], false);
     await refused;
     void actions.callServerTool("merge_records", { source_id: "a" });
+
+    const [first, again] = callsSent(parent).map(keyOf);
+    expect(again).not.toBe(first);
+  });
+
+  it("does not let a late answer to an old press drop the key of a newer one", async () => {
+    const { parent, actions } = await ready();
+    const one = actions.callServerTool("merge_records", { source_id: "a" });
+    const two = actions.callServerTool("merge_records", { source_id: "a" });
+    reply(parent, callsSent(parent)[0], true);
+    await one;
+    const third = actions.callServerTool("merge_records", { source_id: "a" });
+    void third;
+    reply(parent, callsSent(parent)[1], true);
+    await two;
     void actions.callServerTool("merge_records", { source_id: "a" });
 
     const keys = callsSent(parent).map(keyOf);
-    expect(new Set(keys).size).toBe(1);
+    expect(keys[0]).toBe(keys[1]);
+    expect(keys[2]).not.toBe(keys[0]);
+    expect(keys[3]).toBe(keys[2]);
   });
 
   it("gives a different call its own key", async () => {
