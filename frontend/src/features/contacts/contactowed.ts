@@ -8,7 +8,6 @@ import {
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMoment = components["schemas"]["ContactMoment"];
-type Activity = components["schemas"]["Activity"];
 
 // What the move says is owed, in the order both readers below take it: the
 // promise it may already have settled, then its evidence.
@@ -22,23 +21,6 @@ function owedRecords(moment: ContactMoment): { id: string; task: boolean }[] {
       item.id ? [{ id: item.id, task: item.type === "task" }] : [],
     ),
   ];
-}
-
-// The first listed task the move is about.
-export function momentTask(
-  moment: ContactMoment,
-  view: Contact360,
-): Activity | undefined {
-  const tasks = view.next_steps?.data ?? [];
-  for (const record of owedRecords(moment)) {
-    const task = record.task
-      ? tasks.find((row) => row.id === record.id)
-      : undefined;
-    if (task) {
-      return task;
-    }
-  }
-  return undefined;
 }
 
 // What the move says is owed, as its due date and kind: a claim's or a listed

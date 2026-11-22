@@ -8977,6 +8977,7 @@ func (e ContactMomentConfidence) Valid() bool {
 // Defines values for ContactMomentActionKind.
 const (
 	ContactMomentActionKindAskColleague     ContactMomentActionKind = "ask_colleague"
+	ContactMomentActionKindCall             ContactMomentActionKind = "call"
 	ContactMomentActionKindCompleteTask     ContactMomentActionKind = "complete_task"
 	ContactMomentActionKindDraftReply       ContactMomentActionKind = "draft_reply"
 	ContactMomentActionKindLogActivity      ContactMomentActionKind = "log_activity"
@@ -8990,6 +8991,8 @@ const (
 func (e ContactMomentActionKind) Valid() bool {
 	switch e {
 	case ContactMomentActionKindAskColleague:
+		return true
+	case ContactMomentActionKindCall:
 		return true
 	case ContactMomentActionKindCompleteTask:
 		return true
@@ -45875,6 +45878,13 @@ type ContactMoment struct {
 	// exists — the alternative is a page offering an action that 404s on click, which is how
 	// a moment becomes a lie. The state is honest for the same reason: an action the caller
 	// cannot take says so instead of failing.
+	//
+	// `call` dials the contact's primary phone number; a client that knows it ignores the
+	// destination. The destination is `activity_log`, so a client that predates `call` opens the
+	// log form instead of drawing a button that does nothing. The server names it only for a
+	// promise whose task was filed from a logged call, on a live contact that has a number.
+	// Writing to them then stays as the second action, and a card that asks whether the promise
+	// is done carries the call as a second action too.
 	RecommendedAction ContactMomentAction `json:"recommended_action"`
 
 	// Rule Which rung of the fixed ladder selected this moment (ADR-0096 D2), in priority order.
@@ -45905,6 +45915,13 @@ type ContactMomentConfidence string
 // exists — the alternative is a page offering an action that 404s on click, which is how
 // a moment becomes a lie. The state is honest for the same reason: an action the caller
 // cannot take says so instead of failing.
+//
+// `call` dials the contact's primary phone number; a client that knows it ignores the
+// destination. The destination is `activity_log`, so a client that predates `call` opens the
+// log form instead of drawing a button that does nothing. The server names it only for a
+// promise whose task was filed from a logged call, on a live contact that has a number.
+// Writing to them then stays as the second action, and a card that asks whether the promise
+// is done carries the call as a second action too.
 type ContactMomentAction struct {
 	BlockedReason *string `json:"blocked_reason,omitempty"`
 

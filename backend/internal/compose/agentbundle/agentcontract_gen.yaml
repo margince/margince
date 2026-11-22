@@ -36561,7 +36561,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [draft_reply, schedule_meeting, complete_task, log_activity, open_record, open_meeting_brief, open_research, ask_colleague]
+          enum: [draft_reply, schedule_meeting, complete_task, log_activity, open_record, open_meeting_brief, open_research, ask_colleague, call]
         label: {type: string}
         destination:
           description: Where the action goes. Absent for an action that opens no surface of its own.
