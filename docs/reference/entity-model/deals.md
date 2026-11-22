@@ -745,7 +745,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_suggestion_evidence
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -755,21 +755,22 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `kind` | `text` | yes | One of `meeting`, `signal`, `attachment`. |
 | `occurred_at` | `timestamp with time zone` | yes |  |
 | `signal_id` | `uuid` |  | Points at `signal.id`. |
+| `source_gone` | `boolean`, default `false` | yes |  |
 | `suggestion_id` | `uuid` | yes | Points at `deal_suggestion.id`. |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `activity_id` | `activity` | deleting the parent deletes this row |
-| `attachment_id` | `attachment` | deleting the parent deletes this row |
-| `signal_id` | `signal` | deleting the parent deletes this row |
+| `activity_id` | `activity` | deleting the parent keeps this row and clears the link |
+| `attachment_id` | `attachment` | deleting the parent keeps this row and clears the link |
+| `signal_id` | `signal` | deleting the parent keeps this row and clears the link |
 | `suggestion_id` | `deal_suggestion` | deleting the parent deletes this row |
 
 **Rules**
 
 - `deal_suggestion_evidence_kind_check`: `CHECK ((kind = ANY (ARRAY['meeting', 'signal', 'attachment'])))`
-- `deal_suggestion_evidence_shape`: `CHECK ((((kind = 'meeting') AND (activity_id IS NOT NULL) AND (signal_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'signal') AND (signal_id IS NOT NULL) AND (activity_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'attachment') AND (attachment_id IS NOT NULL) AND (activity_id IS NULL) AND (signal_id IS NULL))))`
+- `deal_suggestion_evidence_shape`: `CHECK ((((kind = 'meeting') AND (signal_id IS NULL) AND (attachment_id IS NULL) AND ((activity_id IS NOT NULL) OR source_gone)) OR ((kind = 'signal') AND (activity_id IS NULL) AND (attachment_id IS NULL) AND ((signal_id IS NOT NULL) OR source_gone)) OR ((kind = 'attachment') AND (activity_id IS NULL) AND (signal_id IS NULL) AND ((attachment_id IS NOT NULL) OR source_gone))))`
 
 **Indexes**
 
@@ -781,6 +782,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `deal_suggestion_evidence_keeps_source_gone`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION deal_suggestion_evidence_keeps_its_source_gone()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
 
