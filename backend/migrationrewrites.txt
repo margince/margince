@@ -223,26 +223,26 @@
 1795355021_the_sender_warning_columns_are_bounded.down.sql | * | restores the two earlier text guards on contact; it changes no existing row
 1795363335_a_record_source_names_a_channel.up.sql | *, partner | the UPDATE touches the partner table once, one row per partner company, and only rows whose source is off the list; the procedural body is a trigger function that acts on later updates of a deal, offer or project only, and those rows are left to a data task
 1795363336_the_partner_source_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795304993_a_rate_correction_keeps_the_rate_it_replaced.down.sql | fx_rate | restores the two read functions and deletes only superseded rate versions, at most the few corrections an operator typed by hand per currency and day
-1795316994_a_signature_may_state_a_second_email.down.sql | contact_profile_field | runs only on a rollback and deletes only email evidence rows, one per further address a signature stated, a handful per contact at most
-1795316995_a_second_email_evidence_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795316996_a_shared_mailbox_contact_stays_its_backup_owners.down.sql | contact | runs only on a rollback and touches only contacts a verdict kept for a shared mailbox's backup owner, a small share of one mailbox's senders
-1795316997_the_shared_mailbox_narrowing_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795320397_the_progress_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795331732_a_bulk_change_can_move_deals_to_a_stage_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795339916_every_foreign_key_states_its_delete_rule_1_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795339918_every_foreign_key_states_its_delete_rule_2_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795339920_every_foreign_key_states_its_delete_rule_3_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795339922_every_foreign_key_states_its_delete_rule_4_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795339924_every_foreign_key_states_its_delete_rule_5_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795339926_every_foreign_key_states_its_delete_rule_6_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795339928_cited_evidence_outlives_its_source_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795339927_cited_evidence_outlives_its_source.up.sql | * | the procedural body is a trigger function that writes no row; the migration adds one column with a constant default, which rewrites nothing, and changes no existing row
+1795363337_a_rate_correction_keeps_the_rate_it_replaced.down.sql | fx_rate | restores the two read functions and deletes only superseded rate versions, at most the few corrections an operator typed by hand per currency and day
+1795363339_a_signature_may_state_a_second_email.down.sql | contact_profile_field | runs only on a rollback and deletes only email evidence rows, one per further address a signature stated, a handful per contact at most
+1795363340_a_second_email_evidence_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363341_a_shared_mailbox_contact_stays_its_backup_owners.down.sql | contact | runs only on a rollback and touches only contacts a verdict kept for a shared mailbox's backup owner, a small share of one mailbox's senders
+1795363342_the_shared_mailbox_narrowing_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363345_the_progress_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363347_a_bulk_change_can_move_deals_to_a_stage_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363349_every_foreign_key_states_its_delete_rule_1_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363351_every_foreign_key_states_its_delete_rule_2_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363353_every_foreign_key_states_its_delete_rule_3_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363355_every_foreign_key_states_its_delete_rule_4_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363357_every_foreign_key_states_its_delete_rule_5_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363359_every_foreign_key_states_its_delete_rule_6_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363361_cited_evidence_outlives_its_source_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363360_cited_evidence_outlives_its_source.up.sql | * | the procedural body is a trigger function that writes no row; the migration adds one column with a constant default, which rewrites nothing, and changes no existing row
 1795370878_an_ai_call_names_the_extension_it_was_made_for.up.sql | * | adds one defaulted column and replaces the two text-bound triggers on ai_call, which act on later writes only; no existing row is changed
 1795370878_an_ai_call_names_the_extension_it_was_made_for.down.sql | * | restores the two text-bound triggers on ai_call as they stood before and drops the column; no existing row is changed
-1795351214_the_target_type_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795351214_the_target_type_checks_are_validated.up.sql | * | the procedural body only counts rows and validates constraints; it writes no row
-1795358785_the_notice_and_report_type_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795358785_the_notice_and_report_type_checks_are_validated.up.sql | * | the procedural body only counts rows and validates constraints; it writes no row
-1795359601_an_approval_with_an_old_type_stays_updatable.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795359601_an_approval_with_an_old_type_stays_updatable.up.sql | * | the procedural body only counts rows, drops or validates constraints; it writes no row
+1795363364_the_target_type_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363364_the_target_type_checks_are_validated.up.sql | * | the procedural body only counts rows and validates constraints; it writes no row
+1795363366_the_notice_and_report_type_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363366_the_notice_and_report_type_checks_are_validated.up.sql | * | the procedural body only counts rows and validates constraints; it writes no row
+1795363367_an_approval_with_an_old_type_stays_updatable.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363367_an_approval_with_an_old_type_stays_updatable.up.sql | * | the procedural body only counts rows, drops or validates constraints; it writes no row

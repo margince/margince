@@ -105,7 +105,7 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
 
    On such an installation the code holds the list until the rows are fixed. The approval staging,
    the notice insert and the edition write each refuse a value outside it.
-   `1795359601_an_approval_with_an_old_type_stays_updatable.up.sql` is the worked example.
+   `1795363367_an_approval_with_an_old_type_stays_updatable.up.sql` is the worked example.
 5. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
    A column that stores the hash of a token is `token_hash bytea` with `CHECK (octet_length(token_hash) = 32)`.
    Its writers and readers hash through `storekit.TokenHashBytes` (`backend/gates/tokenhashformat_test.go`).
