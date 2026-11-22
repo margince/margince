@@ -308,10 +308,9 @@ func TestAnAgentCorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 	t.Fatal("the corrected phone fact is gone entirely")
 }
 
-// Confirming is the verdict that changes no value, so the one thing it leaves
-// the nightly re-read to take away would be the claim that a person agreed.
-// Both sidecars are driven through the real ApplyDeepRead, with a proposal that
-// differs from the stored value.
+// A confirmation changes no value, so a re-read that took the row back would
+// silently drop the person's agreement. Both sidecars run through the real
+// ApplyDeepRead with a proposal that differs from the stored value.
 func TestAConfirmedClaimSurvivesTheNextDeepRead(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

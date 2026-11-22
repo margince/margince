@@ -184,10 +184,10 @@ export function EvidenceModal({
   );
 }
 
-// Confirm and Correct for the claim the receipt is about. The receipt names its
-// claim by row id and the verbs address it by field key and version, so the row
-// comes from the same list reads the Overview cards use; their keys are what
-// the verdict invalidates, which keeps this and those cards agreeing.
+// Confirm and Correct for the claim the receipt is about. The receipt names the
+// claim by row id, but the verbs need its field key and version.
+// So the row comes from the list reads the Overview cards use, and the verdict
+// invalidates those same keys.
 function CitedVerdict({
   companyId,
   anchor,
