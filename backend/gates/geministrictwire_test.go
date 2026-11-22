@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package aicert_test
+package gates
 
 import (
 	"bytes"
@@ -17,10 +17,10 @@ import (
 )
 
 // Every registered tool's arguments are rewritten as the Gemini wire sends
-// them, answered as a constrained decoder answers (every required key, null
-// wherever the key admits one), and taken back through the wire's undo. What
-// comes back must be valid under the tool's own schema, and a property the tool
-// lets the model clear is never written for it. A rewrite the walk does not
+// them. A constrained decoder writes every required key, with null wherever the
+// key admits one, and the wire's undo takes the padding back out. What comes
+// back must be valid under the tool's own schema. A property the tool lets the
+// model clear is never written for it. A rewrite the walk does not
 // undo fails here.
 func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
@@ -62,6 +62,8 @@ func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
 
 // leastValue is what a constrained decoder writes under schema: every required
 // key, null wherever the key admits null, and the least value allowed elsewhere.
+//
+//craft:ignore naked-any a JSON schema decoded generically holds values of any JSON type, and so does the value it describes
 func leastValue(schema map[string]any) any {
 	if branches, ok := schema["anyOf"].([]any); ok && len(branches) > 0 {
 		if branch, ok := branches[0].(map[string]any); ok {
@@ -170,6 +172,7 @@ func firstType(schema map[string]any) string {
 	return ""
 }
 
+//craft:ignore naked-any a schema's type and required members are a string or a list, decoded generically
 func stringsOf(value any) []string {
 	switch typed := value.(type) {
 	case string:
@@ -188,7 +191,7 @@ func stringsOf(value any) []string {
 }
 
 // clearableKeys are the root properties a tool leaves optional and lets the
-// model set to null, where an absent key keeps the field and a null clears it.
+// model set to null. An absent key keeps such a field, and a null clears it.
 func clearableKeys(t *testing.T, raw json.RawMessage) []string {
 	t.Helper()
 	var schema map[string]any

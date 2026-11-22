@@ -140,8 +140,8 @@ func TestGeminiLeavesANullablePropertyOptional(t *testing.T) {
 	}
 }
 
-// A branch is read by the values it was sent, and a padded null is not one of
-// an enum's values; the branch still matches, and the null comes back out.
+// A branch is read by the values it was sent. A padded null is not one of an
+// enum's values, yet the branch still matches and the null comes back out.
 func TestGeminiMatchesABranchThroughAPaddedEnum(t *testing.T) {
 	schema := json.RawMessage(`{"anyOf":[{"type":"object","properties":{"kind":{"type":"string","enum":["a"]},` +
 		`"mode":{"type":"string","enum":["x","y"]}},"required":["kind"]}]}`)
@@ -171,8 +171,8 @@ func TestGeminiPadsOnlyWhereItCanTakeThePaddingBackOut(t *testing.T) {
 }
 
 // On a PATCH body an absent key keeps a field and a null clears it. Through the
-// client, the decoder is not made to write the clearable key, and a null the
-// model chose to write for it reaches the caller.
+// client, the decoder is not made to write the clearable key. A null the model
+// chose to write for it reaches the caller.
 func TestAPatchBodyKeepsAbsenceAndANullApartOverTheGeminiWire(t *testing.T) {
 	const patch = `{"type":"object","properties":{"id":{"type":"string"},"note":{"type":["string","null"]}},"required":["id"],"additionalProperties":false}`
 	for reply, want := range map[string]string{

@@ -6,8 +6,8 @@ package ai
 // Gemini's constrained decoder leaves out the optional properties of an object.
 // An agent's log_activity call carried `kind` and `subject`, never the `body`
 // its store requires. So on the Gemini wire every optional property that does
-// not admit null is sent as required and nullable, and the nulls the decoder
-// then writes are taken back out of the reply. A property that admits null
+// not admit null is sent as required and nullable. The nulls the decoder then
+// writes are taken back out of the reply. A property that admits null
 // stays optional: its absence and its null mean different things. The padding
 // is done only where the walk that removes it reads. Other wires are unchanged.
 

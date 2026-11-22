@@ -127,7 +127,7 @@ func TestAStockBindingAdoptsItsPresetsTaskOrderAndACustomOneDoesNot(t *testing.T
 	}
 }
 
-// Settings' lead tier and the call flow read the order the router walks, so a
+// Settings' lead tier and the call flow read the order the router walks. A
 // preset that reorders a task shows the rung its calls are first sent to.
 func TestTheLeadTierAndTheCallFlowReadTheRoutersOrder(t *testing.T) {
 	stock, err := ParsePreset([]byte(stockPresets["gemini_cloud.yaml"]))
