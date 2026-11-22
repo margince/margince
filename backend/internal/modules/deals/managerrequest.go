@@ -37,6 +37,10 @@ const (
 // move lists them.
 var ManagerRequestReasons = []string{"big_deal", "single_contact", "stuck"}
 
+// ManagerOwners answers which of these deal owners the caller manages, as a
+// lead of a team they are on, narrowed to one team when given.
+type ManagerOwners func(ctx context.Context, tx pgx.Tx, owners []ids.UUID, team *ids.UUID) (map[ids.UUID]bool, error)
+
 // ManagerRequest is one deal a seller asked the manager to look at.
 type ManagerRequest struct {
 	DealID      ids.UUID
@@ -93,8 +97,8 @@ func (s *Store) RequestManager(ctx context.Context, id ids.DealID, reasons []str
 }
 
 // ClearManagerRequest marks a deal's request handled. The caller must lead a
-// team or hold oversight of every team, and may change the deal. A deal with no
-// request is left as it is.
+// team the deal's owner is on, or hold oversight of every team, and may change
+// the deal. A deal with no request is left as it is.
 func (s *Store) ClearManagerRequest(ctx context.Context, id ids.DealID) error {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
@@ -110,11 +114,16 @@ func (s *Store) ClearManagerRequest(ctx context.Context, id ids.DealID) error {
 			return err
 		}
 		var at *time.Time
-		var by *ids.UUID
+		var by, owner *ids.UUID
 		var before []string
-		if err := tx.QueryRow(ctx, `SELECT manager_requested_at, manager_requested_by, manager_request_reasons
-			FROM deal WHERE id = $1 AND archived_at IS NULL`, id).Scan(&at, &by, &before); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT manager_requested_at, manager_requested_by, manager_request_reasons, owner_id
+			FROM deal WHERE id = $1 AND archived_at IS NULL`, id).Scan(&at, &by, &before, &owner); err != nil {
 			return noRowIsNotFound(err)
+		}
+		if managed, err := s.managedOwners(ctx, tx, ownersOf(owner), nil); err != nil {
+			return err
+		} else if owner == nil || !managed[*owner] {
+			return apperrors.ErrNotFound
 		}
 		if at == nil {
 			return nil
@@ -163,8 +172,9 @@ func checkedReasons(reasons []string) ([]string, error) {
 }
 
 // ManagerRequests lists the open deals the caller may read that carry a
-// request, oldest first. Only a team lead, or a seat with oversight of every
-// team, reads them. team narrows to deals owned by that team's members.
+// request, oldest first. Only a lead of a team the deal's owner is on, or a
+// seat with oversight of every team, reads one. A record grant does not.
+// team narrows to deals owned by that team's members.
 func (s *Store) ManagerRequests(ctx context.Context, tx pgx.Tx, team *ids.UUID) ([]ManagerRequest, error) {
 	if auth.TeamLeadReachOf(ctx) == auth.ReachesNoTeam {
 		return nil, nil
@@ -185,19 +195,65 @@ func (s *Store) ManagerRequests(ctx context.Context, tx pgx.Tx, team *ids.UUID) 
 	if scope != "" {
 		where += " AND " + scope
 	}
-	if team != nil {
-		where += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM team_membership m WHERE m.team_id = $%d AND m.user_id = d.owner_id)", arg(*team))
-	}
 	rows, err := tx.Query(ctx, `SELECT d.id, d.name, d.owner_id, d.manager_requested_by, d.manager_requested_at, d.manager_request_reasons
 		FROM deal d WHERE `+where+` ORDER BY d.manager_requested_at, d.id`, args...)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (ManagerRequest, error) {
+	candidates, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (ManagerRequest, error) {
 		var out ManagerRequest
 		err := row.Scan(&out.DealID, &out.Name, &out.OwnerID, &out.RequestedBy, &out.RequestedAt, &out.Reasons)
 		return out, err
 	})
+	if err != nil {
+		return nil, err
+	}
+	owners := make([]ids.UUID, 0, len(candidates))
+	for _, candidate := range candidates {
+		owners = append(owners, ownersOf(candidate.OwnerID)...)
+	}
+	managed, err := s.managedOwners(ctx, tx, owners, team)
+	if err != nil {
+		return nil, err
+	}
+	out := candidates[:0]
+	for _, candidate := range candidates {
+		if candidate.OwnerID != nil && managed[*candidate.OwnerID] {
+			out = append(out, candidate)
+		}
+	}
+	return out, nil
+}
+
+// managedOwners asks the injected team reader which owners the caller manages.
+func (s *Store) managedOwners(ctx context.Context, tx pgx.Tx, owners []ids.UUID, team *ids.UUID) (map[ids.UUID]bool, error) {
+	return s.managerOwners(ctx, tx, owners, team)
+}
+
+func ownersOf(owner *ids.UUID) []ids.UUID {
+	if owner == nil {
+		return nil
+	}
+	return []ids.UUID{*owner}
+}
+
+// dropManagerRequest ends a request when its deal leaves the open pipeline, in
+// the write that closes it, so reopening finds no stale ask.
+func dropManagerRequest(ctx context.Context, tx pgx.Tx, p *storekit.Patch, id ids.UUID) error {
+	var at *time.Time
+	var by *ids.UUID
+	var reasons []string
+	if err := tx.QueryRow(ctx, `SELECT manager_requested_at, manager_requested_by, manager_request_reasons
+		FROM deal WHERE id = $1`, id).Scan(&at, &by, &reasons); err != nil {
+		return fmt.Errorf("read the manager request of a closing deal: %w", err)
+	}
+	if at == nil {
+		return nil
+	}
+	p.Set(managerRequestedAt, at, nil)
+	p.Set(managerRequestedBy, by, nil)
+	p.Set(managerRequestedReasons, reasons, nil)
+	return nil
 }
 
 // RequestDealManager implements POST /deals/{id}/manager-request.

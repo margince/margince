@@ -38,6 +38,14 @@ var suggestionVerbWrites = map[crmcontracts.Company360SuggestionActionKind]*lang
 // MoveRefusal says why this reader may not take a Worklist or deal-card verb,
 // in the reader's language, or nil when they may.
 func MoveRefusal(ctx context.Context, action crmcontracts.WorklistMoveAction) *string {
+	// Asking the manager changes the deal, not an activity, so it asks the deal grant.
+	if action == crmcontracts.WorklistMoveActionBringInManager {
+		if auth.AllowsWrite(ctx, "deal", principal.ActionUpdate) {
+			return nil
+		}
+		reason := langcopy.For(string(systemtext.Locale(ctx))).Say(blockedWords.Deal)
+		return &reason
+	}
 	return refusal(ctx, worklistVerbWrites, action)
 }
 

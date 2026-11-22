@@ -40,6 +40,7 @@ type managerMoveFixture struct {
 	now      time.Time
 	pipeline ids.PipelineID
 	stage    ids.StageID
+	won      ids.StageID
 }
 
 // leadReadingForecast is a team lead's grants: the rep's plus forecast and team lead read.
@@ -61,12 +62,12 @@ func repReadingForecast(read bool) principal.Permissions {
 func newManagerMoveFixture(t *testing.T) managerMoveFixture {
 	t.Helper()
 	e := Setup(t)
-	pipeline, stage, _ := DealFixture(t, e)
+	pipeline, stage, won := DealFixture(t, e)
 	now := clocktest.Now(t)
 	svc := dealstatus.NewService(e.Pool, e.Deals, e.Activities, dealrooms.NewStore(e.DB()), func() time.Time { return now }).
 		WithManagerStandings(managermove.Standings(compose.ForecastStoreForTest(e.Pool)))
 	return managerMoveFixture{
-		e: e, svc: svc, rep: e.As(e.Rep1, []ids.UUID{e.Team1}, repReadingForecast(true)), now: now, pipeline: pipeline, stage: stage,
+		e: e, svc: svc, rep: e.As(e.Rep1, []ids.UUID{e.Team1}, repReadingForecast(true)), now: now, pipeline: pipeline, stage: stage, won: won,
 	}
 }
 
@@ -389,5 +390,60 @@ func TestARequestLeavesTheListWhenTheDealLeavesTheOpenPipeline(t *testing.T) {
 	})
 	if err != nil || len(got) != 0 {
 		t.Errorf("a won deal's request lists %+v (err %v), want none", got, err)
+	}
+}
+
+func TestARecordGrantDoesNotMakeALeadTheManagerOfADeal(t *testing.T) {
+	f := newManagerMoveFixture(t)
+	owner := f.e.Rep1
+	deal := f.e.SeedDeal(t, "Shared deal", f.pipeline, f.stage, &owner)
+	if err := f.e.Deals.RequestManager(f.rep, ids.From[ids.DealKind](deal), []string{"stuck"}); err != nil {
+		t.Fatalf("requesting the manager: %v", err)
+	}
+	f.e.WsExec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
+		VALUES ('deal', $1, 'user', $2, 'write', $3)`, deal, f.e.Rep3, f.e.Rep1)
+	unrelated := f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, leadReadingForecast())
+
+	var got []deals.ManagerRequest
+	err := database.WithWorkspaceTx(unrelated, f.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		got, err = f.e.Deals.ManagerRequests(unrelated, tx, nil)
+		return err
+	})
+	if err != nil || len(got) != 0 {
+		t.Errorf("a lead of another team with a write grant reads %+v (err %v), want none", got, err)
+	}
+	if err := f.e.Deals.ClearManagerRequest(unrelated, ids.From[ids.DealKind](deal)); err == nil {
+		t.Error("a lead of another team with a write grant cleared the request")
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND manager_requested_at IS NOT NULL`, deal); n != 1 {
+		t.Errorf("the request is gone after the refused clear")
+	}
+}
+
+func TestClosingAndReopeningADealLeavesNoStaleRequest(t *testing.T) {
+	f := newManagerMoveFixture(t)
+	f.e.GrantRole(t, f.e.Rep2, "manager")
+	owner := f.e.Rep1
+	big := f.e.SeedDeal(t, "Big renewal", f.pipeline, f.stage, &owner)
+	f.freeze(t, f.now.Add(-time.Hour), openRow(big, 900_000), openRow(f.e.SeedDeal(t, "Small", f.pipeline, f.stage, &owner), 100_000))
+	dealID := ids.From[ids.DealKind](big)
+	if err := f.e.Deals.RequestManager(f.rep, dealID, []string{"big_deal"}); err != nil {
+		t.Fatalf("requesting the manager: %v", err)
+	}
+	if _, err := f.e.Deals.AdvanceDeal(f.e.Admin(), dealID, deals.AdvanceDealInput{ToStageID: f.won, WonWithoutContractReason: new("verbal")}); err != nil {
+		t.Fatalf("closing the deal: %v", err)
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND manager_requested_at IS NULL AND manager_request_reasons IS NULL`, big); n != 1 {
+		t.Fatal("closing the deal left its request on the row")
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal' AND entity_id = $1 AND after ? 'manager_requested_at' AND after->'manager_requested_at' = 'null'::jsonb`, big); n != 1 {
+		t.Errorf("%d audit rows record the request ending with the close, want 1", n)
+	}
+	if _, err := f.e.Deals.AdvanceDeal(f.e.Admin(), dealID, deals.AdvanceDealInput{ToStageID: f.stage}); err != nil {
+		t.Fatalf("reopening the deal: %v", err)
+	}
+	if got := f.move(f.rep, t, big); got == nil {
+		t.Error("a reopened deal is not offered the move again, so a stale request still hides it")
 	}
 }
