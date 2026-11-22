@@ -97,9 +97,9 @@ func NewStore(db *database.DB) *Store {
 //
 // The other equal-tuple write is progress: the same attempt and state with a
 // higher processed count than the row holds. At an equal tuple the lease only
-// ever lengthens and the count pair only ever advances, so a delayed renewal
-// cannot erase newer progress and a delayed progress event cannot shorten the
-// lease. Only a higher tuple replaces both outright.
+// lengthens and the count pair only advances. A delayed renewal cannot erase
+// newer progress, and a delayed progress event cannot shorten the lease.
+// Only a higher tuple replaces both outright.
 //
 // Every column is written from EXCLUDED rather than merged: a reopened
 // occurrence must LOSE the previous attempt's finished_at, degrade_reason and

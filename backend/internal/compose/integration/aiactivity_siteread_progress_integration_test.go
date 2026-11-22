@@ -99,8 +99,8 @@ func TestASettledWebsiteReadCarriesNoCount(t *testing.T) {
 	}
 }
 
-// siteReadFacts is what the dossier row and the staged events say about one read,
-// read straight from the tables so a refused write is seen to change nothing.
+// siteReadFacts is what the dossier row and the staged events say about one read.
+// It reads the tables directly, so a refused write is seen to change nothing.
 type siteReadFacts struct {
 	pagesRead, outbox, ledger int
 	phase                     *string

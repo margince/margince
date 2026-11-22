@@ -281,10 +281,9 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, companyID *ids.Company
 
 // UpdateSiteReadProgress records the phase and the committed page count on a
 // still-running dossier, so the SPA's poll shows movement during the crawl.
-// It is announced to the AI-activity projection in the same transaction under
-// the lease the claim announced; a different lease would move the instant the
-// read stops being believed, and a lease that is not positive is refused.
-// claimedAt is the lease BeginSiteRead handed this worker. A worker whose claim
+// It is announced to the AI-activity projection in the same transaction, under
+// the lease the claim announced. A lease that is not positive is refused.
+// claimedAt is the claim BeginSiteRead handed this worker. A worker whose claim
 // was reclaimed presents an old one and changes nothing.
 // A read that is no longer running is not updated, and that is not an error:
 // the terminal write won. No auth.Require, same rationale as BeginSiteRead.

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,14 +29,12 @@ type progressProbe struct {
 func newProgressProbe(t *testing.T) *progressProbe {
 	t.Helper()
 	e := Setup(t)
-	started := time.Now().UTC().Truncate(time.Second)
+	started := clocktest.Now(t).UTC().Truncate(time.Second)
 	return &progressProbe{
 		t: t, e: e, store: aiactivity.NewStore(e.DB()),
 		key: ids.NewV7().String(), queued: started.Add(-time.Minute), started: started,
 	}
 }
-
-func intPtr(n int) *int { return &n }
 
 func (p *progressProbe) apply(attempt int, state string, lease time.Duration, processed, total *int) bool {
 	p.t.Helper()
@@ -85,37 +84,37 @@ func (p *progressProbe) want(processed *int, lease time.Duration) {
 
 func TestADelayedLeaseRenewalKeepsNewerProgress(t *testing.T) {
 	p := newProgressProbe(t)
-	p.apply(1, "running", time.Minute, intPtr(3), nil)
+	p.apply(1, "running", time.Minute, new(3), nil)
 	if !p.apply(1, "running", time.Hour, nil, nil) {
 		t.Fatal("a longer lease at an equal tuple must still land")
 	}
-	p.want(intPtr(3), time.Hour)
+	p.want(new(3), time.Hour)
 }
 
 func TestADelayedProgressEventKeepsTheLongerLease(t *testing.T) {
 	p := newProgressProbe(t)
 	p.apply(1, "running", time.Hour, nil, nil)
-	if !p.apply(1, "running", time.Minute, intPtr(3), nil) {
+	if !p.apply(1, "running", time.Minute, new(3), nil) {
 		t.Fatal("a higher count at an equal tuple must still land")
 	}
-	p.want(intPtr(3), time.Hour)
+	p.want(new(3), time.Hour)
 }
 
 func TestAnExactReplayAndALowerCountChangeNothing(t *testing.T) {
 	p := newProgressProbe(t)
-	p.apply(1, "running", time.Hour, intPtr(5), nil)
-	if p.apply(1, "running", time.Hour, intPtr(5), nil) {
+	p.apply(1, "running", time.Hour, new(5), nil)
+	if p.apply(1, "running", time.Hour, new(5), nil) {
 		t.Fatal("an exact replay was applied")
 	}
-	if p.apply(1, "running", time.Hour, intPtr(2), nil) {
+	if p.apply(1, "running", time.Hour, new(2), nil) {
 		t.Fatal("a lower count was applied")
 	}
-	p.want(intPtr(5), time.Hour)
+	p.want(new(5), time.Hour)
 }
 
 func TestSettlingClearsTheCountsAndANewAttemptStartsWithNone(t *testing.T) {
 	p := newProgressProbe(t)
-	p.apply(1, "running", time.Hour, intPtr(5), intPtr(10))
+	p.apply(1, "running", time.Hour, new(5), new(10))
 	p.apply(1, "done", 0, nil, nil)
 	processed, total, _ := p.row()
 	if processed != nil || total != nil {
@@ -123,7 +122,7 @@ func TestSettlingClearsTheCountsAndANewAttemptStartsWithNone(t *testing.T) {
 	}
 
 	q := newProgressProbe(t)
-	q.apply(1, "running", time.Hour, intPtr(5), intPtr(10))
+	q.apply(1, "running", time.Hour, new(5), new(10))
 	q.apply(2, "running", time.Hour, nil, nil)
 	processed, total, _ = q.row()
 	if processed != nil || total != nil {
