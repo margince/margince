@@ -503,8 +503,6 @@ func expressionMentions(expr ast.Expr, ident string) bool {
 var notAModelReply = gatekit.Waive(map[string]string{
 	"ai.decodeTranscriptItems": "reads the transcript an OPERATOR uploaded to the voice corpus, not a completion — " +
 		"its `content` is a form field, and there is no model whose manners could have wrapped it",
-	"searchplan.withoutEmptyLists": "reads the arguments member of a plan the certification check already " +
-		"decoded through searchplan.Read, which unfences the reply; it never sees the reply itself",
 })
 
 // The census half: no model-reply parser reads its reply without reducing it.

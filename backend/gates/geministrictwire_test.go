@@ -7,6 +7,7 @@ package gates
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"slices"
 	"strings"
@@ -15,101 +16,137 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// Every registered tool's arguments are rewritten as the Gemini wire sends
-// them. A constrained decoder writes every required key, with null wherever the
-// key admits one, and the wire's undo takes the padding back out. What comes
-// back must be valid under the tool's own schema. A property the tool lets the
-// model clear is never written for it. A rewrite the walk does not
-// undo fails here.
+// Each tool's arguments and the runner's step schema go through the Gemini
+// rewrite. The decoder answers every branch in turn. It fills an optional object
+// one level down and a list with one item, and nulls every other padded key.
+// The undo must hand on a value valid under the schema sent, clearing nothing.
 func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
 	t.Parallel()
-	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
+	registry := compose.NewRegistry(nil, compose.SendPath{})
+	specs := registry.Specs()
 	if len(specs) < 100 {
 		t.Fatalf("the registry offered %d tools; the census lost its subject", len(specs))
 	}
-	padded := 0
+	schemas := stepSchemas(t, registry)
 	for _, spec := range specs {
-		strict, err := ai.GeminiStrictSchema(spec.InputSchema)
+		schemas[spec.Name] = spec.InputSchema
+	}
+	padded, branched := 0, 0
+	for name, original := range schemas {
+		strict, err := ai.GeminiStrictSchema(original)
 		if err != nil {
-			t.Errorf("%s: the strict wire cannot read its schema: %v", spec.Name, err)
+			t.Errorf("%s: the strict wire cannot read its schema: %v", name, err)
 			continue
-		}
-		if strings.Contains(string(strict), `{"type":"null"}`) {
-			padded++
 		}
 		var sent map[string]any
 		if err := json.Unmarshal(strict, &sent); err != nil {
 			t.Fatal(err)
 		}
-		decoded, err := json.Marshal(leastValue(sent))
-		if err != nil {
-			t.Fatal(err)
+		if strings.Contains(string(strict), `{"type":"null"}`) {
+			padded++
 		}
-		handed := ai.GeminiDropPaddedNulls(spec.InputSchema, string(decoded))
-		if err := validJSON(spec.InputSchema, handed); err != nil {
-			t.Errorf("%s: the arguments handed on break the tool's own schema: %v\n%s", spec.Name, err, handed)
+		branches := max(1, len(nonNullBranches(sent)))
+		if branches > 1 {
+			branched++
 		}
-		for _, key := range clearableKeys(t, spec.InputSchema) {
-			if strings.Contains(handed, `"`+key+`":null`) {
-				t.Errorf("%s: %s, which the model may clear, came back null though nobody asked to clear it", spec.Name, key)
+		for choice := range branches {
+			decoded, err := json.Marshal(leastValue(sent, choice, 0))
+			if err != nil {
+				t.Fatal(err)
+			}
+			handed := ai.GeminiDropPaddedNulls(original, string(decoded))
+			if err := validJSON(original, handed); err != nil {
+				t.Errorf("%s, branch %d: the value handed on breaks the schema sent: %v\n%s", name, choice, err, handed)
+			}
+			for _, key := range clearableKeys(t, original) {
+				if strings.Contains(handed, `"`+key+`":null`) {
+					t.Errorf("%s: %s, which the model may clear, came back null though nobody asked to clear it", name, key)
+				}
 			}
 		}
 	}
-	if padded == 0 {
-		t.Fatal("no tool schema was padded, so no padding was taken back out")
+	if padded == 0 || branched == 0 {
+		t.Fatalf("%d schemas were padded and %d had branches, so the undo was not exercised", padded, branched)
 	}
 }
 
-// leastValue is what a constrained decoder writes under schema: every required
-// key, null wherever the key admits null, and the least value allowed elsewhere.
+// stepSchemas are the runner's own step schemas, captured at the model
+// boundary, for the registry's tools in groups the window carries.
+func stepSchemas(t *testing.T, registry *agents.Registry) map[string]json.RawMessage {
+	t.Helper()
+	var scopes []principal.Scope
+	for _, spec := range registry.Specs() {
+		scopes = append(scopes, spec.RequiredScope)
+	}
+	user := ids.NewV7()
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:wire", UserID: user, OnBehalfOf: user,
+		PassportID: ids.NewV7(), SeatType: principal.SeatFull, Scopes: principal.NewScopeSet(scopes...),
+	})
+	var names []string
+	for _, spec := range registry.Runnable(ctx) {
+		names = append(names, spec.Name)
+	}
+	slices.Sort(names)
+	out := map[string]json.RawMessage{}
+	for group := range slices.Chunk(names, 8) {
+		brain := &stepRecorder{}
+		if _, err := runner.New(registry, brain).Run(ctx, runner.Job{Goal: "sweep", Tools: group}); err != nil {
+			t.Fatalf("run over %v: %v", group, err)
+		}
+		if brain.schema == nil {
+			t.Fatalf("the run over %v made no model call", group)
+		}
+		out["step:"+strings.Join(group, ",")] = brain.schema
+	}
+	if len(out) == 0 {
+		t.Fatal("no step schema was captured")
+	}
+	return out
+}
+
+// stepRecorder is the model boundary: it keeps the first step schema and ends the run.
+type stepRecorder struct{ schema json.RawMessage }
+
+func (r *stepRecorder) Complete(_ context.Context, req model.Request) (model.Response, runner.Meta, error) {
+	if r.schema == nil {
+		r.schema = req.ResponseSchema
+	}
+	return model.Response{Text: `{"final":{"summary":"done"}}`}, runner.Meta{}, nil
+}
+
+func (*stepRecorder) PromptWindow() int { return 0 }
+
+// leastValue is what a constrained decoder writes under schema. It takes the
+// choice-th branch and every required key. It fills an optional object or list
+// one level down and nulls every other key that admits it. Elsewhere it writes
+// the least value allowed.
 //
 //craft:ignore naked-any a JSON schema decoded generically holds values of any JSON type, and so does the value it describes
-func leastValue(schema map[string]any) any {
-	if branches, ok := schema["anyOf"].([]any); ok && len(branches) > 0 {
-		if branch, ok := branches[0].(map[string]any); ok {
-			return leastValue(branch)
-		}
+func leastValue(schema map[string]any, choice, depth int) any {
+	if branches := nonNullBranches(schema); len(branches) > 0 {
+		return leastValue(branches[choice%len(branches)], choice, depth)
 	}
 	if values, ok := schema["enum"].([]any); ok && len(values) > 0 {
 		return values[0]
 	}
 	switch firstType(schema) {
 	case "object":
-		out := map[string]any{}
-		props, _ := schema["properties"].(map[string]any)
-		required := stringsOf(schema["required"])
-		// A conditional requirement is the decoder's to meet too: the least
-		// value is the one its own enums put on the if's side.
-		branch := "else"
-		if condition, ok := schema["if"].(map[string]any); ok && conditionHolds(condition, props) {
-			branch = "then"
-		}
-		conditional := []string{}
-		if extra, ok := schema[branch].(map[string]any); ok {
-			conditional = stringsOf(extra["required"])
-		}
-		for _, key := range append(required, conditional...) {
-			prop, _ := props[key].(map[string]any)
-			if prop != nil && slices.Contains(conditional, key) {
-				out[key] = leastValue(withoutNull(prop))
-				continue
-			}
-			if prop == nil || nullable(prop) {
-				out[key] = nil
-				continue
-			}
-			out[key] = leastValue(prop)
-		}
-		return out
+		return leastObject(schema, choice, depth)
 	case "array":
 		items, _ := schema["items"].(map[string]any)
 		least, _ := schema["minItems"].(float64)
-		out := make([]any, int(least))
+		out := make([]any, max(1, int(least)))
 		for i := range out {
-			out[i] = leastValue(items)
+			out[i] = leastValue(items, choice, depth+1)
 		}
 		return out
 	case "string":
@@ -125,6 +162,35 @@ func leastValue(schema map[string]any) any {
 	}
 }
 
+func leastObject(schema map[string]any, choice, depth int) map[string]any {
+	out := map[string]any{}
+	props, _ := schema["properties"].(map[string]any)
+	// A conditional requirement is the decoder's to meet too: the least value
+	// is the one its own enums put on the if's side.
+	branch := "else"
+	if condition, ok := schema["if"].(map[string]any); ok && conditionHolds(condition, props) {
+		branch = "then"
+	}
+	var conditional []string
+	if extra, ok := schema[branch].(map[string]any); ok {
+		conditional = stringsOf(extra["required"])
+	}
+	for _, key := range append(stringsOf(schema["required"]), conditional...) {
+		prop, _ := props[key].(map[string]any)
+		switch {
+		case prop == nil:
+			out[key] = nil
+		case slices.Contains(conditional, key) || (depth == 0 && nullable(prop) && nested(withoutNull(prop))):
+			out[key] = leastValue(withoutNull(prop), choice, depth+1)
+		case nullable(prop):
+			out[key] = nil
+		default:
+			out[key] = leastValue(prop, choice, depth+1)
+		}
+	}
+	return out
+}
+
 // conditionHolds says an if-schema's enums admit the least value of each
 // property it names, which is the value leastValue writes.
 func conditionHolds(condition, props map[string]any) bool {
@@ -133,23 +199,38 @@ func conditionHolds(condition, props map[string]any) bool {
 		ruleNode, _ := rule.(map[string]any)
 		prop, _ := props[key].(map[string]any)
 		values, _ := ruleNode["enum"].([]any)
-		if len(values) > 0 && prop != nil && !slices.Contains(values, leastValue(prop)) {
+		if len(values) > 0 && prop != nil && !slices.Contains(values, leastValue(prop, 0, 1)) {
 			return false
 		}
 	}
 	return true
 }
 
-// withoutNull is the non-null side of a padded property, which a key the
-// schema's own condition requires must take.
-func withoutNull(schema map[string]any) map[string]any {
-	branches, _ := schema["anyOf"].([]any)
-	for _, branch := range branches {
-		if node, ok := branch.(map[string]any); ok && !nullable(node) {
-			return node
+// nonNullBranches are a schema's anyOf or oneOf branches that are not null.
+func nonNullBranches(schema map[string]any) []map[string]any {
+	var out []map[string]any
+	for _, key := range []string{"anyOf", "oneOf"} {
+		branches, _ := schema[key].([]any)
+		for _, branch := range branches {
+			if node, ok := branch.(map[string]any); ok && (firstType(node) != "" || !nullable(node)) {
+				out = append(out, node)
+			}
 		}
 	}
+	return out
+}
+
+// withoutNull is the non-null side of a padded property.
+func withoutNull(schema map[string]any) map[string]any {
+	if branches := nonNullBranches(schema); len(branches) == 1 && nullable(schema) {
+		return branches[0]
+	}
 	return schema
+}
+
+func nested(schema map[string]any) bool {
+	kind := firstType(schema)
+	return kind == "object" || kind == "array"
 }
 
 func nullable(schema map[string]any) bool {

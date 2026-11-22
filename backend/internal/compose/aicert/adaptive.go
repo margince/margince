@@ -105,8 +105,8 @@ func nextRunCounts(sets []ScenarioRuns, maxRuns int) []int {
 //	            case must pass and the veto line, i.e. (2k − n)² ≤ n
 //	judge mean: TLower(scores) ≤ bar ≤ TUpper(scores) for bar = certified_min or
 //	            degraded_min, over its m graded scores
-//	scores:     a judged case with 0 < m < minJudgeScores, which more runs can
-//	            lift off the cap; one no run of which was graded they cannot
+//	scores:     a judged case with 0 < m < minJudgeScores that would certify
+//	            but for the count (shortOnlyOfScores)
 //
 // The judge test reads the interval the verdict reads (meanBounds), so a case
 // extends exactly while more runs could move its grade. The pass-rate test is
@@ -116,7 +116,7 @@ func caseBorderline(c caseStats) bool {
 	if off*off <= c.runs {
 		return true
 	}
-	if !c.mechanical && len(c.scores) > 0 && len(c.scores) < minJudgeScores {
+	if shortOnlyOfScores(c) {
 		return true
 	}
 	if len(c.scores) < 2 {
@@ -129,6 +129,17 @@ func caseBorderline(c caseStats) bool {
 		}
 	}
 	return false
+}
+
+// shortOnlyOfScores says the count of judge scores is all that keeps c below
+// certified: its pass rate and the scores it has clear the bars. A case with no
+// score is not one. Its runs went ungraded because the judge refused or the
+// candidate was withheld; the runner already re-drives a judge call that failed.
+// More runs would pay for candidates no judge grades.
+func shortOnlyOfScores(c caseStats) bool {
+	return !c.mechanical && len(c.scores) > 0 && len(c.scores) < minJudgeScores &&
+		caseMechanicalBand(c) == VerdictCertified && !underFloor(c) &&
+		judgeUpper(c) >= float64(c.bands.CertifiedMin)
 }
 
 // poolUndecided says the pooled evidence meets a certified bar on its point

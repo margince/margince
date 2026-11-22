@@ -257,12 +257,12 @@ func TestASubsetThatOwedNoContextKeepsTheRecordsClaim(t *testing.T) {
 	dir := t.TempDir()
 	corpus := mixedCorpus()
 	committed := certifyCorpusWith(t, corpus, "")
-	committed.ContextApplied = true
+	committed.ContextApplied, committed.ContextOwed = true, 9
 	if err := WriteRecord(dir, committed); err != nil {
 		t.Fatalf("writing the committed record: %v", err)
 	}
 	measured := certifyCorpusWith(t, corpus[:1], "")
-	measured.ContextApplied, measured.contextOwed = false, 0
+	measured.ContextApplied, measured.ContextOwed = false, 0
 	merged, err := mergeIntoCommitted(dir, measured, corpus)
 	if err != nil {
 		t.Fatalf("merging: %v", err)
@@ -270,8 +270,29 @@ func TestASubsetThatOwedNoContextKeepsTheRecordsClaim(t *testing.T) {
 	if !merged.ContextApplied {
 		t.Error("a subset that owed no context wiped the record's context_applied")
 	}
-	measured.contextOwed = 3
+	measured.ContextOwed = 3
 	if merged, err = mergeIntoCommitted(dir, measured, corpus); err != nil || merged.ContextApplied {
 		t.Errorf("a subset that owed context and did not carry it kept context_applied (%v)", err)
+	}
+}
+
+// A record that owed no context gains the claim of a subset that owed and
+// carried it.
+func TestARecordThatOwedNoContextTakesTheSubsetsClaim(t *testing.T) {
+	dir := t.TempDir()
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	committed.ContextApplied, committed.ContextOwed = false, 0
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	measured := certifyCorpusWith(t, corpus[:1], "")
+	measured.ContextApplied, measured.ContextOwed = true, 3
+	merged, err := mergeIntoCommitted(dir, measured, corpus)
+	if err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	if !merged.ContextApplied {
+		t.Error("a record that owed no context kept context_applied false after a subset carried it")
 	}
 }

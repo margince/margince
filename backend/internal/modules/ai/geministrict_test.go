@@ -209,3 +209,38 @@ func TestAPatchBodyKeepsAbsenceAndANullApartOverTheGeminiWire(t *testing.T) {
 		}
 	}
 }
+
+// An object with nothing required leaves required out. A nil list on the wire
+// reads as "required": null.
+func TestGeminiNeverSendsARequiredNull(t *testing.T) {
+	for name, schema := range map[string]string{
+		"no properties":           `{"type":"object","properties":{}}`,
+		"only nullable optionals": `{"type":"object","properties":{"note":{"type":["string","null"]}}}`,
+	} {
+		strict, err := GeminiStrictSchema(json.RawMessage(schema))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(strict), `"required":null`) {
+			t.Errorf("%s: %s", name, strict)
+		}
+	}
+}
+
+// A node that declares properties beside its branches pads both. The walk
+// takes both paddings back out, and a node with required and no properties
+// keeps its required list.
+func TestGeminiUndoesANodesOwnPaddingBesideItsBranch(t *testing.T) {
+	schema := json.RawMessage(`{"type":"object","properties":{"note":{"type":"string"}},` +
+		`"anyOf":[{"type":"object","properties":{"kind":{"type":"string","enum":["a"]},"mode":{"type":"string"}},"required":["kind"]}]}`)
+	if got, want := GeminiDropPaddedNulls(schema, `{"note":null,"kind":"a","mode":null}`), `{"kind":"a"}`; got != want {
+		t.Errorf("reply = %s, want %s", got, want)
+	}
+	strict, err := GeminiStrictSchema(json.RawMessage(`{"type":"object","required":["id"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(strict), `"required":["id"]`) {
+		t.Errorf("a node with required and no properties lost it: %s", strict)
+	}
+}

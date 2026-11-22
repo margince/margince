@@ -47,6 +47,8 @@ func TestABorderlineCaseIsExtendedAndASettledOneIsNot(t *testing.T) {
 		{"a median exactly at degraded_min is borderline", caseRuns(3, 40, 50, 60), 6},
 		{"a mean near a bar is borderline though the median is far from it", caseRuns(3, 40, 90, 91), 6},
 		{"a judged case with two scores of three runs is extended", ungradedOnce(caseRuns(3, nineties(3)...)), 6},
+		{"a case its pass rate fails is not extended for its scores", ungradedOnce(caseRuns(0, nineties(3)...)), 3},
+		{"a case whose two scores sit under the bar is not extended for them", ungradedOnce(caseRuns(3, 30, 30, 30)), 3},
 		{"a borderline case at ten runs stops at the cap", caseRuns(5, nineties(10)...), adaptiveMaxRuns},
 		{"a borderline case at the cap is not extended", caseRuns(6, nineties(adaptiveMaxRuns)...), adaptiveMaxRuns},
 	} {

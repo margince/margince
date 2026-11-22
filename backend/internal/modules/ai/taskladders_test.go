@@ -176,4 +176,10 @@ func TestAnAmbiguousOrEmptyStockOrderIsNotAdopted(t *testing.T) {
 	if got, ok := installed.WithStockTaskLadders(); ok {
 		t.Errorf("a preset ordering nothing was adopted as a change: %v", got.TaskLadders)
 	}
+
+	// A twin that orders nothing is a rival too: the install may have chosen it.
+	stockPresets = map[string]string{"a.yaml": unordered, "b.yaml": original["gemini_cloud.yaml"]}
+	if got, ok := installed.WithStockTaskLadders(); ok {
+		t.Errorf("a binding shared with a preset that orders nothing adopted %v", got.TaskLadders)
+	}
 }

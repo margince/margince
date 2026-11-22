@@ -30,8 +30,8 @@ func TestTheCommittedTableIsCurrent(t *testing.T) {
 	}
 }
 
-// The Go table of presets that reorder a task holds each such preset, and only
-// those, as its file reads.
+// The Go table holds every committed preset as its file reads. A binding two
+// presets share is then seen as shared, whichever of them orders its tasks.
 func TestTheCommittedStockTableIsCurrent(t *testing.T) {
 	want, err := renderStock(repoPresets)
 	if err != nil {
@@ -44,7 +44,7 @@ func TestTheCommittedStockTableIsCurrent(t *testing.T) {
 	if string(onDisk) != string(want) {
 		t.Errorf("%s is stale: run make gen", repoStock)
 	}
-	if !strings.Contains(string(want), `"gemini_cloud.yaml"`) || strings.Contains(string(want), `"openrouter_cloud.yaml"`) {
+	if !strings.Contains(string(want), `"gemini_cloud.yaml"`) || !strings.Contains(string(want), `"openrouter_cloud.yaml"`) {
 		t.Errorf("the stock table names the wrong presets:\n%s", want)
 	}
 }

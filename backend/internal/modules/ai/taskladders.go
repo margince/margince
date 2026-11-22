@@ -48,19 +48,20 @@ func (cfg RoutingConfig) WithStockTaskLadders() (RoutingConfig, bool) {
 		return cfg, false
 	}
 	var adopt map[Task][]Tier
+	matched := false
 	for _, name := range slices.Sorted(maps.Keys(stockPresets)) {
 		stock, err := ParsePreset([]byte(stockPresets[name]))
-		if err != nil || !sameTierModels(cfg.Tiers, stock.Tiers) || len(stock.TaskLadders) == 0 {
+		if err != nil || !sameTierModels(cfg.Tiers, stock.Tiers) {
 			continue
 		}
 		// Two committed presets that bind these tiers and order tasks
-		// differently leave the install's own choice unknown.
-		if adopt != nil && !reflect.DeepEqual(adopt, stock.TaskLadders) {
+		// differently, one of them not at all, leave the install's choice unknown.
+		if matched && !reflect.DeepEqual(adopt, stock.TaskLadders) {
 			return cfg, false
 		}
-		adopt = stock.TaskLadders
+		adopt, matched = stock.TaskLadders, true
 	}
-	if adopt == nil {
+	if len(adopt) == 0 {
 		return cfg, false
 	}
 	cfg.TaskLadders = maps.Clone(adopt)

@@ -110,11 +110,9 @@ func mergeIntoCommitted(dir string, measured Record, corpus []Scenario) (Record,
 	merged.Scenarios = rows
 	regradeFromRows(&merged)
 	merged.CertifiedScope = aitasks.NarrowerScope(prior.CertifiedScope, measured.CertifiedScope)
-	if measured.contextOwed == 0 {
-		merged.ContextApplied = prior.ContextApplied
-	} else {
-		merged.ContextApplied = prior.ContextApplied && measured.ContextApplied
-	}
+	merged.ContextApplied = mergedContextClaim(prior, measured)
+	merged.ContextOwed = prior.ContextOwed + measured.ContextOwed
+
 	// Every row the record pools vouches for these, so each reads the worse run.
 	// That is a judge of the candidate's family, and the oldest row it keeps.
 	merged.SelfJudged = prior.SelfJudged || measured.SelfJudged
@@ -126,6 +124,19 @@ func mergeIntoCommitted(dir string, measured Record, corpus []Scenario) (Record,
 	merged.MeanCachedTokens, merged.MeanCacheWriteTokens = prior.MeanCachedTokens, prior.MeanCacheWriteTokens
 	merged.EstCostMicroUSD = prior.EstCostMicroUSD
 	return merged, nil
+}
+
+// mergedContextClaim is context_applied over both measurements' rows. A side
+// that owed no context says nothing, so the other side's claim stands.
+func mergedContextClaim(prior, measured Record) bool {
+	switch {
+	case measured.ContextOwed == 0:
+		return prior.ContextApplied
+	case prior.ContextOwed == 0:
+		return measured.ContextApplied
+	default:
+		return prior.ContextApplied && measured.ContextApplied
+	}
 }
 
 // mergeable refuses a committed record whose rows were measured under

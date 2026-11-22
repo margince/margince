@@ -95,9 +95,10 @@ type Record struct {
 	// beside it, so a scope added to a task cannot leave a record naming the old
 	// set.
 	ContextScopes []string `json:"context_scopes"`
-	// contextOwed is how many of this measurement's runs production would send
-	// company context with. A merge reads it; a written record does not keep it.
-	contextOwed int
+	// ContextOwed counts the runs production would send company context with.
+	// Zero means none of the record's rows owed it, so context_applied says
+	// nothing about them; a merge reads it to combine two measurements' claims.
+	ContextOwed int `json:"context_owed,omitempty"`
 	// JudgeScoreP50/JudgeScoreMin are the JUDGE's grade: a model scoring the
 	// reply's prose against a written rubric, pooled across the runs.
 	//
@@ -342,17 +343,31 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 		tally.Verdict = worst
 	default:
 		tally.Verdict, _ = verdictOver(cases)
-		if tally.Verdict != VerdictNotSupported && tally.Runs < certifiedMinRuns && poolUndecided(cases) {
+		if tally.Verdict != VerdictNotSupported && tally.Runs < certifiedMinRuns && meetsCertifiedOnEstimate(cases) {
 			tally.Verdict = SiteTooFewRuns
 		}
 	}
 	return tally, true
 }
 
+// meetsCertifiedOnEstimate says more runs alone could certify cases: the pass
+// rate reaches certifiedPassPercent and the judge's mean margin over
+// certified_min is not below 0. A site short on either is weak, not short.
+func meetsCertifiedOnEstimate(cases []caseStats) bool {
+	runs, passed := 0, 0
+	for _, c := range cases {
+		runs += c.runs
+		passed += c.passed
+	}
+	margins := marginsOver(cases, func(b Bands) int { return b.CertifiedMin })
+	mean, _ := meanAndSD(margins)
+	return passed*100 >= certifiedPassPercent*runs && (len(margins) == 0 || mean >= 0)
+}
+
 // SiteTooFewRuns is a site's grade when its pool meets the certified bar on
-// its own estimate but holds fewer runs than that grade rests on. The pooled
-// rule could only call it weak, and nothing it measured is. The task's own verdict
-// pools these runs with its other sites'.
+// its own estimate, on pass rate and judge alike. It holds fewer runs than that
+// grade rests on, and nothing it measured is weak. The task's own verdict pools
+// these runs with its other sites'.
 const SiteTooFewRuns = "too_few_runs"
 
 // sanitizeForPath maps a raw identifier (a provider name, or a served-model

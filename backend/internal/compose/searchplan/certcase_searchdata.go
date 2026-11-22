@@ -156,7 +156,7 @@ func sameSearchArguments[T any](want, got string) (bool, error) {
 // asks what leaving the member out asks.
 func withoutEmptyLists(raw string) (string, error) {
 	var members map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(raw), &members); err != nil {
+	if err := json.Unmarshal([]byte(ai.Unfence(raw)), &members); err != nil {
 		return "", err
 	}
 	for key, value := range members {

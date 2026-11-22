@@ -36,6 +36,7 @@ func GeminiStrictSchema(raw json.RawMessage) (json.RawMessage, error) {
 	}
 	out := make(schemaObject, 0, len(node)+1)
 	var padded []string
+	_, declared := node.lookup(kwProperties)
 	for _, member := range node {
 		value, err := geminiStrictKeyword(node, member.key, member.value)
 		if err != nil {
@@ -44,12 +45,14 @@ func GeminiStrictSchema(raw json.RawMessage) (json.RawMessage, error) {
 		if member.key == kwProperties {
 			padded = paddedProperties(member.value, requiredOf(node))
 		}
-		if member.key != kwRequired {
+		if member.key != kwRequired || !declared {
 			out = append(out, schemaMember{key: member.key, value: value})
 		}
 	}
-	if _, declared := node.lookup(kwProperties); declared {
-		required, err := json.Marshal(append(slices.Clone(requiredOf(node)), padded...))
+	// An object with nothing required leaves the key out: a nil list on the
+	// wire reads as "required": null.
+	if list := append(slices.Clone(requiredOf(node)), padded...); declared && len(list) > 0 {
+		required, err := json.Marshal(list)
 		if err != nil {
 			return nil, err
 		}
@@ -128,16 +131,23 @@ func GeminiDropPaddedNulls(callerSchema json.RawMessage, reply string) string {
 	return string(dropPaddedNulls(node, trimmed))
 }
 
-// dropPaddedNulls walks value as node describes it. An object under anyOf or
-// oneOf is read by the branch it matches. That is how a step's tool call is read
-// by its own tool's arguments.
+// dropPaddedNulls walks value as node describes it. A node's own properties
+// are read first, then the anyOf or oneOf branch value matches. That is how a
+// step's tool call is read by its own tool's arguments.
 func dropPaddedNulls(node schemaObject, value json.RawMessage) json.RawMessage {
+	value = dropInProperties(node, value)
 	if branch, found := matchingBranch(node, value); found {
 		return dropPaddedNulls(branch, value)
 	}
 	if items, ok := node.lookup(kwItems); ok && isJSONArray(value) {
 		return dropInItems(items, value)
 	}
+	return value
+}
+
+// dropInProperties takes out of an object value the nulls padded for node's
+// own properties, and walks each declared member by its schema.
+func dropInProperties(node schemaObject, value json.RawMessage) json.RawMessage {
 	props, ok := node.lookup(kwProperties)
 	if !ok || !isJSONObject(value) {
 		return value
