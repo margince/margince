@@ -5,7 +5,14 @@
 -- The roles below are cluster-wide, so one run at a time changes them: a
 -- session lock, held until this psql session ends. An advisory lock is per
 -- database, so every caller runs this script in the `postgres` database.
-DO $$ BEGIN PERFORM pg_advisory_lock(7300148210); END $$;
+DO $$
+BEGIN
+  IF current_database() <> 'postgres' THEN
+    RAISE EXCEPTION 'db-init.sql ran in database %, not postgres', current_database()
+      USING HINT = 'Run it as `psql postgres` so two stacks share one lock.';
+  END IF;
+  PERFORM pg_advisory_lock(7300148210);
+END $$;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_app') THEN

@@ -25,7 +25,7 @@ must_mention:
   - "Mai Nguyen|Aufstellung|appendix|Anhang"
   # "The generated brief is missing" and "the brief hasn't been generated" say
   # it too, with the brief first and the negation contracted.
-  - "(?i)\bno\b[^.]{0,40}\bbrief\b|\bbrief\b[^.]{0,60}(?:\b(?:not|never)|n['’]t) (?:yet )?(?:been )?(?:generated|made|run|built|created)|\bbrief\b[^.]{0,30}\b(?:is|was)(?: still)?(?: missing| unavailable|(?: not|n['’]t) (?:there|available|ready))\b"
+  - "(?i)\bno\b[^.]{0,40}\bbrief\b|\bbrief\b[^.]{0,60}(?:\bnever|\bnot|n['’]t) (?:yet )?(?:been )?(?:generated|made|run|built|created)|\bbrief\b[^.]{0,30}\b(?:is|was)(?: still)?(?: missing| unavailable|(?: not|n['’]t) (?:there|available|ready))\b"
 
 may_call:
   - catch_me_up_on

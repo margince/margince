@@ -101,7 +101,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | My hours, my time zone and my language | The agent's zone is the agent's<br>Own hours go to the own-settings tool<br>A user's language is their own | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | Write Greta a thank-you | The user's own draft stays theirs | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
-| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | an admin | ✅ | ✅ | ✅ |
+| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | an admin | ✅ | ✅ | ✅ re-graded |
 | After the sales review | Record the review decision<br>Record the forecast call | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
 | The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
@@ -299,7 +299,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 8 (6–10) | - | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
 | [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3 | 4 | **1** Read the plan and the dossier, and change nothing | - |
 | [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/3 | 2 | 5 (3–5) | 4 | **1** Read the plan and the dossier, and change nothing | - |
-| [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | 6 (4–8) | - | **1** Read the plan and the dossier, and change nothing | - |
+| [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 6 (4–8) | - | **1** Read the plan and the dossier, and change nothing | - |
 | [case113_after_the_sales_review](../../e2e/llm/scenarios/case113-after-the-sales-review.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 7 (6–8) | 8 (7–9) | **1** Record the review decision<br>**2** Record the forecast call | `change_reports` |
 | [case113_after_the_sales_review](../../e2e/llm/scenarios/case113-after-the-sales-review.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 8.5 (8–9) | 5.5 (5–6) | **1** Record the review decision<br>**2** Record the forecast call | `change_reports` |
 | [case113_after_the_sales_review](../../e2e/llm/scenarios/case113-after-the-sales-review.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 7.5 (7–8) | - | **1** Record the review decision<br>**2** Record the forecast call | `change_reports` |

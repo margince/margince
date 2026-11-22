@@ -323,9 +323,87 @@ func TestTheHarnessHoldsEveryModuleTheGraderImports(t *testing.T) {
 	}
 }
 
-// lintEntrySpellings are the ways a caller would run check.py's own lint, which
-// skips the wording rules; scenariolint.py is the lane's one lint entry.
-var lintEntrySpellings = []string{"check.py --lint", `check.py" --lint`}
+// checkPyAssigned finds a name a script, Makefile or Python file binds to a
+// path ending in check.py, so a call through that name is read as a call to it.
+var (
+	checkPyAssigned = regexp.MustCompile(`(?m)\b([A-Za-z_][A-Za-z0-9_]*)\s*[:?]?=[^\n]*check\.py\b`)
+	lintFlag        = regexp.MustCompile(`(?:^|[^\w-])--lint(?:[^\w-]|$)`)
+)
+
+// lintCallers are the statements of body that run check.py's own lint, which
+// skips the wording rules: check.py, or a name bound to it, with --lint in one
+// command. A command runs on over a backslash line end and inside brackets,
+// so an argv list spread over lines is one statement.
+func lintCallers(body string) []string {
+	names := []string{`check\.py`}
+	for _, bound := range checkPyAssigned.FindAllStringSubmatch(body, -1) {
+		names = append(names, `(?:^|[^\w])`+regexp.QuoteMeta(bound[1])+`(?:[^\w]|$)`)
+	}
+	callee := regexp.MustCompile(strings.Join(names, "|"))
+	var callers []string
+	for _, statement := range statements(body) {
+		if lintFlag.MatchString(statement) && callee.MatchString(statement) {
+			callers = append(callers, strings.TrimSpace(statement))
+		}
+	}
+	return callers
+}
+
+func statements(body string) []string {
+	var out []string
+	var current strings.Builder
+	depth := 0
+	for index := 0; index < len(body); index++ {
+		switch char := body[index]; {
+		case char == '\\' && index+1 < len(body) && body[index+1] == '\n':
+			current.WriteByte(' ')
+			index++
+		case char == '(' || char == '[':
+			depth++
+			current.WriteByte(char)
+		case (char == ')' || char == ']') && depth > 0:
+			depth--
+			current.WriteByte(char)
+		case char == '\n' && depth == 0:
+			out = append(out, current.String())
+			current.Reset()
+		case char == '\n':
+			current.WriteByte(' ')
+		default:
+			current.WriteByte(char)
+		}
+	}
+	return append(out, current.String())
+}
+
+func TestTheLintCensusReadsEveryWayToCallCheckPysLint(t *testing.T) {
+	for name, body := range map[string]string{
+		"a plain command":          "python3 e2e/llm/check.py --lint e2e/llm/scenarios/*.yaml\n",
+		"a quoted path":            `python3 "$root/e2e/llm/check.py" --lint "$f"` + "\n",
+		"wide spacing":             "python3 e2e/llm/check.py \t  --lint x.yaml\n",
+		"a continued line":         "python3 e2e/llm/check.py \\\n    --lint x.yaml\n",
+		"a shell variable":         "CHECK=e2e/llm/check.py\npython3 \"$CHECK\" --lint x.yaml\n",
+		"a braced shell variable":  "CHECK=\"$root/e2e/llm/check.py\"\npython3 ${CHECK} --lint x.yaml\n",
+		"a Makefile variable":      "CHECK := e2e/llm/check.py\nlint:\n\tpython3 $(CHECK) --lint x.yaml\n",
+		"an argv list":             "subprocess.run([sys.executable, \"e2e/llm/check.py\", \"--lint\", path])\n",
+		"an argv list over lines":  "subprocess.run(\n    [sys.executable,\n     \"e2e/llm/check.py\",\n     \"--lint\",\n     path],\n)\n",
+		"an argv list by its name": "CHECK = os.path.join(HERE, \"check.py\")\nsubprocess.run([sys.executable, CHECK, \"--lint\", path])\n",
+	} {
+		if got := lintCallers(body); len(got) != 1 {
+			t.Errorf("%s: found %d callers in %q, want 1", name, len(got), body)
+		}
+	}
+	for name, body := range map[string]string{
+		"the lane's own lint": "python3 e2e/llm/scenariolint.py e2e/llm/scenarios/*.yaml\n",
+		"a grade":             "python3 e2e/llm/check.py --check s.yaml run.jsonl\n",
+		"two commands":        "python3 e2e/llm/check.py --check s.yaml run.jsonl\nmake lint --lint-all\n",
+		"another script":      "python3 tools/other.py --lint x\n",
+	} {
+		if got := lintCallers(body); len(got) != 0 {
+			t.Errorf("%s: found callers %q, want none", name, got)
+		}
+	}
+}
 
 func TestTheLaneLintsThroughScenariolintAlone(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "..")
@@ -357,10 +435,8 @@ func TestTheLaneLintsThroughScenariolintAlone(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, spelling := range lintEntrySpellings {
-			if strings.Contains(string(body), spelling) {
-				t.Errorf("%s runs %s, which skips scenariolint.py's wording rules; call e2e/llm/scenariolint.py", path, spelling)
-			}
+		for _, caller := range lintCallers(string(body)) {
+			t.Errorf("%s runs %q, check.py's own lint, which skips scenariolint.py's wording rules; call e2e/llm/scenariolint.py", path, caller)
 		}
 	}
 	if len(files) < 10 {

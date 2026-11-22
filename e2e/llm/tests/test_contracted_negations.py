@@ -55,6 +55,11 @@ class ContractedNegationTest(unittest.TestCase):
                 self.assertTrue(self.holds(pattern, spelled))
                 self.assertTrue(self.holds(pattern, contracted))
 
+    def test_the_plan_pin_reads_a_negation_about_the_plan_alone(self):
+        plan = pin("case112-my-plan-and-the-dossier.yaml", "must_mention", "started")
+        self.assertTrue(self.holds(plan, "You haven't started a plan this week."))
+        self.assertFalse(self.holds(plan, "The dossier on Nordholz hasn't been opened yet."))
+
     def test_an_exclusion_lets_no_contracted_denial_through(self):
         done = pin("case10-finish-the-import.yaml", "must_mention", "committed|imported|created")
         self.assertTrue(self.holds(done, "The four companies are imported."))
@@ -75,7 +80,11 @@ class NegationLintTest(unittest.TestCase):
             r"(?i)cannot send",
             r"(?i)will not do",
             r"(?i)(?:not|can'?t) sent",
-            r"(?i)not able|x|y|z|n['’]t able",
+            r"(?i)could not send|couldn't find",
+            r"(?i)(?:not sent|isn't here)",
+            r"(?i)was\snot\ssent",
+            r"(?i)\Wnot sent",
+            r"(?i)\dnot sent",
         ):
             with self.subTest(pattern=pattern):
                 self.assertTrue(self.problems(pattern))
@@ -88,6 +97,11 @@ class NegationLintTest(unittest.TestCase):
             r"(?i)not able|n['’]t able",
             r"(?i)not saved|wasn't saved",
             r"(?i)nothing was sent",
+            r"(?i)not able|x|y|z|n['’]t able",
+            r"(?i)(?:was not|\w*n['’]t) sent",
+            r"(?i)(?:cannot|can.t) send",
+            r"(?i)(?:is not|isn.t) here",
+            r"(?i)I am not sure|I['’]m not sure",
         ):
             with self.subTest(pattern=pattern):
                 self.assertEqual(self.problems(pattern), [])

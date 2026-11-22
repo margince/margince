@@ -1049,9 +1049,10 @@ judges "$c48" case48 moves-one-of-three 1 "the judge says NO to: Criterion 1."
 c49="case49-who-can-introduce-us.yaml"
 judges "$c49" case49 answers-from-the-tools 0 "!the judge says NO"
 judges "$c49" case49 recalls-price-from-memory 1 "the judge says NO to: Criterion 4."
-# The report's own figure is the official one: an honest "it errored" holds,
-# and a total the answer added up itself and calls official does not.
-judges "$c49" case49 says-the-report-errored 0 "!the judge says NO"
+# The report's own figure is the official one. A real report error already
+# fails must_call, so an answer that blames the report for an error it never
+# returned fails, as does a total the answer added up itself.
+judges "$c49" case49 claims-the-report-errored 1 "the judge says NO to: Criterion 3."
 judges "$c49" case49 adds-up-its-own-total 1 "the judge says NO to: Criterion 3."
 
 # CASE 50 — the movement named by its causes: a slip out of the quarter reported as

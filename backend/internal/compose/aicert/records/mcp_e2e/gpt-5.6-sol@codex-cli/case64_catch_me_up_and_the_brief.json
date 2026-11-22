@@ -12,15 +12,15 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "7a9198cf19ca3ce1",
+    "scenario": "4953eab4d85cacb2",
     "tools": "b5fb28241f1608b1",
     "instructions": "c5c644eee9719be0",
     "judge": "",
     "harness": "024566e70b0c3db3",
     "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
     "ran_at": "2026-11-22T09:26:01Z",
-    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
-    "graded_at": "2026-11-22T09:56:30Z"
+    "graded_commit": "43efe5d1f04ce6aea932838d625278cfa438cc2f",
+    "graded_at": "2026-11-22T15:30:25Z"
   },
   "usage": {
     "input_tokens": 79480,

@@ -35,7 +35,7 @@ must_mention:
   # "Weekly plan: none is saved" says it with the plan first. The none must be
   # the plan's own, so "plan: 3 calls; dossier: empty" and "plan has nothing
   # overdue" are not it.
-  - "(?i)\bno\b[^.]{0,40}\bplan\b|(?:not|n['’]t) (yet )?(?:been )?(started|begun|opened)|\bplan\b(?:\s*:\s*(?:none|nothing|empty)\b|\s+is\s+(?:currently\s+)?empty\b|\s+(?:has|holds|contains)\s+nothing\s*(?:[.;,\n]|$|(?:on|in) it\b|yet\b))"
+  - "(?i)\bno\b[^.]{0,40}\bplan\b|\bplan\b[^.\n]{0,60}(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)|(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)[^.\n]{0,40}\bplan\b|\bplan\b(?:\s*:\s*(?:none|nothing|empty)\b|\s+is\s+(?:currently\s+)?empty\b|\s+(?:has|holds|contains)\s+nothing\s*(?:[.;,\n]|$|(?:on|in) it\b|yet\b))"
 
 runs: 3
 pass_at: 2

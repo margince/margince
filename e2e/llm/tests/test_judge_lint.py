@@ -43,6 +43,10 @@ class JudgeCriterionLintTest(unittest.TestCase):
             "Criterion 1. It quotes the tool's figures. Answer no otherwise.",
             "Criterion 1. It names the deals the tools flagged. Answer no otherwise.",
             "Criterion 1. It gives the result of the read. Answer no otherwise.",
+            "Criterion 1. It quotes the tool’s figures. Answer no otherwise.",
+            "Criterion 1. It does not list a deal the tool didn’t flag. Answer no otherwise.",
+            "Criterion 1. It gives the result of the read call. Answer no otherwise.",
+            "Criterion 1. It matches the results of the tool calls. Answer no otherwise.",
         ):
             with self.subTest(criterion=criterion):
                 self.assertEqual(len(problems(criterion)), 1)
@@ -53,6 +57,7 @@ class JudgeCriterionLintTest(unittest.TestCase):
             "EUR 9,500 slip. Answer no if it gives other figures.",
             "Criterion 2. The answer names Körber Sensorik Rollout and lists no other deal as at risk. Answer no otherwise.",
             "Criterion 2. None could go: the workspace has no connected mailbox, and the tools refused. Answer no otherwise.",
+            "Criterion 3. It gives the result of the call with Anna Weber: she agreed to a demo. Answer no otherwise.",
         ):
             with self.subTest(criterion=criterion):
                 self.assertEqual(problems(criterion), [])

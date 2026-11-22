@@ -1950,7 +1950,8 @@
               "max": 8
             },
             "turns": null
-          }
+          },
+          "regraded": true
         }
       ]
     },
