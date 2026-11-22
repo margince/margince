@@ -314,7 +314,7 @@ func TestAcceptingTheMoveRequestsTheManagerThroughTheDealsOwnWrite(t *testing.T)
 		AND after ? 'manager_requested_at'`, deal); n != 1 {
 		t.Errorf("%d audit rows name the request, want 1", n)
 	}
-	if n := f.e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE payload::text LIKE '%manager_requested_at%'`); n != 1 {
+	if n := f.e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope::text LIKE '%manager_requested_at%'`); n != 1 {
 		t.Errorf("%d events name the request, want 1", n)
 	}
 	if got := f.move(f.rep, t, deal); got != nil {
@@ -350,10 +350,15 @@ func TestAcceptingTheMoveRequestsTheManagerThroughTheDealsOwnWrite(t *testing.T)
 	if rep := requested(f.rep); len(rep) != 0 {
 		t.Errorf("a seller who leads no team reads %+v, want none", rep)
 	}
-	f.e.WsExec(t, `DELETE FROM team_membership WHERE team_id = $1 AND user_id = $2`, f.e.Team1, f.e.Rep3)
-	f.e.WsExec(t, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, f.e.Team2, f.e.Rep3)
-	if outside := requested(f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, leadReadingForecast())); len(outside) != 0 {
-		t.Errorf("a lead of another team reads %+v, want none", outside)
+	otherTeam := f.e.Team2
+	var narrowed []deals.ManagerRequest
+	lead := f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, leadReadingForecast())
+	if err := database.WithWorkspaceTx(lead, f.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		narrowed, err = f.e.Deals.ManagerRequests(lead, tx, &otherTeam)
+		return err
+	}); err != nil || len(narrowed) != 0 {
+		t.Errorf("asking for another team's members lists %+v (err %v), want none", narrowed, err)
 	}
 
 	if err := f.e.Deals.ClearManagerRequest(f.rep, dealID); err == nil {
@@ -374,7 +379,7 @@ func TestARequestLeavesTheListWhenTheDealLeavesTheOpenPipeline(t *testing.T) {
 	if err := f.e.Deals.RequestManager(f.rep, ids.From[ids.DealKind](deal), []string{"stuck"}); err != nil {
 		t.Fatalf("requesting the manager: %v", err)
 	}
-	f.e.WsExec(t, `UPDATE deal SET status = 'won' WHERE id = $1`, deal)
+	f.e.WsExec(t, `UPDATE deal SET status = 'won', closed_at = now() WHERE id = $1`, deal)
 	lead := f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, leadReadingForecast())
 	var got []deals.ManagerRequest
 	err := database.WithWorkspaceTx(lead, f.e.Pool, func(tx pgx.Tx) error {
