@@ -55,6 +55,8 @@ func reportToolCatalog(selected ...corefeatures.Availability) []agents.ReportCat
 			Filters:    catalogFilterNames(spec),
 			Aggregates: allowedReportNames(spec.measures),
 			Defaults:   describeReportDefaults(spec),
+			Measures:   describeReportMeasures(spec),
+			DefaultBy:  slices.Clone(spec.defaultBy),
 			Notes:      spec.notes,
 		})
 	}
@@ -77,17 +79,7 @@ func catalogFilterNames(spec reportSpec) []string {
 // which is the call a caller should make first and the one they cannot see from
 // the vocabularies alone.
 func describeReportDefaults(spec reportSpec) string {
-	aggs := make([]string, 0, len(spec.defaultAggs))
-	for _, agg := range spec.defaultAggs {
-		rendered := agg.Fn
-		if agg.Field != "" {
-			rendered += "(" + agg.Field + ")"
-		}
-		if agg.As != "" && agg.As != agg.Field {
-			rendered += " as " + agg.As
-		}
-		aggs = append(aggs, rendered)
-	}
+	aggs := renderDefaultAggregates(spec, true)
 	// Each half is rendered only if it EXISTS. runAdHocPlan already builds a spec
 	// with default aggregates and no default grouping (report.go), so an `&&`
 	// guard here would ship "count as deals grouped by " to an agent the first
@@ -102,6 +94,29 @@ func describeReportDefaults(spec reportSpec) string {
 	default:
 		return ""
 	}
+}
+
+// describeReportMeasures is the default aggregates as bare function(field)
+// terms, joined, for the tool description: an alias names an output column the
+// answer already carries, and a caller choosing a report never reads it. The
+// published document keeps the aliases through describeReportDefaults.
+func describeReportMeasures(spec reportSpec) string {
+	return strings.Join(renderDefaultAggregates(spec, false), ", ")
+}
+
+func renderDefaultAggregates(spec reportSpec, withAlias bool) []string {
+	aggs := make([]string, 0, len(spec.defaultAggs))
+	for _, agg := range spec.defaultAggs {
+		rendered := agg.Fn
+		if agg.Field != "" {
+			rendered += "(" + agg.Field + ")"
+		}
+		if withAlias && agg.As != "" && agg.As != agg.Field {
+			rendered += " as " + agg.As
+		}
+		aggs = append(aggs, rendered)
+	}
+	return aggs
 }
 
 // strictDecodeReportPlan decodes the tool's plan arguments, refusing a key the

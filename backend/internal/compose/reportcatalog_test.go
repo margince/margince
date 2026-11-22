@@ -142,6 +142,21 @@ func TestReportDefaultsRenderEachHalfOnlyWhenItExists(t *testing.T) {
 	}
 }
 
+// The tool description's measures carry no alias: the answer names its own
+// columns, and the published document keeps the aliases.
+func TestReportMeasuresCarryNoAlias(t *testing.T) {
+	spec := reportSpec{defaultAggs: []reportAggregate{
+		{Fn: "count", As: "deals"},
+		{Fn: "sum", Field: "amount_minor", As: "total"},
+	}}
+	if got, want := describeReportMeasures(spec), "count, sum(amount_minor)"; got != want {
+		t.Errorf("measures = %q, want %q", got, want)
+	}
+	if got := describeReportDefaults(spec); !strings.Contains(got, " as total") {
+		t.Errorf("the document's defaults lost the alias: %q", got)
+	}
+}
+
 // An unknown report key is a CLIENT mistake about a static catalog, not a
 // missing tenant record. It used to answer the row-scope not-found sentence,
 // which told a caller their permissions might be at fault and named nothing
@@ -251,8 +266,8 @@ func TestReportPlanRefusesTrailingContent(t *testing.T) {
 //
 // So the default is the only per-report content left in the description, and a
 // report that shipped without one would silently reopen exactly that failure:
-// describeReportDefaults returns "" for a spec with neither default aggregates
-// nor default grouping, which is a shape runAdHocPlan already builds. Nothing
+// a spec with neither default aggregates
+// nor default grouping would render nothing, which is a shape runAdHocPlan already builds. Nothing
 // else on this surface tells a caller which report answers their question.
 //
 // Derived from the engine's own catalog, so a report added tomorrow inherits the
@@ -267,7 +282,7 @@ func TestEveryReportKeyIsDescribedByItsDefaultAnswer(t *testing.T) {
 	// surface built for one test.
 	described := servedReportArgumentDescription(t)
 	for _, entry := range catalog {
-		if entry.Defaults == "" {
+		if entry.Measures == "" && len(entry.DefaultBy) == 0 {
 			t.Errorf("%s answers nothing by default, so run_report's description reduces it to a bare "+
 				"enum key — which is what sent every certification run to the vocabulary door instead "+
 				"of the report. Give the spec a defaultAggs or a defaultBy.", entry.Report)
@@ -276,9 +291,19 @@ func TestEveryReportKeyIsDescribedByItsDefaultAnswer(t *testing.T) {
 		if !strings.Contains(described, entry.Report) {
 			t.Errorf("%s is in the enum and not in the description", entry.Report)
 		}
-		if !strings.Contains(described, entry.Defaults) {
-			t.Errorf("%s: the description does not say what it answers by default: %q",
-				entry.Report, entry.Defaults)
+		if entry.Measures != "" && !strings.Contains(described, entry.Measures) {
+			t.Errorf("%s: the description does not say what it computes by default: %q",
+				entry.Report, entry.Measures)
+		}
+		for _, dimension := range entry.GroupBy {
+			want := dimension
+			if slices.Contains(entry.DefaultBy, dimension) {
+				want += "*"
+			}
+			if !strings.Contains(described, entry.Report+": ") || !strings.Contains(described, want) {
+				t.Errorf("%s: the description does not list the dimension %q the engine accepts",
+					entry.Report, want)
+			}
 		}
 	}
 }

@@ -777,6 +777,8 @@ var probeReportCatalog = []ReportCatalogEntry{{
 	Filters:    []string{"owner_id", "pipeline_id", "status"},
 	Aggregates: []string{"amount_minor"},
 	Defaults:   "count as deals grouped by stage_id",
+	Measures:   "count",
+	DefaultBy:  []string{"stage_id"},
 }}
 
 // probeReportPlan stands in for the engine's plan vocabulary, and carries the

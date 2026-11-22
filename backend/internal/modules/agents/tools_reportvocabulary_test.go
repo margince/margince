@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -188,54 +189,59 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 	// EACH REPORT'S DEFAULT SURVIVES, and this is the half the first pass got
 	// wrong. The certification lane found it: with only the enum of keys, every
 	// run of "how much open pipeline in each stage" opened the vocabulary door
-	// instead of the report — because `deals-by-stage` answers that goal with no
+	// instead of the report, because `deals-by-stage` answers that goal with no
 	// plan at all and a bare key does not say so.
+	//
+	// Each report is ONE list: the measures, then `by:` with every dimension it
+	// accepts and the default grouping starred. Derived from the fixture, so
+	// renaming a name there cannot leave this passing while the description
+	// recites the old one.
 	for _, entry := range twoReportCatalog() {
-		if entry.Defaults == "" {
-			continue
-		}
-		if !strings.Contains(described, entry.Defaults) {
-			t.Errorf("%s: the description does not say what the report answers by default, which is "+
-				"what decides whether it is the right report AND whether a plan is needed at all: %s",
+		if entry.Measures != "" && !strings.Contains(described, entry.Measures) {
+			t.Errorf("%s: the description does not say what it computes by default: %s",
 				entry.Report, described)
 		}
+		for _, dimension := range entry.GroupBy {
+			want := dimension
+			if slices.Contains(entry.DefaultBy, dimension) {
+				want += "*"
+			}
+			if !strings.Contains(described, want) {
+				t.Errorf("%s: the description does not name the dimension %q the report accepts, "+
+					"so a caller concludes no prebuilt report reaches it: %s", entry.Report, want, described)
+			}
+		}
 	}
-	// A report with NO default stays silent rather than rendering a key with an
-	// empty clause after it, which reads as a report that answers nothing.
-	silent := []ReportCatalogEntry{{Report: "answers-nothing", GroupBy: []string{"phase"}}}
-	if bare := describeReportCatalog(silent); strings.Contains(bare, "answers-nothing: .") {
-		t.Errorf("a report with no default rendered an empty clause: %s", bare)
+	if !strings.Contains(described, "deals-by-stage: count; by: pipeline_id, stage_id*, status") {
+		t.Errorf("the list for deals-by-stage is not measures, then `by:` with the default starred: %s", described)
 	}
-	// And the three VOCABULARIES are gone. That is the saving, and it is the half
-	// a caller only needs when narrowing: a description still listing one
-	// report's names would be the same second copy in a shorter font.
-	//
-	// THE DIMENSIONS BELONG HERE AND DO NOT FIT. A report's admitted group_by
-	// names are a selection signal exactly as its default is — a caller that
-	// cannot see `direction` on activities-by-kind concludes no prebuilt report
-	// reaches it — and publishing them costs more of the single-tool ration
-	// than run_report has left. What stands in their place is the sentence
-	// saying a default is not a report's reach, which attacks the same wrong
-	// conclusion with no enumeration. Widening the ration is a decision with a
-	// measurement behind it: #5333.
-	//
-	// DERIVED from the fixture rather than listed, so renaming a name in
-	// twoReportCatalog() cannot leave this passing while the description recites
-	// the new one.
-	//
-	// The two provenance ids are the documented exception. They appear in "a
-	// pipeline_id or stage_id used in a plan comes from list_pipelines", which is
-	// where a caller learns the ids are obtainable at all, and
-	// TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines requires that
-	// sentence as long as the schema names them. Sweeping them up here would be
-	// demanding the removal of the one sentence another gate demands.
-	//
-	provenance := map[string]bool{"pipeline_id": true, "stage_id": true}
+	// An alias names an output column the answer already carries; a caller
+	// choosing a report never reads it.
+	if strings.Contains(described, " as ") {
+		t.Errorf("the description still carries a measure alias: %s", described)
+	}
+	// The sentence that stood in for the dimensions is gone: the list names them all.
+	if strings.Contains(described, "A default is not a report's reach") {
+		t.Errorf("the description still says a default is not a report's reach, which the list makes false: %s", described)
+	}
+	// A report with NO measure still lists its dimensions, with no empty clause
+	// before them; one with neither stays silent.
+	silent := []ReportCatalogEntry{{Report: "answers-nothing", GroupBy: []string{"phase"}}, {Report: "bare"}}
+	bare := describeReportCatalog(silent)
+	if !strings.Contains(bare, "answers-nothing: by: phase.") {
+		t.Errorf("a report with dimensions and no measure rendered wrongly: %s", bare)
+	}
+	if strings.Contains(bare, "bare:") {
+		t.Errorf("a report with neither measures nor dimensions rendered a key with an empty clause: %s", bare)
+	}
+	// The dimensions are published; the filters and aggregates are the document's.
+	// The two provenance ids are named by "a pipeline_id or stage_id used in a
+	// plan comes from list_pipelines", which another gate requires.
 	swept := 0
 	for _, entry := range twoReportCatalog() {
-		for _, names := range [][]string{entry.GroupBy, entry.Filters, entry.Aggregates} {
+		for _, names := range [][]string{entry.Filters, entry.Aggregates} {
 			for _, name := range names {
-				if provenance[name] {
+				if slices.Contains(entry.GroupBy, name) || name == "pipeline_id" || name == "stage_id" {
 					continue
 				}
 				swept++
@@ -247,7 +253,7 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 		}
 	}
 	if swept == 0 {
-		t.Fatal("the fixture's vocabularies are all provenance ids, so this swept nothing")
+		t.Fatal("the fixture's filters and aggregates are all dimensions or provenance ids, so this swept nothing")
 	}
 }
 
