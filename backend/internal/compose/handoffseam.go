@@ -9,13 +9,16 @@ package compose
 
 import (
 	"context"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/project360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,7 +50,7 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 			return agents.HandoffFacts{}, err
 		}
 		facts := handoffFacts(res)
-		zone, err := installationZone(ctx, pool)
+		zone, err := handoffZone(ctx, pool)
 		if err != nil {
 			return agents.HandoffFacts{}, err
 		}
@@ -63,6 +66,18 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 		}
 		return facts, nil
 	}
+}
+
+// handoffZone is the zone the handoff's dates are counted in. It is a date
+// derivation, so it skips the installation settings gate, as
+// identity.TimezoneAppliedTx says; a reader without that grant still gets a handoff.
+func handoffZone(ctx context.Context, pool *pgxpool.Pool) (*time.Location, error) {
+	var zone *time.Location
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) (err error) {
+		zone, err = identity.ZoneAppliedTx(ctx, tx)
+		return err
+	})
+	return zone, err
 }
 
 // handoffFacts carries one page read across the seam. Every deal is carried,

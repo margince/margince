@@ -28,6 +28,7 @@ import (
 
 // lockWatchingBlob asks, during every put, whether any session holds the
 // authorization lock a capture transaction takes, and counts puts and deletes.
+// pg_locks lists every database, so the count is held to this test's own.
 type lockWatchingBlob struct {
 	blobstore.Store
 	e *integration.SearchEnv
@@ -43,6 +44,7 @@ func (b *lockWatchingBlob) Put(ctx context.Context, key string, r io.Reader, siz
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM pg_locks
 			 WHERE locktype = 'advisory' AND granted
+			   AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
 			   AND objid::bigint = hashtext('margince:authz')::bigint & 4294967295`).Scan(&held)
 	})
 	b.mu.Lock()

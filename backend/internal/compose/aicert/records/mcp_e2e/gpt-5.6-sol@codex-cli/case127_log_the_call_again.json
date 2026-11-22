@@ -1,0 +1,91 @@
+{
+  "scenario": "case127_log_the_call_again",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "6e145f1addcbdd9f",
+    "tools": "3fe569f31327dcd0",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T22:02:51Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:35:36Z"
+  },
+  "usage": {
+    "input_tokens": 98184,
+    "output_tokens": 3522,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 532224,
+    "runs_measured": 3,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_context",
+        "read_record",
+        "resolve_entities",
+        "search_records"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "change_activities",
+        "find_records",
+        "log_activity",
+        "read_record",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_context",
+        "read_record",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 5,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 197685,
+      "min": 197359,
+      "max": 235364
+    },
+    "output_tokens": {
+      "median": 1282,
+      "min": 950,
+      "max": 1290
+    }
+  }
+}
