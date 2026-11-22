@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -373,7 +374,7 @@ func TestAColleagueAndTheirAgentHoldOneOwnershipRequest(t *testing.T) {
 	passport := ids.NewV7()
 	e.WsExec(t, `INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
 		VALUES ($1, $2, $2, 'handover agent', ARRAY['read','write'], $3, now() + interval '1 day')`,
-		passport, e.Rep3, "hash-"+passport.String())
+		passport, e.Rep3, storekit.TokenHash(passport.String()))
 	agent := e.AgentOnPassport(t, e.Rep3, nil, handoverRepPerms(), ids.From[ids.PassportKind](passport))
 	stranger := e.AgentFor(t, e.Rep2, nil, handoverRepPerms())
 

@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -176,7 +177,7 @@ func TestAPassportAndAGrantSharingAnIDAreStillTwoRows(t *testing.T) {
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
 		VALUES ($1, $1, 'oauth:collision', ARRAY['read']::text[], $2, now() + interval '30 days', $3)`,
-		e.admin.UserID, "collision-hash-"+minted.String(), minted); err != nil {
+		e.admin.UserID, storekit.TokenHash(minted.String()), minted); err != nil {
 		t.Fatalf("minting the connection's credential: %v", err)
 	}
 

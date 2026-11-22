@@ -269,7 +269,7 @@ func (p dealVerdictPass) record(
 	}
 	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		verdict := assurance.DealVerdict{
-			DealID: c.deal, BasisDigest: c.digest, PromptVersion: dealverdict.PromptVersion,
+			DealID: c.deal, BasisDigest: c.digest,
 			AssessedAt: p.now(), Actions: encoded,
 		}
 		verdict.InputChecksum = assessed

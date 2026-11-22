@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -101,7 +102,7 @@ func seedGrantedPassport(t *testing.T, e *Env, human ids.UUID, clientName string
 			`INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash,
 			                       expires_at, oauth_grant_id)
 			 VALUES ($1, $2, $2, $3, ARRAY['read'], $4, now() + interval '1 day', $5)`,
-			passportID, human, "oauth:"+clientID, "hash-"+passportID.String(), grantID)
+			passportID, human, "oauth:"+clientID, storekit.TokenHash(passportID.String()), grantID)
 		return err
 	})
 	if err != nil {
@@ -120,7 +121,7 @@ func seedUngrantedPassport(t *testing.T, e *Env, human ids.UUID) ids.UUID {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
 			 VALUES ($1, $2, $2, 'My laptop', ARRAY['read'], $3, now() + interval '1 day')`,
-			passportID, human, "hash-"+passportID.String())
+			passportID, human, storekit.TokenHash(passportID.String()))
 		return err
 	})
 	if err != nil {

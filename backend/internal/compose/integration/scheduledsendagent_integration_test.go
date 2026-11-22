@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -291,7 +292,7 @@ func (p *preflightEnv) issuePassport(t *testing.T) ids.UUID {
 			`INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
 			 VALUES ($1, $2, $2, 'scheduled-send probe',
 			         ARRAY['read','write'], $3, now() + interval '30 days')`,
-			id, uuidOf(t, p.user), "probe-"+id.String())
+			id, uuidOf(t, p.user), storekit.TokenHash(id.String()))
 		return err
 	}); err != nil {
 		t.Fatalf("issuing a passport: %v", err)

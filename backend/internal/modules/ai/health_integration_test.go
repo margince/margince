@@ -19,7 +19,7 @@ import (
 func ladderRow(logical ids.UUID, attempt int, terminal bool, tier Tier, reason, sentinel string) Call {
 	return Call{
 		LogicalCallID: logical, Attempt: attempt, IsTerminal: terminal, Kind: callKindCompletion,
-		Task: TaskSiteTriage, Tier: tier, Provider: "test", ModelID: "test-model", RequestFingerprint: "fp-health",
+		Task: TaskSiteTriage, Tier: tier, Provider: "test", ModelID: "test-model",
 		AttemptReason: reason, ErrorSentinel: sentinel, TokensIn: 100, TokensOut: 10,
 	}
 }

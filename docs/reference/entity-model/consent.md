@@ -378,6 +378,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `confirm_token_lead_is_only_told`: `CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice') OR (kind = 'consent_confirmation')))`
 - `confirm_token_one_subject`: `CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))`
 - `confirm_token_purpose_is_consents`: `CHECK (((kind = 'consent_confirmation') = (purpose_id IS NOT NULL)))`
+- `confirm_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 
 **Indexes**
 
@@ -418,6 +419,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `consent_doi_token_expires_after_issue`: `CHECK ((expires_at > issued_at))`
 - `consent_doi_token_hash_unique`: `UNIQUE (token_hash)`
+- `consent_doi_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 
 **Indexes**
 
@@ -935,6 +937,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `preference_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `preference_token_revocation_is_reasoned`: `CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))`
 - `preference_token_revoked_reason_check`: `CHECK ((revoked_reason = ANY (ARRAY['rotated', 'expired', 'erasure', 'compromise', 'merged_predecessor', 'merged_into_survivor'])))`
+- `preference_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `preference_token_token_key`: `UNIQUE (token)`
 
 **Indexes**
@@ -1104,6 +1107,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `withdrawal_credential_revoked_reason_check`: `CHECK ((revoked_reason = ANY (ARRAY['erasure', 'compromise', 'merged_predecessor', 'superseded'])))`
 - `withdrawal_credential_scope_check`: `CHECK ((scope = ANY (ARRAY['named_purpose', 'all_marketing'])))`
 - `withdrawal_credential_scope_names_its_target`: `CHECK (((scope = 'named_purpose') = (purpose_id IS NOT NULL)))`
+- `withdrawal_credential_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `withdrawal_credential_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**

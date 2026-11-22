@@ -5,8 +5,6 @@ package activities
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -16,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -26,13 +25,12 @@ func (s *Store) ResolveMeetingToken(ctx context.Context, token string) (ids.UUID
 	if len(token) != 43 {
 		return ids.Nil, ids.UserID{}, apperrors.ErrNotFound
 	}
-	sum := sha256.Sum256([]byte(token))
 	var id ids.UUID
 	var host ids.UserID
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		args := schedulingArgs{}
 		query := `SELECT i.activity_id,i.host_user_id FROM meeting_invitation i JOIN activity a ON a.id=i.activity_id
-   WHERE i.management_hash=` + args.add(hex.EncodeToString(sum[:])) + ` AND a.archived_at IS NULL
+   WHERE i.management_hash=` + args.add(storekit.TokenHash(token)) + ` AND a.archived_at IS NULL
    AND ` + args.add(s.now().Add(-30*24*time.Hour)) + `<a.occurred_at -- occurred_at raw: the thirty days a guest may manage it
 `
 		return tx.QueryRow(ctx, query, args...).Scan(&id, &host)

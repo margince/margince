@@ -73,7 +73,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 		// nothing to trace, and a caller tells a deferral from a failed lane.
 		return model.Embeddings{}, err
 	}
-	trace := Call{Task: TaskEmbeddings, Tier: TierEmbedLane, Kind: callKindEmbedding, CacheOff: r.cacheOff, LatencyMS: r.now().Sub(start).Milliseconds()}
+	trace := Call{Task: TaskEmbeddings, Tier: TierEmbedLane, Kind: callKindEmbedding, LatencyMS: r.now().Sub(start).Milliseconds()}
 	if err == nil {
 		// Stamp the SAME token estimate the meter records below onto the
 		// trace row too — embeddings are input-only (no output, no cache

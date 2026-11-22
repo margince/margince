@@ -130,8 +130,8 @@ func TestACardOverACorrectionNeedsTheVerdictReader(t *testing.T) {
 	}
 	key := sha256.Sum256([]byte("profile_field:" + fieldTitle))
 	e.execAs(ctx, t, `INSERT INTO ai_feedback
-		(subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, source, captured_by)
-		VALUES ('contact', $1, 'profile_field', $2, 'corrected', 'Head of Treasury', 'human', 'human:x')`,
+		(subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, captured_by)
+		VALUES ('contact', $1, 'profile_field', $2, 'corrected', 'Head of Treasury', 'human:x')`,
 		incumbent.Id, hex.EncodeToString(key[:]))
 
 	entries, err := ParseVCards(strings.NewReader(

@@ -86,7 +86,7 @@ func TestCommercialIntermediariesDoNotCreateBuyingReviewMatters(t *testing.T) {
 	}
 	store := assurance.NewStore(InstallationDB(e.Pool))
 	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
-	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+	if _, err := scanner.Scan(e.system(), e.now); err != nil {
 		t.Fatal(err)
 	}
 	if found := readSignalFindings(e.signalReader(), t, e); len(found) != 0 {
