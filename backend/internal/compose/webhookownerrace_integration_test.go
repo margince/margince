@@ -33,10 +33,11 @@ type afterFirstAuthorization struct {
 	then func()
 }
 
-func (r *afterFirstAuthorization) EffectiveRBAC(ctx context.Context, ws, user ids.UUID) (authz.RBAC, error) {
-	rbac, err := r.Resolver.EffectiveRBAC(ctx, ws, user)
+// AdmittedAuthority is the read the fan-out authorizes an owner with.
+func (r *afterFirstAuthorization) AdmittedAuthority(ctx context.Context, ws, user, passport ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	rbac, seat, err := r.Resolver.AdmittedAuthority(ctx, ws, user, passport)
 	r.once.Do(r.then)
-	return rbac, err
+	return rbac, seat, err
 }
 
 // dealWebhook stores a subscription to deal.updated owned by owner, and

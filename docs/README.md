@@ -256,10 +256,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
   programs and start them on a host without images.
 - [ai-egress.md](reference/ai-egress.md): which AI tasks can send data out of the installation.
   Generated.
-- [ai-provider-outages.md](reference/ai-provider-outages.md): what each AI task does while its provider
-  is down. Generated.
+- [ai-provider-outages.md](reference/ai-provider-outages.md): what each AI task does while its provider is down. Generated.
 - [glossary.md](reference/glossary.md): what each technical name in the plain pages means.
 - [record-vocabulary.md](reference/record-vocabulary.md): one name for each kind of record, in the app and in the code.
+- [administered-lists.md](reference/administered-lists.md): the two shapes of a list an admin changes, and when to use each.
 - [browser-support.md](reference/browser-support.md): the browsers the app supports, and when code may use a web feature.
 - [ui-copy-style.md](reference/ui-copy-style.md): how to write English text in the app.
 - [docs-prose-style.md](reference/docs-prose-style.md): how to write a doc page.

@@ -72,8 +72,8 @@ func (s *Store) summarize(ctx context.Context, lists []listRow) ([]*listSummary,
 	return out, nil
 }
 
-// gatedSummaries checks read access once per record type before any filter is
-// judged, so a list whose filter no longer compiles is refused to a reader who
+// gatedSummaries checks read access once per record type, before any filter is
+// judged. So a list whose filter no longer compiles is refused to a reader who
 // may not read its records.
 func gatedSummaries(ctx context.Context, lists []listRow) ([]*listSummary, error) {
 	out := make([]*listSummary, 0, len(lists))

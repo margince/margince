@@ -178,19 +178,9 @@ type reportSpec struct {
 	// rowMoments are the dimensions that differ for every row but order the
 	// rows: a timestamp. No group of one can answer, but a range over them
 	// can. The typed vocabulary offers them to narrow by, never to group by.
-	rowMoments []string
-	// nativeMeasures are the measures denominated in the ROW's own currency
-	// rather than in one the whole answer shares. Summing one across a grouping
-	// that does not split by currency adds euros to dollars and returns a plain
-	// integer — a number with no unit, which data-semantics §1 r4 forbids.
-	//
-	// Declared rather than inferred from the `_minor` / `_base_minor` naming
-	// convention. The convention is real and the frontend leans on it, but a
-	// convention is not a rule: the next measure that breaks it is named by
-	// whoever adds it, and nothing would notice.
-	nativeMeasures map[string]bool
-	defaultBy      []string
-	defaultAggs    []reportAggregate
+	rowMoments  []string
+	defaultBy   []string
+	defaultAggs []reportAggregate
 	// population says whose records this report measures, as against which
 	// rows its reader may see at all. See populationRule: the zero value
 	// measures the caller's own.

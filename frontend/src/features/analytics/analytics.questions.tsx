@@ -29,7 +29,7 @@ import {
   scopeName,
   scopeQuery,
 } from "./analytics.context";
-import { AnswerTable, QuestionFailure } from "./analytics.questions.answer";
+import { AnswerTable } from "./analytics.questions.answer";
 import { QuestionBuilder } from "./analytics.questions.builder";
 import {
   draftFromQuery,
@@ -38,6 +38,13 @@ import {
   type QuestionDraft,
   toQuery,
 } from "./analytics.questions.draft";
+import { QuestionFailure } from "./analytics.questions.failure";
+import {
+  filterAmountCurrency,
+  type MoneyFields,
+  moneyFieldsOf,
+  NO_MONEY,
+} from "./analytics.questions.money";
 import { useValueNamer } from "./analytics.questions.names";
 import {
   SAVED_QUESTIONS_KEY,
@@ -50,7 +57,6 @@ import {
   type CustomLabels,
   customLabels,
   entityLabel,
-  filterAmountCurrency,
   measureLabel,
   opLabel,
   takesValue,
@@ -87,6 +93,7 @@ export function QuestionsView({
   const baseCurrency = context.base_currency || null;
   const route = useRoute();
   const runId = route.screen === "analytics" ? route.id2 : undefined;
+  const entities = useAnalyticsSchema().data?.entities ?? [];
   const [draft, setDraft] = useState<QuestionDraft>(() => newDraft(""));
   // Set when an edited question was saved over a population this reader may
   // not measure, so the builder says it will be asked over another one.
@@ -99,7 +106,13 @@ export function QuestionsView({
         allowedScopes={allowedScopes}
         baseCurrency={baseCurrency}
         onEdit={(query) => {
-          setDraft(draftFromQuery(query, baseCurrency));
+          setDraft(
+            draftFromQuery(
+              query,
+              baseCurrency,
+              moneyFieldsOf(entities, query.entity),
+            ),
+          );
           // The question was asked over a population; editing it keeps that
           // population, and says so when this reader may not measure it
           // rather than quietly re-asking over another.
@@ -174,6 +187,7 @@ function AskQuestion({
         : question,
       scope,
       baseCurrency,
+      entity?.money ?? NO_MONEY,
     );
   };
   // An answer is shown only under the population it was asked over. Changing
@@ -319,10 +333,8 @@ function SavedQuestion({
   });
   // A run asked before a field was renamed reads under today's name; a field
   // no longer reportable falls back to its column name.
-  const fieldLabels = customLabels(
-    t,
-    useAnalyticsSchema().data?.entities ?? [],
-  );
+  const entities = useAnalyticsSchema().data?.entities ?? [];
+  const fieldLabels = customLabels(t, entities);
   const link = `${globalThis.location.origin}${globalThis.location.pathname}${routeHash(
     { screen: "analytics", id: "questions", id2: runId },
   )}`;
@@ -371,6 +383,7 @@ function SavedQuestion({
             query={saved.query}
             fieldLabels={fieldLabels}
             baseCurrency={baseCurrency}
+            money={moneyFieldsOf(entities, saved.query.entity)}
             population={population}
             askedBy={<EntityRef kind="user" id={saved.asked_by} />}
           />
@@ -397,12 +410,14 @@ function QuestionSummary({
   query,
   fieldLabels,
   baseCurrency,
+  money,
   population,
   askedBy,
 }: Readonly<{
   query: AnalyticsQuery;
   fieldLabels: CustomLabels;
   baseCurrency: string | null;
+  money: MoneyFields;
   population: string | null;
   askedBy: ReactNode;
 }>) {
@@ -417,7 +432,12 @@ function QuestionSummary({
   const none = t("analytics.q.none");
   // An amount travels in minor units and reads as money.
   const filterValueText = (filter: (typeof filters)[number]) => {
-    const currency = filterAmountCurrency(filter.field, filters, baseCurrency);
+    const currency = filterAmountCurrency(
+      filter.field,
+      filters,
+      baseCurrency,
+      money,
+    );
     return currency && typeof filter.value === "number"
       ? formatAnalyticsMoneyOrAbsent(filter.value, currency, locale)
       : namer(filter.field, filter.value);

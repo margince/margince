@@ -167,11 +167,8 @@ func readOllama(body []byte) ([]wireTurn, error) {
 func readOpenAIResponses(body []byte) ([]wireTurn, error) {
 	var wire struct {
 		Input []struct {
-			Role    string `json:"role"`
-			Content []struct {
-				Type string `json:"type"`
-				Text string `json:"text"`
-			} `json:"content"`
+			Role    string          `json:"role"`
+			Content json.RawMessage `json:"content"`
 		} `json:"input"`
 	}
 	if err := json.Unmarshal(body, &wire); err != nil {
@@ -180,7 +177,21 @@ func readOpenAIResponses(body []byte) ([]wireTurn, error) {
 	turns := make([]wireTurn, 0, len(wire.Input))
 	for _, item := range wire.Input {
 		turn := wireTurn{role: item.Role}
-		for _, part := range item.Content {
+		// A bare string is a whole text turn, which is how an assistant turn goes.
+		var text string
+		if json.Unmarshal(item.Content, &text) == nil {
+			turn.text = text
+			turns = append(turns, turn)
+			continue
+		}
+		var parts []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		}
+		if err := json.Unmarshal(item.Content, &parts); err != nil {
+			return nil, err
+		}
+		for _, part := range parts {
 			// input_text / output_text are the conversation; input_image and
 			// input_file are the attachment kinds this wire spells.
 			if strings.HasSuffix(part.Type, "_text") {

@@ -37,6 +37,9 @@ const (
 	// from the three outcomes above because a dry run that folds it into
 	// `created` promises work that cannot happen.
 	predictUnwritable
+	// predictHeldKey is an update refused over a key another record holds. The
+	// row is skipped, and its record still answers to the row's ref.
+	predictHeldKey
 	// predictCollides is a row naming a company the CRM ALREADY holds, found
 	// by the same PO-F-2 ladder the create path runs. The commit still lands
 	// it — and files a review pair — so this is a disclosure, not a refusal:
@@ -210,7 +213,7 @@ func (w *csvWriters) reconcilePrediction(
 	}
 	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
 	if err != nil || why.Code != "" {
-		return predictUnwritable, why, err
+		return predictHeldKey, why, err
 	}
 	w.predictedChange, err = w.changeOf(ctx, id, changed, current)
 	return predictUpdate, kept, err

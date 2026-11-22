@@ -11,13 +11,76 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "1230d1b26a0a56d1",
+    "tools": "8b7f08f09bc4505e",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T19:21:03Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:29Z"
+  },
   "usage": {
-    "input_tokens": 35574,
-    "output_tokens": 5585,
+    "input_tokens": 36305,
+    "output_tokens": 4826,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 62492,
+    "cache_read_input_tokens": 56641,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "add_capture_exclusion",
+        "change_capture",
+        "describe_router_actions",
+        "list_capture_exclusions",
+        "list_capture_senders",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "add_capture_exclusion",
+        "change_capture",
+        "describe_router_actions",
+        "list_capture_exclusions",
+        "list_capture_senders",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "turns": {
+      "median": 4.5,
+      "min": 4,
+      "max": 5
+    },
+    "refused": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 46473,
+      "min": 39996,
+      "max": 52950
+    },
+    "output_tokens": {
+      "median": 2413,
+      "min": 2335,
+      "max": 2491
+    }
   }
 }

@@ -260,8 +260,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     page.getByText("Erweiterung wird neu verhandelt.", { exact: false }),
   ).toBeVisible();
 
-  // 7. Close with a reason. The close button stays disabled until a reason
-  // is typed, and the reason is what the history shows afterwards.
+  // 7. Close with a reason. A close with no reason is refused on the reason
+  // field, and the reason is what the history shows afterwards.
   // The Closed step is named for the move it makes, as the dialog's heading is.
   await phase.getByRole("button", { name: "Wechsel zu Abgeschlossen" }).click();
   await expect(
@@ -270,7 +270,14 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   const close = page
     .getByRole("dialog")
     .getByRole("button", { name: "Projekt abschließen" });
-  await expect(close).toBeDisabled();
+  await close.click();
+  await expect(page.getByTestId("project-advance-reason")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Wechsel zu Abgeschlossen" }),
+  ).toBeVisible();
   await page
     .getByTestId("project-advance-reason")
     .fill("Go-live abgenommen, Hypercare an den Support übergeben.");
