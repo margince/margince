@@ -51,6 +51,7 @@ var returningRow = regexp.MustCompile(`(?i)\bRETURNING\b`)
 // right not to look, each saying why. A reason describes the act, not the
 // missing check.
 var declinedWriteIsSilent = gatekit.Waive(map[string]string{
+	"backend/internal/compose/weekly/weeklymovement.go:freezeMovement":                           "freezing a week's bars once (outlook_movement IS NULL): a retried job finds the bars the first run froze and keeps them, because a second write would replace a record the review has already shown",
 	"backend/internal/modules/approvals/failureack.go:AcknowledgeEffectFailure":                  "writing the lapse a sweep has not yet recorded, only for a decider's own unredeemed row past its window: a row already marked, or not lapsed, is the common case, and the locked read that follows decides what the caller is told",
 	"backend/internal/modules/capture/syncstate.go:recordSyncSuccessTx":                          "restoring an errored connection after a successful sync: a connection already connected, archived or awaiting reauthorization keeps its newer state; the success itself is recorded independently in capture_sync_state",
 	"backend/internal/modules/comms/partysettle.go:SettlePartyAdmission":                         "acknowledging a sent delivery's party admission: a delivery no longer sent has no sent admission to settle, and clearing a flag already clear is idempotent",

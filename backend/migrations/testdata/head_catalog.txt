@@ -225,13 +225,6 @@ BEGIN
   RETURN NULL;
 END;
 
-public.activity_clock_refold_mark acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.activity_clock_refold_mark.activity_clock_refold_mark_pkey PRIMARY KEY (singleton)
-public.activity_clock_refold_mark.activity_clock_refold_mark_singleton_check CHECK (singleton)
-public.activity_clock_refold_mark.passed_id uuid NOT NULL gen=- def=-
-public.activity_clock_refold_mark.passed_up_to timestamp with time zone NOT NULL gen=- def=-
-public.activity_clock_refold_mark.singleton boolean NOT NULL gen=- def=true
-public.activity_clock_refold_mark_pkey CREATE UNIQUE INDEX activity_clock_refold_mark_pkey ON public.activity_clock_refold_mark USING btree (singleton)
 public.activity_commitment_admission acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_commitment_admission.activity_commitment_admission_check CHECK (((renewed_by IS NULL) = (renewed_at IS NULL)))
 public.activity_commitment_admission.activity_commitment_admission_pkey PRIMARY KEY (source_activity_id, locator)
@@ -924,14 +917,6 @@ public.activity_ts_config(lang text) secdef=false cfg=- acl=-
 public.activity_unfolded_counterparty(address text) secdef=false cfg=- acl=- 
     SELECT CASE WHEN address <> lower(address) THEN lower(address) END
 
-public.activity_waiting_horizon acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.activity_waiting_horizon.activity_waiting_horizon_days_check CHECK ((horizon_days > 0))
-public.activity_waiting_horizon.activity_waiting_horizon_pkey PRIMARY KEY (singleton)
-public.activity_waiting_horizon.activity_waiting_horizon_singleton_check CHECK (singleton)
-public.activity_waiting_horizon.horizon_days integer NOT NULL gen=- def=-
-public.activity_waiting_horizon.measured_at timestamp with time zone NOT NULL gen=- def=-
-public.activity_waiting_horizon.singleton boolean NOT NULL gen=- def=true
-public.activity_waiting_horizon_pkey CREATE UNIQUE INDEX activity_waiting_horizon_pkey ON public.activity_waiting_horizon USING btree (singleton)
 public.advance_activity_domain_evidence_version() secdef=false cfg=- acl=- 
 BEGIN
  IF ROW(NEW.occurred_at, NEW.occurred_precision, NEW.archived_at, NEW.restricted_at)
@@ -2285,13 +2270,6 @@ public.capture_alias_sighting.user_id uuid NOT NULL gen=- def=-
 public.capture_alias_sighting.value text NOT NULL gen=- def=-
 public.capture_alias_sighting_once_per_message CREATE UNIQUE INDEX capture_alias_sighting_once_per_message ON public.capture_alias_sighting USING btree (user_id, value, source)
 public.capture_alias_sighting_pkey CREATE UNIQUE INDEX capture_alias_sighting_pkey ON public.capture_alias_sighting USING btree (id)
-public.capture_answered_sweep_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.capture_answered_sweep_cursor.after_contact_id uuid gen=- def=-
-public.capture_answered_sweep_cursor.capture_answered_sweep_cursor_one_row CHECK (singleton)
-public.capture_answered_sweep_cursor.capture_answered_sweep_cursor_pkey PRIMARY KEY (singleton)
-public.capture_answered_sweep_cursor.singleton boolean NOT NULL gen=- def=true
-public.capture_answered_sweep_cursor.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.capture_answered_sweep_cursor_pkey CREATE UNIQUE INDEX capture_answered_sweep_cursor_pkey ON public.capture_answered_sweep_cursor USING btree (singleton)
 public.capture_auto_enrich_budget acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_auto_enrich_budget.budget_date date NOT NULL gen=- def=-
 public.capture_auto_enrich_budget.capture_auto_enrich_budget_pkey PRIMARY KEY (budget_date)
@@ -2543,14 +2521,6 @@ public.capture_owner_identity_withdrawn.withdrawn_by text NOT NULL gen=- def=-
 public.capture_owner_identity_withdrawn_at_idx CREATE INDEX capture_owner_identity_withdrawn_at_idx ON public.capture_owner_identity_withdrawn USING btree (withdrawn_at)
 public.capture_owner_identity_withdrawn_pkey CREATE UNIQUE INDEX capture_owner_identity_withdrawn_pkey ON public.capture_owner_identity_withdrawn USING btree (id)
 public.capture_owner_identity_withdrawn_user_idx CREATE INDEX capture_owner_identity_withdrawn_user_idx ON public.capture_owner_identity_withdrawn USING btree (user_id)
-public.capture_party_admission_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.capture_party_admission_cursor.after_activity uuid NOT NULL gen=- def=-
-public.capture_party_admission_cursor.after_user uuid NOT NULL gen=- def=-
-public.capture_party_admission_cursor.capture_party_admission_cursor_pkey PRIMARY KEY (singleton)
-public.capture_party_admission_cursor.capture_party_admission_cursor_singleton_check CHECK (singleton)
-public.capture_party_admission_cursor.ceiling uuid NOT NULL gen=- def=-
-public.capture_party_admission_cursor.singleton boolean NOT NULL gen=- def=true
-public.capture_party_admission_cursor_pkey CREATE UNIQUE INDEX capture_party_admission_cursor_pkey ON public.capture_party_admission_cursor USING btree (singleton)
 public.capture_party_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_party_source.activity_id uuid NOT NULL gen=- def=-
 public.capture_party_source.admission_blocked boolean NOT NULL gen=- def=-
@@ -4780,13 +4750,6 @@ public.deal_acquisition_source.updated_at timestamp with time zone NOT NULL gen=
 public.deal_acquisition_source.version bigint NOT NULL gen=- def=1
 public.deal_acquisition_source_key_key CREATE UNIQUE INDEX deal_acquisition_source_key_key ON public.deal_acquisition_source USING btree (key)
 public.deal_acquisition_source_pkey CREATE UNIQUE INDEX deal_acquisition_source_pkey ON public.deal_acquisition_source USING btree (id)
-public.deal_authorship_sweep_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.deal_authorship_sweep_cursor.after_evidence_id uuid gen=- def=-
-public.deal_authorship_sweep_cursor.deal_authorship_sweep_cursor_one_row CHECK (singleton)
-public.deal_authorship_sweep_cursor.deal_authorship_sweep_cursor_pkey PRIMARY KEY (singleton)
-public.deal_authorship_sweep_cursor.singleton boolean NOT NULL gen=- def=true
-public.deal_authorship_sweep_cursor.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal_authorship_sweep_cursor_pkey CREATE UNIQUE INDEX deal_authorship_sweep_cursor_pkey ON public.deal_authorship_sweep_cursor USING btree (singleton)
 public.deal_clear_partner_attribution_on_company_delete() secdef=false cfg=- acl=- 
 BEGIN
   UPDATE deal
@@ -6623,6 +6586,16 @@ public.import_run_one_active_per_source_name CREATE UNIQUE INDEX import_run_one_
 public.import_run_one_live_per_source_ref CREATE UNIQUE INDEX import_run_one_live_per_source_ref ON public.import_run USING btree (source_ref) WHERE ((connector = 'csv'::text) AND (source_released_at IS NULL))
 public.import_run_one_test_per_agent CREATE UNIQUE INDEX import_run_one_test_per_agent ON public.import_run USING btree (((actor ->> 'id'::text))) WHERE ((status = 'validating'::text) AND ((actor ->> 'type'::text) = 'agent'::text))
 public.import_run_pkey CREATE UNIQUE INDEX import_run_pkey ON public.import_run USING btree (id)
+public.installation_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.installation_state.installation_state_key_present CHECK ((btrim(key) <> ''::text))
+public.installation_state.installation_state_pkey PRIMARY KEY (key)
+public.installation_state.installation_state_value_is_an_object CHECK ((jsonb_typeof(value) = 'object'::text))
+public.installation_state.key text NOT NULL gen=- def=-
+public.installation_state.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.installation_state FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000}')
+public.installation_state.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.installation_state FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000}')
+public.installation_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.installation_state.value jsonb NOT NULL gen=- def=-
+public.installation_state_pkey CREATE UNIQUE INDEX installation_state_pkey ON public.installation_state USING btree (key)
 public.intro_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.intro_request.archived_at timestamp with time zone gen=- def=-
 public.intro_request.captured_by text NOT NULL gen=- def=-
@@ -10821,7 +10794,6 @@ public.uq_weekly_plan_owner_week CREATE UNIQUE INDEX uq_weekly_plan_owner_week O
 public.uq_weekly_review_driver_deal CREATE UNIQUE INDEX uq_weekly_review_driver_deal ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar, deal_id)
 public.uq_weekly_review_learning_citation CREATE UNIQUE INDEX uq_weekly_review_learning_citation ON public.weekly_review_learning_citation USING btree (learning_id, subject_type, subject_id)
 public.uq_weekly_review_learning_slot CREATE UNIQUE INDEX uq_weekly_review_learning_slot ON public.weekly_review_learning USING btree (weekly_review_id, "position")
-public.uq_weekly_review_movement_bar CREATE UNIQUE INDEX uq_weekly_review_movement_bar ON public.weekly_review_movement USING btree (weekly_review_id, period_kind, bar)
 public.uq_weekly_review_outlook_period CREATE UNIQUE INDEX uq_weekly_review_outlook_period ON public.weekly_review_outlook USING btree (weekly_review_id, period_kind)
 public.uq_weekly_review_user_week CREATE UNIQUE INDEX uq_weekly_review_user_week ON public.weekly_review USING btree (user_id, local_week_start)
 public.user_mfa acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -11357,6 +11329,7 @@ public.weekly_review.meetings_with_next_step integer NOT NULL gen=- def=0
 public.weekly_review.narrated_at timestamp with time zone gen=- def=-
 public.weekly_review.narrative text gen=- def=-
 public.weekly_review.numeric_summary jsonb gen=- def=-
+public.weekly_review.outlook_movement jsonb gen=- def=-
 public.weekly_review.pipeline_created_minor bigint gen=- def=-
 public.weekly_review.pipeline_lost_minor bigint gen=- def=-
 public.weekly_review.pipeline_won_minor bigint gen=- def=-
@@ -11453,20 +11426,6 @@ public.weekly_review_learning_citation.weekly_review_learning_citation_pkey PRIM
 public.weekly_review_learning_citation.weekly_review_learning_citation_subject_check CHECK ((subject_type = ANY (ARRAY['deal'::text, 'commitment'::text])))
 public.weekly_review_learning_citation_pkey CREATE UNIQUE INDEX weekly_review_learning_citation_pkey ON public.weekly_review_learning_citation USING btree (id)
 public.weekly_review_learning_pkey CREATE UNIQUE INDEX weekly_review_learning_pkey ON public.weekly_review_learning USING btree (id)
-public.weekly_review_movement acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.weekly_review_movement.bar text NOT NULL gen=- def=-
-public.weekly_review_movement.delta_minor bigint NOT NULL gen=- def=-
-public.weekly_review_movement.id uuid NOT NULL gen=- def=uuidv7()
-public.weekly_review_movement.period_kind text NOT NULL gen=- def=-
-public.weekly_review_movement.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review_movement FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"bar": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"bar":20000,"period_kind":20000}')
-public.weekly_review_movement.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review_movement FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bar": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"bar":20000,"period_kind":20000}')
-public.weekly_review_movement.weekly_review_id uuid NOT NULL gen=- def=-
-public.weekly_review_movement.weekly_review_movement_bar_check CHECK ((bar = ANY (ARRAY['created'::text, 'advanced'::text, 'slipped'::text, 'excluded'::text, 'reinstated'::text, 'not_checked'::text, 'won'::text, 'lost'::text, 'other'::text])))
-public.weekly_review_movement.weekly_review_movement_delta_minor_js_safe CHECK (((delta_minor >= '-9007199254740991'::bigint) AND (delta_minor <= '9007199254740991'::bigint)))
-public.weekly_review_movement.weekly_review_movement_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text])))
-public.weekly_review_movement.weekly_review_movement_pkey PRIMARY KEY (id)
-public.weekly_review_movement.weekly_review_movement_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
-public.weekly_review_movement_pkey CREATE UNIQUE INDEX weekly_review_movement_pkey ON public.weekly_review_movement USING btree (id)
 public.weekly_review_outlook acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review_outlook.base_currency currency_code NOT NULL gen=- def=-
 public.weekly_review_outlook.best_case_minor bigint gen=- def=-

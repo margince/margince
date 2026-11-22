@@ -39,8 +39,12 @@ const MEMBER_STOPS: readonly RailStop[] = CREATOR_STOPS.filter(
   (stop) => !INSTALLATION_STOPS.has(stop.key),
 );
 
-export function railStops(memberPath: boolean): readonly RailStop[] {
-  return memberPath ? MEMBER_STOPS : CREATOR_STOPS;
+export function railStops(
+  memberPath: boolean,
+  voiceStep = true,
+): readonly RailStop[] {
+  const stops = memberPath ? MEMBER_STOPS : CREATOR_STOPS;
+  return voiceStep ? stops : stops.filter((stop) => stop.key !== "voice");
 }
 
 // The stop the conversation is standing on. `null` while the company act is
@@ -110,7 +114,9 @@ export function stopState(
   stop: RailStop["key"],
   state: ConversationState,
 ): RailStopState {
-  const stops = railStops(state.memberPath).map((entry) => entry.key);
+  const stops = railStops(state.memberPath, state.voiceStep).map(
+    (entry) => entry.key,
+  );
   const currentIndex = currentIndexOf(currentStop(state), stops);
 
   // The team act stands on no stop, so `currentIndex` is -1 and the position

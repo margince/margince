@@ -226,6 +226,8 @@ run lasted is there too when the transcript carries `duration_ms`. A refused cal
 name that the CLI turned away. A run with no last result is left out, and `runs` says how many runs
 are behind the numbers.
 
+A turn is one request to the model, and a Gemini run counts its agent's answers. The codex CLI reports no such count. So a GPT verdict has no turns, and the page shows `-`.
+
 These numbers never fail a case and never change the exit code. A scenario can set
 `expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true`
 and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and
@@ -263,7 +265,7 @@ for line in open(sys.argv[1]):
             if block["type"] == "tool_use":
                 print("CALL", block["name"].split("__")[-1], json.dumps(block["input"])[:120])
     elif event["type"] == "result":
-        print("END is_error", event["is_error"], "turns", event["num_turns"])
+        print("END is_error", event["is_error"], "turns", event.get("num_turns"))
         print(event["result"][:1500])
 PY
 ```
@@ -283,6 +285,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
 | `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
+| `the stack did not answer an authenticated call after the restore` | The snapshot restore between runs cuts every database connection, and the api still answered 503 after 30 seconds | A harness stop, never a score. Read `make dev-logs DEV_SLUG=<slug> FOLLOW=0 N=500` before the next boot replaces the log |
 | `the client declined a question the server asked in the chat` | The server asked the user to confirm a change in the chat, and the CLI said no by itself: in print mode nobody can answer the form | A harness stop, never a score. Run the case on the `sdk` route with the user's answer in `elicitation:`. A no that the case scripts there is the user's own, so it is scored |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a bug: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) ended part of the way through a run. A CLI that exits with an error code, under a result that reports no error, stops the lane in the same way | A harness stop, never a score. Every driver writes a last result when the model ends the run, at the turn cap too. The stop prints the last lines the driver wrote to stderr |

@@ -227,7 +227,7 @@ func TestASecondAssemblyWritesNoSecondOutlook(t *testing.T) {
 		t.Fatalf("second assembly: %v", err)
 	}
 
-	bars := e.WsCount(t, `SELECT count(*) FROM weekly_review_movement`)
+	bars := e.WsCount(t, `SELECT coalesce(sum(jsonb_array_length(outlook_movement)), 0) FROM weekly_review`)
 	if bars != 3 {
 		t.Errorf("two assemblies left %d bars, want the 3 written once — a doubled "+
 			"bridge sums to twice the money anybody moved", bars)
@@ -256,7 +256,7 @@ func TestFreezingAnOutlookTwiceLeavesOneSetOfBars(t *testing.T) {
 		t.Fatalf("re-freezing the outlook: %v", err)
 	}
 
-	bars := e.WsCount(t, `SELECT count(*) FROM weekly_review_movement`)
+	bars := e.WsCount(t, `SELECT coalesce(sum(jsonb_array_length(outlook_movement)), 0) FROM weekly_review`)
 	if bars != 3 {
 		t.Errorf("freezing twice left %d bars, want 3 — a bridge with two 'created' "+
 			"rows sums to twice the pipeline anybody made", bars)

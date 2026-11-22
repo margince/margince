@@ -30,9 +30,9 @@
 // audited; a sweep receipt lets "when did it last succeed" outlive River's day
 // of retention.
 //
-// capture_answered_sweep_cursor is where the pass publishing answered
-// contacts stopped, so it reaches every stored contact. It is bookkeeping and
-// not audited.
+// Where the pass publishing answered contacts stopped is a row of
+// installation_state, written through storekit, so the pass reaches every
+// stored contact. It is bookkeeping and not audited.
 //
 // Two more tables back the undo of an owner identity.
 // capture_owner_identity_withdrawn holds a withdrawn identity for the ten

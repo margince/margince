@@ -3,13 +3,14 @@ import { useRef, useState } from "react";
 import { Button, Field, Radio, Textarea } from "../../design-system/atoms";
 import { FileDropzoneControl } from "../../design-system/filedropzone";
 import { SettingRow } from "../../design-system/settingrow";
-import { formatNumber } from "../../format/format";
+import { formatBytes, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { useUnsavedGuard } from "../../lib/unsavedclaims";
 import { useFileDrop } from "../../lib/use-file-drop";
 import { ACCEPTED_CORPUS_ATTR } from "../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
+import { VOICE_SOURCE_MAX_BYTES } from "../../lib/voice-refusal";
 import type { IntakeNotice, SpeakerAsk, VoiceIntake } from "./use-voice-intake";
 
 // The Settings intake: hand over files, and answer who is speaking when one
@@ -53,7 +54,9 @@ export function VoiceCorpusIntake({
         label={t(
           first ? "settings.voice.addFirstLabel" : "settings.voice.addSource",
         )}
-        description={t("settings.voice.dropHint")}
+        description={t("settings.voice.dropHint", {
+          limit: formatBytes(VOICE_SOURCE_MAX_BYTES, locale),
+        })}
         layout="stack"
         control={(control) => (
           <div className="vdna-zone">
@@ -283,6 +286,11 @@ function noticeText(
           return t("settings.voice.refusalSpeaker", { name: notice.label });
         case "unsupported":
           return t("settings.voice.refusalUnsupported", { name: notice.label });
+        case "tooLarge":
+          return t("settings.voice.refusalTooLarge", {
+            name: notice.label,
+            limit: formatBytes(VOICE_SOURCE_MAX_BYTES, locale),
+          });
         default:
           return t("settings.voice.noticeFailed", {
             name: notice.label,
