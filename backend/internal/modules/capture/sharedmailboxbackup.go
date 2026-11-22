@@ -71,10 +71,9 @@ func backupMayHoldTx(ctx context.Context, tx pgx.Tx, authority HeldAuthority, te
 	if mayCapture := CaptureRefusal(rbac.Permissions, seat) == nil; !mayCapture {
 		return principal.Principal{}, false, nil
 	}
-	return principal.Principal{
-		Type: principal.PrincipalConnector, UserID: backup, OnBehalfOf: backup,
-		TeamIDs: rbac.TeamIDs, SeatType: seat, Permissions: rbac.Permissions,
-	}, true, nil
+	acting := authz.HumanPrincipal(backup, rbac, seat)
+	acting.Type, acting.OnBehalfOf = principal.PrincipalConnector, backup
+	return acting, true, nil
 }
 
 // backupKeepsOutTx reports whether the backup owner's own rules keep this mail

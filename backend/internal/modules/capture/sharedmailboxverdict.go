@@ -69,15 +69,17 @@ func SharedMailboxFilingTx(ctx context.Context, tx pgx.Tx, authority HeldAuthori
 	if _, holds, err := backupMayHoldTx(ctx, tx, authority, team, owner); err != nil || !holds {
 		return filing, err
 	}
-	var rec connector.NormalizedRecord
-	err = readPartyAdmissionRecord(ctx, tx, ids.From[ids.ActivityKind](activity), partySource{}, &rec)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return filing, nil
-	}
+	// The exclusions judge the mail's addresses, read off its participants.
+	rows, err := tx.Query(ctx, `SELECT DISTINCT address FROM activity_participant
+	  WHERE activity_id = $1 AND address IS NOT NULL ORDER BY address`, activity)
 	if err != nil {
 		return filing, fmt.Errorf("capture: reading the shared mail a decision files: %w", err)
 	}
-	keptOut, err := backupKeepsOutTx(ctx, tx, rec, activity, owner)
+	addresses, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return filing, fmt.Errorf("capture: reading the shared mail a decision files: %w", err)
+	}
+	keptOut, err := backupKeepsOutTx(ctx, tx, connector.NormalizedRecord{Addresses: addresses}, activity, owner)
 	if err != nil || keptOut {
 		return filing, err
 	}

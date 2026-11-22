@@ -278,20 +278,27 @@ func addSignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		 WHERE contact_id = $1 AND archived_at IS NULL`, contactID).Scan(&next); err != nil {
 		return fmt.Errorf("contacts: placing a signature's email: %w", err)
 	}
-	return insertContactEmails(ctx, tx, ids.From[ids.WorkspaceKind](wsID), contactID, enrichSource, enrichCapturedBy,
+	if err := insertContactEmails(ctx, tx, ids.From[ids.WorkspaceKind](wsID), contactID, enrichSource, enrichCapturedBy,
 		[]ContactEmailInput{{Email: address, EmailType: emailTypeWork, Position: next, VouchedNotCorresponded: true}},
-		storekit.RefuseErased, nil)
+		storekit.RefuseErased, nil); err != nil {
+		return err
+	}
+	return touchChildSetParent(ctx, tx, contactEntity, contactID.UUID)
 }
 
 // withdrawSignatureEmail archives the address a signature read added, while it
 // is still the pass's own row and not the contact's primary.
 func withdrawSignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, address string) error {
-	if _, err := tx.Exec(ctx, `UPDATE contact_email SET archived_at = now()
+	tag, err := tx.Exec(ctx, `UPDATE contact_email SET archived_at = now()
 		 WHERE contact_id = $1 AND email = $2 AND source = $3 AND captured_by = $4
-		   AND NOT is_primary AND archived_at IS NULL`, contactID, address, enrichSource, enrichCapturedBy); err != nil {
+		   AND NOT is_primary AND archived_at IS NULL`, contactID, address, enrichSource, enrichCapturedBy)
+	if err != nil {
 		return fmt.Errorf("contacts: archiving the email a signature read added: %w", err)
 	}
-	return nil
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+	return touchChildSetParent(ctx, tx, contactEntity, contactID.UUID)
 }
 
 // fillEmployerStreetTx writes a signature's address onto the contact's one

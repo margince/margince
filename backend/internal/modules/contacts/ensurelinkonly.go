@@ -80,6 +80,13 @@ func readableByATeamMemberTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpar
 	return false, nil
 }
 
+// memberReadSQL asks whether the row is visible, spelled per table so each
+// read stays a literal its gates can see.
+var memberReadSQL = map[string]string{
+	entityContact: `SELECT EXISTS (SELECT 1 FROM contact r WHERE r.id = $1 AND %s)`,
+	leadEntity:    `SELECT EXISTS (SELECT 1 FROM lead r WHERE r.id = $1 AND %s)`,
+}
+
 // memberMayReadTx asks one member's role for read on entity, then the
 // table's visibility rule for the row.
 func memberMayReadTx(ctx context.Context, tx pgx.Tx, authority MemberAuthority, member ids.UUID, entity string, record ids.UUID) (bool, error) {
@@ -93,13 +100,15 @@ func memberMayReadTx(ctx context.Context, tx pgx.Tx, authority MemberAuthority, 
 	if !rbac.Permissions.Allows(entity, principal.ActionRead) {
 		return false, nil
 	}
-	reader := principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + member.String(), UserID: member,
-		TeamIDs: rbac.TeamIDs, SeatType: seat, Permissions: rbac.Permissions}
+	reader := authz.HumanPrincipal(member, rbac, seat)
+	statement, known := memberReadSQL[entity]
+	if !known {
+		return false, fmt.Errorf("contacts: no reader check for %s", entity)
+	}
 	args := []any{record}
 	clause := auth.VisiblePredicate(reader, entity, func(v any) int { args = append(args, v); return len(args) })("r")
 	var visible bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM `+pgx.Identifier{entity}.Sanitize()+` r WHERE r.id = $1 AND `+clause+`)`,
-		args...).Scan(&visible); err != nil {
+	if err := tx.QueryRow(ctx, fmt.Sprintf(statement, clause), args...).Scan(&visible); err != nil {
 		return false, fmt.Errorf("contacts: asking whether a reader may read the %s: %w", entity, err)
 	}
 	return visible, nil
