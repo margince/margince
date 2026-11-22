@@ -126,3 +126,54 @@ func TestAStockBindingAdoptsItsPresetsTaskOrderAndACustomOneDoesNot(t *testing.T
 		t.Errorf("an install ordering one task itself was given %v; it adopts no part of the stock order", got.TaskLadders)
 	}
 }
+
+// Settings' lead tier and the call flow read the order the router walks, so a
+// preset that reorders a task shows the rung its calls are first sent to.
+func TestTheLeadTierAndTheCallFlowReadTheRoutersOrder(t *testing.T) {
+	stock, err := ParsePreset([]byte(stockPresets["gemini_cloud.yaml"]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range FeatureRoutes(stock, stock, BandNormal) {
+		if row.Task == string(TaskAgentLoop) && row.LeadingTier != string(TierPremium) {
+			t.Errorf("agent_loop leads on %s in Settings, but the router sends it to premium first", row.LeadingTier)
+		}
+	}
+	order := stock.Ladder(TaskAgentLoop)
+	steps := []FlowStep{{Tier: TierCheapCloud}, {Tier: TierPremium}, {Decision: true}}
+	slices.SortStableFunc(steps, func(a, b FlowStep) int { return routeOrder(order, a) - routeOrder(order, b) })
+	if !steps[0].Decision || steps[1].Tier != TierPremium || steps[2].Tier != TierCheapCloud {
+		t.Errorf("the call flow reads %+v, want the decision, then premium, then cheap_cloud", steps)
+	}
+	router := assembleRouter(map[Tier]model.Client{}, NewFakeClient(), ProfileCloudFrontier, &memMeter{}, StaticBudget(100),
+		&fakeCallStore{}, map[Tier]routeMeta{}, false, nil)
+	router.install(router.binding().withConfig(stock, nil))
+	if got := router.TaskOrder(TaskAgentLoop); !slices.Equal(got, order) {
+		t.Errorf("the router walks agent_loop %v, want %v", got, order)
+	}
+}
+
+// A binding two committed presets share, ordering its tasks two ways, adopts
+// neither; nor does one whose matching preset orders nothing.
+func TestAnAmbiguousOrEmptyStockOrderIsNotAdopted(t *testing.T) {
+	stock, err := ParsePreset([]byte(stockPresets["gemini_cloud.yaml"]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	installed := stock
+	installed.TaskLadders = nil
+	original := stockPresets
+	t.Cleanup(func() { stockPresets = original })
+
+	twin := strings.Replace(original["gemini_cloud.yaml"], "draft_reply: [premium, cheap_cloud]", "", 1)
+	stockPresets = map[string]string{"a.yaml": original["gemini_cloud.yaml"], "b.yaml": twin}
+	if got, ok := installed.WithStockTaskLadders(); ok {
+		t.Errorf("two presets ordering this binding differently adopted %v", got.TaskLadders)
+	}
+
+	unordered := strings.Replace(twin, "agent_loop: [premium, cheap_cloud]", "", 1)
+	stockPresets = map[string]string{"a.yaml": unordered}
+	if got, ok := installed.WithStockTaskLadders(); ok {
+		t.Errorf("a preset ordering nothing was adopted as a change: %v", got.TaskLadders)
+	}
+}

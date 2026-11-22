@@ -22,7 +22,13 @@ import (
 // rebinds premium to the cheap model, as an admin might.
 func storeGeminiRouting(t *testing.T, e *integration.Env, routing *ai.RoutingStore, customise bool) {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "config", "presets", "gemini_cloud.yaml"))
+	storePresetRouting(t, e, routing, "gemini_cloud.yaml", customise)
+}
+
+// storePresetRouting saves a committed preset's binding with no task order.
+func storePresetRouting(t *testing.T, e *integration.Env, routing *ai.RoutingStore, preset string, customise bool) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "config", "presets", preset))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,5 +95,18 @@ func TestTheStockLaddersTaskLeavesACustomisedInstallAlone(t *testing.T) {
 	}
 	if got := routingAuditsByTheTask(t, e); got != 0 {
 		t.Errorf("the task wrote a customised install's routing %d time(s)", got)
+	}
+}
+
+// An install bound to a preset that orders no task is not written to: no save,
+// no audit row.
+func TestTheStockLaddersTaskWritesNothingForAPresetThatOrdersNoTask(t *testing.T) {
+	e := integration.Setup(t)
+	routing := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
+	storePresetRouting(t, e, routing, "openrouter_cloud.yaml", false)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	e.RunDataTask(ctx, t, stockLaddersDataTask(routing.AdoptStockTaskLaddersTx))
+	if got := routingAuditsByTheTask(t, e); got != 0 {
+		t.Errorf("the task wrote an openrouter_cloud install's routing %d time(s)", got)
 	}
 }

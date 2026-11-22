@@ -110,7 +110,7 @@ func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, b *binding, t
 	wsID := ids.From[ids.WorkspaceKind](rawWS)
 	// The decision attempt reads the band once for itself; each ladder walk
 	// after it reads the band again, as every walk does.
-	order, _ := r.binding().ladder(task)
+	order, _ := b.ladder(task)
 	ladder, _, budgetErr := r.applyBudget(ctx, task, wsID, order)
 	switch {
 	case errors.Is(budgetErr, ErrBudgetDeferred):
@@ -146,7 +146,7 @@ func (r *Router) DecideProbe(ctx context.Context, task Task, site string, dreq d
 	if !ok {
 		return DecisionProbe{}, fmt.Errorf("ai: task %s outside workspace context", task)
 	}
-	order, _ := r.binding().ladder(task)
+	order, _ := b.ladder(task)
 	if _, _, err := r.applyBudget(ctx, task, ids.From[ids.WorkspaceKind](rawWS), order); err != nil {
 		return DecisionProbe{}, err
 	}

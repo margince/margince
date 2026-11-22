@@ -262,6 +262,13 @@ func TestASiteWithTooFewRunsIsNotCalledWeak(t *testing.T) {
 	if tally, _ := (aicert.Record{Scenarios: []aicert.ScenarioRecord{right, wrong}}).ForSite("field_extract"); tally.Verdict != aicert.VerdictNotSupported {
 		t.Errorf("a site with a case failing every try reads %q, want not_supported", tally.Verdict)
 	}
+	// Each case certifies on 2 of 3, but the pool of 4 of 6 is below the bar on
+	// its own estimate: that is a weak site, not one waiting for more runs.
+	twoOfThree := right
+	twoOfThree.Passed = 2
+	if tally, _ := (aicert.Record{Scenarios: []aicert.ScenarioRecord{twoOfThree, twoOfThree}}).ForSite("field_extract"); tally.Verdict != aicert.VerdictSupportedDegraded {
+		t.Errorf("two cases at 2 of 3 read %q, want supported_degraded", tally.Verdict)
+	}
 	four := []aicert.ScenarioRecord{right, right, right, right}
 	if tally, _ := (aicert.Record{Scenarios: four}).ForSite("field_extract"); tally.Verdict != aicert.VerdictCertified {
 		t.Errorf("12 of 12 right reads %q, want certified", tally.Verdict)

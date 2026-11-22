@@ -189,7 +189,7 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 	resp := spent
 	resp.Text = text.String()
 	if len(req.ResponseSchema) > 0 {
-		resp.Text = geminiDropPaddedNulls(req.ResponseSchema, resp.Text)
+		resp.Text = GeminiDropPaddedNulls(req.ResponseSchema, resp.Text)
 	}
 	resp.ServedModel = out.ModelVersion
 	resp.FinishReason = geminiFinishReason(finish)
@@ -323,7 +323,7 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 	}
 	wire.GenerationConfig = geminiGenerationConfig(req, genModel, opts)
 	if format := wire.GenerationConfig.ResponseFormat; format != nil {
-		if strict, err := geminiStrictSchema(req.ResponseSchema); err == nil {
+		if strict, err := GeminiStrictSchema(req.ResponseSchema); err == nil {
 			format.Text.Schema = strict
 		}
 	}

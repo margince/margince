@@ -10,6 +10,7 @@ package ai
 import (
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 )
 
@@ -46,14 +47,24 @@ func (cfg RoutingConfig) WithStockTaskLadders() (RoutingConfig, bool) {
 	if len(cfg.TaskLadders) > 0 {
 		return cfg, false
 	}
+	var adopt map[Task][]Tier
 	for _, name := range slices.Sorted(maps.Keys(stockPresets)) {
 		stock, err := ParsePreset([]byte(stockPresets[name]))
-		if err == nil && sameTierModels(cfg.Tiers, stock.Tiers) {
-			cfg.TaskLadders = maps.Clone(stock.TaskLadders)
-			return cfg, true
+		if err != nil || !sameTierModels(cfg.Tiers, stock.Tiers) || len(stock.TaskLadders) == 0 {
+			continue
 		}
+		// Two committed presets that bind these tiers and order tasks
+		// differently leave the install's own choice unknown.
+		if adopt != nil && !reflect.DeepEqual(adopt, stock.TaskLadders) {
+			return cfg, false
+		}
+		adopt = stock.TaskLadders
 	}
-	return cfg, false
+	if adopt == nil {
+		return cfg, false
+	}
+	cfg.TaskLadders = maps.Clone(adopt)
+	return cfg, true
 }
 
 func sameTierModels(a, b map[Tier]ProviderConfig) bool {

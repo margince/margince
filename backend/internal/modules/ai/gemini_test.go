@@ -132,7 +132,7 @@ func TestGeminiStructuredOutputRidesResponseFormat(t *testing.T) {
 	if format.Text.MimeType != "APPLICATION_JSON" {
 		t.Fatalf("responseFormat.text.mimeType = %q, want APPLICATION_JSON", format.Text.MimeType)
 	}
-	strict, err := geminiStrictSchema(schema)
+	strict, err := GeminiStrictSchema(schema)
 	if err != nil {
 		t.Fatal(err)
 	}

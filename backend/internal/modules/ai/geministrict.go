@@ -5,9 +5,11 @@ package ai
 
 // Gemini's constrained decoder leaves out the optional properties of an object.
 // An agent's log_activity call carried `kind` and `subject`, never the `body`
-// its store requires. So on the Gemini wire every optional property is sent as
-// required and nullable. The nulls the decoder then writes are taken back out
-// of the reply before anyone reads it. Other providers' wires are unchanged.
+// its store requires. So on the Gemini wire every optional property that does
+// not admit null is sent as required and nullable, and the nulls the decoder
+// then writes are taken back out of the reply. A property that admits null
+// stays optional: its absence and its null mean different things. The padding
+// is done only where the walk that removes it reads. Other wires are unchanged.
 
 import (
 	"bytes"
@@ -23,31 +25,31 @@ const (
 	kwNullType = "null"
 )
 
-// geminiStrictSchema is raw with every optional property of every object made
-// required and nullable. A property that already admits null keeps its own
-// meaning, so a null it carries is the caller's and stays. A schema it cannot
-// read is answered with an error, and the caller sends it as it was.
-func geminiStrictSchema(raw json.RawMessage) (json.RawMessage, error) {
+// GeminiStrictSchema is raw with every optional property that does not admit
+// null made required and nullable. A schema it cannot read is answered with an
+// error, and the caller sends it as it was. Exported with GeminiDropPaddedNulls
+// so a test over every tool's schema can hold the two to one another.
+func GeminiStrictSchema(raw json.RawMessage) (json.RawMessage, error) {
 	node, err := decodeSchemaObject(raw)
 	if err != nil {
 		return nil, err
 	}
 	out := make(schemaObject, 0, len(node)+1)
-	var properties []string
+	var padded []string
 	for _, member := range node {
 		value, err := geminiStrictKeyword(node, member.key, member.value)
 		if err != nil {
 			return nil, err
 		}
 		if member.key == kwProperties {
-			properties = schemaKeys(member.value)
+			padded = paddedProperties(member.value, requiredOf(node))
 		}
 		if member.key != kwRequired {
 			out = append(out, schemaMember{key: member.key, value: value})
 		}
 	}
-	if properties != nil {
-		required, err := json.Marshal(requiredFirst(requiredOf(node), properties))
+	if _, declared := node.lookup(kwProperties); declared {
+		required, err := json.Marshal(append(slices.Clone(requiredOf(node)), padded...))
 		if err != nil {
 			return nil, err
 		}
@@ -62,15 +64,13 @@ func geminiStrictKeyword(node schemaObject, key string, value json.RawMessage) (
 	switch key {
 	case kwProperties:
 		return geminiStrictProperties(value, requiredOf(node))
-	case kwItems, kwAdditionalProperties:
+	case kwItems:
 		if !isJSONObject(value) {
 			return value, nil
 		}
-		return geminiStrictSchema(value)
-	case kwAnyOf, kwOneOf, kwAllOf:
+		return GeminiStrictSchema(value)
+	case kwAnyOf, kwOneOf:
 		return geminiStrictEach(value)
-	case kwDefs, kwDefinitions:
-		return geminiStrictNamed(value)
 	default:
 		return value, nil
 	}
@@ -85,11 +85,11 @@ func geminiStrictProperties(raw json.RawMessage, required []string) (json.RawMes
 	}
 	out := make(schemaObject, 0, len(props))
 	for _, prop := range props {
-		strict, err := geminiStrictSchema(prop.value)
+		strict, err := GeminiStrictSchema(prop.value)
 		if err != nil {
 			return nil, err
 		}
-		if !slices.Contains(required, prop.key) && !admitsNull(prop.value) {
+		if isPadded(prop, required) {
 			strict = json.RawMessage(`{"anyOf":[` + string(strict) + `,{"type":"null"}]}`)
 		}
 		out = append(out, schemaMember{key: prop.key, value: strict})
@@ -103,7 +103,7 @@ func geminiStrictEach(raw json.RawMessage) (json.RawMessage, error) {
 		return nil, err
 	}
 	for i, branch := range branches {
-		strict, err := geminiStrictSchema(branch)
+		strict, err := GeminiStrictSchema(branch)
 		if err != nil {
 			return nil, err
 		}
@@ -112,26 +112,11 @@ func geminiStrictEach(raw json.RawMessage) (json.RawMessage, error) {
 	return json.Marshal(branches)
 }
 
-func geminiStrictNamed(raw json.RawMessage) (json.RawMessage, error) {
-	named, err := decodeSchemaObject(raw)
-	if err != nil {
-		return nil, err
-	}
-	for i, def := range named {
-		strict, err := geminiStrictSchema(def.value)
-		if err != nil {
-			return nil, err
-		}
-		named[i].value = strict
-	}
-	return named.encode()
-}
-
-// geminiDropPaddedNulls takes out of reply each null written for a property
-// geminiStrictSchema made nullable. It reads the caller's schema, so a property
+// GeminiDropPaddedNulls takes out of reply each null written for a property
+// GeminiStrictSchema made nullable. It reads the caller's schema, so a property
 // that admits null there keeps its null. A reply that is not JSON is returned as
 // it came, for the caller's own parser to refuse.
-func geminiDropPaddedNulls(callerSchema json.RawMessage, reply string) string {
+func GeminiDropPaddedNulls(callerSchema json.RawMessage, reply string) string {
 	node, err := decodeSchemaObject(callerSchema)
 	if err != nil {
 		return reply
@@ -174,7 +159,7 @@ func dropPaddedNulls(node schemaObject, value json.RawMessage) json.RawMessage {
 		switch {
 		case !known:
 			kept = append(kept, member)
-		case string(bytes.TrimSpace(member.value)) == kwNullType && !slices.Contains(required, member.key) && !admitsNull(prop):
+		case isNull(member.value) && isPadded(schemaMember{key: member.key, value: prop}, required):
 			continue
 		default:
 			if sub, err := decodeSchemaObject(prop); err == nil {
@@ -254,7 +239,7 @@ func fits(branch schemaObject, value json.RawMessage) bool {
 			}
 			continue
 		}
-		if !inEnum(prop, member.value) {
+		if !inEnum(prop, member.value) && !(isNull(member.value) && isPadded(schemaMember{key: member.key, value: prop}, requiredOf(branch))) {
 			return false
 		}
 	}
@@ -306,17 +291,30 @@ func admitsNull(prop json.RawMessage) bool {
 	return false
 }
 
-// requiredFirst lists the caller's required keys in their own order, then the
-// optional ones. Gemini writes required keys in that order, so a verdict the
-// caller put first is decided before the fields that describe it.
-func requiredFirst(required, properties []string) []string {
-	out := slices.Clone(required)
-	for _, key := range properties {
-		if !slices.Contains(out, key) {
-			out = append(out, key)
+// paddedProperties are the properties of a properties object that the strict
+// wire makes required: optional ones that do not admit null, in their order.
+func paddedProperties(raw json.RawMessage, required []string) []string {
+	props, err := decodeSchemaObject(raw)
+	if err != nil {
+		return nil
+	}
+	var padded []string
+	for _, prop := range props {
+		if isPadded(prop, required) {
+			padded = append(padded, prop.key)
 		}
 	}
-	return out
+	return padded
+}
+
+// isPadded says the strict wire sends prop required and nullable, so a null
+// the decoder writes for it is padding and not the model's answer.
+func isPadded(prop schemaMember, required []string) bool {
+	return !slices.Contains(required, prop.key) && !admitsNull(prop.value)
+}
+
+func isNull(value json.RawMessage) bool {
+	return string(bytes.TrimSpace(value)) == kwNullType
 }
 
 func requiredOf(node schemaObject) []string {
@@ -325,19 +323,6 @@ func requiredOf(node schemaObject) []string {
 		return nil
 	}
 	return required
-}
-
-// schemaKeys is a properties object's names in their own order.
-func schemaKeys(raw json.RawMessage) []string {
-	props, err := decodeSchemaObject(raw)
-	if err != nil {
-		return nil
-	}
-	keys := make([]string, 0, len(props))
-	for _, prop := range props {
-		keys = append(keys, prop.key)
-	}
-	return keys
 }
 
 func isJSONObject(raw json.RawMessage) bool {

@@ -1,0 +1,227 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+import (
+	"bytes"
+	"encoding/json"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
+
+	"github.com/margince/margince/backend/internal/modules/ai"
+)
+
+// Every registered tool's arguments are rewritten as the Gemini wire sends
+// them, answered as a constrained decoder answers (every required key, null
+// wherever the key admits one), and taken back through the wire's undo. What
+// comes back must be valid under the tool's own schema, and a property the tool
+// lets the model clear is never written for it. So the rewrite and the walk
+// that undoes it cannot drift apart.
+func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
+	specs := NewRegistry(nil, SendPath{}).Specs()
+	if len(specs) < 100 {
+		t.Fatalf("the registry offered %d tools; the census lost its subject", len(specs))
+	}
+	padded := 0
+	for _, spec := range specs {
+		strict, err := ai.GeminiStrictSchema(spec.InputSchema)
+		if err != nil {
+			t.Errorf("%s: the strict wire cannot read its schema: %v", spec.Name, err)
+			continue
+		}
+		if strings.Contains(string(strict), `{"type":"null"}`) {
+			padded++
+		}
+		var sent map[string]any
+		if err := json.Unmarshal(strict, &sent); err != nil {
+			t.Fatal(err)
+		}
+		decoded, err := json.Marshal(leastValue(sent))
+		if err != nil {
+			t.Fatal(err)
+		}
+		handed := ai.GeminiDropPaddedNulls(spec.InputSchema, string(decoded))
+		if err := validJSON(spec.InputSchema, handed); err != nil {
+			t.Errorf("%s: the arguments handed on break the tool's own schema: %v\n%s", spec.Name, err, handed)
+		}
+		for _, key := range clearableKeys(t, spec.InputSchema) {
+			if strings.Contains(handed, `"`+key+`":null`) {
+				t.Errorf("%s: %s, which the model may clear, came back null though nobody asked to clear it", spec.Name, key)
+			}
+		}
+	}
+	if padded == 0 {
+		t.Fatal("no tool schema was padded, so no padding was taken back out")
+	}
+}
+
+// leastValue is what a constrained decoder writes under schema: every required
+// key, null wherever the key admits null, and the least value allowed elsewhere.
+func leastValue(schema map[string]any) any {
+	if branches, ok := schema["anyOf"].([]any); ok && len(branches) > 0 {
+		if branch, ok := branches[0].(map[string]any); ok {
+			return leastValue(branch)
+		}
+	}
+	if values, ok := schema["enum"].([]any); ok && len(values) > 0 {
+		return values[0]
+	}
+	switch firstType(schema) {
+	case "object":
+		out := map[string]any{}
+		props, _ := schema["properties"].(map[string]any) //nolint:errcheck // a schema with no properties answers {}
+		required := stringsOf(schema["required"])
+		// A conditional requirement is the decoder's to meet too: the least
+		// value is the one its own enums put on the if's side.
+		branch := "else"
+		if condition, ok := schema["if"].(map[string]any); ok && conditionHolds(condition, props) {
+			branch = "then"
+		}
+		conditional := []string{}
+		if extra, ok := schema[branch].(map[string]any); ok {
+			conditional = stringsOf(extra["required"])
+		}
+		for _, key := range append(required, conditional...) {
+			prop, _ := props[key].(map[string]any) //nolint:errcheck // an undeclared required key is written as null
+			if prop != nil && slices.Contains(conditional, key) {
+				out[key] = leastValue(withoutNull(prop))
+				continue
+			}
+			if prop == nil || nullable(prop) {
+				out[key] = nil
+				continue
+			}
+			out[key] = leastValue(prop)
+		}
+		return out
+	case "array":
+		items, _ := schema["items"].(map[string]any) //nolint:errcheck // an untyped item is written as null
+		least, _ := schema["minItems"].(float64)     //nolint:errcheck // no floor writes none
+		out := make([]any, int(least))
+		for i := range out {
+			out[i] = leastValue(items)
+		}
+		return out
+	case "string":
+		least, _ := schema["minLength"].(float64) //nolint:errcheck // no floor writes one character
+		return strings.Repeat("x", max(1, int(least)))
+	case "integer", "number":
+		least, _ := schema["minimum"].(float64) //nolint:errcheck // no floor writes zero
+		return least
+	case "boolean":
+		return false
+	default:
+		return nil
+	}
+}
+
+// conditionHolds says an if-schema's enums admit the least value of each
+// property it names, which is the value leastValue writes.
+func conditionHolds(condition, props map[string]any) bool {
+	named, _ := condition["properties"].(map[string]any) //nolint:errcheck // an if with no properties holds
+	for key, rule := range named {
+		ruleNode, _ := rule.(map[string]any)   //nolint:errcheck // a rule that is not an object constrains nothing
+		prop, _ := props[key].(map[string]any) //nolint:errcheck // an undeclared key's least value is null
+		values, _ := ruleNode["enum"].([]any)  //nolint:errcheck // a rule with no enum admits any value
+		if len(values) > 0 && prop != nil && !slices.Contains(values, leastValue(prop)) {
+			return false
+		}
+	}
+	return true
+}
+
+// withoutNull is the non-null side of a padded property, which a key the
+// schema's own condition requires must take.
+func withoutNull(schema map[string]any) map[string]any {
+	branches, _ := schema["anyOf"].([]any) //nolint:errcheck // a property with no branches is its own side
+	for _, branch := range branches {
+		if node, ok := branch.(map[string]any); ok && !nullable(node) {
+			return node
+		}
+	}
+	return schema
+}
+
+func nullable(schema map[string]any) bool {
+	if slices.Contains(stringsOf(schema["type"]), "null") {
+		return true
+	}
+	branches, _ := schema["anyOf"].([]any) //nolint:errcheck // a schema with no branches has none that is null
+	return slices.ContainsFunc(branches, func(branch any) bool {
+		node, ok := branch.(map[string]any)
+		return ok && nullable(node)
+	})
+}
+
+func firstType(schema map[string]any) string {
+	for _, name := range stringsOf(schema["type"]) {
+		if name != "null" {
+			return name
+		}
+	}
+	if _, ok := schema["properties"]; ok {
+		return "object"
+	}
+	return ""
+}
+
+func stringsOf(value any) []string {
+	switch typed := value.(type) {
+	case string:
+		return []string{typed}
+	case []any:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if name, ok := item.(string); ok {
+				out = append(out, name)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+// clearableKeys are the root properties a tool leaves optional and lets the
+// model set to null, where an absent key keeps the field and a null clears it.
+func clearableKeys(t *testing.T, raw json.RawMessage) []string {
+	t.Helper()
+	var schema map[string]any
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		t.Fatal(err)
+	}
+	props, _ := schema["properties"].(map[string]any) //nolint:errcheck // a schema with no properties has none to clear
+	required := stringsOf(schema["required"])
+	var keys []string
+	for key, prop := range props {
+		node, ok := prop.(map[string]any)
+		if ok && nullable(node) && !slices.Contains(required, key) {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
+func validJSON(schema json.RawMessage, text string) error {
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(schema))
+	if err != nil {
+		return err
+	}
+	compiler := jsonschema.NewCompiler()
+	if err := compiler.AddResource("tool.json", doc); err != nil {
+		return err
+	}
+	compiled, err := compiler.Compile("tool.json")
+	if err != nil {
+		return err
+	}
+	instance, err := jsonschema.UnmarshalJSON(strings.NewReader(text))
+	if err != nil {
+		return err
+	}
+	return compiled.Validate(instance)
+}

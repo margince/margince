@@ -104,7 +104,9 @@ func nextRunCounts(sets []ScenarioRuns, maxRuns int) []int {
 //	pass rate:  |k/n − ½| ≤ ½/√n, the binomial standard error AT the half the
 //	            case must pass and the veto line, i.e. (2k − n)² ≤ n
 //	judge mean: TLower(scores) ≤ bar ≤ TUpper(scores) for bar = certified_min or
-//	            degraded_min, over its m ≥ 2 graded scores
+//	            degraded_min, over its m graded scores
+//	scores:     a judged case with 0 < m < minJudgeScores, which more runs can
+//	            lift off the cap; one no run of which was graded they cannot
 //
 // The judge test reads the interval the verdict reads (meanBounds), so a case
 // extends exactly while more runs could move its grade. The pass-rate test is
@@ -112,6 +114,9 @@ func nextRunCounts(sets []ScenarioRuns, maxRuns int) []int {
 func caseBorderline(c caseStats) bool {
 	off := 2*c.passed - c.runs
 	if off*off <= c.runs {
+		return true
+	}
+	if !c.mechanical && len(c.scores) > 0 && len(c.scores) < minJudgeScores {
 		return true
 	}
 	if len(c.scores) < 2 {

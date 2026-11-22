@@ -19,6 +19,14 @@ func caseRuns(passes int, scores ...int) ScenarioRuns {
 
 func nineties(n int) []int { return slices.Repeat([]int{90}, n) }
 
+// ungradedOnce is set with its first run's grade lost, as a judge call that
+// failed leaves it.
+func ungradedOnce(set ScenarioRuns) ScenarioRuns {
+	set.Runs = slices.Clone(set.Runs)
+	set.Runs[0].Ungraded = true
+	return set
+}
+
 // A case is extended exactly when it sits within one standard error of a line
 // it is graded against, and never past the cap. Six settled cases of 90 keep
 // the pool decided, so only the case under test can move.
@@ -38,6 +46,7 @@ func TestABorderlineCaseIsExtendedAndASettledOneIsNot(t *testing.T) {
 		{"a median further above it is not", caseRuns(3, 84, 90, 96), 3},
 		{"a median exactly at degraded_min is borderline", caseRuns(3, 40, 50, 60), 6},
 		{"a mean near a bar is borderline though the median is far from it", caseRuns(3, 40, 90, 91), 6},
+		{"a judged case with two scores of three runs is extended", ungradedOnce(caseRuns(3, nineties(3)...)), 6},
 		{"a borderline case at ten runs stops at the cap", caseRuns(5, nineties(10)...), adaptiveMaxRuns},
 		{"a borderline case at the cap is not extended", caseRuns(6, nineties(adaptiveMaxRuns)...), adaptiveMaxRuns},
 	} {

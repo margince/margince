@@ -74,11 +74,10 @@ type binding struct {
 
 // ladder is task's rungs under this binding, and false for no task.
 func (b *binding) ladder(task Task) ([]Tier, bool) {
-	if order, reordered := b.ladders[task]; reordered {
-		return order, true
+	if _, known := taskLadders[task]; !known {
+		return nil, false
 	}
-	ladder, ok := taskLadders[task]
-	return ladder, ok
+	return RoutingConfig{TaskLadders: b.ladders}.Ladder(task), true
 }
 
 // binding returns the configuration this call must serve itself from. Load it

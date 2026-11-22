@@ -95,6 +95,9 @@ type Record struct {
 	// beside it, so a scope added to a task cannot leave a record naming the old
 	// set.
 	ContextScopes []string `json:"context_scopes"`
+	// contextOwed is how many of this measurement's runs production would send
+	// company context with. A merge reads it; a written record does not keep it.
+	contextOwed int
 	// JudgeScoreP50/JudgeScoreMin are the JUDGE's grade: a model scoring the
 	// reply's prose against a written rubric, pooled across the runs.
 	//
@@ -337,17 +340,18 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 		tally.Verdict = r.Verdict
 	case legacy:
 		tally.Verdict = worst
-	case tally.Runs < certifiedMinRuns && worst == VerdictCertified:
-		tally.Verdict = SiteTooFewRuns
 	default:
 		tally.Verdict, _ = verdictOver(cases)
+		if tally.Verdict != VerdictNotSupported && tally.Runs < certifiedMinRuns && poolUndecided(cases) {
+			tally.Verdict = SiteTooFewRuns
+		}
 	}
 	return tally, true
 }
 
-// SiteTooFewRuns is a site's grade when every case clears the per-case gates
-// but the site holds fewer runs than a certified grade rests on. The pooled rule
-// could only call it weak, and nothing it measured is. The task's own verdict
+// SiteTooFewRuns is a site's grade when its pool meets the certified bar on
+// its own estimate but holds fewer runs than that grade rests on. The pooled
+// rule could only call it weak, and nothing it measured is. The task's own verdict
 // pools these runs with its other sites'.
 const SiteTooFewRuns = "too_few_runs"
 

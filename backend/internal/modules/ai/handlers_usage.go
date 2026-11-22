@@ -247,6 +247,19 @@ func (h Handlers) WithBoundModels(bound func() map[Tier]ModelRef) Handlers {
 	return h
 }
 
+// WithTaskOrder reads a task's rung order from the router's own binding.
+func (h Handlers) WithTaskOrder(order func(Task) []Tier) Handlers {
+	h.ladderOf = order
+	return h
+}
+
+func (h Handlers) taskOrder(task Task) []Tier {
+	if h.ladderOf == nil {
+		return TaskLadder(task)
+	}
+	return h.ladderOf(task)
+}
+
 // GetAiProviderHealth implements (GET /ai/provider-health).
 //
 // Admitted by the same grant as GetAiHealth. It reads the in-process book

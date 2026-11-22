@@ -235,3 +235,43 @@ func TestAFilteredRunIsRefusedARecordWhoseModelWasIdentifiedAnotherWay(t *testin
 		t.Fatal("rows whose served model was identified two ways were pooled under one served_identity_source")
 	}
 }
+
+// Rows measured over another wire translation are another measurement.
+func TestAFilteredRunIsRefusedARecordMeasuredOverAnotherWire(t *testing.T) {
+	dir := t.TempDir()
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	committed.WireRule = "gemini-wire-older"
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	_, err := mergeIntoCommitted(dir, certifyCorpusWith(t, corpus[:1], ""), corpus)
+	if err == nil || !strings.Contains(err.Error(), "another wire") {
+		t.Fatalf("err = %v; rows sent over two wire translations must not pool into one verdict", err)
+	}
+}
+
+// A subset that owed no company context says nothing about whether the rows it
+// leaves standing carried it.
+func TestASubsetThatOwedNoContextKeepsTheRecordsClaim(t *testing.T) {
+	dir := t.TempDir()
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	committed.ContextApplied = true
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	measured := certifyCorpusWith(t, corpus[:1], "")
+	measured.ContextApplied, measured.contextOwed = false, 0
+	merged, err := mergeIntoCommitted(dir, measured, corpus)
+	if err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	if !merged.ContextApplied {
+		t.Error("a subset that owed no context wiped the record's context_applied")
+	}
+	measured.contextOwed = 3
+	if merged, err = mergeIntoCommitted(dir, measured, corpus); err != nil || merged.ContextApplied {
+		t.Errorf("a subset that owed context and did not carry it kept context_applied (%v)", err)
+	}
+}

@@ -110,7 +110,11 @@ func mergeIntoCommitted(dir string, measured Record, corpus []Scenario) (Record,
 	merged.Scenarios = rows
 	regradeFromRows(&merged)
 	merged.CertifiedScope = aitasks.NarrowerScope(prior.CertifiedScope, measured.CertifiedScope)
-	merged.ContextApplied = prior.ContextApplied && measured.ContextApplied
+	if measured.contextOwed == 0 {
+		merged.ContextApplied = prior.ContextApplied
+	} else {
+		merged.ContextApplied = prior.ContextApplied && measured.ContextApplied
+	}
 	// Every row the record pools vouches for these, so each reads the worse run.
 	// That is a judge of the candidate's family, and the oldest row it keeps.
 	merged.SelfJudged = prior.SelfJudged || measured.SelfJudged
@@ -139,6 +143,8 @@ func mergeable(prior, measured Record) error {
 		return errors.New("another judge graded it")
 	case prior.ServedIdentitySource != measured.ServedIdentitySource:
 		return errors.New("its served model was identified another way")
+	case prior.WireRule != measured.WireRule:
+		return errors.New("its runs went out over another wire")
 	}
 	return nil
 }

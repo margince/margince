@@ -169,6 +169,13 @@ func (r *Router) CurrentModelForTier(tier Tier) (ModelRef, bool) {
 	return ModelRef{Provider: m.provider, Model: m.model}, true
 }
 
+// TaskOrder is the order this Router's binding walks task's rungs in now,
+// before any budget band bends a call.
+func (r *Router) TaskOrder(task Task) []Tier {
+	order, _ := r.binding().ladder(task)
+	return order
+}
+
 // BoundModels is the (provider, model) every lane serves under the binding
 // this Router holds now, the embed and decision lanes included. It is keyed by
 // the tier its calls are recorded under. Unlike CurrentModelForTier it keeps a
