@@ -274,10 +274,7 @@ func TestAnOverCapPageAskIsClampedRatherThanResetToTheDefault(t *testing.T) {
 		}
 	}
 
-	open, err := e.store.CountOpenDedupeCandidates(ctx)
-	if err != nil {
-		t.Fatalf("counting open pairs: %v", err)
-	}
+	open := countOpen(ctx, t, e)
 	if open <= dedupeQueueDefaultLimit || open > dedupeQueueMaxLimit {
 		t.Fatalf("the seed left %d open pairs, and this case needs more than one default page of %d and at most the maximum of %d",
 			open, dedupeQueueDefaultLimit, dedupeQueueMaxLimit)

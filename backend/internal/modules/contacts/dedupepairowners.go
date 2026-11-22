@@ -62,7 +62,7 @@ func readPairOwners(ctx context.Context, tx pgx.Tx, rows []DedupeCandidateRow) e
 
 // queryCandidateRows runs one queue statement whose columns are the candidate
 // fields followed by the two writable flags, and reads its rows.
-func queryCandidateRows(ctx context.Context, tx pgx.Tx, query string, args []any) ([]DedupeCandidateRow, error) {
+func queryCandidateRows(ctx context.Context, tx pgx.Tx, query string, args []any, extra ...any) ([]DedupeCandidateRow, error) {
 	res, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -72,9 +72,13 @@ func queryCandidateRows(ctx context.Context, tx pgx.Tx, query string, args []any
 	for res.Next() {
 		var r DedupeCandidateRow
 		var writers PairWriters
-		if err := res.Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
+		dest := []any{
+			&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
 			&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt,
-			&writers.Left, &writers.Right); err != nil {
+			&writers.Left, &writers.Right,
+		}
+		dest = append(dest, extra...)
+		if err := res.Scan(dest...); err != nil {
 			return nil, err
 		}
 		r.pairAuthority(writers)
