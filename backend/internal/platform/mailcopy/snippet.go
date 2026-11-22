@@ -32,11 +32,11 @@ func WordSnippet(text string, limit int) string {
 	}
 	wider := textcut.Runes(text, limit)
 	head := textcut.Runes(wider, limit-1)
-	// A word across the cut is dropped whole, unless that keeps under half the
-	// limit: a long address after "Re:" would otherwise leave only "Re…".
+	// A cut word is dropped only if the rest is at least half the
+	// limit. Otherwise a long address after "Re:" would leave only "Re…".
 	if next, _ := utf8.DecodeLastRuneInString(wider); !unicode.IsSpace(next) {
 		space := strings.LastIndexFunc(head, unicode.IsSpace)
-		if space > 0 && utf8.RuneCountInString(head[:space]) >= limit/2 {
+		if space > 0 && 2*utf8.RuneCountInString(head[:space]) >= limit {
 			head = head[:space]
 		}
 	}
