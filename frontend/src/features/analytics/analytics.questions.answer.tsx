@@ -13,7 +13,6 @@ import {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
   formatDateTime,
-  MONEY_ABSENT,
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
@@ -21,6 +20,7 @@ import { labelFor } from "../../lib/labelfor";
 import { ProblemError, throwProblem } from "../../lib/problem";
 import { derivationColumns, ExcludedNote } from "./analytics.explain";
 import { ExplainDrawer } from "./analytics.explain.drawer";
+import { measureCell } from "./analytics.questions.cell";
 import {
   type Namer,
   shortId,
@@ -53,35 +53,6 @@ const NO_LABELS: CustomLabels = new Map();
 export type ExplainSource =
   | Readonly<{ kind: "query"; query: AnalyticsQuery }>
   | Readonly<{ kind: "run"; runId: string }>;
-
-function measureCell(
-  query: AnalyticsQuery,
-  column: string,
-  row: AnswerRow,
-  baseCurrency: string | null,
-  locale: Locale,
-  t: Translate,
-): ReactNode {
-  const measure = measureOfColumn(query, column);
-  const value = row[column];
-  if (!measure || typeof value !== "number") {
-    return value == null ? MONEY_ABSENT : String(value);
-  }
-  const reading = measureReading(measure, row, query, baseCurrency);
-  if (reading.kind === "mixed") {
-    return t("analytics.q.mixedCurrencies");
-  }
-  if (reading.kind === "noBase") {
-    return t("analytics.noBaseCurrency");
-  }
-  return (
-    <span className="t-num">
-      {reading.kind === "money"
-        ? formatAnalyticsMoneyOrAbsent(value, reading.currency, locale)
-        : formatAnalyticsNumber(value, locale)}
-    </span>
-  );
-}
 
 // Whether any shown cell reads the way asked: an amount summed across
 // currencies, or a converted one with no base currency to state it in.
