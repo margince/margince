@@ -17,15 +17,17 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 ## Which assistant should I use?
 
-| Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
-|---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 81 of 83 | 🟡 Mostly | Reliable on 77 of 81 jobs tried; not yet: Catch me up, and show me the brief; Sofia is leaving the team; Send it anyway; Add a review stage to the pipeline. A model of the same family judged its answers. |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 83 | 🟡 Mostly | Reliable on 79 of 81 jobs tried; not yet: She asked us to stop writing; Send it anyway. |
-| `gpt-5.6-sol` | Codex CLI | 36 of 83 | ⚪ Not enough tested yet | Reliable on 34 of 36 jobs tried; not yet: Tidy up the deal room; Finish the import. |
+| Assistant | How we connected it | Jobs tried | Can I trust it? | Calls per job | Turns per job | In plain words |
+|---|---|---:|---|---:|---:|---|
+| `claude-sonnet-5-5` | Claude Code CLI | 81 of 83 | 🟡 Mostly | 4.5 | 5.5 | Reliable on 77 of 81 jobs tried; not yet: Catch me up, and show me the brief; Sofia is leaving the team; Send it anyway; Add a review stage to the pipeline. A model of the same family judged its answers. |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 83 | 🟡 Mostly | 8.5 | 6.5 | Reliable on 79 of 81 jobs tried; not yet: She asked us to stop writing; Send it anyway. |
+| `gpt-5.6-sol` | Codex CLI | 36 of 83 | ⚪ Not enough tested yet | 9.75 | - | Reliable on 34 of 36 jobs tried; not yet: Tidy up the deal room; Finish the import. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
 *Reliably* means it got the job right in most of its tries: each job is tried several times, because an assistant does not answer the same way twice.
+
+**Calls per job** and **turns per job** are the middle value over the jobs tried: how directly the assistant finished. They are a score and never fail a job. The Codex CLI reports no turn count, so its turns show `-`.
 
 **How we connected it** matters. *Claude Code CLI* and *Codex CLI* are each vendor's own assistant, with its own instructions. The *neutral harness* gives every model the same tools and the same instructions, so it is the only route that compares one model with another.
 

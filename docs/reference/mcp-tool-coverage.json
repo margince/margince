@@ -33,7 +33,9 @@
       "route": "Claude Code CLI",
       "self_judged": true,
       "calls_per_case": "4.5 over 81",
-      "slow_cases": []
+      "slow_cases": [],
+      "median_calls_per_case": "4.5",
+      "median_turns_per_case": "5.5"
     },
     {
       "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -52,7 +54,9 @@
       "route": "Antigravity CLI",
       "self_judged": false,
       "calls_per_case": "8.5 over 81",
-      "slow_cases": []
+      "slow_cases": [],
+      "median_calls_per_case": "8.5",
+      "median_turns_per_case": "6.5"
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
@@ -71,7 +75,9 @@
       "route": "Codex CLI",
       "self_judged": false,
       "calls_per_case": "9.75 over 36",
-      "slow_cases": []
+      "slow_cases": [],
+      "median_calls_per_case": "9.75",
+      "median_turns_per_case": "-"
     }
   ],
   "rest_door": {
@@ -96,7 +102,9 @@
         "route": "Claude Code CLI",
         "self_judged": true,
         "calls_per_case": "12 over 20",
-        "slow_cases": []
+        "slow_cases": [],
+        "median_calls_per_case": "12",
+        "median_turns_per_case": "13"
       }
     ],
     "cases": [
