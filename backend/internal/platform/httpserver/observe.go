@@ -145,19 +145,15 @@ func AccessLog(log *slog.Logger, next http.Handler) http.Handler {
 				status = http.StatusInternalServerError
 			}
 			cost := meter.Cost()
-			attrs := []any{
+			log.InfoContext(r.Context(), "http request",
 				"method", r.Method,
 				"path", capabilitypath.Redact(r.URL.Path),
+				"route", trace.route,
 				"status", status,
 				"duration_ms", time.Since(start).Milliseconds(),
 				"db_ms", cost.DBTime.Milliseconds(),
 				"pool_wait_ms", cost.PoolWait.Milliseconds(),
-				"statements", cost.Statements,
-			}
-			if trace.route != "" {
-				attrs = append(attrs, "route", trace.route)
-			}
-			log.InfoContext(r.Context(), "http request", attrs...)
+				"statements", cost.Statements)
 		}()
 		next.ServeHTTP(rec, r)
 		returned = true

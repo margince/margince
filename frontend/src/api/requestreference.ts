@@ -11,15 +11,23 @@ const REQUEST_ID_HEADER = "X-Request-Id";
 // problemMessageOf then shows it as "Reference: <id>".
 //
 // An answer with no id, such as a proxy's own page, or with no JSON problem
-// body passes through untouched.
-export async function withRequestReference(
+// body passes through untouched, without waiting a tick: a success is returned
+// as it came, so no caller sees its timing change.
+export function withRequestReference(
   response: Response,
-): Promise<Response> {
+): Response | Promise<Response> {
   const id = response.headers.get(REQUEST_ID_HEADER);
   const contentType = response.headers.get("Content-Type") ?? "";
   if (response.ok || !id || !contentType.includes("application/problem+json")) {
     return response;
   }
+  return withReferenceInBody(response, id);
+}
+
+async function withReferenceInBody(
+  response: Response,
+  id: string,
+): Promise<Response> {
   let problem: unknown;
   try {
     problem = await response.clone().json();

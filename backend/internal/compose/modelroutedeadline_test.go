@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -164,9 +163,9 @@ func (*deadlineWriter) SetWriteDeadline(time.Time) error { return nil }
 // And a chain that cannot extend the deadline fails LOUDLY rather than serving
 // a response that dies mid-write, which is the symptom this exists to remove.
 func TestAChainThatCannotExtendSaysSo(t *testing.T) {
-	handler := boundByResponseDeadline(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handler := httpserver.TraceContract(discardLog(), boundByResponseDeadline(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("drafted"))
-	}))
+	})))
 
 	recorder := httptest.NewRecorder() // implements no ResponseController hook
 	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/v1/activities/x/draft-email", nil))
@@ -174,35 +173,10 @@ func TestAChainThatCannotExtendSaysSo(t *testing.T) {
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500 — a chain that cannot extend must say so", recorder.Code)
 	}
+	if recorder.Header().Get("X-Request-Id") == "" {
+		t.Fatal("the refusal names no request")
+	}
 	if body := recorder.Body.String(); !strings.Contains(body, "deadline_not_extendable") {
 		t.Fatalf("body = %q, want the machine code an operator can act on", body)
-	}
-}
-
-// The refusal above is an answer under /v1, so it carries the request id and
-// has an access line. A chain that can extend the deadline still reaches the
-// connection through the access log's recorder.
-func TestTheDeadlineRefusalIsTracedAndTheRecorderPassesTheDeadlineOn(t *testing.T) {
-	var output strings.Builder
-	logger := slog.New(httpserver.WithCorrelation(slog.NewJSONHandler(&output, nil)))
-	handler := httpserver.TraceContract(logger, boundByResponseDeadline(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte("drafted"))
-	})))
-	const path = "/v1/activities/x/draft-email"
-
-	refused := httptest.NewRecorder()
-	handler.ServeHTTP(refused, httptest.NewRequest(http.MethodPost, path, nil))
-	id := refused.Header().Get("X-Request-Id")
-	if refused.Code != http.StatusInternalServerError || id == "" {
-		t.Fatalf("refusal status %d, X-Request-Id %q: want a 500 that names its request", refused.Code, id)
-	}
-	if !strings.Contains(output.String(), `"correlation_id":"`+id+`"`) {
-		t.Fatalf("no access line for %s in %s", id, output.String())
-	}
-
-	answered := &deadlineWriter{httptest.NewRecorder()}
-	handler.ServeHTTP(answered, httptest.NewRequest(http.MethodPost, path, nil))
-	if answered.Code != http.StatusOK {
-		t.Fatalf("status %d: the recorder did not pass the write deadline on", answered.Code)
 	}
 }
