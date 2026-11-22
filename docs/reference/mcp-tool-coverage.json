@@ -8008,7 +8008,7 @@
     },
     {
       "name": "change_attention",
-      "tokens": 1775,
+      "tokens": 1842,
       "agents": [],
       "required_by_cases": [
         "case104_mark_it_seen"

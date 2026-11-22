@@ -3489,6 +3489,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Inhalt konnte nicht geladen werden. Bitte lade die Seite neu.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Es wurde keine Ursache gemeldet.",
+  "common.errorReference": "Referenz",
   "common.assistantUnavailable":
     "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
   "common.providerOutOfCredit":
@@ -14334,6 +14335,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal360.readFull": "Vollständigen Bericht lesen",
   "deal360.openTask": "Aufgabe öffnen",
   "deal360.createTask": "Folgeaufgabe erstellen",
+  "deal360.bringInManager": "Führungskraft einbinden",
+  "deal360.managerAsked": "Führungskraft gefragt",
   "deal360.followUpCreated": "Folgeaufgabe erstellt",
   "deal360.openBrief": "Terminvorbereitung öffnen",
   "deal360.unreadable":
@@ -21748,6 +21751,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.gap.tab": "Lücke schließen",
   "worklist.gap.title": "Lücke schließen",
   "worklist.gap.loading": "Gereihte Deals werden geladen…",
+  "worklist.gap.requested.title": "Um deine Hilfe gebeten",
+  "worklist.gap.requested.done": "Als erledigt markieren",
+  "worklist.gap.reason.big_deal": "Wert über dem Median des Teams",
+  "worklist.gap.reason.single_contact": "Nur ein Kontakt eingebunden",
+  "worklist.gap.reason.stuck": "Steckt in seiner Phase fest",
   "worklist.gap.empty":
     "Noch kein Team hat eine gereihte Liste. Margince reiht die Deals jedes erfassten Teams einmal am Tag.",
   "worklist.gap.behind":

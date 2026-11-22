@@ -42,6 +42,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 - `notice_subject_present`: `CHECK ((subject <> ''))`
 - `notice_system_text_shape`: `CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object') AND (((system_text ->> 'schema_version') = '1') IS TRUE) AND (octet_length((system_text)) <= 8192))))`
 - `notice_target_paired`: `CHECK (((target_type IS NULL) = (target_id IS NULL)))`
+- `notice_target_type_check`: `CHECK (((target_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant', 'list', 'signal', 'saved_view', 'tag', 'custom_field', 'webhook_subscription', 'import_run', 'report_definition', 'app_user', 'user_admin', 'team', 'record_grant', 'data_subject_request', 'fx_rate', 'ai_model_rate', 'legal_review', 'brief', 'stage', 'approval', 'data_task', 'retained_email_signature', 'email_signature', 'signature_template', 'legal_entity', 'knowledge_document', 'approval_history'])) OR (target_type ~ '^ext_[a-z0-9]+(_[a-z0-9]+)*$')))`
 
 **Indexes**
 
