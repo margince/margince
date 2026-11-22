@@ -60,6 +60,11 @@ export type ExtensionDescriptor = {
    * in every locale. A screen shows what it resolves to, else the unit name.
    */
   readonly title: `ext${string}.title` | "";
+  /**
+   * The unit's copy key for a one-line account of what it does, or "" when
+   * its copy carries none in every locale. Settings shows it under the name.
+   */
+  readonly summary: `ext${string}.summary` | "";
   readonly verbs: readonly ExtensionVerbDescriptor[];
   readonly entries: readonly ExtensionEntryDescriptor[];
   readonly panels: readonly ExtensionPanelDescriptor[];

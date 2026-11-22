@@ -69,7 +69,11 @@ async function readRosterPage(
   const data = unwrap(
     await api.GET("/teams", {
       params: {
-        query: { limit: ROSTER_PAGE_SIZE, ...(cursor ? { cursor } : {}) },
+        query: {
+          limit: ROSTER_PAGE_SIZE,
+          ...(cursor ? { cursor } : {}),
+          ...(everyone ? { include_archived: true } : {}),
+        },
       },
     }),
   );
@@ -127,6 +131,20 @@ export function useEveryMember(enabled: boolean) {
   return useQuery({
     queryKey: ["users", "everyone"],
     queryFn: () => walkRoster("user", true),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Every team, the archived ones included, for the Teams page that restores
+ * them. The server answers it to a team administrator only. The cache entry
+ * sits under the `teams` prefix, so an archive or a restore refreshes it too.
+ */
+export function useEveryTeam(enabled: boolean) {
+  return useQuery({
+    queryKey: ["teams", "everyone"],
+    queryFn: () => walkRoster("team", true),
     enabled,
     staleTime: 60_000,
   });

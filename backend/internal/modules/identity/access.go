@@ -167,8 +167,8 @@ func teamsByID(ctx context.Context, tx pgx.Tx, teamIDs []ids.UUID) ([]teamRow, e
 	defer rows.Close()
 	var out []teamRow
 	for rows.Next() {
-		var t teamRow
-		if err := rows.Scan(&t.ID, &t.Name, &t.MemberCount, &t.CreatedAt); err != nil {
+		t, err := scanTeam(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, t)

@@ -7,8 +7,8 @@ import { Badge } from "./atoms";
 // read on screen. Presentation ONLY — the server's admission gates are the
 // authority on what a role may do and what the wire discloses.
 
-// The six seeded system roles (ADR-0110). A workspace-defined role key
-// outside this set renders as its raw key — honest, never invented copy.
+// The six seeded system roles (ADR-0110). A workspace-defined role shows the
+// name its admin gave it, else its raw key: never invented copy.
 const ROLE_LABEL_KEYS: Record<string, MessageKey> = {
   admin: "role.admin",
   management: "role.management",
@@ -18,10 +18,15 @@ const ROLE_LABEL_KEYS: Record<string, MessageKey> = {
   ops: "role.ops",
 };
 
-export function RoleBadge({ roleKey }: Readonly<{ roleKey: string }>) {
+export function RoleBadge({
+  roleKey,
+  name,
+}: Readonly<{ roleKey: string; name?: string }>) {
   const t = useT();
   const labelKey = ROLE_LABEL_KEYS[roleKey];
-  return <Badge tone="accent">{labelKey ? t(labelKey) : roleKey}</Badge>;
+  return (
+    <Badge tone="accent">{labelKey ? t(labelKey) : name || roleKey}</Badge>
+  );
 }
 
 // A withheld value must read as "withheld", not "absent" — omitting the node

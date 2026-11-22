@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -234,6 +235,63 @@ func TestAClaimWithNoPrincipalIsRefused(t *testing.T) {
 			}
 			if err := claims.Release(tc.ctx, "send_email", "k-6", ids.NewV7().String()); err == nil {
 				t.Fatal("the release ran")
+			}
+		})
+	}
+}
+
+// A refused reuse names when the key was first spent and how that call stands.
+func TestAKeyHeldForDifferentArgumentsSaysWhenAndHowItWasFirstUsed(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		settle func(ctx context.Context, claims agentClaims, attempt string) error
+		want   agents.ClaimState
+	}{
+		{
+			name: "the first call succeeded", want: agents.ClaimReplay,
+			settle: func(ctx context.Context, claims agentClaims, attempt string) error {
+				return claims.Settle(ctx, "update_record", "k-7", attempt, json.RawMessage(`{"data":{}}`), 1)
+			},
+		},
+		{
+			name: "the first call failed", want: agents.ClaimFailed,
+			settle: func(ctx context.Context, claims agentClaims, attempt string) error {
+				return claims.Fail(ctx, "update_record", "k-7", attempt, "the record had changed")
+			},
+		},
+		{
+			name: "the first call is still running", want: agents.ClaimInFlight,
+			settle: func(context.Context, agentClaims, string) error { return nil },
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			claims := toolIdempotency(e.Pool)
+			holder := "agent:" + ids.NewV7().String()
+			ctx := agentCtxAs(e, holder)
+			first := claimState(ctx, t, claims, "update_record", "k-7", "digest-a")
+			if err := tc.settle(ctx, claims, first.Attempt); err != nil {
+				t.Fatalf("settling the first call: %v", err)
+			}
+			var firstUsed time.Time
+			if err := e.Pool.QueryRow(context.Background(),
+				`SELECT created_at FROM idempotency_key WHERE principal_id = $1 AND key = $2 AND endpoint = $3`,
+				holder, "k-7", mcpClaimEndpoint("update_record")).Scan(&firstUsed); err != nil {
+				t.Fatalf("reading the claim row: %v", err)
+			}
+
+			mismatch := claimState(ctx, t, claims, "update_record", "k-7", "digest-b")
+			if mismatch.State != agents.ClaimMismatch {
+				t.Fatalf("a changed payload under one key = %v, want mismatch", mismatch.State)
+			}
+			if !mismatch.FirstUsedAt.Equal(firstUsed) {
+				t.Errorf("first used at %v, the row says %v", mismatch.FirstUsedAt, firstUsed)
+			}
+			if mismatch.Earlier != tc.want {
+				t.Errorf("the first call reads as %v, want %v", mismatch.Earlier, tc.want)
+			}
+			if mismatch.Result != nil || mismatch.Reason != "" {
+				t.Errorf("the refusal carried the first call's answer: %s %q", mismatch.Result, mismatch.Reason)
 			}
 		})
 	}

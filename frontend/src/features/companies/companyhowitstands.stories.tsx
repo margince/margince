@@ -61,19 +61,21 @@ function view(activities: Activity[]): Company360 {
   };
 }
 
-function render(read: Company360) {
+const paying = {
+  company_id: company.id,
+  state: "connected",
+  net_invoiced: { amount_minor: 6_420_000, currency: "EUR" },
+  overdue: { amount_minor: 0, currency: "EUR" },
+  median_days_after_due: 1,
+  payment_behaviour: [0, 2, 1, 0],
+};
+
+function render(read: Company360, finance: Record<string, unknown> = paying) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({ company: ["read"] }),
       [`GET /companies/${company.id}/finance-summary`]: () =>
-        jsonResponse({
-          company_id: company.id,
-          state: "connected",
-          net_invoiced: { amount_minor: 6_420_000, currency: "EUR" },
-          overdue: { amount_minor: 0, currency: "EUR" },
-          median_days_after_due: 1,
-          payment_behaviour: [0, 2, 1, 0],
-        }),
+        jsonResponse(finance),
     });
     return (
       <StoryProviders>
@@ -115,5 +117,29 @@ export const DayOnlyVisit: Story = {
     const stop = within(stops).getByText(/^Site visit/);
     await expect(stop.textContent).toMatch(/13 Aug/);
     await expect(stop.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+  },
+};
+
+// A new company with one open deal: one rating is that dimension's word, so
+// the headline stays unassessed and the row still shows the rating.
+export const OneRated: Story = {
+  render: render(
+    {
+      ...view([]),
+      health: {
+        commercial: {
+          rating: "strong",
+          reason: "1 open deal, not stalled.",
+          reason_code: "deals_none_stalled",
+          reason_params: { count: 1 },
+        },
+      },
+    },
+    { ...paying, median_days_after_due: null, payment_behaviour: [] },
+  ),
+  play: async ({ canvasElement }) => {
+    const card = within(canvasElement);
+    await expect(await card.findByText("Strong")).toBeInTheDocument();
+    await expect(card.getAllByText("Not assessed").length).toBeGreaterThan(2);
   },
 };

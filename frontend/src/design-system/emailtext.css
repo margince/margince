@@ -47,3 +47,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.emailtext__none {
+  margin: 0;
+}

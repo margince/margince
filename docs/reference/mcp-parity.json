@@ -18177,7 +18177,7 @@
       "verb": "read_view",
       "web_app": "direct",
       "rep_passes": true,
-      "decided_by": "no_check"
+      "decided_by": "declared"
     },
     {
       "method": "POST",
