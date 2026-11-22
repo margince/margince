@@ -15,11 +15,12 @@ import {
   Sparkles,
   Tag,
 } from "lucide-react";
-import { createElement } from "react";
+import { createElement, Fragment } from "react";
 import { RECORD_CHIP_ICONS } from "../components/recordlinks";
 import { Avatar, Badge, BusyMark } from "../design-system/atoms";
 import { EmailReference } from "../design-system/emailreference";
-import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
+import { ListOption } from "../design-system/listoption";
 import { StatusBadge } from "../design-system/statusbadge";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -34,77 +35,160 @@ const TYPE_KEY: Record<Command["type"], MessageKey> = {
 };
 
 /**
- * One destination in the palette list, under the heading of its group when it
- * is the first of a run. The heading sits outside the row: the arrow keys walk
- * rows, and a heading is not somewhere to go.
+ * The palette's results as the listbox its search box drives. A run of rows
+ * under one heading is a `role="group"` named by it; the arrows walk the rows,
+ * and a heading is not somewhere to go. Recents are named by the heading above
+ * the list, which carries a button and so cannot sit inside it.
  */
+export function PaletteOptions({
+  rows,
+  selected,
+  listboxId,
+  recentHeadingId,
+  onRun,
+}: Readonly<{
+  rows: readonly Command[];
+  selected: number;
+  listboxId: string;
+  recentHeadingId: string | undefined;
+  onRun: (command: Command) => void;
+}>) {
+  return (
+    <div id={listboxId} role="listbox">
+      {paletteRuns(rows).map((run) => {
+        const options = run.rows.map((command, offset) => {
+          const index = run.start + offset;
+          return (
+            <PaletteRow
+              key={command.id}
+              id={optionId(listboxId, index)}
+              command={command}
+              selected={index === selected}
+              onRun={onRun}
+            />
+          );
+        });
+        const headingId = `${listboxId}-group-${run.start}`;
+        const labelledBy = run.recent ? recentHeadingId : headingId;
+        if (labelledBy === undefined || (!run.recent && !run.group)) {
+          return <Fragment key={headingId}>{options}</Fragment>;
+        }
+        return (
+          // biome-ignore lint/a11y/useSemanticElements: a listbox owns options and groups of them; a fieldset is a form's group and no listbox child
+          <div key={headingId} role="group" aria-labelledby={labelledBy}>
+            {!run.recent && (
+              <Heading
+                as="div"
+                size="xxsmall"
+                id={headingId}
+                className="t-eyebrow palette-group"
+              >
+                {run.group}
+              </Heading>
+            )}
+            {options}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function optionId(listboxId: string, index: number): string {
+  return `${listboxId}-option-${index}`;
+}
+
+/** The DOM id of the highlighted option, which `aria-activedescendant` names. */
+export function paletteOptionId(
+  listboxId: string,
+  rows: readonly Command[],
+  selected: number,
+): string | undefined {
+  return selected >= 0 && selected < rows.length
+    ? optionId(listboxId, selected)
+    : undefined;
+}
+
+type PaletteRun = {
+  recent: boolean;
+  group: string | undefined;
+  start: number;
+  rows: Command[];
+};
+
+// Consecutive rows under one heading. Recents form one run whatever group they
+// name, and an option keeps its index in the whole list.
+function paletteRuns(rows: readonly Command[]): readonly PaletteRun[] {
+  const runs: PaletteRun[] = [];
+  rows.forEach((command, index) => {
+    const recent = command.recent !== undefined;
+    const group = recent ? undefined : command.group;
+    const last = runs.at(-1);
+    if (last && last.recent === recent && last.group === group) {
+      last.rows.push(command);
+    } else {
+      runs.push({ recent, group, start: index, rows: [command] });
+    }
+  });
+  return runs;
+}
+
+/** One destination in the palette list. */
 export function PaletteRow({
+  id,
   command,
-  previous,
   selected,
   onRun,
 }: Readonly<{
+  id: string;
   command: Command;
-  // The row above, which decides whether this one opens a new group.
-  previous: Command | undefined;
   selected: boolean;
   onRun: (command: Command) => void;
 }>) {
   const t = useT();
   return (
-    <>
-      {!command.recent &&
-        command.group &&
-        command.group !== previous?.group && (
-          <Eyebrow as="h2" size="xxsmall" className="palette-group">
-            {command.group}
-          </Eyebrow>
-        )}
-      <button
-        type="button"
-        disabled={command.pending}
-        aria-busy={command.pending || undefined}
-        className={
-          selected ? "palette-row t-body selected" : "palette-row t-body"
+    <ListOption
+      id={id}
+      selected={selected}
+      disabled={command.pending}
+      busy={command.pending}
+      className={
+        selected ? "palette-row t-body selected" : "palette-row t-body"
+      }
+      onPick={() => onRun(command)}
+      ref={(element) => {
+        if (selected) {
+          element?.scrollIntoView?.({ block: "nearest" });
         }
-        onClick={() => onRun(command)}
-        ref={(element) => {
-          if (selected) {
-            element?.scrollIntoView?.({ block: "nearest" });
-          }
-        }}
-      >
-        <RowGlyph command={command} />
-        <span className="palette-text">
-          {command.cite ? (
-            <EmailReference
-              stacked
-              subject={command.cite.subject}
-              occurredAt={command.cite.occurredAt}
-            />
-          ) : (
-            <>
-              <span className="label">{command.label}</span>
-              {command.subtitle && (
-                <span className="sub t-caption">{command.subtitle}</span>
-              )}
-            </>
-          )}
-        </span>
-        {command.status && (
-          <StatusBadge
-            kind={command.status.kind}
-            label={command.status.label}
+      }}
+    >
+      <RowGlyph command={command} />
+      <span className="palette-text">
+        {command.cite ? (
+          <EmailReference
+            stacked
+            subject={command.cite.subject}
+            occurredAt={command.cite.occurredAt}
           />
+        ) : (
+          <>
+            <span className="label">{command.label}</span>
+            {command.subtitle && (
+              <span className="sub t-caption">{command.subtitle}</span>
+            )}
+          </>
         )}
-        {command.aside && (
-          <span className="palette-aside t-caption">{command.aside}</span>
-        )}
-        {command.id === "ask-ai" && <Badge tone="ai">{t("palette.ask")}</Badge>}
-        {!command.group && <Badge>{t(TYPE_KEY[command.type])}</Badge>}
-        <ChevronRight aria-hidden className="palette-chevron" />
-      </button>
-    </>
+      </span>
+      {command.status && (
+        <StatusBadge kind={command.status.kind} label={command.status.label} />
+      )}
+      {command.aside && (
+        <span className="palette-aside t-caption">{command.aside}</span>
+      )}
+      {command.id === "ask-ai" && <Badge tone="ai">{t("palette.ask")}</Badge>}
+      {!command.group && <Badge>{t(TYPE_KEY[command.type])}</Badge>}
+      <ChevronRight aria-hidden className="palette-chevron" />
+    </ListOption>
   );
 }
 

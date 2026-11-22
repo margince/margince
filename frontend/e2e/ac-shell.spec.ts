@@ -208,7 +208,7 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
 }) => {
   await openForKeys(page, "home");
   await page.keyboard.press("ControlOrMeta+k");
-  const input = page.getByRole("searchbox", { name: "Befehlspalette" });
+  const input = page.getByRole("combobox", { name: "Befehlspalette" });
   await expect(input).toBeFocused();
   // "Pipeline" is the row's old label, kept as an alias.
   // Typing it must still land on the screen for readers who know the old name.
@@ -227,7 +227,7 @@ test("AC-shell-3: ⌘K does nothing while a dialog is up", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(form).toHaveCount(0);
   await expect(
-    page.getByRole("searchbox", { name: "Befehlspalette" }),
+    page.getByRole("combobox", { name: "Befehlspalette" }),
   ).toHaveCount(0);
 });
 
@@ -235,7 +235,7 @@ test("AC-shell-7: the top bar's search opens the palette, and Enter on a row clo
   page,
 }) => {
   await page.goto("/#/home");
-  const input = page.getByRole("searchbox", { name: "Befehlspalette" });
+  const input = page.getByRole("combobox", { name: "Befehlspalette" });
   const topbar = page.locator(".topbar");
   // One search affordance in the product, and it is the centre of the session
   // strip. It is a button, never a field: the palette owns the query, and this
@@ -443,7 +443,7 @@ test("keyboard shortcuts: / opens search", async ({ page }) => {
   await openForKeys(page, "home");
   await page.keyboard.press("/");
   await expect(
-    page.getByRole("searchbox", { name: "Befehlspalette" }),
+    page.getByRole("combobox", { name: "Befehlspalette" }),
   ).toBeFocused();
 });
 
@@ -490,7 +490,7 @@ test("keyboard shortcuts: with single keys off, ? does nothing and ⌘K still op
   // ⌘K lands after ?, so the palette on screen proves ? was already heard.
   await page.keyboard.press("ControlOrMeta+k");
   await expect(
-    page.getByRole("searchbox", { name: "Befehlspalette" }),
+    page.getByRole("combobox", { name: "Befehlspalette" }),
   ).toBeFocused();
   await expect(
     page.getByRole("dialog", { name: de["shell.help.shortcuts"] }),
