@@ -65,10 +65,7 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 	if !posts {
 		return nil
 	}
-	ev := chatlinks.Event{
-		EventID: env.EventID, EventType: env.Type, EntityType: env.Entity.Type,
-		EntityID: env.Entity.ID, Tier: tier, Detail: detail,
-	}
+	ev := chatlinks.Event{EventID: env.EventID, EventType: env.Type, Tier: tier, Detail: detail}
 	if env.Entity.Type == "activity" {
 		shared, err := s.activityPosts(ctx, env.Entity.ID)
 		if err != nil || !shared {

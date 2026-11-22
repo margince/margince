@@ -6,7 +6,7 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 
 ## agent_run
 
-17 columns · primary key `(id)` · referenced by 1 foreign key
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,12 +17,10 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 | `degrade_reason` | `text` |  |  |
 | `finished_at` | `timestamp with time zone` |  |  |
 | `goal` | `text` | yes |  |
-| `output_tokens` | `integer`, default `0` | yes |  |
 | `passport_id` | `uuid` |  | Points at `passport.id`. |
 | `pending` | `jsonb` |  |  |
 | `result` | `jsonb` |  |  |
 | `status` | `text`, default `'running'::text` | yes | One of `running`, `awaiting_approval`, `completed`, `degraded`, `failed`. |
-| `steps_used` | `integer`, default `0` | yes |  |
 | `trace` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `trigger_ref` | `text` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -57,7 +55,7 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 
 ## agent_standing_grant
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+6 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -67,8 +65,6 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 | `passport_id` | `uuid` |  |  |
 | `state` | `text`, default `'granted'::text` | yes | One of `granted`, `declined`. |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -96,16 +92,13 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 
 ## runner_job
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `agent_run_id` | `uuid` |  | Points at `agent_run.id`. |
 | `agent_spec` | `text` | yes |  |
-| `attempts` | `integer`, default `0` | yes |  |
 | `due_at` | `timestamp with time zone` | yes |  |
-| `last_error` | `text` |  |  |
 | `passport_id` | `uuid` |  | Points at `passport.id`. |
 | `status` | `text`, default `'queued'::text` | yes | One of `queued`, `running`, `done`, `failed`. |
 | `trigger_ref` | `text` | yes |  |
@@ -116,7 +109,6 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `passport_id` | `passport` | deleting the parent keeps this row and clears the link |
-| `agent_run_id` | `agent_run` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -131,5 +123,5 @@ The 3 tables owned by `agents`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "agent_spec": 20000, "last_error": 20000, "trigger_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"last_error":20000,"status":20000,"trigger_ref":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "agent_spec": 20000, "last_error": 20000, "trigger_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"last_error":20000,"status":20000,"trigger_ref":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "agent_spec": 20000, "trigger_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"status":20000,"trigger_ref":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "agent_spec": 20000, "trigger_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agent_spec":20000,"status":20000,"trigger_ref":20000}')`

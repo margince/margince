@@ -42,17 +42,12 @@ func (s *Store) insertLink(ctx context.Context, kind string, id ids.UUID, sessio
 		if err != nil {
 			return err
 		}
-		var key *string
-		if req.Mode == ModeCreate {
-			k := externalKey(kind, id)
-			key = &k
-		}
 		out, err = scanLink(tx.QueryRow(ctx, `INSERT INTO chat_link
-			(connection_id, provider, channel_slug, channel_name, channel_external_key, deal_id, project_id,
+			(connection_id, provider, channel_slug, channel_name, deal_id, project_id,
 			 verbosity, backfill_requested, linked_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			RETURNING `+linkColumns,
-			session.ConnectionID, ProviderDispact, channel.Slug, channel.Name, key, deal, project,
+			session.ConnectionID, ProviderDispact, channel.Slug, channel.Name, deal, project,
 			req.Verbosity, req.SummarizeHistory != nil && *req.SummarizeHistory, actor))
 		if err != nil {
 			return linkUniqueness(err)

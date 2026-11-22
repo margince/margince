@@ -175,7 +175,7 @@ func TestTheCounterpartyAskTakesAConfidentDecision(t *testing.T) {
 		llmReply: verdictReply("s1", capture.KindSpam),
 	}
 
-	results, _, err := (&CounterpartyVerdictEngine{brain: lane}).ask(context.Background(), row)
+	results, err := (&CounterpartyVerdictEngine{brain: lane}).ask(context.Background(), row)
 	if err != nil {
 		t.Fatalf("asking: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestTheCounterpartyAskFallsBackBelowTheFloor(t *testing.T) {
 		llmReply: verdictReply("s1", capture.KindSpam),
 	}
 
-	results, _, err := (&CounterpartyVerdictEngine{brain: lane}).ask(context.Background(), row)
+	results, err := (&CounterpartyVerdictEngine{brain: lane}).ask(context.Background(), row)
 	if err != nil {
 		t.Fatalf("asking: %v", err)
 	}

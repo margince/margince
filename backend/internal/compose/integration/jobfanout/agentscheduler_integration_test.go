@@ -112,19 +112,15 @@ func seedDueRunnerJob(t *testing.T, owner *pgx.Conn, trigger string) {
 	}
 }
 
-// runnerJobOutcome reads one seeded occurrence's status and failure reason.
-func runnerJobOutcome(t *testing.T, owner *pgx.Conn, trigger string) (status, lastError string) {
+// runnerJobStatus reads one seeded occurrence's status.
+func runnerJobStatus(t *testing.T, owner *pgx.Conn, trigger string) string {
 	t.Helper()
-	var reason *string
+	var status string
 	if err := owner.QueryRow(context.Background(),
-		`SELECT status, last_error FROM runner_job WHERE trigger_ref = $1`,
-		trigger).Scan(&status, &reason); err != nil {
+		`SELECT status FROM runner_job WHERE trigger_ref = $1`, trigger).Scan(&status); err != nil {
 		t.Fatalf("reading the runner job %s: %v", trigger, err)
 	}
-	if reason != nil {
-		lastError = *reason
-	}
-	return status, lastError
+	return status
 }
 
 // assertSpecSeededFor fails unless this seat holds the given spec's occurrence
@@ -168,7 +164,7 @@ func TestAgentSchedulerReportsAPassThatCouldNotWrite(t *testing.T) {
 	if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err == nil {
 		t.Fatal("a scheduling pass that could not write reported success — nothing records that the briefs were never seeded or claimed")
 	}
-	if status, _ := runnerJobOutcome(t, owner, trigger); status != "queued" {
+	if status := runnerJobStatus(t, owner, trigger); status != "queued" {
 		t.Fatalf("the seeded job is %s, want it untouched at queued — the fault injection did not hold, so this test proves nothing", status)
 	}
 }
@@ -202,14 +198,14 @@ func TestAgentSchedulerSeedsAndClaimsWhatIsDue(t *testing.T) {
 	}
 	assertSpecSeededFor(t, owner, grantedSpec(t), now, me)
 
-	status, lastError := runnerJobOutcome(t, owner, trigger)
+	status := runnerJobStatus(t, owner, trigger)
 	if status == "queued" {
 		t.Fatal("the due job is still queued — the pass reported success without claiming anything")
 	}
-	// Passport-less by design: the loud "no passport bound" failure on the row
-	// is the cheapest honest evidence that the claim ran and the job executed.
-	if status != "failed" || lastError == "" {
-		t.Fatalf("the passport-less job is %s (%q), want a loud failure — the claim reached it but the execution did not", status, lastError)
+	// Passport-less by design: the failed status on the row shows that the
+	// claim ran and the job executed.
+	if status != "failed" {
+		t.Fatalf("the passport-less job is %s, want failed — the claim reached it but the execution did not", status)
 	}
 }
 
@@ -559,14 +555,14 @@ func TestOneSeatWhoseSeedingFailsDoesNotStopTheOthersRunning(t *testing.T) {
 	// The pass still reported the fault, AND still ran the work that was
 	// waiting. Both halves matter: reporting without claiming is the starvation
 	// bug, and claiming without reporting hides a rep's broken night.
-	status, lastError := runnerJobOutcome(t, owner, waiting)
+	status := runnerJobStatus(t, owner, waiting)
 	if status == "queued" {
 		t.Errorf("the already-queued brief is still queued after a pass that failed to seed one seat: "+
 			"one broken seat stops every other rep's queued work from running, every tick, "+
 			"for as long as the fault lasts (pass reported: %v)", err)
 	}
-	if status != "failed" || lastError == "" {
-		t.Fatalf("the claimed job is %s (%q), want the loud passport-less failure — the claim did not reach it, so this test proves nothing about starvation", status, lastError)
+	if status != "failed" {
+		t.Fatalf("the claimed job is %s, want the passport-less failure — the claim did not reach it, so this test proves nothing about starvation", status)
 	}
 }
 

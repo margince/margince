@@ -303,14 +303,12 @@ func (e *CounterpartyVerdictEngine) applyJudged(
 // reply is dropped by the validator before it reaches here — so the fallback is
 // not decoration: without it a retirement after a failed re-ask would record
 // nothing, which reads as "no model was asked" when two were.
-func lastMeasurement(
-	retry []verdictResult, retryModel string, first []verdictResult, firstModel string,
-) capture.VerdictMeasurement {
+func lastMeasurement(retry, first []verdictResult) capture.VerdictMeasurement {
 	if len(retry) == 1 {
-		return capture.MeasuredVerdict(float64(retry[0].Confidence), retryModel)
+		return capture.MeasuredVerdict(float64(retry[0].Confidence))
 	}
 	if len(first) == 1 {
-		return capture.MeasuredVerdict(float64(first[0].Confidence), firstModel)
+		return capture.MeasuredVerdict(float64(first[0].Confidence))
 	}
 	return capture.VerdictMeasurement{}
 }

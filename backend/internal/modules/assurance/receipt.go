@@ -6,7 +6,6 @@ package assurance
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -26,7 +25,7 @@ import (
 // The run's own audit row covers these, as it covers the findings. A receipt
 // per deal in the audit log would bury the night's one verdict.
 func (s *Store) RecordReceipts(
-	ctx context.Context, tx pgx.Tx, runID ids.UUID, asOf time.Time, lifetime time.Duration, subjects []Subject,
+	ctx context.Context, tx pgx.Tx, runID ids.UUID, subjects []Subject,
 ) error {
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return err
@@ -40,16 +39,15 @@ func (s *Store) RecordReceipts(
 		answer := receiptOf(subject.Viability)
 		batch.Queue(`
 			INSERT INTO assurance_deal_receipt
-			    (deal_id, run_id, outcome, policy_version, input_fingerprint, assessed_at, valid_until)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			    (deal_id, run_id, outcome, policy_version, input_fingerprint)
+			VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT (deal_id) DO UPDATE
 			SET run_id = EXCLUDED.run_id, outcome = EXCLUDED.outcome,
 			    policy_version = EXCLUDED.policy_version,
-			    input_fingerprint = EXCLUDED.input_fingerprint, assessed_at = EXCLUDED.assessed_at,
-			    valid_until = EXCLUDED.valid_until,
+			    input_fingerprint = EXCLUDED.input_fingerprint,
 			    updated_at = now()`,
 			dealID, runID, string(answer.Outcome),
-			viability.PolicyVersion, answer.Fingerprint, asOf, validUntil(asOf, lifetime, answer.NextChange))
+			viability.PolicyVersion, answer.Fingerprint)
 	}
 	if err := tx.SendBatch(ctx, batch).Close(); err != nil {
 		return fmt.Errorf("assurance: recording the viability receipts: %w", err)
@@ -62,17 +60,4 @@ func receiptOf(assessed *SubjectViability) SubjectViability {
 		return SubjectViability{Outcome: viability.OutcomeUnknown}
 	}
 	return *assessed
-}
-
-// validUntil is the sooner of the next scheduled check and the moment the
-// answer changes by the clock alone. Never before the assessment itself.
-func validUntil(asOf time.Time, lifetime time.Duration, nextChange *time.Time) time.Time {
-	until := asOf.Add(lifetime)
-	if nextChange != nil && nextChange.Before(until) {
-		until = *nextChange
-	}
-	if until.Before(asOf) {
-		return asOf
-	}
-	return until
 }

@@ -258,7 +258,7 @@ func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []fore
 	if err != nil {
 		return nil, err
 	}
-	cfg := AssuranceConfig()
+	cfg := assurance.DefaultConfig()
 	for _, subject := range subjects {
 		var threshold *time.Duration
 		if pace, ok := stuck[subject.StageID]; ok {

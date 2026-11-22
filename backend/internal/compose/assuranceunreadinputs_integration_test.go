@@ -74,7 +74,7 @@ func TestAnIncompleteCheckLeavesCommittedInputsUnread(t *testing.T) {
 	unavailable := func(context.Context, pgx.Tx, time.Time) []assurance.SourceCoverage {
 		return []assurance.SourceCoverage{{Source: sourceMail, State: assurance.CoverageUnavailable}, offerCoverage(e.at)}
 	}
-	scanner := assurance.NewScanner(e.store, AssuranceSubjects, unavailable, AssuranceConfig())
+	scanner := assurance.NewScanner(e.store, AssuranceSubjects, unavailable, assurance.DefaultConfig())
 	result, err := scanner.Scan(e.passCtx(), e.at)
 	if err != nil || result.Status != assurance.StatusIncomplete {
 		t.Fatalf("incomplete scan = %+v: %v", result, err)

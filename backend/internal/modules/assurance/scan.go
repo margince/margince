@@ -211,7 +211,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
 				return err
 			}
 		}
-		if err := s.store.RecordReceipts(ctx, tx, runID, now, s.cfg.ReceiptLifetime, subjects); err != nil {
+		if err := s.store.RecordReceipts(ctx, tx, runID, subjects); err != nil {
 			return err
 		}
 		// Which findings THIS run saw, before the clearing below removes the
