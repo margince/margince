@@ -19,12 +19,12 @@ What each list offers:
 | List | Search | Filters | Tabs | Table and board | Bulk actions |
 |---|---|---|---|---|---|
 | **Contacts** | name or job title, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Companies** | name, legal name or industry, or exact domain | Owner, Team, Employees, Partner kinds, Relationship stage and Stage meaning (if you may see partners), Tags, Lifecycle, Relationship type, Activity | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Companies** | name, legal name or industry, or exact domain | Owner, Team, **Employees**, Partner kinds, Relationship stage and Stage meaning (if you may see partners), Tags, Lifecycle, Relationship type, Activity | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Leads** | name, company name or job title, or exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Contacted, Engaged, Hot, Overdue | both | Assign, Disqualify |
-| **Deals** | name or description | Owner, Team, Stage, Company, Tags, Close date, Value, Currency, Country, Status, Stalled only, Partner-sourced, Probability, Motion, Priority, Linked as, Source, Partner | All, Mine | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Deals** | name or description | Owner, Team, Stage, Company, Tags, Close date, Value, Currency, **Country**, Status, Stalled only, Partner-sourced, Probability, Motion, Priority, Linked as, Source, Partner | All, Mine | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
 
-**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. On Deals, **Value** shows once your company has a main currency. **Linked as**, **Source** and **Partner** show only when there is something to pick.
+**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. On Deals, **Value** shows once your company has a main currency, and **Linked as**, **Source** and **Partner** only when there is something to pick.
 
 ## Searching and filtering a list
 ### How do I search a list?
@@ -105,8 +105,8 @@ Margince does not make a contact from an address that belongs to a sending syste
 Also called: contacts made from notification mail, automatic senders.
 
 ### How do I filter by date?
-On **Deals**, use **View** → **Filters** → **Close date**, shown in the next question. The list screens have no other date filter, so sort them by date, or build a filter on **Filters and views**.
-1. Press **New filter**, pick the record type, press **Add condition** and pick **Created** (every type), **Last activity** (contacts, companies and deals), **Expected close** (deals) or a date custom field.
+On **Deals**, use **View** → **Filters** → **Close date**, shown in the next question. The list screens have no other date filter, so sort them by date, or build a filter on **Filters and views**. Its date fields are **Created** (every type), **Last activity** (contacts, companies and deals), **Expected close** (deals) and date custom fields.
+1. Press **New filter**, pick the record type, press **Add condition** and pick a date field.
 2. Pick **is after**, **is on or after**, **is before** or **is on or before**. Give the value **On a date**, or as **Days ago** to count back from today.
 Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, and neither does a newsletter.
 Also called: created this month, filter by created date, date range.
@@ -161,8 +161,7 @@ Also called: page size, see all records, load more.
 ## Archived records on a list
 
 ### How do I see archived records?
-To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Press **View**, then press **Show archived**.
-
+To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**) and press **View** → **Show archived**.
 Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
 Also called: show deleted, find an archived contact, closed records, inactive.
 
@@ -267,7 +266,8 @@ Also called: bulk reassign, hand over accounts, transfer deals, a colleague left
 
 ### What can I do to several records at once?
 The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage**: pick an open stage under **Pick a stage** and press **Move**. On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**). **Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do. Your own company is never archived.
-A change of more than 10 records shows a "Large change" warning. On **Leads**, **Assign** and **Disqualify** ask first and name how many leads change, with the same warning above 10. You cannot win or lose many deals at once or change custom fields on many records at once. After a change, the message that says how many changed has an **Undo** button. It opens a window that shows what it puts back, and **Undo change** does it. **Move to stage** and **Disqualify** have no bulk **Undo**. **Move to stage** names the stage and says how many deals move and how many are already there before it moves anything.
+
+A change of more than 10 records shows a "Large change" warning. On **Leads**, **Assign** and **Disqualify** ask first and name how many leads change, with the same warning above 10. You cannot win or lose many deals at once or change custom fields on many records at once. After a change, the message that says how many changed has an **Undo** button, which opens a window where **Undo change** puts it back. **Move to stage** and **Disqualify** have no bulk **Undo**. **Move to stage** names the stage and says how many deals move and how many are already there before it moves anything.
 
 Also called: bulk actions, mass archive, bulk disqualify.
 
