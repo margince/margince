@@ -53708,6 +53708,19 @@ export interface components {
              * @description That record's id, so the name can link to it.
              */
             subject_id?: string | null;
+            /**
+             * @description How much of its work a LIVE occurrence has finished so far, in the unit its source
+             *     counts (a website read counts pages). Null while unknown, which is not zero: most
+             *     kinds report no position, and a client then draws an unmeasured ring. A settled
+             *     item carries none.
+             */
+            processed?: number | null;
+            /**
+             * @description How much the occurrence expects to finish in all, in the unit of `processed`. A
+             *     client draws a measured arc only when both counts are present; with `processed`
+             *     alone the ring stays unmeasured, and no percentage is ever derived from elapsed time.
+             */
+            total?: number | null;
         };
         AgentTool: {
             /** @description The tool name (tools/list identity). */
