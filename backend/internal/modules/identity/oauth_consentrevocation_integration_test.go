@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -118,7 +119,7 @@ func TestARevocationWaitingOnAConsentEndsItsCode(t *testing.T) {
 		_, err := tx.Exec(ctx, `INSERT INTO oauth_authorization_code
 			(client_id, code_hash, code_challenge, redirect_uri, scopes, user_id, expires_at)
 			VALUES ($1, $2, 'challenge', 'https://client.example/cb', '{read}', $3, now() + interval '5 minutes')`,
-			clientID, "hash-"+ids.NewV7().String(), id.UserID)
+			clientID, storekit.TokenHash(ids.NewV7().String()), id.UserID)
 		return err
 	})
 	if err != nil {

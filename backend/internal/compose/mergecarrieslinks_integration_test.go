@@ -468,7 +468,7 @@ func TestAMergeCarriesDoubleOptInHistory(t *testing.T) {
 	}
 	if _, err := c.e.Pool.Exec(context.Background(), `
 		INSERT INTO consent_doi_token (contact_id, purpose_id, token_hash, expires_at)
-		VALUES ($1, $2, 'doi-carry-hash', now() + interval '1 day')`, retired, purpose.ID); err != nil {
+		VALUES ($1, $2, encode(sha256('doi-carry-hash'), 'hex'), now() + interval '1 day')`, retired, purpose.ID); err != nil {
 		t.Fatal(err)
 	}
 

@@ -34,6 +34,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -58,7 +59,7 @@ func seedConfirmLink(ctx context.Context, t *testing.T, owner *pgx.Conn, contact
 		    (contact_id, token_hash, delivered_to, issued_at, expires_at, opened_at, consumed_at,
 		     kind, purpose_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		contact, "hash-"+kind+"-"+issued.Format(time.RFC3339Nano),
+		contact, storekit.TokenHash(kind+"-"+issued.Format(time.RFC3339Nano)),
 		"sara@sar.test", issued, expires, opened, consumed, kind, purpose); err != nil {
 		t.Fatalf("seeding a %s confirm link: %v", kind, err)
 	}

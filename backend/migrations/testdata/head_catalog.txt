@@ -1286,6 +1286,7 @@ public.analytics_share.analytics_share_scope_user_id_fkey FOREIGN KEY (scope_use
 public.analytics_share.analytics_share_scope_user_id_retirement_guard CREATE TRIGGER analytics_share_scope_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.analytics_share FOR EACH ROW WHEN (((new.scope_id IS NOT NULL) AND ((new.scope_kind = 'owner'::text) AND (new.revoked_at IS NULL) AND (new.expires_at > now())))) EXECUTE FUNCTION refuse_retired_member_work('scope_id')
 public.analytics_share.analytics_share_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
 public.analytics_share.analytics_share_snapshot_matches_kind CHECK (((kind = 'snapshot'::text) = (snapshot_id IS NOT NULL)))
+public.analytics_share.analytics_share_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.analytics_share.analytics_share_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.analytics_share.captured_by text NOT NULL gen=- def=-
 public.analytics_share.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2024,6 +2025,7 @@ public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/ma
 public.auth_token.auth_token_expires_after_creation CHECK ((expires_at > created_at))
 public.auth_token.auth_token_pkey PRIMARY KEY (id)
 public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text])))
+public.auth_token.auth_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.auth_token.auth_token_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.auth_token.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.auth_token.expires_at timestamp with time zone NOT NULL gen=- def=-
@@ -2216,6 +2218,7 @@ public.bulk_confirmation.affected uuid[] NOT NULL gen=- def=-
 public.bulk_confirmation.binding bytea NOT NULL gen=- def=-
 public.bulk_confirmation.bulk_confirmation_expiry_after_creation CHECK ((expires_at > created_at))
 public.bulk_confirmation.bulk_confirmation_pkey PRIMARY KEY (token_hash)
+public.bulk_confirmation.bulk_confirmation_token_hash_check CHECK ((octet_length(token_hash) = 32))
 public.bulk_confirmation.consumed_at timestamp with time zone gen=- def=-
 public.bulk_confirmation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.bulk_confirmation.expires_at timestamp with time zone NOT NULL gen=- def=-
@@ -3857,6 +3860,7 @@ public.confirm_token.confirm_token_pkey PRIMARY KEY (id)
 public.confirm_token.confirm_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.confirm_token.confirm_token_purpose_is_consents CHECK (((kind = 'consent_confirmation'::text) = (purpose_id IS NOT NULL)))
 public.confirm_token.confirm_token_subject_request_id_fkey FOREIGN KEY (subject_request_id) REFERENCES consent_qualifying_event(id) ON DELETE SET NULL
+public.confirm_token.confirm_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.confirm_token.consumed_at timestamp with time zone gen=- def=-
 public.confirm_token.contact_id uuid gen=- def=-
 public.confirm_token.delivered_to text NOT NULL gen=- def=-
@@ -3887,6 +3891,7 @@ public.consent_doi_token.consent_doi_token_expires_after_issue CHECK ((expires_a
 public.consent_doi_token.consent_doi_token_hash_unique UNIQUE (token_hash)
 public.consent_doi_token.consent_doi_token_pkey PRIMARY KEY (id)
 public.consent_doi_token.consent_doi_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
+public.consent_doi_token.consent_doi_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.consent_doi_token.consumed_at timestamp with time zone gen=- def=-
 public.consent_doi_token.contact_id uuid NOT NULL gen=- def=-
 public.consent_doi_token.expires_at timestamp with time zone NOT NULL gen=- def=-
@@ -5052,6 +5057,7 @@ public.deal_room_invitation.created_at timestamp with time zone NOT NULL gen=- d
 public.deal_room_invitation.deal_room_invitation_expires_after_creation CHECK ((expires_at > created_at))
 public.deal_room_invitation.deal_room_invitation_participant_fkey FOREIGN KEY (participant_id) REFERENCES deal_room_participant(id) ON DELETE CASCADE
 public.deal_room_invitation.deal_room_invitation_pkey PRIMARY KEY (id)
+public.deal_room_invitation.deal_room_invitation_token_hash_check CHECK ((octet_length(token_hash) = 32))
 public.deal_room_invitation.delivered_at timestamp with time zone gen=- def=-
 public.deal_room_invitation.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.deal_room_invitation.failed_at timestamp with time zone gen=- def=-
@@ -5102,6 +5108,7 @@ public.deal_room_session.deal_room_session_expires_after_creation CHECK ((expire
 public.deal_room_session.deal_room_session_participant_in_room FOREIGN KEY (participant_id, room_id) REFERENCES deal_room_participant(id, room_id) ON DELETE CASCADE
 public.deal_room_session.deal_room_session_pkey PRIMARY KEY (id)
 public.deal_room_session.deal_room_session_room_fkey FOREIGN KEY (room_id) REFERENCES deal_room(id) ON DELETE CASCADE
+public.deal_room_session.deal_room_session_token_hash_check CHECK ((octet_length(token_hash) = 32))
 public.deal_room_session.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.deal_room_session.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_room_session.last_seen_at timestamp with time zone gen=- def=-
@@ -7811,6 +7818,7 @@ public.oauth_authorization_code.created_at timestamp with time zone NOT NULL gen
 public.oauth_authorization_code.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.oauth_authorization_code.id uuid NOT NULL gen=- def=uuidv7()
 public.oauth_authorization_code.lent_passport_id uuid gen=- def=-
+public.oauth_authorization_code.oauth_authorization_code_code_hash_check CHECK ((code_hash ~ '^[0-9a-f]{64}$'::text))
 public.oauth_authorization_code.oauth_authorization_code_expires_after_creation CHECK ((expires_at > created_at))
 public.oauth_authorization_code.oauth_authorization_code_pkey PRIMARY KEY (id)
 public.oauth_authorization_code.oauth_code_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id)
@@ -7875,6 +7883,7 @@ public.oauth_refresh_token.id uuid NOT NULL gen=- def=uuidv7()
 public.oauth_refresh_token.oauth_refresh_grant_fkey FOREIGN KEY (grant_id) REFERENCES oauth_grant(id) ON DELETE CASCADE
 public.oauth_refresh_token.oauth_refresh_token_expires_after_creation CHECK ((expires_at > created_at))
 public.oauth_refresh_token.oauth_refresh_token_pkey PRIMARY KEY (id)
+public.oauth_refresh_token.oauth_refresh_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.oauth_refresh_token.oauth_refresh_unique UNIQUE (token_hash)
 public.oauth_refresh_token.replaced_by uuid gen=- def=-
 public.oauth_refresh_token.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.oauth_refresh_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')
@@ -8128,6 +8137,7 @@ public.passport.passport_grant_fkey FOREIGN KEY (oauth_grant_id) REFERENCES oaut
 public.passport.passport_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.passport.passport_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE CASCADE
 public.passport.passport_pkey PRIMARY KEY (id)
+public.passport.passport_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.passport.passport_token_hash_key UNIQUE (token_hash)
 public.passport.revoked_at timestamp with time zone gen=- def=-
 public.passport.scopes text[] NOT NULL gen=- def=-
@@ -8167,6 +8177,7 @@ public.preference_token.preference_token_expires_after_creation CHECK ((expires_
 public.preference_token.preference_token_pkey PRIMARY KEY (id)
 public.preference_token.preference_token_revocation_is_reasoned CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))
 public.preference_token.preference_token_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['rotated'::text, 'expired'::text, 'erasure'::text, 'compromise'::text, 'merged_predecessor'::text, 'merged_into_survivor'::text])))
+public.preference_token.preference_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.preference_token.preference_token_token_key UNIQUE (token)
 public.preference_token.revoked_at timestamp with time zone gen=- def=-
 public.preference_token.revoked_reason text gen=- def=-
@@ -9640,6 +9651,7 @@ public.session.provider_authenticated boolean NOT NULL gen=- def=false
 public.session.revoked_at timestamp with time zone gen=- def=-
 public.session.session_expires_after_creation CHECK ((expires_at > created_at))
 public.session.session_pkey PRIMARY KEY (id)
+public.session.session_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.session.session_token_hash_key UNIQUE (token_hash)
 public.session.session_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.session.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.session FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token_hash": 20000, "user_agent": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000,"user_agent":20000}')
@@ -9751,6 +9763,7 @@ public.setup_token.consumed_at timestamp with time zone gen=- def=-
 public.setup_token.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.setup_token.id uuid NOT NULL gen=- def=uuidv7()
 public.setup_token.setup_token_pkey PRIMARY KEY (id)
+public.setup_token.setup_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.setup_token.setup_token_token_hash_key UNIQUE (token_hash)
 public.setup_token.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.setup_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')
 public.setup_token.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.setup_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')
@@ -10966,6 +10979,7 @@ public.voice_learning_signal.transformations jsonb NOT NULL gen=- def='[]'::json
 public.voice_learning_signal.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_learning_signal.uq_voice_learning_signal_draft UNIQUE (draft_ref_hash)
 public.voice_learning_signal.version bigint NOT NULL gen=- def=1
+public.voice_learning_signal.voice_learning_signal_draft_ref_hash_check CHECK ((octet_length(draft_ref_hash) = 32))
 public.voice_learning_signal.voice_learning_signal_outcome_check CHECK ((outcome = ANY (ARRAY['drafted'::text, 'accepted'::text, 'edited_sent'::text, 'rejected'::text])))
 public.voice_learning_signal.voice_learning_signal_pkey PRIMARY KEY (id)
 public.voice_learning_signal.voice_learning_signal_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES voice_profile(id) ON DELETE CASCADE
@@ -11518,6 +11532,7 @@ public.withdrawal_credential.withdrawal_credential_revocation_is_reasoned CHECK 
 public.withdrawal_credential.withdrawal_credential_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['erasure'::text, 'compromise'::text, 'merged_predecessor'::text, 'superseded'::text])))
 public.withdrawal_credential.withdrawal_credential_scope_check CHECK ((scope = ANY (ARRAY['named_purpose'::text, 'all_marketing'::text])))
 public.withdrawal_credential.withdrawal_credential_scope_names_its_target CHECK (((scope = 'named_purpose'::text) = (purpose_id IS NOT NULL)))
+public.withdrawal_credential.withdrawal_credential_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.withdrawal_credential.withdrawal_credential_token_hash_key UNIQUE (token_hash)
 public.withdrawal_credential_pkey CREATE UNIQUE INDEX withdrawal_credential_pkey ON public.withdrawal_credential USING btree (id)
 public.withdrawal_credential_token_hash_key CREATE UNIQUE INDEX withdrawal_credential_token_hash_key ON public.withdrawal_credential USING btree (token_hash)

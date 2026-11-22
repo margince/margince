@@ -99,7 +99,7 @@ func vouchEntities(t *testing.T, conn *pgx.Conn, branchRep string) (branch, defa
 func seedPassport(t *testing.T, conn *pgx.Conn, user string) string {
 	t.Helper()
 	return scalar(t, conn, `INSERT INTO passport (granted_by, on_behalf_of, token_hash, scopes, expires_at)
-		VALUES ($1, $1, 'hash-'||gen_random_uuid()::text, '{read}', now() + interval '1 day') RETURNING id`, user)
+		VALUES ($1, $1, encode(sha256(gen_random_uuid()::text::bytea), 'hex'), '{read}', now() + interval '1 day') RETURNING id`, user)
 }
 
 func seedVouch(t *testing.T, conn *pgx.Conn, contact, capturedBy string, carriedFrom *string) string {

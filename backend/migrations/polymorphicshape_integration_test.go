@@ -52,7 +52,7 @@ func TestAForecastShareGoesWithItsScope(t *testing.T) {
 		_, err := owner.Exec(context.Background(), `
 			INSERT INTO analytics_share
 			  (kind, target, scope_kind, scope_id, token_hash, created_by, expires_at, captured_by)
-			VALUES ('live', 'forecast', $1, $2, gen_random_uuid()::text, $3, now() + interval '1 day', 'human:seed')`,
+			VALUES ('live', 'forecast', $1, $2, encode(sha256(gen_random_uuid()::text::bytea), 'hex'), $3, now() + interval '1 day', 'human:seed')`,
 			scopeKind, team, user)
 		return err
 	}
