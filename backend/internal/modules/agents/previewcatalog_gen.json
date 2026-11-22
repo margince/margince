@@ -20793,9 +20793,9 @@
     "html_body":
      "Formatierte Nachricht",
     "impersonation_warning_carried":
-     "Warnung vor falscher Absendeadresse aus Zusammenführung übernommen",
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
     "impersonation_warning_cleared":
-     "Warnung vor falscher Absendeadresse aufgehoben",
+     "Warnung vor möglicher Täuschung aufgehoben",
     "import_apply_tag":
      "Tag hinzufügen",
     "import_close_deal":
@@ -29769,9 +29769,9 @@
     "merge_profile_field/text/icp":
      "Ideales Kundenprofil",
     "merge_profile_field/text/impersonation_warning_carried":
-     "Warnung vor falscher Absendeadresse aus Zusammenführung übernommen",
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
     "merge_profile_field/text/impersonation_warning_cleared":
-     "Warnung vor falscher Absendeadresse aufgehoben",
+     "Warnung vor möglicher Täuschung aufgehoben",
     "merge_profile_field/text/industry":
      "Branche",
     "merge_profile_field/text/invitation_status":
@@ -30133,9 +30133,9 @@
     "merge_profile_field/lifecycle/icp":
      "Ideales Kundenprofil",
     "merge_profile_field/lifecycle/impersonation_warning_carried":
-     "Warnung vor falscher Absendeadresse aus Zusammenführung übernommen",
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
     "merge_profile_field/lifecycle/impersonation_warning_cleared":
-     "Warnung vor falscher Absendeadresse aufgehoben",
+     "Warnung vor möglicher Täuschung aufgehoben",
     "merge_profile_field/lifecycle/industry":
      "Branche",
     "merge_profile_field/lifecycle/invitation_status":
