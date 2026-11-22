@@ -17977,9 +17977,9 @@ export const en = {
     "How many unresolved senders one counterparty review run asks the model about, 1 to 1000. The rest wait for the next run. Raise it when new senders stay unresolved for longer than the run schedule. Default 200.",
   "captureReview.verdictCap.refusal":
     "Enter a whole number of senders from 1 to 1000.",
-  "captureReview.classifyCap.label": "Messages labelled per run",
+  "captureReview.classifyCap.label": "Messages labeled per run",
   "captureReview.classifyCap.help":
-    "How many captured messages one labelling run settles, 1 to 2500. The rest wait for the next run. Raise it when new mail stays unlabelled for longer than the run schedule. Default 500.",
+    "How many captured messages one labeling run settles, 1 to 2500. The rest wait for the next run. Raise it when new mail stays unlabeled for longer than the run schedule. Default 500.",
   "captureReview.classifyCap.refusal":
     "Enter a whole number of messages from 1 to 2500.",
   "captureReview.owedCap.label": "Messages checked for a reply per run",

@@ -17652,11 +17652,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số chuỗi thư đang bị giữ mà một lượt rà soát xem xét, từ 1 đến 200. Các chuỗi còn lại chờ lượt sau. Hãy tăng khi thư mới bị ẩn với đồng nghiệp lâu hơn lịch chạy, do Tình trạng hệ thống đặt. Mặc định 40.",
   "captureReview.passCap.refusal":
     "Nhập số chuỗi thư là số nguyên từ 1 đến 200.",
-  "captureReview.verdictCap.label": "Số người gửi được xét mỗi lượt",
+  "captureReview.verdictCap.label": "Số bên gửi được xét mỗi lượt",
   "captureReview.verdictCap.help":
-    "Số người gửi chưa rõ mà một lượt xét người gửi đưa cho mô hình, từ 1 đến 1000. Những người gửi còn lại chờ lượt sau. Hãy tăng khi người gửi mới chưa được xét lâu hơn lịch chạy. Mặc định 200.",
+    "Số bên gửi chưa rõ mà một lượt xét bên gửi đưa cho mô hình, từ 1 đến 1000. Các bên gửi còn lại chờ lượt sau. Hãy tăng khi bên gửi mới chưa được xét lâu hơn lịch chạy. Mặc định 200.",
   "captureReview.verdictCap.refusal":
-    "Nhập số người gửi là số nguyên từ 1 đến 1000.",
+    "Nhập số bên gửi là số nguyên từ 1 đến 1000.",
   "captureReview.classifyCap.label": "Số thư được gắn nhãn mỗi lượt",
   "captureReview.classifyCap.help":
     "Số thư đã thu thập mà một lượt gắn nhãn xử lý, từ 1 đến 2500. Các thư còn lại chờ lượt sau. Hãy tăng khi thư mới chưa có nhãn lâu hơn lịch chạy. Mặc định 500.",

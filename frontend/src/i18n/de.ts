@@ -18135,11 +18135,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wie viele zurückgehaltene Mail-Threads eine Prüfung der Vertraulichkeit je Durchlauf durchgeht, 1 bis 200. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Mails für das Team länger unsichtbar bleiben als der Rhythmus der Durchläufe. Den Rhythmus legt der Systemzustand fest. Standard 40.",
   "captureReview.passCap.refusal":
     "Gib eine ganze Zahl von Threads von 1 bis 200 ein.",
-  "captureReview.verdictCap.label": "Beurteilte Absender pro Durchlauf",
+  "captureReview.verdictCap.label": "Beurteilte Absenderadressen pro Durchlauf",
   "captureReview.verdictCap.help":
-    "Wie viele ungeklärte Absender ein Durchlauf der Absenderprüfung dem Modell vorlegt, 1 bis 1000. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Absender länger ungeklärt bleiben als der Rhythmus der Durchläufe. Standard 200.",
+    "Wie viele ungeklärte Absenderadressen ein Durchlauf der Absenderprüfung dem Modell vorlegt, 1 bis 1000. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Absenderadressen länger ungeklärt bleiben als der Rhythmus der Durchläufe. Standard 200.",
   "captureReview.verdictCap.refusal":
-    "Gib eine ganze Zahl von Absendern von 1 bis 1000 ein.",
+    "Gib eine ganze Zahl von Absenderadressen von 1 bis 1000 ein.",
   "captureReview.classifyCap.label":
     "Gekennzeichnete Nachrichten pro Durchlauf",
   "captureReview.classifyCap.help":

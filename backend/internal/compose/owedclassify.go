@@ -84,9 +84,8 @@ var owedVerdicts = map[string]bool{
 type OwedClassifier struct {
 	pool  *pgxpool.Pool
 	store *activities.Store
-	// caps answers how many new messages one run may judge, per workspace: the
-	// admin's setting. Per workspace rather than shared, because a shared
-	// counter lets one large backlog spend the budget and starve the rest.
+	// caps answers how many new messages one run may judge per workspace: the
+	// admin's setting. A shared counter would let one backlog starve the rest.
 	caps  *capture.PassCaps
 	brain completer
 	log   *slog.Logger
@@ -176,11 +175,10 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 		return nil
 	}
 	if maxVerdicts <= 0 {
-		passCap, err := c.caps.OwedClassify(ctx)
-		if err != nil {
+		var err error
+		if maxVerdicts, err = c.caps.OwedClassify(ctx); err != nil {
 			return err
 		}
-		maxVerdicts = passCap
 	}
 	if err := c.drain(ctx, maxVerdicts, "backlog", func(limit int) ([]owedCandidate, time.Time, error) {
 		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), limit, owedBodyLimit, owedPriorBodyLimit)
