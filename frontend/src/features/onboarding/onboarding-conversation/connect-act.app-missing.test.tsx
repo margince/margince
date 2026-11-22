@@ -139,7 +139,10 @@ describe("a reader who cannot register the app", () => {
       screen.queryByRole("button", { name: "Connect mail and calendar" }),
     ).toBeNull();
     // A link to Settings is a dead end: the onboarding gate sends it back.
-    expect(screen.queryByRole("link")).toBeNull();
+    // The band's Account link is the one page it lets through.
+    expect(
+      screen.queryAllByRole("link").map((link) => link.getAttribute("href")),
+    ).toEqual(["/#/settings/account"]);
     const request =
       "Could you register the company’s Google app in Margince, in Settings under Sign-in and security? Then I can connect my mail and calendar.";
     // The reader sees what they are about to send before they copy it.

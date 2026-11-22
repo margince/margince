@@ -36,9 +36,8 @@ import (
 // resolver does: the surface it serves has no session, and the token IS the
 // authorization.
 //
-// IT RECORDS WHAT ACTUALLY HAPPENED, which is two different facts. Every
-// resolution counts a fetch (first_fetched_at, fetch_count); only one the
-// request itself presents as a human navigating to the page stamps opened_at.
+// Only a resolution the request itself presents as a human navigating to the
+// page stamps opened_at.
 //
 // That column is evidence — the middle of the ask-to-click chain a later reader
 // follows from the row, with a named data subject as its subject — and it used
@@ -66,9 +65,7 @@ func (s *Store) ResolveConfirmToken(
 		// notice or a consent question, and no other kind.
 		err := tx.QueryRow(ctx, `
 			UPDATE confirm_token ct
-			   SET first_fetched_at = coalesce(ct.first_fetched_at, $2),
-			       fetch_count = ct.fetch_count + 1,
-			       opened_at = CASE WHEN $3 THEN coalesce(ct.opened_at, $2) ELSE ct.opened_at END
+			   SET opened_at = CASE WHEN $3 THEN coalesce(ct.opened_at, $2) ELSE ct.opened_at END
 			WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
 			  AND (EXISTS (SELECT 1 FROM contact p
 			                WHERE p.id = ct.contact_id AND p.archived_at IS NULL)

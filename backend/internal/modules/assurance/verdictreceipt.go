@@ -43,10 +43,9 @@ func (s *Store) RecordVerdict(ctx context.Context, tx pgx.Tx, v DealVerdict) err
 	_, err := tx.Exec(ctx, `
 		INSERT INTO assurance_deal_receipt
 		    (deal_id, run_id, outcome, policy_version, input_fingerprint,
-		     assessed_at, valid_until,
 		     verdict_input_checksum, verdict_basis_digest,
 		     verdict_assessed_at, verdict_next_due_at, verdict_actions)
-		VALUES ($1, NULL, $2, $3, $4, $5, $5, $6, $7, $5, $8, $9)
+		VALUES ($1, NULL, $2, $3, $4, $6, $7, $5, $8, $9)
 		ON CONFLICT (deal_id) DO UPDATE
 		SET verdict_input_checksum = EXCLUDED.verdict_input_checksum,
 		    verdict_basis_digest = EXCLUDED.verdict_basis_digest,

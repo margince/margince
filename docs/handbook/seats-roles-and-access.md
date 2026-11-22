@@ -313,7 +313,7 @@ A team in Margince is a named group of colleagues. To create or rename one you n
 
 The Teams page says it: "Membership grants no access, except to a team lead, who can read and edit the team’s records without a share."
 
-When a team is archived, being in it gives nothing any more. You can restore an archived team.
+When a team is archived, being in it gives nothing any more. If the team has members, Margince asks first and says how many lose it. To restore a team, turn on **Show archived teams** on the Teams page and choose **Restore** on its row.
 
 ## Sharing one record
 

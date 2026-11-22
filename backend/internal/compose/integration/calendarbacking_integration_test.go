@@ -39,8 +39,8 @@ func seedConnection(ctx context.Context, t *testing.T, e *SearchEnv, provider st
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO capture_connection (provider, user_id, scopes, status, auth)
-			VALUES ($1, $2, '{}', $3, $4)`,
+			INSERT INTO capture_connection (provider, user_id, status, auth)
+			VALUES ($1, $2, $3, $4)`,
 			provider, user, status, []byte(`{"refresh_token":"r","granted":[]}`))
 		return err
 	}); err != nil {

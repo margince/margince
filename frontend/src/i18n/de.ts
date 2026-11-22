@@ -2937,6 +2937,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
   "shell.back": "Zurück",
+  "shell.backToSetup": "Zurück zur Einrichtung",
   "shell.license.none": "Keine Lizenz",
   "shell.license.refused": "Lizenz abgelehnt",
   "shell.signOutAria": "Abmelden",
@@ -5421,6 +5422,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.thread.details": "Details",
   "email.thread.textForwarded":
     "Der Text unten stammt aus der weitergeleiteten Mail, nicht vom Verfasser selbst.",
+  "email.thread.noText": "Diese Nachricht hat keinen Text.",
   "email.thread.textPartial":
     "Ein Teil des Textes dieser Mail konnte nicht gelesen werden.",
   "email.thread.textUnassessed": "E-Mail-Text nicht geprüft",
@@ -16512,6 +16514,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.teamParent": "Teil von {name}",
   "users.teamRename": "Umbenennen",
   "users.teamArchive": "Archivieren",
+  "users.teamRestore": "Wiederherstellen",
+  "users.teamArchivedBadge": "Archiviert",
+  "users.showArchivedTeams": "Archivierte Teams anzeigen",
+  "users.showArchivedTeamsSub":
+    "Ein archiviertes Team gibt seinen Mitgliedern keinen Zugriff, bis du es wiederherstellst.",
+  "users.archiveTeamTitle": "„{name}“ archivieren?",
+  "users.archiveTeamBody_one":
+    "Das Team hat {count} Mitglied. Es verliert den Zugriff, den das Team gibt: mit dem Team geteilte Datensätze und, als Teamleitung, die Datensätze des Teams. Du kannst es unter „Archivierte Teams anzeigen“ wiederherstellen.",
+  "users.archiveTeamBody_other":
+    "Das Team hat {count} Mitglieder. Diese verlieren den Zugriff, den das Team gibt: mit dem Team geteilte Datensätze und, als Teamleitung, die Datensätze des Teams. Du kannst es unter „Archivierte Teams anzeigen“ wiederherstellen.",
   "users.teamRenameTitle": "Team umbenennen",
   "users.teamRenameSave": "Namen speichern",
   "users.teamRenamed": "Team in „{name}“ umbenannt",

@@ -2842,6 +2842,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn điều hướng",
   "shell.back": "Quay lại",
+  "shell.backToSetup": "Quay lại thiết lập",
   "shell.license.none": "Chưa có giấy phép",
   "shell.license.refused": "Giấy phép bị từ chối",
   "shell.signOutAria": "Đăng xuất",
@@ -5278,6 +5279,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.details": "Chi tiết",
   "email.thread.textForwarded":
     "Nội dung bên dưới là thư được chuyển tiếp, không phải lời của chính bên gửi.",
+  "email.thread.noText": "Thư này không có văn bản.",
   "email.thread.textPartial": "Không đọc được một phần nội dung của thư này.",
   "email.thread.textUnassessed": "Nội dung email chưa được xác minh",
   "email.thread.textUnassessedHint":
@@ -16057,6 +16059,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.teamParent": "Thuộc {name}",
   "users.teamRename": "Đổi tên",
   "users.teamArchive": "Chuyển vào kho lưu trữ",
+  "users.teamRestore": "Khôi phục",
+  "users.teamArchivedBadge": "Trong kho lưu trữ",
+  "users.showArchivedTeams": "Hiển thị nhóm trong kho lưu trữ",
+  "users.showArchivedTeamsSub":
+    "Nhóm trong kho lưu trữ không cho thành viên quyền truy cập nào cho đến khi bạn khôi phục.",
+  "users.archiveTeamTitle": "Chuyển “{name}” vào kho lưu trữ?",
+  "users.archiveTeamBody_one":
+    "Nhóm có {count} thành viên. Họ mất quyền truy cập mà nhóm mang lại: hồ sơ được chia sẻ với nhóm, và hồ sơ của nhóm đối với trưởng nhóm. Bạn có thể khôi phục nhóm trong “Hiển thị nhóm trong kho lưu trữ”.",
+  "users.archiveTeamBody_other":
+    "Nhóm có {count} thành viên. Họ mất quyền truy cập mà nhóm mang lại: hồ sơ được chia sẻ với nhóm, và hồ sơ của nhóm đối với trưởng nhóm. Bạn có thể khôi phục nhóm trong “Hiển thị nhóm trong kho lưu trữ”.",
   "users.teamRenameTitle": "Đổi tên nhóm",
   "users.teamRenameSave": "Lưu tên",
   "users.teamRenamed": "Đã đổi tên nhóm thành “{name}”",

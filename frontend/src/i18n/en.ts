@@ -2820,6 +2820,7 @@ export const en = {
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
+  "shell.backToSetup": "Back to setup",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
@@ -5361,6 +5362,7 @@ export const en = {
   "email.thread.details": "Details",
   "email.thread.textForwarded":
     "The text below is the forwarded mail, not words the sender wrote.",
+  "email.thread.noText": "This message has no text.",
   "email.thread.textPartial":
     "Part of the text of this mail could not be read.",
   "email.thread.textUnassessed": "Email text not verified",
@@ -16390,6 +16392,16 @@ export const en = {
   "users.teamParent": "Part of {name}",
   "users.teamRename": "Rename",
   "users.teamArchive": "Archive",
+  "users.teamRestore": "Restore",
+  "users.teamArchivedBadge": "Archived",
+  "users.showArchivedTeams": "Show archived teams",
+  "users.showArchivedTeamsSub":
+    "An archived team gives its members no access until you restore it.",
+  "users.archiveTeamTitle": "Archive “{name}”?",
+  "users.archiveTeamBody_one":
+    "The team has {count} member. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
+  "users.archiveTeamBody_other":
+    "The team has {count} members. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
   "users.teamRenameTitle": "Rename team",
   "users.teamRenameSave": "Save name",
   "users.teamRenamed": "Team renamed to “{name}”",

@@ -32,17 +32,15 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_deal_receipt
 
-13 columns · primary key `(deal_id)` · referenced by 0 foreign keys
+11 columns · primary key `(deal_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `assessed_at` | `timestamp with time zone` | yes |  |
 | `deal_id` | `uuid` | yes |  |
 | `input_fingerprint` | `text` | yes |  |
 | `outcome` | `text` | yes | One of `eligible`, `review_required`, `unsupported`, `waiting`, `unknown`. |
 | `policy_version` | `text` | yes |  |
 | `run_id` | `uuid` |  | Points at `assurance_run.id`. |
-| `valid_until` | `timestamp with time zone` | yes |  |
 | `verdict_actions` | `jsonb` |  |  |
 | `verdict_assessed_at` | `timestamp with time zone` |  |  |
 | `verdict_basis_digest` | `text` |  |  |
@@ -59,7 +57,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 **Rules**
 
 - `assurance_deal_receipt_outcome_check`: `CHECK ((outcome = ANY (ARRAY['eligible', 'review_required', 'unsupported', 'waiting', 'unknown'])))`
-- `assurance_deal_receipt_valid_after_assessed`: `CHECK ((valid_until >= assessed_at))`
 
 **Indexes**
 
