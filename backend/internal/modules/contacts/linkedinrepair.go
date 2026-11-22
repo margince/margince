@@ -195,7 +195,7 @@ const leadPairColumns = `l.id, matches.contact_ids, matches.fields, matches.matc
 const maxContactsPerLeadReview = 10
 
 // existingLeadContactPairs lists live leads that share an identity with a live
-// contact. It skips a lead whose every pair of contacts a person already
+// contact. It skips a lead whose every pair of contacts a teammate already
 // dismissed as not a duplicate, so that lead stays a lead for good. Fields and
 // Values name, per contact in id order, the identity that matched.
 const existingLeadContactPairs = `
@@ -205,7 +205,9 @@ const existingLeadContactPairs = `
 		       array_agg(by_contact.field ORDER BY by_contact.contact_id) AS fields,
 		       array_agg(by_contact.value ORDER BY by_contact.contact_id) AS match_values
 		FROM (
-			SELECT DISTINCT ON (candidate.contact_id) candidate.contact_id, candidate.field, candidate.value
+			SELECT candidate.contact_id,
+			       (array_agg(candidate.field ORDER BY candidate.field, candidate.value))[1] AS field,
+			       (array_agg(candidate.value ORDER BY candidate.field, candidate.value))[1] AS value
 			FROM (
 				SELECT ce.contact_id, 'email' AS field, ce.email AS value
 				  FROM contact_email ce JOIN contact c ON c.id = ce.contact_id
@@ -219,7 +221,7 @@ const existingLeadContactPairs = `
 				UNION ALL
 				SELECT c.id, 'matched_lane', 'linked_lead' FROM contact c WHERE c.converted_from_lead_id = l.id AND c.archived_at IS NULL
 			) candidate
-			ORDER BY candidate.contact_id, candidate.field
+			GROUP BY candidate.contact_id
 		) by_contact
 	) matches
 	WHERE l.archived_at IS NULL AND cardinality(matches.contact_ids) > 0
