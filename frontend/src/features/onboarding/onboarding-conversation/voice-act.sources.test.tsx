@@ -1,11 +1,14 @@
 /** @vitest-environment happy-dom */
+
+import { useQueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useReducer } from "react";
+import { useReducer, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { en } from "../../../i18n/en";
 import { conversationReducer } from "./conversation-machine";
+import { VOICE_PROBE_KEY, type VoiceRestoreProbe } from "./restore";
 import { VoiceAct } from "./voice-act";
 import {
   collectingState,
@@ -59,15 +62,17 @@ function Resumed({
   sources,
   words = 701,
 }: Readonly<{ sources: readonly CorpusSource[]; words?: number }>) {
-  const [state, dispatch] = useReducer(conversationReducer, collectingState());
-  return (
-    <VoiceAct
-      state={state}
-      dispatch={dispatch}
-      initialSummary={summaryOf(words)}
-      initialSources={sources}
-    />
+  const client = useQueryClient();
+  // Seeded before the step's first render, as the screen's restore leaves it.
+  useState(() =>
+    client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, {
+      built: false,
+      summary: summaryOf(words),
+      sources,
+    }),
   );
+  const [state, dispatch] = useReducer(conversationReducer, collectingState());
+  return <VoiceAct state={state} dispatch={dispatch} />;
 }
 
 describe("the Sources list on the voice step", () => {
