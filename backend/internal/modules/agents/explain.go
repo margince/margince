@@ -448,7 +448,8 @@ func stagedReleasePath(staged *workflow.StagedApprovalError) string {
 // faultReferenceSuffix names what a refusal left behind, in the one place an
 // agent reliably reads.
 //
-// THE TOOL SURFACE HAS NO STRUCTURED ERROR SHAPE. A tool failure is
+// THE TOOL SURFACE HAS NO STRUCTURED ERROR SHAPE (the one exception is the
+// `_meta` code on an in-flight idempotency refusal, see refusalCodeMeta). A tool failure is
 // `{isError: true, content: [text]}` — the MCP spec's shape — so a refusal's
 // Details map has nowhere to go on this door, and the seam that built it
 // (apperrors.ReferencedFault) would stop at the REST renderer.

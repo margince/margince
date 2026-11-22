@@ -28,6 +28,12 @@ export type ActionOutcome =
   | { ok: true; data: unknown; warnings: Warning[] }
   | { ok: false; reason: string; unknown?: true };
 
+/** The `_meta` member the server puts a refusal's stable code in, and the code
+ *  of a call whose key an earlier call still holds. That earlier call may yet
+ *  write, so the press's key is kept: the outcome is unknown, not refused. */
+const REFUSAL_CODE_META = "margince/code";
+const IN_FLIGHT_CODE = "idempotency_key_in_progress";
+
 type Pending = {
   resolve: (outcome: ActionOutcome) => void;
   timer: ReturnType<typeof setTimeout>;
@@ -156,9 +162,12 @@ function outcomeOf(message: Record<string, unknown>): ActionOutcome {
       Array.isArray(result.content) ? result.content[0] : null,
     );
     const reason = asText(first.text);
+    const heldByEarlierCall =
+      asRecord(result._meta)[REFUSAL_CODE_META] === IN_FLIGHT_CODE;
     return {
       ok: false,
       reason: reason === "" ? "The tool refused the call." : reason,
+      ...(heldByEarlierCall ? { unknown: true as const } : {}),
     };
   }
   const envelope = asRecord(result.structuredContent);

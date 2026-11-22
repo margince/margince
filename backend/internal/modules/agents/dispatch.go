@@ -24,6 +24,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"slices"
 
@@ -407,6 +408,10 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			return asked
 		}
 		refusal := toolError(s.explain(served.Tool, err))
+		var inFlight *claimInFlightError
+		if errors.As(err, &inFlight) {
+			refusal["_meta"] = map[string]any{refusalCodeMeta: httperr.IdempotencyInProgressCode}
+		}
 		if shown := shownAnswer(err); shown != nil {
 			if structured, ok := s.structuredContent(served.Tool, shown); ok {
 				refusal["structuredContent"] = structured
@@ -477,6 +482,11 @@ func (s *Dispatcher) structuredContent(name string, out json.RawMessage) (json.R
 	}
 	return out, true
 }
+
+// refusalCodeMeta is the `_meta` member that carries a refusal's stable code,
+// beside the prose a model reads. Only refusals a client must act on without
+// reading prose carry one.
+const refusalCodeMeta = "margince/code"
 
 func toolError(msg string) map[string]any {
 	return map[string]any{

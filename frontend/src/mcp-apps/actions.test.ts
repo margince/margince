@@ -325,6 +325,25 @@ describe("a press carries one retry key", () => {
     expect(again).not.toBe(first);
   });
 
+  it("keeps the key when the server says an earlier call still holds it", async () => {
+    const { parent, actions } = await ready();
+    const held = actions.callServerTool("merge_records", { source_id: "a" });
+    deliver(parent.win, HOST, {
+      jsonrpc: "2.0",
+      id: callsSent(parent)[0].msg.id,
+      result: {
+        isError: true,
+        content: [{ type: "text", text: "an earlier call has not finished" }],
+        _meta: { "margince/code": "idempotency_key_in_progress" },
+      },
+    });
+    expect(await held).toMatchObject({ ok: false, unknown: true });
+    void actions.callServerTool("merge_records", { source_id: "a" });
+
+    const [first, again] = callsSent(parent).map(keyOf);
+    expect(again).toBe(first);
+  });
+
   it("does not let a late answer to an old press drop the key of a newer one", async () => {
     const { parent, actions } = await ready();
     const one = actions.callServerTool("merge_records", { source_id: "a" });
