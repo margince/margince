@@ -9,15 +9,13 @@ import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { dealFilterChips } from "./deals.listtools";
 import { dealRangeChips } from "./deals.rangefilters";
 
-// The handbook's table names the Deals screen's tabs and filters for a reader
-// hunting for them, so each name it types must be one the screen offers, and
-// each one the screen offers must be there.
+// The handbook's table names the Deals screen's tabs and filters. Each name it
+// types must be one the screen offers. Each one the screen offers must be there.
 
 const t = (key: MessageKey) => translate("en", key);
 
-// The owner, team and tag chips come from hooks that read the session and the
-// tag vocabulary, so they are named by their label keys, as deals.list.tsx
-// places them: owner and team first, tags after the stage and company chips.
+// The owner, team and tag chips come from hooks, so they are named by label key.
+// deals.list.tsx puts owner and team first, and tags after stage and company.
 const offeredFilters = [
   t("list.owner"),
   t("list.team"),
