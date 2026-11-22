@@ -5255,7 +5255,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.details": "Chi tiết",
   "email.thread.textForwarded":
     "Nội dung bên dưới là thư được chuyển tiếp, không phải lời của chính bên gửi.",
-  "email.thread.noText": "Thư này không có nội dung.",
+  "email.thread.noText": "Thư này không có văn bản.",
   "email.thread.textPartial": "Không đọc được một phần nội dung của thư này.",
   "email.thread.textUnassessed": "Nội dung email chưa được xác minh",
   "email.thread.textUnassessedHint":

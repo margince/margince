@@ -2285,7 +2285,7 @@
   "email.thread.toLine": "gửi {names}",
   "email.thread.details": "Chi tiết",
   "email.thread.textForwarded": "Nội dung bên dưới là thư được chuyển tiếp, không phải lời của chính bên gửi.",
-  "email.thread.noText": "Thư này không có nội dung.",
+  "email.thread.noText": "Thư này không có văn bản.",
   "email.thread.textPartial": "Không đọc được một phần nội dung của thư này.",
   "email.thread.textUnassessed": "Nội dung email chưa được xác minh",
   "email.thread.textUnassessedHint": "Margince không thể nhận diện yêu cầu hoặc cam kết ở đây. Đọc email gốc trong ứng dụng email nếu thiếu nội dung; tự thêm việc cần làm nếu cần.",
