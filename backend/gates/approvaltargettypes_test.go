@@ -70,6 +70,7 @@ func scanStrings(t *testing.T, scan stringScan) (resolved map[string]string, unr
 		imports map[string]bool
 	}
 	var sources []source
+	var pending []constConversion
 	err := gatekit.WalkDir("internal", func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") ||
 			strings.Contains(p, "internal/contracts/") {
@@ -85,11 +86,18 @@ func scanStrings(t *testing.T, scan stringScan) (resolved map[string]string, unr
 		}
 		recordStringConsts(byDir[dir], file)
 		recordStringConsts(global, file)
+		pending = append(pending, constConversions(dir, file)...)
 		sources = append(sources, source{file, p, scanImportNames(file)})
 		return nil
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, c := range pending {
+		if values := global[c.from]; len(values) == 1 {
+			byDir[c.dir][c.name] = values
+			global[c.name] = values
+		}
 	}
 	resolved = map[string]string{}
 	for _, src := range sources {
@@ -172,6 +180,42 @@ func stagerLiteralTypeName(expr ast.Expr) string {
 		return e.Sel.Name
 	}
 	return ""
+}
+
+// constConversion is a constant declared as string(pkg.Const): its value is that
+// of the named constant, which can sit in a file read later.
+type constConversion struct{ dir, name, from string }
+
+func constConversions(dir string, file *ast.File) []constConversion {
+	var out []constConversion
+	for _, decl := range file.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok || gd.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gd.Specs {
+			vs, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, name := range vs.Names {
+				if i >= len(vs.Values) {
+					continue
+				}
+				call, ok := vs.Values[i].(*ast.CallExpr)
+				if !ok || len(call.Args) != 1 {
+					continue
+				}
+				if fn, ok := call.Fun.(*ast.Ident); !ok || fn.Name != "string" {
+					continue
+				}
+				if sel, ok := call.Args[0].(*ast.SelectorExpr); ok {
+					out = append(out, constConversion{dir, name.Name, sel.Sel.Name})
+				}
+			}
+		}
+	}
+	return out
 }
 
 // recordStringConsts maps each constant name in file to the string literals it
@@ -332,7 +376,7 @@ const (
 	noticeOwnTargetTypes  = "internal/modules/notices.OwnTargetType"
 	reportingSourceTypes  = "internal/modules/reporting.SourceType"
 	noticeCensusFloor     = 4
-	factSourceCensusFloor = 5
+	factSourceCensusFloor = 6
 	noticeTargetColumn    = "notice.target_type"
 )
 
