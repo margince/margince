@@ -47,19 +47,18 @@ func knownRecords(companyID string, in Input) map[Evidence]string {
 // for them. A sentence about the account may state what the account row says:
 // its industry, its size, its lifetime won and its open total.
 func accountItself(in Input) string {
-	total := openTotalText(in)
+	totals := in.totalsText()
 	in.Contacts, in.OpenDeals, in.Recent, in.OpenTasks, in.OpenCommitments = nil, nil, nil, nil, nil
-	return claims.Source(in) + total
+	return claims.Source(in) + totals
 }
 
-// openTotalText is the open total as the prompt renders an amount, or "" when
-// the floor states none.
-func openTotalText(in Input) string {
-	total, currency, ok := oneCurrencyTotal(in.OpenDeals)
-	if !ok || total <= 0 {
-		return ""
-	}
-	return "\nopen_total " + renderedAmount(total, currency, in.lang) + " " + currency
+// totalsText states the two totals the account card shows, in the form the
+// money check reads. The open total is the card's own open_pipeline_minor_base
+// in the base currency. A sum of the prompt's deal rows would be wrong: that
+// page is capped, and the card converts across currencies.
+func (in Input) totalsText() string {
+	won := claims.MoneyLine(renderedAmount(in.WonLifetime, in.WonCurrency, in.lang), in.WonCurrency)
+	return won + claims.MoneyLine(renderedAmount(in.OpenPipelineMinor, in.OpenPipelineCurrency, in.lang), in.OpenPipelineCurrency)
 }
 
 // recordKey is knownRecords' pair without the citation's descriptive Name.

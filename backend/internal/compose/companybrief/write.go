@@ -360,7 +360,7 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 			sentence.Nature = nature
 			// Grounding and refusal decide first: a recommendation the reader never sees
 			// must not spend the budget.
-			if claims.UngroundedExactMoney(sentence, known) != "" {
+			if !claims.Grounded(sentence, known) {
 				continue
 			}
 			if nature == natureRecommendation {
@@ -389,9 +389,10 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 //
 // It drops a sentence whose citations name a record this input did not carry.
 // The account is pinned, not merely allowed by type: the one company a brief
-// may cite is the one it is about. It also drops a sum no cited record states.
+// may cite is the one it is about. A sum of money must be in a cited record or
+// be one of the account's own totals, which the account row carries.
 func keepGroundedSentences(sentences []Sentence, companyID string, in Input) []Sentence {
-	return claims.KeepExactMoney(sentences, knownRecords(companyID, in), knownNature, natureFact)
+	return claims.Keep(sentences, knownRecords(companyID, in), knownNature, natureFact)
 }
 
 // The section kinds, DERIVED from the contract's enum rather than re-spelled,

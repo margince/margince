@@ -5,10 +5,15 @@ package companybrief
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/claims"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func germanAccount() Input {
@@ -68,51 +73,87 @@ func TestAGermanFigureTheModelCopiesIsGroundedInItsDeal(t *testing.T) {
 
 const fleetDealID = "44444444-4444-4444-8444-444444444444"
 
-func twoDealAccount() Input {
-	return Input{
-		ID: briefCompanyID, Name: "Acme",
-		OpenDeals: []DealIn{
-			{ID: fleetDealID, Name: "Fleet retrofit", AmountMinor: 5_000_000, Currency: "EUR"},
-			{ID: "55555555-5555-4555-8555-555555555555", Name: "Depot", AmountMinor: 7_000_000, Currency: "EUR"},
-		},
-		WonLifetime: 3_000_000, WonCurrency: "EUR",
+// cardView is a company 360 whose open deals are rows and whose state strip
+// carries the open total the card shows, in the workspace base currency.
+func cardView(rows []crmcontracts.Company360Deal, baseMinor int, base string) crmcontracts.Company360 {
+	view := crmcontracts.Company360{Company: crmcontracts.Company{Id: uuid.MustParse(briefCompanyID), DisplayName: "Acme"}}
+	view.Deals = &crmcontracts.Company360Deals{Data: rows}
+	view.StateStrip = &crmcontracts.Company360StateStrip{Commercial: &struct {
+		BaseCurrency          *string             `json:"base_currency,omitempty"`
+		ConvertedCount        int                 `json:"converted_count" minimum:"0"`
+		FxAsOf                *openapi_types.Date `json:"fx_as_of,omitempty"`
+		NextCloseOn           *openapi_types.Date `json:"next_close_on,omitempty"`
+		OpenCount             int                 `json:"open_count" minimum:"0"`
+		OpenPipelineMinorBase *int                `json:"open_pipeline_minor_base,omitempty"`
+		PricedCount           int                 `json:"priced_count" minimum:"0"`
+		StalledCount          int                 `json:"stalled_count" minimum:"0"`
+	}{BaseCurrency: &base, OpenPipelineMinorBase: &baseMinor}}
+	return view
+}
+
+func dealRow(n int, minor int64, currency string) crmcontracts.Company360Deal {
+	id := uuid.MustParse(fmt.Sprintf("44444444-4444-4444-8444-%012d", n))
+	return crmcontracts.Company360Deal{DealId: id, Name: fmt.Sprintf("Deal %d", n), Amount: &crmcontracts.Money{AmountMinor: &minor, Currency: &currency}}
+}
+
+func companySentence(in Input, text string) Sentence {
+	return Sentence{Text: text, Evidence: []Evidence{{EntityType: citeCompany, EntityID: in.ID}}}
+}
+
+func TestTheOpenTotalIsTheCardsOwnFigureNotASumOfThePage(t *testing.T) {
+	rows := make([]crmcontracts.Company360Deal, 0, 25)
+	for n := 1; n <= 25; n++ {
+		rows = append(rows, dealRow(n, 1_000_000, "EUR"))
+	}
+	// The card totals 26 deals; the page the brief reads holds 25 of them.
+	in := FromView(cardView(rows, 26_000_000, "EUR")).WordedIn("en")
+	known := knownRecords(in.ID, in)
+	if claims.Ungrounded(companySentence(in, "Open pipeline is 260,000.00 EUR."), known) != "" {
+		t.Error("the card's own open total was dropped")
+	}
+	if claims.Ungrounded(companySentence(in, "Open pipeline is 250,000.00 EUR."), known) == "" {
+		t.Error("the sum of the 25 rows on the page was kept as if it were the total")
 	}
 }
 
-func TestTheTotalsMargincePutsOnTheCardAreGroundedAndNoOtherSumIs(t *testing.T) {
-	in := twoDealAccount()
+func TestAMixedCurrencyAccountKeepsTheCardsConvertedTotal(t *testing.T) {
+	rows := []crmcontracts.Company360Deal{dealRow(1, 10_000_000, "EUR"), dealRow(2, 5_500_000, "USD")}
+	in := FromView(cardView(rows, 15_000_000, "EUR")).WordedIn("en")
 	known := knownRecords(in.ID, in)
-	company := []Evidence{{EntityType: citeCompany, EntityID: in.ID}}
-	deal := []Evidence{{EntityType: citeDeal, EntityID: fleetDealID}}
+	if claims.Ungrounded(companySentence(in, "Open pipeline is 150,000.00 EUR."), known) != "" {
+		t.Error("the converted total the card shows was dropped")
+	}
+	if claims.Ungrounded(companySentence(in, "Open pipeline is 155,000.00 EUR."), known) == "" {
+		t.Error("the unconverted sum of two currencies was kept")
+	}
+}
+
+func TestOnlyTheCardsTotalsAndACitedRowAnswerASum(t *testing.T) {
+	rows := []crmcontracts.Company360Deal{dealRow(1, 18_000_000, "EUR")}
+	in := FromView(cardView(rows, 18_000_000, "EUR")).WordedIn("en")
+	in.WonLifetime, in.WonCurrency = 3_000_000, "EUR"
+	known := knownRecords(in.ID, in)
+	deal := []Evidence{{EntityType: citeDeal, EntityID: rows[0].DealId.String()}}
 	cases := []struct {
-		name     string
-		sentence Sentence
-		kept     bool
+		name string
+		s    Sentence
+		kept bool
 	}{
-		{"the open total", Sentence{Text: "Open pipeline is 120,000.00 EUR.", Evidence: company}, true},
-		{"the won total", Sentence{Text: "Won to date is 30,000.00 EUR.", Evidence: company}, true},
-		{"a sum that is no row and no total", Sentence{Text: "Open pipeline is 95,000.00 EUR.", Evidence: company}, false},
-		{"the largest row beside a sum", Sentence{Text: "Fleet retrofit at 50,000.00 EUR makes 120,000.00 EUR.", Evidence: deal}, false},
-		{"one row's own amount", Sentence{Text: "Fleet retrofit is 50,000.00 EUR.", Evidence: deal}, true},
+		{"the won total", companySentence(in, "Won to date is 30,000.00 EUR."), true},
+		{"a cited row's own amount", Sentence{Text: "Deal 1 is 180,000.00 EUR.", Evidence: deal}, true},
+		{"an invented sum on a cited row", Sentence{Text: "Deal 1 is 950,000.00 EUR.", Evidence: deal}, false},
+		{"the open total beside only a deal", Sentence{Text: "Deal 1 is 180,000.00 EUR of 180,000.00 EUR open.", Evidence: deal}, true},
+		{"a sum that is no row and no total", companySentence(in, "Open pipeline is 95,000.00 EUR."), false},
 	}
 	for _, c := range cases {
-		if got := claims.UngroundedExactMoney(c.sentence, known) == ""; got != c.kept {
+		if got := claims.Ungrounded(c.s, known) == ""; got != c.kept {
 			t.Errorf("%s: kept = %v, want %v", c.name, got, c.kept)
 		}
 	}
 }
 
-func TestNoOpenTotalIsGroundedWhenTheDealsMixCurrencies(t *testing.T) {
-	in := twoDealAccount()
-	in.OpenDeals[1].Currency = "USD"
-	sentence := Sentence{Text: "Open pipeline is 120,000.00 EUR.", Evidence: []Evidence{{EntityType: citeCompany, EntityID: in.ID}}}
-	if claims.UngroundedExactMoney(sentence, knownRecords(in.ID, in)) == "" {
-		t.Error("a total the floor would never state was kept")
-	}
-}
-
-func TestBothParsersKeepTheOpenTotalAndRefuseAnyOtherSum(t *testing.T) {
-	in := twoDealAccount().WordedIn("en")
+func TestBothParsersKeepTheCardsTotalAndRefuseAnyOtherSum(t *testing.T) {
+	in := FromView(cardView(nil, 12_000_000, "EUR")).WordedIn("en")
 	sentence := func(text string) string {
 		return `{"text":"` + text + `","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + in.ID + `"}]}`
 	}

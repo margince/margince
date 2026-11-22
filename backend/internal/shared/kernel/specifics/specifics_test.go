@@ -171,21 +171,33 @@ func TestAnInjectedInstructionsFabricatedFiguresAreDropped(t *testing.T) {
 	}
 }
 
-func TestMoneyMissingNamesASumTheSourceDoesNotState(t *testing.T) {
-	source := `{"amount":"50,000.00","currency":"EUR"} open_total 120,000.00 EUR`
+func TestMoneyMissingHoldsASumToItsCurrencyAndItsValueTogether(t *testing.T) {
+	source := "money: 120,000.00 USD\nmoney: 30,000.00 EUR\nmoney: 50,000.00 EUR\nmoney: 12.345 KWD\n" + `{"contact_count":3}`
 	cases := []struct {
+		name    string
 		claim   string
 		missing int
 	}{
-		{"Worth 120,000 EUR.", 0},
-		{"Worth EUR 50.000,00 here.", 0},
-		{"Worth 95,000 EUR.", 1},
-		{"Worth 120k EUR.", 0},
-		{"Three seats and 14 days.", 0},
+		{"the open sum", "Worth 120,000 USD.", 0},
+		{"a swapped pair", "Worth EUR 120,000.", 1},
+		{"a count that collides", "Worth EUR 3.", 1},
+		{"a German spelling", "Worth 50.000,00 EUR.", 0},
+		{"a scale suffix", "Worth 50k EUR.", 0},
+		{"a currency symbol", "Worth €50,000.", 0},
+		{"a code with three decimals", "Worth 12.345 KWD.", 0},
+		{"a code the old list lacked", "Worth KWD 950,000.", 1},
+		{"a code of a sum the source has under another", "Worth 30,000 USD.", 1},
+		{"a count is not money", "Three seats and 14 days.", 0},
+		{"a lower-case word is not a code", "Try 5 all day.", 0},
+		{"a negative sum", "Down −50,000 EUR.", 1},
+		{"a hyphen inside a word", "The pre-50,000 EUR quote.", 0},
+		{"a range with both ends in the source", "Worth EUR 30,000–50,000.", 0},
+		{"a range with an end outside it", "Worth EUR 50,000–60,000.", 1},
+		{"a range whose currency follows", "Worth 30k-60k EUR.", 1},
 	}
 	for _, c := range cases {
 		if got := MoneyMissing(c.claim, source); len(got) != c.missing {
-			t.Errorf("%q: %d sums missing (%v), want %d", c.claim, len(got), Texts(got), c.missing)
+			t.Errorf("%s: %q has %d sums missing (%v), want %d", c.name, c.claim, len(got), Texts(got), c.missing)
 		}
 	}
 }
