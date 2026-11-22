@@ -6,7 +6,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-90 columns · primary key `(id)` · referenced by 49 foreign keys
+90 columns · primary key `(id)` · referenced by 48 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -197,7 +197,6 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_unjudged`: `btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_unjudged_reply`: `btree (occurred_at) WHERE ((reply_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_unlabeled`: `btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%') AND (kind = ANY (ARRAY['email', 'message'])))`
-- `uq_activity_domain_evidence_version`: `unique, btree (id, domain_evidence_version)`
 - `uq_activity_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
 **Triggers**
@@ -213,6 +212,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_refuse_restricted_mutation`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()`
 - `activity_system_text_retire`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()`
 - `advance_activity_domain_evidence_version`: `BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at FOR EACH ROW EXECUTE FUNCTION advance_activity_domain_evidence_version()`
+- `copy_activity_domain_evidence`: `AFTER UPDATE FOR EACH ROW WHEN ((new.domain_evidence_version IS DISTINCT FROM old.domain_evidence_version)) EXECUTE FUNCTION copy_activity_domain_evidence()`
 - `deleted_mail_clears_reply_settled`: `AFTER DELETE REFERENCING OLD TABLE AS written_mail FOR EACH STATEMENT EXECUTE FUNCTION written_mail_clears_reply_settled()`
 - `home_read_fence_activity_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.audience IS DISTINCT FROM new.audience) OR ((old.restricted_at IS NULL) AND (new.restricted_at IS NOT NULL)) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)) OR (old.assignee_id IS DISTINCT FROM new.assignee_id) OR ((old.sent_by_colleague IS NOT NULL) AND (old.sent_by_colleague IS DISTINCT FROM new.sent_by_colleague)) OR (old.captured_by IS DISTINCT FROM new.captured_by) OR (old.source_system IS DISTINCT FROM new.source_system) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `inserted_mail_clears_reply_settled`: `AFTER INSERT REFERENCING NEW TABLE AS written_mail FOR EACH STATEMENT EXECUTE FUNCTION written_mail_clears_reply_settled()`
@@ -595,7 +595,6 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `roster_seat` | `app_user` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
-| `activity_id, domain_evidence_parent_version` | `activity` | deleting the parent deletes this row |
 
 **Rules**
 
@@ -614,8 +613,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_aparticipant_waiting_address_time`: `btree (lower(address), domain_evidence_at DESC) WHERE ((role = 'to') AND (address IS NOT NULL))`
 - `idx_participant_domain_evidence_incomplete`: `btree (id) WHERE ((domain_evidence_parent_version IS NULL) OR (domain_evidence_at IS NULL) OR (domain_evidence_precision IS NULL) OR (domain_evidence_visible IS NULL))`
 - `idx_participant_domain_evidence_latest`: `gist (reverse(address_domain_folded) COLLATE "C", domain_evidence_precision, domain_evidence_at) WHERE (domain_evidence_visible AND (NOT past_party_cap) AND (address_domain_folded IS NOT NULL))`
-- `idx_participant_domain_evidence_parent`: `btree (activity_id, domain_evidence_parent_version)`
-- `uq_activity_participant`: `unique, btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT`
+- `uq_activity_participant_identity`: `unique, btree (activity_id, role, ((md5(((((((COALESCE((user_id), '') || '|') || COALESCE((contact_id), '')) || '|') || COALESCE((((length(address)) || ':') || address), '')) || '|') || COALESCE((((length(channel_user_id)) || ':') || channel_user_id), ''))))::uuid))`
 
 **Triggers**
 

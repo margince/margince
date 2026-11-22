@@ -32,7 +32,7 @@ module to put a change in, read [modules.md](../modules.md).
 |---|--:|
 | Tables | 363 |
 | Columns | 4474 |
-| Foreign keys | 623 |
+| Foreign keys | 622 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -44,7 +44,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 155 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 39 | 50 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 49 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 48 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
@@ -140,7 +140,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 90 | 49 |
+| [`activity`](activities.md#activity) | activities | 90 | 48 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |

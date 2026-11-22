@@ -95,6 +95,7 @@ public.activity.capture_labeled_at timestamp with time zone gen=- def=-
 public.activity.captured_by text NOT NULL gen=- def=-
 public.activity.channel_provider text gen=- def=-
 public.activity.claims_host_slot boolean NOT NULL gen=- def=false
+public.activity.copy_activity_domain_evidence CREATE TRIGGER copy_activity_domain_evidence AFTER UPDATE ON public.activity FOR EACH ROW WHEN ((new.domain_evidence_version IS DISTINCT FROM old.domain_evidence_version)) EXECUTE FUNCTION copy_activity_domain_evidence()
 public.activity.counterparty_email text gen=- def=-
 public.activity.counterparty_outbound_attested boolean NOT NULL gen=- def=false
 public.activity.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -504,7 +505,6 @@ public.activity_participant.domain_evidence_at timestamp with time zone gen=- de
 public.activity_participant.domain_evidence_parent_version bigint gen=- def=-
 public.activity_participant.domain_evidence_precision text gen=- def=-
 public.activity_participant.domain_evidence_visible boolean gen=- def=-
-public.activity_participant.fk_participant_domain_evidence_version FOREIGN KEY (activity_id, domain_evidence_parent_version) REFERENCES activity(id, domain_evidence_version) ON UPDATE CASCADE ON DELETE CASCADE
 public.activity_participant.home_read_fence_participant CREATE TRIGGER home_read_fence_participant AFTER UPDATE ON public.activity_participant FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION advance_home_read_fence()
 public.activity_participant.home_read_fence_participant_removed CREATE TRIGGER home_read_fence_participant_removed AFTER DELETE ON public.activity_participant FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
@@ -936,6 +936,7 @@ public.advance_activity_domain_evidence_version() secdef=false cfg=- acl=-
 BEGIN
  IF ROW(NEW.occurred_at, NEW.occurred_precision, NEW.archived_at, NEW.restricted_at)
  IS DISTINCT FROM ROW(OLD.occurred_at, OLD.occurred_precision, OLD.archived_at, OLD.restricted_at) THEN
+  PERFORM 1 FROM activity WHERE id = OLD.id FOR UPDATE;
   NEW.domain_evidence_version := OLD.domain_evidence_version + 1;
  END IF;
  RETURN NEW;
@@ -4523,6 +4524,13 @@ public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix 
 public.conversation_claim_evidence_ux CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)
 public.conversation_claim_pkey CREATE UNIQUE INDEX conversation_claim_pkey ON public.conversation_claim USING btree (id)
 public.conversation_claim_task_ix CREATE INDEX conversation_claim_task_ix ON public.conversation_claim USING btree (task_activity_id) WHERE ((task_activity_id IS NOT NULL) AND (archived_at IS NULL))
+public.copy_activity_domain_evidence() secdef=false cfg=- acl=- 
+BEGIN
+ UPDATE activity_participant SET domain_evidence_parent_version = NEW.domain_evidence_version
+  WHERE activity_id = NEW.id;
+ RETURN NULL;
+END;
+
 public.currency_minor_digits acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
 public.currency_minor_digits.currency currency_code NOT NULL gen=- def=-
 public.currency_minor_digits.currency_minor_digits_digits_check CHECK (((digits >= 0) AND (digits <= 4)))
@@ -6449,7 +6457,6 @@ public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer 
 public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
 public.idx_participant_domain_evidence_incomplete CREATE INDEX idx_participant_domain_evidence_incomplete ON public.activity_participant USING btree (id) WHERE ((domain_evidence_parent_version IS NULL) OR (domain_evidence_at IS NULL) OR (domain_evidence_precision IS NULL) OR (domain_evidence_visible IS NULL))
 public.idx_participant_domain_evidence_latest CREATE INDEX idx_participant_domain_evidence_latest ON public.activity_participant USING gist (reverse(address_domain_folded) COLLATE "C", domain_evidence_precision, domain_evidence_at) WHERE (domain_evidence_visible AND (NOT past_party_cap) AND (address_domain_folded IS NOT NULL))
-public.idx_participant_domain_evidence_parent CREATE INDEX idx_participant_domain_evidence_parent ON public.activity_participant USING btree (activity_id, domain_evidence_parent_version)
 public.idx_partner_kinds CREATE INDEX idx_partner_kinds ON public.partner USING gin (partner_kinds)
 public.idx_partner_stage CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage)
 public.idx_partner_tier CREATE INDEX idx_partner_tier ON public.partner USING btree (margin_tier) WHERE (archived_at IS NULL)
@@ -10681,11 +10688,10 @@ public.update_intent_time(old_wall timestamp without time zone, old_zone text, o
   COALESCE(public.resolve_intent_time(wall_time, new_zone), new_instant)
  FROM kept
 
-public.uq_activity_domain_evidence_version CREATE UNIQUE INDEX uq_activity_domain_evidence_version ON public.activity USING btree (id, domain_evidence_version)
 public.uq_activity_link CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activity_id, entity_type, COALESCE(contact_id, company_id, deal_id, lead_id, project_id))
 public.uq_activity_link_project CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text)
 public.uq_activity_link_suggestion_target CREATE UNIQUE INDEX uq_activity_link_suggestion_target ON public.activity_link_suggestion USING btree (activity_id, entity_type, entity_id)
-public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT
+public.uq_activity_participant_identity CREATE UNIQUE INDEX uq_activity_participant_identity ON public.activity_participant USING btree (activity_id, role, ((md5(((((((COALESCE((user_id)::text, ''::text) || '|'::text) || COALESCE((contact_id)::text, ''::text)) || '|'::text) || COALESCE((((length(address))::text || ':'::text) || address), ''::text)) || '|'::text) || COALESCE((((length(channel_user_id))::text || ':'::text) || channel_user_id), ''::text))))::uuid))
 public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE ((basis <> 'controller_pin'::text) AND ((deal_id IS NOT NULL) OR (project_id IS NOT NULL)))
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
