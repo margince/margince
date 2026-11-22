@@ -46,6 +46,8 @@ func TestAStatementThatOnlyReadsABodyIsNotAWriter(t *testing.T) {
 		`INSERT INTO activity (id, kind, body_completeness) VALUES ($1, $2, $3)`,
 		`INSERT INTO comms_outbound (id, body) VALUES ($1, $2)`,
 		`SELECT body FROM activity WHERE id = $1`,
+		`SELECT 'UPDATE activity SET body = NULL'`,
+		"SELECT 1 -- INSERT INTO activity (id, body) VALUES ($1, $2)",
 	} {
 		if writers, _ := ActivityBodyWrites(statement); writers != 0 {
 			t.Errorf("counted as %d writers of an activity body, and it writes none: %s", writers, statement)

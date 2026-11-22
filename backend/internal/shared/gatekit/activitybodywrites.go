@@ -21,7 +21,7 @@ var (
 // activity's body, and those among them that leave body_own_end unassigned.
 // The stored end is read with the body, so a writer of one sets the other.
 func ActivityBodyWrites(statement string) (writers, unpaired int) {
-	low := strings.ToLower(statement)
+	low := withoutSQLSpans(strings.ToLower(statement))
 	var clauses [][]string
 	for _, at := range insertsActivity.FindAllStringIndex(low, -1) {
 		clauses = append(clauses, bareColumns(sqlListAt(low, at[1], false)))
@@ -44,6 +44,24 @@ func ActivityBodyWrites(statement string) (writers, unpaired int) {
 		}
 	}
 	return writers, unpaired
+}
+
+// withoutSQLSpans blanks every quoted and commented run, keeping each offset.
+// A statement quoted inside a value is then no statement, and a comment is a space.
+func withoutSQLSpans(text string) string {
+	blank := []byte(text)
+	for i := 0; i < len(text); i++ {
+		span, _ := SQLSpanAt(text, i)
+		for end := i + span; i < end; i++ {
+			if blank[i] != '\n' {
+				blank[i] = ' '
+			}
+		}
+		if span > 0 {
+			i--
+		}
+	}
+	return string(blank)
 }
 
 // sqlListAt splits the comma list starting at pos into its items. It stops at
