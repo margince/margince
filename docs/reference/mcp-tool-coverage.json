@@ -7444,7 +7444,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3209,
+      "tokens": 3239,
       "agents": [],
       "required_by_cases": [
         "case116_the_rate_and_the_logo",

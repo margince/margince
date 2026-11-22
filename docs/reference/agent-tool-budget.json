@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 51732,
+    "tokens": 51762,
     "median_tool_tokens": 797,
     "mean_tool_tokens": 1077
   },
@@ -89,7 +89,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3209
+      "tokens": 3239
     },
     {
       "name": "change_activities",

@@ -115,8 +115,8 @@ func checkSettings(fieldMap map[string]string, consentRequired bool, wording, re
 	return checkSenderSecret(secret)
 }
 
-// CreateForm registers a form. It answers the signing secret it minted, if it
-// minted one, and never to an agent; that is the only time the secret leaves the vault.
+// CreateForm registers a form. It answers the signing secret it minted, if any,
+// and never to an agent. That is the only time the secret leaves the vault.
 func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
 		return Form{}, "", err
@@ -183,8 +183,8 @@ func secretForCaller(ctx context.Context, minted string) string {
 	return minted
 }
 
-// promises is what a new form would promise a visitor and where it would take
-// posts from, the part of a form an agent leaves to its user.
+// promises is what a new form would promise a visitor and where it takes posts
+// from. An agent leaves that part of a form to its user.
 func (in CreateInput) promises() Form {
 	return Form{
 		AllowedOrigins: in.AllowedOrigins, ConsentRequired: in.ConsentRequired,

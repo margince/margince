@@ -16,8 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
-// An agent sets a form up like its user, but no signing secret enters its answer
-// on either door, and the secret and the form's websites stay its user's to set.
+// An agent sets a form up like its user, and no signing secret enters its answer
+// on either door. The secret and the form's websites stay its user's to set.
 // The user then mints a secret in the app and the website signs with it.
 func TestAnAgentMakesAServerFormWithoutEverSeeingItsSecret(t *testing.T) {
 	d := apptest.SetupTwoDoors(t, "agent-web-form", []compose.Option{compose.WithKeyvault(keyvault.NewMemory())}, "read", "write")

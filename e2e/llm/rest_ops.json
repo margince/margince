@@ -819,6 +819,7 @@
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/apply": "apply_voice_version",
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/reject": "reject_voice_version",
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/rollback": "rollback_voice_version",
+    "POST /v1/web-forms": "create_web_form",
     "POST /v1/web-forms/{id}/handling/existing": "handle_website_inquiries",
     "POST /v1/web-forms/{id}/handling/preview": "preview_website_inquiries",
     "POST /v1/weekly-plans/commitments": "add_weekly_plan_commitment",
@@ -1539,6 +1540,9 @@
     ],
     "create_voice_profile": [
       "idempotency_key",
+      "request_body"
+    ],
+    "create_web_form": [
       "request_body"
     ],
     "data_coverage": [],
