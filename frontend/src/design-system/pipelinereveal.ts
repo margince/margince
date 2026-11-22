@@ -45,6 +45,31 @@ export function scrollColumnIn(node: HTMLElement | undefined) {
 }
 
 /**
+ * Brings a column the reader unfolds into view once it has opened. Opened, a
+ * fold takes a whole stage width and can end past the board's edge. The stage
+ * just asked for would then be the one cut off. Returns the call a fold makes
+ * as it is pressed; `openStages` lists the stages drawn open.
+ */
+export function useUnfoldIntoView(
+  sections: RefObject<Map<string, HTMLElement>>,
+  openStages: readonly string[],
+): (stage: string) => void {
+  const unfolding = useRef<string | undefined>(undefined);
+  // A string, so a new array with the same stages is no change.
+  const openKey = openStages.join("\n");
+  useEffect(() => {
+    const stage = unfolding.current;
+    unfolding.current = undefined;
+    if (stage !== undefined && openKey.split("\n").includes(stage)) {
+      scrollColumnIn(sections.current.get(stage));
+    }
+  }, [openKey, sections]);
+  return (stage) => {
+    unfolding.current = stage;
+  };
+}
+
+/**
  * Once per search, checks whether any column holding a match shows inside the
  * board. When none does, it scrolls the first into view and answers true until
  * the search changes, so the board can say where the matches are.
