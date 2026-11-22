@@ -79271,6 +79271,12 @@ type CreateContactEnrichmentRunParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ClearContactImpersonationWarningJSONBody defines parameters for ClearContactImpersonationWarning.
+type ClearContactImpersonationWarningJSONBody struct {
+	// DetectedAt The `detected_at` of the `impersonation_warning` the caller read.
+	DetectedAt time.Time `json:"detected_at"`
+}
+
 // DraftIntroNoteJSONBody defines parameters for DraftIntroNote.
 type DraftIntroNoteJSONBody struct {
 	// ThroughContactId The intermediary on a route that runs through another contact, when it does. Absent means the colleague knows the target directly.
@@ -85592,6 +85598,9 @@ type ApplyContactEmploymentImportJSONRequestBody = EmploymentImportRequest
 
 // CreateContactEnrichmentRunJSONRequestBody defines body for CreateContactEnrichmentRun for application/json ContentType.
 type CreateContactEnrichmentRunJSONRequestBody = CreateContactEnrichmentRunRequest
+
+// ClearContactImpersonationWarningJSONRequestBody defines body for ClearContactImpersonationWarning for application/json ContentType.
+type ClearContactImpersonationWarningJSONRequestBody ClearContactImpersonationWarningJSONBody
 
 // DraftIntroNoteJSONRequestBody defines body for DraftIntroNote for application/json ContentType.
 type DraftIntroNoteJSONRequestBody DraftIntroNoteJSONBody

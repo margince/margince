@@ -66,7 +66,7 @@ describe("the impersonation warning on the contact page", () => {
   it("clears the warning when Looks fine is pressed", async () => {
     const user = userEvent.setup();
     let page = warned({ reason: "punycode_domain", detected_at: DETECTED_AT });
-    const cleared = vi.fn(() => {
+    const cleared = vi.fn((_body: unknown) => {
       page = view;
       return new Response(null, { status: 204 });
     });
@@ -78,6 +78,7 @@ describe("the impersonation warning on the contact page", () => {
     await user.click(await clearButton());
 
     await waitFor(() => expect(cleared).toHaveBeenCalledTimes(1));
+    expect(cleared.mock.calls[0]?.[0]).toEqual({ detected_at: DETECTED_AT });
     await waitFor(() =>
       expect(screen.queryByText(en["contact.impersonation.title"])).toBeNull(),
     );
@@ -96,6 +97,34 @@ describe("the impersonation warning on the contact page", () => {
 
     expect((await screen.findByRole("alert")).textContent).not.toBe("");
     expect(screen.getByText(en["contact.impersonation.title"])).toBeTruthy();
+  });
+
+  // A merge can put another warning on the contact after the page read it.
+  it("shows the warning that stands when the one shown was replaced", async () => {
+    const user = userEvent.setup();
+    let page = warned({ reason: "punycode_domain", detected_at: DETECTED_AT });
+    mount("overview", page, [], {
+      "GET /contacts/p-1/360": () => jsonResponse(page),
+      [CLEAR_ROUTE]: () => {
+        page = warned({
+          reason: "display_name_other_domain",
+          detected_at: "2026-08-12T10:00:00Z",
+        });
+        return jsonResponse(
+          { status: 409, code: "conflict", title: "Conflict" },
+          409,
+        );
+      },
+    });
+
+    await user.click(await clearButton());
+
+    expect(
+      await screen.findByText(
+        en["contact.impersonation.reason.displayNameOtherDomain"],
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).not.toBe("");
   });
 
   it("refuses the clear to a reader who may not edit the contact", async () => {

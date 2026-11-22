@@ -56,6 +56,17 @@ func warningOn(reader context.Context, t *testing.T, e *Env, contact ids.Contact
 	return read.ImpersonationWarning
 }
 
+// shownAt is the detection time of the warning the reader is shown, which a
+// clear names.
+func shownAt(reader context.Context, t *testing.T, e *Env, contact ids.ContactID) time.Time {
+	t.Helper()
+	warning := warningOn(reader, t, e, contact)
+	if warning == nil {
+		t.Fatal("the contact serves no warning to clear")
+	}
+	return warning.DetectedAt
+}
+
 // clearedAudits counts the audit rows of a cleared warning whose event names
 // them, which proves both came from one transaction.
 func clearedAudits(t *testing.T, e *Env, contact ids.ContactID) (audits, events int) {
@@ -122,10 +133,11 @@ func TestASeatThatCannotReadTheContactGetsNotFoundOnTheReadAndTheClear(t *testin
 	if _, err := e.Contacts.GetContact(outsider, contact, storekit.LiveOnly); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("the read: err = %v, want not found", err)
 	}
-	if err := e.Contacts.ClearImpersonationWarning(outsider, contact); !errors.Is(err, apperrors.ErrNotFound) {
+	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	shown := shownAt(owner, t, e, contact)
+	if err := e.Contacts.ClearImpersonationWarning(outsider, contact, shown); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("the clear: err = %v, want not found", err)
 	}
-	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	if got := warningOn(owner, t, e, contact); got == nil {
 		t.Error("the outsider's clear removed the warning")
 	}
@@ -136,7 +148,8 @@ func TestLooksFineClearsTheWarningOnceWithItsAuditRowAndEvent(t *testing.T) {
 	contact := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
-	if err := e.Contacts.ClearImpersonationWarning(owner, contact); err != nil {
+	shown := shownAt(owner, t, e, contact)
+	if err := e.Contacts.ClearImpersonationWarning(owner, contact, shown); err != nil {
 		t.Fatalf("clearing the warning: %v", err)
 	}
 	if got := warningOn(e.Admin(), t, e, contact); got != nil {
@@ -154,11 +167,34 @@ func TestLooksFineClearsTheWarningOnceWithItsAuditRowAndEvent(t *testing.T) {
 		t.Errorf("the row keeps %q, want %q", kept, want)
 	}
 
-	if err := e.Contacts.ClearImpersonationWarning(owner, contact); err != nil {
+	if err := e.Contacts.ClearImpersonationWarning(owner, contact, shown); err != nil {
 		t.Fatalf("a second clear: %v", err)
 	}
 	if audits, events := clearedAudits(t, e, contact); audits != 1 || events != 1 {
 		t.Errorf("after a second clear: %d audit rows and %d events, want still 1 and 1", audits, events)
+	}
+}
+
+// A clear names the warning its reader was shown. When a merge has put another
+// open warning on the contact since, the clear is refused and that one stands.
+func TestAClearOfAWarningThatWasReplacedIsAConflict(t *testing.T) {
+	e := Setup(t)
+	answered := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
+	shown := shownAt(e.Admin(), t, e, answered)
+	if err := e.Contacts.ClearImpersonationWarning(e.Admin(), answered, shown); err != nil {
+		t.Fatalf("clearing the first warning: %v", err)
+	}
+	suspect := captureSuspectSender(t, e, "ceo@real-corp.example", "boss@spoof.test", "spoof.test")
+	mergeAsAgent(t, e, suspect, answered)
+
+	if err := e.Contacts.ClearImpersonationWarning(e.Admin(), answered, shown); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("clearing by the replaced warning's time: err = %v, want a conflict", err)
+	}
+	if got := warningOn(e.Admin(), t, e, answered); got == nil {
+		t.Error("the refused clear removed the warning that stands")
+	}
+	if audits, _ := clearedAudits(t, e, answered); audits != 1 {
+		t.Errorf("%d audit rows of a clear, want only the first", audits)
 	}
 }
 
@@ -174,8 +210,9 @@ func TestOnlyAUserWhoMayEditTheContactClearsTheWarning(t *testing.T) {
 	})
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
+	shown := shownAt(e.Admin(), t, e, contact)
 	for name, ctx := range map[string]context.Context{"a reader": reader, "an agent": agent} {
-		if err := e.Contacts.ClearImpersonationWarning(ctx, contact); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		if err := e.Contacts.ClearImpersonationWarning(ctx, contact, shown); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("%s: err = %v, want permission denied", name, err)
 		}
 	}
@@ -233,7 +270,7 @@ func TestAMergeReopensASurvivorWhoseOwnWarningWasCleared(t *testing.T) {
 	e := Setup(t)
 	suspect := captureSuspectSender(t, e, "ceo@real-corp.example", "boss@spoof.test", "spoof.test")
 	answered := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
-	if err := e.Contacts.ClearImpersonationWarning(e.Admin(), answered); err != nil {
+	if err := e.Contacts.ClearImpersonationWarning(e.Admin(), answered, shownAt(e.Admin(), t, e, answered)); err != nil {
 		t.Fatalf("clearing the survivor's own warning: %v", err)
 	}
 

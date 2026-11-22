@@ -45,18 +45,22 @@ export function ContactImpersonationWarning({
   const t = useT();
   const queryClient = useQueryClient();
   const clear = useMutation({
-    mutationFn: async (id: string) => {
+    // The clear names the warning this reader was shown. The server refuses
+    // it when the contact now carries another one.
+    mutationFn: async (shown: { id: string; detectedAt: string }) => {
       unwrap(
         await api.POST("/contacts/{id}/impersonation-warning/clear", {
-          params: { path: { id } },
+          params: { path: { id: shown.id } },
+          body: { detected_at: shown.detectedAt },
         }),
         t,
       );
     },
-    onSuccess: (_answer, id) =>
+    // Read again after a refusal too: the page then shows the warning that stands.
+    onSettled: (_answer, _error, shown) =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["contact360", id] }),
-        queryClient.invalidateQueries({ queryKey: ["contact", id] }),
+        queryClient.invalidateQueries({ queryKey: ["contact360", shown.id] }),
+        queryClient.invalidateQueries({ queryKey: ["contact", shown.id] }),
       ]),
   });
   const warning = contact.impersonation_warning;
@@ -72,7 +76,9 @@ export function ContactImpersonationWarning({
         <Button
           pending={clear.isPending}
           reasonId={refusedReasonId}
-          onClick={() => clear.mutate(contact.id)}
+          onClick={() =>
+            clear.mutate({ id: contact.id, detectedAt: warning.detected_at })
+          }
         >
           {t("contact.impersonation.clear")}
         </Button>

@@ -414,7 +414,11 @@ func (h Handlers) RetractAcquisitionRequest(w http.ResponseWriter, r *http.Reque
 // ClearContactImpersonationWarning serves POST /contacts/{id}/impersonation-warning/clear.
 // Wire-only; the store owns the rules.
 func (h Handlers) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	if err := h.store.ClearImpersonationWarning(r.Context(), pathID[ids.ContactKind](id)); err != nil {
+	var req crmcontracts.ClearContactImpersonationWarningJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.ClearImpersonationWarning(r.Context(), pathID[ids.ContactKind](id), req.DetectedAt); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}

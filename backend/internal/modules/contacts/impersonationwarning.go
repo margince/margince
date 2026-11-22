@@ -18,6 +18,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -87,15 +89,20 @@ func impersonationWarningOf(detectedAt *time.Time, reason *string) *crmcontracts
 
 // ClearImpersonationWarning records a user's answer that the sender is fine.
 //
-// The verdict stays on the row beside the answer, as the record of what was
-// answered and by whom. A contact with no open warning writes nothing.
+// shownAt names the warning the user read, by its detection time. A contact
+// that now carries another open warning is a conflict, so nobody clears a
+// warning they were not shown. A contact with no open warning writes nothing.
+// The verdict stays on the row beside the answer, as the record of it.
 // Human-only: mail an agent reads could ask it to clear the warning about its sender.
-func (s *Store) ClearImpersonationWarning(ctx context.Context, id ids.ContactID) error {
+func (s *Store) ClearImpersonationWarning(ctx context.Context, id ids.ContactID, shownAt time.Time) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return err
+	}
+	if shownAt.IsZero() {
+		return httperr.Validation("detected_at", "required", "name the warning to clear by its detected_at")
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -105,21 +112,34 @@ func (s *Store) ClearImpersonationWarning(ctx context.Context, id ids.ContactID)
 		if err := auth.HoldWritableLive(ctx, tx, entityContact, id.UUID); err != nil {
 			return err
 		}
-		var reason string
+		// One statement decides: the row lock above keeps the open warning
+		// from changing between the comparison and the write.
+		var reason *string
+		var stands bool
 		err := tx.QueryRow(ctx, `
-			UPDATE contact SET quarantine_cleared_at = now(), quarantine_cleared_by = $2
-			 WHERE id = $1 AND quarantined_at IS NOT NULL AND quarantine_cleared_at IS NULL
-			RETURNING coalesce(quarantine_reason, $3)`, id, by, impersonationUnrecorded).Scan(&reason)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
+			WITH open AS (
+				SELECT quarantined_at FROM contact
+				 WHERE id = $1 AND quarantined_at IS NOT NULL AND quarantine_cleared_at IS NULL),
+			cleared AS (
+				UPDATE contact SET quarantine_cleared_at = now(), quarantine_cleared_by = $2
+				  FROM open
+				 WHERE contact.id = $1 AND open.quarantined_at = $3
+				RETURNING coalesce(contact.quarantine_reason, $4) AS reason)
+			SELECT (SELECT reason FROM cleared), EXISTS (SELECT 1 FROM open)`,
+			id, by, shownAt, impersonationUnrecorded).Scan(&reason, &stands)
 		if err != nil {
 			return fmt.Errorf("contacts: clearing the impersonation warning: %w", err)
+		}
+		if reason == nil {
+			if stands {
+				return fmt.Errorf("the contact carries another open warning than the one shown: %w", apperrors.ErrConflict)
+			}
+			return nil
 		}
 		// An occurrence: the verdict and its reason stay on the row, so no
 		// field holds a prior value for a before-image to name.
 		auditID, err := storekit.AuditEvent(ctx, tx, "update", entityContact, id.UUID,
-			map[string]any{auditImpersonationWarningCleared: reason})
+			map[string]any{auditImpersonationWarningCleared: *reason})
 		if err != nil {
 			return fmt.Errorf("contacts: recording the cleared impersonation warning: %w", err)
 		}

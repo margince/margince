@@ -19844,7 +19844,10 @@ export interface paths {
          * @description Clears the warning `impersonation_warning` serves on the contact. The verdict stays on the
          *     record with the moment and the user who cleared it, as the record of what was answered.
          *     Requires permission to update the contact. A contact the caller cannot see answers `404`.
-         *     A contact with no warning, or one already cleared, answers `204` and writes nothing.
+         *
+         *     The body names the warning the caller read by its `detected_at`. A contact that now carries
+         *     a different open warning answers `409`, so nobody clears a warning they were not shown.
+         *     A contact with no open warning answers `204` and writes nothing.
          *     One transaction: the row, its audit row and its `contact.updated` event.
          */
         post: operations["clearContactImpersonationWarning"];
@@ -95349,9 +95352,19 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description The `detected_at` of the `impersonation_warning` the caller read.
+                     */
+                    detected_at: string;
+                };
+            };
+        };
         responses: {
-            /** @description The contact carries no warning. */
+            /** @description The contact carries no open warning. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -95361,6 +95374,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
