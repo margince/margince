@@ -246,6 +246,43 @@ describe("a provider's settings on its sheet", () => {
     },
   );
 
+  // An install with no key vault answers the key list with 503. It is the
+  // install that runs only local models, so the hosts must stay reachable.
+  it("still sets a local host when the key list is unavailable", async () => {
+    const puts = backend(routingWith({}));
+    const inner = vi.mocked(fetch);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.method === "GET" && req.url.includes("/ai/provider-keys")) {
+          return jsonResponse({ title: "unavailable", status: 503 }, 503);
+        }
+        return inner(input, init);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    expect(await screen.findByTestId("ai-provider-row-ollama")).toBeVisible();
+    expect(screen.getByTestId("ai-provider-row-vllm")).toBeVisible();
+    expect(screen.queryByTestId("ai-provider-row-anthropic")).toBeNull();
+    const sheet = await openSheet(user, "ollama");
+    await user.type(
+      await within(sheet).findByLabelText("Host"),
+      "http://10.0.0.5:11434",
+    );
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
+    await waitFor(() =>
+      expect(puts).toEqual([
+        { provider: "ollama", body: { base_url: "http://10.0.0.5:11434" } },
+      ]),
+    );
+  });
+
   // The form starts from what is stored; drawn before the routing read lands
   // it would start empty, and Save would then remove the stored entry.
   it("waits for the stored settings before drawing the form", async () => {

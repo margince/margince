@@ -9,7 +9,7 @@ import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { QueryGate } from "../../design-system/querystates";
+import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { serviceAccountProblem } from "../../design-system/serviceaccountkeyfield";
 import { type FieldLock, lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
@@ -60,6 +60,7 @@ import "./ai-settings.css";
 // shape the routing card uses.
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
+type KeyList = components["schemas"]["AiProviderKeyList"];
 
 export function AiProviderKeysCard() {
   const t = useT();
@@ -111,6 +112,95 @@ export function AiProviderKeysCard() {
     );
   }
 
+  // The rows of one key list. Without a list (the key store is unavailable)
+  // only the local providers draw, so a host stays settable on an install
+  // that has no vault.
+  const renderRows = (list: KeyList | undefined) => {
+    const keyed = list?.providers ?? [];
+    // The status line counts keys, so it reads the list as the server
+    // sent it; the table and sheets also carry the keyless local rows.
+    const providers = withLocalProviders(keyed);
+    const openStatus = providers.find((p) => p.provider === opened);
+    return (
+      <>
+        {list ? (
+          <ProvidersStatus providers={keyed} routing={routing.data?.routing} />
+        ) : null}
+        <ProviderTable
+          providers={providers}
+          canManage={canManage}
+          usage={usage}
+          unhosted={unhosted}
+          health={canDiagnose ? health?.providers : undefined}
+          onOpen={(provider) => {
+            setDraftHost(null);
+            setOpened(provider);
+            // The list stays mounted while sheets open and close, so
+            // a key set elsewhere shows only if opening reads again.
+            query.refetch();
+          }}
+        />
+        {openStatus ? (
+          <ProviderSheet
+            status={openStatus}
+            usage={usage?.get(openStatus.provider)}
+            unhosted={unhosted(openStatus.provider)}
+            health={
+              canDiagnose
+                ? health?.providers.find(
+                    (h) => h.provider === openStatus.provider,
+                  )
+                : undefined
+            }
+            connection={
+              <>
+                <ProviderConnection
+                  status={openStatus}
+                  canManage={canManage}
+                  lock={lockFor(
+                    list?.locks,
+                    `ai.provider_keys_${openStatus.provider}`,
+                    t,
+                  )}
+                />
+                {/* Drawn once the stored settings are read: the form
+                    starts from them, and one started empty would save
+                    an empty entry over what is stored. */}
+                {hasProviderSettings(openStatus.provider) && routing.data && (
+                  <ProviderSettingsForm
+                    key={openStatus.provider}
+                    provider={openStatus.provider}
+                    routing={routing.data.routing}
+                    canManage={canManage}
+                    onHostChange={setDraftHost}
+                  />
+                )}
+              </>
+            }
+            figures={
+              <ProviderRecentCalls
+                provider={openStatus.provider}
+                broker={
+                  openStatus.provider === "openai_compatible" &&
+                  isOpenRouter(
+                    draftHost ??
+                      routing.data?.routing.providers?.[openStatus.provider]
+                        ?.base_url ??
+                      "",
+                  )
+                }
+              />
+            }
+            onClose={() => {
+              setDraftHost(null);
+              setOpened(null);
+            }}
+          />
+        ) : null}
+      </>
+    );
+  };
+
   // Rows rather than a stack of forms. Every vendor asks the same three-part
   // question — who, whether it is keyed, and the way to change that — and a
   // reader auditing the page travels one column instead of reading six open
@@ -121,95 +211,18 @@ export function AiProviderKeysCard() {
         <PanelTitle term="provider">{t("aiProviderKeys.title")}</PanelTitle>
       }
     >
-      <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
-        {(list) => {
-          // The status line counts keys, so it reads the list as the server
-          // sent it; the table and sheets also carry the keyless local rows.
-          const providers = withLocalProviders(list.providers);
-          const openStatus = providers.find((p) => p.provider === opened);
-          return (
-            <>
-              <ProvidersStatus
-                providers={list.providers}
-                routing={routing.data?.routing}
-              />
-              <ProviderTable
-                providers={providers}
-                canManage={canManage}
-                usage={usage}
-                unhosted={unhosted}
-                health={canDiagnose ? health?.providers : undefined}
-                onOpen={(provider) => {
-                  setDraftHost(null);
-                  setOpened(provider);
-                  // The list stays mounted while sheets open and close, so
-                  // a key set elsewhere shows only if opening reads again.
-                  query.refetch();
-                }}
-              />
-              {openStatus ? (
-                <ProviderSheet
-                  status={openStatus}
-                  usage={usage?.get(openStatus.provider)}
-                  unhosted={unhosted(openStatus.provider)}
-                  health={
-                    canDiagnose
-                      ? health?.providers.find(
-                          (h) => h.provider === openStatus.provider,
-                        )
-                      : undefined
-                  }
-                  connection={
-                    <>
-                      <ProviderConnection
-                        status={openStatus}
-                        canManage={canManage}
-                        lock={lockFor(
-                          list.locks,
-                          `ai.provider_keys_${openStatus.provider}`,
-                          t,
-                        )}
-                      />
-                      {/* Drawn once the stored settings are read: the form
-                          starts from them, and one started empty would save
-                          an empty entry over what is stored. */}
-                      {hasProviderSettings(openStatus.provider) &&
-                        routing.data && (
-                          <ProviderSettingsForm
-                            key={openStatus.provider}
-                            provider={openStatus.provider}
-                            routing={routing.data.routing}
-                            canManage={canManage}
-                            onHostChange={setDraftHost}
-                          />
-                        )}
-                    </>
-                  }
-                  figures={
-                    <ProviderRecentCalls
-                      provider={openStatus.provider}
-                      broker={
-                        openStatus.provider === "openai_compatible" &&
-                        isOpenRouter(
-                          draftHost ??
-                            routing.data?.routing.providers?.[
-                              openStatus.provider
-                            ]?.base_url ??
-                            "",
-                        )
-                      }
-                    />
-                  }
-                  onClose={() => {
-                    setDraftHost(null);
-                    setOpened(null);
-                  }}
-                />
-              ) : null}
-            </>
-          );
-        }}
-      </QueryGate>
+      {query.isError ? (
+        <>
+          <QueryStates query={query} pendingLabel={t("aiProviderKeys.title")}>
+            {null}
+          </QueryStates>
+          {renderRows(undefined)}
+        </>
+      ) : (
+        <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
+          {renderRows}
+        </QueryGate>
+      )}
     </Panel>
   );
 }

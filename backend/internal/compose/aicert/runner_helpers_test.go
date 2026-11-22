@@ -233,3 +233,39 @@ func TestLadderDocumentWritesTheProvidersBlockAndNoPerLaneHost(t *testing.T) {
 		t.Errorf("embeddings lane = %+v, want no host and no routing of its own", doc.Embeddings)
 	}
 }
+
+// The config a run serves is finalized from that document, as a stored routing
+// is: the provider's host and pins reach every tier, and the version and the
+// embeddings width a raw struct never gets are present.
+func TestLadderForTaskServesTheFinalizedProvidersDocument(t *testing.T) {
+	binding := ai.ProviderConfig{
+		Provider: "openai_compatible",
+		Model:    "z-ai/glm-5.2",
+		BaseURL:  "https://openrouter.ai/api",
+		Routing:  &ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{Only: []string{"deepinfra"}}},
+	}
+
+	cfg, err := ladderForTask("candidate", binding, ai.ProfileCloudFrontier, ai.TaskColdStart)
+	if err != nil {
+		t.Fatalf("broker binding rejected: %v", err)
+	}
+
+	if got := cfg.Providers["openai_compatible"].BaseURL; got != "https://openrouter.ai/api" {
+		t.Errorf("providers block host = %q, want the broker's", got)
+	}
+	for _, tier := range ai.AllTiers() {
+		lane := cfg.Tiers[tier]
+		if lane.BaseURL != "https://openrouter.ai/api" {
+			t.Errorf("tier %s dials %q, want the provider's host", tier, lane.BaseURL)
+		}
+		if lane.Routing == nil || len(lane.Routing.Provider.Only) != 1 || lane.Routing.Provider.Only[0] != "deepinfra" {
+			t.Errorf("tier %s routing = %+v, want the provider's pin inherited", tier, lane.Routing)
+		}
+	}
+	if cfg.RoutingVersion() == "" {
+		t.Error("routing version is empty, so the config was never finalized")
+	}
+	if cfg.Embeddings.Dimensions == 0 {
+		t.Error("embeddings width is unset, so the config was never finalized")
+	}
+}

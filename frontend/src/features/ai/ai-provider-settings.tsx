@@ -24,7 +24,12 @@ import {
   upstreamOf,
 } from "./ai-openrouter-settings";
 import { isOpenRouter } from "./ai-provider-links";
-import { OTHER, SERVICES, type Service } from "./ai-provider-services";
+import {
+  LOCAL_PROVIDERS,
+  OTHER,
+  SERVICES,
+  type Service,
+} from "./ai-provider-services";
 import { OtherHostFields } from "./ai-provider-settings.otherhost";
 
 // Where a provider is reached. Set once here; every lane that binds the
@@ -33,12 +38,6 @@ import { OtherHostFields } from "./ai-provider-settings.otherhost";
 
 type Routing = components["schemas"]["AiRouting"];
 type ProviderSettings = components["schemas"]["AiProviderSettings"];
-
-// The providers whose sheet is only a host. They take no key, so the server's
-// key list never names them and the table adds their rows itself.
-export const LOCAL_PROVIDERS: readonly string[] = [...SERVICES]
-  .filter(([, catalog]) => catalog.direct)
-  .map(([provider]) => provider);
 
 type KeyStatus = components["schemas"]["AiProviderKeyStatus"];
 

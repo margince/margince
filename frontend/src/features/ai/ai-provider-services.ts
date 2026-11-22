@@ -48,6 +48,28 @@ function langdock(
   ];
 }
 
+// The providers whose sheet is only a host. They take no key, so the server's
+// key list never names them. A declared mirror of the server's local providers
+// that have a compiled endpoint, held in both directions by
+// backend/gates/frontendproviders_test.go, which reads this `[…] as const` form.
+export const LOCAL_PROVIDERS = ["ollama", "vllm"] as const;
+
+const LOCAL_HOSTS: Record<
+  (typeof LOCAL_PROVIDERS)[number],
+  OtherHost & { label: MessageKey }
+> = {
+  ollama: {
+    label: "aiProviderSettings.service.otherAddress",
+    help: "aiRouting.baseUrl.help.ollama",
+    placeholder: "aiRouting.baseUrl.placeholder.ollama",
+  },
+  vllm: {
+    label: "aiProviderSettings.service.otherAddress",
+    help: "aiRouting.baseUrl.help.vllm",
+    placeholder: "aiRouting.baseUrl.placeholder.vllm",
+  },
+};
+
 export const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
   [
     "openai_compatible",
@@ -191,28 +213,8 @@ export const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
       },
     },
   ],
-  [
-    "ollama",
-    {
-      services: [],
-      direct: true,
-      other: {
-        label: "aiProviderSettings.service.otherAddress",
-        help: "aiRouting.baseUrl.help.ollama",
-        placeholder: "aiRouting.baseUrl.placeholder.ollama",
-      },
-    },
-  ],
-  [
-    "vllm",
-    {
-      services: [],
-      direct: true,
-      other: {
-        label: "aiProviderSettings.service.otherAddress",
-        help: "aiRouting.baseUrl.help.vllm",
-        placeholder: "aiRouting.baseUrl.placeholder.vllm",
-      },
-    },
-  ],
+  ...LOCAL_PROVIDERS.map((provider): [string, ProviderServices] => [
+    provider,
+    { services: [], direct: true, other: LOCAL_HOSTS[provider] },
+  ]),
 ]);
