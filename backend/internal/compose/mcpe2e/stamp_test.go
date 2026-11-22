@@ -323,17 +323,17 @@ func TestTheHarnessHoldsEveryModuleTheGraderImports(t *testing.T) {
 	}
 }
 
-// checkPyAssigned finds a name a script, Makefile or Python file binds to a
-// path ending in check.py, so a call through that name is read as a call to it.
+// checkPyAssigned finds a name bound to a path ending in check.py. A call
+// through that name is read as a call to check.py.
 var (
 	checkPyAssigned = regexp.MustCompile(`(?m)\b([A-Za-z_][A-Za-z0-9_]*)\s*[:?]?=[^\n]*check\.py\b`)
 	lintFlag        = regexp.MustCompile(`(?:^|[^\w-])--lint(?:[^\w-]|$)`)
 )
 
 // lintCallers are the statements of body that run check.py's own lint, which
-// skips the wording rules: check.py, or a name bound to it, with --lint in one
-// command. A command runs on over a backslash line end and inside brackets,
-// so an argv list spread over lines is one statement.
+// skips the wording rules. Each names check.py, or a name bound to it, and --lint.
+// A statement runs on over a backslash line end and inside brackets, so an argv
+// list spread over lines is one statement.
 func lintCallers(body string) []string {
 	names := []string{`check\.py`}
 	for _, bound := range checkPyAssigned.FindAllStringSubmatch(body, -1) {
