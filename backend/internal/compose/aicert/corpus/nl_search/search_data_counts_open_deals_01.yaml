@@ -52,6 +52,11 @@
         "engine": "analytics",
         "count": false,
         "arguments": "{\"entity\": \"deals-by-stage\", \"measures\": [{\"fn\": \"count\"}], \"filters\": [{\"field\": \"status\", \"op\": \"eq\", \"value\": \"open\"}], \"scope_kind\": \"owner\", \"scope_id\": \"019f0000-0000-7000-8000-000000000001\"}"
+      },
+      {
+        "engine": "analytics",
+        "count": false,
+        "arguments": "{\"entity\": \"pipeline-current\", \"measures\": [{\"fn\": \"count\"}], \"scope_kind\": \"owner\", \"scope_id\": \"019f0000-0000-7000-8000-000000000001\"}"
       }
     ],
     "bands": {
