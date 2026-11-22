@@ -234,10 +234,10 @@ func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
 	})
 }
 
-// TestAuditLogActorFilterIncludesWhatAnAgentDidForThePerson holds the Actor
-// filter's two meanings. A person includes the rows an agent wrote for them,
+// TestAuditLogActorFilterIncludesWhatAnAgentDidForTheMember holds the Actor
+// filter's two meanings. A member includes the rows an agent wrote for them,
 // and an agent matches only its own rows.
-func TestAuditLogActorFilterIncludesWhatAnAgentDidForThePerson(t *testing.T) {
+func TestAuditLogActorFilterIncludesWhatAnAgentDidForTheMember(t *testing.T) {
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Delegation Subject", nil)
 	base := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
@@ -256,8 +256,8 @@ func TestAuditLogActorFilterIncludesWhatAnAgentDidForThePerson(t *testing.T) {
 		name, actor    string
 		want, withheld []ids.UUID
 	}{
-		{name: "the person", actor: "human:" + ada.String(), want: []ids.UUID{own, delegated}, withheld: []ids.UUID{others}},
-		{name: "the person's agent", actor: adaAgent, want: []ids.UUID{delegated}, withheld: []ids.UUID{own, others}},
+		{name: "the member", actor: "human:" + ada.String(), want: []ids.UUID{own, delegated}, withheld: []ids.UUID{others}},
+		{name: "the member's agent", actor: adaAgent, want: []ids.UUID{delegated}, withheld: []ids.UUID{own, others}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			page, err := privacy.ListAuditLog(e.Admin(), e.DB(), privacy.AuditFilter{EntityID: &contactID, Actor: &tc.actor})

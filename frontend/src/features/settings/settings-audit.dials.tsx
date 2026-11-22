@@ -143,11 +143,11 @@ function ActorDial({
   const { locale } = useLocale();
   const members = useMemberFilterOptions(true).options;
   const options = actorOptions(value, members, entries, t, locale);
-  const person = value.startsWith(HUMAN_ACTOR_PREFIX);
+  const member = value.startsWith(HUMAN_ACTOR_PREFIX);
   return (
     <Field
       label={t("settings.auditActor")}
-      hint={person ? t("settings.auditActorDelegated") : undefined}
+      hint={member ? t("settings.auditActorDelegated") : undefined}
     >
       {(field) => (
         <Select
@@ -174,7 +174,7 @@ export function actorOptions(
   t: Translator,
   locale: Locale,
 ): SelectOption[] {
-  const people = members.map((member) => ({
+  const colleagues = members.map((member) => ({
     ...member,
     value: HUMAN_ACTOR_PREFIX + member.value,
   }));
@@ -188,7 +188,7 @@ export function actorOptions(
     }
   }
   const options: SelectOption[] = [
-    ...sortedByLabel(people, locale),
+    ...sortedByLabel(colleagues, locale),
     ...sortedByLabel(
       [...machines].map(([id, label]) => ({ value: id, label })),
       locale,

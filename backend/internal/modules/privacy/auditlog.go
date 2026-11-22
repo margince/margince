@@ -385,7 +385,7 @@ func buildAuditWhere(f AuditFilter) (string, []any, error) {
 		return "$" + strconv.Itoa(len(args))
 	}
 	if f.Actor != nil {
-		// Each row still names who acted, so the person's own rows and their
+		// Each row still names who acted, so the member's own rows and their
 		// agent's stay apart on the page.
 		actor := "a.actor_id = " + arg(*f.Actor)
 		if user, human := principal.HumanUserID(*f.Actor); human {

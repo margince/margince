@@ -29,7 +29,7 @@ import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ACTOR_ICON, actionLabel, entityLabel } from "./audit";
 import { AuditDetail } from "./settings-audit.detail";
-import { AuditLogFilterBar } from "./settings-audit.filters";
+import { AuditLogFilterBar } from "./settings-audit.dials";
 import {
   ACTION_TONE,
   type AuditLogEntry,

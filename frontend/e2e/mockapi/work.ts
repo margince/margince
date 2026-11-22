@@ -228,11 +228,11 @@ export const consentPurposes = page([
   },
 ]);
 
-// Filtered by actor, entity type and action, two rows to a page. A person
+// Filtered by actor, entity type and action, two rows to a page. A member
 // also matches what an agent did on their behalf, as the server reads it.
 export const auditLog: Handler = ({ url, json }) => {
   const actor = url.searchParams.get("actor");
-  const person = actor?.startsWith("human:") ? actor.slice(6) : null;
+  const member = actor?.startsWith("human:") ? actor.slice(6) : null;
   const entityType = url.searchParams.get("entity_type");
   const action = url.searchParams.get("action");
   const cursor = url.searchParams.get("cursor");
@@ -240,7 +240,7 @@ export const auditLog: Handler = ({ url, json }) => {
     (entry) =>
       (!actor ||
         entry.actor_id === actor ||
-        (person !== null && entry.on_behalf_of === person)) &&
+        (member !== null && entry.on_behalf_of === member)) &&
       (!entityType || entry.entity_type === entityType) &&
       (!action || entry.action === action),
   );
