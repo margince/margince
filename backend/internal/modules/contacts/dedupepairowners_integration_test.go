@@ -184,3 +184,53 @@ func TestAFormerMembersCompaniesLeaveTheirPairUnassigned(t *testing.T) {
 		t.Fatalf("the unassigned count = %d, err %v, want 1", counted, err)
 	}
 }
+
+// The counted first page answers what the list and the separate count did.
+// It returns the same pairs, and a total of every pair the reader may see even
+// when the page holds fewer.
+func TestTheCountedFirstPageMatchesTheListAndTheCount(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	for _, name := range []string{"Alpha Trading GmbH", "Beta Freight GmbH", "Gamma Logistics GmbH"} {
+		for range 2 {
+			company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: name, Source: "manual", OwnerID: new(ids.From[ids.UserKind](e.rep))})
+			if err != nil {
+				t.Fatalf("create %s: %v", name, err)
+			}
+			setRowVisibility(ctx, t, e, `UPDATE company SET owner_id = $1, visibility = 'owner' WHERE id = $2`, &e.rep, ids.UUID(company.Id))
+		}
+	}
+
+	for _, tc := range []struct {
+		name      string
+		reader    context.Context
+		limit     int
+		wantPage  int
+		wantTotal int
+	}{
+		{"full scope, whole page", ctx, 10, 3, 3},
+		{"full scope, truncated page", ctx, 2, 2, 3},
+		{"the owner under own scope", e.asOwnScoped(e.rep), 10, 3, 3},
+		{"the owner under own scope, truncated", e.asOwnScoped(e.rep), 1, 1, 3},
+		{"a colleague who sees neither end", e.asOwnScoped(e.otherRep), 10, 0, 0},
+	} {
+		in := DedupeQueueInput{EntityTypes: []string{entityCompany}, Limit: tc.limit}
+		page, total, err := e.store.ListFirstDedupePage(tc.reader, in)
+		if err != nil || len(page) != tc.wantPage || total != tc.wantTotal {
+			t.Errorf("%s: page %d, total %d, err %v; want page %d, total %d", tc.name, len(page), total, err, tc.wantPage, tc.wantTotal)
+		}
+		listed, _, err := e.store.ListDedupeCandidates(tc.reader, in)
+		if err != nil || len(listed) != len(page) {
+			t.Fatalf("%s: the plain list holds %d, err %v, want %d", tc.name, len(listed), err, len(page))
+		}
+		for i := range listed {
+			if listed[i].ID != page[i].ID {
+				t.Errorf("%s: row %d is %s, the plain list has %s", tc.name, i, page[i].ID, listed[i].ID)
+			}
+		}
+		counted, err := e.store.CountOpenDedupePairsOf(tc.reader, nil, entityCompany)
+		if err != nil || counted != total {
+			t.Errorf("%s: the separate count is %d, err %v, want the page's total %d", tc.name, counted, err, total)
+		}
+	}
+}

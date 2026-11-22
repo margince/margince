@@ -5,10 +5,9 @@ package compose
 
 // The dedupe queue's side of the day's surface.
 //
-// It sits apart from the rest of the seam because it is the one adapter that
-// asks the store two different questions about the same page: which pairs are
-// open, and which of those a merge would actually accept. Everything else the
-// seam binds is a single read.
+// It sits apart from the rest of the seam because it asks the store two
+// questions about the same page. Which pairs are open (with how many there
+// are in all), and which of those a merge would actually accept.
 
 import (
 	"context"
@@ -37,10 +36,10 @@ const (
 // pairs reach it as cases (attentioncontactcases.go).
 var pairLaneTypes = []string{entityCompany, entityLead}
 
-func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int, owners *attention.PairOwners) ([]attention.DuplicatePair, error) {
-	rows, _, err := d.store.ListDedupeCandidates(ctx, contacts.DedupeQueueInput{Limit: limit, EntityTypes: pairLaneTypes, Owners: owners})
+func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int, owners *attention.PairOwners) ([]attention.DuplicatePair, int, error) {
+	rows, total, err := d.store.ListFirstDedupePage(ctx, contacts.DedupeQueueInput{Limit: limit, EntityTypes: pairLaneTypes, Owners: owners})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	pairs := make([]attention.DuplicatePair, 0, len(rows))
 	for _, row := range rows {
@@ -54,7 +53,7 @@ func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int, owne
 			Owners:     row.Owners,
 		})
 	}
-	return pairs, nil
+	return pairs, total, nil
 }
 
 // DescribeMany names records of one entity type, under the reader's own scope.
@@ -98,10 +97,6 @@ func (d attentionDuplicates) DecidableSubset(
 		return nil, apperrors.ErrNotFound
 	}
 	return d.store.DecidableForMerge(ctx, entityType, rowIDs)
-}
-
-func (d attentionDuplicates) CountOpen(ctx context.Context, owners *attention.PairOwners) (int, error) {
-	return d.store.CountOpenDedupePairsOf(ctx, owners, pairLaneTypes...)
 }
 
 // SettleablePairs answers which pairs a merge would actually accept.

@@ -46,11 +46,7 @@ func TestTheQueueReadsEachOwnersCasesAndNoContactPair(t *testing.T) {
 	}
 
 	pairs := attentionDuplicates{store: c.store}
-	listed, err := pairs.OpenCandidates(c.e.Admin(), 50, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	counted, err := pairs.CountOpen(c.e.Admin(), nil)
+	listed, counted, err := pairs.OpenCandidates(c.e.Admin(), 50, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
