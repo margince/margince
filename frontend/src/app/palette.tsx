@@ -13,7 +13,7 @@ import { useDialogFocus } from "../design-system/dialogfocus";
 import { Eyebrow } from "../design-system/eyebrow";
 import { usePresence } from "../design-system/presence";
 import type { StatusKind } from "../design-system/statusbadge";
-import { holdsEveryWord, searchWords } from "../format/collate";
+import { holdsEveryWordStart, searchWords } from "../format/collate";
 import { type Translator, useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import type { ShortcutId } from "../lib/keymap";
@@ -85,7 +85,10 @@ export type Command = {
   aside?: string;
 };
 
-/** The commands whose label, subtitle and keywords hold every query word. */
+/**
+ * The commands where every query word BEGINS a word of the label, subtitle or
+ * keywords. Half a name inside a keyword would hand Enter to that page.
+ */
 export function matchingCommands(
   commands: readonly Command[],
   query: string,
@@ -95,7 +98,7 @@ export function matchingCommands(
     return commands;
   }
   return commands.filter((command) =>
-    holdsEveryWord(words, [
+    holdsEveryWordStart(words, [
       command.label,
       command.subtitle ?? "",
       ...(command.keywords ?? []),
@@ -138,13 +141,18 @@ function seeAllCommand(
   };
 }
 
+// Narrowed to one type, the list holds only records of it. The Configuration
+// row is listed but takes Enter only when picked: its key merely holds the words.
 function builtinRows(
   kind: CoreSearchHitType | null,
   matched: readonly Command[],
   setting: Command | null,
-): readonly Command[] {
-  if (kind) return [];
-  return setting ? [...matched, setting] : matched;
+): Readonly<{
+  destinations: readonly Command[];
+  filtered: readonly Command[];
+}> {
+  if (kind) return { destinations: [], filtered: [] };
+  return { destinations: matched, filtered: [...matched, ...present(setting)] };
 }
 
 function present<T>(row: T | null | undefined): T[] {
@@ -210,8 +218,7 @@ export function CommandPalette({
     [commands, query],
   );
   const setting = useConfigurationCommand(searched, commands, matched);
-  // Narrowed to one type, the list holds only records of it.
-  const filtered = builtinRows(kind, matched, setting);
+  const { destinations, filtered } = builtinRows(kind, matched, setting);
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
   // on the full results screen. Row order: builtin matches, then see-all,
@@ -229,7 +236,7 @@ export function CommandPalette({
   const nothingFound = foundNothing(search, filtered);
   const seeAll = seeAllCommand(searched, t, nothingFound);
 
-  const handbook = usePaletteAsk(searched, open, filtered.length);
+  const handbook = usePaletteAsk(searched, open, destinations.length);
   const askGroup = t("palette.askGroup");
   const rows = [
     ...recentCommands,
@@ -242,7 +249,7 @@ export function CommandPalette({
     Math.max(0, Math.min(index, rows.length - 1));
   const selected = paletteSelection(
     rows,
-    filtered.length,
+    destinations.length,
     query,
     picked,
     listsRecents && recents.pending,
@@ -467,7 +474,7 @@ function paletteSelection(
     (row) => row.type === "record" && row.label.toLowerCase() === needle,
   );
   if (named >= 0) return named;
-  // Then a question to ask, else the first row.
+  // Then a question to ask, then every result, else the first row.
   for (const preferred of DEFAULT_ROWS) {
     const index = rows.findIndex(preferred);
     if (index >= 0) return index;
@@ -477,6 +484,7 @@ function paletteSelection(
 
 const DEFAULT_ROWS: readonly ((row: Command) => boolean)[] = [
   (row) => row.id === "ask-ai",
+  (row) => row.id === "search:all",
 ];
 
 export function BuiltinCommandPalette(

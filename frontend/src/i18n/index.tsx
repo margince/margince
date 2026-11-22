@@ -63,13 +63,31 @@ export {
 
 export { catalogs, loadLocale } from "./catalogs";
 
+// The children keep their slot whether or not the gate is drawn, so a catalog
+// that arrives remounts nothing below it.
 function LocaleReady({
   locale,
   children,
   level = "complete",
 }: Readonly<{ locale: Locale; children: ReactNode; level?: CatalogLevel }>) {
-  if (!localeLoaded(locale, level)) use(localeReady(locale, level));
-  return children;
+  return (
+    <>
+      {localeLoaded(locale, level) ? null : (
+        <AwaitCatalog locale={locale} level={level} />
+      )}
+      {children}
+    </>
+  );
+}
+
+// Not `use()` in LocaleReady itself: under `act` even a settled thenable stops
+// a synchronous flush, so a loaded catalog must not pass through `use()`.
+function AwaitCatalog({
+  locale,
+  level,
+}: Readonly<{ locale: Locale; level: CatalogLevel }>) {
+  use(localeReady(locale, level));
+  return null;
 }
 
 /**
