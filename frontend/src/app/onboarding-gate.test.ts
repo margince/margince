@@ -13,8 +13,12 @@ describe("passesOnboardingGate", () => {
     expect(passesOnboardingGate({ screen: "oauth-consent" })).toBe(true);
   });
 
-  it("holds every settings page, Account included", () => {
-    expect(passesOnboardingGate(settingsHref("account"))).toBe(false);
+  it("lets Settings > Account through and holds every other settings page", () => {
+    expect(passesOnboardingGate(settingsHref("account"))).toBe(true);
+    expect(passesOnboardingGate(settingsHref("account", "devices"))).toBe(
+      false,
+    );
     expect(passesOnboardingGate(settingsHref("notifications"))).toBe(false);
+    expect(passesOnboardingGate(settingsHref())).toBe(false);
   });
 });

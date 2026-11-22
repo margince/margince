@@ -124,6 +124,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins the zone so the date chips build the same options on every runner: the census compares requests, and the runner's own zone could move a date bound.",
   },
   {
+    file: "features/deals/deals.handbook.test.ts",
+    why: "Builds the date chips only to read their labels against the handbook; any fixed zone serves, and the runner's own zone is not a reader's.",
+  },
+  {
     file: "features/companies/evidencesource.test.ts",
     why: "Pins the record zone so the meeting's date reads the same on every runner: the line under test prints a day, and the runner's own zone could move it.",
   },
