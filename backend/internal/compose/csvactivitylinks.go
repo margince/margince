@@ -101,7 +101,7 @@ func (w *csvWriters) resolveActivityLinks(
 		return refuse(*missing), nil
 	}
 	found := slices.Clone(preset)
-	pending := 0
+	var pending []string
 	out := rowLink{links: map[string]any{}}
 	column := w.headerFor(activityTargetLinks)
 	for _, key := range keys {
@@ -116,7 +116,7 @@ func (w *csvWriters) resolveActivityLinks(
 				found = append(found, link)
 			}
 		case answer.Pending:
-			pending++
+			pending = append(pending, key.Object+":"+answer.PendingRef)
 		default:
 			broken := w.brokenLink(row, column, key.Object+":"+key.Key, activityLinkWhy(answer.Why))
 			if broken.skip {
@@ -125,10 +125,13 @@ func (w *csvWriters) resolveActivityLinks(
 			out.problem = cmp.Or(out.problem, broken.problem)
 		}
 	}
-	if len(found)+pending == 0 {
+	if len(found)+len(pending) == 0 {
 		return refuse(migration.Why(migration.ReasonActivityUnlinked)), nil
 	}
 	out.links[activityTargetLinks] = found
+	if len(pending) > 0 {
+		out.links[activityPendingLinks] = pending
+	}
 	return out, nil
 }
 

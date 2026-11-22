@@ -16,7 +16,7 @@ import (
 )
 
 func TestEachVerbNamesItsOneParameterAndNoOther(t *testing.T) {
-	tag, owner, list := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	tag, owner, list, stage := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	note := "why"
 	longNote, okNote := strings.Repeat("n", 501), strings.Repeat("é", 500)
 	task := &crmcontracts.BulkTask{Subject: "Call back"}
@@ -43,6 +43,10 @@ func TestEachVerbNamesItsOneParameterAndNoOther(t *testing.T) {
 		"a well-formed task change":             {bulkChange{verb: crmcontracts.BulkVerbCreateTask, items: one, task: task}, ""},
 		"complete with a tag":                   {bulkChange{verb: crmcontracts.BulkVerbComplete, items: one, tagID: &tag}, "tag_id"},
 		"a well-formed completion":              {bulkChange{verb: crmcontracts.BulkVerbComplete, items: one}, ""},
+		"move_stage without a stage":            {bulkChange{verb: crmcontracts.BulkVerbMoveStage, items: one}, "stage_id"},
+		"archive with a stage":                  {bulkChange{verb: crmcontracts.BulkVerbArchive, items: one, stageID: &stage}, "stage_id"},
+		"move_stage with an owner":              {bulkChange{verb: crmcontracts.BulkVerbMoveStage, items: one, stageID: &stage, ownerID: &owner}, "owner_id"},
+		"a well-formed stage move":              {bulkChange{verb: crmcontracts.BulkVerbMoveStage, items: one, stageID: &stage}, ""},
 	} {
 		err := validateBulkChange(tc.change)
 		var refused *httperr.DetailedError
@@ -69,6 +73,8 @@ func TestCompleteIsAWorklistItemsVerbAlone(t *testing.T) {
 		"reassign on a worklist item": {worklist, crmcontracts.BulkVerbReassignOwner, true},
 		"complete on a contact":       {contact, crmcontracts.BulkVerbComplete, true},
 		"archive on a contact":        {contact, crmcontracts.BulkVerbArchive, false},
+		"move_stage on a contact":     {contact, crmcontracts.BulkVerbMoveStage, true},
+		"move_stage on a deal":        {dealBulkTarget{}, crmcontracts.BulkVerbMoveStage, false},
 	} {
 		err := admitKind(tc.target, bulkChange{verb: tc.verb})
 		var refused *httperr.DetailedError

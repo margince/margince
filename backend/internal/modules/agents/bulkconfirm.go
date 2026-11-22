@@ -74,6 +74,8 @@ func bulkVerbWords(verb string) string {
 		return "Remove the tag from"
 	case verbCreateTask:
 		return "File a task under"
+	case "move_stage":
+		return "Move to the new stage"
 	case "complete":
 		return "Mark done"
 	default:
