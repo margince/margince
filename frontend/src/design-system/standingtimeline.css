@@ -231,7 +231,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--textPrimary);
-  color: var(--bgElevated);
+  color: var(--textInverse);
   font: var(--fontHeadingXXSmall);
   white-space: nowrap;
 }
@@ -344,7 +344,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--textPrimary);
-  color: var(--bgElevated);
+  color: var(--textInverse);
   font: var(--fontBodySmall);
   text-align: center;
 }

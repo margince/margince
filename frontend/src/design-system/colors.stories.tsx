@@ -72,6 +72,14 @@ const SURFACES: readonly Entry[] = [
     usage: "One pane per zone, over the page ground.",
   },
   {
+    token: "--bgField",
+    usage: "The face of an input, chip or switch, at any depth.",
+  },
+  {
+    token: "--bgControl",
+    usage: "The face of an outlined button or search field, at any depth.",
+  },
+  {
     token: "--bgChip",
     usage:
       "A small inline fill drawn on a rung: a badge, a key-cap, a segmented strip, a meter trough.",
@@ -91,6 +99,7 @@ const TEXT: readonly Entry[] = [
       "The one secondary neutral, for text that supports rather than carries. A placeholder is the first.",
   },
   { token: "--textOnAccent", kind: "ink", on: "--accent" },
+  { token: "--textInverse", kind: "ink", on: "--textPrimary" },
   {
     token: "--textOnAccentControl",
     kind: "ink",

@@ -97,7 +97,7 @@
      elevated fill keeps a live plate from reading as a greyed-out one. */
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
   transition:
     border-color var(--dur-move) var(--ease-out),
     box-shadow var(--dur-move) var(--ease-out);
@@ -196,7 +196,7 @@
   padding: var(--space-3);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
+  background: var(--bgField);
   box-shadow: var(--shadow-rest);
   transition:
     border-color var(--dur-move) var(--ease-out),
