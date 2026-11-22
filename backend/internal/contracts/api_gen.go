@@ -54623,7 +54623,7 @@ type InstallationFiscalYearImpact struct {
 	// ReportsWithKeptPeriods Live reports with a card whose saved question filters on a period.
 	ReportsWithKeptPeriods int `json:"reports_with_kept_periods" minimum:"0"`
 
-	// ReportsWithRelativePeriods Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
+	// ReportsWithRelativePeriods Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window.
 	ReportsWithRelativePeriods int `json:"reports_with_relative_periods" minimum:"0"`
 
 	// SavedQuestions Saved questions, of every member, that filter on a period.
