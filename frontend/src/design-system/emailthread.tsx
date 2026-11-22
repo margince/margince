@@ -22,8 +22,7 @@ import {
   relaySendOf,
   senderParties,
 } from "./emailmessage";
-import { EmailText } from "./emailtext";
-import { ReaderRendering } from "./readerrendering";
+import { EmailReading } from "./emailtext";
 import { SurfaceState } from "./surfacestate";
 import { ProvenanceTag } from "./trust";
 import "./emailthread.css";
@@ -283,12 +282,12 @@ function OpenMessage({
         </EmailEnvelope>
       )}
       <TextNotice completeness={presentation.body_completeness} />
-      <ReaderRendering
+      <EmailReading
         activityId={presentation.id}
         language={presentation.language}
-      >
-        <EmailText body={presentation.body ?? ""} />
-      </ReaderRendering>
+        body={presentation.body}
+        textUnreadable={presentation.body_completeness === "unreadable"}
+      />
       <EmailAttachments files={presentation.attachments} />
       {related?.()}
       {renderActions && (

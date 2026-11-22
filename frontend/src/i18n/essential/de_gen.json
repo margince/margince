@@ -2286,6 +2286,7 @@
   "email.thread.toLine": "an {names}",
   "email.thread.details": "Details",
   "email.thread.textForwarded": "Der Text unten stammt aus der weitergeleiteten Mail, nicht vom Verfasser selbst.",
+  "email.thread.noText": "Diese Nachricht hat keinen Text.",
   "email.thread.textPartial": "Ein Teil des Textes dieser Mail konnte nicht gelesen werden.",
   "email.thread.textUnassessed": "E-Mail-Text nicht geprüft",
   "email.thread.textUnassessedHint": "Margince kann hier keine Anfragen oder Zusagen erkennen. Lies bei fehlendem Text das Original in deinem E-Mail-Programm; erstelle nötige Aufgaben selbst.",

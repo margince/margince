@@ -20558,7 +20558,8 @@ paths:
       summary: List workspace teams — cursor-paginated. Read-only.
       description: |-
         Teams available as record-share subjects, with a member count. Any authenticated member may read.
-        Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
+        Excludes archived teams unless `include_archived` is true, which needs `team_admin.read`.
+        Bounded by authenticated membership, like the member roster beside it.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -20566,6 +20567,11 @@ paths:
           in: query
           schema: {type: string}
           description: Case-insensitive match over team name that ignores diacritics on both sides.
+        - name: include_archived
+          in: query
+          required: false
+          schema: {type: boolean, default: false}
+          description: True also lists archived teams, each carrying `archived_at`, so an admin can restore one.
       responses:
         '200':
           description: A page of teams.
@@ -20573,6 +20579,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/TeamListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Identity]
