@@ -38712,10 +38712,17 @@ export interface components {
          *     exists — the alternative is a page offering an action that 404s on click, which is how
          *     a moment becomes a lie. The state is honest for the same reason: an action the caller
          *     cannot take says so instead of failing.
+         *
+         *     `call` dials the contact's primary phone number; a client that knows it ignores the
+         *     destination. The destination is `activity_log`, so a client that predates `call` opens the
+         *     log form instead of drawing a button that does nothing. The server names it only for a
+         *     promise whose task was filed from a logged call, on a live contact that has a number.
+         *     Writing to them then stays as the second action, and a card that asks whether the promise
+         *     is done carries the call as a second action too.
          */
         ContactMomentAction: {
             /** @enum {string} */
-            kind: "draft_reply" | "schedule_meeting" | "complete_task" | "log_activity" | "open_record" | "open_meeting_brief" | "open_research" | "ask_colleague";
+            kind: "draft_reply" | "schedule_meeting" | "complete_task" | "log_activity" | "open_record" | "open_meeting_brief" | "open_research" | "ask_colleague" | "call";
             label: string;
             /** @description Where the action goes. Absent for an action that opens no surface of its own. */
             destination?: components["schemas"]["ContactMomentDestination"];
