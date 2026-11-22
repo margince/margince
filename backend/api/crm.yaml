@@ -21358,6 +21358,71 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /capture/unrouted-mail:
+    get:
+      tags: [Capture]
+      operationId: listUnroutedMail
+      summary: The mail in your mailbox that was sent to addresses that are not yours.
+      description: |
+        Mail your own connected mailbox brought in that names none of your addresses, so no seat
+        imported it and nothing judges it. Listed per address, most mail first, with the number of
+        messages. `messages` counts each message once. At most 50 addresses are listed, from the
+        newest 5000 messages, and `more` says when the list was cut.
+
+        Answer one address with `POST /capture/owner-identities` (it is yours: the mail is then
+        checked like the rest) or `PUT /capture/unrouted-mail/{address}/refusal` (it is not: the
+        mail stays hidden and the address leaves this list).
+
+        Your own mailbox and nobody else's: the mail is private to its mailbox owner, so there is
+        no id here that reaches a colleague's list and no admin view of one.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The caller's unjudged mail, per address.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UnroutedMailResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /capture/unrouted-mail/{address}/refusal:
+    parameters:
+      - name: address
+        in: path
+        required: true
+        schema: { type: string, maxLength: 320 }
+        description: The email address the mail was sent to.
+    put:
+      tags: [Capture]
+      operationId: refuseUnroutedAddress
+      summary: Say that you do not receive this address.
+      description: |
+        The mail sent to it stays hidden and the address is no longer counted. It is never learned
+        as one of your addresses from later mail either. Idempotent on the folded address.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '204': { description: Recorded. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Capture]
+      operationId: restoreUnroutedAddress
+      summary: Take back "not mine" for an address.
+      description: The address is counted again when mail to it is still unjudged. Idempotent.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '204': { description: Taken back. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /capture/email-domains/{domain}:
     parameters:
       - name: domain
@@ -45449,6 +45514,21 @@ components:
         data:
           type: array
           items: { $ref: '#/components/schemas/CaptureOwnerIdentity' }
+    UnroutedMailResponse:
+      type: object
+      required: [messages, more, data]
+      properties:
+        messages: { type: integer, description: 'Messages counted once each, however many listed addresses they name.' }
+        more: { type: boolean, description: 'True when the list is cut: at most 50 addresses are listed, from the newest 5000 messages.' }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/UnroutedMailAddress' }
+    UnroutedMailAddress:
+      type: object
+      required: [address, messages]
+      properties:
+        address: { type: string }
+        messages: { type: integer, description: 'Messages in your mailbox sent to this address.' }
     CreateCaptureOwnerIdentityRequest:
       type: object
       required: [kind, value]

@@ -1768,6 +1768,7 @@
   "rel.kind.billingContact": "Billing contact",
   "common.error": "Could not load this view. Reload the page.",
   "common.errorNoCause": "The request failed. No cause reported.",
+  "common.errorReference": "Reference",
   "common.assistantUnavailable": "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
   "common.providerOutOfCredit": "The AI provider has no credit left. Contact your system administrator.",
   "common.providerUnauthorized": "The AI provider refused the configured credential. Contact your system administrator.",

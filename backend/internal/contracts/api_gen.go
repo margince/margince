@@ -70458,6 +70458,25 @@ type Undoability struct {
 // UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
 type UndoabilityReason string
 
+// UnroutedMailAddress defines model for UnroutedMailAddress.
+type UnroutedMailAddress struct {
+	Address string `json:"address"`
+
+	// Messages Messages in your mailbox sent to this address.
+	Messages int `json:"messages"`
+}
+
+// UnroutedMailResponse defines model for UnroutedMailResponse.
+type UnroutedMailResponse struct {
+	Data []UnroutedMailAddress `json:"data"`
+
+	// Messages Messages counted once each, however many listed addresses they name.
+	Messages int `json:"messages"`
+
+	// More True when the list is cut: at most 50 addresses are listed, from the newest 5000 messages.
+	More bool `json:"more"`
+}
+
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
 type UpdateAcquisitionSourceRequest struct {
 	Active    *bool   `json:"active,omitempty"`
@@ -101186,6 +101205,15 @@ type ServerInterface interface {
 	// The same ladder, opened from a row of the capture-activity window.
 	// (GET /capture/traces/{id})
 	ReadCaptureTracePipeline(w http.ResponseWriter, r *http.Request, id Id)
+	// The mail in your mailbox that was sent to addresses that are not yours.
+	// (GET /capture/unrouted-mail)
+	ListUnroutedMail(w http.ResponseWriter, r *http.Request)
+	// Take back "not mine" for an address.
+	// (DELETE /capture/unrouted-mail/{address}/refusal)
+	RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request, address string)
+	// Say that you do not receive this address.
+	// (PUT /capture/unrouted-mail/{address}/refusal)
+	RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request, address string)
 	// What has been going on with one record, in one cited picture.
 	// (GET /catch-up)
 	CatchUpOnRecord(w http.ResponseWriter, r *http.Request, params CatchUpOnRecordParams)
@@ -105383,6 +105411,24 @@ func (_ Unimplemented) UpdateCaptureSettings(w http.ResponseWriter, r *http.Requ
 // The same ladder, opened from a row of the capture-activity window.
 // (GET /capture/traces/{id})
 func (_ Unimplemented) ReadCaptureTracePipeline(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The mail in your mailbox that was sent to addresses that are not yours.
+// (GET /capture/unrouted-mail)
+func (_ Unimplemented) ListUnroutedMail(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back "not mine" for an address.
+// (DELETE /capture/unrouted-mail/{address}/refusal)
+func (_ Unimplemented) RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request, address string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say that you do not receive this address.
+// (PUT /capture/unrouted-mail/{address}/refusal)
+func (_ Unimplemented) RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request, address string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -122635,6 +122681,90 @@ func (siw *ServerInterfaceWrapper) ReadCaptureTracePipeline(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReadCaptureTracePipeline(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListUnroutedMail operation middleware
+func (siw *ServerInterfaceWrapper) ListUnroutedMail(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUnroutedMail(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreUnroutedAddress operation middleware
+func (siw *ServerInterfaceWrapper) RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "address" -------------
+	var address string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "address", chi.URLParam(r, "address"), &address, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "address", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreUnroutedAddress(w, r, address)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RefuseUnroutedAddress operation middleware
+func (siw *ServerInterfaceWrapper) RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "address" -------------
+	var address string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "address", chi.URLParam(r, "address"), &address, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "address", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefuseUnroutedAddress(w, r, address)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -161326,6 +161456,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/traces/{id}", wrapper.ReadCaptureTracePipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/unrouted-mail", wrapper.ListUnroutedMail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/capture/unrouted-mail/{address}/refusal", wrapper.RestoreUnroutedAddress)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/capture/unrouted-mail/{address}/refusal", wrapper.RefuseUnroutedAddress)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/catch-up", wrapper.CatchUpOnRecord)

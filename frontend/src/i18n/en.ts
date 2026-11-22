@@ -3395,6 +3395,7 @@ export const en = {
   // fetch and a bug in our own code both report in wording nobody authored for
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
+  "common.errorReference": "Reference",
   "common.assistantUnavailable":
     "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
   "common.providerOutOfCredit":
@@ -18214,6 +18215,25 @@ export const en = {
     "This address is already back in your list.",
   "ownerIdentities.addDescriptionEmpty":
     "None added yet. Colleagues never see this list.",
+  "unroutedMail.title": "Mail sent to addresses that are not yours",
+  "unroutedMail.sub":
+    "Your mailbox holds mail that was sent to other addresses. Nothing checks it until you say whether you receive that address. Only you see this list.",
+  "unroutedMail.summary_one":
+    "{count} message in your mailbox was sent to an address that is not yours.",
+  "unroutedMail.summary_other":
+    "{count} messages in your mailbox were sent to addresses that are not yours.",
+  "unroutedMail.count_one": "{count} message",
+  "unroutedMail.count_other": "{count} messages",
+  "unroutedMail.receive": "This address is mine",
+  "unroutedMail.receiveLabel": "This address is mine: {value}",
+  "unroutedMail.notMine": "Not mine",
+  "unroutedMail.notMineLabel": "Not mine: {value}",
+  "unroutedMail.received": "Address added. Its mail is checked like the rest.",
+  "unroutedMail.refused": "Hidden. This address is no longer counted.",
+  "unroutedMail.restored": "Counted again.",
+  "unroutedMail.removedClaim": "Address removed.",
+  "unroutedMail.more":
+    "The list is cut. Answer these addresses and the next ones appear.",
   "captureValue.refusedAddress":
     "Enter one email address, for example name@example.com.",
   "captureValue.refusedDomain":
