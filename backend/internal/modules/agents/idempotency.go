@@ -493,17 +493,3 @@ func replayEvidence(recorded json.RawMessage) ([]EvidenceRef, error) {
 	}
 	return envelope.Evidence, nil
 }
-
-// claimInFlightError is the refusal of a call whose key an earlier call still
-// holds. The earlier call may yet write, so a caller that gives up this key
-// risks a second write; the dispatcher marks the result with
-// httperr.IdempotencyInProgressCode so a client can keep the key without
-// reading the sentence.
-type claimInFlightError struct{ tool string }
-
-func (e *claimInFlightError) Error() string {
-	return fmt.Sprintf("an earlier %s call with this idempotency_key has not finished yet; wait for it rather than "+
-		"repeating it: %s", e.tool, apperrors.ErrConflict)
-}
-
-func (*claimInFlightError) Unwrap() error { return apperrors.ErrConflict }

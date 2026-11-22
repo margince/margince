@@ -1,6 +1,6 @@
-// The key lifecycle shared by every sender of a retryable write: one key per
-// intent, kept while the outcome is unknown and dropped once it is settled.
-// No React here, so a choice card's single-file bundle can import it.
+// The key lifecycle every sender of a retryable write shares. One key per
+// intent: kept while the outcome is unknown, dropped once it is settled.
+// It has no React, so a choice card's single-file bundle can import it.
 
 /** keyedIntents holds one key per intent text. A retry of an intent still open
  *  reuses its key, so the server replays the first answer. A settled call drops

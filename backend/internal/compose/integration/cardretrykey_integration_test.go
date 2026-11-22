@@ -6,10 +6,8 @@
 package integration
 
 // A choice card's button asks its host to run change_tags, decide_approvals or
-// resolve_duplicates with a retry key. The card's press is a tools/call like
-// any other, so the claim, the replay and the first-result answer are the ones
-// the registry gives every mutating tool; this pins them for a card-reachable
-// tool through the composed registry.
+// resolve_duplicates with a retry key. That press is an ordinary tools/call.
+// This test pins the registry's claim and replay for a card-reachable tool.
 
 import (
 	"encoding/json"
