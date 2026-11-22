@@ -24,7 +24,6 @@ import {
   vendorSuggestions,
 } from "../../lib/ai-models";
 import { tierLabel, tierRank } from "../../lib/ai-tier-label";
-import { MODEL_SETUP_TITLES } from "../../lib/modelsetup-titles";
 import { MODEL_SETUPS } from "../../lib/modelsetups.gen";
 import {
   SETUP_PROVIDER_IDS,
@@ -44,6 +43,7 @@ import {
 } from "./installation-setup.ai-key";
 import { AiBindRefused } from "./installation-setup.notices";
 import { StepNeeds } from "./installation-setup.platform";
+import { MODEL_SETUP_TITLES } from "./modelsetup-titles";
 
 /**
  * A step's form, telling the stage above it when a write is in flight.

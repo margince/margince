@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { MessageKey } from "../i18n/en";
-import type { ModelSetupId } from "./modelsetups.gen";
+import type { MessageKey } from "../../i18n/en";
+import type { ModelSetupId } from "../../lib/modelsetups.gen";
 
 /**
  * The catalog key that names each model setup to a reader. Typed against the

@@ -849,13 +849,13 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "band": "supported_degraded",
+          "band": "certified",
           "state": "current",
           "abandoned": 0,
-          "runs": 24,
-          "passed": 24,
+          "runs": 15,
+          "passed": 15,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 1,
+          "cases_below_quality_bar": 0,
           "scope": "full_invocation",
           "judge": "claude-sonnet-5-5"
         },
@@ -1127,8 +1127,8 @@
         }
       ],
       "bands": {
-        "certified": 26,
-        "supported_degraded": 11,
+        "certified": 27,
+        "supported_degraded": 10,
         "not_supported": 1,
         "too_few_runs": 0
       },
@@ -2249,13 +2249,13 @@
             "env": "eu_hosted",
             "thinking_level": "low"
           },
-          "band": "supported_degraded",
+          "band": "certified",
           "state": "current",
           "abandoned": 0,
-          "runs": 24,
-          "passed": 24,
+          "runs": 15,
+          "passed": 15,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 1,
+          "cases_below_quality_bar": 0,
           "measured_on": {
             "provider": "gemini",
             "model": "gemini-3.8-flash",
@@ -2626,8 +2626,8 @@
         }
       ],
       "bands": {
-        "certified": 26,
-        "supported_degraded": 11,
+        "certified": 27,
+        "supported_degraded": 10,
         "not_supported": 1,
         "too_few_runs": 0
       },
@@ -9616,8 +9616,8 @@
       "answer": "mostly",
       "sites_shipped": 62,
       "sites_measured": 62,
-      "ready": 40,
-      "usable_with_care": 5,
+      "ready": 41,
+      "usable_with_care": 4,
       "not_reliable_yet": 1,
       "too_few_runs": 16,
       "recheck_pending": 0,
@@ -9661,17 +9661,17 @@
           "sites_current": 52,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 981,
-          "passed": 974,
-          "reliability": 0.9928644240570846,
+          "runs": 972,
+          "passed": 965,
+          "reliability": 0.992798353909465,
           "reliability_interval": {
-            "lower": 0.988502,
-            "upper": 0.995579
+            "lower": 0.988396,
+            "upper": 0.995538
           },
           "slowest_p95_ms": 32845,
           "bands": {
-            "certified": 30,
-            "supported_degraded": 4,
+            "certified": 31,
+            "supported_degraded": 3,
             "not_supported": 1,
             "too_few_runs": 17
           }
@@ -10342,10 +10342,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "band": "supported_degraded",
+          "band": "certified",
           "state": "current",
-          "runs": 24,
-          "passed": 24,
+          "runs": 15,
+          "passed": 15,
           "records": 1,
           "judge": "claude-sonnet-5-5"
         },
@@ -12618,17 +12618,17 @@
       "sites_current": 52,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 981,
-      "passed": 974,
-      "reliability": 0.9928644240570846,
+      "runs": 972,
+      "passed": 965,
+      "reliability": 0.992798353909465,
       "reliability_interval": {
-        "lower": 0.988502,
-        "upper": 0.995579
+        "lower": 0.988396,
+        "upper": 0.995538
       },
       "slowest_p95_ms": 32845,
       "bands": {
-        "certified": 30,
-        "supported_degraded": 4,
+        "certified": 31,
+        "supported_degraded": 3,
         "not_supported": 1,
         "too_few_runs": 17
       }
@@ -32751,12 +32751,12 @@
           "env": "cloud_frontier",
           "thinking_level": "low"
         },
-        "band": "supported_degraded",
-        "runs": 24,
-        "passed": 24,
+        "band": "certified",
+        "runs": 15,
+        "passed": 15,
         "reliability": 1,
         "reliability_interval": {
-          "lower": 0.935946,
+          "lower": 0.901307,
           "upper": 1
         },
         "state": "current"
@@ -32821,8 +32821,11 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; the provider's wire translation changed since the run; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; the provider's wire translation changed since the run; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -32865,8 +32868,11 @@
             "invalid": 0,
             "abstained": 5
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; the provider's wire translation changed since the run; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; the provider's wire translation changed since the run; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -32910,8 +32916,11 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; the provider's wire translation changed since the run; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; the provider's wire translation changed since the run; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -32936,21 +32945,21 @@
             "thinking_level": "low"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 5,
           "scenarios_total": 5,
-          "runs": 24,
-          "passed": 24,
+          "runs": 15,
+          "passed": 15,
           "reliability": 1,
           "reliability_interval": {
-            "lower": 0.935946,
+            "lower": 0.901307,
             "upper": 1
           },
-          "latency_p50_ms": 3774,
-          "latency_p95_ms": 4998,
+          "latency_p50_ms": 3206,
+          "latency_p95_ms": 5368,
           "reported": {
-            "accepted": 21,
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 3
@@ -32983,8 +32992,11 @@
             "invalid": 0,
             "abstained": 15
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -33027,8 +33039,11 @@
             "invalid": 0,
             "abstained": 6
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -33071,8 +33086,11 @@
             "invalid": 0,
             "abstained": 6
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -33115,8 +33133,11 @@
             "invalid": 0,
             "abstained": 9
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -33159,8 +33180,11 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -33203,8 +33227,11 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",
@@ -33247,8 +33274,11 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): an_impressum_grounds_the_legal_trio, home_page_profile_fields_grounded, js_only_page_yields_no_fabrication, one_legal_page_naming_two_entities, services_page_profile_fields_grounded",
           "stale_cause": {
+            "case_changed": [
+              "home_page_profile_fields_grounded"
+            ],
             "prompt_changed": [
               "an_impressum_grounds_the_legal_trio",
               "home_page_profile_fields_grounded",

@@ -566,7 +566,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/site_extract/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "site_extract", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/site_extract/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "site_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
+	{Task: "site_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/site_extract/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "site_extract", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "not_supported", State: "stale"},
 	// records/site_extract/openai_compatible_mistralai_mistral-medium-3-5_cloud_frontier.json
