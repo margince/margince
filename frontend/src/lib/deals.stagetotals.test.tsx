@@ -60,7 +60,6 @@ it("reuses fresh totals after a table sort and sends the same body", async () =>
       { fn: "count", as: "deals" },
       { fn: "sum", field: "amount_base_minor", as: "base_minor" },
       { fn: "sum", field: "weighted_base_minor", as: "weighted_base_minor" },
-      { fn: "count", field: "amount_base_minor", as: "priced_deals" },
     ],
     filters: { pipeline_id: "pipeline" },
   });
@@ -200,7 +199,9 @@ it("drops a cached refusal when the same user's grants change", async () => {
   client.setQueryData(["me"], meFixture({ rowScope: "own" }));
   const view = renderHook(() => useStageTotals(board), { wrapper });
   await waitFor(() => expect(reads).toHaveLength(1));
-  await act(async () => reads[0]?.answer({ detail: "refused" }, 403));
+  await act(async () =>
+    reads[0]?.answer({ detail: "refused", code: "owner_not_measurable" }, 403),
+  );
   await waitFor(() => expect(view.result.current.data).toBeNull());
   await act(async () => {
     client.setQueryData(["me"], meFixture({ rowScope: "all" }));

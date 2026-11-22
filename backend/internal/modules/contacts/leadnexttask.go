@@ -15,8 +15,10 @@ import (
 // leadNextTask is the next open task's subject with the descriptor it was
 // written with, selected as one row so the two describe one task.
 type leadNextTask struct {
-	Subject    *string             `json:"subject"`
-	SystemText *systemtext.Message `json:"system_text"`
+	Subject    *string                  `json:"subject"`
+	SystemText *systemtext.Message      `json:"system_text"`
+	DueHasTime bool                     `json:"due_has_time"`
+	DueIntent  *crmcontracts.IntentTime `json:"due_intent"`
 }
 
 // nameNextTask names the lead's next task for the reader: in their language
@@ -31,6 +33,8 @@ func nameNextTask(l *crmcontracts.Lead, raw []byte, reader textlang.Lang) error 
 	}
 	if task.Subject != nil {
 		l.NextTaskSubject = new(task.SystemText.SubjectIn(*task.Subject, reader))
+		l.NextTaskDueHasTime = new(task.DueHasTime && l.NextTaskDueAt != nil)
+		l.NextTaskDueIntent = task.DueIntent
 	}
 	return nil
 }

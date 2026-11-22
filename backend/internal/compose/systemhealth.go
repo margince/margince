@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -75,7 +76,7 @@ func (s Server) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	ctx, cancel := context.WithTimeout(ctx, healthReadTimeout)
+	ctx, cancel := context.WithTimeout(ctx, adminadmit.ReadTimeout)
 	defer cancel()
 	out := composeHealth(ctx, s.healthReads(), utcNow)
 	if s.originProbe != nil && auth.Allows(ctx, healthReadObject, principal.ActionRead) {

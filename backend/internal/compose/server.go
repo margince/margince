@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
 	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
+	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -235,6 +236,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		captureHealthHandlers:         captureHealthHandlers{pool: pool, now: utcNow},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{pool: pool, now: utcNow},
 		automaticWorkHandlers:         automaticWorkHandlers{pool: pool, now: utcNow},
+		Endpoint:                      vacuumhealth.NewEndpoint(pool, utcNow),
 		extensionSettingsHandlers:     extensionSettingsHandlers{store: NewSettingsStore(pool)},
 		recoveryHealthHandlers: recoveryHealthHandlers{
 			ledger: continuity.NewStore(InstallationDB(pool)),
@@ -340,7 +342,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// works wherever the readings do. An attachment that has never been read
 		// simply has no grounded field to accept, and the accept says so.
 		accept: NewExtractionAccept(pool),
-		file:   NewChatCaptureFile(pool),
+		file:   NewChatCaptureFile(pool, nil),
 		// A review joins two modules' halves, so the seam is constructed here
 		// rather than either module owning the other.
 		reviews:    NewOutcomeReviews(pool),

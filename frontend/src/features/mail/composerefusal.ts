@@ -13,15 +13,20 @@ import {
 export type Refusal =
   | "consent"
   | "mailbox"
+  | "noMailbox"
   | "sharedUnsubscribe"
   | "legacyFooter"
   | null;
 
-// Consent is a 409 naming itself, a mailbox that cannot send a 422 naming no
-// field, and a shared unsubscribe link a 422 field fault on the recipients.
+// Consent is a 409 naming itself. A mailbox that cannot send, or none
+// connected, is a 422 naming no field. A shared unsubscribe link is a 422 field
+// fault on the recipients.
 export function refusalOf(error: unknown): Refusal {
   if (error instanceof ProblemError && isConsentNotGranted(error.problem)) {
     return "consent";
+  }
+  if (problemCodeOf(error) === "mailbox_not_connected") {
+    return "noMailbox";
   }
   if (problemCodeOf(error) === "mailbox_not_send_capable") {
     return "mailbox";

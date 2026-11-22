@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package recordexport
+
+import (
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
+)
+
+// Columns computed from child tables: a mail merge needs the contact's address
+// and number, which live on contact_email and contact_phone.
+const (
+	exportPrimaryEmail = "primary_email"
+	exportPrimaryPhone = "primary_phone"
+	// LinkedCompanyName is what the lead's linked company is called now.
+	// company_name stays the name typed on the lead, which an import writes back.
+	LinkedCompanyName = "linked_company_name"
+)
+
+// DerivedColumns lists, per table, the columns that follow its stored ones.
+var DerivedColumns = map[string][]string{
+	objectContact: {exportPrimaryEmail, exportPrimaryPhone},
+	objectLead:    {LinkedCompanyName},
+}
+
+// DerivedColumnExpr is the expression for a derived column on a row aliased t.
+// It picks the address the record page prints, and never a retired one.
+func DerivedColumnExpr(table, column string) (string, bool) {
+	if table == objectLead && column == LinkedCompanyName {
+		return `(SELECT lc.display_name FROM company lc
+		          WHERE lc.id = t.company_id AND lc.archived_at IS NULL)`, true
+	}
+	if table != objectContact {
+		return "", false
+	}
+	switch column {
+	case exportPrimaryEmail:
+		return `(SELECT pe.email FROM contact_email pe
+		          WHERE pe.contact_id = t.id AND pe.archived_at IS NULL` +
+			contacts.ReachableEmailOrder + ` LIMIT 1)`, true
+	case exportPrimaryPhone:
+		return `(SELECT pp.phone FROM contact_phone pp
+		          WHERE pp.contact_id = t.id AND pp.archived_at IS NULL` +
+			contactaddress.ReachablePhoneOrder + ` LIMIT 1)`, true
+	default:
+		return "", false
+	}
+}

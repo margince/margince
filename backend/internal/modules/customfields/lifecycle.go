@@ -154,6 +154,7 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 			next.LabelTranslations, next.OptionTranslations, id); err != nil {
 			return fmt.Errorf("customfields: updating settings: %w", err)
 		}
+		forgetActiveColumns(tx, f.Object)
 		if out, err = readField(ctx, tx, id); err != nil {
 			return err
 		}
@@ -286,6 +287,7 @@ func (s *Service) Retire(ctx context.Context, id ids.UUID) (crmcontracts.CustomF
 			`UPDATE custom_field SET status = $1, reportable = false WHERE id = $2`, statusRetired, id); err != nil {
 			return fmt.Errorf("customfields: updating status: %w", err)
 		}
+		forgetActiveColumns(tx, f.Object)
 		if out, err = readField(ctx, tx, id); err != nil {
 			return err
 		}

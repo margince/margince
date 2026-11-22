@@ -6,10 +6,12 @@ import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
 import { Panel } from "../../design-system/panel";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
+  blankRequired,
   ProblemError,
   problemCode,
   problemFieldErrors,
@@ -90,6 +92,8 @@ export function PasswordSettingRow({
   const formId = useId();
   const [open, setOpen] = useState(false);
   const [fields, setFields] = useState<ChangeFields>(EMPTY);
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
   const [done, setDone] = useState(false);
 
   const queryClient = useQueryClient();
@@ -139,8 +143,10 @@ export function PasswordSettingRow({
       : problemMessageOf(error, t, t("password.errorGeneric"));
   };
 
-  const set = (key: keyof ChangeFields) => (value: string) =>
+  const set = (key: keyof ChangeFields) => (value: string) => {
     setFields((current) => ({ ...current, [key]: value }));
+    faults.edited(key);
+  };
 
   // One per field, because they toggle independently: a reader checking what
   // they typed in the confirm box has no reason to expose the new password
@@ -155,11 +161,20 @@ export function PasswordSettingRow({
 
   const fault = passwordFault(fields.next);
   const mismatch = fields.confirm.length > 0 && fields.confirm !== fields.next;
-  const ready =
-    fields.current !== "" &&
-    fields.next !== "" &&
-    !fault &&
-    fields.confirm === fields.next;
+  // Each empty field says it is required. A new password the rule refuses, or
+  // a confirm that differs, already says so; the press takes focus there.
+  const faultsAtSubmit = () => {
+    const found = blankRequired(locale, {
+      current: [t("password.current"), fields.current],
+      next: [t("password.next"), fields.next],
+      confirm: [t("password.confirm"), fields.confirm],
+    });
+    if (fault && !found.has("next")) found.set("next", t(fault));
+    if (fields.confirm !== fields.next && !found.has("confirm")) {
+      found.set("confirm", t("password.mismatch"));
+    }
+    return found;
+  };
 
   // Leaving the dialog discards what was typed, which is the honest outcome for
   // a credential: nothing here is a draft worth restoring, and holding a typed
@@ -167,6 +182,7 @@ export function PasswordSettingRow({
   // one's benefit.
   const close = () => {
     setFields(EMPTY);
+    faults.show(new Map());
     setOpen(false);
   };
 
@@ -198,10 +214,14 @@ export function PasswordSettingRow({
         {/* A real form, so Enter in any of the three fields submits it. */}
         <form
           id={formId}
+          ref={faultsRoot}
           className="form-stack"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            if (ready && !change.isPending) change.mutate(fields);
+            if (!faults.show(faultsAtSubmit()) && !change.isPending) {
+              change.mutate(fields);
+            }
           }}
         >
           {/* Said before the fields, because the change ends more than the
@@ -231,6 +251,7 @@ export function PasswordSettingRow({
           <Field
             label={t("password.current")}
             required
+            error={faults.of("current")}
             trailing={current.trailing}
           >
             {(control) => (
@@ -251,7 +272,7 @@ export function PasswordSettingRow({
           <Field
             label={t("password.next")}
             required
-            error={fault ? t(fault) : undefined}
+            error={fault ? t(fault) : faults.of("next")}
             // The rule, until the rule is being broken — at which point the
             // refusal restates it in the danger tone and a second grey copy of
             // the same sentence underneath is noise.
@@ -272,7 +293,7 @@ export function PasswordSettingRow({
           <Field
             label={t("password.confirm")}
             required
-            error={mismatch ? t("password.mismatch") : undefined}
+            error={mismatch ? t("password.mismatch") : faults.of("confirm")}
             trailing={confirm.trailing}
           >
             {(control) => (
@@ -291,23 +312,12 @@ export function PasswordSettingRow({
           <Button variant="ghost" onClick={close}>
             {t("password.cancel")}
           </Button>
-          {/* Two facts, two props. `!ready` is a form that is not filled in
-                yet and `change.isPending` is a write already on its way, and
-                folding them into one `disabled` drew them the same: the reader
-                could not tell "I still have to type something" from "it is
-                going".
-
-                The precondition stops applying once the write is out, and that
-                guard is load bearing rather than tidy: these fields stay
-                editable during the request, so clearing one mid-flight would
-                otherwise flip `ready` false, hand the button `disabled` on top
-                of `pending`, and — since refusal outranks busy — drop both the
-                focus and the busy state in the middle of the change. */}
+          {/* Never disabled: a press on an unfinished form says what is
+                missing at the field, and a write on its way shows as pending. */}
           <Button
             type="submit"
             form={formId}
             variant="primary"
-            disabled={!change.isPending && !ready}
             pending={change.isPending}
             busyLabel={t("password.changing")}
           >

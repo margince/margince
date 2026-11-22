@@ -52,6 +52,5 @@ func (a correctionApplier) ApplyCorrection(
 	default:
 		return consent.ErrUnsupportedField
 	}
-	_, err := a.store.UpdateContact(ctx, contactID, in)
-	return err
+	return a.store.ApplyContactUpdate(ctx, contactID, in)
 }

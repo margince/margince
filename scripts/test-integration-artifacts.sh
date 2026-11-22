@@ -4,7 +4,7 @@
 # continuation.
 #
 # A shard that lost a failing part's log still reports red, so nothing else
-# would notice. Five properties:
+# would notice. Seven properties:
 #   1. two failing parts of one package keep two logs, each under a name that
 #      does not move with the dispatch order, and no two parts share a name;
 #   2. every part keeps the tests it was given and the tests that reported;
@@ -14,7 +14,9 @@
 #      without its lists, and accepts a shard that was dealt no tests or, from
 #      the queue, claimed none;
 #   5. a step that cannot be written makes the function fail, not the shell exit;
-#   6. a part with more tests than a pipe buffer holds keeps its evidence.
+#   6. a part with more tests than a pipe buffer holds keeps its evidence;
+#   7. of an artifact uploaded by several attempts, the newest takes its plain
+#      name and the older ones are gone, so a green re-run counts.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -175,5 +177,30 @@ printf -- '--- PASS: TestLong1 (0.01s)\nok\nEXIT 0\n' > "$long/logs/1.log"
 seq 1 50000 | sed 's/^/backend|.\/internal\/long|TestLong/' | LC_ALL=C sort > "$long/out/assigned.txt"
 keep_shard_evidence "$long/out" "$long/work" "$long/regex" "$long/logs" "$long/failed" \
   || fail "a part holding 50000 tests could not keep its evidence"
+
+# 7. A re-run of shard 1 uploads its own copy. The red first attempt must not
+# stand for it, and attempt 10 is newer than attempt 9.
+runs="$work/runs"
+for copy in integration-shard-1-attempt-1 integration-shard-1-attempt-2 integration-shard-2-attempt-1 \
+  integration-covdata-unit-attempt-9 integration-covdata-unit-attempt-10; do
+  mkdir -p "$runs/$copy"
+  echo "$copy" > "$runs/$copy/meta.txt"
+done
+echo "shard 1/2 failed" > "$runs/integration-shard-1-attempt-1/failure-summary.txt"
+newest_attempt_artifacts "$runs" > /dev/null || fail "the attempts of each artifact could not be cut to the newest"
+[[ "$(cat "$runs/integration-shard-1/meta.txt")" == integration-shard-1-attempt-2 ]] \
+  || fail "shard 1 kept $(cat "$runs/integration-shard-1/meta.txt"), want its re-run"
+[[ ! -e "$runs/integration-shard-1/failure-summary.txt" ]] || fail "the red first attempt of shard 1 was merged into its re-run"
+[[ "$(cat "$runs/integration-shard-2/meta.txt")" == integration-shard-2-attempt-1 ]] \
+  || fail "shard 2, which ran once, lost its only attempt"
+[[ "$(cat "$runs/integration-covdata-unit/meta.txt")" == integration-covdata-unit-attempt-10 ]] \
+  || fail "attempt 9 was read as newer than attempt 10"
+leftover="$(cd "$runs" && ls -d ./*-attempt-* 2> /dev/null || true)"
+[[ -z "$leftover" ]] || fail "older attempts stayed beside the newest: $leftover"
+
+# An artifact already under its plain name beside its attempts is two answers
+# to one question, and the function refuses to pick one.
+mkdir -p "$runs/integration-shard-2-attempt-3"
+newest_attempt_artifacts "$runs" > /dev/null && fail "a plain-named artifact beside its attempts was overwritten"
 
 echo "OK: each failing part keeps its own log and lists, and the rerun list holds what is owed"

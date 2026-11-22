@@ -69,23 +69,27 @@ const (
 	// `gates/foo_test.go` — the rows say which gate, and where the directory
 	// sits is this constant's business, not 163 rows'.
 	gateDir = "gates"
-	// gateFloor sits below the real count so it catches a broken walk rather
-	// than a shrinking tree. A census that discovered nothing would otherwise
-	// render an empty page and call it current.
-	gateFloor = 100
+	// gateFloor and gateTestFloor sit just below the real counts. They catch a
+	// walk that lost a directory's worth of gates, such as a batch moved where
+	// no gate looks, and not one deleted gate. A change that deletes many
+	// gates lowers them.
+	gateFloor     = 700
+	gateTestFloor = 1400
 )
 
 var updateGateInventory = flag.Bool("update-gate-inventory", false,
 	"rewrite docs/reference/gate-inventory.md from the //gate:kind declarations")
 
 // gate is one declared gate: its file, the name the page calls it by, its
-// shape, and the first sentence of its own doc comment.
+// shape, and the first sentence of its own doc comment. tests counts its Test
+// functions.
 //
 // file and name differ only in the gateDir prefix, and both are carried because
 // they are read by different audiences: a failure message names `file`, so the
 // reader can open it from the module root, while the page prints `name`.
 type gate struct {
 	file, name, kind, hardness, holds string
+	tests                             int
 }
 
 // TestNoGoSourceHidesWhereThisCensusCannotSeeIt closes the drop point the move
@@ -151,6 +155,15 @@ func TestEveryGateDeclaresItsShape(t *testing.T) {
 		t.Fatalf("this census found %d gate file(s) and expects at least %d, so the walk over "+
 			"backend/gates/*_test.go has stopped finding them rather than the tree having shrunk",
 			len(gates), gateFloor)
+	}
+	tests := 0
+	for _, g := range gates {
+		tests += g.tests
+	}
+	if tests < gateTestFloor {
+		t.Fatalf("this census found %d gate Test function(s) and expects at least %d, so the walk "+
+			"over backend/gates/*_test.go has lost some of them rather than the tree having shrunk",
+			tests, gateTestFloor)
 	}
 }
 
@@ -233,7 +246,7 @@ func readGateDeclarations(t *testing.T) (gates []gate, untagged []string) {
 		if relErr != nil {
 			t.Fatalf("naming %s relative to %s: %v", path, gateDir, relErr)
 		}
-		gates = append(gates, gate{path, filepath.ToSlash(name), kind, hardness, firstSentenceOf(parsed)})
+		gates = append(gates, gate{path, filepath.ToSlash(name), kind, hardness, firstSentenceOf(parsed), countGateTests(parsed)})
 	}
 	sort.Slice(gates, func(i, j int) bool { return gates[i].file < gates[j].file })
 	return gates, untagged
@@ -254,16 +267,21 @@ func parseGateFile(t *testing.T, path string, source []byte) *ast.File {
 // syntax rather than by matching `func Test` in text — a commented-out example
 // of one is not a gate.
 func declaresATest(file *ast.File) bool {
+	return countGateTests(file) > 0
+}
+
+func countGateTests(file *ast.File) int {
+	count := 0
 	for _, decl := range file.Decls {
 		// isGateTest (parallelgates_test.go) is the one spelling of "this
 		// declaration is one of the package's gates", TestMain carve-out
 		// included — a file holding only TestMain judges nothing, so it owes no
 		// //gate:kind declaration and belongs on no row of the page.
 		if fn, ok := decl.(*ast.FuncDecl); ok && isGateTest(fn) {
-			return true
+			count++
 		}
 	}
-	return false
+	return count
 }
 
 func requireDeclaredValue(t *testing.T, path, field, value string, allowed []string) {

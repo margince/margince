@@ -195,7 +195,7 @@ func (s importSlicer) slice(ctx context.Context, args importJobArgs, work import
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			panicked := fmt.Errorf("%s panicked: %v", args.Kind(), recovered)
-			result, err = s.stop(system, runs, lease, panicked, migration.StopCause(lease.Status, panicked))
+			result, err = s.stop(system, runs, lease, panicked, panicked)
 		}
 	}()
 	actorCtx, trace, err := s.actAs(ctx, system, runs, lease)
@@ -281,19 +281,20 @@ func (s importSlicer) settle(
 	case errors.Is(ctx.Err(), context.Canceled):
 		return s.yield(system, runs, lease)
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		return s.stop(system, runs, lease, err, migration.StopCause(lease.Status, ctx.Err()))
+		return s.stop(system, runs, lease, err, ctx.Err())
 	}
-	return s.stop(system, runs, lease, err, migration.StopCause(lease.Status, err))
+	return s.stop(system, runs, lease, err, err)
 }
 
-// stop writes why the attempt stopped, on a context of its own: the slice's may
-// be what ended. A newer attempt owning the run is no stop to record or log.
+// stop writes why the attempt stopped, worded from why, on a context of its
+// own: the slice's may be what ended. A newer attempt owning the run is no stop
+// to record or log.
 func (s importSlicer) stop(
-	system context.Context, runs *migration.RunStore, lease migration.Lease, stopped error, cause string,
+	system context.Context, runs *migration.RunStore, lease migration.Lease, stopped, why error,
 ) (importSliceResult, error) {
 	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(system), importStopFlushTimeout)
 	defer cancel()
-	err := runs.FailLease(stopCtx, lease, cause)
+	err := runs.FailLease(stopCtx, lease, why)
 	if errors.Is(err, migration.ErrSuperseded) {
 		return importSliceResult{}, nil
 	}

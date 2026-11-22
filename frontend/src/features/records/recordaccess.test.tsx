@@ -284,6 +284,29 @@ describe("RecordAccess — handing the record over", () => {
   });
 });
 
+describe("RecordAccess — asking a colleague's owner", () => {
+  it("offers edit access as the one primary ask, and the handover as a link", async () => {
+    const user = userEvent.setup();
+    stub();
+    drawContact({
+      ...base,
+      visibility: "workspace",
+      writable: false,
+      owner_id: "u-owner",
+    });
+    const panel = await open(user);
+    const editAccess = await within(panel).findByRole("button", {
+      name: en["editAccess.ask"].replace("{owner}", "Mira Voss"),
+    });
+    const handover = await within(panel).findByRole("button", {
+      name: en["handover.ask"].replace("{owner}", "Mira Voss"),
+    });
+    expect(editAccess.className).toContain("btn-primary");
+    expect(handover.className).toContain("btn-link");
+    expect(panel.querySelectorAll(".btn-primary")).toHaveLength(1);
+  });
+});
+
 describe("RecordAccess — who the sentence names", () => {
   it("tells the owner the contact is theirs and their sharers'", async () => {
     const user = userEvent.setup();

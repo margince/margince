@@ -238,6 +238,8 @@ func TestAgentReleaseSpendsTheCapsTheReleaseSpends(t *testing.T) {
 		{"not even to decline it", agent(principal.ScopeWrite), KindVolumeRelease, false, false},
 		{"no agent accepts an employer change", agent(principal.ScopeWrite), approvalsubject.KindEmployerChange, true, false},
 		{"but it may decline one", agent(principal.ScopeWrite), approvalsubject.KindEmployerChange, false, true},
+		{"no agent gives edit access", agent(principal.ScopeWrite), approvalsubject.KindEditAccess, true, false},
+		{"but it may decline the request", agent(principal.ScopeWrite), approvalsubject.KindEditAccess, false, true},
 		{"a human is bounded by their seat, not by caps", principal.Principal{
 			Type: principal.PrincipalHuman, UserID: ids.NewV7(),
 		}, "held_draft", true, true},

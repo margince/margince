@@ -16,6 +16,8 @@ const SERVER_WEEK =
   "The server buckets this week or day on the company's clock (decision B1 on #7894); naming it in another zone would label the bucket with days it does not hold.";
 const SERVER_TODAY =
   "The server reads 'today' on the company's clock, so the form opens on the day the server will count.";
+const DATE_ONLY_TASK =
+  "A task with only a date is overdue by the company's calendar, as the Worklist groups it, so every page agrees on the day it falls on; a timed task reads on the reader's clock.";
 export const companyZoneSites: { file: string; why: string }[] = [
   ...[
     "analytics.decisions.tsx",
@@ -61,6 +63,23 @@ export const companyZoneSites: { file: string; why: string }[] = [
     file: "features/brief/brief.glance.tsx",
     why: "Home holds the server's day and the weekly's week, both bucketed on the company's clock (decision B1), so the day and week it is labelled with are on that clock; the greeting hour is the reader's.",
   },
+  ...[
+    "features/companies/companyhowitstands.tsx",
+    "features/companies/companynextbar.tsx",
+    "features/contacts/contacttoday.tsx",
+    "features/deals/deal360/dealfigures.tsx",
+    "features/deals/deals.overview.tsx",
+    "components/opentaskrow.tsx",
+    "components/taskwrite.ts",
+    "features/companies/companytaskstable.tsx",
+    "features/contacts/contacthowitstands.tsx",
+    "features/contacts/contactopentasks.tsx",
+    "features/leads/leadnext.tsx",
+    "features/projects/partners.nextstep.tsx",
+    "features/projects/projectnext.tsx",
+    "features/projects/projectsections.tsx",
+    "features/projects/projectstandingcard.tsx",
+  ].map((file) => ({ file, why: DATE_ONLY_TASK })),
   { file: "features/brief/brief.plan.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.teamweekly.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.deals.tsx", why: SERVER_WEEK },
@@ -95,6 +114,10 @@ const DATE_ONLY =
   "A date-only value is read at its midday, so it names the same calendar day in every zone; no reader's clock changes it.";
 export const browserZoneSites: { file: string; why: string }[] = [
   { file: "features/deals/buyerroomframe.tsx", why: PUBLIC },
+  {
+    file: "format/formatters.ts",
+    why: "A date formatter asked with no zone keeps the old Intl behaviour and reads the browser's clock. The zone goes into the cache key, so a changed browser zone builds a new formatter.",
+  },
   {
     file: "format/timezoneoptions.ts",
     why: "The time zone list always offers the browser's own zone, so a reader can pick the clock they are on. It renders no time in it.",

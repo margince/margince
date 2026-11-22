@@ -18,6 +18,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
@@ -185,6 +186,7 @@ export function RecordAccess({
         {refusal ? (
           <>
             <p className="t-caption">{refusal}</p>
+            <EditAccessRequest kind={kind} record={record} />
             <HandoverRequest kind={kind} record={record} />
           </>
         ) : (

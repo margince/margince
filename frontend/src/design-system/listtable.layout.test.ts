@@ -20,6 +20,16 @@ const figures = (price: number) => ({
 });
 
 describe("columnLayout", () => {
+  it("clamps a stored width narrower than the drag minimum", () => {
+    const layout = columnLayout(catalogue, { billing: 40 }, 900);
+    expect(px(layout.widthOf(catalogue[2]))).toBe(96);
+  });
+
+  it("keeps the declared width of a row menu after a resize stored it", () => {
+    const layout = columnLayout(catalogue, { actions: 56 }, 900);
+    expect(layout.widthOf(catalogue[4])).toBe("56px");
+  });
+
   it("gives a row menu its narrow fixed width", () => {
     const layout = columnLayout(catalogue, {}, 707);
     expect(layout.widthOf(catalogue[4])).toBe("56px");
@@ -179,8 +189,8 @@ describe("columnLayout", () => {
   // screen does not hold the reader's drag at that figure.
   it("holds a dragged numeric column only at the figures on screen now", () => {
     const floors = { held: { price: 160 }, onScreen: { price: 80 } };
-    const layout = columnLayout(catalogue, { price: 90 }, 1000, floors);
-    expect(layout.widthOf(catalogue[1])).toBe("90px");
+    const layout = columnLayout(catalogue, { price: 100 }, 1000, floors);
+    expect(layout.widthOf(catalogue[1])).toBe("100px");
     expect(
       px(columnLayout(catalogue, {}, 400, floors).widthOf(catalogue[1])),
     ).toBe(160);
@@ -189,8 +199,8 @@ describe("columnLayout", () => {
   // A reader may drag any column under its default minimum; the cell then ends
   // its text in an ellipsis.
   it("keeps a width the reader set under the column's default minimum", () => {
-    const layout = columnLayout(catalogue, { name: 100, price: 60 }, 1000);
+    const layout = columnLayout(catalogue, { name: 100, price: 96 }, 1000);
     expect(layout.widthOf(catalogue[0])).toBe("100px");
-    expect(layout.widthOf(catalogue[1])).toBe("60px");
+    expect(layout.widthOf(catalogue[1])).toBe("96px");
   });
 });

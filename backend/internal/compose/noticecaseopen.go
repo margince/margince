@@ -71,7 +71,7 @@ func NewNoticeCaseOpen(pool *pgxpool.Pool, now func() time.Time, log *slog.Logge
 // duties they were only owed because nobody knew where their address came from
 // (settleWhenSubjectWrote).
 func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.ID == ids.Nil {
+	if !events.NoticeCaseOpenTypes.Has(env.Type) || env.Entity.ID == ids.Nil {
 		return nil
 	}
 	// The generated constants, not typed literals: a hand-written event name

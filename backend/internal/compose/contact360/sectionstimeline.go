@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // contactReachesActivity is the reachability predicate every contact-360 section
@@ -135,8 +136,7 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
-	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts,
-		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`, byUrgencyHumanFirst)
+	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts, openTaskFilter, byUrgencyHumanFirst)
 	if err != nil {
 		return err
 	}
@@ -146,6 +146,10 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids
 	}{Data: rows, Page: crmcontracts.PageInfo{HasMore: hasMore}}
 	return nil
 }
+
+// openTaskFilter is the open work nextStepsSection lists and a claim's
+// task_open asks about.
+const openTaskFilter = `AND a.kind = 'task' AND coalesce(a.is_done, false) = false`
 
 // How a section's rows are ordered, and why the two differ.
 //
@@ -166,7 +170,7 @@ type sectionOrder string
 
 var (
 	byRecency sectionOrder = "a.occurred_at DESC, a.id DESC"
-	byUrgency sectionOrder = sectionOrder(storekit.TaskDueSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
+	byUrgency sectionOrder = sectionOrder(storekit.TaskDueOrderSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
 )
 
 // byUrgencyHumanFirst is byUrgency with work a colleague filed ahead of work
@@ -226,50 +230,43 @@ func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool
 // a row off /activities answers, because it is read by the same list and
 // folded by the same scan.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
-	forDraft := opts.WrittenByHumanOnly && order == byRecency
+	bounds := []int{0}
+	if order == byRecency {
+		bounds = connector.FoldBounds(sectionCap + 1)
+	}
+	for _, foldRows := range bounds {
+		out, hasMore, incomplete, err := s.readActivitiesAt(ctx, tx, contactID, opts, extra, order, foldRows)
+		if err != nil || !incomplete {
+			return out, hasMore, err
+		}
+	}
+	return nil, false, errors.New("a collapsed section read never ran unbounded")
+}
+
+// readActivitiesAt is readActivities with the recent fold bounded to foldRows
+// candidates, or unbounded at zero. Its third result says the bound left the
+// page short.
+func (s *Service) readActivitiesAt(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder, foldRows int) ([]crmcontracts.Activity, bool, bool, error) {
+	forDraft := draftRead(opts, order)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	contactPos := arg(contactID)
-	if opts.PartyOnly && order == byRecency {
-		extra += " AND " + activities.ContactIsPartySQL(bind(contactPos))
-	}
-	if order != byRecency {
-		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
-		if err != nil {
-			return nil, false, err
-		}
-		extra += " AND " + activities.CurrentTaskClause("a", s.now(), identities, arg)
-	}
-	// DISCOVER-gated, like the activities list: a limited conversation on
-	// this contact is still a row on the timeline — date, direction, kind —
-	// with its content withheld (content_state), not a gap the reader
-	// cannot tell from silence.
-	gate := activityDiscoverScope
-	if forDraft {
-		// A draft reads content, so a row withheld from this reader must leave
-		// before the cap rather than occupy a slot the draft then discards.
-		gate = activityScope
-		extra += " AND " + relstrength.HappenedByNowSQL("a", bind(arg(s.now().UTC())))
-	}
-	scope, err := gate(ctx, arg)
+	candidates, err := s.activityCandidates(ctx, tx, contactID, opts, extra, order, arg)
 	if err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
 	// A draft's rows passed the content gate, which holds the audience arm, so
 	// each is readable. Projecting the arm again would plan a second copy.
 	contentArm := "TRUE"
 	if !forDraft {
 		if contentArm, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
-			return nil, false, err
+			return nil, false, false, err
 		}
 	}
-	candidates := fmt.Sprintf(`a.archived_at IS NULL AND %s AND (%s)%s %s`,
-		fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra)
 	// The recent timeline shows one row per email, as the company timeline does.
 	from, trailing, collapse, gatedOnce := "activity a", "", order == byRecency, ""
 	if collapse {
 		gatedOnce, candidates = foldedCandidates(candidates)
-		from = activities.SeatCopyFrom(ctx, candidates, contentArm, arg)
+		from = activities.SeatCopyFrom(ctx, candidates, contentArm, connector.FoldBound{Rows: foldRows}, arg)
 		contentArm, trailing, candidates = activities.SeatCopyReadable, activities.SeatCopyColumns, "TRUE"
 	}
 	if !collapse {
@@ -281,20 +278,61 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	// list here to fall behind that one.
 	columns, err := activities.ActivityProjection(ctx, contentArm, arg)
 	if err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
 	query := gatedOnce + fmt.Sprintf(`SELECT %s%s FROM %s WHERE %s ORDER BY %s LIMIT %d`,
 		columns, trailing, from, candidates, order, sectionCap+1)
-	out, hasMore, err := readSection(ctx, tx, sectionQuery{query, args, collapse}, opts.activityColumns, s.now())
-	if err != nil {
-		return nil, false, err
+	out, hasMore, incomplete, err := readSection(ctx, tx, sectionQuery{query, args, collapse, foldRows > 0}, opts.activityColumns, s.now())
+	if err != nil || incomplete {
+		return nil, false, incomplete, err
 	}
 	// A row reaches this page through a Cc or an attendance too, so each row
 	// says which part this contact had in it.
 	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
-	return out, hasMore, nil
+	return out, hasMore, false, nil
+}
+
+// draftRead reports whether a section feeds a draft, which reads content.
+func draftRead(opts AssembleOptions, order sectionOrder) bool {
+	return opts.WrittenByHumanOnly && order == byRecency
+}
+
+// activityCandidates is the predicate a section's rows are read under, before
+// its cap: the contact's reach, the gate, the project scope and extra. The
+// next-steps section and a claim's task_open both read it. So one page judges
+// a task open and visible in one way.
+func (s *Service) activityCandidates(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder, arg func(any) int,
+) (string, error) {
+	contactPos := arg(contactID)
+	if opts.PartyOnly && order == byRecency {
+		extra += " AND " + activities.ContactIsPartySQL(bind(contactPos))
+	}
+	if order != byRecency {
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return "", err
+		}
+		extra += " AND " + activities.CurrentTaskClause("a", s.now(), identities, arg)
+	}
+	// DISCOVER-gated, like the activities list. A limited conversation on this
+	// contact is still a row (date, direction, kind) with its content withheld,
+	// so the reader can tell it from silence.
+	gate := activityDiscoverScope
+	if draftRead(opts, order) {
+		// A draft reads content, so a row withheld from this reader must leave
+		// before the cap rather than occupy a slot the draft then discards.
+		gate = activityScope
+		extra += " AND " + relstrength.HappenedByNowSQL("a", bind(arg(s.now().UTC())))
+	}
+	scope, err := gate(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf(`a.archived_at IS NULL AND %s AND (%s)%s %s`,
+		fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra), nil
 }
 
 // networkSection answers "who here knows them", warmest first — the

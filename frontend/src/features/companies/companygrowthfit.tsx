@@ -7,7 +7,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Meter } from "../../design-system/readings";
-import { formatNumber, INTL_LOCALE } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
@@ -23,6 +23,7 @@ import {
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { listFormat } from "../../format/formatters";
 import { labelFor } from "../../lib/labelfor";
 import { AssemblyStamp, AssemblyWait } from "./companyassembly";
 import { ReassessOutcome, useReassess } from "./companygrowthfit.reassess";
@@ -61,7 +62,7 @@ function missingWords(
   locale: Locale,
   missing: readonly GrowthFitInput[] | undefined,
 ): string {
-  return new Intl.ListFormat(INTL_LOCALE[locale], {
+  return listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format((missing ?? []).map((code) => t(labelFor(INPUT_LABELS, code))));

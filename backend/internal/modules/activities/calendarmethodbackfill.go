@@ -19,8 +19,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The outcomes the calendar-method re-read records; the marker table's CHECK
@@ -53,79 +56,61 @@ type CalendarMethodCandidate struct {
 	RawCaptureID *ids.UUID
 }
 
-// calendarMethodDirections are walked in this order, each to the end before
-// the next. A copy we sent of our own invitation is as much a calendar copy as
-// the one we received.
-var calendarMethodDirections = []string{directionInbound, directionOutbound}
+// calendarMethodScope is the mail the re-read is for, in either direction. A
+// copy we sent of our own invitation is a calendar copy too. Paging by id
+// needs no index of its own.
+var calendarMethodScope = `FROM activity a
+ WHERE a.kind = 'email' AND a.calendar_method IS NULL AND a.direction IN ('inbound', 'outbound')
+   AND a.restricted_at IS NULL
+   AND a.created_at < (SELECT m.applied_at FROM schema_migrations_core m WHERE m.version = '` + CalendarMethodMigration + `')
+   AND NOT EXISTS (SELECT 1 FROM activity_calendar_method_backfill checked WHERE checked.activity_id = a.id)`
 
-// CalendarMethodCandidatesTx offers the next limit unchecked mails in capture
-// order, inbound first. Each direction resumes after its own newest checked
-// mail, so outbound mail older than the inbound pointer is still offered.
-// Every row it offers must be marked, or the walk would offer it again.
-//
-// Each walk is bounded by its activity_calendar_method_unread index and by
-// the migration's own applied_at, so a drained pass reads two empty ranges.
-func CalendarMethodCandidatesTx(ctx context.Context, tx pgx.Tx, limit int) ([]CalendarMethodCandidate, error) {
-	var out []CalendarMethodCandidate
-	for _, direction := range calendarMethodDirections {
-		if len(out) >= limit {
-			break
-		}
-		found, err := calendarMethodWalkTx(ctx, tx, direction, limit-len(out))
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, found...)
+// CalendarMethodCandidatesTx offers the next limit unchecked mails after the
+// given id, in id order, locked for the caller's batch.
+func CalendarMethodCandidatesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]CalendarMethodCandidate, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT a.id, (SELECT r.id FROM raw_capture r WHERE `+storekit.StoredOriginalSQL("a", "r")+` LIMIT 1)
+		  `+calendarMethodScope+`
+		   AND a.id > @after
+		 ORDER BY a.id
+		 LIMIT @batch_limit
+		   FOR UPDATE OF a`, pgx.NamedArgs{repairAfterArg: after, "batch_limit": limit})
+	if err != nil {
+		return nil, fmt.Errorf("activities: selecting mail whose calendar method can be re-read: %w", err)
+	}
+	out, err := pgx.CollectRows(rows, pgx.RowToStructByPos[CalendarMethodCandidate])
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the calendar-method candidates: %w", err)
 	}
 	return out, nil
 }
 
-func calendarMethodWalkTx(ctx context.Context, tx pgx.Tx, direction string, limit int) ([]CalendarMethodCandidate, error) {
-	rows, err := tx.Query(ctx, `
-		WITH resume AS (
-		  SELECT b.activity_created_at AS at, b.activity_id AS id
-		    FROM activity_calendar_method_backfill b
-		   WHERE b.direction = $3
-		   ORDER BY b.activity_created_at DESC, b.activity_id DESC
-		   LIMIT 1
-		), boundary AS (
-		  SELECT m.applied_at AS at FROM schema_migrations_core m WHERE m.version = $2
-		), walk AS (
-		  SELECT a.id, a.created_at
-		    FROM activity a
-		   WHERE a.calendar_method IS NULL AND a.kind = 'email' AND a.direction = $3
-		     AND a.restricted_at IS NULL
-		     AND a.created_at < (SELECT at FROM boundary)
-		     AND (a.created_at, a.id) > (
-		         coalesce((SELECT at FROM resume), '-infinity'::timestamptz),
-		         coalesce((SELECT id FROM resume), '00000000-0000-0000-0000-000000000000'::uuid))
-		   ORDER BY a.created_at, a.id
-		   LIMIT $1
-		)
-		SELECT w.id, rc.id
-		  FROM walk w
-		  JOIN activity src ON src.id = w.id
-		  LEFT JOIN LATERAL (
-		       SELECT r.id FROM raw_capture r
-		        WHERE `+storekit.StoredOriginalSQL("src", "r")+`
-		        LIMIT 1) rc ON true
-		 ORDER BY w.created_at, w.id`, limit, CalendarMethodMigration, direction)
-	if err != nil {
-		return nil, fmt.Errorf("activities: selecting %s mail whose calendar method can be re-read: %w", direction, err)
+// MarkCalendarMethodsUnreadableTx records the unchecked mail among activities
+// as unreadable. Its original is about to be destroyed, so no later read can
+// check it. A mail the task passed while it was held still ends checked.
+func MarkCalendarMethodsUnreadableTx(ctx context.Context, tx pgx.Tx, activities []ids.UUID) error {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO activity_calendar_method_backfill (activity_id, activity_created_at, outcome, direction)
+		SELECT a.id, a.created_at, @outcome, a.direction `+calendarMethodScope+` AND a.id = ANY(@activities)
+		ON CONFLICT (activity_id) DO NOTHING`,
+		pgx.NamedArgs{"outcome": CalendarMethodBackfillUnreadable, "activities": activities}); err != nil {
+		return fmt.Errorf("activities: marking the calendar-method re-read of erased mail: %w", err)
 	}
-	defer rows.Close()
-	var out []CalendarMethodCandidate
-	for rows.Next() {
-		var c CalendarMethodCandidate
-		if err := rows.Scan(&c.ActivityID, &c.RawCaptureID); err != nil {
-			return nil, fmt.Errorf("activities: reading a calendar-method candidate: %w", err)
-		}
-		out = append(out, c)
+	return nil
+}
+
+// EstimateCalendarMethodCandidates counts the unchecked mails for the data
+// task's estimate, reading at most maximum plus one.
+func EstimateCalendarMethodCandidates(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
+	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
+		return 0, false, err
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("activities: reading the calendar-method candidates: %w", err)
+	var count int64
+	if err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT a.id `+calendarMethodScope+` LIMIT @cap) candidates`,
+		pgx.NamedArgs{"cap": maximum + 1}).Scan(&count); err != nil {
+		return 0, false, fmt.Errorf("activities: counting mail whose calendar method can be re-read: %w", err)
 	}
-	return out, nil
+	return min(count, maximum), count > maximum, nil
 }
 
 // SetCalendarMethodTx stores the method read back from a message's original,
@@ -164,7 +149,7 @@ func SetCalendarMethodTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, meth
 const auditFieldCalendarMethod = "calendar_method"
 
 // MarkCalendarMethodCheckedTx records that a message was checked, so it is
-// never offered again and the next batch resumes after it.
+// never offered again and calendarUncheckedSQL reads it as checked.
 func MarkCalendarMethodCheckedTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, outcome string) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_calendar_method_backfill (activity_id, activity_created_at, outcome, direction)

@@ -16,7 +16,7 @@ import { useLocale, useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { FilesStep, ImportDropzone } from "./import.files";
-import { ImportRefusal } from "./import.notices";
+import { ImportRefusal, useRunStopSentence } from "./import.notices";
 import { ImportPresetTarget } from "./import.preset";
 import { ImportProgress, ImportResult } from "./import.result";
 import { TestRunStep } from "./import.testrun";
@@ -242,6 +242,7 @@ function ClosedRun({
   run,
 }: Readonly<{ wizard: ImportWizardState; run: ImportRun }>) {
   const t = useT();
+  const stopped = useRunStopSentence(run);
   const cancelled = run.status === "cancelled";
   const newer = run.superseded_by;
   const title = newer
@@ -264,7 +265,7 @@ function ClosedRun({
         )
       }
     >
-      {cancelled ? undefined : (run.error ?? t("import.closed.stopped"))}
+      {cancelled ? undefined : (stopped ?? t("import.closed.stopped"))}
     </Callout>
   );
 }

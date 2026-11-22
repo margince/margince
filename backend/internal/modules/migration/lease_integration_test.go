@@ -147,7 +147,7 @@ func TestASupersededAttemptCannotFailTheRun(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	first := approvedRun(ctx, t, s)
-	if err := s.FailLease(ctx, first, CauseStopped); err != nil {
+	if err := s.FailLease(ctx, first, stopWith(CauseStopped)); err != nil {
 		t.Fatalf("FailLease: %v", err)
 	}
 	resumed, err := s.ResumeApproved(ctx, first.Run, 0, queueNothing)
@@ -155,7 +155,7 @@ func TestASupersededAttemptCannotFailTheRun(t *testing.T) {
 		t.Fatalf("ResumeApproved: %v", err)
 	}
 
-	if err := s.FailLease(ctx, first, CauseOverBudget); !errors.Is(err, ErrSuperseded) {
+	if err := s.FailLease(ctx, first, stopWith(CauseOverBudget)); !errors.Is(err, ErrSuperseded) {
 		t.Fatalf("the first attempt failing the resumed run = %v, want ErrSuperseded", err)
 	}
 	if got := mustGetStaged(ctx, t, s, first.Run); got.Status != StatusRunning || got.Error != "" ||

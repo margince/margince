@@ -46,7 +46,7 @@ To add a new contact in Margince, open **Contacts** in the sidebar and choose **
 1. Enter the **Full name** and at least one email, phone number or LinkedIn profile link.
 2. If you like, fill **First name**, **Last name**, **Title**, **Company** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
-4. Fill any custom fields, then choose **Create**. Create stays off until the name and a contact channel are filled.
+4. Fill any custom fields, then choose **Create**. If something is missing, Create says so under each field and takes you to the first one.
 
 The **Company** box lists the companies that match what you type: pick one to link it. A typed name links the company of that name, or creates one if there is none. Until you use the box, a work email fills it with the company whose domain covers the address, such as `example.com` for `dana@eu.example.com`. Margince never makes up a company from a domain alone. On a company's **Contacts** tab, **New contact** files the contact under that company, without the box.
 
@@ -137,7 +137,7 @@ To add a company (a new customer, client or account) in Margince, open **Compani
 1. Enter the **Company name** (required).
 2. If you like, fill **Legal name**, **Industry**, **Employees**, **Phone** and **Email**. You pick **Industry** from a list.
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
-4. Fill any custom fields, then choose **Create**. If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
+4. Fill any custom fields, then choose **Create**. If another company holds the same domain, **View existing record** opens it instead and nothing is created. If a company with the same name exists, Margince still creates yours and shows a notice with **View existing record**. Your company's page then shows **Possible duplicates** and a count. The website address comes from the main domain, so there is no website box.
 
 A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 

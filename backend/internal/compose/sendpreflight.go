@@ -3,12 +3,9 @@
 
 package compose
 
-// The request-time send pre-flight, over the SAME capture registry the connect
-// flows write to (telegram-oa design §8.1). It sits apart from the transmit lane
-// in commsjobs.go because it answers a different question at a different moment:
-// not "which credential carries this delivery", but "is there a credential at
-// all", asked while the contact who can do something about the answer is still on
-// the screen.
+// The request-time send pre-flight reads the capture registry the connect flows
+// write to. It sits apart from the transmit lane in commsjobs.go. It asks whether
+// any credential exists while the user who can fix it is still on screen.
 //
 // Which table holds that credential is the whole subtlety, and it is why this is
 // one type with one branch rather than two authorities: a mailbox is one human's
@@ -125,11 +122,9 @@ func installSendPreflight(s *Server, pool *pgxpool.Pool) {
 	})(s, pool)
 }
 
-// SendableMailbox names the mailbox this user's send goes out through, asked
-// of every live mailbox they hold (capture.Registry.ChooseSendingMailbox). Each
-// is asked what SendCapable asks of a provider: an app this deployment
-// configured, and a grant holding comms' own send scope. Empty means none can
-// transmit, which the caller turns into the refusal naming what to fix.
+// SendableMailbox names the live mailbox this user sends through
+// (capture.Registry.ChooseSendingMailbox). Each needs a configured app and a
+// grant with comms' send scope, as SendCapable does; none is refused by name.
 func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, anchor ids.ActivityID) (string, ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
@@ -141,6 +136,9 @@ func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, an
 			configured, err := m.mailAppConfigured(ctx, mailbox.Provider)
 			return configured && slices.Contains(mailbox.ProviderScopes, scope), err
 		})
+	if errors.Is(err, capture.ErrNoConnection) {
+		return "", ids.Nil, &activities.MailboxNotConnectedError{}
+	}
 	if err != nil {
 		return "", ids.Nil, err
 	}

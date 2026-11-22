@@ -9,7 +9,7 @@ import { Select } from "../../design-system/select";
 import { formatNumber, formatPercent } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { ColumnGuideButton } from "./import.guide";
-import { ImportRefusal } from "./import.notices";
+import { ImportRefusal, useRunStopSentence } from "./import.notices";
 import { fieldLabelOf } from "./importfieldlabel";
 import type { WizardFile } from "./importflow";
 import type {
@@ -212,6 +212,7 @@ export function MapStep({
     return left > 0 ? [[entry.file.file, left]] : [];
   });
   const [open, setOpen] = useState(typed[0]?.file.file ?? "");
+  const stopSentence = useRunStopSentence(wizard.run.data, format);
   const current = typed.find((entry) => entry.file.file === open) ?? typed[0];
   if (!current) return null;
   const name = current.file.file;
@@ -230,7 +231,7 @@ export function MapStep({
   const refused = test.error ?? wizard.saveFailure;
   // A test run that stopped left the run a draft, with the reason on it.
   const stopped =
-    wizard.run.data?.status === "pending" ? wizard.run.data.error : undefined;
+    wizard.run.data?.status === "pending" ? stopSentence : undefined;
   return (
     <div className="import">
       <RecordTabs

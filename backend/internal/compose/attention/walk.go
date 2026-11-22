@@ -249,6 +249,8 @@ type walkState struct {
 	// holds work that arrived behind the reader, and recomputing would let the
 	// headline climb — the exact movement freezing the walk exists to stop.
 	buckets worklistsnap.Buckets
+	// offset is where a first page that froze this walk stopped, in ranked rows.
+	offset int
 	// resumed says this page continued a walk rather than starting one.
 	//
 	// Its own field rather than a comparison of instants: a first page and its
@@ -330,6 +332,7 @@ func (s *Service) pageOf(
 	// The next page resumes into the frozen list, where a group is one entry
 	// per member, so the cut is restated in those entries.
 	if walk.carried {
+		walk.offset = reached
 		reached = len(frozenRows(rows[:reached]))
 	}
 	return shown, more, reached, walk

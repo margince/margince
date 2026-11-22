@@ -149,7 +149,10 @@ describe("PartnerTab — not yet a partner", () => {
       expect(screen.getByText("Not a partner yet")).toBeTruthy(),
     );
     const create = screen.getByRole("button", { name: "Create" });
-    expect(create).toBeDisabled();
+    await user.click(create);
+    expect(screen.getByText("Partner kinds is required.")).toBeVisible();
+    expect(screen.getByLabelText("Partner kinds *")).toHaveFocus();
+    expect(putBody).toBeNull();
     await toggleOptions(user, screen.getByLabelText("Partner kinds *"), [
       "Referral",
       "Consulting",

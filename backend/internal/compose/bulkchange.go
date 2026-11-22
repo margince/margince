@@ -299,7 +299,7 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 	}
 	items := slices.Clone(change.items)
 	slices.SortFunc(items, func(a, b crmcontracts.BulkItem) int { return strings.Compare(a.Id.String(), b.Id.String()) })
-	held, err := holdBulkRows(ctx, tx, target, items, change.previewed)
+	held, refused, err := holdBulkRows(ctx, tx, target, items, change.previewed)
 	if err != nil {
 		return bulkRun{}, err
 	}
@@ -307,13 +307,13 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 	var links bulkLinks
 	var restored []ids.UUID
 	for _, item := range items {
-		if skip, refused := held[ids.UUID(item.Id)]; refused {
+		if skip, isRefused := refused[ids.UUID(item.Id)]; isRefused {
 			run.skipped = append(run.skipped, skip)
 			continue
 		}
 		rowChange := change
 		rowChange.pendingLinks = links.pending
-		applied, skip, err := applyOneInSavepoint(ctx, tx, target, rowChange, item)
+		applied, skip, err := applyOneInSavepoint(ctx, tx, target, rowChange, item, held[ids.UUID(item.Id)])
 		switch {
 		case err != nil:
 			return bulkRun{}, err
@@ -341,13 +341,13 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 // applyOneInSavepoint changes one row, or rolls its savepoint back and says why
 // the row was left alone.
 func applyOneInSavepoint(
-	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem,
+	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem, held bulkRow,
 ) (bulkApplied, *crmcontracts.BulkSkip, error) {
 	savepoint, err := tx.Begin(ctx)
 	if err != nil {
 		return bulkApplied{}, nil, fmt.Errorf("open a savepoint for %s: %w", item.Id, err)
 	}
-	applied, skip, err := applyOne(ctx, savepoint, target, change, item)
+	applied, skip, err := applyOne(ctx, savepoint, target, change, item, held)
 	if err == nil && skip.Reason == "" {
 		if err := savepoint.Commit(ctx); err != nil {
 			return bulkApplied{}, nil, fmt.Errorf("release the savepoint for %s: %w", item.Id, err)
@@ -369,10 +369,10 @@ func skipped(reason crmcontracts.BulkSkipReason) crmcontracts.BulkSkip {
 	return crmcontracts.BulkSkip{Reason: reason}
 }
 
-// applyOne is one row's change. A row a rule refuses answers why it was left
-// alone; an error nobody classified aborts the whole change.
+// applyOne is one row's change, from row as holdBulkRows found it under its lock.
+// A refused row answers why; an error nobody classified aborts the change.
 func applyOne(
-	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem,
+	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem, row bulkRow,
 ) (bulkApplied, crmcontracts.BulkSkip, error) {
 	if change.previewed != nil && !change.previewed[item.Id] {
 		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNotPreviewed), nil
@@ -392,10 +392,9 @@ func applyOne(
 		return applyTask(ctx, tx, target, change, item)
 	}
 	id := ids.UUID(item.Id)
-	row, err := target.lock(ctx, tx, id)
-	if err != nil {
-		skip, classifyErr := bulkSkipFor(err)
-		return bulkApplied{}, skip, classifyErr
+	// A forward change refuses an archived row, as a live-only lock would.
+	if row.archived {
+		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNotFound), nil
 	}
 	if row.version != item.Version {
 		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonChangedSincePreview), nil
@@ -405,15 +404,19 @@ func applyOne(
 		Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID)},
 		After:  crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID)},
 	}
+	var err error
 	switch change.verb {
 	case crmcontracts.BulkVerbReassignOwner:
 		if row.ownerID != nil && *row.ownerID == *change.ownerID {
 			return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
 		}
 		sample.After.OwnerId = wireOwner(change.ownerID)
+		owner := ids.From[ids.UserKind](*change.ownerID)
 		var reassigner bulkReassigner
-		if reassigner, err = reassignerOf(target); err == nil {
-			err = reassigner.reassign(ctx, tx, id, ids.From[ids.UserKind](*change.ownerID), item.Version)
+		if held, ok := target.(bulkHeldReassigner); ok {
+			err = held.reassignHeld(ctx, tx, row.lock, owner, item.Version)
+		} else if reassigner, err = reassignerOf(target); err == nil {
+			err = reassigner.reassign(ctx, tx, id, owner, item.Version)
 		}
 	case crmcontracts.BulkVerbArchive:
 		sample.After.Archived = true

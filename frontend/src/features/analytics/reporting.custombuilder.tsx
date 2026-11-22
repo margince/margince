@@ -17,8 +17,10 @@ import {
 } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { analyticsFieldLabel } from "./analytics.questions.vocab";
@@ -112,6 +114,8 @@ export function CustomReportDrawer({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const titleId = useId();
   const reader = useViewerId();
   const composition = useComposition(draft?.selection ?? initial);
@@ -129,15 +133,16 @@ export function CustomReportDrawer({
     0,
   );
   const full = cards >= MAX_CARDS;
+  // An empty name says so on press; these holds are no field's to word.
   const incomplete =
-    !name.trim() ||
-    cards === 0 ||
-    reader === undefined ||
-    unsaveable(selection, metrics);
+    cards === 0 || reader === undefined || unsaveable(selection, metrics);
   // The proposal fills what the words named and leaves the rest as it
   // stands; a name the reader typed is theirs.
   const applyProposal = (proposal: SetupProposal) => {
-    if (proposal.name && name.trim() === "") setName(proposal.name);
+    if (proposal.name && name.trim() === "") {
+      setName(proposal.name);
+      faults.edited("name");
+    }
     const next = selectionWithProposal(selection, proposal);
     composition.setSelection(next);
     if (next.metrics !== selection.metrics) {
@@ -147,7 +152,8 @@ export function CustomReportDrawer({
     }
   };
   const preview = () => {
-    if (reader === undefined) return;
+    const blank = blankRequired(locale, { name: [t("reporting.name"), name] });
+    if (faults.show(blank) || reader === undefined) return;
     holdCustomReport(reader, {
       name: name.trim(),
       description: description.trim(),
@@ -171,13 +177,16 @@ export function CustomReportDrawer({
         <p className="t-caption">{t("reporting.customBuilderPurpose")}</p>
       </DrawerHead>
       <DrawerBody>
-        <div className="form-stack">
-          <Field label={t("reporting.name")} required>
+        <div className="form-stack" ref={faultsRoot}>
+          <Field label={t("reporting.name")} required error={faults.of("name")}>
             {(field) => (
               <TextInput
                 {...field}
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  faults.edited("name");
+                }}
                 maxLength={160}
               />
             )}

@@ -68,12 +68,12 @@ func (s *Store) ReopenLead(ctx context.Context, id ids.LeadID) (crmcontracts.Lea
 	if err := auth.Require(ctx, "lead", principal.ActionDelete); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
 	var out crmcontracts.Lead
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "lead")
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
 			return err
 		}

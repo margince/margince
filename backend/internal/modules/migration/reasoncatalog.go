@@ -118,7 +118,7 @@ const (
 	textValueDetail = "{value:q}: {detail}"
 )
 
-var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
+var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
 	ReasonEmployerRefused: {text: map[textlang.Lang]string{
 		textlang.English:    "The employer could not be resolved. Choose an unambiguous company that you may link.",
 		textlang.German:     "Der Arbeitgeber konnte nicht zugeordnet werden. Wählen Sie ein eindeutiges Unternehmen, das Sie verknüpfen dürfen.",
@@ -271,9 +271,9 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.Vietnamese: "Có nhiều hơn một công ty tên {name:q} nên chỉ con người mới quyết định được công ty nào thuê liên hệ này. Hàng đã được nhập mà không có liên kết.",
 	}},
 	ReasonIDOnNonCompany: {params: []string{paramColumn, "object"}, text: map[textlang.Lang]string{
-		textlang.English:    "Only a company row can name an “{column}”. A {object} row is identified by its own key.",
-		textlang.German:     "Nur eine Unternehmenszeile kann {column:q} angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
-		textlang.Vietnamese: "Chỉ hàng công ty mới có thể nêu {column:q}; hàng {object} được nhận diện bằng khóa riêng.",
+		textlang.English:    "Only a company, contact, lead or deal row can name an “{column}”. A {object} row is identified by its own key.",
+		textlang.German:     "Nur eine Zeile für Unternehmen, Kontakte, Leads oder Deals kann {column:q} angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
+		textlang.Vietnamese: "Chỉ hàng công ty, liên hệ, lead hoặc deal mới có thể nêu {column:q}; hàng {object} được nhận diện bằng khóa riêng.",
 	}},
 	ReasonIDNotACompanyID: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a company id. Export the companies to get theirs, or leave the column empty to import this row as a new company.",
@@ -490,4 +490,4 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
 		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
-})))
+}))))

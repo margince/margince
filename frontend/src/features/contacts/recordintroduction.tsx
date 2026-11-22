@@ -22,9 +22,10 @@ import {
 } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
-import { problemStatus } from "../../lib/problem";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired, problemStatus } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
 import {
   type RecordIntroductionInput,
@@ -75,6 +76,8 @@ export function RecordIntroductionDialog({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const titleId = useId();
   const viewerId = useViewerId();
   const roster = useRoster("user", open);
@@ -90,15 +93,29 @@ export function RecordIntroductionDialog({
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );
-  const ready =
-    introducer !== "" &&
-    introduced !== "" &&
-    introducer !== introduced &&
-    isISODate(day) &&
-    channel !== "";
+  const labels = {
+    introducer: t("contact.intro.recordIntroducer"),
+    introduced: t("contact.intro.recordIntroduced"),
+    day: t("contact.intro.recordDate"),
+    channel: t("contact.intro.recordChannel"),
+  };
+  // One colleague cannot introduce themselves; the two picks must differ.
+  const sameColleague = Boolean(introducer) && introducer === introduced;
+  const edit =
+    <V,>(key: string, set: (value: V) => void) =>
+    (value: V) => {
+      set(value);
+      faults.edited(key);
+    };
 
   const submit = () => {
-    if (!ready) {
+    const blank = blankRequired(locale, {
+      introducer: [labels.introducer, introducer],
+      introduced: [labels.introduced, introduced],
+      day: [labels.day, day],
+      channel: [labels.channel, channel],
+    });
+    if (faults.show(blank) || sameColleague || !isISODate(day) || !channel) {
       return;
     }
     record.mutate(
@@ -117,40 +134,51 @@ export function RecordIntroductionDialog({
       <Heading size="large" id={titleId} className="modal-title">
         {t("contact.intro.recordTitle", { name: contactName })}
       </Heading>
-      <div className="form-stack">
+      <div className="form-stack" ref={faultsRoot}>
         <p>{t("contact.intro.recordHint")}</p>
-        <Field label={t("contact.intro.recordIntroducer")}>
+        <Field
+          label={labels.introducer}
+          required
+          error={faults.of("introducer")}
+        >
           {(control) => (
             <Select
               {...control}
               options={colleagues}
               value={introducer}
-              onChange={setIntroducer}
+              onChange={edit("introducer", setIntroducer)}
             />
           )}
         </Field>
-        <Field label={t("contact.intro.recordIntroduced")}>
+        <Field
+          label={labels.introduced}
+          required
+          error={faults.of("introduced")}
+        >
           {(control) => (
             <Select
               {...control}
               options={colleagues}
               value={introduced}
-              onChange={setIntroduced}
+              onChange={edit("introduced", setIntroduced)}
             />
           )}
         </Field>
-        <Field label={t("contact.intro.recordDate")}>
+        <Field label={labels.day} required error={faults.of("day")}>
           {(control) => (
             <DateInput
               {...control}
               value={day}
               onChange={(e) =>
-                setDay(isISODate(e.target.value) ? e.target.value : "")
+                edit(
+                  "day",
+                  setDay,
+                )(isISODate(e.target.value) ? e.target.value : "")
               }
             />
           )}
         </Field>
-        <Field label={t("contact.intro.recordChannel")}>
+        <Field label={labels.channel} required error={faults.of("channel")}>
           {(control) => (
             <Select
               {...control}
@@ -160,7 +188,10 @@ export function RecordIntroductionDialog({
               }))}
               value={channel}
               onChange={(v) =>
-                setChannel(CHANNELS.find((c) => c.value === v)?.value ?? "")
+                edit(
+                  "channel",
+                  setChannel,
+                )(CHANNELS.find((c) => c.value === v)?.value ?? "")
               }
             />
           )}
@@ -175,7 +206,11 @@ export function RecordIntroductionDialog({
         <Button onClick={onClose} variant="ghost">
           {t("contact.intro.cancel")}
         </Button>
-        <Button onClick={submit} disabled={!ready} pending={record.isPending}>
+        <Button
+          onClick={submit}
+          disabled={sameColleague}
+          pending={record.isPending}
+        >
           {t("contact.intro.recordSubmit")}
         </Button>
       </div>

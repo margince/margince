@@ -327,7 +327,8 @@ describe("KnowledgeCard", () => {
   });
 
   it("refuses to create a set without both a name and a topic statement", async () => {
-    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    const backend = backendFor(ADMIN);
+    vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
     render(<KnowledgeCard />);
 
@@ -336,18 +337,19 @@ describe("KnowledgeCard", () => {
     );
     const dialog = within(await screen.findByRole("dialog"));
     const create = dialog.getByRole("button", { name: "Create" });
-    expect(create).toBeDisabled();
+    const topic = dialog.getByLabelText(/what this set covers/i);
 
     await user.type(dialog.getByLabelText(/^name/i), "Handbook");
     // Still refused: a set with no topic statement has nothing to quote back
     // when it refuses a question, which is the one moment it is read.
-    expect(create).toBeDisabled();
+    await user.click(create);
+    expect(dialog.getByText("What this set covers is required.")).toBeVisible();
+    expect(topic).toHaveFocus();
+    expect(backend.posts).toHaveLength(0);
 
-    await user.type(
-      dialog.getByLabelText(/what this set covers/i),
-      "How the product is operated.",
-    );
-    expect(create).toBeEnabled();
+    await user.type(topic, "How the product is operated.");
+    await user.click(create);
+    await waitFor(() => expect(backend.posts).toHaveLength(1));
   });
 
   it("asks before archiving a set, and sends nothing until the reader agrees", async () => {

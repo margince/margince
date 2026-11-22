@@ -48,7 +48,26 @@ type pendingSource struct {
 	// when the set form and embedText disagree about whether they narrow,
 	// about which value they narrow to, or about which entities exist at all.
 	embeddable string // predicate over the aliased table t
+	// recentColumn is the indexed timestamp a recent drift pass bounds the
+	// table by. Empty means the table is small and every pass reads it whole.
+	recentColumn string
 }
+
+// DriftScope says which rows a drift sweep reads.
+type DriftScope int
+
+const (
+	// DriftFull reads every live row: the daily safety net, which also finds a
+	// row that became embeddable without a write of its own.
+	DriftFull DriftScope = iota
+	// DriftRecent reads only rows written within recentDriftWindow on the
+	// tables that declare a recentColumn, which covers a lost embed event.
+	DriftRecent
+)
+
+// recentDriftWindow is several sweep cadences wide, so a skipped or slow pass
+// leaves no gap. It is read against the database clock.
+const recentDriftWindow = "1 hour"
 
 // embeddablePredicate is the source's own narrowing, or TRUE when it declares
 // none — so a caller composes it unconditionally rather than branching, and a
@@ -71,12 +90,27 @@ func (p pendingSource) embeddablePredicate() string {
 // live indexer must agree on what "this entity's text" means — and, since
 // the embeddable predicate landed, on which rows are embeddable at all.
 var pendingSources = map[string]pendingSource{
-	entityContact:  {table: entityContact, text: "t.full_name"},
-	entityCompany:  {table: entityCompany, text: "concat_ws(' ', t.display_name, t.legal_name, t.industry)"},
-	entityDeal:     {table: entityDeal, text: "t.name"},
-	entityLead:     {table: entityLead, text: "concat_ws(' ', t.full_name, t.company_name, t.title)"},
-	entityActivity: {table: entityActivity, text: "concat_ws(' ', t.subject, t.body)", embeddable: activityIndexable("t")},
-	entityProject:  {table: entityProject, text: "concat_ws(' ', t.name, t.key, t.description)"},
+	// The recent columns lead idx_contact_dedupe_scan, idx_company_dedupe_scan
+	// and idx_activity_receipt_order. Activity has no index on updated_at, so a
+	// lost event for an edit to a mail waits for the full pass.
+	entityContact: {table: entityContact, text: "t.full_name", recentColumn: "updated_at"},
+	entityCompany: {
+		table: entityCompany, text: "concat_ws(' ', t.display_name, t.legal_name, t.industry)", recentColumn: "updated_at",
+	},
+	entityDeal: {table: entityDeal, text: "t.name"},
+	entityLead: {table: entityLead, text: "concat_ws(' ', t.full_name, t.company_name, t.title)"},
+	entityActivity: {
+		table: entityActivity, text: "concat_ws(' ', t.subject, t.body)", embeddable: activityIndexable("t"), recentColumn: "created_at",
+	},
+	entityProject: {table: entityProject, text: "concat_ws(' ', t.name, t.key, t.description)"},
+}
+
+// recencyBound is the extra predicate a scope puts on the outer table.
+func (p pendingSource) recencyBound(scope DriftScope) string {
+	if scope != DriftRecent || p.recentColumn == "" {
+		return ""
+	}
+	return fmt.Sprintf("\n\t\t      AND t.%s >= now() - interval '%s'", p.recentColumn, recentDriftWindow)
 }
 
 // PendingByWorkspace is what a re-embed pass for each enumerated workspace will
@@ -205,11 +239,11 @@ func (s *Store) workspacePending(ctx context.Context, currentIdentity string) (c
 // the drift sweep both build on it, so they admit the same rows (#10966).
 // The anti-join runs before the text is read. Trimming in the scan would
 // detoast every body in the table, and for activity that is every mail.
-func (p pendingSource) pendingTextCTE(entityType string) string {
+func (p pendingSource) pendingTextCTE(entityType string, scope DriftScope) string {
 	return fmt.Sprintf(`
 		unembedded AS MATERIALIZED (
 		    SELECT t.id FROM %[1]s t
-		    WHERE t.archived_at IS NULL
+		    WHERE t.archived_at IS NULL%[5]s
 		      AND %[2]s
 		      AND NOT EXISTS (
 		            SELECT 1 FROM embedding e
@@ -219,18 +253,19 @@ func (p pendingSource) pendingTextCTE(entityType string) string {
 		    FROM %[1]s t
 		    JOIN unembedded u ON u.id = t.id
 		    WHERE btrim(%[4]s) <> '')`,
-		p.table, p.embeddablePredicate(), entityType, p.text)
+		p.table, p.embeddablePredicate(), entityType, p.text, p.recencyBound(scope))
 }
 
-// pendingStatsSQL counts and measures the pending set (workspacePending).
+// pendingStatsSQL counts and measures the whole pending set (workspacePending).
 func (p pendingSource) pendingStatsSQL(entityType string) string {
-	return `WITH ` + p.pendingTextCTE(entityType) + `
+	return `WITH ` + p.pendingTextCTE(entityType, DriftFull) + `
 		SELECT count(*), coalesce(sum(octet_length(trimmed)), 0) FROM pending_text`
 }
 
-// pendingIDsSQL lists the pending set's ids (the drift sweep's pendingEntityIDs).
-func (p pendingSource) pendingIDsSQL(entityType string) string {
-	return `WITH ` + p.pendingTextCTE(entityType) + `
+// pendingIDsSQL lists the ids of the pending set within scope (the drift
+// sweep's pendingEntityIDs).
+func (p pendingSource) pendingIDsSQL(entityType string, scope DriftScope) string {
+	return `WITH ` + p.pendingTextCTE(entityType, scope) + `
 		SELECT id FROM pending_text`
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // narrateBudget bounds ONE rep's sentence, and it is the deterministic half's
@@ -166,17 +167,9 @@ func (w *weeklyGenerateWorker) measureWorkspace(
 func (w *weeklyGenerateWorker) measureFor(
 	ctx context.Context, wsID, userID ids.UUID, now time.Time,
 ) (mailableReview, error) {
-	rbac, seat, err := w.users.EffectiveAuthority(ctx, wsID, userID)
+	repPrincipal, err := authz.MemberPrincipal(ctx, w.users, wsID, userID)
 	if err != nil {
 		return mailableReview{}, fmt.Errorf("resolving the rep's authority: %w", err)
-	}
-	repPrincipal := principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + userID.String(),
-		UserID:      userID,
-		SeatType:    seat,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
 	}
 	repCtx := principal.WithActor(ctx, repPrincipal)
 	repCtx = principal.WithCorrelationID(repCtx, ids.NewV7())

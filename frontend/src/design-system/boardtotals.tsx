@@ -6,15 +6,38 @@ import {
   formatDayMonth,
   formatMoneyCompact,
   formatMoneyOrAbsent,
-  formatNumber,
   MONEY_ABSENT,
 } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
-import { translatePlural, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { useCompanyZone } from "../lib/companyzone";
+import { RATE_SHEET, useCoverageWords } from "../lib/coveragewords";
+import { hasGap, type MoneyCoverage } from "../lib/moneycoverage";
+import { AppLink } from "./applink";
 import type { BoardMoneyColumn } from "./pipelineboard";
 import { Meter } from "./readings";
 import { useDetailTooltip } from "./tooltip";
+
+// What the total's tip says of the deals it leaves out.
+function usePartialTip(coverage: MoneyCoverage | null | undefined) {
+  const t = useT();
+  const words = useCoverageWords();
+  if (!hasGap(coverage)) return null;
+  const reasons = Object.values(words(coverage)).filter(Boolean);
+  return [t("coverage.partialTip"), ...reasons.map((r) => `${r}.`)].join(" ");
+}
+
+// The two reasons, worded apart. A missing rate links to the rate sheet.
+function GapNote({ coverage }: Readonly<{ coverage: MoneyCoverage }>) {
+  const { rate, value } = useCoverageWords()(coverage);
+  return (
+    <span>
+      {rate && <AppLink href={RATE_SHEET}>{rate}</AppLink>}
+      {rate && value && " · "}
+      {value}
+    </span>
+  );
+}
 
 /**
  * The scale every stage's bar is drawn against: the largest stage total on the
@@ -60,7 +83,8 @@ export function ColumnTotals({
       MONEY_ABSENT,
       formatMoneyCompact,
     );
-  const unpriced = money.unpricedCount ?? 0;
+  const gap = hasGap(money.coverage);
+  const partialTip = usePartialTip(money.coverage);
   const reportZone = money.timezone ?? companyZone;
   const rates =
     money.asOf && reportZone ? { at: money.asOf, zone: reportZone } : null;
@@ -74,10 +98,7 @@ export function ColumnTotals({
           locale,
         ),
       }),
-      unpriced > 0 &&
-        translatePlural(locale, "board.unpricedTip", unpriced, {
-          count: formatNumber(unpriced, locale),
-        }),
+      partialTip,
       rates &&
         t("board.convertedTip", {
           date: formatDate(rates.at, locale, rates.zone),
@@ -92,6 +113,9 @@ export function ColumnTotals({
       <div className="board-col-total">
         <span className="board-col-money" ref={ref} {...trigger}>
           {compact(money.rawMinor)}
+          {gap && money.rawMinor != null && (
+            <span className="board-col-partial"> {t("coverage.partial")}</span>
+          )}
           {tip}
         </span>
         <span className="board-col-weighted">
@@ -99,6 +123,9 @@ export function ColumnTotals({
             {compact(money.weightedMinor)}
           </span>{" "}
           {t("board.weightedLabel")}
+          {gap && money.weightedMinor != null && (
+            <span className="board-col-partial"> {t("coverage.partial")}</span>
+          )}
         </span>
       </div>
       {/* The bar repeats the two figures beside it, so it stays out of the
@@ -124,15 +151,9 @@ export function ColumnTotals({
           )}
         </div>
       )}
-      {(unpriced > 0 || rates) && (
+      {(gap || rates) && (
         <span className="board-col-notes">
-          {unpriced > 0 && (
-            <span>
-              {translatePlural(locale, "board.unpriced", unpriced, {
-                count: formatNumber(unpriced, locale),
-              })}
-            </span>
-          )}
+          {hasGap(money.coverage) && <GapNote coverage={money.coverage} />}
           {rates && (
             <span>
               {t("board.ratesOn", {

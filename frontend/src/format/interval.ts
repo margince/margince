@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Locale } from "../i18n/locale";
-import { INTL_LOCALE } from "./format";
+import { listFormat, numberFormat } from "./formatters";
 
 const INTERVAL_UNITS = [
   ["day", 86_400],
@@ -15,7 +15,7 @@ const INTERVAL_UNITS = [
 // seconds is "1 hour, 30 minutes", where formatDuration would floor it to "1 hr".
 export function formatInterval(seconds: number, locale: Locale): string {
   const unitWords = (unit: string, count: number) =>
-    new Intl.NumberFormat(INTL_LOCALE[locale], {
+    numberFormat(locale, {
       style: "unit",
       unit,
       unitDisplay: "long",
@@ -28,7 +28,7 @@ export function formatInterval(seconds: number, locale: Locale): string {
     if (count > 0) parts.push(unitWords(unit, count));
   }
   if (parts.length === 0) return unitWords("second", 0);
-  return new Intl.ListFormat(INTL_LOCALE[locale], {
+  return listFormat(locale, {
     style: "long",
     type: "unit",
   }).format(parts);

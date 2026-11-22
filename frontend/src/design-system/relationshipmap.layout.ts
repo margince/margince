@@ -5,6 +5,8 @@
 // every read, and the highlighted route must be the strongest one the edges
 // support rather than whichever the renderer happened to walk first.
 
+import { graphemes } from "../lib/charactercount";
+
 /** What a node stands for, which decides its shape rather than its colour. */
 export type MapNodeKind = "user" | "contact" | "company" | "deal" | "gap";
 
@@ -454,16 +456,6 @@ export function fitLabel(
     }
   }
   return cutAt(glyphs, fits);
-}
-
-// Graphemes, so a cut never splits a flag, a joined emoji or an accent.
-function graphemes(text: string): string[] {
-  // Not every supported browser has Intl.Segmenter; code points never throw.
-  if (typeof Intl.Segmenter !== "function") {
-    return Array.from(text);
-  }
-  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-  return Array.from(segmenter.segment(text), (part) => part.segment);
 }
 
 function cutAt(glyphs: readonly string[], count: number): string {

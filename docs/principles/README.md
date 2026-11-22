@@ -22,6 +22,7 @@ shows what the code does today: fix one or the other, and say which.
 | [Derive the obligation](derive-the-obligation.md) | Why a gate must hold a rule, not a human, and how to write a gate that holds instead of one that shows green over its own bug. It also covers the two ways a gate becomes the second copy it exists to stop. [reference/gate-patterns.md](../reference/gate-patterns.md) lists the shapes a gate comes in, and [reference/gate-inventory.md](../reference/gate-inventory.md) is the generated list of every gate. | *Rules learned from the review loop* |
 | [An agent does what its user does](an-agent-does-what-its-user-does.md) | Which actions an agent may take, why a closed one needs a security reason, and when it must ask first. | *What decides a question* |
 | [Nothing here is private](nothing-here-is-private.md) | Who the public reader is, what never shows in the tree, and why a working attack takes the private path. | *This repository is public* |
+| [Where an invariant belongs](where-an-invariant-belongs.md) | Which rules the database holds, which the program holds, and how a gate keeps the two the same. | *Rules learned from the review loop* |
 
 ## Adding a principle
 

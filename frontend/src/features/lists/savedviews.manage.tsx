@@ -6,8 +6,9 @@ import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { useSinglePress } from "../../design-system/presslatch";
-import { useT } from "../../i18n";
-import { problemMessageOf } from "../../lib/problem";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
 import { type SavedView, useSaveView } from "../../lib/savedviews.queries";
 import "./savedviews.css";
 
@@ -57,8 +58,11 @@ export function ManageViewsButton({
 function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
   const t = useT();
   const { rename, remove } = useSaveView();
+  const { locale } = useLocale();
   const singlePress = useSinglePress(rename.isPending);
   const [mode, setMode] = useState<RowMode>(null);
+  const [faults, faultsRoot] = useFieldFaults();
+  const nameLabel = t("views.name");
   // The failure belongs to the row that asked, and is cleared by the next
   // question: a refusal left under another row would name the wrong view.
   const settle = () => {
@@ -67,6 +71,7 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
   };
   const ask = (next: RowMode) => {
     settle();
+    faults.show(new Map());
     setMode(next);
   };
   if (views.length === 0) {
@@ -80,10 +85,15 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
           {mode?.id === view.id && mode.kind === "rename" ? (
             <form
               className="savedviews-manage-edit"
+              ref={faultsRoot}
+              noValidate
               onSubmit={singlePress((event) => {
                 event.preventDefault();
                 const name = mode.name.trim();
-                if (name === "") {
+                const blank = blankRequired(locale, {
+                  name: [nameLabel, mode.name],
+                });
+                if (faults.show(blank)) {
                   return;
                 }
                 rename.mutate(
@@ -92,14 +102,15 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
                 );
               })}
             >
-              <Field label={t("views.name")}>
+              <Field label={nameLabel} required error={faults.of("name")}>
                 {(control) => (
                   <TextInput
                     {...control}
                     value={mode.name}
-                    onChange={(event) =>
-                      setMode({ ...mode, name: event.target.value })
-                    }
+                    onChange={(event) => {
+                      setMode({ ...mode, name: event.target.value });
+                      faults.edited("name");
+                    }}
                   />
                 )}
               </Field>
@@ -107,7 +118,6 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
                 type="submit"
                 variant="primary"
                 pending={rename.isPending}
-                disabled={mode.name.trim() === ""}
               >
                 {t("views.saveConfirm")}
               </Button>

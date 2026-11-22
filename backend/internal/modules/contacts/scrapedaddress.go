@@ -10,9 +10,6 @@ import (
 	"regexp"
 	"strings"
 
-	"golang.org/x/text/language"
-	"golang.org/x/text/language/display"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -29,28 +26,6 @@ var (
 	anyDigit           = regexp.MustCompile(`\d`)
 	addressSeparators  = strings.NewReplacer(",", "\n", ";", "\n", "|", "\n", " · ", "\n")
 )
-
-// countryByName answers a country written out in English, German or Vietnamese,
-// in lower case, with the alpha-2 code the address column stores.
-var countryByName = func() map[string]string {
-	names := map[string]string{
-		"usa": "US", "u.s.a.": "US", "united states of america": "US",
-		"uk": "GB", "great britain": "GB", "viet nam": "VN",
-	}
-	namers := []display.Namer{display.English.Regions(), display.German.Regions(), display.Vietnamese.Regions()}
-	for code := range assignedCountry {
-		region, err := language.ParseRegion(code)
-		if err != nil {
-			continue
-		}
-		for _, namer := range namers {
-			if name := namer.Name(region); name != "" {
-				names[strings.ToLower(name)] = code
-			}
-		}
-	}
-	return names
-}()
 
 // addressSplitRule says how much a split must see before it is accepted.
 type addressSplitRule uint8
@@ -177,8 +152,7 @@ func addressCountry(part string) (string, bool) {
 	if _, assigned := assignedCountry[part]; assigned {
 		return part, true
 	}
-	code, named := countryByName[strings.ToLower(part)]
-	return code, named
+	return countryNamed(part)
 }
 
 func streetLines(parts []string) crmcontracts.Address {

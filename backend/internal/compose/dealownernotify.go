@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/editaccess"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // Deal stores have no job client; this inserter uses the caller's transaction.
@@ -30,6 +32,9 @@ var ownerChangeMail = sync.OnceValues(func() (*jobs.Runner, error) {
 // queues their announcements in the deal writer's transaction. No second
 // approval event is emitted for an existing request.
 func followDealOwnerAndTell(ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *ids.UUID) error {
+	if err := editaccess.FollowOwnerTx(ctx, tx, entityDeal, dealID, to); err != nil {
+		return err
+	}
 	done, err := approvals.MoveDealRequestsInTx(ctx, tx, dealID, from, to)
 	if err != nil {
 		return err
@@ -110,12 +115,5 @@ func deciderContextTx(ctx context.Context, tx pgx.Tx, seat ids.UUID) (context.Co
 	if err != nil {
 		return nil, false, err
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          principal.HumanIDPrefix + seat.String(),
-		UserID:      seat,
-		SeatType:    seatType,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), true, nil
+	return principal.WithActor(ctx, authz.HumanPrincipal(seat, rbac, seatType)), true, nil
 }

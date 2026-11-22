@@ -48,11 +48,17 @@ func TestPreparedMailboxProofUsesOneReadAndStaysInItsTransaction(t *testing.T) {
 		if !ok {
 			t.Fatal("reader principal missing")
 		}
-		if _, err := storekit.ProvedMailboxLabels(principal.WithActor(prepared, other), tx); err != nil {
+		// The identities are workspace facts with no row scope, so another
+		// reader in this transaction gets the same answer from its memo.
+		labels, err := storekit.ProvedMailboxLabels(principal.WithActor(prepared, other), tx)
+		if err != nil {
 			return err
 		}
-		if meter.Cost().Statements-before != 2 {
-			t.Fatal("another reader reused the prepared proof")
+		if len(labels) != 1 || len(labels[e.Rep1]) != 1 || labels[e.Rep1][0] != "proved@example.test" {
+			t.Fatalf("another reader in the transaction got other proof: %v", labels)
+		}
+		if meter.Cost().Statements-before != 1 {
+			t.Fatalf("another reader in the transaction read the identities again: %d queries", meter.Cost().Statements-before)
 		}
 		return nil
 	})

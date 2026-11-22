@@ -113,13 +113,12 @@ func (s *Store) UpdateLead(ctx context.Context, id ids.LeadID, in UpdateLeadInpu
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
 	var out crmcontracts.Lead
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "lead")
+		if err != nil {
+			return err
+		}
 		out, err = s.updateLeadInTx(ctx, tx, id, in, active)
 		return err
 	})
@@ -188,7 +187,7 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 	if patch.FullName == nil && patch.CompanyName == nil && patch.Title == nil {
 		return nil
 	}
-	_, err = s.updateLeadInTx(ctx, tx, id, patch, active.cols)
+	_, err = s.lockAndWriteLeadInTx(ctx, tx, id, patch, active.cols)
 	return err
 }
 
@@ -215,89 +214,92 @@ func emptyFieldPatch(current crmcontracts.Lead, in CapturedLeadFields) UpdateLea
 
 func blank(value *string) bool { return value == nil || *value == "" }
 
-// updateLeadInTx runs the visibility gate, the sparse-patch fold, the write
-// shape, and the cleared-override recompute for one lead update inside the
-// caller's transaction. active names the workspace's custom-field columns
-// (fetched before the tx opened).
-//
-//nolint:cyclop // one edit applies each optional field in turn, as updateContactInTx does.
+// updateLeadInTx is the lead update on the caller's transaction, then the lead
+// as it now stands.
 func (s *Store) updateLeadInTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in UpdateLeadInput, active []fieldcatalog.Column) (crmcontracts.Lead, error) {
-	if err := ensureLeadUpdateAuthority(ctx, tx, id, in); err != nil {
-		return crmcontracts.Lead{}, err
+	edit, err := s.lockAndWriteLeadInTx(ctx, tx, id, in, active)
+	if err != nil || !edit.changed {
+		return edit.current, err
 	}
-	// The lock comes before the read, so the before image is what the write
-	// replaces. A recompute landing in between would otherwise move
-	// score_computed under a clear that already captured the old value.
-	lock, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly)
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
+	return readLead(ctx, tx, id, storekit.LiveOnly, active)
+}
+
+// writeLeadInTx runs the sparse-patch fold, the write shape, and the
+// cleared-override recompute for one lead update. The caller holds the lead row
+// locked and checked its update authority. It reads nothing back for a caller.
+//
+//nolint:cyclop // one edit applies each optional field in turn, as writeContactInTx does.
+func (s *Store) writeLeadInTx(
+	ctx context.Context, tx pgx.Tx, lock storekit.RowLock, in UpdateLeadInput, active []fieldcatalog.Column,
+) (recordEdit[crmcontracts.Lead], error) {
+	var none recordEdit[crmcontracts.Lead]
+	id := ids.From[ids.LeadKind](lock.ID())
 	current, err := readLead(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	// Checked here and not only by the write: a patch that turns out empty
 	// returns early, and a stale If-Match must still answer 409 then.
-	if err := storekit.EnsureIfMatch(ctx, tx, "lead", id.UUID, in.IfVersion); err != nil {
-		return crmcontracts.Lead{}, err
+	if err := storekit.EnsureVersionMatches(current.Version, in.IfVersion); err != nil {
+		return none, err
 	}
 	in, err = admitLeadReferences(ctx, tx, current, in)
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, resumeRecompute, err := buildLeadPatch(current, in)
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := setLeadPartner(ctx, tx, p, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := refuseContactHeldLeadEdit(ctx, tx, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := refuseErasedLeadEmail(ctx, tx, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := stampHumanFirstResponse(ctx, tx, p, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := stampStatusSetBy(ctx, p, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := unlinkUnnamedCompany(ctx, tx, id, current.CompanyName, current.CandidateCompanyKey, p); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if p.Empty() {
-		return current, nil
+		return recordEdit[crmcontracts.Lead]{current: current}, nil
 	}
 	rescore, err := stageLeadRescore(ctx, tx, id, current, p, resumeRecompute)
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 		if mapped, ok := leadUniqueViolation(err, in.Email); ok {
-			return crmcontracts.Lead{}, mapped
+			return none, mapped
 		}
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "lead", id.UUID, p.Before(), p.After())
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadUpdated{ChangedFields: p.After()}); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := s.reviewTouchedLeadIdentity(ctx, tx, id, p); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := recordRescoreHistory(ctx, tx, id, in, rescore); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
-	return readLead(ctx, tx, id, storekit.LiveOnly, active)
+	return recordEdit[crmcontracts.Lead]{current: current, changed: true}, nil
 }
 
 // admitLeadReferences checks the project and origin a patch names, and

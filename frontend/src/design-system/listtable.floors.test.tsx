@@ -107,8 +107,8 @@ describe("a numeric column's floor", () => {
       ).toBeGreaterThan(160),
     );
     rerender(table(testRows(3)));
-    dragValueTo(container, 90);
-    await waitFor(() => expect(widthOfColumn(container, 1)).toBe("90px"));
+    dragValueTo(container, 100);
+    await waitFor(() => expect(widthOfColumn(container, 1)).toBe("100px"));
   });
 
   it("sets no floor from a cell that holds a strip", async () => {

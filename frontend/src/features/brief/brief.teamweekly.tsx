@@ -20,6 +20,7 @@ import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import { useCompanyZone } from "../../lib/companyzone";
+import { coverageOfWire, hasGap } from "../../lib/moneycoverage";
 import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -244,10 +245,18 @@ function RepsUnread({ review }: Readonly<{ review: TeamWeeklyReview }>) {
 function wonValue(
   review: TeamWeeklyReview,
   locale: Locale,
+  partial: string,
 ): string | undefined {
   const pipeline = review.pipeline;
   if (pipeline === undefined) return undefined;
-  return formatMoneyCompact(pipeline.won_minor, pipeline.currency, locale);
+  const figure = formatMoneyCompact(
+    pipeline.won_minor,
+    pipeline.currency,
+    locale,
+  );
+  return hasGap(coverageOfWire(review.pipeline_coverage))
+    ? `${figure} ${partial}`
+    : figure;
 }
 
 function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
@@ -260,7 +269,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
     review.leads_withheld,
   );
   const n = (value: number) => formatNumber(value, locale);
-  const won = wonValue(review, locale);
+  const won = wonValue(review, locale, t("coverage.partial"));
   const place = { t, locale, zone };
   const reading = (
     figure: WeeklyFigure,

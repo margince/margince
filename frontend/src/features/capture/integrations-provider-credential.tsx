@@ -19,9 +19,10 @@ import {
   ProviderMark,
   providerBrandName,
 } from "../../design-system/provider-mark";
+import { useFieldFaults } from "../../design-system/savepage";
 import { SettingRow } from "../../design-system/settingrow";
-import { useT } from "../../i18n";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { connectionLabel, connectionTone } from "../../lib/provider-status";
 import { recordWriteKeys } from "../../lib/recordwritekeys";
 import type { ProviderConnection } from "./integrations-provider";
@@ -106,15 +107,22 @@ function CredentialDialog({
   onConnect: (apiKey: string) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [key, setKey] = useState("");
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const connected = connection.credential_present;
   return (
     <ConfirmModal
       open
       title={t("provider.connectConfirm.title")}
       confirmLabel={connected ? t("provider.reconnect") : t("provider.connect")}
-      confirmDisabled={key.trim() === ""}
-      onConfirm={() => onConnect(key.trim())}
+      bodyRef={faultsRoot}
+      onConfirm={() => {
+        const blank = blankRequired(locale, {
+          key: [t("provider.apiKey"), key],
+        });
+        if (!faults.show(blank)) onConnect(key.trim());
+      }}
       onClose={onClose}
       pending={pending}
       error={error}
@@ -131,6 +139,7 @@ function CredentialDialog({
         hint={
           connected ? t("provider.apiKeyReplaceHint") : t("provider.apiKeyHint")
         }
+        error={faults.of("key")}
       >
         {(control) => (
           <TextInput
@@ -142,7 +151,10 @@ function CredentialDialog({
             placeholder={
               connected ? t("provider.apiKeyReplacePlaceholder") : ""
             }
-            onChange={(event) => setKey(event.target.value)}
+            onChange={(event) => {
+              setKey(event.target.value);
+              faults.edited("key");
+            }}
           />
         )}
       </Field>

@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 61,
+    "sites": 62,
     "sites_best_current": 58,
     "sites_best_partial": 0,
     "sites_best_stale": 2,
-    "sites_absent": 1,
-    "scenarios": 339,
+    "sites_absent": 2,
+    "scenarios": 342,
     "records": 400,
     "bindings": 18,
     "self_judged_records": 0
@@ -245,6 +245,34 @@
           "abandoned": 0,
           "runs": 15,
           "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "chat_task_reading",
+          "label": "Chat and open tasks",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -1035,7 +1063,7 @@
         "supported_degraded": 9,
         "not_supported": 1
       },
-      "untested": 0,
+      "untested": 1,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -1350,6 +1378,34 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           }
+        },
+        {
+          "task": "chat_task_reading",
+          "label": "Chat and open tasks",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "cold_start",
@@ -2427,7 +2483,7 @@
         "supported_degraded": 9,
         "not_supported": 1
       },
-      "untested": 0,
+      "untested": 1,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -2652,6 +2708,34 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "chat_task_reading",
+          "label": "Chat and open tasks",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-luna",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
             "band": "",
             "state": ""
           },
@@ -3424,7 +3508,7 @@
         "supported_degraded": 3,
         "not_supported": 4
       },
-      "untested": 9,
+      "untested": 10,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -3649,6 +3733,34 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "chat_task_reading",
+          "label": "Chat and open tasks",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-oss-120b",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
             "band": "",
             "state": ""
           },
@@ -4421,7 +4533,7 @@
         "supported_degraded": 12,
         "not_supported": 8
       },
-      "untested": 4,
+      "untested": 5,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -4646,6 +4758,34 @@
               "env": "cloud_frontier"
             },
             "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "chat_task_reading",
+          "label": "Chat and open tasks",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
             "band": "",
             "state": ""
           },
@@ -5418,7 +5558,7 @@
         "supported_degraded": 1,
         "not_supported": 4
       },
-      "untested": 31,
+      "untested": 32,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -5640,6 +5780,34 @@
             "model": {
               "provider": "openai_compatible",
               "model": "mistralai/mistral-medium-3-5",
+              "env": "eu_hosted"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "chat_task_reading",
+          "label": "Chat and open tasks",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "mistralai/ministral-14b-2512",
               "env": "eu_hosted"
             },
             "same_model": false,
@@ -6415,7 +6583,7 @@
         "supported_degraded": 2,
         "not_supported": 14
       },
-      "untested": 9,
+      "untested": 10,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6650,6 +6818,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "chat_task_reading",
+          "label": "Chat and open tasks",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -7412,7 +7608,7 @@
         "supported_degraded": 0,
         "not_supported": 0
       },
-      "untested": 37,
+      "untested": 38,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -7647,6 +7843,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "chat_task_reading",
+          "label": "Chat and open tasks",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "vllm",
+              "model": "mlx-community/Qwen3-14B-4bit",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "cold_start",
           "label": "Onboarding read",
           "tier": "cheap_cloud",
@@ -8409,7 +8633,7 @@
         "supported_degraded": 0,
         "not_supported": 0
       },
-      "untested": 37,
+      "untested": 38,
       "unbound": 0,
       "unrecognised": 0
     }
@@ -8418,7 +8642,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 61,
+      "sites_shipped": 62,
       "sites_measured": 60,
       "ready": 47,
       "usable_with_care": 12,
@@ -9343,7 +9567,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 61,
+      "sites_shipped": 62,
       "sites_measured": 54,
       "ready": 37,
       "usable_with_care": 11,
@@ -10185,7 +10409,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 61,
+      "sites_shipped": 62,
       "sites_measured": 50,
       "ready": 23,
       "usable_with_care": 17,
@@ -10995,7 +11219,7 @@
     {
       "name": "Gemma",
       "answer": "not_enough_tested",
-      "sites_shipped": 61,
+      "sites_shipped": 62,
       "sites_measured": 6,
       "ready": 1,
       "usable_with_care": 1,
@@ -15786,6 +16010,36 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "chat_task_reading",
+      "site": "chat_tasks",
+      "key": "chat_task_reading/chat_tasks",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "booked_slot_closes_the_task",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/chat_task_reading/booked_slot_closes_the_task_01.yaml"
+        },
+        {
+          "name": "next_week_moves_the_task",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/chat_task_reading/next_week_moves_the_task_01.yaml"
+        },
+        {
+          "name": "unrelated_chat_changes_nothing",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/chat_task_reading/unrelated_chat_changes_nothing_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "cold_start",

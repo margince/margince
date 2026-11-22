@@ -14,9 +14,10 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
+import { useFieldFaults } from "../design-system/savepage";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
-import { throwProblem } from "../lib/problem";
+import { useLocale, useT } from "../i18n";
+import { blankRequired, throwProblem } from "../lib/problem";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -62,7 +63,16 @@ export function RecordTeamAssign({
   existing?: RecordAssignment;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const headingId = useId();
+  const whoErrorId = useId();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  // Each opening starts with no field sentence from the last one.
+  const [faultsOpen, setFaultsOpen] = useState(open);
+  if (open !== faultsOpen) {
+    setFaultsOpen(open);
+    faults.show(new Map());
+  }
   const [subjectKind, setSubjectKind] = useState<AssignmentSubjectKind>("user");
   const [subject, setSubject] = useState<RecordPickerCandidate | null>(null);
   const [roleId, setRoleId] = useState("");
@@ -131,7 +141,11 @@ export function RecordTeamAssign({
   }
 
   async function submit() {
-    if (!subject || !roleId) {
+    const blank = blankRequired(locale, {
+      subject: [t("assignments.who"), subject?.id ?? ""],
+      role: [t("assignments.role"), roleId],
+    });
+    if (faults.show(blank) || !subject) {
       return;
     }
     const submitted = draftId;
@@ -167,7 +181,7 @@ export function RecordTeamAssign({
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {existing ? t("assignments.changeTitle") : t("assignments.addTitle")}
       </Heading>
-      <div className="form-stack">
+      <div className="form-stack" ref={faultsRoot}>
         <SegmentedControl
           label={t("assignments.subjectKind")}
           options={SUBJECT_KINDS}
@@ -193,17 +207,27 @@ export function RecordTeamAssign({
                 : undefined
             }
             selected={subject}
-            onPick={setSubject}
+            onPick={(next) => {
+              setSubject(next);
+              faults.edited("subject");
+            }}
             disabled={write.isPending}
+            required
+            aria-invalid={faults.of("subject") ? true : undefined}
+            aria-describedby={faults.of("subject") ? whoErrorId : undefined}
           />
+          <ErrorLine id={whoErrorId}>{faults.of("subject")}</ErrorLine>
         </div>
-        <Field label={t("assignments.role")}>
+        <Field label={t("assignments.role")} required error={faults.of("role")}>
           {(control) => (
             <Select
               {...control}
               options={options}
               value={roleId}
-              onChange={setRoleId}
+              onChange={(next) => {
+                setRoleId(next);
+                faults.edited("role");
+              }}
               placeholder={t("assignments.rolePlaceholder")}
               disabled={write.isPending || options.length === 0}
             />
@@ -216,10 +240,7 @@ export function RecordTeamAssign({
         <Button variant="ghost" onClick={close} disabled={write.isPending}>
           {t("deals.cancel")}
         </Button>
-        <Button
-          onClick={() => void submit()}
-          disabled={write.isPending || !subject || roleId === ""}
-        >
+        <Button onClick={() => void submit()} disabled={write.isPending}>
           {existing ? t("assignments.saveChange") : t("assignments.saveAdd")}
         </Button>
       </div>

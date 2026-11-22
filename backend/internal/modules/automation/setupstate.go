@@ -22,7 +22,7 @@ type configurationState struct {
 func configurationOf(a Automation, authorizerActive bool) configurationState {
 	entry, known := CatalogEntryByKey(a.Key)
 	var params map[string]any
-	if !known || json.Unmarshal(a.Params, &params) != nil || entry.Validate(params) != nil || validateRequiredSetup(entry, params) != nil {
+	if !known || json.Unmarshal(a.Params, &params) != nil || setupIncomplete(entry, params) {
 		return configurationState{crmcontracts.AutomationSetupStateNeedsSetup, "configuration_incomplete"}
 	}
 	needsAuthorizer, err := starterNeedsAuthorizer(entry, a.Params)

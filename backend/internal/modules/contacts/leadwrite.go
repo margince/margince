@@ -44,12 +44,12 @@ func (s *Store) leadWrite(
 	id ids.LeadID,
 	write func(tx pgx.Tx, active []fieldcatalog.Column) (crmcontracts.Lead, error),
 ) (crmcontracts.Lead, error) {
-	active, err := s.activeColumns(ctx, entityLead)
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
 	var out crmcontracts.Lead
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, entityLead)
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureWritable(ctx, tx, entityLead, id.UUID); err != nil {
 			return err
 		}

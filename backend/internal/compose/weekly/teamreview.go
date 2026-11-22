@@ -18,6 +18,9 @@ package weekly
 import (
 	"context"
 	"errors"
+	"maps"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -263,14 +266,15 @@ func gatherTeamWeek(
 	// currency had no rate makes the team total unanswerable, exactly as one
 	// unconvertible deal does for that rep — a sum quietly missing a contact is
 	// worse than an absent one.
-	money := Money{Known: true}
+	money := Money{Known: true, Assessed: true}
+	missing := map[string]bool{}
 	var plans memberPlans
 	var accepted, rejected int
 	for _, member := range members {
 		frozen, err := memberWeek(ctx, tx, member.UserID, review.LocalWeekStart)
 		if errors.Is(err, apperrors.ErrNotFound) {
 			review.RepsUnread++
-			money.Known = false
+			money.Known, money.Assessed = false, false
 			review.Members = append(review.Members, FrozenMember{UserID: member.UserID, DisplayName: member.DisplayName})
 			continue
 		}
@@ -287,6 +291,17 @@ func gatherTeamWeek(
 		addTeamCounts(&review.Counts, counts)
 		accepted += counts.ProposalsAccepted
 		rejected += counts.ProposalsRejected
+		if memberMoney.Assessed {
+			money.NoValueDeals += memberMoney.NoValueDeals
+			money.NoRateDeals += memberMoney.NoRateDeals
+			for code := range strings.SplitSeq(memberMoney.MissingCurrencies, ",") {
+				if code != "" {
+					missing[code] = true
+				}
+			}
+		} else {
+			money.Assessed = false
+		}
 		if !memberMoney.Known || (money.Currency != "" && money.Currency != memberMoney.Currency) {
 			money.Known = false
 		} else if money.Known {
@@ -302,8 +317,11 @@ func gatherTeamWeek(
 		review.Reps = append(review.Reps, teamCopyFor(review.Language).repFrom(member, counts, frozen.help, deals))
 	}
 	review.Quality.ProposalsAccepted, review.Quality.ProposalsRejected = &accepted, &rejected
+	money.MissingCurrencies = strings.Join(slices.Sorted(maps.Keys(missing)), ",")
 	if money.Known && money.Currency != "" {
 		review.Money = money
+	} else if money.Assessed {
+		review.Money = Money{Assessed: true, NoValueDeals: money.NoValueDeals, NoRateDeals: money.NoRateDeals, MissingCurrencies: money.MissingCurrencies}
 	}
 	return plans, nil
 }
