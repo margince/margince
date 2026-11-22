@@ -152,7 +152,7 @@ func (e *WorkflowEngine) gateAndApply(ctx context.Context, h workflow.Handler, e
 		}
 		return e.passedOverForLapsedSetter(ctx, h, ev)
 	}
-	claimed, err := e.claimRun(ctx, h, ev, plannedJSON, runStatusApplied, nil)
+	claimed, err := e.claimRunForApply(ctx, h, ev, plannedJSON)
 	if err != nil || !claimed {
 		return err
 	}
@@ -356,13 +356,41 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 // is NOT NULL; a silently-wrong provenance is the honest-hard-case this
 // column guards against).
 func (e *WorkflowEngine) claimRun(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte, status string, detail []byte) (bool, error) {
+	return e.insertRun(ctx, h, ev, planned, status, detail, false)
+}
+
+// applyRetryWindow bounds how long after its first attempt a failed apply may
+// be taken over by a redelivery. The bus redelivers without limit, so a
+// permanent fault must stop re-running and wait for an operator.
+const applyRetryWindow = "1 hour"
+
+// claimRunForApply claims the run before Apply, like claimRun.
+// When the handler declares a second pass safe, a run whose Apply failed on a
+// transient fault is claimed again. A redelivery then retries the failed notice.
+func (e *WorkflowEngine) claimRunForApply(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte) (bool, error) {
+	return e.insertRun(ctx, h, ev, planned, runStatusApplied, nil, h.Spec().RedrivableWithoutDuplicating)
+}
+
+// insertRun claims the (handler, key) row. With reclaim set, a row whose Apply
+// failed with the generic reason, the shape an infrastructure fault leaves, is
+// taken over inside the window. A refusal with its own sentence (not found, not
+// permitted) would answer the same way again, so it stays terminal.
+func (e *WorkflowEngine) insertRun(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte, status string, detail []byte, reclaim bool) (bool, error) {
+	onConflict, args := "DO NOTHING", []any{h.Spec().Name, runKey(h, ev), ev.ID, planned, status, detail}
+	if reclaim {
+		onConflict = `DO UPDATE
+			SET status = EXCLUDED.status, planned = EXCLUDED.planned, detail = NULL, applied = NULL
+			WHERE workflow_run.status = 'failed' AND workflow_run.applied IS NULL
+			  AND workflow_run.detail->>'reason' = $7
+			  AND workflow_run.created_at > now() - $8::interval`
+		args = append(args, genericFailureText, applyRetryWindow)
+	}
 	claimed := false
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO workflow_run (handler, idempotency_key, trigger_event, planned, status, detail)
 			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (handler, idempotency_key) DO NOTHING`,
-			h.Spec().Name, runKey(h, ev), ev.ID, planned, status, detail)
+			ON CONFLICT (handler, idempotency_key) `+onConflict, args...)
 		if err != nil {
 			return err
 		}
