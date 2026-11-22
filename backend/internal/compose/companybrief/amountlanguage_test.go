@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func germanAccount() Input {
@@ -71,12 +71,10 @@ func TestAGermanFigureTheModelCopiesIsGroundedInItsDeal(t *testing.T) {
 	}
 }
 
-const fleetDealID = "44444444-4444-4444-8444-444444444444"
-
 // cardView is a company 360 whose open deals are rows and whose state strip
 // carries the open total the card shows, in the workspace base currency.
 func cardView(rows []crmcontracts.Company360Deal, baseMinor int, base string) crmcontracts.Company360 {
-	view := crmcontracts.Company360{Company: crmcontracts.Company{Id: uuid.MustParse(briefCompanyID), DisplayName: "Acme"}}
+	view := crmcontracts.Company360{Company: crmcontracts.Company{Id: openapi_types.UUID(ids.MustParse(briefCompanyID)), DisplayName: "Acme"}}
 	view.Deals = &crmcontracts.Company360Deals{Data: rows}
 	view.StateStrip = &crmcontracts.Company360StateStrip{Commercial: &struct {
 		BaseCurrency          *string             `json:"base_currency,omitempty"`
@@ -92,7 +90,7 @@ func cardView(rows []crmcontracts.Company360Deal, baseMinor int, base string) cr
 }
 
 func dealRow(n int, minor int64, currency string) crmcontracts.Company360Deal {
-	id := uuid.MustParse(fmt.Sprintf("44444444-4444-4444-8444-%012d", n))
+	id := openapi_types.UUID(ids.MustParse(fmt.Sprintf("44444444-4444-4444-8444-%012d", n)))
 	return crmcontracts.Company360Deal{DealId: id, Name: fmt.Sprintf("Deal %d", n), Amount: &crmcontracts.Money{AmountMinor: &minor, Currency: &currency}}
 }
 

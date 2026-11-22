@@ -30,7 +30,9 @@ func foldDeals(view crmcontracts.Company360, in *Input) {
 }
 
 // foldOpenPipeline reads the open total off the same state strip the card
-// shows, so the check and the card cannot disagree on it.
+// shows, so the check reads the card's figure and not a second sum.
+//
+// Held by: TestTheOpenTotalIsTheCardsOwnFigureNotASumOfThePage (backend/internal/compose/companybrief/amountlanguage_test.go)
 func foldOpenPipeline(view crmcontracts.Company360, in *Input) {
 	if view.StateStrip == nil || view.StateStrip.Commercial == nil {
 		return

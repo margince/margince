@@ -41,8 +41,10 @@ var moneyFigure = regexp.MustCompile(`(?i)([-−])?(?:(?P<sym1>` + symbolMarks +
 	`(?:\s?(?:(?P<sym2>` + symbolMarks + `)|\b(?P<word2>` + wordMarks + `)\b))?`)
 
 const (
-	moneyNumber = `\d{1,3}(?:[.,' ]\d{3})+(?:[.,]\d{1,3})?|\d+(?:[.,]\d{1,3})?`
-	moneyScales = `k|m|mio|tsd|thousand|million|millions|millionen`
+	// moneyMaxInt and moneyMaxFrac bound a sum the parser will read.
+	moneyMaxInt, moneyMaxFrac = 18, 3
+	moneyNumber               = `\d{1,3}(?:[.,' ]\d{3})+(?:[.,]\d{1,3})?|\d+(?:[.,]\d{1,3})?`
+	moneyScales               = `k|m|mio|tsd|thousand|million|millions|millionen`
 )
 
 var symbolMarks, wordMarks = markAlternations()
@@ -140,7 +142,7 @@ func amountOf(code, raw string, scale int64, negative bool) Amount {
 	readings := moneyReadings(raw, values.MinorUnitDigits(code))
 	amount.Major = readings[len(readings)-1]
 	for _, reading := range readings {
-		value, ok := new(big.Rat).SetString(reading)
+		value, ok := plainRat(reading)
 		if !ok {
 			continue
 		}
@@ -148,6 +150,15 @@ func amountOf(code, raw string, scale int64, negative bool) Amount {
 		amount.Keys = append(amount.Keys, code+":"+sign+strings.TrimRight(strings.TrimRight(value.FloatString(6), "0"), "."))
 	}
 	return amount
+}
+
+// plainRat parses a plain decimal only. Exponent and fraction forms would let
+// big.Rat size the value by the digits of the text.
+func plainRat(reading string) (*big.Rat, bool) {
+	if !values.PlainDecimal(reading, moneyMaxInt, moneyMaxFrac) {
+		return nil, false
+	}
+	return new(big.Rat).SetString(reading)
 }
 
 // moneyReadings reads a written sum as plain decimals. A single separator
