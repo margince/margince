@@ -1,4 +1,6 @@
 -- Restores the cascade and the strict shape.
+-- Rollback restores the rule for new rows only: the keys come back NOT VALID,
+-- because a down has no later file to validate them in.
 SET LOCAL lock_timeout = '5s';
 
 -- The strict shape comes back NOT VALID: a row whose cited record was deleted holds
@@ -14,8 +16,8 @@ DROP FUNCTION deal_suggestion_evidence_keeps_its_source_gone();
 ALTER TABLE deal_suggestion_evidence DROP COLUMN source_gone;
 ALTER TABLE deal_suggestion_evidence
     DROP CONSTRAINT deal_suggestion_evidence_activity_id_fkey,
-    ADD CONSTRAINT deal_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE,
+    ADD CONSTRAINT deal_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE NOT VALID,
     DROP CONSTRAINT deal_suggestion_evidence_attachment_id_fkey,
-    ADD CONSTRAINT deal_suggestion_evidence_attachment_id_fkey FOREIGN KEY (attachment_id) REFERENCES attachment(id) ON DELETE CASCADE,
+    ADD CONSTRAINT deal_suggestion_evidence_attachment_id_fkey FOREIGN KEY (attachment_id) REFERENCES attachment(id) ON DELETE CASCADE NOT VALID,
     DROP CONSTRAINT deal_suggestion_evidence_signal_id_fkey,
-    ADD CONSTRAINT deal_suggestion_evidence_signal_id_fkey FOREIGN KEY (signal_id) REFERENCES signal(id) ON DELETE CASCADE;
+    ADD CONSTRAINT deal_suggestion_evidence_signal_id_fkey FOREIGN KEY (signal_id) REFERENCES signal(id) ON DELETE CASCADE NOT VALID;
