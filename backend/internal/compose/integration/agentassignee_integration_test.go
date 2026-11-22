@@ -103,7 +103,14 @@ func TestARefusedSeatGetsOneAnswerOnEveryDoor(t *testing.T) {
 		retired, "gone-"+retired.String()+"@seat.test"); err != nil {
 		t.Fatalf("seeding the retired seat: %v", err)
 	}
+	reader := ids.NewV7()
+	if _, err := OwnerConn(t).Exec(t.Context(), `
+		INSERT INTO app_user (id, email, display_name, status, seat_type) VALUES ($1, $2, 'Reader', 'active', 'read')`,
+		reader, "reader-"+reader.String()+"@seat.test"); err != nil {
+		t.Fatalf("seeding the read seat: %v", err)
+	}
 	seats := map[string]ids.UserID{
+		"a read seat":         ids.From[ids.UserKind](reader),
 		"an agent seat":       seedAgentSeat(t),
 		"a retired colleague": ids.From[ids.UserKind](retired),
 		"an unknown id":       ids.From[ids.UserKind](ids.NewV7()),

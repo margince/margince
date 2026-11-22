@@ -254,6 +254,17 @@ describe("LeadCompanyName", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
+  it("reads the typed name for a reader without company read, and asks nothing", () => {
+    const fetched = vi.fn(async () => new Response(null, { status: 403 }));
+    vi.stubGlobal("fetch", fetched);
+    render(<LeadCompanyName lead={{ ...lead, company_id: "c-7" }} />, {
+      lead: ["read"],
+    });
+    expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(fetched).not.toHaveBeenCalled();
+  });
+
   it("names a company the reader may see by its own name", async () => {
     stubServer();
     render(<LeadCompanyName lead={{ ...lead, company_id: "c-7" }} />);

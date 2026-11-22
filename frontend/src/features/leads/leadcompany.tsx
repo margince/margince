@@ -20,7 +20,7 @@ import type {
 import { industryWords } from "../../format/industry";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { useLocale, useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
+import { useCan, useCanWrite } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { leadIndustry } from "./leadindustry";
@@ -105,13 +105,15 @@ function LinkCompanyOffer({
 // draws. The link reads the company's own name, which a rename there may have
 // moved away from what the lead typed. A company the reader may not see reads
 // as if the lead were not linked, which is what the Company sort orders by.
+// Without company read the name is not even asked for.
 export function LeadCompanyName({
   lead,
   asText = false,
 }: Readonly<{ lead: Lead; asText?: boolean }>): ReactNode {
-  const linked = useEntityName("company", lead.company_id);
-  if (lead.company_id && !linked.absent) {
-    return <EntityRef kind="company" id={lead.company_id} asText={asText} />;
+  const companyId = useCan("company", "read") ? lead.company_id : null;
+  const linked = useEntityName("company", companyId);
+  if (companyId && !linked.absent) {
+    return <EntityRef kind="company" id={companyId} asText={asText} />;
   }
   const name = lead.company_name?.trim();
   return name ? <span>{name}</span> : null;

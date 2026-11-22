@@ -225,8 +225,11 @@ func unpricedDeals(rows []ranked) int {
 // counts while its preview is stale or blocked: the reader can refresh it.
 //
 // Another row counts where it carries any verb, as its producer resolved
-// authority. A pair the reader may only look at waits on someone else. A
-// contact case settles in its own review, so it carries no verb.
+// authority. A pair the reader may only look at waits on someone else.
+//
+// A contact case carries no verb and still counts. Its lane raises it only for
+// the owners of its members, and each settles it in the case's own review. So
+// it waits on this reader, as a stale approval does.
 func readerSettles(item crmcontracts.WorklistItem) bool {
 	return item.Source == crmcontracts.WorklistItemSourceApproval || item.ContactCase != nil || len(item.Actions) > 0
 }
