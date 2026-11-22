@@ -13858,9 +13858,10 @@ export interface paths {
         /**
          * Declare another address as your own.
          * @description Takes a user or their agent and nothing more: claiming your own address needs no grant, and the claim
-         *     binds only your own mail. Not retroactive — mail already captured under the old reading
-         *     stays, and a contact already minted from an alias stays until it is merged or removed.
-         *     Idempotent on the folded value.
+         *     binds only your own mail. Mail already captured stays, except for the contact capture minted
+         *     from this address. When you alone hold that contact, it is archived and its mail is taken
+         *     off it and kept as yours. A contact a colleague owns or shares, or one with other mail on
+         *     it, stays. Idempotent on the folded value.
          *
          *     A consumer-mail domain is refused with 422 `consumer_mail_domain` as a whole domain. A company's
          *     domain or a contact's address answers 409 `domain_needs_confirmation` (`details.role`,

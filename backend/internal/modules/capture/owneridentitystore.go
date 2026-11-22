@@ -77,7 +77,8 @@ type OwnerIdentity struct {
 
 // OwnerIdentityStore reads and writes the per-seat identity list.
 type OwnerIdentityStore struct {
-	db *database.DB
+	db             *database.DB
+	addressClaimed AddressClaimHook
 }
 
 // NewOwnerIdentityStore builds the store over the app pool.
@@ -200,6 +201,9 @@ func (s *OwnerIdentityStore) AddConfirmed(ctx context.Context, kind, raw string,
 		// close. Only the claimant's own rows — the ledger is owner-scoped,
 		// and a colleague's verdict about the same address is theirs.
 		if err := retirePendingForIdentityTx(ctx, tx, actor.UserID, out); err != nil {
+			return err
+		}
+		if err := s.addressClaimedTx(ctx, tx, out); err != nil {
 			return err
 		}
 		// Audit-only, like the exclusion list and the own-domain list beside
