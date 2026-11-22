@@ -12,12 +12,14 @@ const meta: Meta<typeof PaletteRow> = {
   render: (args) => (
     <LocaleProvider initial="en">
       <div className="palette-list">
-        <PaletteRow {...args} />
+        <div role="listbox" aria-label="Command palette">
+          <PaletteRow {...args} />
+        </div>
       </div>
     </LocaleProvider>
   ),
   args: {
-    previous: undefined,
+    id: "palette-option-0",
     selected: false,
     onRun: fn(),
     command: {

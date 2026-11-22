@@ -2,15 +2,16 @@ import type { LucideIcon } from "lucide-react";
 import {
   type ComponentProps,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
 } from "react";
-import { Button, Kbd, PendingBody, SearchField } from "../design-system/atoms";
+import { Kbd, PendingBody, SearchField } from "../design-system/atoms";
 import { useBackdropDismiss } from "../design-system/backdrop";
 import { Callout } from "../design-system/callout";
 import { useDialogFocus } from "../design-system/dialogfocus";
-import { Eyebrow } from "../design-system/eyebrow";
+import { comboboxAria } from "../design-system/listoption";
 import { usePresence } from "../design-system/presence";
 import type { StatusKind } from "../design-system/statusbadge";
 import { holdsEveryWordStart, searchWords } from "../format/collate";
@@ -27,13 +28,14 @@ import {
   PaletteEmpty,
   PaletteFilter,
   PaletteKeys,
+  PaletteRecentHeading,
 } from "./palettechrome";
 import { useBuiltinCommands } from "./palettecommands";
 import { useConfigurationCommand } from "./paletteconfiguration";
 import type { PaletteMode } from "./palettehotkey";
 import { recentCommand, usePaletteRecents } from "./paletterecents";
 import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
-import { PaletteRow } from "./paletterow";
+import { PaletteOptions, paletteOptionId } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 
 // ⌘K command palette. Each command is a screen, setting, action or record;
@@ -178,6 +180,8 @@ export function CommandPalette({
   // The one type of record the list is narrowed to; null lists every type.
   const [kind, setKind] = useState<CoreSearchHitType | null>(null);
   const panel = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const recentHeadingId = useId();
   const overlay = useRef<HTMLDivElement>(null);
 
   // The palette draws its own chrome and borrows the two contracts every dialog
@@ -230,6 +234,9 @@ export function CommandPalette({
   const search = kind ? narrowed : every;
   const listsRecents = !creates && !query.trim();
   const recents = usePaletteRecents(open, listsRecents);
+  // The heading over stored recents, which names their group in the list.
+  const recentLabel =
+    listsRecents && recents.hasStored ? recentHeadingId : undefined;
   const recentCommands = recents.entries.map((entry) =>
     recentCommand(entry, t, recents.activating === recentIdentity(entry)),
   );
@@ -327,6 +334,11 @@ export function CommandPalette({
             value={query}
             placeholder={t("palette.placeholder")}
             aria-label={t("palette.aria")}
+            {...comboboxAria(
+              listboxId,
+              rows.length > 0,
+              paletteOptionId(listboxId, rows, selected),
+            )}
             onChange={(event) => {
               recents.cancel();
               setQuery(event.target.value);
@@ -407,38 +419,23 @@ export function CommandPalette({
             listed={rows.length}
             search={search}
           />
-          {listsRecents && recents.hasStored && (
-            <Eyebrow
-              as="h2"
-              size="xxsmall"
-              className="palette-group"
-              action={
-                <Button
-                  variant="link"
-                  onClick={() => {
-                    recents.clear();
-                    focusSearch();
-                  }}
-                >
-                  {t("palette.clearRecent")}
-                </Button>
-              }
-            >
-              {t("palette.recent")}
-            </Eyebrow>
-          )}
+          <PaletteRecentHeading
+            id={recentLabel}
+            onClear={() => {
+              recents.clear();
+              focusSearch();
+            }}
+          />
           {listsRecents && recents.pending && (
             <PendingBody label={t("common.loading")} lines={1} />
           )}
-          {rows.map((command, index) => (
-            <PaletteRow
-              key={command.id}
-              command={command}
-              previous={rows[index - 1]}
-              selected={index === selected}
-              onRun={run}
-            />
-          ))}
+          <PaletteOptions
+            rows={rows}
+            selected={selected}
+            listboxId={listboxId}
+            recentHeadingId={recentLabel}
+            onRun={run}
+          />
           {!creates && (
             <PaletteAskDocuments
               heading={rows.at(-1)?.group === askGroup ? null : askGroup}

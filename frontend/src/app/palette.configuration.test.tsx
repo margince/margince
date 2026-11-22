@@ -90,9 +90,9 @@ describe("the palette, by a setting's name", () => {
   ])("opens Configuration filtered to %j", async (query, named) => {
     const user = userEvent.setup();
     mount(INSTALLATION_WRITER);
-    await user.type(screen.getByRole("searchbox"), query);
+    await user.type(screen.getByRole("combobox"), query);
 
-    const row = await screen.findByRole("button", { name: /^Configuration/ });
+    const row = await screen.findByRole("option", { name: /^Configuration/ });
     expect(row.querySelector(".sub")?.textContent).toBe(named);
     await user.click(row);
     expect(window.location.hash).toBe(`#/settings/configuration?q=${query}`);
@@ -101,9 +101,9 @@ describe("the palette, by a setting's name", () => {
   it("opens Configuration unfiltered when its own name matches", async () => {
     const user = userEvent.setup();
     mount(INSTALLATION_WRITER);
-    await user.type(screen.getByRole("searchbox"), "configuration");
+    await user.type(screen.getByRole("combobox"), "configuration");
 
-    const rows = await screen.findAllByRole("button", {
+    const rows = await screen.findAllByRole("option", {
       name: /^Configuration/,
     });
     expect(rows).toHaveLength(1);
@@ -135,13 +135,13 @@ describe("the palette, by a setting's name", () => {
     // The witness: Mail capture proves /me has answered before the absence
     // below is read.
     const fetch = mount({ capture_settings: ["read"] });
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
     await user.type(box, "capture");
-    await screen.findByRole("button", { name: /^Mail capture/ });
+    await screen.findByRole("option", { name: /^Mail capture/ });
     await user.clear(box);
     await user.type(box, "MARGINCE_HTTP_PORT");
 
-    expect(screen.queryByRole("button", { name: /^Configuration/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /^Configuration/ })).toBeNull();
     expect(
       fetch.mock.calls.some(([input]) =>
         urlOf(input).endsWith(CONFIGURATION_PATH),
