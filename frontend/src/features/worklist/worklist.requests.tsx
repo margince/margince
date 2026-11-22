@@ -28,7 +28,7 @@ const REASON_KEYS = {
 
 export function RequestedDeals({
   requests,
-}: Readonly<{ requests: readonly Request[] }>) {
+}: Readonly<{ requests: Request[] }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();

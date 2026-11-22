@@ -3,10 +3,10 @@
 
 package deals
 
-// A seller can ask the team's manager to look at a deal. The request is one
-// fact on the deal row, so every lead of the owner's teams sees it and none
-// has a copy to keep in step. The write is the deal's own: row, audit entry and
-// event commit together.
+// A seller can ask the team's manager to look at a deal.
+// The request is one fact on the deal row, so every lead of the owner's teams
+// sees it and none keeps a copy. The write is the deal's own: row, audit entry
+// and event commit together.
 
 import (
 	"context"

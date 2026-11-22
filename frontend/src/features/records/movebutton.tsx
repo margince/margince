@@ -66,7 +66,7 @@ export function recipientsOf(move: PerformableMove): string[] {
 }
 
 // managerRequestOf reads the deal and the reasons a "bring in the manager" move
-// carries; null where either is missing, so no button is drawn that would be refused.
+// carries. It is null where either is missing, so no refused button is drawn.
 function managerRequestOf(
   move: PerformableMove,
 ): { dealId: string; reasons: string[] } | null {

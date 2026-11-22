@@ -38,8 +38,8 @@ func (h Handlers) WithManagerRequests(read ManagerRequestsFunc) Handlers {
 }
 
 // requestedDeals is the section of requested deals, empty rather than null.
-// With individual performance off a request would name a colleague's deal, so
-// the section is left empty, as the ranked list shows only the reader's own.
+// With individual performance off a request would name a colleague's deal.
+// The section is then left empty, as the ranked list shows only the reader's own.
 func (h Handlers) requestedDeals(ctx context.Context, tx pgx.Tx, only *Scope) ([]crmcontracts.ForecastFocusRequested, error) {
 	out := []crmcontracts.ForecastFocusRequested{}
 	if allowed, bound := auth.IndividualPerformanceOf(ctx); h.managerRequests == nil || (bound && !allowed) {
