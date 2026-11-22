@@ -102,8 +102,7 @@ const (
 // of them would answer a question about calendars rather than about work.
 var whereHeldMeeting = "t.kind = 'meeting' AND " + meetingoutcome.HeldSQL("t") + " AND t.archived_at IS NULL"
 
-// A filter on a colleague asks the credit rule itself (filterPredicates), so
-// colCreditedSeat only gives it a null test and a value shape.
+// colCreditedSeat is the colleague filter's null test and value shape; its match is filterPredicates.
 var colCreditedSeat, colCreditedSeats = storekit.MeetingLowestCreditedSeatSQL("t"), storekit.MeetingCreditedSeatListSQL("t")
 
 // activityOwnRowFields names, per report, each dimension or filter read off
