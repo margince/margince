@@ -6343,6 +6343,27 @@ export const en = {
     "Clear the figure to follow the stage again.",
   "deal.winProbability.reason.stageNamed": "the stage {name}",
   "deal.winProbability.reason.stageUnnamed": "the deal’s stage",
+  "deal.winChance.typed": "Typed at {percent} on {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} deal from here has closed, {percent} won.",
+  "deal.winChance.evidence_other":
+    "{count} deals from here have closed, {percent} won.",
+  "deal.winChance.learningOff": "Learning from closed deals is switched off.",
+  "deal.winChance.signal.quiet": "quiet for {days} days",
+  "deal.winChance.signal.close_pushed": "the close date was pushed",
+  "deal.winChance.signal.no_next_step": "no next step",
+  "deal.winChance.signal.stuck": "stuck for {days} days",
+  "deal.winChance.effect.lowers_one":
+    "{signal} lowers it (learned from {count} closed deal).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} lowers it (learned from {count} closed deals).",
+  "deal.winChance.effect.raises_one":
+    "{signal} raises it (learned from {count} closed deal).",
+  "deal.winChance.effect.raises_other":
+    "{signal} raises it (learned from {count} closed deals).",
+  "deal.winChance.effect.halved":
+    "{signal} halves it, because too few closed deals show the real effect yet.",
+  "deal.winChance.result": "The win chance is {percent}.",
   "deal.winProbability.band.90_plus": "90% or more",
   "deal.winProbability.band.60_89": "60 to 89%",
   "deal.winProbability.band.30_59": "30 to 59%",
@@ -16895,6 +16916,21 @@ export const en = {
   "installationSettings.likelyThreshold.help":
     "The probability from which an open deal with a confirmed close date counts as Likely.",
   "forecast.landing": "Landing",
+  "forecast.accuracy.title": "Forecast accuracy",
+  "forecast.accuracy.none":
+    "Not enough closed deals yet. Once deals the forecast counted have closed, this compares what it said with what happened.",
+  "forecast.accuracy.calibration_one":
+    "{count} closed deal, grouped by the chance the forecast gave it {days} days before it closed.",
+  "forecast.accuracy.calibration_other":
+    "{count} closed deals, grouped by the chance the forecast gave them {days} days before they closed.",
+  "forecast.accuracy.band_one": "Chance {mean}, won {won} ({count} deal)",
+  "forecast.accuracy.band_other": "Chance {mean}, won {won} ({count} deals)",
+  "forecast.accuracy.fewDeals_one": "{count} deal, too few to state a share",
+  "forecast.accuracy.fewDeals_other": "{count} deals, too few to state a share",
+  "forecast.accuracy.landings":
+    "Finished quarters: what the forecast said four weeks before the end against what was won.",
+  "forecast.accuracy.landing": "Said {said}, won {landed}",
+  "forecast.accuracy.saidOn": "Said on {date}",
   "forecast.landingSection": "Where the period lands",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingUnrecorded": "Not recorded",

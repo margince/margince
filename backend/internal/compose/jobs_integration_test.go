@@ -202,9 +202,7 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 		t.Error("the replacement is the sweep's own estimate and must say so")
 	}
 	if swept.probability == nil || *swept.probability != 95 {
-		// The tier comes with it. 45 here is what the downgrade notch writes,
-		// reached only from a stalled finding this fixture does not carry.
-		// Naming the decision says which of the two an occurrence was.
+		// Naming the sweep's decision says which tier an occurrence was.
 		t.Errorf("probability = %s, want the untouched 95 (%s)",
 			shownInt(swept.probability), e.sweptTier(t, id))
 	}

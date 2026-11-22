@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/dealcoverage"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -244,9 +243,10 @@ type reportSpec struct {
 	grants map[string]string
 }
 
-// colWinProbability is the deal's effective win probability, the figure the
-// forecast weights by and the deal list filters on.
-var colWinProbability = deals.WinProbabilitySQL("t")
+// colWinProbability is the deal's win chance, the figure the forecast weights
+// by and the deal list filters on. A token, bound per request to the one win
+// chance (forecastchancetable.go).
+const colWinProbability = reportDealChanceToken
 
 // winProbabilityBandExpr groups deals into the bands the analytics tiles draw.
 // 90_plus is Likely at the shipped threshold.

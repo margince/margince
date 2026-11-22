@@ -32,7 +32,7 @@ func (s *Store) GetDeal(ctx context.Context, id ids.DealID, archived storekit.Ar
 		if err != nil {
 			return err
 		}
-		out, err = getDealInTx(ctx, tx, id, archived, active)
+		out, err = s.getDealWithChance(ctx, tx, id, archived, active)
 		return err
 	})
 	return out, err
@@ -44,7 +44,7 @@ func (s *Store) GetDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID, archive
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	return getDealInTx(ctx, tx, id, archived, active.cols)
+	return s.getDealWithChance(ctx, tx, id, archived, active.cols)
 }
 
 func getDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
@@ -242,6 +242,9 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 				if err := finishDealPage(ctx, tx, page); err != nil {
 					return err
 				}
+				if err := s.stampWinChances(ctx, tx, page); err != nil {
+					return err
+				}
 				return storekit.AttachRowTags(ctx, tx, dealTaggableType, page,
 					func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
 					func(d *crmcontracts.Deal, tags []storekit.RowTag) { d.Tags = wireRowTags(tags) })
@@ -270,7 +273,10 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 			if in.FactsOnly {
 				return maskDeals(ctx, tx, page)
 			}
-			return finishDealPage(ctx, tx, page)
+			if err := finishDealPage(ctx, tx, page); err != nil {
+				return err
+			}
+			return s.stampWinChances(ctx, tx, page)
 		})
 }
 
@@ -294,6 +300,11 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
 	if err != nil {
 		return nil, nil, err
+	}
+	if s.winChanceSQL != nil && (in.WinProbabilityMin != nil || in.WinProbabilityMax != nil) {
+		if in.winChance, err = s.winChanceSQL(ctx, tx, s.clock(), dealRef(""), pre.Arg); err != nil {
+			return nil, nil, err
+		}
 	}
 	where, err := appendDealFilters(ctx, pre.Where(), in, pre.Arg)
 	if err != nil {

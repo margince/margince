@@ -177,6 +177,19 @@ func TestEveryUninjectedInstallationSeamRefuses(t *testing.T) {
 					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)
 				}
 				_, err = seam(context.Background(), nil, nil)
+			case WinChanceReader:
+				// Optional by design: a store with none keeps the stored
+				// probability, which is what a store built outside the
+				// composition reads. It must stay nil, never a refusal.
+				if seam != nil {
+					t.Fatalf("%s is set after orRefusing; an unset win chance read must stay nil", field)
+				}
+				return
+			case WinChanceSQL:
+				if seam != nil {
+					t.Fatalf("%s is set after orRefusing; an unset win chance read must stay nil", field)
+				}
+				return
 			default:
 				t.Fatalf("%s is neither seam shape; teach this test how to call it", field)
 			}

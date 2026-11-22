@@ -61,6 +61,11 @@ type Store struct {
 	ensureProjectAttachable EnsureProjectAttachable
 	startDeliveryForWonDeal StartDeliveryForWonDeal
 
+	// winChances and winChanceSQL are the installation's win chance reads; nil
+	// keeps the stored probability.
+	winChances   WinChanceReader
+	winChanceSQL WinChanceSQL
+
 	// followOwner hands pending proposals to a deal's new owner (ownerfollow.go).
 	followOwner FollowOwner
 	// ownDomains, when bound, lets the stage-move check judge activity
@@ -137,6 +142,11 @@ type Installation struct {
 	// ContractVisible is the contracts module's row rule, which stage
 	// evidence asks before it calls a cited contract openable.
 	ContractVisible ContractVisibleClause
+	// WinChances and WinChanceSQL read the one win chance of an open deal and
+	// of every deal in a filter (winchance.go). Unset, a read keeps the stored
+	// probability, which is what a store built outside the composition reads.
+	WinChances   WinChanceReader
+	WinChanceSQL WinChanceSQL
 	// AuthorEntity and IssuerEntity answer which legal entity an offer is
 	// issued by, and what it prints about it. `contacts` owns the entities.
 	AuthorEntity AuthorEntity
@@ -158,6 +168,8 @@ func NewStore(db *database.DB, inst Installation) *Store {
 		ensureProjectAttachable: inst.EnsureProjectAttachable,
 		startDeliveryForWonDeal: inst.StartDeliveryForWonDeal,
 		followOwner:             inst.FollowOwner,
+		winChances:              inst.WinChances,
+		winChanceSQL:            inst.WinChanceSQL,
 	}
 }
 

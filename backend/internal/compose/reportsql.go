@@ -293,6 +293,10 @@ const (
 	// weighted by. It is the forecast's chance in use, or the typed one while
 	// self-correction is off (forecastchancetable.go).
 	reportChanceToken = "<<forecast-chance:t,s>>"
+	// reportDealChanceToken stands in for the same chance of a deal aliased t
+	// where the statement joins no stage. The win_probability dimension and
+	// bands read it, so a report groups by the number a deal shows.
+	reportDealChanceToken = "<<forecast-chance:t>>"
 	// reportBaseCurrencyToken stands in for the installation base currency's
 	// bind position.
 	reportBaseCurrencyToken = "<<installation-base-currency>>"
@@ -388,6 +392,12 @@ func bindReportTokens(
 	if err := bindScope(reportChanceToken, func() (string, error) {
 		table, err := readForecastChanceTable(ctx, tx, frame.AsOf)
 		return table.sqlExpr("t", "s", arg), err
+	}); err != nil {
+		return "", nil, err
+	}
+	if err := bindScope(reportDealChanceToken, func() (string, error) {
+		table, err := readForecastChanceTable(ctx, tx, frame.AsOf)
+		return table.scalarSQL("t", arg), err
 	}); err != nil {
 		return "", nil, err
 	}

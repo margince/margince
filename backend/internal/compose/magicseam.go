@@ -45,7 +45,7 @@ func newMagicService(
 ) *magic.Service {
 	db := InstallationDB(pool)
 	return magic.NewService(pool, magicBriefCutoff{
-		engine: briefs.NewBriefEngine(pool, nil),
+		engine: briefs.NewBriefEngine(pool, nil).WithWinChances(dealWinChances),
 		now:    now,
 	}, now).
 		WithTroubledRuns(automation.NewAutomationStore(db)).

@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/stagemove"
+	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
 // forecastChanceActor names the system reads behind a deal's chance.
@@ -35,13 +36,9 @@ const forecastChanceActor = "system:forecast_chances"
 // forecastChanceModel is what an installation's own evidence says, read once
 // per forecast.
 type forecastChanceModel struct {
-	SelfCorrecting bool
+	forecasting.ChanceModel
 	// Cutoff is the start of the as-of local day; no outcome after it counts.
 	Cutoff time.Time
-	// Stages holds each open stage's recorded evidence, keyed by stage id.
-	Stages map[string]forecasting.StageEvidence
-	// Effects holds each risk signal's odds ratio; a signal missing is 1.
-	Effects map[string]float64
 }
 
 // readForecastChanceModel reads the evidence a forecast with this cutoff, the
@@ -52,7 +49,10 @@ func readForecastChanceModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (
 	if err != nil {
 		return forecastChanceModel{}, err
 	}
-	out := forecastChanceModel{SelfCorrecting: on, Cutoff: cutoff}
+	out := forecastChanceModel{
+		ChanceModel: forecasting.ChanceModel{SelfCorrecting: on, QuietSignal: assurance.SignalQuiet},
+		Cutoff:      cutoff,
+	}
 	if !on {
 		return out, nil
 	}
@@ -60,40 +60,56 @@ func readForecastChanceModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (
 	if out.Stages, err = forecastStageEvidence(system, tx, out.Cutoff); err != nil {
 		return forecastChanceModel{}, err
 	}
-	if out.Effects, err = forecastRiskEffects(system, tx, out.Cutoff); err != nil {
+	tallies, err := forecastRiskTallies(system, tx, out.Cutoff)
+	if err != nil {
 		return forecastChanceModel{}, err
 	}
+	out.Effects, out.Samples = riskEffectsAndSamples(tallies)
 	return out, nil
 }
 
 // applyForecastChances sets each deal's typed chance, chance in use, evidence
-// count, risk signals and effect. Off, the typed chance stays the chance in use
-// and nothing else is set. A probability set on the deal is used as it is:
-// self-correction moves only a probability that comes from the stage.
+// count, risk signals and effect from the one resolver. It also sets the
+// figure the forecast weights by and tests for Likely.
 func applyForecastChances(ctx context.Context, tx pgx.Tx, model forecastChanceModel, at time.Time, in []forecasting.Deal) error {
-	for i := range in {
-		in[i].TypedProbability = new(in[i].StageProbability)
-	}
-	if !model.SelfCorrecting {
-		return nil
-	}
-	signals, err := forecastRiskSignals(principal.SystemActing(ctx, forecastChanceActor), tx, at, in)
+	chances, signals, err := resolveForecastChances(ctx, tx, model, at, in)
 	if err != nil {
 		return err
 	}
-	for i := range in {
-		if in[i].Source != forecasting.SourceStage {
-			continue
+	for i, chance := range chances {
+		in[i].TypedProbability = new(chance.Typed)
+		if in[i].Source == forecasting.SourceStage {
+			in[i].StageProbability = chance.InUse
+			in[i].EvidenceN = chance.EvidenceN
+			in[i].Effect = chance.Effect
+			in[i].Signals = signals[in[i].ID]
 		}
-		evidence := model.Stages[in[i].StageID]
-		in[i].StageProbability = forecasting.ChanceInUse(*in[i].TypedProbability, evidence)
-		in[i].EvidenceN = new(evidence.Resolved)
-		if found, ok := signals[in[i].ID]; ok {
-			in[i].Signals = found
-			in[i].Effect = forecasting.StrongestEffect(forecasting.SignalCodes(found), model.Effects)
-		}
+		in[i].WinProbability = chance.Percent
+		in[i].Explanation = chance.Line()
 	}
 	return nil
+}
+
+// resolveForecastChances runs every deal through forecasting.ResolveWinChance,
+// in the deals' order, and answers the risk signals it read.
+func resolveForecastChances(
+	ctx context.Context, tx pgx.Tx, model forecastChanceModel, at time.Time, in []forecasting.Deal,
+) ([]winprobability.Chance, map[string][]forecasting.Signal, error) {
+	var signals map[string][]forecasting.Signal
+	if model.SelfCorrecting {
+		var err error
+		if signals, err = forecastRiskSignals(principal.SystemActing(ctx, forecastChanceActor), tx, at, in); err != nil {
+			return nil, nil, err
+		}
+	}
+	out := make([]winprobability.Chance, len(in))
+	for i := range in {
+		out[i] = forecasting.ResolveWinChance(model.ChanceModel, forecasting.ChanceInput{
+			StageID: in[i].StageID, Typed: in[i].StageProbability, Own: in[i].WinProbability,
+			Source: in[i].Source, Signals: signals[in[i].ID],
+		})
+	}
+	return out, signals, nil
 }
 
 // forecastStandingSQL is a deal's latest stage move before the cutoff, in the
@@ -186,9 +202,31 @@ var forecastSettledSignalsSQL = `
 	   AND standing.semantic IN ('won', 'lost') AND standing.at > s.taken_at
 	 ORDER BY c.deal_id, s.taken_at DESC, s.id DESC`
 
-// forecastRiskEffects tallies frozen deals settled by the cutoff per signal
-// and answers each signal's shrunk odds ratio. With none, every effect is 1.
+// forecastRiskEffects answers each signal's shrunk odds ratio from the frozen
+// deals settled by the cutoff. With none, every effect is 1.
 func forecastRiskEffects(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[string]float64, error) {
+	tallies, err := forecastRiskTallies(ctx, tx, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	effects, _ := riskEffectsAndSamples(tallies)
+	return effects, nil
+}
+
+// riskEffectsAndSamples turns each signal's tally into its odds ratio and the
+// count of settled deals that carried it.
+func riskEffectsAndSamples(tallies map[string]*forecasting.RiskTally) (map[string]float64, map[string]int) {
+	effects := make(map[string]float64, len(tallies))
+	samples := make(map[string]int, len(tallies))
+	for name, tally := range tallies {
+		effects[name] = forecasting.RiskEffect(*tally)
+		samples[name] = tally.PresentWon + tally.PresentLost
+	}
+	return effects, samples
+}
+
+// forecastRiskTallies tallies frozen deals settled by the cutoff per signal.
+func forecastRiskTallies(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[string]*forecasting.RiskTally, error) {
 	rows, err := tx.Query(ctx, forecastSettledSignalsSQL, assurance.RiskSignalsVersion, cutoff)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the settled forecast signals: %w", err)
@@ -221,11 +259,7 @@ func forecastRiskEffects(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("compose: reading the settled forecast signals: %w", err)
 	}
-	out := make(map[string]float64, len(tallies))
-	for name, tally := range tallies {
-		out[name] = forecasting.RiskEffect(*tally)
-	}
-	return out, nil
+	return tallies, nil
 }
 
 // forecastRiskSignals assesses the open deals through the assurance subjects,
@@ -304,7 +338,11 @@ func ForecastStageChances(ctx context.Context, tx pgx.Tx, at time.Time) (forecas
 	if err != nil {
 		return forecasting.StageChances{}, err
 	}
-	out := forecasting.StageChances{SelfCorrecting: on, EvidenceCutoff: period.LocalDay(at)}
+	accuracy, err := forecastAccuracy(ctx, tx, at)
+	if err != nil {
+		return forecasting.StageChances{}, err
+	}
+	out := forecasting.StageChances{SelfCorrecting: on, EvidenceCutoff: period.LocalDay(at), Accuracy: accuracy}
 	evidence, err := forecastStageEvidence(principal.SystemActing(ctx, forecastChanceActor), tx, out.EvidenceCutoff)
 	if err != nil {
 		return forecasting.StageChances{}, err

@@ -104,8 +104,8 @@ type CloseDateHygiene struct {
 	// Provisional: the written date is a guess a human must confirm — the
 	// deal stays out of Commit/Best-case until then.
 	Provisional bool
-	// Downgrade: the deal has gone quiet; its win probability drops one
-	// notch instead of the date being pushed optimistically forward.
+	// Downgrade: the deal has gone quiet; its owner is asked whether it is
+	// still alive instead of the date being pushed optimistically forward.
 	Downgrade bool
 }
 

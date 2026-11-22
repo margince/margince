@@ -241,6 +241,10 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 		if err := scanFigures(rows, out, s.clock(), loc); err != nil {
 			return err
 		}
+		rows.Close()
+		if err := s.restateFigureChances(ctx, tx, out); err != nil {
+			return err
+		}
 		return maskFigures(ctx, tx, out)
 	})
 	if err != nil {
