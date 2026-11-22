@@ -194,3 +194,98 @@ func TestAQuietDealMovesByTheEffectLearnedFromSettledForecasts(t *testing.T) {
 		t.Fatalf("win chance %+v, want learned from %d settled deals", chance, forecasting.QuietSampleFloor)
 	}
 }
+
+// freezeAt takes a daily workspace snapshot of a fixed quarter at a fixed
+// instant, so a test places a freeze on either side of a quarter's end.
+func (f *stageCohortFixture) freezeAt(t *testing.T, takenAt time.Time, readings forecasting.Readings) {
+	t.Helper()
+	quarter, err := forecasting.ResolvePeriod(forecasting.PeriodQuarter, time.Date(2025, 5, 15, 0, 0, 0, 0, time.UTC), 1, time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := newForecastStoreFor(f.env.Pool)
+	if err := store.InTx(f.writer, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
+			Period: quarter, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+			Trigger: forecasting.TriggerDaily, BaseCurrency: "EUR", TakenAt: takenAt, Readings: readings,
+		})
+		return err
+	}); err != nil {
+		t.Fatalf("freezing the quarter: %v", err)
+	}
+}
+
+func (f *stageCohortFixture) accuracy(t *testing.T, today time.Time) forecasting.Accuracy {
+	t.Helper()
+	var out forecasting.Accuracy
+	if err := database.WithWorkspaceTx(f.forecastReader(), f.env.Pool, func(tx pgx.Tx) error {
+		var err error
+		out, err = forecastAccuracy(f.forecastReader(), tx, today)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// The accuracy view sets the chance each settled deal was frozen at, two weeks
+// or more before it closed, against how it closed. A deal closed within two
+// weeks of its freeze is not counted, because that chance was read too late to
+// be a forecast.
+func TestTheAccuracyViewSetsFrozenChancesAgainstHowDealsClosed(t *testing.T) {
+	f := newStageCohortFixture(t)
+	s0 := f.stage(0)
+	n := 2 * ForecastEvaluationCohortFloor
+	var settled []ids.DealID
+	var rows []forecasting.Contribution
+	for range n {
+		deal := f.deal(t, f.env.Rep1, s0)
+		settled = append(settled, deal)
+		rows = append(rows, forecasting.Contribution{DealID: deal.String(), InOpen: true, StageProbability: 64})
+	}
+	tooLate := f.deal(t, f.env.Rep1, s0)
+	f.at = f.at.Add(10 * 24 * time.Hour)
+	rows = append(rows, forecasting.Contribution{DealID: tooLate.String(), InOpen: true, StageProbability: 64})
+	f.freezeSignals(t, rows, forecasting.TriggerDaily, assurance.RiskSignalsVersion)
+	f.at = f.at.Add(20 * 24 * time.Hour)
+	for i, deal := range settled {
+		if i < n/2 {
+			f.win(t, deal)
+		} else {
+			f.lose(t, deal)
+		}
+	}
+	today := f.at.Add(24 * time.Hour)
+	f.at = f.at.Add(-10 * 24 * time.Hour)
+	f.lose(t, tooLate)
+
+	got := f.accuracy(t, today).Calibration
+	if got.Deals != n || len(got.Bands) != 1 {
+		t.Fatalf("calibration holds %d deals in %d bands, want %d in one: %+v", got.Deals, len(got.Bands), n, got)
+	}
+	band := got.Bands[0]
+	if band.From != 60 || band.To != 69 || band.MeanPercent == nil || *band.MeanPercent != 64 || band.WonPercent == nil || *band.WonPercent != 50 {
+		t.Fatalf("band %+v, want 60 to 69 at a mean of 64 with half won", band)
+	}
+}
+
+// A finished quarter is said to land at the won plus weighted pipeline of the
+// last freeze four weeks or more before its end, and is set against what the
+// first freeze after the end shows as won.
+func TestTheAccuracyViewSetsAQuartersFrozenLandingAgainstWhatWasWon(t *testing.T) {
+	f := newStageCohortFixture(t)
+	day := func(month time.Month, d int) time.Time { return time.Date(2025, month, d, 12, 0, 0, 0, time.UTC) }
+	f.freezeAt(t, day(time.April, 2), forecasting.Readings{WonMinor: 0, WeightedMinor: 900})
+	f.freezeAt(t, day(time.May, 20), forecasting.Readings{WonMinor: 100, WeightedMinor: 400})
+	f.freezeAt(t, day(time.June, 20), forecasting.Readings{WonMinor: 300, WeightedMinor: 100})
+	f.freezeAt(t, day(time.July, 2), forecasting.Readings{WonMinor: 350})
+
+	landings := f.accuracy(t, clocktest.Now(t)).Landings
+	if len(landings) != 1 {
+		t.Fatalf("%d landings, want the one finished quarter: %+v", len(landings), landings)
+	}
+	got := landings[0]
+	if got.SaidMinor != 500 || got.LandedMinor != 350 || got.Currency != "EUR" || got.SaidOn.Day() != 20 {
+		t.Fatalf("landing %+v, want said 500 on 20 May and landed 350", got)
+	}
+}
