@@ -345,7 +345,7 @@ type openDealRow struct {
 func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, fx *fxConverter, asOf time.Time) (int64, error) {
 	// Each deal at the chance the forecast weights it by, the risk effect
 	// included where one is learned, so this total and the forecast agree.
-	chances, err := readForecastChanceTable(ctx, tx, asOf)
+	chances, err := chances.ReadTable(ctx, tx, asOf)
 	if err != nil {
 		return 0, err
 	}
@@ -391,7 +391,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 		if err != nil {
 			return 0, err
 		}
-		weighted, err := values.WeightedValue(baseMinor, chances.applied(d.id, d.stageID, d.override, d.winProbability))
+		weighted, err := values.WeightedValue(baseMinor, chances.Applied(d.id, d.stageID, d.override, d.winProbability))
 		if err != nil {
 			return 0, err
 		}

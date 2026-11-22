@@ -291,7 +291,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool))).WithWinChances(dealWinChances)),
+		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool))).WithWinChances(chances.WinChances)),
 		// The membership seam decides which team's week a lead may open: the
 		// team id arrives from the request, and nothing on the row narrows it
 		// to the reader.

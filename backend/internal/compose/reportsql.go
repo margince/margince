@@ -390,14 +390,14 @@ func bindReportTokens(
 		return nil
 	}
 	if err := bindScope(reportChanceToken, func() (string, error) {
-		table, err := readForecastChanceTable(ctx, tx, frame.AsOf)
-		return table.sqlExpr("t", "s", arg), err
+		table, err := chances.ReadTable(ctx, tx, frame.AsOf)
+		return table.SQLExpr("t", "s", arg), err
 	}); err != nil {
 		return "", nil, err
 	}
 	if err := bindScope(reportDealChanceToken, func() (string, error) {
-		table, err := readForecastChanceTable(ctx, tx, frame.AsOf)
-		return table.scalarSQL("t", arg), err
+		table, err := chances.ReadTable(ctx, tx, frame.AsOf)
+		return table.ScalarSQL("t", arg), err
 	}); err != nil {
 		return "", nil, err
 	}

@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"github.com/margince/margince/backend/internal/compose/halvedprobabilities"
 	"log/slog"
 	"strings"
 	"time"
@@ -143,7 +144,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		keyedIdentifiersDataTask(),
 		mailCopiesDataTask(pool),
 		answeredTasksDataTask(pool),
-		halvedProbabilitiesDataTask(pool),
+		halvedprobabilities.DataTask(halvedProbabilityStore(pool)),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),
 		importscopes.DataTask(),

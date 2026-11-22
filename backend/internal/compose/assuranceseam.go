@@ -186,7 +186,7 @@ func assuranceSubjects(
 	if len(dealIDs) == 0 {
 		return subjects, nil
 	}
-	chances, err := dealWinChances(ctx, tx, asOf, dealIDs)
+	chances, err := chances.WinChances(ctx, tx, asOf, dealIDs)
 	if err != nil {
 		return nil, err
 	}

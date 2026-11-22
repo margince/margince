@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package winchance
 
 // The chance in use as a lookup, for readers that weight deals outside the
 // forecast assembler. The report engine's weighted measures and the company
@@ -15,39 +15,40 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// forecastChanceTable is the applied chance per open stage, and per open deal
+// Table is the applied chance per open stage, and per open deal
 // where a risk effect moves it. A deal or stage missing from it keeps its typed
 // chance, which is every deal while self-correction is off. A probability set
 // on the deal answers before the table, as the assembler uses it unmoved.
-type forecastChanceTable struct {
+type Table struct {
 	stages map[string]int
 	deals  map[string]int
 	// explanations is the one-line reason per open deal that follows its stage.
 	explanations map[string]string
 }
 
-// readForecastChanceTable reads the chances in use as of `at`, on the same
+// ReadTable reads the chances in use as of `at`, on the same
 // model, cutoff and resolver the assembler uses.
-func readForecastChanceTable(ctx context.Context, tx pgx.Tx, at time.Time) (forecastChanceTable, error) {
-	zone, err := installationZoneTx(ctx, tx)
+func (e *Engine) ReadTable(ctx context.Context, tx pgx.Tx, at time.Time) (Table, error) {
+	zone, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
-		return forecastChanceTable{}, err
+		return Table{}, err
 	}
-	model, err := readForecastChanceModel(ctx, tx, forecasting.Period{Zone: zone}.LocalDay(at))
+	model, err := ReadModel(ctx, tx, forecasting.Period{Zone: zone}.LocalDay(at))
 	if err != nil || !model.SelfCorrecting {
-		return forecastChanceTable{}, err
+		return Table{}, err
 	}
 	open, err := openForecastDeals(principal.SystemActing(ctx, forecastChanceActor), tx)
 	if err != nil {
-		return forecastChanceTable{}, err
+		return Table{}, err
 	}
-	if err := applyForecastChances(ctx, tx, model, at, open); err != nil {
-		return forecastChanceTable{}, err
+	if err := e.Apply(ctx, tx, model, at, open); err != nil {
+		return Table{}, err
 	}
-	out := forecastChanceTable{stages: map[string]int{}, deals: map[string]int{}, explanations: map[string]string{}}
+	out := Table{stages: map[string]int{}, deals: map[string]int{}, explanations: map[string]string{}}
 	for _, deal := range open {
 		out.stages[deal.StageID] = forecasting.ChanceInUse(*deal.TypedProbability, model.Stages[deal.StageID])
 		out.explanations[deal.ID] = deal.Explanation
@@ -82,7 +83,7 @@ func openForecastDeals(ctx context.Context, tx pgx.Tx) ([]forecasting.Deal, erro
 
 // applied answers the chance one deal is weighted by: its own probability
 // where set, else the table's, else the stage's typed one.
-func (c forecastChanceTable) applied(dealID, stageID string, override *int, typed int) int {
+func (c Table) Applied(dealID, stageID string, override *int, typed int) int {
 	if override != nil {
 		return *override
 	}
@@ -95,10 +96,10 @@ func (c forecastChanceTable) applied(dealID, stageID string, override *int, type
 	return typed
 }
 
-// scalarSQL is sqlExpr over a deal alone, for a query that joins no stage.
+// ScalarSQL is SQLExpr over a deal alone, for a query that joins no stage.
 // The stage's typed chance and id are read by subquery from the deal's
 // stage_id.
-func (c forecastChanceTable) scalarSQL(deal string, arg func(any) int) string {
+func (c Table) ScalarSQL(deal string, arg func(any) int) string {
 	typed := fmt.Sprintf("(SELECT wp_stage.win_probability FROM stage wp_stage WHERE wp_stage.id = %s.stage_id)", deal)
 	if c.stages == nil {
 		return fmt.Sprintf("COALESCE(%s.win_probability_override, %s)", deal, typed)
@@ -110,9 +111,9 @@ func (c forecastChanceTable) scalarSQL(deal string, arg func(any) int) string {
 		deal, arg(dealPcts), arg(dealIDs), deal, arg(stagePcts), arg(stageIDs), deal, typed)
 }
 
-// sqlExpr renders the same lookup over a deal alias and its stage alias, with
+// SQLExpr renders the same lookup over a deal alias and its stage alias, with
 // the two tables bound as arrays. The typed chance answers what neither holds.
-func (c forecastChanceTable) sqlExpr(deal, stage string, arg func(any) int) string {
+func (c Table) SQLExpr(deal, stage string, arg func(any) int) string {
 	typed := stage + ".win_probability"
 	if c.stages == nil {
 		return fmt.Sprintf("COALESCE(%s.win_probability_override, %s)", deal, typed)

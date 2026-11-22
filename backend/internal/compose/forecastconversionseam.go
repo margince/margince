@@ -15,6 +15,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"github.com/margince/margince/backend/internal/compose/winchance"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -33,7 +34,7 @@ import (
 // Two years, because it must span enough completed periods to be a rate while
 // staying inside the business the installation is running now. A rate from four
 // years ago describes a company that no longer exists.
-const conversionWindowYears = 2
+const conversionWindowYears = winchance.EvidenceWindowYears
 
 // ForecastConversionHistory reads the conversion evidence a sufficiency answer
 // rests on.

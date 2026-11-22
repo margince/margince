@@ -158,8 +158,8 @@ func yamlPaths(t reflect.Type, prefix string) map[string]bool {
 func DealsInstallation() deals.Installation {
 	inst := installseam.Deals()
 	inst.FollowOwner = followDealOwnerAndTell
-	inst.WinChances = dealWinChances
-	inst.WinChanceSQL = dealWinChanceSQL
+	inst.WinChances = chances.WinChances
+	inst.WinChanceSQL = chances.WinChanceSQL
 	return inst
 }
 

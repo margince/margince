@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package winchance
 
 // The deals module's two reads of the one win chance. Both go through
 // forecasting.ResolveWinChance, the function the forecast itself uses, so a
@@ -16,20 +16,21 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
-// dealWinChances answers the win chance of each given open deal as of `at`.
+// WinChances answers the win chance of each given open deal as of `at`.
 // It reads installation-wide as the system, so a deal's chance never depends
 // on who reads it. The caller has already admitted the deals to the reader.
-func dealWinChances(ctx context.Context, tx pgx.Tx, at time.Time, dealIDs []ids.UUID) (map[ids.UUID]winprobability.Chance, error) {
-	zone, err := installationZoneTx(ctx, tx)
+func (e *Engine) WinChances(ctx context.Context, tx pgx.Tx, at time.Time, dealIDs []ids.UUID) (map[ids.UUID]winprobability.Chance, error) {
+	zone, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
-	model, err := readForecastChanceModel(ctx, tx, forecasting.Period{Zone: zone}.LocalDay(at))
+	model, err := ReadModel(ctx, tx, forecasting.Period{Zone: zone}.LocalDay(at))
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +39,7 @@ func dealWinChances(ctx context.Context, tx pgx.Tx, at time.Time, dealIDs []ids.
 	if err != nil {
 		return nil, err
 	}
-	chances, _, err := resolveForecastChances(ctx, tx, model, at, open)
+	chances, _, err := e.resolve(ctx, tx, model, at, open)
 	if err != nil {
 		return nil, err
 	}
@@ -76,18 +77,18 @@ func forecastDealsByID(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID) ([]fo
 	return out, nil
 }
 
-// dealWinChanceSQL renders every deal's win chance as a SQL expression over a
+// WinChanceSQL renders every deal's win chance as a SQL expression over a
 // deal alias, from the same table the report engine weights by.
-func dealWinChanceSQL(ctx context.Context, tx pgx.Tx, at time.Time, deal string, arg func(any) int) (string, error) {
-	table, err := readForecastChanceTable(ctx, tx, at)
+func (e *Engine) WinChanceSQL(ctx context.Context, tx pgx.Tx, at time.Time, deal string, arg func(any) int) (string, error) {
+	table, err := e.ReadTable(ctx, tx, at)
 	if err != nil {
 		return "", err
 	}
-	return table.scalarSQL(deal, arg), nil
+	return table.ScalarSQL(deal, arg), nil
 }
 
-// dealWinChanceSQLNow is dealWinChanceSQL as of the current instant, for the
+// WinChanceSQLNow is WinChanceSQL as of the current instant, for the
 // readers that carry no clock of their own.
-func dealWinChanceSQLNow(ctx context.Context, tx pgx.Tx, deal string, arg func(any) int) (string, error) {
-	return dealWinChanceSQL(ctx, tx, time.Now(), deal, arg)
+func (e *Engine) WinChanceSQLNow(ctx context.Context, tx pgx.Tx, deal string, arg func(any) int) (string, error) {
+	return e.WinChanceSQL(ctx, tx, time.Now(), deal, arg)
 }

@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"github.com/margince/margince/backend/internal/compose/winchance"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -180,7 +181,7 @@ func TestRecordedOutcomesMoveTheChanceAndImportedSyncedOrLegacyMovesDoNot(t *tes
 	var stages forecasting.StageChances
 	if err := database.WithWorkspaceTx(f.forecastReader(), f.env.Pool, func(tx pgx.Tx) error {
 		var err error
-		stages, err = ForecastStageChances(f.forecastReader(), tx, today)
+		stages, err = chances.StageChances(f.forecastReader(), tx, today)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -385,7 +386,7 @@ func TestARiskEffectIsLearnedFromSettledFrozenForecasts(t *testing.T) {
 	var effects map[string]float64
 	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
 		var err error
-		effects, err = forecastRiskEffects(f.writer, tx, cutoff)
+		effects, err = winchance.RiskEffects(f.writer, tx, cutoff)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -450,7 +451,7 @@ func TestStageEvidenceReadsHowADealStoodAtTheCutoff(t *testing.T) {
 	var evidence map[string]forecasting.StageEvidence
 	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
 		var err error
-		evidence, err = forecastStageEvidence(f.writer, tx, cutoff)
+		evidence, err = winchance.StageEvidence(f.writer, tx, cutoff)
 		return err
 	}); err != nil {
 		t.Fatal(err)

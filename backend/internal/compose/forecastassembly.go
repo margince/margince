@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"github.com/margince/margince/backend/internal/compose/winchance"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -39,11 +40,11 @@ func assembleForecast(
 	if err != nil {
 		return forecasting.Assembly{}, err
 	}
-	model, err := readForecastChanceModel(ctx, tx, period.LocalDay(asOf))
+	model, err := winchance.ReadModel(ctx, tx, period.LocalDay(asOf))
 	if err != nil {
 		return forecasting.Assembly{}, err
 	}
-	if err := applyForecastChances(ctx, tx, model, asOf, deals); err != nil {
+	if err := chances.Apply(ctx, tx, model, asOf, deals); err != nil {
 		return forecasting.Assembly{}, err
 	}
 	threshold, err := identity.ForecastLikelyThresholdTx(ctx, tx)

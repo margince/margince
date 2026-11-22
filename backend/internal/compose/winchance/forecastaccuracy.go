@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package winchance
 
 // How accurate the forecast has been, read from the frozen daily forecasts and
 // the stage history that already exist. Nothing here is stored.
@@ -13,7 +13,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -67,11 +69,11 @@ const forecastLandingsSQL = `
 	 ORDER BY p.period_end DESC
 	 LIMIT $5`
 
-// forecastAccuracy sets what the frozen forecasts said against what happened,
+// Accuracy sets what the frozen forecasts said against what happened,
 // as of `at`.
-func forecastAccuracy(ctx context.Context, tx pgx.Tx, at time.Time) (forecasting.Accuracy, error) {
+func (e *Engine) Accuracy(ctx context.Context, tx pgx.Tx, at time.Time) (forecasting.Accuracy, error) {
 	system := principal.SystemActing(ctx, forecastChanceActor)
-	zone, err := installationZoneTx(ctx, tx)
+	zone, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
 		return forecasting.Accuracy{}, err
 	}
@@ -79,12 +81,12 @@ func forecastAccuracy(ctx context.Context, tx pgx.Tx, at time.Time) (forecasting
 	if err != nil {
 		return forecasting.Accuracy{}, err
 	}
-	calibration := forecasting.BinAccuracy(settled, ForecastEvaluationCohortFloor)
+	calibration := forecasting.BinAccuracy(settled, analyticsquery.PercentileSampleFloor)
 	landings, landingOwners, err := forecastLandings(system, tx, forecasting.Period{Zone: zone}.LocalDay(at))
 	if err != nil {
 		return forecasting.Accuracy{}, err
 	}
-	if err := requireNoLoneColleague(ctx, tx, append(owners, landingOwners...)); err != nil {
+	if err := e.NoLoneColleague(ctx, tx, append(owners, landingOwners...)); err != nil {
 		return forecasting.Accuracy{}, err
 	}
 	return forecasting.Accuracy{Calibration: calibration, Landings: landings}, nil

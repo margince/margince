@@ -175,7 +175,7 @@ func (o ownDomainReader) ReaderAddresses(
 // needing one gate per independently-built store.
 func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithWinChance(dealWinChanceSQLNow).WithBaseCurrency(identity.BaseCurrencyOf).
+		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithWinChance(chances.WinChanceSQLNow).WithBaseCurrency(identity.BaseCurrencyOf).
 		WithRuleUses(ruleUsesOf(pool))
 }
 
@@ -254,7 +254,7 @@ func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.H
 		newForecastStoreFor(pool),
 		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
-	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
+	).WithCallBaseline(ForecastCallBaseline).WithStageChances(chances.StageChances).
 		WithReaderRows(ForecastReaderContributions).WithGoalReadable(newReportingService(pool, now).GoalReadable).
 		WithManagerRequests(managermove.Requests(deals.NewStore(InstallationDB(pool), DealsInstallation())))
 }
