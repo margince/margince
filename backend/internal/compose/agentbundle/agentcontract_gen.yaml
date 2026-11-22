@@ -40908,7 +40908,7 @@ components:
       type: object
       required: [entity_type, entity_id]
       properties:
-        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_type: {type: string, enum: [contact, company, deal, lead, project], description: The kind of record the meeting is filed on.}
         entity_id: {type: string, format: uuid}
     MeetingAvailability:
       type: object
@@ -45873,6 +45873,9 @@ components:
             - team
             - workspace
             - managed_teams
+          description: |-
+            Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id`
+            naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.
         id:
           type: string
           format: uuid
@@ -45906,6 +45909,10 @@ components:
     ReportingValueBasis:
       type: string
       enum: [all, software, implementation]
+      description: |-
+        Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+        the default, `software` and `implementation` count only that component of it. Open figures
+        take only `all`.
     ReportingSelection:
       type: object
       additionalProperties: false
@@ -45943,6 +45950,7 @@ components:
           enum:
             - month
             - fiscal_quarter
+          description: Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.
         close_window:
           type: string
           enum:
@@ -46199,6 +46207,9 @@ components:
     ReportingCoverage:
       type: object
       additionalProperties: false
+      description: |-
+        How much of the population the figure could be computed for. A `partial` reading with a
+        `priced_count` of 0 priced nothing, so its figure is not one to report.
       required:
         - status
         - withheld
@@ -50890,7 +50901,7 @@ components:
       additionalProperties: false
       required: [kind]
       properties:
-        kind: {type: string, enum: [owner, team, workspace]}
+        kind: {type: string, enum: [owner, team, workspace], description: 'Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.'}
         id: {type: string, format: uuid}
     RunReportRequest:
       type: object

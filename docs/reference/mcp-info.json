@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 283530,
+    "tool_catalog_bytes": 288331,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 72288,
+    "approx_wire_tokens_total": 73488,
     "largest_tool_bytes": 18033,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 55475,
-      "input_schema_bytes": 162962,
+      "description_bytes": 55541,
+      "input_schema_bytes": 167697,
       "output_schema_bytes": 52985,
-      "description_plus_input_schema_bytes": 218437
+      "description_plus_input_schema_bytes": 223238
     }
   },
   "tools": {
@@ -2445,6 +2445,12 @@
                   "type": "object"
                 },
                 "close_window": {
+                  "description": "Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter` is the current fiscal quarter, `all_open` is every open deal, and `custom` is `close_interval`, which it requires.",
+                  "enum": [
+                    "fiscal_quarter",
+                    "all_open",
+                    "custom"
+                  ],
                   "type": "string"
                 },
                 "country": {
@@ -2520,6 +2526,17 @@
                                         "type": "string"
                                       },
                                       "fn": {
+                                        "description": "The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.",
+                                        "enum": [
+                                          "count",
+                                          "count_distinct",
+                                          "sum",
+                                          "avg",
+                                          "min",
+                                          "max",
+                                          "median",
+                                          "p75"
+                                        ],
                                         "type": "string"
                                       }
                                     },
@@ -2542,6 +2559,11 @@
                               "type": "object"
                             },
                             "width": {
+                              "description": "`half` shares a row with the next half card. A chart that needs the whole width draws full regardless.",
+                              "enum": [
+                                "full",
+                                "half"
+                              ],
                               "type": "string"
                             }
                           },
@@ -2572,6 +2594,15 @@
                   "type": "array"
                 },
                 "period": {
+                  "description": "`this_week` runs from Monday 00:00 in the installation zone to the evaluation time. Read at that exact moment, the week holds no time yet and the context's interval starts where it ends.",
+                  "enum": [
+                    "this_week",
+                    "this_month",
+                    "last_month",
+                    "last_week",
+                    "this_quarter",
+                    "custom"
+                  ],
                   "type": "string"
                 },
                 "pipeline_id": {
@@ -2589,6 +2620,12 @@
                       "type": "string"
                     },
                     "kind": {
+                      "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
+                      "enum": [
+                        "owner",
+                        "team",
+                        "workspace"
+                      ],
                       "type": "string"
                     },
                     "label": {
@@ -2601,9 +2638,20 @@
                   "type": "object"
                 },
                 "target_basis": {
+                  "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
+                  "enum": [
+                    "month",
+                    "fiscal_quarter"
+                  ],
                   "type": "string"
                 },
                 "value_basis": {
+                  "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
+                  "enum": [
+                    "all",
+                    "software",
+                    "implementation"
+                  ],
                   "type": "string"
                 }
               },
@@ -5950,6 +5998,12 @@
                                   "type": "object"
                                 },
                                 "close_window": {
+                                  "description": "Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter` is the current fiscal quarter, `all_open` is every open deal, and `custom` is `close_interval`, which it requires.",
+                                  "enum": [
+                                    "fiscal_quarter",
+                                    "all_open",
+                                    "custom"
+                                  ],
                                   "type": "string"
                                 },
                                 "country": {
@@ -5988,6 +6042,15 @@
                                   "type": "array"
                                 },
                                 "period": {
+                                  "description": "`this_week` runs from Monday 00:00 in the installation zone to the evaluation time. Read at that exact moment, the week holds no time yet and the context's interval starts where it ends.",
+                                  "enum": [
+                                    "this_week",
+                                    "this_month",
+                                    "last_month",
+                                    "last_week",
+                                    "this_quarter",
+                                    "custom"
+                                  ],
                                   "type": "string"
                                 },
                                 "pipeline_id": {
@@ -6005,6 +6068,12 @@
                                       "type": "string"
                                     },
                                     "kind": {
+                                      "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
+                                      "enum": [
+                                        "owner",
+                                        "team",
+                                        "workspace"
+                                      ],
                                       "type": "string"
                                     },
                                     "label": {
@@ -6017,9 +6086,20 @@
                                   "type": "object"
                                 },
                                 "target_basis": {
+                                  "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
+                                  "enum": [
+                                    "month",
+                                    "fiscal_quarter"
+                                  ],
                                   "type": "string"
                                 },
                                 "value_basis": {
+                                  "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
+                                  "enum": [
+                                    "all",
+                                    "software",
+                                    "implementation"
+                                  ],
                                   "type": "string"
                                 }
                               },
@@ -10013,7 +10093,7 @@
           "readOnlyHint": true,
           "title": "Read sales reports"
         },
-        "description": "Read sales reports. standard reads the standard metrics, saved reports and their frozen editions, and the open partner commission liability. run runs one of the named reports, grouped and filtered. evidence searches the passages behind a saved run. company_coverage names deals with one contact, companies in pipeline nobody has talked to, and won companies gone silent. report_run_cell_records, analytics_cell_records and question_card_records name the records behind one figure. Read only. Every figure names its coverage and when it was captured; quote both. read_workspace topic report_vocabulary names what each run report takes. For a written section a reader keeps, such as a board pack, use read_analytics: query with save, then compose. Use read_forecast for what a period is expected to close, and read_forecast with view=input_sources for how complete the data behind a number is. Keep a run's id to search its evidence, and quote coverage with each number.",
+        "description": "Read sales reports. standard reads the standard metrics, saved reports and their frozen editions, and the open partner commission liability. run runs one of the named reports, grouped and filtered. evidence searches the passages behind a saved run. company_coverage names deals with one contact, companies in pipeline nobody has talked to, and won companies gone silent. report_run_cell_records, analytics_cell_records and question_card_records name the records behind one figure. Read only. Every figure names its coverage and when it was captured; quote both. A partial coverage with nothing priced is not a figure to report. read_workspace topic report_vocabulary names what each run report takes. For a written section a reader keeps, such as a board pack, use read_analytics: query with save, then compose. Use read_forecast for what a period is expected to close, and read_forecast with view=input_sources for how complete the data behind a number is. Keep a run's id to search its evidence, and quote coverage with each number.",
         "inputSchema": {
           "properties": {
             "aggregates": {
@@ -10271,6 +10351,12 @@
                   "type": "string"
                 },
                 "kind": {
+                  "description": "Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.",
+                  "enum": [
+                    "owner",
+                    "team",
+                    "workspace"
+                  ],
                   "type": "string"
                 }
               },
@@ -10323,6 +10409,12 @@
                   "type": "object"
                 },
                 "close_window": {
+                  "description": "Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter` is the current fiscal quarter, `all_open` is every open deal, and `custom` is `close_interval`, which it requires.",
+                  "enum": [
+                    "fiscal_quarter",
+                    "all_open",
+                    "custom"
+                  ],
                   "type": "string"
                 },
                 "country": {
@@ -10398,6 +10490,17 @@
                                         "type": "string"
                                       },
                                       "fn": {
+                                        "description": "The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.",
+                                        "enum": [
+                                          "count",
+                                          "count_distinct",
+                                          "sum",
+                                          "avg",
+                                          "min",
+                                          "max",
+                                          "median",
+                                          "p75"
+                                        ],
                                         "type": "string"
                                       }
                                     },
@@ -10420,6 +10523,11 @@
                               "type": "object"
                             },
                             "width": {
+                              "description": "`half` shares a row with the next half card. A chart that needs the whole width draws full regardless.",
+                              "enum": [
+                                "full",
+                                "half"
+                              ],
                               "type": "string"
                             }
                           },
@@ -10450,6 +10558,15 @@
                   "type": "array"
                 },
                 "period": {
+                  "description": "`this_week` runs from Monday 00:00 in the installation zone to the evaluation time. Read at that exact moment, the week holds no time yet and the context's interval starts where it ends.",
+                  "enum": [
+                    "this_week",
+                    "this_month",
+                    "last_month",
+                    "last_week",
+                    "this_quarter",
+                    "custom"
+                  ],
                   "type": "string"
                 },
                 "pipeline_id": {
@@ -10467,6 +10584,12 @@
                       "type": "string"
                     },
                     "kind": {
+                      "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
+                      "enum": [
+                        "owner",
+                        "team",
+                        "workspace"
+                      ],
                       "type": "string"
                     },
                     "label": {
@@ -10479,9 +10602,20 @@
                   "type": "object"
                 },
                 "target_basis": {
+                  "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
+                  "enum": [
+                    "month",
+                    "fiscal_quarter"
+                  ],
                   "type": "string"
                 },
                 "value_basis": {
+                  "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
+                  "enum": [
+                    "all",
+                    "software",
+                    "implementation"
+                  ],
                   "type": "string"
                 }
               },
@@ -11753,6 +11887,14 @@
                     "type": "string"
                   },
                   "entity_type": {
+                    "description": "The kind of record the meeting is filed on.",
+                    "enum": [
+                      "contact",
+                      "company",
+                      "deal",
+                      "lead",
+                      "project"
+                    ],
                     "type": "string"
                   }
                 },
@@ -19177,6 +19319,7 @@
                         "type": "string"
                       },
                       "kind": {
+                        "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
                         "enum": [
                           "owner",
                           "team",
@@ -19184,7 +19327,10 @@
                           "managed_teams"
                         ],
                         "type": "string",
-                        "x-extensible-enum": true
+                        "x-extensible-enum": true,
+                        "x-response-only-values": [
+                          "managed_teams"
+                        ]
                       },
                       "label": {
                         "type": "string"
@@ -19196,6 +19342,7 @@
                     "type": "object"
                   },
                   "target_basis": {
+                    "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
                     "enum": [
                       "month",
                       "fiscal_quarter"
@@ -19204,6 +19351,7 @@
                     "x-extensible-enum": true
                   },
                   "value_basis": {
+                    "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
                     "enum": [
                       "all",
                       "software",
@@ -19352,6 +19500,7 @@
                     "type": "string"
                   },
                   "kind": {
+                    "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
                     "enum": [
                       "owner",
                       "team",
@@ -19359,7 +19508,10 @@
                       "managed_teams"
                     ],
                     "type": "string",
-                    "x-extensible-enum": true
+                    "x-extensible-enum": true,
+                    "x-response-only-values": [
+                      "managed_teams"
+                    ]
                   },
                   "label": {
                     "type": "string"
@@ -19480,6 +19632,7 @@
                           "type": "string"
                         },
                         "kind": {
+                          "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
                           "enum": [
                             "owner",
                             "team",
@@ -19487,7 +19640,10 @@
                             "managed_teams"
                           ],
                           "type": "string",
-                          "x-extensible-enum": true
+                          "x-extensible-enum": true,
+                          "x-response-only-values": [
+                            "managed_teams"
+                          ]
                         },
                         "label": {
                           "type": "string"
@@ -20300,6 +20456,7 @@
                         "type": "string"
                       },
                       "kind": {
+                        "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
                         "enum": [
                           "owner",
                           "team",
@@ -20307,7 +20464,10 @@
                           "managed_teams"
                         ],
                         "type": "string",
-                        "x-extensible-enum": true
+                        "x-extensible-enum": true,
+                        "x-response-only-values": [
+                          "managed_teams"
+                        ]
                       },
                       "label": {
                         "type": "string"
@@ -20319,6 +20479,7 @@
                     "type": "object"
                   },
                   "target_basis": {
+                    "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
                     "enum": [
                       "month",
                       "fiscal_quarter"
@@ -20327,6 +20488,7 @@
                     "x-extensible-enum": true
                   },
                   "value_basis": {
+                    "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
                     "enum": [
                       "all",
                       "software",
@@ -20480,6 +20642,7 @@
                     "type": "string"
                   },
                   "kind": {
+                    "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
                     "enum": [
                       "owner",
                       "team",
@@ -20487,7 +20650,10 @@
                       "managed_teams"
                     ],
                     "type": "string",
-                    "x-extensible-enum": true
+                    "x-extensible-enum": true,
+                    "x-response-only-values": [
+                      "managed_teams"
+                    ]
                   },
                   "label": {
                     "type": "string"
@@ -27569,6 +27735,7 @@
                         "type": "string"
                       },
                       "kind": {
+                        "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
                         "enum": [
                           "owner",
                           "team",
@@ -27576,7 +27743,10 @@
                           "managed_teams"
                         ],
                         "type": "string",
-                        "x-extensible-enum": true
+                        "x-extensible-enum": true,
+                        "x-response-only-values": [
+                          "managed_teams"
+                        ]
                       },
                       "label": {
                         "type": "string"
@@ -27588,6 +27758,7 @@
                     "type": "object"
                   },
                   "target_basis": {
+                    "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
                     "enum": [
                       "month",
                       "fiscal_quarter"
@@ -27596,6 +27767,7 @@
                     "x-extensible-enum": true
                   },
                   "value_basis": {
+                    "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
                     "enum": [
                       "all",
                       "software",

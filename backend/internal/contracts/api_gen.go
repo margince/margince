@@ -58857,11 +58857,13 @@ type MeetingReadyRequest struct {
 
 // MeetingRecordLink defines model for MeetingRecordLink.
 type MeetingRecordLink struct {
-	EntityId   openapi_types.UUID          `json:"entity_id"`
+	EntityId openapi_types.UUID `json:"entity_id"`
+
+	// EntityType The kind of record the meeting is filed on.
 	EntityType MeetingRecordLinkEntityType `json:"entity_type"`
 }
 
-// MeetingRecordLinkEntityType defines model for MeetingRecordLink.EntityType.
+// MeetingRecordLinkEntityType The kind of record the meeting is filed on.
 type MeetingRecordLinkEntityType string
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
@@ -63576,7 +63578,10 @@ type RenderedReport struct {
 
 // RenderedValue defines model for RenderedValue.
 type RenderedValue struct {
-	Context           *ReportingContext  `json:"context,omitempty"`
+	Context *ReportingContext `json:"context,omitempty"`
+
+	// Coverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
 	Coverage          *ReportingCoverage `json:"coverage,omitempty"`
 	DefinitionVersion *string            `json:"definition_version,omitempty"`
 	Unit              *string            `json:"unit,omitempty"`
@@ -63936,11 +63941,13 @@ type ReportRunSummary struct {
 
 // ReportScope defines model for ReportScope.
 type ReportScope struct {
-	Id   *openapi_types.UUID `json:"id,omitempty"`
-	Kind ReportScopeKind     `json:"kind"`
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.
+	Kind ReportScopeKind `json:"kind"`
 }
 
-// ReportScopeKind defines model for ReportScope.Kind.
+// ReportScopeKind Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.
 type ReportScopeKind string
 
 // ReportSetupObjective defines model for ReportSetupObjective.
@@ -64139,8 +64146,11 @@ type ReportingChart struct {
 	Closing              *float64                `json:"closing,omitempty"`
 	ComparisonInterval   *ReportingWindow        `json:"comparison_interval,omitempty"`
 	ContextId            string                  `json:"context_id"`
-	Coverage             ReportingCoverage       `json:"coverage"`
-	Interval             *ReportingWindow        `json:"interval,omitempty"`
+
+	// Coverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
+	Coverage ReportingCoverage `json:"coverage"`
+	Interval *ReportingWindow  `json:"interval,omitempty"`
 
 	// Kind `breakdown` splits one metric's figure into named groups: a lead's origin,
 	// the status a lead moved to, a partner and whether it sourced or influenced
@@ -64235,17 +64245,22 @@ type ReportingContext struct {
 	Scope         ReportingScope `json:"scope"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
-	ScopeHoldsDeals *bool                `json:"scope_holds_deals,omitempty"`
-	StateAt         time.Time            `json:"state_at"`
-	TargetInterval  *ReportingWindow     `json:"target_interval,omitempty"`
-	Timezone        string               `json:"timezone"`
-	ValueBasis      *ReportingValueBasis `json:"value_basis,omitempty"`
+	ScopeHoldsDeals *bool            `json:"scope_holds_deals,omitempty"`
+	StateAt         time.Time        `json:"state_at"`
+	TargetInterval  *ReportingWindow `json:"target_interval,omitempty"`
+	Timezone        string           `json:"timezone"`
+
+	// ValueBasis Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+	// the default, `software` and `implementation` count only that component of it. Open figures
+	// take only `all`.
+	ValueBasis *ReportingValueBasis `json:"value_basis,omitempty"`
 }
 
 // ReportingCountry defines model for ReportingCountry.
 type ReportingCountry = string
 
-// ReportingCoverage defines model for ReportingCoverage.
+// ReportingCoverage How much of the population the figure could be computed for. A `partial` reading with a
+// `priced_count` of 0 priced nothing, so its figure is not one to report.
 type ReportingCoverage struct {
 	EligibleCount *int64  `json:"eligible_count,omitempty" minimum:"0"`
 	PricedCount   *int64  `json:"priced_count,omitempty" minimum:"0"`
@@ -64451,7 +64466,10 @@ type ReportingInitiativeId = openapi_types.UUID
 
 // ReportingMetric defines model for ReportingMetric.
 type ReportingMetric struct {
-	Attainment  *float64             `json:"attainment,omitempty"`
+	Attainment *float64 `json:"attainment,omitempty"`
+
+	// Coverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
 	Coverage    ReportingCoverage    `json:"coverage"`
 	Denominator *float64             `json:"denominator,omitempty"`
 	Evidence    ReportingEvidenceRef `json:"evidence"`
@@ -64744,12 +64762,16 @@ type ReportingScheduleList struct {
 
 // ReportingScope defines model for ReportingScope.
 type ReportingScope struct {
-	Id    *openapi_types.UUID `json:"id,omitempty"`
-	Kind  ReportingScopeKind  `json:"kind"`
-	Label *string             `json:"label,omitempty"`
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id`
+	// naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.
+	Kind  ReportingScopeKind `json:"kind"`
+	Label *string            `json:"label,omitempty"`
 }
 
-// ReportingScopeKind defines model for ReportingScope.Kind.
+// ReportingScopeKind Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id`
+// naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.
 type ReportingScopeKind string
 
 // ReportingSection defines model for ReportingSection.
@@ -64789,12 +64811,18 @@ type ReportingSelection struct {
 	// evaluation time. Read at that exact moment, the week holds no time
 	// yet and the context's interval starts where it ends. A month target
 	// beside it still counts the whole month up to the evaluation time.
-	Period      ReportingSelectionPeriod      `json:"period"`
-	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
-	ProductId   *ReportingProductId           `json:"product_id,omitempty"`
-	Scope       ReportingScope                `json:"scope"`
+	Period     ReportingSelectionPeriod `json:"period"`
+	PipelineId *openapi_types.UUID      `json:"pipeline_id,omitempty"`
+	ProductId  *ReportingProductId      `json:"product_id,omitempty"`
+	Scope      ReportingScope           `json:"scope"`
+
+	// TargetBasis Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.
 	TargetBasis ReportingSelectionTargetBasis `json:"target_basis"`
-	ValueBasis  *ReportingValueBasis          `json:"value_basis,omitempty"`
+
+	// ValueBasis Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+	// the default, `software` and `implementation` count only that component of it. Open figures
+	// take only `all`.
+	ValueBasis *ReportingValueBasis `json:"value_basis,omitempty"`
 }
 
 // ReportingSelectionCloseWindow Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter`
@@ -64808,7 +64836,7 @@ type ReportingSelectionCloseWindow string
 // beside it still counts the whole month up to the evaluation time.
 type ReportingSelectionPeriod string
 
-// ReportingSelectionTargetBasis defines model for ReportingSelection.TargetBasis.
+// ReportingSelectionTargetBasis Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.
 type ReportingSelectionTargetBasis string
 
 // ReportingStatus `failed` means the database could not calculate this figure on this
@@ -64954,7 +64982,9 @@ type ReportingTargetList struct {
 	NextCursor *string           `json:"next_cursor,omitempty"`
 }
 
-// ReportingValueBasis defines model for ReportingValueBasis.
+// ReportingValueBasis Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+// the default, `software` and `implementation` count only that component of it. Open figures
+// take only `all`.
 type ReportingValueBasis string
 
 // ReportingWindow defines model for ReportingWindow.
@@ -72995,6 +73025,8 @@ type WeeklyLearningCitationSubjectType string
 
 // WeeklyNumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
 type WeeklyNumericSummary struct {
+	// BookingsCoverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
 	BookingsCoverage ReportingCoverage `json:"bookings_coverage"`
 	Currency         string            `json:"currency"`
 	EvaluatedAt      time.Time         `json:"evaluated_at"`
@@ -73002,12 +73034,15 @@ type WeeklyNumericSummary struct {
 	// FigureCoverage Whether each figure family on the review was measured over the week, by the source
 	// that feeds it. Absent on a review frozen before figures carried their coverage; such a
 	// review states no coverage either way. A family missing here has no coverage statement.
-	FigureCoverage   *WeeklyFigureCoverageSet `json:"figure_coverage,omitempty"`
-	Interval         ReportingWindow          `json:"interval"`
-	MeetingsCoverage ReportingCoverage        `json:"meetings_coverage"`
-	Timezone         string                   `json:"timezone"`
-	Version          string                   `json:"version"`
-	WonMinor         *int64                   `json:"won_minor,omitempty"`
+	FigureCoverage *WeeklyFigureCoverageSet `json:"figure_coverage,omitempty"`
+	Interval       ReportingWindow          `json:"interval"`
+
+	// MeetingsCoverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
+	MeetingsCoverage ReportingCoverage `json:"meetings_coverage"`
+	Timezone         string            `json:"timezone"`
+	Version          string            `json:"version"`
+	WonMinor         *int64            `json:"won_minor,omitempty"`
 }
 
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
