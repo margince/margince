@@ -86,14 +86,14 @@ var owedLookupFilter = `
 
 // uncoveredSubjects names the contacts this tick should queue, at most limit.
 //
-// Up to sweepFixedShare places go first to contacts a user just fixed, newest
+// Up to sweepFixedPlaces(limit) places go first to contacts a user just fixed, newest
 // change first. Places that lane leaves empty go to the backlog.
 //
 // The backlog is ordered oldest-first so the sweep converges. A contact passed
 // over stays at the front rather than being overtaken by everything created
 // since.
 func (s *Store) uncoveredSubjects(ctx context.Context, tx pgx.Tx, name string, limit int) ([]string, error) {
-	fixed, err := s.justFixedSubjects(ctx, tx, name, min(limit, sweepFixedShare))
+	fixed, err := s.justFixedSubjects(ctx, tx, name, sweepFixedPlaces(limit))
 	if err != nil {
 		return nil, err
 	}
@@ -190,12 +190,7 @@ func (s *Store) backlogInTx(ctx context.Context, tx pgx.Tx, name string) (Backlo
 	err = tx.QueryRow(ctx, `
 			SELECT count(*)
 			  FROM contact p
-			 WHERE p.archived_at IS NULL
-			   AND p.merged_into_id IS NULL
-			   AND NOT EXISTS (
-			       SELECT 1 FROM provider_run r
-			        WHERE r.contact_id = p.id AND r.provider = $1
-			          AND (`+coveredByARun+`))`,
+			 WHERE `+owedLookupFilter,
 		name).Scan(&out.Remaining)
 	if err != nil {
 		return out, fmt.Errorf("integrations: counting the contacts still owed a lookup: %w", err)

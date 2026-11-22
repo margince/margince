@@ -177,16 +177,136 @@ func TestAContactThatIsNotFixedKeepsItsCooldown(t *testing.T) {
 	}
 }
 
-func TestTheReservationNeverExceedsTheBudget(t *testing.T) {
+func TestTheFixedShareScalesWithTheBudgetAndTheBacklogKeepsTheRest(t *testing.T) {
 	e := setupRuns(t, runsConfig{})
-	e.plantOlderBacklog(t, 20)
+	e.plantOlderBacklog(t, 30)
+	fixed := map[ids.ContactID]bool{}
 	for range 8 {
-		e.plantFixed(t)
+		fixed[e.plantFixed(t)] = true
 	}
 
-	for _, budget := range []int{1, 2, 5, 6} {
-		if got := len(e.tickPicks(t, budget)); got != budget {
-			t.Errorf("a budget of %d picked %d contacts: a daily limit must still cap the total", budget, got)
+	for budget, wantFixed := range map[int]int{1: 0, 2: 0, 4: 0, 5: 1, 6: 1, 10: 2, 25: 5} {
+		picks := e.tickPicks(t, budget)
+		if len(picks) != budget {
+			t.Errorf("a budget of %d picked %d contacts: a daily limit must still cap the total", budget, len(picks))
 		}
+		var got int
+		for _, id := range picks {
+			if fixed[id] {
+				got++
+			}
+		}
+		if got != wantFixed {
+			t.Errorf("a budget of %d gave %d places to fixed contacts, want %d", budget, got, wantFixed)
+		}
+	}
+}
+
+// A daily limit that leaves five runs gives a tick five places. Six fresh
+// fixes arrive every tick, and the backlog must still drain. A fixed contact
+// the run skipped again for lack of identifiers must not come back.
+func TestTheBacklogDrainsUnderADailyLimitWhileFixesKeepArriving(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+	const backlogSize = 30
+	e.plantOlderBacklog(t, backlogSize)
+	picked := map[ids.ContactID]int{}
+	backlogLeft := backlogSize
+	// Five places give the backlog four a tick, so thirty need eight ticks.
+	for tick := 1; tick <= 8 && backlogLeft > 0; tick++ {
+		for range 6 {
+			e.plantFixed(t)
+		}
+		e.allowFiveMoreRuns(t)
+		budget, err := e.sweepBudgetNow(t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, id := range e.tickPicks(t, budget) {
+			picked[id]++
+			if picked[id] > 1 {
+				t.Fatalf("a contact was picked again in tick %d after its run was recorded", tick)
+			}
+			if e.isBacklog(t, id) {
+				backlogLeft--
+				e.recordRun(t, id, "no_match")
+				continue
+			}
+			e.recordRun(t, id, "skipped")
+		}
+	}
+	if backlogLeft != 0 {
+		t.Errorf("%d backlog contacts were never reached: fixes starved the backlog", backlogLeft)
+	}
+}
+
+// allowFiveMoreRuns sets the daily limit to what today has spent plus five.
+// Each tick then sees a budget of five, as a limit leaving five runs would.
+func (e *runsEnv) allowFiveMoreRuns(t *testing.T) {
+	t.Helper()
+	if _, err := e.owner.Exec(e.ctx, `
+		UPDATE provider_connection SET daily_run_limit = 5 + (
+		       SELECT count(*) FROM provider_run
+		        WHERE provider = $1 AND state <> 'skipped' AND state <> 'cancelled'
+		          AND created_at >= date_trunc('day', now() AT TIME ZONE 'UTC'))
+		 WHERE provider = $1`, e.provider); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (e *runsEnv) isBacklog(t *testing.T, id ids.ContactID) bool {
+	t.Helper()
+	var backlog bool
+	if err := e.owner.QueryRow(e.ctx,
+		`SELECT captured_by = 'test:sweepfixed' FROM contact WHERE id = $1`, id).Scan(&backlog); err != nil {
+		t.Fatal(err)
+	}
+	return backlog
+}
+
+// recordRun writes what the sweep leaves behind for a picked contact: an
+// answer, or a second no_identifiers skip.
+func (e *runsEnv) recordRun(t *testing.T, id ids.ContactID, state string) {
+	t.Helper()
+	var reason *string
+	if state == "skipped" {
+		r := string(provider.SkipNoIdentifiers)
+		reason = &r
+	}
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO provider_run
+		       (contact_id, subject_kind, provider, trigger, state, skip_reason,
+		        connection_version, connection_epoch, configuration_snapshot,
+		        requested_categories, input_fingerprint, external_correlation_id)
+		VALUES ($1, 'contact', $2, 'automatic_backfill', $3, $4, 1, 1, '{}'::jsonb,
+		        ARRAY['linkedin_profile'], $5, gen_random_uuid())`,
+		id, e.provider, state, reason, "fp-tick-"+id.String()+"-"+state); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTheSettingsCountLeavesOutARestrictedContact(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+	e.plantOlderBacklog(t, 3)
+	count := func() int {
+		var out BacklogCount
+		if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+			var err error
+			out, err = e.store.backlogInTx(e.ctx, tx, e.provider)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return out.Remaining
+	}
+	before := count()
+	var victim ids.ContactID
+	if err := e.owner.QueryRow(e.ctx,
+		`SELECT id FROM contact WHERE captured_by = 'test:sweepfixed' AND archived_at IS NULL LIMIT 1`).Scan(&victim); err != nil {
+		t.Fatal(err)
+	}
+	e.restrict(t, victim)
+	if after := count(); after != before-1 {
+		t.Errorf("the count went from %d to %d after a restriction, want %d: the sweep can never pick a restricted contact",
+			before, after, before-1)
 	}
 }

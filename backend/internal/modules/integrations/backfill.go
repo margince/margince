@@ -35,10 +35,17 @@ import (
 // means something.
 const sweepTickBudget = 25
 
-// sweepFixedShare is how many of a tick's places go first to contacts a user
-// just fixed. It divides the budget and never adds to it, so a daily run limit
-// still caps the total.
+// sweepFixedShare is how many of a full tick's places go first to contacts a
+// user just fixed. The share scales with the budget a tick really has.
+// A daily run limit therefore never hands a whole tick to fixes.
 const sweepFixedShare = 5
+
+// sweepFixedPlaces is how many of budget's places the fixed lane may take:
+// the same fraction as sweepFixedShare of sweepTickBudget, rounded down. A
+// budget under five has none, so the backlog always keeps most of a tick.
+func sweepFixedPlaces(budget int) int {
+	return budget * sweepFixedShare / sweepTickBudget
+}
 
 // BackfillSweep queues free lookups for contacts no run has covered, and
 // applies purchases that are stored but never reached a record.
