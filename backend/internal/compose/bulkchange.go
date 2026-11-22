@@ -62,6 +62,8 @@ type bulkChange struct {
 	note   *string
 	tagID  *ids.UUID
 	task   *crmcontracts.BulkTask
+	// stageID is move_stage's target stage.
+	stageID *ids.UUID
 	// writers are the stores the verb's rows are written through, set when
 	// the change is admitted.
 	writers      bulkWriters
@@ -249,6 +251,9 @@ func (e *bulkEngine) admit(ctx context.Context, change *bulkChange) (bulkRecords
 	if err != nil {
 		return bulkRecords{}, err
 	}
+	if err := admitStage(ctx, target, *change); err != nil {
+		return bulkRecords{}, err
+	}
 	// A Worklist item is a task or a promise, two objects; each row's own
 	// writer asks the grant of the one it is.
 	if _, worklist := target.(worklistBulkTarget); worklist {
@@ -390,6 +395,8 @@ func applyOne(
 		return applyTagging(ctx, tx, target, change, item, change.verb == crmcontracts.BulkVerbAddTag)
 	case change.verb == crmcontracts.BulkVerbCreateTask:
 		return applyTask(ctx, tx, target, change, item)
+	case change.verb == crmcontracts.BulkVerbMoveStage:
+		return applyStageMove(ctx, tx, target, change, item)
 	}
 	id := ids.UUID(item.Id)
 	// A forward change refuses an archived row, as a live-only lock would.

@@ -4733,6 +4733,7 @@ const (
 	BulkVerbArchive        BulkVerb = "archive"
 	BulkVerbComplete       BulkVerb = "complete"
 	BulkVerbCreateTask     BulkVerb = "create_task"
+	BulkVerbMoveStage      BulkVerb = "move_stage"
 	BulkVerbReassignOwner  BulkVerb = "reassign_owner"
 	BulkVerbRemoveFromList BulkVerb = "remove_from_list"
 	BulkVerbRemoveTag      BulkVerb = "remove_tag"
@@ -4750,6 +4751,8 @@ func (e BulkVerb) Valid() bool {
 	case BulkVerbComplete:
 		return true
 	case BulkVerbCreateTask:
+		return true
+	case BulkVerbMoveStage:
 		return true
 	case BulkVerbReassignOwner:
 		return true
@@ -39382,11 +39385,15 @@ type BulkChangeExecuteRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-	// no bulk verb.
+	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+	// `complete`.
 	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
+
+	// StageId The open stage to move the deals to. Required for `move_stage` and refused for every other verb.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 
 	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
 	TagId *openapi_types.UUID `json:"tag_id,omitempty"`
@@ -39400,7 +39407,10 @@ type BulkChangeExecuteRequest struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
@@ -39424,8 +39434,9 @@ type BulkChangePreview struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-	// no bulk verb.
+	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+	// `complete`.
 	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
@@ -39440,7 +39451,10 @@ type BulkChangePreview struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
@@ -39460,11 +39474,15 @@ type BulkChangePreviewRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-	// no bulk verb.
+	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+	// `complete`.
 	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
+
+	// StageId The open stage to move the deals to. Required for `move_stage` and refused for every other verb.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 
 	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
 	TagId *openapi_types.UUID `json:"tag_id,omitempty"`
@@ -39478,7 +39496,10 @@ type BulkChangePreviewRequest struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
@@ -39538,12 +39559,16 @@ type BulkOperation struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-	// no bulk verb.
+	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+	// `complete`.
 	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 	Skipped    []BulkSkip     `json:"skipped"`
+
+	// StageId The stage a stage move named.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 
 	// TagId The tag a tag verb named.
 	TagId *openapi_types.UUID `json:"tag_id,omitempty"`
@@ -39563,7 +39588,10 @@ type BulkOperation struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
@@ -39580,6 +39608,9 @@ type BulkRecordState struct {
 	Listed  *bool               `json:"listed,omitempty"`
 	OwnerId *openapi_types.UUID `json:"owner_id"`
 
+	// StageId For `move_stage`, the stage the deal stands on.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
+
 	// Tagged For a tag verb, whether the record carries the tag.
 	Tagged *bool `json:"tagged,omitempty"`
 
@@ -39588,8 +39619,9 @@ type BulkRecordState struct {
 }
 
 // BulkRecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-// no bulk verb.
+// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+// `complete`.
 // A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 // named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 type BulkRecordType string
@@ -39634,6 +39666,10 @@ type BulkSkip struct {
 	// `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 	// each task the change created, and skips one completed or edited since as `changed_since_batch`.
 	// Undoing `complete` opens each task or promise again, and skips one changed since the same way.
+	// Undoing `move_stage` moves each deal back to the stage it stood on, as a new move that
+	// writes its own stage history row (marked as the reversal of the first) and its own
+	// `deal.stage_changed` event. The first move's row and event stay, and whatever reacted to
+	// them is not taken back. A deal that changed after the batch is skipped as `changed_since_batch`.
 	Reason BulkSkipReason `json:"reason"`
 }
 
@@ -39651,6 +39687,10 @@ type BulkSkip struct {
 // `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 // each task the change created, and skips one completed or edited since as `changed_since_batch`.
 // Undoing `complete` opens each task or promise again, and skips one changed since the same way.
+// Undoing `move_stage` moves each deal back to the stage it stood on, as a new move that
+// writes its own stage history row (marked as the reversal of the first) and its own
+// `deal.stage_changed` event. The first move's row and event stay, and whatever reacted to
+// them is not taken back. A deal that changed after the batch is skipped as `changed_since_batch`.
 type BulkSkipReason string
 
 // BulkTask The task `create_task` files under every record of the selection.
@@ -39680,7 +39720,10 @@ type BulkUndoRequest struct {
 // `addListMember` and `removeListMember` do, and change nothing on the record itself.
 // `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 // as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 // a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 // `settleConversationClaim` with `outcome: done` does.
 type BulkVerb string
@@ -78894,6 +78937,15 @@ type ImportVCardsMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// ImportVCardsParams defines parameters for ImportVCards.
+type ImportVCardsParams struct {
+	// CompanyId The company every contact the import creates works for. Each created contact and its
+	// current employment edge to this company land in one transaction, and the company a card
+	// names is not used. A card that matches a contact already held updates it and does not
+	// move its employer. A company the caller cannot read answers 422 naming `company_id`.
+	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+}
+
 // ArchiveContactParams defines parameters for ArchiveContact.
 type ArchiveContactParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -101217,7 +101269,7 @@ type ServerInterface interface {
 	QuickCaptureContact(w http.ResponseWriter, r *http.Request, params QuickCaptureContactParams)
 	// Import a .vcf address-card file.
 	// (POST /contacts/vcard-import)
-	ImportVCards(w http.ResponseWriter, r *http.Request)
+	ImportVCards(w http.ResponseWriter, r *http.Request, params ImportVCardsParams)
 	// Archive (soft-delete) a contact.
 	// (DELETE /contacts/{id})
 	ArchiveContact(w http.ResponseWriter, r *http.Request, id Id, params ArchiveContactParams)
@@ -105789,7 +105841,7 @@ func (_ Unimplemented) QuickCaptureContact(w http.ResponseWriter, r *http.Reques
 
 // Import a .vcf address-card file.
 // (POST /contacts/vcard-import)
-func (_ Unimplemented) ImportVCards(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ImportVCards(w http.ResponseWriter, r *http.Request, params ImportVCardsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -128520,6 +128572,9 @@ func (siw *ServerInterfaceWrapper) QuickCaptureContact(w http.ResponseWriter, r 
 // ImportVCards operation middleware
 func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -128528,8 +128583,24 @@ func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.R
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ImportVCardsParams
+
+	// ------------- Optional query parameter "company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ImportVCards(w, r)
+		siw.Handler.ImportVCards(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

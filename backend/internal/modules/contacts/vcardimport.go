@@ -91,7 +91,16 @@ type VCardResult struct {
 // find and fix the one row before any of it lands is a reader who gives up. The
 // per-card outcome list is what makes that legible.
 func (s *Store) ImportVCards(ctx context.Context, entries []VCardEntry) ([]VCardResult, error) {
-	return s.importCardsFrom(ctx, entries, ids.Nil)
+	return s.importCardsFrom(ctx, entries, cardTarget{})
+}
+
+// ImportVCardsToCompany is ImportVCards for the Contacts tab of one company.
+// Every contact a card creates works for company, through the employment edge a
+// contact created with that company gets, in the card's own transaction.
+// The company the card names is not used. A card that matches a contact already
+// held updates it as usual and does not move its employer.
+func (s *Store) ImportVCardsToCompany(ctx context.Context, entries []VCardEntry, company ids.CompanyID) ([]VCardResult, error) {
+	return s.importCardsFrom(ctx, entries, cardTarget{employer: &company})
 }
 
 // ImportVCardsFromMessage imports cards that arrived as an attachment, holding
@@ -116,10 +125,18 @@ func (s *Store) ImportVCardsFromMessage(ctx context.Context, entries []VCardEntr
 	if source.IsZero() {
 		return nil, errors.New("contacts: importing cards from a message that names no message")
 	}
-	return s.importCardsFrom(ctx, entries, source)
+	return s.importCardsFrom(ctx, entries, cardTarget{source: source})
 }
 
-func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, source ids.UUID) ([]VCardResult, error) {
+// cardTarget is what one import writes its cards against. It holds the message
+// the cards were mailed in, if any, and the company every created contact joins
+// when a company's Contacts tab asked for the import.
+type cardTarget struct {
+	source   ids.UUID
+	employer *ids.CompanyID
+}
+
+func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, target cardTarget) ([]VCardResult, error) {
 	// Both grants, up front. The import CREATES contacts and it UPDATES the ones
 	// a card already matches, and those are two different permissions: the
 	// create grant that lets somebody start an import says nothing about
@@ -134,9 +151,14 @@ func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, sourc
 	if len(entries) > vcardMaxCards {
 		return nil, &TooManyCardsError{Limit: vcardMaxCards}
 	}
+	if target.employer != nil {
+		if err := s.requireImportCompany(ctx, *target.employer); err != nil {
+			return nil, err
+		}
+	}
 	results := make([]VCardResult, 0, len(entries))
 	for i, entry := range entries {
-		result, err := s.importOneVCard(ctx, i, entry, source)
+		result, err := s.importOneVCard(ctx, i, entry, target)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +167,8 @@ func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, sourc
 	return results, nil
 }
 
-func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry, source ids.UUID) (VCardResult, error) {
+func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry, target cardTarget) (VCardResult, error) {
+	source := target.source
 	result := VCardResult{Index: index, FullName: strings.TrimSpace(entry.FullName)}
 	if reason := cardRefusal(entry); reason != "" {
 		result.Outcome, result.Reason = VCardSkipped, reason
@@ -219,7 +242,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		case entry.ModelRead:
 			return proposeModelReadCard(ctx, tx, source, &result)
 		default:
-			return s.createFromCard(ctx, tx, entry, source, &result)
+			return s.createFromCard(ctx, tx, entry, target, &result)
 		}
 	})
 	// The create arm signals a refusal by failing its transaction, because the

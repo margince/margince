@@ -1599,7 +1599,7 @@ func (stubs) QuickCaptureContact(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "QuickCaptureContact")
 }
 
-func (stubs) ImportVCards(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ImportVCards(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ImportVCardsParams) {
 	httperr.NotImplemented(w, r, "ImportVCards")
 }
 
