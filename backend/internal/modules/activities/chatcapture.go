@@ -300,17 +300,9 @@ func refileAttachment(ctx context.Context, tx pgx.Tx, attachmentID, activityID i
 	if err != nil {
 		return err
 	}
-	rollUp, hasAccount, err := accountRollUp(ctx, tx, linkEntityActivity, activityID)
-	if err != nil {
-		return err
-	}
-	var account *ids.UUID
-	if hasAccount {
-		account = &rollUp
-	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE attachment SET entity_type = $2, entity_id = $3, company_id = $4 WHERE id = $1`,
-		attachmentID, linkEntityActivity, activityID, account); err != nil {
+		`UPDATE attachment SET entity_type = $2, entity_id = $3, company_id = NULL WHERE id = $1`,
+		attachmentID, linkEntityActivity, activityID); err != nil {
 		return err
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "attachment", attachmentID,
