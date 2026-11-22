@@ -65,7 +65,8 @@ export const AccountPage: Story = {
   },
 };
 
-/** The onboarding gate holds the reader: no outbox and no bell in the bar. */
+/** The onboarding gate holds the reader: Back to setup stands in the bar,
+ *  where the outbox and the bell would. */
 export const HeldOnOnboarding: Story = {
   name: "a settings page while onboarding holds the reader",
   render: () => <SettingsFrame held />,
@@ -75,5 +76,8 @@ export const HeldOnOnboarding: Story = {
     await expect(
       canvas.queryByRole("button", { name: /^Notifications/ }),
     ).toBeNull();
+    await expect(
+      canvas.getByRole("link", { name: "Back to setup" }),
+    ).toBeVisible();
   },
 };

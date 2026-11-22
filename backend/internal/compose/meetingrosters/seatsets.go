@@ -22,7 +22,7 @@ func SeatSetsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1795336082_guest_rows_name_every_calendar", Version: 1,
 		Title:    systemtext.Literal("datatask.title.core.1795336082_guest_rows_name_every_calendar"),
-		Requires: []string{"core/1795336081"},
+		Requires: []string{"core/1795346515"},
 		Steps: []datatask.Step{{
 			Name: "copy_roster_seats", Limit: 500, MinLimit: 20, EmptyWhenDone: true,
 			Audit: datatask.AuditPolicy{Reason: "capture's roster writers store the same seat set on the rows they write, without a separate audit"},

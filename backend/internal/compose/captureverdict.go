@@ -339,7 +339,7 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	if !e.CanJudge() {
 		return e.askAHumanInstead(ctx, row)
 	}
-	answers, servedModel, err := e.ask(ctx, row)
+	answers, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err
 	}
@@ -349,10 +349,9 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 			return 0, err
 		}
 		if stray {
-			return e.askAboutAStrayAnswer(ctx, row, answers, servedModel, settled)
+			return e.askAboutAStrayAnswer(ctx, row, answers, settled)
 		}
-		return e.applyJudged(ctx, row, answers[0].Verdict,
-			capture.MeasuredVerdict(float64(answers[0].Confidence), servedModel))
+		return e.applyJudged(ctx, row, answers[0].Verdict, capture.MeasuredVerdict(float64(answers[0].Confidence)))
 	}
 	// One re-ask below the floor, then terminal (ADR-0072). The retry asks for a
 	// fresh answer, because the result cache would hand back the first one. It
@@ -368,12 +367,12 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		// The same helper, asked with no retry answer to prefer: a human is
 		// owed what the model DID say, which here is the one answer it gave.
 		if err := e.pending.Retire(ctx, row, "below the confidence floor, and this pass had no re-ask left",
-			lastMeasurement(nil, "", answers, servedModel)); err != nil {
+			lastMeasurement(nil, answers)); err != nil {
 			return 0, err
 		}
 		return 1, nil
 	}
-	retry, retryModel, err := e.ask(ai.WithFreshAnswer(ctx), row)
+	retry, err := e.ask(ai.WithFreshAnswer(ctx), row)
 	if err != nil {
 		return 0, err
 	}
@@ -388,10 +387,9 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 			return 0, err
 		}
 		if stray {
-			return e.askAboutAStrayAnswer(ctx, row, retry, retryModel, settled)
+			return e.askAboutAStrayAnswer(ctx, row, retry, settled)
 		}
-		return e.applyJudged(ctx, row, retry[0].Verdict,
-			capture.MeasuredVerdict(float64(retry[0].Confidence), retryModel))
+		return e.applyJudged(ctx, row, retry[0].Verdict, capture.MeasuredVerdict(float64(retry[0].Confidence)))
 	}
 	// Terminally unsure: a human decides, and the ledger says so explicitly
 	// rather than by having quietly run out of attempts.
@@ -400,7 +398,7 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	// contact at 0.78 twice" is why a human is now being asked, and dropping it
 	// would hand them the question with none of the evidence.
 	if err := e.pending.Retire(ctx, row, "below the confidence floor on a re-ask",
-		lastMeasurement(retry, retryModel, answers, servedModel)); err != nil {
+		lastMeasurement(retry, answers)); err != nil {
 		return 0, err
 	}
 	return 1, nil

@@ -288,7 +288,6 @@ public.capture_connection.history_baseline_tz document
 public.capture_connection.mail_posture document
 public.capture_connection.provider document
 public.capture_connection.provider_scopes document
-public.capture_connection.scopes document
 public.capture_connection.status document
 public.capture_connection.watch_ref document
 public.capture_counterparty_hold.created_by document
@@ -325,7 +324,6 @@ public.capture_pending_counterparty.disposition_reason note
 public.capture_pending_counterparty.domain document
 public.capture_pending_counterparty.email document
 public.capture_pending_counterparty.kind document
-public.capture_pending_counterparty.served_model document
 public.capture_pending_counterparty.status document
 public.capture_sender_override.address document
 public.capture_sender_override.captured_by document
@@ -363,17 +361,13 @@ public.channel_provider.provider exempt bounded provider identifiers follow the 
 public.channel_provider.transport document
 public.chat_link.card_fingerprint label
 public.chat_link.card_message_id line
-public.chat_link.channel_external_key line
 public.chat_link.channel_name line
 public.chat_link.channel_slug line
 public.chat_link.provider document
 public.chat_link.status document
 public.chat_link.verbosity document
-public.chat_post_item.entity_type document
 public.chat_post_item.event_type document
-public.chat_post_item.last_error line
 public.chat_post_item.message_id line
-public.chat_post_item.tier document
 public.close_date_run.captured_by document
 public.close_date_run.status document
 public.close_date_run_member.outcome document
@@ -1251,7 +1245,6 @@ public.report_definition.name label
 public.report_edition.publication_audience document
 public.report_edition_contribution.context_id document
 public.report_edition_contribution.contribution_key document
-public.report_edition_contribution.group_key document
 public.report_edition_contribution.metric document
 public.report_edition_contribution.source_type document
 public.report_edition_question.card_id document
@@ -1264,7 +1257,6 @@ public.report_execution.reason note
 public.report_execution.request_hash document
 public.report_execution.status document
 public.report_run.captured_by document
-public.report_run.schema_version document
 public.report_schedule.last_status document
 public.report_schedule.timezone document
 public.restore_drill.notes note
@@ -1277,7 +1269,6 @@ public.retention_policy.object_type document
 public.role.key document
 public.role.name label
 public.runner_job.agent_spec document
-public.runner_job.last_error document checked: fixed text and catalog spec names
 public.runner_job.status document
 public.runner_job.trigger_ref document
 public.sales_goal_plan_revision.kind document

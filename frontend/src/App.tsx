@@ -23,7 +23,7 @@ import { lockScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
 import { useHomePrefetch } from "./app/homeprefetch";
-import { passesOnboardingGate } from "./app/onboarding-gate";
+import { ONBOARDING_ENTRY, passesOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
@@ -225,7 +225,7 @@ function useOnboardingHold(
       // reader away from answers by sending them here again. Pushed, Back
       // lands on that address and the effect fires. The one key meant for
       // getting out of things then returns the reader to onboarding.
-      navigateReplacing({ screen: "onboarding", id: "company" });
+      navigateReplacing(ONBOARDING_ENTRY);
     }
   }, [held, screen, id, id2, navigateReplacing]);
   return { held, turnedAway: held && !passesOnboardingGate(route) };
