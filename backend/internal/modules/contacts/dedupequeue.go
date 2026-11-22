@@ -216,11 +216,33 @@ func requireDedupeWrite(ctx context.Context, entityType string) error {
 
 // ListDedupeCandidates pages the queue, confidence-sorted (AC-dedupe-1).
 func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) ([]DedupeCandidateRow, string, error) {
+	rows, next, _, err := s.listDedupe(ctx, in, false)
+	return rows, next, err
+}
+
+// FirstDedupePageInput filters the first page of the open queue. It has no
+// cursor: a later page's window would count only the pairs after it.
+type FirstDedupePageInput struct {
+	EntityTypes []string
+	Owners      *storekit.OwnerSet
+	Limit       int
+}
+
+// ListFirstDedupePage reads the first page of the open queue and, in the same
+// statement, how many pairs the whole filtered queue holds. The total is the
+// window count over the page's own predicate, so it never counts a pair the
+// page would hide.
+func (s *Store) ListFirstDedupePage(ctx context.Context, in FirstDedupePageInput) ([]DedupeCandidateRow, int, error) {
+	rows, _, total, err := s.listDedupe(ctx, DedupeQueueInput{EntityTypes: in.EntityTypes, Owners: in.Owners, Limit: in.Limit}, true)
+	return rows, total, err
+}
+
+func (s *Store) listDedupe(ctx context.Context, in DedupeQueueInput, withTotal bool) ([]DedupeCandidateRow, string, int, error) {
 	if in.EntityType != "" {
 		in.EntityTypes = []string{in.EntityType}
 	}
 	if err := requireDedupeReadOf(ctx, in.EntityTypes); err != nil {
-		return nil, "", err
+		return nil, "", 0, err
 	}
 	if in.Status == "" {
 		in.Status = dispositionOpen
@@ -230,13 +252,12 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	// queue on Home asks for exactly that, so every open pair past the
 	// twenty-fifth was missing from the surface that exists to reach them, in
 	// confidence order, with nothing on the page saying so.
-	switch {
-	case in.Limit <= 0:
-		in.Limit = dedupeQueueDefaultLimit
-	case in.Limit > dedupeQueueMaxLimit:
-		in.Limit = dedupeQueueMaxLimit
-	}
+	in.Limit = clampDedupeLimit(in.Limit)
 
+	totalColumn := ""
+	if withTotal {
+		totalColumn = ", count(*) OVER ()"
+	}
 	args := []any{in.Status}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	// Computed in the SAME statement as the page rather than probed per row: the
@@ -245,12 +266,12 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	// the joins for.
 	authority, err := dedupeSideWritableColumns(ctx, arg, in.Status == dispositionOpen)
 	if err != nil {
-		return nil, "", err
+		return nil, "", 0, err
 	}
 	query := `
 		SELECT id, entity_type, coalesce(left_contact_id, left_company_id, left_lead_id), coalesce(right_contact_id, right_company_id, right_lead_id),
 		       confidence, evidence, disposition, disposed_by, disposed_at, created_at,
-		       ` + authority + `
+		       ` + authority + totalColumn + `
 		FROM dedupe_candidate
 		WHERE disposition = $1 AND archived_at IS NULL`
 	// Liveness binds the OPEN lane only. A decided pair is a record of what
@@ -259,18 +280,18 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	// filter exists to serve.
 	visClause, err := dedupeVisibilityClause(ctx, arg, in.Status == dispositionOpen)
 	if err != nil {
-		return nil, "", err
+		return nil, "", 0, err
 	}
 	if visClause != "" {
 		query += " AND " + visClause
 	}
 	if query, err = dedupeNarrowing(query, in, arg); err != nil {
-		return nil, "", err
+		return nil, "", 0, err
 	}
 	if in.Cursor != "" {
 		cur, err := decodeDedupeCursor(in.Cursor)
 		if err != nil {
-			return nil, "", err
+			return nil, "", 0, err
 		}
 		args = append(args, cur.Confidence, cur.ID)
 		query += fmt.Sprintf(" AND (confidence, id) < ($%d, $%d)", len(args)-1, len(args))
@@ -279,23 +300,44 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	query += fmt.Sprintf(" ORDER BY confidence DESC, id DESC LIMIT $%d", len(args))
 
 	var rows []DedupeCandidateRow
+	var total int
+	extra := []any{}
+	if withTotal {
+		extra = append(extra, &total)
+	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if rows, err = queryCandidateRows(ctx, tx, query, args); err != nil {
+		if rows, err = queryCandidateRows(ctx, tx, query, args, extra...); err != nil {
 			return err
 		}
 		return readPairOwners(ctx, tx, rows)
 	})
 	if err != nil {
-		return nil, "", fmt.Errorf("contacts: listing dedupe candidates: %w", err)
+		return nil, "", 0, fmt.Errorf("contacts: listing dedupe candidates: %w", err)
 	}
-	next := ""
-	if len(rows) > in.Limit {
-		rows = rows[:in.Limit]
-		last := rows[len(rows)-1]
-		next = encodeDedupeCursor(dedupeCursor{Confidence: last.Confidence, ID: last.ID})
+	rows, next := trimDedupePage(rows, in.Limit)
+	return rows, next, total, nil
+}
+
+func clampDedupeLimit(limit int) int {
+	switch {
+	case limit <= 0:
+		return dedupeQueueDefaultLimit
+	case limit > dedupeQueueMaxLimit:
+		return dedupeQueueMaxLimit
 	}
-	return rows, next, nil
+	return limit
+}
+
+// trimDedupePage drops the probe row the query read past the limit and names
+// the cursor of the last row kept.
+func trimDedupePage(rows []DedupeCandidateRow, limit int) ([]DedupeCandidateRow, string) {
+	if len(rows) <= limit {
+		return rows, ""
+	}
+	rows = rows[:limit]
+	last := rows[len(rows)-1]
+	return rows, encodeDedupeCursor(dedupeCursor{Confidence: last.Confidence, ID: last.ID})
 }
 
 // GetDedupeCandidate reads one row with its full evidence. Both sides of

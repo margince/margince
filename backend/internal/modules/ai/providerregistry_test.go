@@ -17,7 +17,7 @@ import (
 func TestTheProviderListKeepsItsOrder(t *testing.T) {
 	// The order is visible: SelectBrain's refusal lists providers in it, and
 	// the config schema's enum was written in it.
-	want := []string{ProviderFake, providerAnthropic, providerOllama, providerVLLM, providerOpenAICompatible, providerOpenAI, providerGemini, providerGeminiVertex}
+	want := []string{ProviderFake, providerAnthropic, providerOllama, providerVLLM, providerOpenAICompatible, providerOpenAI, providerGemini, providerGeminiVertex, providerAzureOpenAI}
 	if !slices.Equal(knownProviders, want) {
 		t.Fatalf("knownProviders = %v, want %v", knownProviders, want)
 	}
@@ -41,7 +41,7 @@ func TestADecisionProviderIsKnownOnlyToTheDecisionLane(t *testing.T) {
 // Every key slot is one row on the key screen, and only a jev_compatible key
 // is optional: a self-hosted Jev-wire server needs none.
 func TestOnlyTheJevCompatibleKeyIsOptional(t *testing.T) {
-	if got, want := CloudProvidersNeedingKeys(), []string{providerAnthropic, providerOpenAICompatible, providerOpenAI, providerGemini, providerGeminiVertex, providerJev, providerJevCompatible}; !slices.Equal(got, want) {
+	if got, want := CloudProvidersNeedingKeys(), []string{providerAnthropic, providerOpenAICompatible, providerOpenAI, providerGemini, providerGeminiVertex, providerAzureOpenAI, providerJev, providerJevCompatible}; !slices.Equal(got, want) {
 		t.Errorf("CloudProvidersNeedingKeys() = %v, want %v", got, want)
 	}
 	for _, provider := range CloudProvidersNeedingKeys() {
@@ -59,15 +59,15 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		ProviderFake: egressPublicOnly, providerAnthropic: egressPublicOnly,
 		providerOpenAI: egressPublicOnly, providerGemini: egressPublicOnly, providerGeminiVertex: egressPublicOnly,
 		providerOllama: egressOperatorEndpoint, providerVLLM: egressOperatorEndpoint,
-		providerOpenAICompatible: egressOperatorEndpoint,
-		providerJev:              egressPublicOnly, providerJevCompatible: egressOperatorEndpoint,
+		providerOpenAICompatible: egressOperatorEndpoint, providerAzureOpenAI: egressPublicOnly,
+		providerJev: egressPublicOnly, providerJevCompatible: egressOperatorEndpoint,
 		providerGeminiDecision: egressPublicOnly,
 	})
 	assertMap(t, "cloudKeyEnv", cloudKeyEnv, map[string]string{
 		providerAnthropic: "ANTHROPIC_API_KEY", providerOpenAI: "OPENAI_API_KEY",
 		providerGemini: "GEMINI_API_KEY", providerGeminiVertex: "GEMINI_VERTEX_SA_JSON",
-		providerOpenAICompatible: "OPENAI_COMPATIBLE_API_KEY",
-		providerJev:              "TYPESAFE_API_KEY", providerJevCompatible: "JEV_COMPATIBLE_API_KEY",
+		providerOpenAICompatible: "OPENAI_COMPATIBLE_API_KEY", providerAzureOpenAI: "AZURE_OPENAI_API_KEY",
+		providerJev: "TYPESAFE_API_KEY", providerJevCompatible: "JEV_COMPATIBLE_API_KEY",
 		providerGeminiDecision: "GEMINI_API_KEY",
 	})
 	assertMap(t, "servedSource", servedSource, map[string]string{
@@ -75,13 +75,14 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		providerGemini: servedIdentitySourceResponse, providerGeminiVertex: servedIdentitySourceResponse,
 		providerOpenAI:           servedIdentitySourceResponse,
 		providerOpenAICompatible: servedIdentitySourceEcho, providerVLLM: servedIdentitySourceEcho,
-		ProviderFake: servedIdentitySourceResponse, providerJev: servedIdentitySourceResponse,
+		providerAzureOpenAI: servedIdentitySourceEcho,
+		ProviderFake:        servedIdentitySourceResponse, providerJev: servedIdentitySourceResponse,
 		providerJevCompatible: servedIdentityPerReply, providerGeminiDecision: servedIdentitySourceResponse,
 	})
 	assertMap(t, "localBaseURLDefaults", localBaseURLDefaults, map[string]string{
 		providerOllama: defaultOllamaBaseURL, providerVLLM: defaultVLLMBaseURL,
 	})
-	if got, want := slices.Sorted(maps.Keys(wildcardWires)), []string{ProviderFake, providerOllama, providerOpenAICompatible, providerVLLM}; !slices.Equal(got, want) {
+	if got, want := slices.Sorted(maps.Keys(wildcardWires)), []string{providerAzureOpenAI, ProviderFake, providerOllama, providerOpenAICompatible, providerVLLM}; !slices.Equal(got, want) {
 		t.Errorf("wildcardWires keys = %v, want %v", got, want)
 	}
 	carriage := wireCarriage()
@@ -90,6 +91,7 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		providerOllama: carriesImages, providerVLLM: carriesImages,
 		providerOpenAICompatible: carriesImages, providerOpenAI: openAICarries,
 		providerGemini: geminiCarries, providerGeminiVertex: geminiCarries,
+		providerAzureOpenAI: carriesImages,
 	}
 	if len(carriage) != len(wantCarriage) {
 		t.Errorf("wireCarriage has %d rows, want %d", len(carriage), len(wantCarriage))

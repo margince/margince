@@ -17896,6 +17896,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.jev":
     "Vollständige Endpunkt-URL. Ohne Eintrag wird die API von TypeSafe selbst genutzt.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "Der Endpunkt der Ressource, ohne Pfad. Der API-Schlüssel geht nur an einen Host auf .openai.azure.com. Pflichtangabe.",
+  "aiRouting.baseUrl.placeholder.azure":
+    "https://meine-ressource.openai.azure.com",
+  "aiRouting.azureRegion.label": "Azure-Region",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
+  "aiRouting.azureRegion.help":
+    "Die Region, in der die Ressource läuft, etwa swedencentral. Eine unbekannte Region wird gesperrt, damit deine Daten dort bleiben, wo ihr es vereinbart habt.",
+  "aiRouting.model.help.azure":
+    "Gib den Namen ein, den du diesem Modell in Azure gegeben hast, nicht den Modellnamen.",
   "aiRouting.baseUrl.help.jevCompatible":
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -22559,6 +22569,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviderSettings.service.otherChat": "Anderer OpenAI-kompatibler Dienst",
   "aiProviderSettings.service.otherDecisions": "Anderer Entscheidungsserver",
   "aiProviderSettings.service.otherAddress": "Andere Adresse",
+  "aiProviderSettings.service.azureResource": "Deine Azure-OpenAI-Ressource",
   "aiProviderSettings.service.learnMore": "Über OpenRouter EU",
   "aiProviderSettings.host.line": "Host: {host}",
   "aiProviderSettings.host.default": "Nutzt die eigene Adresse des Dienstes.",
@@ -22569,6 +22580,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-kompatibel",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",

@@ -125,9 +125,10 @@ embeddings:    {provider: gemini}
 - **`profile`** is the location ladder: where the model may run. `eu_hosted` means a partner runs the
   model in the EU. `sovereign` means no data leaves, by the way it is built. `cloud_frontier` means a
   vendor's cloud, where the vendor serves.
-- Only `sovereign` limits anything: it refuses a cloud provider. `eu_hosted` and `cloud_frontier` are
-  labels that refuse no binding on location grounds. Where a lane is served is the connection's choice
-  (`only` on the broker `upstream`, or a Vertex `location`).
+- `sovereign` refuses a cloud provider. `eu_hosted` refuses an `azure_openai` binding whose Azure region
+  is outside the EU; the regions of `GB`, `NO` and `CH` count as outside it. Otherwise
+  `eu_hosted` and `cloud_frontier` are labels that refuse no binding on location grounds. Where a lane is
+  served is the connection's choice (`only` on the broker `upstream`, or a Vertex `location`).
 - **No key ever sits in the binding.** A provider names only itself, and an `api_key:` left in it is a *boot
   error*. Where the key comes from depends on who asks. A served installation reads it from the **key
   vault**.
@@ -512,7 +513,7 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | The gate | `internal/modules/ai`: `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
 | Decision lane | `decisions:` in the routing setting · `Router.Decide` (`decideroute.go`) · certified rows in `decisioncert_gen.go` |
 | Certification shown per task | the AI admin screen reads each candidate's verdict from `tiercert_gen.go` through `ai.TierCertificationFor`. `make gen` writes the table from the committed records. A binding is never refused for its verdict |
-| Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (built in; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible`, `gemini_decision` (`providerregistry.go`) |
+| Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (built in; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`), `azure_openai` (the OpenAI wire on an Azure resource, bound by an Azure region) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible`, `gemini_decision` (`providerregistry.go`) |
 | Tracing | `ai_call` / `ai_call_payload` / `ai_call_config` (migrations `0088`, `0089`, `0100`, `0102`) |
 | Cost rates | `ai_model_rate` (per provider and model, dated, micro-USD) · seeded by `SeedModelRates` |
 | Pricer (actuals) | `PriceCall` + `RateStore` (`internal/modules/ai`) → `/ai/usage` `cost_est_minor` |

@@ -127,6 +127,10 @@ func finishWires(t *testing.T) map[string]finishWire {
 			provider: providerOpenAICompatible, contentType: "application/json",
 			truncated: compatReply("length"), finished: compatReply("stop"), withheld: compatWithheld,
 		},
+		"azure_openai": {
+			provider: providerAzureOpenAI, contentType: "application/json",
+			truncated: compatReply("length"), finished: compatReply("stop"), withheld: compatWithheld,
+		},
 		"vllm": {
 			provider: providerVLLM, contentType: "application/json",
 			truncated: compatReply("length"), finished: compatReply("stop"), withheld: compatWithheld,
