@@ -23,7 +23,8 @@ must_not_call_with:
 # the Aufstellung the user promised.
 must_mention:
   - "Mai Nguyen|Aufstellung|appendix|Anhang"
-  - "(?i)\bno\b[^.]{0,40}\bbrief\b|brief[^.]{0,60}\b(not|never) (yet )?(been )?(generated|made|run|built|created)"
+  # "The generated brief is missing" says it too, with the brief first.
+  - "(?i)\bno\b[^.]{0,40}\bbrief\b|brief[^.]{0,60}\b(not|never) (yet )?(been )?(generated|made|run|built|created)|\bbrief\b[^.]{0,30}\b(?:is|was) (?:still )?(?:missing|unavailable|not available|not there)\b"
 
 may_call:
   - catch_me_up_on
