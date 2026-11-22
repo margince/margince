@@ -16,10 +16,10 @@ ALTER TABLE ai_task_run
   ADD COLUMN progress_processed integer NULL,
   ADD COLUMN progress_total integer NULL,
   ADD CONSTRAINT ai_task_run_progress_processed_check
-    CHECK (progress_processed IS NULL OR progress_processed >= 0),
+    CHECK (progress_processed IS NULL OR progress_processed >= 0) NOT VALID,
   ADD CONSTRAINT ai_task_run_progress_total_check
     CHECK (progress_total IS NULL OR (progress_total >= 1 AND progress_processed IS NOT NULL
-                                      AND progress_processed <= progress_total));
+                                      AND progress_processed <= progress_total)) NOT VALID;
 
 COMMENT ON COLUMN ai_task_run.progress_processed IS
   'How much a live occurrence has finished so far, in its source''s own unit. NULL while unknown; never the settled quantity.';
