@@ -33,8 +33,8 @@ const noteTwinObject = "activity_note_twin"
 
 // noteTwinKey names the note a row files within one run: its records, subject,
 // body, time, author and owner. It is empty for every kind but a note.
-// A dry run also names the records of its own upload a note links, by the ref
-// each answers with, because those have no id yet. The commit passes none.
+// A dry run also names the records of its own upload that a note links. It
+// uses the ref each answers with, because they have no id yet. The commit passes none.
 func noteTwinKey(runID migration.RunID, in activities.LogActivityInput, pending []string) string {
 	if in.Kind != string(crmcontracts.ActivityKindNote) || in.OccurredAt == nil {
 		return ""

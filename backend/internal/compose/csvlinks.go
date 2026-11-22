@@ -59,9 +59,9 @@ type linkResolver struct {
 	// refused holds the rows of this run that were skipped, so a link to one
 	// says so instead of claiming the row never existed.
 	refused map[linkKey]bool
-	// pendingNatural holds the natural keys of those rows (a contact's email,
-	// a company's domain) to the ref that names the row, so a link written with
-	// one resolves as the commit's does and folds with a link by ref.
+	// pendingNatural maps the natural keys of those rows (a contact's email,
+	// a company's domain) to the ref naming the row. A link by natural key then
+	// resolves as the commit's does, and folds with a link by ref.
 	pendingNatural map[linkKey]string
 	// claims are the unique keys of the run's landing rows (newRecordRefusal).
 	claims importkeys.Ledger
