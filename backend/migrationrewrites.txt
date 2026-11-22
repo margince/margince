@@ -232,3 +232,5 @@
 1795358785_the_notice_and_report_type_checks_are_validated.up.sql | * | the procedural body only counts rows and validates constraints; it writes no row
 1795359601_an_approval_with_an_old_type_stays_updatable.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795359601_an_approval_with_an_old_type_stays_updatable.up.sql | * | the procedural body only counts rows, drops or validates constraints; it writes no row
+1795388887_the_basis_vocabulary_names_no_country.up.sql | communication_basis, communication_decision | only rows holding the retired vn_subject_agreement value are touched, and no code path ever wrote it, so the set is empty or a handful
+1795388888_the_basis_vocabulary_names_no_country_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

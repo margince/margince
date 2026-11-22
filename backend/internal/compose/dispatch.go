@@ -45,8 +45,7 @@ func enumerateWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, e
 // GDPR storage limitation does not pause because a tenant stopped logging in:
 // skipping archived rows would hold personal data past its retention floor in
 // exactly the workspaces nobody looks at any more. Idempotency claim retention
-// needs them for a second reason — idempotency_key.workspace_id is ON DELETE
-// RESTRICT, so leftover claims also refuse the eventual hard delete.
+// still runs under each workspace's own transaction, so it needs every one.
 func enumerateEveryWorkspace(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
 	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; retention reads every tenant, archived included, before any per-workspace tx exists.
 	rows, err := pool.Query(ctx, `SELECT id FROM workspace ORDER BY created_at`)

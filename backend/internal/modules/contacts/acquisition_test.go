@@ -84,7 +84,7 @@ func TestNoAcquisitionKindIsALawfulBasis(t *testing.T) {
 		"contract": true, "precontract_request": true, "consent": true,
 		"legitimate_interests": true, "legal_obligation": true,
 		"existing_customer_exception": true, "vital_or_security_interest": true,
-		"subject_initiated_correspondence": true, "vn_subject_agreement": true,
+		"subject_initiated_correspondence": true,
 	}
 	for _, k := range kinds {
 		if bases[k] {

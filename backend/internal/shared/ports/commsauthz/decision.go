@@ -33,8 +33,6 @@ const (
 	BasisConsent Basis = "consent"
 	// BasisExistingCustomerException is the narrow own-similar-products lane.
 	BasisExistingCustomerException Basis = "existing_customer_exception"
-	// BasisVNSubjectAgreement is the Vietnamese advertising agreement.
-	BasisVNSubjectAgreement Basis = "vn_subject_agreement"
 )
 
 // Verdict is what the engine answered.
