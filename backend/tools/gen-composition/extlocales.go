@@ -116,10 +116,10 @@ func localeKeyPrefix(unit string) string {
 // strings. Held by TestCoreCopyNamespacesMatchTheCatalogue.
 var coreCopyNamespaces = []string{"extAccess.", "extGovernance.", "extIngest.", "extUnits."}
 
-// unitTitleKey is the copy key naming the unit, or "" when its copy does not
-// carry one in every locale the installation ships.
-func unitTitleKey(unit string, merged map[string]map[string]string) string {
-	key := localeKeyPrefix(unit) + "title"
+// unitCopyKey is the unit's key for leaf (its title, its summary), or "" when
+// its copy does not carry one in every locale the installation ships.
+func unitCopyKey(unit, leaf string, merged map[string]map[string]string) string {
+	key := localeKeyPrefix(unit) + leaf
 	for _, locale := range composedLocales {
 		if _, ok := merged[locale][key]; !ok {
 			return ""

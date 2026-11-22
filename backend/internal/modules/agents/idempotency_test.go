@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -390,6 +391,34 @@ func TestAHeldKeyRefusesRatherThanActingTwice(t *testing.T) {
 			// The message has to say what to do next, not only what went wrong.
 			if !strings.Contains(err.Error(), "send_email") {
 				t.Errorf("the refusal does not name the tool: %v", err)
+			}
+			if f.tool.runs != 0 {
+				t.Fatal("the tool ran despite the key being held")
+			}
+		})
+	}
+}
+
+func TestAKeyHeldForDifferentArgumentsSaysWhenAndHowItWasFirstUsed(t *testing.T) {
+	firstUsed := time.Date(2026, time.March, 4, 9, 15, 0, 0, time.FixedZone("CET", 3600))
+	for _, tc := range []struct {
+		earlier ClaimState
+		says    string
+	}{
+		{earlier: ClaimReplay, says: "first used at 2026-03-04T08:15:00Z; that call succeeded"},
+		{earlier: ClaimFailed, says: "first used at 2026-03-04T08:15:00Z; that call failed"},
+		{earlier: ClaimInFlight, says: "first used at 2026-03-04T08:15:00Z; that call is still running"},
+	} {
+		t.Run(tc.says, func(t *testing.T) {
+			f := newRetryFixture(t)
+			f.claims.verdict = Claim{State: ClaimMismatch, FirstUsedAt: firstUsed, Earlier: tc.earlier}
+
+			_, err := f.invoke(t, `{"idempotency_key":"k-1","note":"a different note"}`)
+			if !errors.Is(err, apperrors.ErrConflict) {
+				t.Fatalf("err = %v, want ErrConflict", err)
+			}
+			if !strings.Contains(err.Error(), tc.says) {
+				t.Errorf("the refusal does not say %q: %v", tc.says, err)
 			}
 			if f.tool.runs != 0 {
 				t.Fatal("the tool ran despite the key being held")

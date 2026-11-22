@@ -229,7 +229,7 @@ describe("the palette's own commands", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    await user.type(screen.getByRole("searchbox"), "keyboard shortcuts");
+    await user.type(screen.getByRole("combobox"), "keyboard shortcuts");
     await user.keyboard("{Enter}");
     expect(onClose).toHaveBeenCalled();
     expect(opened).toHaveBeenCalledTimes(1);
@@ -278,9 +278,9 @@ describe("a settings page in the palette", () => {
           </LocaleProvider>
         </QueryClientProvider>,
       );
-      await user.type(screen.getByRole("searchbox"), typed);
+      await user.type(screen.getByRole("combobox"), typed);
       const named = screen
-        .getAllByRole("button")
+        .getAllByRole("option")
         .map((row) => row.textContent)
         .filter((text) => text?.startsWith(typed));
       expect(named.slice(0, 2)).toEqual([`${typed}Screen`, `${typed}Setting`]);

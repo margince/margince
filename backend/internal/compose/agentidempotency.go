@@ -100,7 +100,9 @@ func (c agentClaims) Claim(ctx context.Context, tool, key, digest string) (agent
 	case claimInProgress:
 		return agents.Claim{State: agents.ClaimInFlight}, nil
 	case claimMismatch:
-		return agents.Claim{State: agents.ClaimMismatch}, nil
+		return agents.Claim{
+			State: agents.ClaimMismatch, FirstUsedAt: stored.firstUsedAt, Earlier: earlierClaimState(stored.earlier),
+		}, nil
 	case claimReplay:
 		return agents.Claim{
 			State: agents.ClaimReplay, Result: json.RawMessage(stored.body), Records: stored.records,
@@ -109,6 +111,19 @@ func (c agentClaims) Claim(ctx context.Context, tool, key, digest string) (agent
 		return agents.Claim{State: agents.ClaimFailed, Reason: stored.body}, nil
 	default:
 		return agents.Claim{}, fmt.Errorf("compose: unknown idempotency claim outcome %d", outcome)
+	}
+}
+
+// earlierClaimState names, in the tool surface's terms, how the call that
+// first spent a key stands.
+func earlierClaimState(verdict claimOutcome) agents.ClaimState {
+	switch verdict {
+	case claimReplay:
+		return agents.ClaimReplay
+	case claimFailed:
+		return agents.ClaimFailed
+	default:
+		return agents.ClaimInFlight
 	}
 }
 

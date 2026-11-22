@@ -73,7 +73,7 @@ describe("the company page's overdue warning", () => {
     mountCompany(() => jsonResponse(OVERDUE));
 
     expect(
-      await screen.findByText("€12,400.00 overdue on 3 invoices"),
+      await screen.findByText("€12,400 overdue on 3 invoices"),
     ).toBeTruthy();
     expect(screen.getByText("The oldest is 41 days past due.")).toBeTruthy();
     expect(screen.queryByText(/reminder/)).toBeNull();
@@ -95,14 +95,14 @@ describe("the company page's overdue warning", () => {
       mountCompany(() => jsonResponse({ ...OVERDUE, state }));
 
       expect(
-        await screen.findByText("€12,400.00 was overdue on 3 invoices"),
+        await screen.findByText("€12,400 was overdue on 3 invoices"),
       ).toBeTruthy();
       expect(
         screen.getByText(
           /^As of the last accounting sync on .*2026.*\. The oldest is 41 days past due\.$/,
         ),
       ).toBeTruthy();
-      expect(screen.queryByText("€12,400.00 overdue on 3 invoices")).toBeNull();
+      expect(screen.queryByText("€12,400 overdue on 3 invoices")).toBeNull();
     },
   );
 
@@ -123,14 +123,14 @@ describe("the company page's overdue warning", () => {
       }),
     );
 
-    expect(await screen.findByText("€12,400.00 overdue")).toBeTruthy();
+    expect(await screen.findByText("€12,400 overdue")).toBeTruthy();
   });
 
   it("goes once the next sync finds the invoices paid", async () => {
     let summary: FinanceSummary = { ...OVERDUE, state: "stale" };
     const { asked } = mountCompany(() => jsonResponse(summary));
     expect(
-      await screen.findByText("€12,400.00 was overdue on 3 invoices"),
+      await screen.findByText("€12,400 was overdue on 3 invoices"),
     ).toBeTruthy();
 
     summary = {

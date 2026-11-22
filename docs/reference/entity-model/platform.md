@@ -46,6 +46,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 - `idx_audit_entity`: `btree (entity_type, entity_id, occurred_at DESC)`
 - `idx_audit_erasure_reason`: `btree (((evidence ->> 'reason'))) WHERE ((action = 'erase') AND (entity_type = 'contact'))`
 - `idx_audit_log_batch`: `btree (batch_id) WHERE (batch_id IS NOT NULL)`
+- `idx_audit_on_behalf_of`: `btree (on_behalf_of, occurred_at DESC) WHERE (on_behalf_of IS NOT NULL)`
 - `idx_audit_scrub_boundary`: `btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase', 'anonymize', 'restrict']))`
 - `idx_audit_time`: `btree (occurred_at DESC)`
 

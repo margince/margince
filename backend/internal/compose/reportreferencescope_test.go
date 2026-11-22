@@ -35,25 +35,33 @@ var referenceColumns = map[string]string{
 	activityProjectIDExpr: tableProject,
 }
 
+// A drill column is held to the same rule: its rows print the id as plainly.
 func TestEveryReferenceDimensionDeclaresItsScope(t *testing.T) {
 	for name, spec := range prebuiltReports {
-		for field, expr := range spec.dimensions {
-			table, isReference := referenceColumns[expr]
-			if !isReference {
-				continue
-			}
-			declared, ok := spec.referenceScopes[expr]
-			if !ok {
-				t.Errorf("%s groups by %q, which names a row in %s the caller may not be able to open, "+
-					"but declares no referenceScopes entry — the aggregate would report an id "+
-					"this caller's own read of the same row masks",
-					name, field, table)
-				continue
-			}
-			if declared != table {
-				t.Errorf("%s scopes %q against %q, want %q", name, field, declared, table)
+		for _, returned := range []map[string]string{spec.dimensions, spec.drillColumns} {
+			for field, expr := range returned {
+				declaresReferenceScope(t, name, spec, field, expr)
 			}
 		}
+	}
+}
+
+func declaresReferenceScope(t *testing.T, name string, spec reportSpec, field, expr string) {
+	t.Helper()
+	table, isReference := referenceColumns[expr]
+	if !isReference {
+		return
+	}
+	declared, ok := spec.referenceScopes[expr]
+	if !ok {
+		t.Errorf("%s returns %q, which names a row in %s the caller may not be able to open, "+
+			"but declares no referenceScopes entry — the report would print an id "+
+			"this caller's own read of the same row masks",
+			name, field, table)
+		return
+	}
+	if declared != table {
+		t.Errorf("%s scopes %q against %q, want %q", name, field, declared, table)
 	}
 }
 
@@ -195,34 +203,20 @@ func TestEveryDeclaredReferenceScopeNamesARowScopedTable(t *testing.T) {
 	}
 }
 
-// Every reference a caller can SELECT BY resolves through the vocabulary
-// namedByReport reads, so that naming one applies its scope.
-//
-// namedByReport (reportwhere.go) looks a group-by key up in spec.dimensions and
-// a filter key in spec.filters. Those are the two maps whose values are SQL
-// expressions comparable against spec.referenceScopes. This asserts the
-// converse: every scoped reference IS reachable that way, so a spec cannot
-// declare a scope for a column no caller can name — a scope that never renders
-// reads exactly like one that does.
-//
-// It says nothing about spec.thresholds, and that is the point of writing it
-// this way rather than scanning threshold SQL for column names: a threshold
-// renders its own clause from a bind position, so a reference inside one would
-// be spelled however its author spelled it, and a substring scan would miss the
-// case it exists to catch. What holds instead is that a threshold takes a
-// NUMBER from the caller (thresholdValue) and compares it — it cannot carry a
-// caller-supplied reference id at all, so there is nothing for a scope to gate.
+// A scope that no question names and no drill column blanks never renders.
+// Thresholds take a number, never a reference id, so they need no scope.
 func TestEveryScopedReferenceIsReachableThroughTheVocabulary(t *testing.T) {
 	judged := 0
 	for name, spec := range prebuiltReports {
 		for column := range spec.referenceScopes {
 			judged++
 			reachable := slices.Contains(slices.Collect(maps.Values(spec.dimensions)), column) ||
-				slices.Contains(slices.Collect(maps.Values(spec.filters)), column)
+				slices.Contains(slices.Collect(maps.Values(spec.filters)), column) ||
+				slices.Contains(slices.Collect(maps.Values(spec.drillColumns)), column)
 			if !reachable {
-				t.Errorf("%s scopes %s, which is neither a dimension nor a filter — "+
-					"namedByReport resolves a caller's key through those two maps, so this "+
-					"scope renders for no question anybody can ask",
+				t.Errorf("%s scopes %s, which is neither a dimension, a filter nor a drill column — "+
+					"namedByReport resolves a caller's key through the first two and the "+
+					"drill-through blanks the third, so this scope renders nowhere",
 					name, column)
 			}
 		}

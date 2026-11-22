@@ -21,6 +21,7 @@ function unit(name: string): ExtensionDescriptor {
   return {
     name,
     title: "",
+    summary: "",
     verbs: [],
     entries: [],
     secretScope: "",

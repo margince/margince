@@ -90,9 +90,9 @@ describe("the palette, by a setting's name", () => {
   ])("opens Configuration filtered to %j", async (query, named) => {
     const user = userEvent.setup();
     mount(INSTALLATION_WRITER);
-    await user.type(screen.getByRole("searchbox"), query);
+    await user.type(screen.getByRole("combobox"), query);
 
-    const row = await screen.findByRole("button", { name: /^Configuration/ });
+    const row = await screen.findByRole("option", { name: /^Configuration/ });
     expect(row.querySelector(".sub")?.textContent).toBe(named);
     await user.click(row);
     expect(window.location.hash).toBe(`#/settings/configuration?q=${query}`);
@@ -101,9 +101,9 @@ describe("the palette, by a setting's name", () => {
   it("opens Configuration unfiltered when its own name matches", async () => {
     const user = userEvent.setup();
     mount(INSTALLATION_WRITER);
-    await user.type(screen.getByRole("searchbox"), "configuration");
+    await user.type(screen.getByRole("combobox"), "configuration");
 
-    const rows = await screen.findAllByRole("button", {
+    const rows = await screen.findAllByRole("option", {
       name: /^Configuration/,
     });
     expect(rows).toHaveLength(1);
@@ -111,22 +111,59 @@ describe("the palette, by a setting's name", () => {
     expect(window.location.hash).toBe("#/settings/configuration");
   });
 
+  // Matched inside a key, the row is a place the reader may mean. Enter keeps to
+  // the results, and the arrows still reach it.
+  it("lists Configuration for words inside a key but leaves Enter to the results", async () => {
+    const user = userEvent.setup();
+    mount(INSTALLATION_WRITER);
+    const box = screen.getByRole("searchbox");
+    await user.type(box, "auto_enrich");
+    await screen.findByRole("button", { name: /^Configuration/ });
+
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/search/auto_enrich");
+
+    await user.clear(box);
+    await user.type(box, "auto_enrich");
+    await screen.findByRole("button", { name: /^Configuration/ });
+    await user.keyboard("{ArrowUp}{Enter}");
+    expect(window.location.hash).toBe("#/settings/configuration?q=auto_enrich");
+  });
+
   it("neither offers nor reads the settings for a reader without the grant", async () => {
     const user = userEvent.setup();
     // The witness: Mail capture proves /me has answered before the absence
     // below is read.
     const fetch = mount({ capture_settings: ["read"] });
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
     await user.type(box, "capture");
-    await screen.findByRole("button", { name: /^Mail capture/ });
+    await screen.findByRole("option", { name: /^Mail capture/ });
     await user.clear(box);
     await user.type(box, "MARGINCE_HTTP_PORT");
 
-    expect(screen.queryByRole("button", { name: /^Configuration/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /^Configuration/ })).toBeNull();
     expect(
       fetch.mock.calls.some(([input]) =>
         urlOf(input).endsWith(CONFIGURATION_PATH),
       ),
     ).toBe(false);
+  });
+});
+
+describe("the palette, by half a word", () => {
+  // "Disqualification reasons" is a keyword of the Leads settings page, and a
+  // colleague's name starting "Ali" holds the same three letters.
+  it("leaves a settings page whose keyword only holds the letters to the results", async () => {
+    const user = userEvent.setup();
+    mount({ custom_field: ["read"] });
+    const box = screen.getByRole("searchbox");
+    await user.type(box, "qualif");
+    await screen.findByRole("button", { name: /^Leads/ });
+    await user.clear(box);
+    await user.type(box, "ali");
+
+    expect(screen.queryByRole("button", { name: /^Leads/ })).toBeNull();
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/search/ali");
   });
 });
