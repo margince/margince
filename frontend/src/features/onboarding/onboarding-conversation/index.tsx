@@ -231,6 +231,9 @@ function useRestore(
     queryKey: VOICE_PROBE_KEY,
     queryFn: probeVoice,
     enabled: voiceNeeded,
+    // The corpus owner writes every later change into this entry, so a
+    // refetch would replace a change the user already made.
+    staleTime: Number.POSITIVE_INFINITY,
   });
   // The persisted read is only worth fetching while the company act is
   // still open: a reload must reattach a running or finished read instead
