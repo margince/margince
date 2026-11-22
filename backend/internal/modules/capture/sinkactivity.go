@@ -283,13 +283,7 @@ func (s *Sink) finishNewActivity(
 		return counterpartyDecision{}, err
 	}
 	if internalMailAdmitted(ctx) {
-		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
-			return counterpartyDecision{}, err
-		}
-		if err := s.joinThread(ctx, tx, id, rec, true); err != nil {
-			return counterpartyDecision{}, err
-		}
-		return counterpartyDecision{}, nil
+		return counterpartyDecision{}, s.finishInternalMail(ctx, tx, id, rec, fields, birth, memberBound)
 	}
 	if err := s.emitReply(ctx, tx, auditID, id, rec, fields); err != nil {
 		return counterpartyDecision{}, err
@@ -305,6 +299,7 @@ func (s *Sink) finishNewActivity(
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
+	decision = withNotesMailHold(rec, decision)
 	// A meeting names no counterparty, so the gate above created nothing and
 	// nothing has filed this row anywhere. The contacts who were in it are already
 	// resolved on the participant rows, so the links come from there — BEFORE
@@ -338,12 +333,15 @@ func (s *Sink) finishNewActivity(
 	// copied on it, leaving mail workspace-readable that the limiter exists to
 	// hold. The meeting arm feeds the count because an attendee link means a
 	// record stands behind the meeting; a cc'd contact is not that claim.
-	if fields.Kind != meetingKind {
+	if fields.Kind != meetingKind && !decision.notesMail {
 		if err := s.fileMailUnderParticipants(ctx, tx, id, len(rec.Links), decision, private); err != nil {
 			return counterpartyDecision{}, err
 		}
 	}
 	if err := limitLinkLessAudience(ctx, tx, id, rec, fields.Kind, decision, derivedLinks); err != nil {
+		return counterpartyDecision{}, err
+	}
+	if err := s.landNotesMail(ctx, tx, rec, fields, decision); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// This mailbox's own record of having imported the message, and the
@@ -365,6 +363,18 @@ func (s *Sink) finishNewActivity(
 		return counterpartyDecision{}, err
 	}
 	return decision, nil
+}
+
+// finishInternalMail is what an admitted internal operational mail still owes:
+// this seat's import and its thread. It names no counterparty and is filed nowhere.
+func (s *Sink) finishInternalMail(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
+	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision, memberBound bool,
+) error {
+	if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
+		return err
+	}
+	return s.joinThread(ctx, tx, id, rec, true)
 }
 
 // activityCaptureEventPayload builds the activity.captured event for the

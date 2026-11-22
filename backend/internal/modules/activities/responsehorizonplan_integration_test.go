@@ -55,6 +55,16 @@ func (n planNode) walk(visit func(planNode)) {
 	}
 }
 
+// seedReplicaRole skips ordinary triggers for the rest of the transaction.
+// The link insert alone would pay seconds for contact strength dates, and the
+// horizon reads none of what its triggers derive. Other inserts keep their
+// triggers, because the plan tests read what those stamp. The setting is local
+// to the transaction, so no other connection skips a trigger.
+const (
+	seedReplicaRole = "SET LOCAL session_replication_role = replica;\n"
+	seedOriginRole  = "SET LOCAL session_replication_role = origin;\n"
+)
+
 // seedMailbox writes a year of mail shaped like a working installation's: each
 // customer has a score of messages to us and several times that many from us,
 // and most of ours are replies to something.
@@ -81,8 +91,10 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShap
 	  SELECT i.id, 'c'||i.n||'@customers.example', c.id, 'from' FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
 	INSERT INTO activity_participant (activity_id, address, role)
 	  SELECT id, 'seat@work.test', 'to' FROM mailbox_inbound;
+	`+seedReplicaRole+`
 	INSERT INTO activity_link (activity_id, entity_type, contact_id)
 	  SELECT i.id, 'contact', c.id FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
+	`+seedOriginRole+`
 	INSERT INTO activity (kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
 	  SELECT 'email', 'Re: Topic '||g, at_time + interval '2 days', 'outbound', 'manual', 'human:seed', 'reply'||g, 'c'||n||'@customers.example', true
 	    FROM mailbox_inbound WHERE g % 100 < @reply_percent;

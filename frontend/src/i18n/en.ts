@@ -16798,7 +16798,7 @@ export const en = {
   "aicalls.detail.source": "Served identity source: {source}",
   "aicalls.detail.attempts": "Attempts",
   "aicalls.detail.request": "Request payload",
-  "aicalls.detail.settings": "Request settings sent",
+  "aicalls.detail.settings": "Settings this call was configured with",
   "aicalls.detail.servedBy": "served by {host}",
   "aicalls.detail.response": "Response payload",
   "aicalls.payload.off":
