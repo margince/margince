@@ -1,6 +1,10 @@
 -- One-time cluster setup (run by `make db-init` as the database owner):
 -- the runtime role the server connects as. Non-superuser, no BYPASSRLS,
 -- not the table owner — its grants bind it with no exception path.
+
+-- The roles below are cluster-wide, so one run at a time changes them: a
+-- session lock, held until this psql session ends.
+DO $$ BEGIN PERFORM pg_advisory_lock(7300148210); END $$;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_app') THEN
