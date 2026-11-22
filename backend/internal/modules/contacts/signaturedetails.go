@@ -76,8 +76,8 @@ func contactAddressArguments(contactID ids.ContactID, a crmcontracts.Address) []
 }
 
 // withdrawSignatureAddress clears the address parts a signature's line filled
-// at filledAt, while the contact still shows those parts and no colleague has
-// edited the address since.
+// at filledAt. It acts only while the contact still shows those parts and no
+// colleague has edited the address since.
 func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, line string, filledAt time.Time) error {
 	address, split := SplitAddressText(line)
 	if !split {
@@ -101,7 +101,7 @@ func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 }
 
 // signatureSource is what the mail a signature was read from proves about its
-// sender, read once for the writes that reach past the contact's own columns.
+// sender. It is read once, for the writes that reach past the contact.
 type signatureSource struct {
 	activity ids.UUID
 	// authenticated is an inbound mail whose sender's domain vouched for its From.
@@ -171,8 +171,8 @@ func applySignatureDetailsTx(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 
 // applySignatureEmails adds each further address a signature lists as a
 // non-primary email of the contact, and reports how many landed. Only an
-// authenticated sender's mail counts, and only an address on the sender's own
-// domain that the signature quotes and no record, seat or other party holds.
+// authenticated sender's mail counts. The address must be on the sender's own
+// domain and quoted by the signature. No record, seat or other party may hold it.
 func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time,
 	src signatureSource, fields []SignatureField,
 ) (int, error) {
@@ -235,8 +235,8 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		[]storekit.FieldStamp{{Field: fieldEmail}})
 }
 
-// signatureStatesAddress holds when the address is on the sender's own domain,
-// no other party of the mail uses it, and the quoted signature line prints it.
+// signatureStatesAddress holds when the address is on the sender's own domain
+// and the quoted signature line prints it. No other party of the mail may use it.
 func signatureStatesAddress(src signatureSource, address, evidence string) bool {
 	return owndomain.OfAddress(address) == src.senderDomain && !src.parties[address] && quotesAddress(evidence, address)
 }
@@ -304,7 +304,7 @@ func withdrawSignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 // fillEmployerStreetTx writes a signature's address onto the contact's one
 // current employer when the signature names that employer. The mail must be
 // open to the workspace and sent, authenticated, from one of the company's
-// domains, and the company must hold no address a user stated.
+// domains. The company must hold no address a user stated.
 func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, src signatureSource, fields []SignatureField) error {
 	line, employerName := signatureValue(fields, fieldAddress), signatureValue(fields, fieldCompanyName)
 	if line == "" || employerName == "" || !src.workspace || !src.authenticated || src.senderDomain == "" ||
@@ -342,9 +342,9 @@ func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	return markStreetSupportTx(ctx, tx, contactID, sourceRef)
 }
 
-// fillCompanyStreetTx fills the company's empty street from the line, and
+// fillCompanyStreetTx fills the company's empty street from the line. It
 // reports whether the company now shows the street this contact's signature
-// filled, by this mail or an earlier one.
+// filled, from this mail or an earlier one.
 func fillCompanyStreetTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, contactID ids.ContactID, sourceRef, line string) (bool, error) {
 	// A company that went keeps nothing to fill, and the contact's own fields
 	// still land. The pass acts as the system principal, which no RBAC refuses.
@@ -407,8 +407,8 @@ func companyShowsSignerStreetTx(ctx context.Context, tx pgx.Tx, companyID ids.Co
 }
 
 // withdrawEmployerStreetTx clears the street this contact's signature filled
-// on a company, while the company still shows those parts and no colleague has
-// edited its address since, with the company's own audit row and event.
+// on a company, with the company's own audit row and event. It acts only while
+// the company still shows those parts and no colleague has edited its address since.
 func withdrawEmployerStreetTx(ctx context.Context, tx pgx.Tx, line string, contactID ids.ContactID) error {
 	address, split := SplitAddressText(line)
 	if !split {

@@ -4,9 +4,9 @@
 package contacts
 
 // Which mails still state a value a signature filled. A further address and a
-// postal address are kept while some mail supports them: each supporting mail
-// is a key of the evidence row's signature_support, with the snippet it quoted
-// and whether it also vouched for the employer's street.
+// postal address are kept while some mail supports them. Each supporting mail
+// is a key of the evidence row's signature_support. It holds the snippet the
+// mail quoted, and whether the mail also vouched for the employer's street.
 
 import (
 	"context"

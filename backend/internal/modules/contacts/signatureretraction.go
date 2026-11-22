@@ -168,14 +168,12 @@ func RetractSignatureFieldsByIDTx(ctx context.Context, tx pgx.Tx, fields []ids.U
 }
 
 // takeBackSignatureFieldsTx is RetractSignatureFieldsByIDTx with an optional
-// question asked once the contacts are held: owed false takes nothing back.
+// question asked once the contacts are held: owed false takes nothing back. A
+// non-empty sourceRef takes back only rows still sourced from that mail.
 //
 // The contacts are locked first, in id order, then the evidence rows. That is
 // the signature writer's order (applySignature), so the two wait instead of
 // deadlocking.
-//
-// A non-empty sourceRef takes back only rows still sourced from that mail:
-// owed may move a row onto another mail that still supports it.
 func takeBackSignatureFieldsTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID, reason, sourceRef string,
 	owed func(context.Context, pgx.Tx) (bool, error),
 ) (int64, error) {

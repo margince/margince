@@ -185,7 +185,7 @@ func TestASignaturesEmailLandsOnlyFromItsAuthenticatedSendersOwnDomain(t *testin
 			e := setupDedupe(t)
 			ctx := e.as()
 			if tc.own {
-				e.employee(ctx, t, nil, "Our Own Company", true, "acme-mail.example", true)
+				e.employee(ctx, t, nil, job{company: "Our Own Company", domain: "acme-mail.example", own: true})
 			}
 			contactID, mail := e.signedMail(ctx, t, "Dana Guarded", tc.mail)
 			e.applySigned(ctx, t, contactID, mail, tc.field)
@@ -200,7 +200,7 @@ func TestANarrowedSignatureTakesBackItsAddressAndEmail(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, mail := e.signedMail(ctx, t, "Dana Narrowed", signerMail{})
-	employer := e.employee(ctx, t, &contactID, "Acme Logistics", true, "acme-mail.example", false)
+	employer := e.employee(ctx, t, &contactID, job{company: "Acme Logistics", domain: "acme-mail.example"})
 	e.applySigned(ctx, t, contactID, mail, signed(fieldAddress, signedAddress), signed(fieldEmail, "dana.weber@acme-mail.example"),
 		signed(fieldCompanyName, "Acme Logistics"))
 	if got := e.count(ctx, t, `SELECT count(*) FROM company WHERE id = $1 AND address_city = 'Hamburg'`, employer); got != 1 {
@@ -231,17 +231,26 @@ func TestANarrowedSignatureTakesBackItsAddressAndEmail(t *testing.T) {
 	}
 }
 
-// employee seeds a company on domain, and the contact's current employment
-// there when contactID is set. own makes it the workspace's own company.
-func (e *dedupeEnv) employee(ctx context.Context, t *testing.T, contactID *ids.ContactID, company string, primary bool, domain string, own bool) ids.CompanyID {
+// job is a company to seed and the contact's employment there.
+type job struct {
+	company, domain string
+	// secondary seeds a current employment that does not hold the primary slot.
+	secondary bool
+	// own makes the company the workspace's own.
+	own bool
+}
+
+// employee seeds a company on its domain, and the contact's current
+// employment there when contactID is set.
+func (e *dedupeEnv) employee(ctx context.Context, t *testing.T, contactID *ids.ContactID, j job) ids.CompanyID {
 	t.Helper()
-	created, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: company, Source: "manual",
-		Domains: []CompanyDomainInput{{Domain: domain, IsPrimary: true}}})
+	created, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: j.company, Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: j.domain, IsPrimary: true}}})
 	if err != nil {
 		t.Fatalf("seed company: %v", err)
 	}
 	companyID := ids.From[ids.CompanyKind](ids.UUID(created.Id))
-	if own {
+	if j.own {
 		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `UPDATE company SET is_anchor = true WHERE id = $1`, companyID)
 			return err
@@ -253,7 +262,7 @@ func (e *dedupeEnv) employee(ctx context.Context, t *testing.T, contactID *ids.C
 		return companyID
 	}
 	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-		Kind: "employment", ContactID: contactID, CompanyID: &companyID, IsCurrentPrimary: new(primary), Source: "manual",
+		Kind: "employment", ContactID: contactID, CompanyID: &companyID, IsCurrentPrimary: new(!j.secondary), Source: "manual",
 	}); err != nil {
 		t.Fatalf("seed employment: %v", err)
 	}
@@ -266,7 +275,7 @@ func TestASignatureFillsItsOneEmployersEmptyStreet(t *testing.T) {
 	street := `SELECT count(*) FROM company WHERE id = $1 AND address_line1 = 'Hafenstrasse 12' AND address_city = 'Hamburg'`
 
 	contactID, mail := e.signedMail(ctx, t, "Dana Employed", signerMail{domain: "acme-logistics.example"})
-	employer := e.employee(ctx, t, &contactID, "Acme Logistics", true, "acme-logistics.example", false)
+	employer := e.employee(ctx, t, &contactID, job{company: "Acme Logistics", domain: "acme-logistics.example"})
 	e.applySigned(ctx, t, contactID, mail, signed(fieldAddress, signedAddress), signed(fieldCompanyName, "Acme Logistics"))
 	if got := e.count(ctx, t, street, employer); got != 1 {
 		t.Fatal("the signature did not fill its employer's empty street")
@@ -283,7 +292,7 @@ func TestASignatureFillsItsOneEmployersEmptyStreet(t *testing.T) {
 		if company == "Acme Pier" {
 			domain = "acme-pier.example"
 		}
-		untouched[what] = e.employee(ctx, t, &signer, company, true, domain, false)
+		untouched[what] = e.employee(ctx, t, &signer, job{company: company, domain: domain})
 		if before != nil {
 			before(signer, untouched[what])
 		}
@@ -291,7 +300,7 @@ func TestASignatureFillsItsOneEmployersEmptyStreet(t *testing.T) {
 	}
 	refused("two current employers", signerMail{domain: "acme-freight.example"}, "Acme Freight", "Acme Freight",
 		func(signer ids.ContactID, _ ids.CompanyID) {
-			e.employee(ctx, t, &signer, "Other Works", false, "other-works.example", false)
+			e.employee(ctx, t, &signer, job{company: "Other Works", domain: "other-works.example", secondary: true})
 		})
 	refused("an employer the signature does not name", signerMail{domain: "acme-shipping.example"}, "Acme Shipping", "Somebody Else", nil)
 	refused("a street a colleague cleared", signerMail{domain: "acme-docks.example"}, "Acme Docks", "Acme Docks",
@@ -345,7 +354,7 @@ func TestAValueTheSnippetDoesNotPrintWritesNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, mail := e.signedMail(ctx, t, "Dana Injected", signerMail{domain: "acme-logistics.example"})
-	employer := e.employee(ctx, t, &contactID, "Acme Logistics", true, "acme-logistics.example", false)
+	employer := e.employee(ctx, t, &contactID, job{company: "Acme Logistics", domain: "acme-logistics.example"})
 	e.applySigned(ctx, t, contactID, mail,
 		signed(fieldAddress, "Evil Road 1, 10115 Berlin"),
 		signed(fieldEmail, "attacker@acme-logistics.example"),
@@ -382,7 +391,7 @@ func TestASignatureValueStaysWhileAnotherMailStillStatesIt(t *testing.T) {
 			e := setupDedupe(t)
 			ctx := e.as()
 			contactID, first := e.signedMail(ctx, t, "Dana Twice", signerMail{})
-			employer := e.employee(ctx, t, &contactID, "Acme Logistics", true, "acme-mail.example", false)
+			employer := e.employee(ctx, t, &contactID, job{company: "Acme Logistics", domain: "acme-mail.example"})
 			statement := []SignatureField{signed(fieldAddress, signedAddress), signed(fieldEmail, "dana.weber@acme-mail.example"),
 				signed(fieldCompanyName, "Acme Logistics")}
 			e.applySigned(ctx, t, contactID, first, statement...)
@@ -432,7 +441,7 @@ func TestTheStreetGoesWithTheLastMailThatVouchedForIt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, vouched := e.signedMail(ctx, t, "Dana Vouched", signerMail{})
-	employer := e.employee(ctx, t, &contactID, "Acme Logistics", true, "acme-mail.example", false)
+	employer := e.employee(ctx, t, &contactID, job{company: "Acme Logistics", domain: "acme-mail.example"})
 	statement := []SignatureField{signed(fieldAddress, signedAddress), signed(fieldCompanyName, "Acme Logistics")}
 	e.applySigned(ctx, t, contactID, vouched, statement...)
 	// A spoofed mail may restate the contact's address, never the employer's street.
