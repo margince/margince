@@ -52,6 +52,7 @@ import {
   reservedPageTitle,
 } from "./nav";
 import { NotificationBell } from "./notificationbell";
+import { ONBOARDING_ENTRY } from "./onboarding-gate";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
 import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
@@ -297,7 +298,8 @@ export function TopBar({
   collapsed: boolean;
   onToggle?: () => void;
   onOpenSearch: () => void;
-  /** The onboarding gate holds the reader: the outbox and the bell stay out. */
+  /** The onboarding gate holds the reader: a way back to setup stands where
+   *  the outbox and the bell would. */
   held?: boolean;
 }>) {
   const t = useT();
@@ -367,8 +369,16 @@ export function TopBar({
             />
           </Suspense>
         )}
-        {!held && <OutboxButton />}
-        {!held && <NotificationBell />}
+        {held ? (
+          <AppLink className="btn btn-ghost" href={routeHash(ONBOARDING_ENTRY)}>
+            {t("shell.backToSetup")}
+          </AppLink>
+        ) : (
+          <>
+            <OutboxButton />
+            <NotificationBell />
+          </>
+        )}
         <AccountMenu />
       </div>
     </header>
