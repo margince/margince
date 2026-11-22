@@ -30,14 +30,28 @@ import (
 	"time"
 )
 
+// resetHeaders are OpenAI's per-limit reset intervals ("1s", "6m0s", "20ms").
+// They stand in only when Retry-After is absent: a limited call carries both.
+var resetHeaders = []string{"x-ratelimit-reset-requests", "x-ratelimit-reset-tokens"}
+
 // Of reads how long a response says to wait. Zero means it did not say — the
 // header was absent, unparseable, or named an instant already past — and the
-// caller falls back to its own backoff.
+// caller falls back to its own backoff. Retry-After wins; without it the
+// longest x-ratelimit-reset-* interval is the wait, since every limit must clear.
 func Of(resp *http.Response) time.Duration {
 	if resp == nil {
 		return 0
 	}
-	return Header(resp.Header.Get("Retry-After"))
+	if wait := Header(resp.Header.Get("Retry-After")); wait > 0 {
+		return wait
+	}
+	var longest time.Duration
+	for _, name := range resetHeaders {
+		if wait, err := time.ParseDuration(strings.TrimSpace(resp.Header.Get(name))); err == nil {
+			longest = max(longest, wait)
+		}
+	}
+	return longest
 }
 
 // Header is Of, for a caller that already holds the value.

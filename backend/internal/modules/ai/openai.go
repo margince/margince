@@ -50,8 +50,24 @@ type openaiWire struct {
 }
 
 type openaiInputItem struct {
-	Role    string            `json:"role"`
-	Content []openaiInputPart `json:"content"`
+	Role    string             `json:"role"`
+	Content openaiInputContent `json:"content"`
+}
+
+// openaiInputContent is a turn's body: typed parts, or a bare string, which
+// the API accepts for every role. An assistant turn must use the string,
+// because its parts would be output_text and only a full output message
+// (id, status) takes those.
+type openaiInputContent struct {
+	Text  string
+	Parts []openaiInputPart
+}
+
+func (c openaiInputContent) MarshalJSON() ([]byte, error) {
+	if len(c.Parts) == 0 {
+		return json.Marshal(c.Text)
+	}
+	return json.Marshal(c.Parts)
 }
 
 // openaiInputPart is one content part. Only the fields relevant to the part's
@@ -64,6 +80,9 @@ type openaiInputPart struct {
 	FileName string `json:"filename,omitempty"`
 	FileURL  string `json:"file_url,omitempty"`
 	FileID   string `json:"file_id,omitempty"`
+	// Detail is required on input_image by the schema; auto leaves the
+	// resolution to the model.
+	Detail string `json:"detail,omitempty"`
 }
 
 type openaiText struct {
@@ -249,11 +268,8 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 	if err != nil {
 		return nil, err
 	}
-	if _, reasons := openaiDefaultEffort(wire.Model); effort == "" && reasons && req.ThinkingLevel != "" {
-		effort = openaiTakenEffort(wire.Model, req.ThinkingLevel)
-	}
 	if effort == "" {
-		effort = openaiEffortFor(wire.Model, req.ThinkingFloor)
+		effort = openaiThinkingEffort(wire.Model, req.ThinkingLevel, req.ThinkingFloor)
 	}
 	if effort != "" {
 		wire.Reasoning = &openaiReasoning{Effort: effort}
@@ -271,14 +287,14 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 func openaiInputMessages(system string, msgs []model.Message, atts []model.Attachment) []openaiInputItem {
 	items := make([]openaiInputItem, 0, len(msgs)+1)
 	if system != "" {
-		items = append(items, openaiInputItem{Role: roleSystem, Content: []openaiInputPart{{Type: "input_text", Text: system}}})
+		items = append(items, openaiInputItem{Role: roleSystem, Content: openaiInputContent{Parts: []openaiInputPart{{Type: "input_text", Text: system}}}})
 	}
 	for _, m := range msgs {
-		partType := "input_text"
+		content := openaiInputContent{Parts: []openaiInputPart{{Type: "input_text", Text: m.Content}}}
 		if m.Role == roleAssistant {
-			partType = "output_text"
+			content = openaiInputContent{Text: m.Content}
 		}
-		items = append(items, openaiInputItem{Role: m.Role, Content: []openaiInputPart{{Type: partType, Text: m.Content}}})
+		items = append(items, openaiInputItem{Role: m.Role, Content: content})
 	}
 	if len(atts) > 0 {
 		items = attachToLastUserTurn(items, atts)
@@ -300,14 +316,14 @@ func attachToLastUserTurn(items []openaiInputItem, atts []model.Attachment) []op
 		idx = len(items) - 1
 	}
 	for _, a := range atts {
-		items[idx].Content = append(items[idx].Content, openaiAttachmentPart(a))
+		items[idx].Content.Parts = append(items[idx].Content.Parts, openaiAttachmentPart(a))
 	}
 	return items
 }
 
 func openaiAttachmentPart(a model.Attachment) openaiInputPart {
 	if isImage(a.MIME) {
-		part := openaiInputPart{Type: "input_image"}
+		part := openaiInputPart{Type: "input_image", Detail: openaiImageDetail}
 		if a.URI != "" {
 			part.ImageURL = a.URI
 		} else {
@@ -322,6 +338,10 @@ func openaiAttachmentPart(a model.Attachment) openaiInputPart {
 	switch {
 	case a.URI == "":
 		part.FileData = dataURI(a.MIME, a.Bytes)
+		// The API refuses inline file_data that names no file.
+		if part.FileName == "" {
+			part.FileName = openaiInlineFileName
+		}
 	case isFetchableURL(a.URI):
 		part.FileURL = a.URI
 	default:
@@ -329,6 +349,11 @@ func openaiAttachmentPart(a model.Attachment) openaiInputPart {
 	}
 	return part
 }
+
+const (
+	openaiImageDetail    = "auto"
+	openaiInlineFileName = "attachment.pdf"
+)
 
 func dataURI(mime string, raw []byte) string {
 	return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(raw)
@@ -401,6 +426,10 @@ type openaiStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
 	end     streamEnd
+	// refusal collects response.refusal.delta text: a refusal streams beside
+	// output_text and the response still ends completed, so without it the
+	// reply would read as a clean empty answer.
+	refusal strings.Builder
 }
 
 func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
@@ -416,6 +445,7 @@ func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
 		var ev struct {
 			Type     string         `json:"type"`
 			Delta    string         `json:"delta"`
+			Refusal  string         `json:"refusal"`
 			Response openaiResponse `json:"response"`
 			// Code/Message are the top-level `error` event's shape.
 			Code    string `json:"code"`
@@ -429,7 +459,14 @@ func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
 			if ev.Delta != "" {
 				return ev.Delta, true, nil
 			}
+		case "response.refusal.delta":
+			s.refusal.WriteString(ev.Delta)
+		case "response.refusal.done":
+			return "", false, s.refused(ctx, ev.Refusal)
 		case "response.completed":
+			if s.refusal.Len() > 0 {
+				return "", false, s.refused(ctx, "")
+			}
 			s.end.finish("")
 		case "response.failed", "response.incomplete":
 			if err := openaiTerminalStatus(ctx, ev.Response); err != nil {
@@ -443,6 +480,15 @@ func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
 		}
 	}
 	return s.end.outcome(s.scanner.Err())
+}
+
+// refused is the withheld answer a streamed refusal ends as, from the done
+// event's full text or, when it never came, the deltas so far.
+func (s *openaiStream) refused(ctx context.Context, text string) error {
+	if text == "" {
+		text = s.refusal.String()
+	}
+	return withheldError{wire: providerOpenAI, reason: finishRefusal, detail: safeProviderText(ctx, text)}
 }
 
 func (s *openaiStream) Close() error { return s.body.Close() }

@@ -84,3 +84,40 @@ func TestOfIsZeroWhenTheProviderSaidNothing(t *testing.T) {
 		t.Errorf("Of(<a response with no Retry-After>) = %v, want 0", got)
 	}
 }
+
+func responseWith(headers map[string]string) *http.Response {
+	resp := &http.Response{Header: http.Header{}}
+	for name, value := range headers {
+		resp.Header.Set(name, value)
+	}
+	return resp
+}
+
+// OpenAI states a limited call's wait in x-ratelimit-reset-*, in Go-style
+// durations, and every limit must clear, so the longest one is the wait.
+func TestOfReadsTheLongestRateLimitResetWhenThereIsNoRetryAfter(t *testing.T) {
+	resp := responseWith(map[string]string{
+		"x-ratelimit-reset-requests": "1s",
+		"x-ratelimit-reset-tokens":   "6m0s",
+	})
+	if got := retryafter.Of(resp); got != 6*time.Minute {
+		t.Errorf("Of = %v, want 6m", got)
+	}
+	if got := retryafter.Of(responseWith(map[string]string{"x-ratelimit-reset-tokens": "20ms"})); got != 20*time.Millisecond {
+		t.Errorf("Of(20ms) = %v, want 20ms", got)
+	}
+}
+
+func TestRetryAfterOutranksTheRateLimitReset(t *testing.T) {
+	resp := responseWith(map[string]string{"Retry-After": "3", "x-ratelimit-reset-tokens": "6m0s"})
+	if got := retryafter.Of(resp); got != 3*time.Second {
+		t.Errorf("Of = %v, want 3s", got)
+	}
+}
+
+func TestAnUnreadableRateLimitResetAsksForNoWait(t *testing.T) {
+	resp := responseWith(map[string]string{"x-ratelimit-reset-requests": "soon", "x-ratelimit-reset-tokens": "-4s"})
+	if got := retryafter.Of(resp); got != 0 {
+		t.Errorf("Of = %v, want 0", got)
+	}
+}
