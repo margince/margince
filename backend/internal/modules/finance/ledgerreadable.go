@@ -11,12 +11,13 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // LedgerVisibleClause is the predicate over a company alias for the companies
-// whose ledger the caller may read. Payment authority is narrower than
-// workspace-readable company identity, so the owner scope joins the read
-// scope. Empty means the caller is unbounded.
+// whose ledger the caller may read. An invoice can carry what a person is paid,
+// so the owner scope joins the read scope. A seat that may read the company
+// but does not own it reads no invoice or payment on it. Empty means unbounded.
 func LedgerVisibleClause(ctx context.Context, companyAlias string, arg func(any) int) (string, error) {
 	var clauses []string
 	for _, scope := range []func(context.Context, string, string, func(any) int) (string, error){
@@ -46,4 +47,35 @@ func LedgerRowReadableSQL(ctx context.Context, alias string, arg func(any) int) 
 	}
 	return fmt.Sprintf(`EXISTS (SELECT 1 FROM company ledger_company WHERE ledger_company.id = %s.company_id AND %s)`,
 		pgx.Identifier{alias}.Sanitize(), clause), nil
+}
+
+// ensureLedgerVisible answers ErrNotFound unless the company exists, is live
+// when live is set, and passes LedgerVisibleClause. Every read of one
+// company's invoices or payments asks it. A ledger the caller may not read
+// then looks the same as no ledger at all.
+func ensureLedgerVisible(ctx context.Context, tx pgx.Tx, company ids.UUID, live bool) error {
+	if !auth.ReadGranted(ctx, "company") {
+		return auth.HideRow(ctx, "company")
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	clause, err := LedgerVisibleClause(ctx, "ledger_company", arg)
+	if err != nil {
+		return err
+	}
+	if clause == "" {
+		clause = "TRUE"
+	}
+	if live {
+		clause += " AND ledger_company.archived_at IS NULL"
+	}
+	query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM company ledger_company WHERE ledger_company.id = $%d AND %s)`, arg(company), clause)
+	var visible bool
+	if err := tx.QueryRow(ctx, query, args...).Scan(&visible); err != nil {
+		return fmt.Errorf("finance: checking who may read the ledger: %w", err)
+	}
+	if !visible {
+		return auth.HideRow(ctx, "company")
+	}
+	return nil
 }

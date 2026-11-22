@@ -21,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -173,6 +175,85 @@ func TestDoneForYouHidesTheLedgerOfACompanyTheReaderDoesNotOwn(t *testing.T) {
 		}
 		if _, shown := worklist[key]; shown {
 			t.Errorf("the Worklist shows %s on a company the reader does not own", key)
+		}
+	}
+}
+
+// ledgerReads are the reads of one company's invoices and payments, each
+// answering whether it showed the reader anything of the fixture's ledger.
+func (f placedFixture) ledgerReads(t *testing.T) map[string]func(ctx context.Context) bool {
+	t.Helper()
+	store := financeStoreFor(f.e, testBooksSource{paid: true})
+	company := companyIDOf(f.company)
+	invoice := uuidOf(t, f.e.WsScalar(t, `SELECT id::text FROM finance_invoice WHERE company_id = $1`, f.company))
+	payment := uuidOf(t, f.e.WsScalar(t, `SELECT id::text FROM finance_payment WHERE company_id = $1`, f.company))
+	shown := func(t *testing.T, err error) bool {
+		if err != nil && !errors.Is(err, apperrors.ErrNotFound) && !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+			t.Fatalf("a ledger read failed: %v", err)
+		}
+		return !errors.Is(err, apperrors.ErrNotFound)
+	}
+	return map[string]func(ctx context.Context) bool{
+		"customer payments": func(ctx context.Context) bool {
+			out, err := store.CustomerPayments(ctx, nil, nil)
+			mustWrite(t, err)
+			for _, row := range out.Data {
+				if ids.UUID(row.CompanyId) == f.company {
+					return true
+				}
+			}
+			return false
+		},
+		"the finance summary": func(ctx context.Context) bool {
+			_, err := store.SummaryFor(ctx, company)
+			return shown(t, err)
+		},
+		"the invoice reference": func(ctx context.Context) bool {
+			_, _, err := store.InvoiceReference(ctx, invoice)
+			return shown(t, err)
+		},
+		// The test source serves no document, so the owner's answer is that
+		// refusal and a hidden ledger's is the 404 a missing invoice gets.
+		"the invoice document": func(ctx context.Context) bool {
+			_, err := store.InvoiceDocumentFor(ctx, invoice)
+			return shown(t, err)
+		},
+		"the invoice in a merge review": func(ctx context.Context) bool {
+			_, err := store.MergeReference(ctx, "invoice", invoice)
+			return shown(t, err)
+		},
+		"the payment in a merge review": func(ctx context.Context) bool {
+			_, err := store.MergeReference(ctx, "payment", payment)
+			return shown(t, err)
+		},
+		// The attention feed's handled lane reads the Worklist's reader.
+		"Home and the Worklist": func(ctx context.Context) bool {
+			home, worklist := placedLines(ctx, t, f.e)
+			_, onHome := home["magic.action.create_invoice"]
+			_, onWorklist := worklist["magic.action.create_invoice"]
+			return onHome || onWorklist
+		},
+	}
+}
+
+// An invoice can carry what a person is paid. A seat with the finance and
+// company grants may read the company without owning it. It is shown none of
+// the company's ledger anywhere, and the owner is shown all of it.
+func TestOnlyTheOwnerReadsACompanysLedger(t *testing.T) {
+	f := newPlacedFixture(t)
+	f.syncLedger(t)
+	perms := withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})
+	owner := f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, perms)
+	stranger := f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, perms)
+	if _, err := f.e.Contacts.GetCompany(stranger, companyIDOf(f.company), storekit.LiveOnly); err != nil {
+		t.Fatalf("the non-owner cannot read the company at all, so the case proves nothing: %v", err)
+	}
+	for name, read := range f.ledgerReads(t) {
+		if !read(owner) {
+			t.Errorf("the owner is not shown %s", name)
+		}
+		if read(stranger) {
+			t.Errorf("a non-owner is shown %s", name)
 		}
 	}
 }
