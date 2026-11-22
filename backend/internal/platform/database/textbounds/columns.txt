@@ -125,6 +125,7 @@ public.ai_call.context_fingerprint document
 public.ai_call.context_scopes document
 public.ai_call.decision_choice document
 public.ai_call.error_sentinel document
+public.ai_call.extension line
 public.ai_call.finish_reason note
 public.ai_call.kind document
 public.ai_call.model_id document

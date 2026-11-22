@@ -54,6 +54,7 @@ func (r *fakeRuntime) Authority() Authority   { return nil }
 func (r *fakeRuntime) Directory() Directory   { return nil }
 func (r *fakeRuntime) Activities() Activities { return nil }
 func (r *fakeRuntime) SetAside() SetAside     { return nil }
+func (r *fakeRuntime) AI() AI                 { return nil }
 
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, Tx) error) error {
 	if !r.live {

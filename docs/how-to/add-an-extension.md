@@ -1578,6 +1578,50 @@ The rules:
   `google` or `microsoft`. `AuthURL` and `TokenURL` must use `https`.
 - `rt.OAuthDisconnect(ctx, "books")` drops the tokens. It does not end the grant at the vendor.
 
+## Ask a model: declare an AI task
+
+A unit that wants a model's help declares each task and runs it through the core. It never holds a provider
+client or a key:
+
+```go
+AITasks: []extension.AITask{{
+	Name:      "invoice_total",
+	Prompt:    "Read the invoice and return its total amount and currency.",
+	Schema:    `{"type":"object","required":["total","currency"],"properties":{"total":{"type":"number"},"currency":{"type":"string"}}}`,
+	Documents: true,
+}},
+```
+
+```go
+res, err := rt.AI().Run(ctx, "invoice_total", extension.AIInput{
+	Documents: []extension.AIDocument{{Filename: "inv.pdf", ContentType: "application/pdf", Body: pdf}},
+	NoContact: "a supplier invoice",
+})
+```
+
+Every call is one `extension_task` call on the core's router. So the installation's routing setting picks the
+model, the region limit applies as it does to a core task, credentials are removed from the input, and the
+input is never kept in the call log's payload store. The `ai_call` row names the unit and the task as
+`<unit>/<task>`.
+
+The rules:
+
+- **A task you did not declare is refused** with `ErrAITaskUndeclared`. `Name` is `snake_case`, at most 48
+  characters, and the call log keeps it, so a rename splits one task's history.
+- **Name the contacts the call carries** in `Contacts`, or say in `NoContact` why it carries none. A contact
+  under a restriction of processing refuses the call. A call that does neither is refused with `ErrInvalid`.
+- **A PDF is read as text** by the reader the core uses for its own PDFs. A scan with no text layer is refused
+  with `ErrAIScannedDocument`. No document goes to a model as bytes, and an image is refused with
+  `ErrAIDocumentType`.
+- **`Documents: true` is required** to pass documents. Text types go through as text.
+- **With a `Schema`**, the answer comes back as `AIResult.JSON` and has been checked against it. Without one,
+  it comes back as `AIResult.Text`.
+- **The answer is advice.** `AIResult.MachineMade` is always true. A unit that shows or stores it says a model
+  wrote it.
+- **A refusal by routing, the region limit, a restriction or the budget** is `ErrAIUnavailable`. The call went
+  nowhere, so a job may try again later.
+- The core's certification covers the one `extension_task` site. It does not run a unit's own examples yet.
+
 ## Call your provider
 
 Build each request with `extension.NewRequest`. It names the installation to your provider in the

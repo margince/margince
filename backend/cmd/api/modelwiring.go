@@ -162,6 +162,7 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 		}
 		boot := ai.NewPublicProfile(candidate.state, candidate.cfg)
 		router := modelPath.Router()
+		compose.BindExtensionAI(modelPath.ExtensionTask)
 		return &modelPath, liveState(router, candidate.state), liveProfile(router, boot, candidate.state == compose.AIStateConfigured), nil
 	}
 	return nil, nil, nil, errors.New("api: no model path candidate resolved")

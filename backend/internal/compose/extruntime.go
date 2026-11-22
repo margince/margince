@@ -75,6 +75,9 @@ type extensionRuntimeBinding struct {
 	// impossible. Nil on a role that composed no capture, and the port then
 	// refuses by name rather than half-working.
 	captureSink *capture.Sink
+	// ai is the model lane a unit's AI calls ride, bound by BindExtensionAI.
+	// Nil on a role that bound none, and AI then answers ErrAIUnavailable.
+	ai extensionAILane
 }
 
 // BindExtensionCapture records the capture pipeline a unit's ingress lands
@@ -122,7 +125,9 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 		slog.Default().Warn("compose: the extension runtime was rebound to a different pool; " +
 			"every extension capability from now on runs against the new one")
 	}
-	extensionRuntimeDeps.extensionRuntimeBinding = extensionRuntimeBinding{pool: pool, vault: vault}
+	binding := extensionRuntimeDeps.extensionRuntimeBinding
+	binding.pool, binding.vault = pool, vault
+	extensionRuntimeDeps.extensionRuntimeBinding = binding
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than

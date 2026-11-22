@@ -110,6 +110,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// already nil where none is configured, and it is the same value
 	// startRunnerLane passes — so the two bindings are idempotent.
 	compose.BindExtensionRuntime(pool, vault)
+	compose.BindExtensionAI(modelPath.ExtensionTask)
 	// The capture pipeline a unit's ingress lands through. Units ingest only from
 	// job ticks and subscription deliveries, and both run in this role. It shares
 	// cfg.captureConfig with the sweep registry, so both reach one attachment store.

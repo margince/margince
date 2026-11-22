@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 358 |
-| Columns | 4475 |
+| Columns | 4476 |
 | Foreign keys | 622 |
 | Owning areas | 40 |
 
@@ -166,7 +166,7 @@ erDiagram
 | [`agent_run`](agents.md#agent_run) | agents | 17 | 1 |
 | [`agent_standing_grant`](agents.md#agent_standing_grant) | agents | 8 | 0 |
 | [`agent_task`](compose.md#agent_task) | compose | 14 | 0 |
-| [`ai_call`](ai.md#ai_call) | ai | 40 | 1 |
+| [`ai_call`](ai.md#ai_call) | ai | 41 | 1 |
 | [`ai_call_config`](ai.md#ai_call_config) | ai | 6 | 1 |
 | [`ai_call_payload`](ai.md#ai_call_payload) | ai | 5 | 0 |
 | [`ai_feedback`](ai.md#ai_feedback) | ai | 15 | 0 |

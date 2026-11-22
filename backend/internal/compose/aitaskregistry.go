@@ -85,6 +85,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskDocumentExtract, laneChat, chatCaptureCases{})
 	oneShot(ai.TaskGrowthFit, "growth_fit", growthFitCases{})
 	oneShot(ai.TaskCertJudge, "judge", certJudgeCases{})
+	oneShot(ai.TaskExtensionTask, "run", extensionTaskCases{})
 	oneShot(ai.TaskRateExtract, "fx", rateFxCases{})
 	oneShot(ai.TaskVoiceBuild, "derive", voiceDeriveCases{})
 	oneShot(ai.TaskVoiceBuild, "eval_draft", voiceEvalDraftCases{})

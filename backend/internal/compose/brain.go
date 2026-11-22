@@ -162,6 +162,9 @@ type ModelPath struct {
 	DocumentExtract documentCompleter
 	// Enrich is the §2.9 evidence-or-omit signature field extraction lane.
 	Enrich completer
+	// ExtensionTask is the lane every extension AI call rides (BindExtensionAI).
+	// One task serves every unit, so no unit holds a provider client.
+	ExtensionTask extensionAILane
 	// ProposeRoles reads a deal's buying roles out of what its contacts wrote.
 	// The one lane in this struct with NO floor behind it: every other absent
 	// lane degrades to a deterministic answer, and a buying role has none —
@@ -367,6 +370,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		RequestSettlement:             brain(ai.TaskRequestSettlement),
 		DealVerdict:                   brain(ai.TaskDealVerdict),
 		TagSuggest:                    brain(ai.TaskTagSuggest),
+		ExtensionTask:                 brain(ai.TaskExtensionTask),
 		CaptureCounterpartyVerdict:    brain(ai.TaskCaptureCounterpartyVerdict),
 		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),
 		SignalExtract:                 brain(ai.TaskSignalExtract),
