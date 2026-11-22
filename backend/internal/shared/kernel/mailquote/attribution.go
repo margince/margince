@@ -26,19 +26,19 @@ var forwardPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)^Anfang der weitergeleiteten (E-Mail|Nachricht)`),
 }
 
-// IsReply reports whether a line introduces quoted earlier mail.
-func IsReply(line string) bool {
+// isReply reports whether a line introduces quoted earlier mail.
+func isReply(line string) bool {
 	return matchesAny(attributionPatterns, line)
 }
 
-// IsForward reports whether a line opens mail the sender passes on.
-func IsForward(line string) bool {
+// isForward reports whether a line opens mail the sender passes on.
+func isForward(line string) bool {
 	return matchesAny(forwardPatterns, line)
 }
 
 // IsAttribution reports whether a line introduces quoted or forwarded mail.
 func IsAttribution(line string) bool {
-	return IsReply(line) || IsForward(line)
+	return isReply(line) || isForward(line)
 }
 
 func matchesAny(patterns []*regexp.Regexp, line string) bool {

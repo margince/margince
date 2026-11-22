@@ -8,7 +8,6 @@ package searchtext
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -33,21 +32,12 @@ const formerSearchValue = `setweight(to_tsvector('simple', f_unaccent(coalesce(s
 // value past the trigger that keeps it.
 func storeAsBefore(t *testing.T, rows []ids.UUID) {
 	t.Helper()
-	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
-	if err != nil {
-		t.Fatalf("connecting as the owner: %v", err)
-	}
-	defer func() {
-		if err := owner.Close(ctx); err != nil {
-			t.Errorf("closing the owner connection: %v", err)
-		}
-	}()
+	owner := integration.FreshOwnerConn(t)
 	batch := &pgx.Batch{}
 	batch.Queue(`ALTER TABLE activity DISABLE TRIGGER activity_search_tsv_update`)
 	batch.Queue(`UPDATE activity SET body_own_end = NULL, search_tsv = `+formerSearchValue+` WHERE id = ANY($1)`, rows)
 	batch.Queue(`ALTER TABLE activity ENABLE TRIGGER activity_search_tsv_update`)
-	if err := owner.SendBatch(ctx, batch).Close(); err != nil {
+	if err := owner.SendBatch(context.Background(), batch).Close(); err != nil {
 		t.Fatalf("storing the rows as the former release did: %v", err)
 	}
 }

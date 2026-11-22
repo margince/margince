@@ -3,7 +3,12 @@
 
 package activities
 
-import "testing"
+import (
+	"testing"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
+)
 
 // The cases here are the shared fixtures the frontend splitter is held to as
 // well. A case added on one side and not the other is the drift this file and
@@ -359,5 +364,13 @@ func TestEmailSummaryTextIsOneLineOfTheSendersOwnWords(t *testing.T) {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// mailquote cannot import the contract, so it spells the mail kind itself.
+func TestTheSplitterAndTheContractNameMailTheSame(t *testing.T) {
+	t.Parallel()
+	if mailquote.MailKind != string(crmcontracts.ActivityKindEmail) {
+		t.Errorf("mailquote calls mail %q and the contract calls it %q", mailquote.MailKind, crmcontracts.ActivityKindEmail)
 	}
 }

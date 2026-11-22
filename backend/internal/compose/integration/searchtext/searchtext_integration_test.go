@@ -71,6 +71,35 @@ func TestMailSearchReadsTheSendersWordsAndNotTheMailTheyQuote(t *testing.T) {
 	assertFound(t, e, mail, "walnut", false)
 }
 
+// The database cuts by characters, as Go counted them. The words above this
+// quote hold letters of two and three bytes, and the stored words lose accents.
+func TestTheEndCutsAMailWithLettersOfSeveralBytesAtTheQuote(t *testing.T) {
+	e := integration.Setup(t)
+	mail := logMail(t, e, "Trả lời", "Bên em đồng ý với điều khoản. Grüße aus Köln.\n\n> Thứ Sáu giao tủ óc chó được không?\n")
+	assertFound(t, e, mail, "koln", true)
+	assertFound(t, e, mail, "khoan", true)
+	assertFound(t, e, mail, "giao", false)
+	assertFound(t, e, mail, "tu", false)
+}
+
+// A language with no dictionary of its own reads the body once, and one with a
+// dictionary reads it a second time as written. Both find the word.
+func TestTheBodyIsReadOnceWhenTheLanguageHasNoDictionary(t *testing.T) {
+	e := integration.Setup(t)
+	mail := logMail(t, e, "Cabinets", "Walnut cabinets arriving.")
+	const weights = `SELECT (search_tsv::text LIKE '%C%')::int FROM activity WHERE id = $1`
+	e.WsExec(t, `UPDATE activity SET language = NULL WHERE id = $1`, mail)
+	if e.WsCount(t, weights, mail) != 0 {
+		t.Error("a mail with no language holds a second reading of its body")
+	}
+	assertFound(t, e, mail, "arriving", true)
+	e.WsExec(t, `UPDATE activity SET language = 'en' WHERE id = $1`, mail)
+	if e.WsCount(t, weights, mail) != 1 {
+		t.Error("an English mail holds no reading of its body as written")
+	}
+	assertFound(t, e, mail, "arriving", true)
+}
+
 func TestAForwardedMailAndANoteAreSearchedWhole(t *testing.T) {
 	e := integration.Setup(t)
 	forward := logMail(t, e, "Fwd: Terms", "FYI.\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025 at 10:15\nSubject: Terms\n\nNet thirty days on the walnut order.\n")

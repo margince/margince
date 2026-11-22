@@ -76,6 +76,11 @@ func TestAReplyKeepsTheTextAboveTheQuotedMail(t *testing.T) {
 			own:  "Đồng ý.\n\n",
 		},
 		{
+			name: "a reply with carriage returns at its line ends",
+			body: "Works for us.\r\n\r\nOn Mon, 3 Mar 2025, Sales wrote:\r\n> Friday?\r\n",
+			own:  "Works for us.\r\n\r\n",
+		},
+		{
 			name: "the capture preamble stays with the text",
 			body: "From: dana@buyer.example\nTo: sales@seller.example\n\nWorks for us.\n\nOn Mon, 3 Mar 2025, Sales wrote:\n> Friday?\n",
 			own:  "From: dana@buyer.example\nTo: sales@seller.example\n\nWorks for us.\n\n",
@@ -167,17 +172,17 @@ func TestAForwardLineIsNotAReplyLine(t *testing.T) {
 		"---------- Thư đã chuyển tiếp ---------", "Begin forwarded message:",
 		"Anfang der weitergeleiteten E-Mail:", "Thư được chuyển tiếp:",
 	} {
-		if !IsForward(line) || IsReply(line) || !IsAttribution(line) {
+		if !isForward(line) || isReply(line) || !IsAttribution(line) {
 			t.Errorf("%q: forward %t, reply %t, attribution %t; want a forward only",
-				line, IsForward(line), IsReply(line), IsAttribution(line))
+				line, isForward(line), isReply(line), IsAttribution(line))
 		}
 	}
 	for _, line := range []string{
 		"-----Original Message-----", "-----Ursprüngliche Nachricht-----", "-----Thư gốc-----",
 		"On Mon, 3 Mar 2025, Sales wrote:", "Ngày 3 thg 3, 2025, An đã viết:", strings.Repeat("_", 32),
 	} {
-		if IsForward(line) || !IsReply(line) {
-			t.Errorf("%q: forward %t, reply %t; want a reply only", line, IsForward(line), IsReply(line))
+		if isForward(line) || !isReply(line) {
+			t.Errorf("%q: forward %t, reply %t; want a reply only", line, isForward(line), isReply(line))
 		}
 	}
 }

@@ -33,7 +33,7 @@ func Preamble(body string) (preamble, text string) {
 // with ">" ends it only when nothing follows, so an inline reply stays whole.
 func OwnTextEnd(lines []string) int {
 	for i := 0; i < len(lines); i++ {
-		if IsForward(lines[i]) {
+		if isForward(lines[i]) {
 			i = forwardedTextStart(lines, i+1) - 1
 			continue
 		}
@@ -80,7 +80,7 @@ func ownChars(body string) int {
 
 func startsQuote(lines []string, index int) bool {
 	line := lines[index]
-	if strings.HasPrefix(line, ">") || IsReply(line) {
+	if strings.HasPrefix(line, ">") || isReply(line) {
 		return true
 	}
 	// The sent-date field below separates an Outlook block from prose opening "Von:".

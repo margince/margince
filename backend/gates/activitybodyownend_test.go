@@ -19,7 +19,7 @@ const bodyWriterFloor = 14
 
 // Search cuts a mail body at activity.body_own_end, which Go computes from the
 // text. A writer that changes the body and leaves the end cuts the new text at
-// the old place. Test fixtures are not read: a row with no end reads whole.
+// the old place. The census reads the Go statements outside test files.
 func TestEveryWriterOfAnActivityBodySetsWhereTheSendersTextEnds(t *testing.T) {
 	t.Parallel()
 	writers := 0
