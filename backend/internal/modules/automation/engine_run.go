@@ -271,20 +271,14 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			// `null` over a column that has read SQL NULL for those runs since
 			// they existed — a shape change on a shared path, for no gain.
 			if len(result.Applied) == 0 {
-				_, err := tx.Exec(ctx, `
-					UPDATE workflow_run SET status = 'requires_approval', detail = $3
-					WHERE handler = $1 AND idempotency_key = $2`,
-					h.Spec().Name, runKey(h, ev), detail)
+				_, err := tx.Exec(ctx, runOutcomeSQL[outcomeStaged], h.Spec().Name, runKey(h, ev), detail)
 				return err
 			}
 			appliedJSON, err := json.Marshal(result.Applied)
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'requires_approval', detail = $3, applied = $4
-				WHERE handler = $1 AND idempotency_key = $2`,
-				h.Spec().Name, runKey(h, ev), detail, appliedJSON)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeStagedWithApplied], h.Spec().Name, runKey(h, ev), detail, appliedJSON)
 			return err
 		case errors.Is(applyErr, ErrNoNotificationTransport):
 			// Matched and would have delivered, but no Notifier was wired
@@ -297,9 +291,7 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'skipped', detail = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeSkipped], h.Spec().Name, runKey(h, ev), detail)
 			return err
 		case errors.As(applyErr, &declinedApply):
 			// The handler looked and found nothing to act on — an unroutable
@@ -316,30 +308,68 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'skipped', detail = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeSkipped], h.Spec().Name, runKey(h, ev), detail)
 			return err
 		case applyErr != nil:
 			detail, err := failureDetail(sanitizedReason(applyErr), !WriteRefused(applyErr))
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'failed', detail = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeFailed], h.Spec().Name, runKey(h, ev), detail)
 			return err
 		default:
 			appliedJSON, err := json.Marshal(result.Applied)
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET applied = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), appliedJSON)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeApplied], h.Spec().Name, runKey(h, ev), appliedJSON)
 			return err
 		}
 	})
+}
+
+// runOutcome names one terminal write onto a claimed run row. Every one reaches
+// the row by its (handler, idempotency_key) claim, so each needs both columns of
+// workflow_run_unique: with only handler, a firing reads that handler's whole
+// history. The plan-shape test (runplanshape_integration_test.go) explains every
+// entry, so a statement added here is covered without being listed again.
+type runOutcome string
+
+const (
+	outcomeStaged            runOutcome = "staged"
+	outcomeStagedWithApplied runOutcome = "staged_with_applied"
+	outcomeSkipped           runOutcome = "skipped"
+	outcomeFailed            runOutcome = "failed"
+	outcomeApplied           runOutcome = "applied"
+)
+
+const runClaimedWhere = `
+	WHERE handler = $1 AND idempotency_key = $2`
+
+var runOutcomeSQL = map[runOutcome]string{
+	outcomeStaged:            `UPDATE workflow_run SET status = 'requires_approval', detail = $3` + runClaimedWhere,
+	outcomeStagedWithApplied: `UPDATE workflow_run SET status = 'requires_approval', detail = $3, applied = $4` + runClaimedWhere,
+	outcomeSkipped:           `UPDATE workflow_run SET status = 'skipped', detail = $3` + runClaimedWhere,
+	outcomeFailed:            `UPDATE workflow_run SET status = 'failed', detail = $3` + runClaimedWhere,
+	outcomeApplied:           `UPDATE workflow_run SET applied = $3` + runClaimedWhere,
+}
+
+// claimRunSQL is the claim insert. With reclaim, the conflict arm takes over a
+// run whose Apply failed retryable inside applyRetryWindow, and the statement
+// takes that window as $7.
+func claimRunSQL(reclaim bool) string {
+	onConflict := "DO NOTHING"
+	if reclaim {
+		onConflict = `DO UPDATE
+			SET status = EXCLUDED.status, planned = EXCLUDED.planned, detail = NULL, applied = NULL
+			WHERE workflow_run.status = 'failed' AND workflow_run.applied IS NULL
+			  AND workflow_run.detail @> '{"retryable":true}'
+			  AND workflow_run.created_at > now() - $7::interval`
+	}
+	return `
+			INSERT INTO workflow_run (handler, idempotency_key, trigger_event, planned, status, detail)
+			VALUES ($1, $2, $3, $4, $5, $6)
+			ON CONFLICT (handler, idempotency_key) ` + onConflict
 }
 
 // claimRun claims the (handler, key) row FIRST: whoever inserts runs; a
@@ -375,21 +405,13 @@ func (e *WorkflowEngine) claimRunForApply(ctx context.Context, h workflow.Handle
 // failed and was recorded retryable is taken over inside the window.
 // A refusal would answer the same way again, so it stays terminal.
 func (e *WorkflowEngine) insertRun(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte, status string, detail []byte, reclaim bool) (bool, error) {
-	onConflict, args := "DO NOTHING", []any{h.Spec().Name, runKey(h, ev), ev.ID, planned, status, detail}
+	args := []any{h.Spec().Name, runKey(h, ev), ev.ID, planned, status, detail}
 	if reclaim {
-		onConflict = `DO UPDATE
-			SET status = EXCLUDED.status, planned = EXCLUDED.planned, detail = NULL, applied = NULL
-			WHERE workflow_run.status = 'failed' AND workflow_run.applied IS NULL
-			  AND workflow_run.detail @> '{"retryable":true}'
-			  AND workflow_run.created_at > now() - $7::interval`
 		args = append(args, applyRetryWindow)
 	}
 	claimed := false
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			INSERT INTO workflow_run (handler, idempotency_key, trigger_event, planned, status, detail)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (handler, idempotency_key) `+onConflict, args...)
+		tag, err := tx.Exec(ctx, claimRunSQL(reclaim), args...)
 		if err != nil {
 			return err
 		}
