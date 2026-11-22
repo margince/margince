@@ -23,18 +23,18 @@ func (addressCheck) FixedIdentity() bool  { return false }
 
 func TestConnectAddressReadsABareHostAsHTTPS(t *testing.T) {
 	selfHosted := addressCheck{needsAddress: true}
-	for raw, want := range map[string]string{
-		"chat.example.com":           "https://chat.example.com",
-		" chat.example.com/ ":        "https://chat.example.com",
-		"chat.example.com:8443/team": "https://chat.example.com:8443/team",
-		"https://chat.example.com":   "https://chat.example.com",
-		"http://chat.internal":       "http://chat.internal",
-		"httpchat.example.com":       "https://httpchat.example.com",
-		"localhost:8065":             "https://localhost:8065",
+	for _, c := range []struct{ raw, want string }{
+		{"chat.example.com", "https://chat.example.com"},
+		{" chat.example.com/ ", "https://chat.example.com"},
+		{"chat.example.com:8443/team", "https://chat.example.com:8443/team"},
+		{"https://chat.example.com", "https://chat.example.com"},
+		{"http://chat.internal", "http://chat.internal"},
+		{"httpchat.example.com", "https://httpchat.example.com"},
+		{"localhost:8065", "https://localhost:8065"},
 	} {
-		got, err := connectAddress(selfHosted, raw)
-		if err != nil || got != want {
-			t.Errorf("connectAddress(%q) = %q, %v; want %q", raw, got, err, want)
+		got, err := connectAddress(selfHosted, c.raw)
+		if err != nil || got != c.want {
+			t.Errorf("connectAddress(%q) = %q, %v; want %q", c.raw, got, err, c.want)
 		}
 	}
 }
