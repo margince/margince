@@ -151,13 +151,21 @@ func TestADatabasePartWayThroughTheHistoryIsRefused(t *testing.T) {
 	ctx := context.Background()
 	core := coreWithBaseline(t)
 	replaced := core.Baseline.Replaces
-	if _, err := dbmigrate.Up(ctx, conn, historyThrough(t, replaced[len(replaced)-2].Version)); err != nil {
+	built := replaced[len(replaced)-2].Version
+	if _, err := dbmigrate.Up(ctx, conn, historyThrough(t, built)); err != nil {
 		t.Fatalf("building a database one version short of the release: %v", err)
 	}
-	if len(core.Renumbered) == 0 {
-		t.Fatal("core declares no renumber; the renumbered row below would not exist")
+	// The newest renumber this database already applied. A later one moved a
+	// migration the history above has not reached, so its row is not there.
+	var pair dbmigrate.Renumber
+	for _, renumber := range core.Renumbered {
+		if renumber.New <= built && renumber.New > pair.New {
+			pair = renumber
+		}
 	}
-	pair := core.Renumbered[len(core.Renumbered)-1]
+	if pair.New == "" {
+		t.Fatalf("no renumber falls within the history through %s; the renumbered row below would not exist", built)
+	}
 	moved, err := conn.Exec(ctx, `UPDATE schema_migrations_core SET version = $1, content_digest = $2 WHERE version = $3`,
 		pair.Old, pair.OldDigest, pair.New)
 	if err != nil || moved.RowsAffected() != 1 {
