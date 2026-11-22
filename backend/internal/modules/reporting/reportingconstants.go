@@ -7,6 +7,8 @@ const (
 	reportingThisMonth       = "this_month"
 	reportingThisWeek        = "this_week"
 	reportingThisQuarter     = "this_quarter"
+	reportingLastQuarter     = "last_quarter"
+	reportingLastYear        = "last_year"
 	reportingCustom          = "custom"
 	reportingWorkspace       = "workspace"
 	reportingFiscalQuarter   = "fiscal_quarter"

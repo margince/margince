@@ -15733,6 +15733,8 @@ paths:
           - last_month
           - last_week
           - this_quarter
+          - last_quarter
+          - last_year
           - custom
       - &id007
         name: start_at
@@ -15911,6 +15913,8 @@ paths:
           - last_month
           - last_week
           - this_quarter
+          - last_quarter
+          - last_year
           - custom
       - &id007
         name: start_at
@@ -34759,7 +34763,7 @@ paths:
           description: The team or owner named by `scope_kind`.
         - name: period
           in: query
-          schema: { type: string, enum: [this_week, last_week, this_month, last_month], default: this_week }
+          schema: { type: string, enum: [this_week, last_week, this_month, last_month, last_quarter, last_year], default: this_week }
           description: The period, in the installation's reporting zone.
       responses:
         '200':
@@ -57177,7 +57181,7 @@ components:
         country: { $ref: '#/components/schemas/ReportingCountry' }
         period:
           type: string
-          enum: [this_week, this_month, last_month, last_week, this_quarter]
+          enum: [this_week, this_month, last_month, last_week, this_quarter, last_quarter, last_year]
           x-extensible-enum: true
         metrics:
           type: array
@@ -66798,6 +66802,8 @@ components:
           - last_month
           - last_week
           - this_quarter
+          - last_quarter
+          - last_year
           - custom
           x-extensible-enum: true
           description: |
@@ -66805,6 +66811,8 @@ components:
             evaluation time. Read at that exact moment, the week holds no time
             yet and the context's interval starts where it ends. A month target
             beside it still counts the whole month up to the evaluation time.
+            `last_quarter` and `last_year` are the last completed fiscal quarter
+            and fiscal year, in the installation's fiscal calendar.
         interval:
           $ref: '#/components/schemas/ReportingWindow'
         target_basis:
@@ -66987,7 +66995,7 @@ components:
         reports_with_relative_periods:
           type: integer
           minimum: 0
-          description: Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
+          description: Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window.
     ReportingCard:
       type: object
       additionalProperties: false

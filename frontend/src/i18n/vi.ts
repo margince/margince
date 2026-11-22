@@ -1240,7 +1240,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.questionBoundPeriod":
     "Câu hỏi này có bộ lọc. Các kỳ của nó giữ nguyên ngày như lúc được đặt vào: năm tài chính bắt đầu vào {month}, theo {zone}.",
   "reporting.fiscalQuarterNote":
-    "Quý này theo năm tài chính bắt đầu vào {month}.",
+    "Quý và năm ở đây theo năm tài chính bắt đầu vào {month}.",
   "reporting.previewChart": "Xem trước",
   "reporting.previewLoading": "Đang tải bản xem trước…",
   "reporting.previewEmpty":
@@ -1595,9 +1595,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mục tiêu được đặt bằng một đồng tiền không còn là tiền tệ cơ sở. Đặt lại mục tiêu để so sánh.",
   "reporting.this_week": "Tuần này",
   "reporting.this_month": "Tháng này",
-  "reporting.last_month": "Tháng trước",
+  "reporting.last_month": "Tháng đã hoàn tất gần nhất",
   "reporting.last_week": "Tuần đã hoàn tất gần nhất",
   "reporting.this_quarter": "Quý tài chính này",
+  "reporting.last_quarter": "Quý đã hoàn tất gần nhất",
+  "reporting.last_year": "Năm đã hoàn tất gần nhất",
   "reporting.custom": "Khoảng tùy chỉnh",
   "reporting.start": "Ngày bắt đầu",
   "reporting.end": "Ngày kết thúc (không bao gồm)",
@@ -8805,7 +8807,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.upcomingTitle": "Cuộc họp sắp tới",
   "analytics.prospect.cohortTitle": "Bàn giao của bạn đã ra sao",
   "analytics.prospect.cohortPeriods":
-    "Chỉ hiện cho một tuần hoặc một tháng. Hãy chọn một trong các kỳ đó.",
+    "Không hiện cho quý tài chính này hoặc khoảng tùy chỉnh. Hãy chọn kỳ khác.",
   "analytics.prospect.cohortCaption_one":
     "{count} bàn giao bạn gửi trong {period}, theo tình trạng hiện tại",
   "analytics.prospect.cohortCaption_other":
@@ -16715,9 +16717,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.fiscalImpactKept_other":
     "{count} báo cáo có thẻ lọc theo một kỳ. Các báo cáo giữ nguyên ngày.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+    "{count} báo cáo đọc quý này, quý hoặc năm đã hoàn tất gần nhất, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+    "{count} báo cáo đọc quý này, quý hoặc năm đã hoàn tất gần nhất, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
   "installationSettings.fiscalImpactLoading":
     "Đang đếm các phần đã lưu mà thay đổi này liên quan…",
   "installationSettings.forwardMeasure": "Cơ sở tính dự kiến",

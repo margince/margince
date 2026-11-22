@@ -1211,7 +1211,7 @@ export const en = {
   "reporting.questionBoundPeriod":
     "This question has filters. Its periods keep the dates they had when it was placed: a fiscal year starting in {month}, in {zone}.",
   "reporting.fiscalQuarterNote":
-    "This quarter follows the fiscal year that starts in {month}.",
+    "Quarters and years here follow the fiscal year that starts in {month}.",
   "reporting.previewChart": "Preview",
   "reporting.previewLoading": "Loading the preview…",
   "reporting.previewEmpty":
@@ -1559,9 +1559,11 @@ export const en = {
     "It was set in a currency that is no longer the base currency. Set the goal again to compare.",
   "reporting.this_week": "This week",
   "reporting.this_month": "This month",
-  "reporting.last_month": "Last month",
+  "reporting.last_month": "Last completed month",
   "reporting.last_week": "Last completed week",
   "reporting.this_quarter": "This fiscal quarter",
+  "reporting.last_quarter": "Last completed quarter",
+  "reporting.last_year": "Last completed year",
   "reporting.custom": "Custom interval",
   "reporting.start": "Start date",
   "reporting.end": "End date (exclusive)",
@@ -9016,7 +9018,7 @@ export const en = {
   "analytics.prospect.upcomingTitle": "Meetings coming up",
   "analytics.prospect.cohortTitle": "What happened to your handoffs",
   "analytics.prospect.cohortPeriods":
-    "Shown for a week or a month. Choose one of those periods to see it.",
+    "Not shown for this fiscal quarter or a custom interval. Choose another period to see it.",
   "analytics.prospect.cohortCaption_one":
     "{count} handoff you submitted {period}, as it stands now",
   "analytics.prospect.cohortCaption_other":
@@ -17040,9 +17042,9 @@ export const en = {
   "installationSettings.fiscalImpactKept_other":
     "{count} reports have a card that filters on a period. They keep their dates.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} report reads this quarter, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
+    "{count} report reads this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} reports read this quarter, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
+    "{count} reports read this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
   "installationSettings.fiscalImpactLoading":
     "Counting the saved work this change concerns…",
   "installationSettings.forwardMeasure": "Projection basis",

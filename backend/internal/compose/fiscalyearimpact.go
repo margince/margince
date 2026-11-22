@@ -93,7 +93,7 @@ func fiscalYearImpact(ctx context.Context, tx pgx.Tx) (crmcontracts.Installation
 	err := tx.QueryRow(ctx, `SELECT
 		(SELECT count(*) FROM report_run WHERE `+periodFilterOn("query", false)+`),
 		(SELECT count(*)`+live+` AND EXISTS (SELECT 1 FROM jsonb_each(r.question_bindings) b WHERE `+periodFilterOn("(b.value->'query')", false)+`)),
-		(SELECT count(*)`+live+` AND (r.selection->>'period' = 'this_quarter' OR r.selection->>'target_basis' = 'fiscal_quarter' OR r.selection->>'close_window' = 'fiscal_quarter'))`,
+		(SELECT count(*)`+live+` AND (r.selection->>'period' IN ('this_quarter', 'last_quarter', 'last_year') OR r.selection->>'target_basis' = 'fiscal_quarter' OR r.selection->>'close_window' = 'fiscal_quarter'))`,
 		entities, fields,
 	).Scan(&out.SavedQuestions, &out.ReportsWithKeptPeriods, &out.ReportsWithRelativePeriods)
 	if err != nil {
