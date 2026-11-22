@@ -169,11 +169,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// hook therefore sees no principal on the context.
 	// r.RemoteAddr is still the proxy (before ResolveClientIP). The body is
 	// not yet capped (before LimitBodies).
-	//
-	// TraceContract is outside the panic guard, so every /v1 answer, the
-	// guard's own 500 and a mux redirect included, carries X-Request-Id and
-	// has an access line. The unit hook and the guard's log line see the
-	// correlation id for the same reason.
+	// TraceContract sits outside the panic guard, so every /v1 answer (its 500
+	// and a mux redirect included) carries X-Request-Id and an access line.
 	return originalStorageHTTP(pool, srv.blob, httpserver.TraceContract(log, httpserver.RecoverPanics(log, instrument.HTTP(
 		httpserver.ResolveClientIP(srv.trustedProxies,
 			httpserver.LimitBodies(ceiling,

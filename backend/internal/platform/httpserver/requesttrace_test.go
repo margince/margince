@@ -51,7 +51,7 @@ func serveLogged(t *testing.T, output *strings.Builder, handler http.Handler, pa
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 
 	var line accessLine
-	for _, raw := range strings.Split(strings.TrimSpace(output.String()), "\n") {
+	for raw := range strings.SplitSeq(strings.TrimSpace(output.String()), "\n") {
 		var parsed struct {
 			Msg string `json:"msg"`
 		}

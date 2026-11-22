@@ -228,9 +228,8 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// shared/kernel/capabilitypath, not named at each mount. The booking
 	// page's slug is on that list because it is the only admission check on a
 	// route that writes.
-	// boundByResponseDeadline sits outside the handler chain because a write
-	// deadline has to be set before anything starts writing. The access log's
-	// recorder, which wraps everything in server.go, passes it on through Unwrap.
+	// boundByResponseDeadline sits outside the chain: a write deadline must be
+	// set before anything writes. The access recorder passes it on via Unwrap.
 	if srv.routesForTest != nil {
 		publicEdge = srv.routesForTest(publicEdge)
 	}
