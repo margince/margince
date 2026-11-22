@@ -35,7 +35,7 @@ func TestAnAddressWithNoDomainIsItself(t *testing.T) {
 }
 
 // Only case, surrounding space and the spelling of the domain are folded. The
-// dot and plus rules differ per provider, and a wrong guess joins two people.
+// dot and plus rules differ per provider, and a wrong guess joins two seats.
 func TestFoldAddressKeepsPlusTagsDotsAndSubdomainsApart(t *testing.T) {
 	const base = "jane.doe@gmail.com"
 	for _, other := range []string{
