@@ -119,17 +119,22 @@ function parseLengths(value: string): number[] {
     .map(Number);
 }
 
-function validLengths(lengths: number[]): boolean {
-  return (
-    lengths.length <= MAX_OFFERED &&
-    new Set(lengths).size === lengths.length &&
-    lengths.every(
+// The one problem a list of extra lengths has, named so the field says which.
+function lengthsProblem(lengths: number[]): MessageKey | undefined {
+  if (
+    !lengths.every(
       (length) =>
         Number.isInteger(length) &&
         length >= MIN_MINUTES &&
         length <= MAX_MINUTES,
     )
-  );
+  ) {
+    return "scheduling.lengthInvalid";
+  }
+  if (new Set(lengths).size !== lengths.length) {
+    return "scheduling.lengthRepeated";
+  }
+  return lengths.length > MAX_OFFERED ? "scheduling.lengthsTooMany" : undefined;
 }
 
 function minutesOf(draft: LinkDraft): number {
@@ -240,7 +245,7 @@ function LinkForm({
   const minutesInput = useRef<HTMLInputElement>(null);
   const offeredInput = useRef<HTMLInputElement>(null);
   const locationInput = useRef<HTMLInputElement>(null);
-  const offeredError = !validLengths(parseLengths(draft.offered ?? ""));
+  const offeredProblem = lengthsProblem(parseLengths(draft.offered ?? ""));
   const locationError =
     draft.video === "own" && draft.location.trim() === ""
       ? t("scheduling.locationRequired")
@@ -262,7 +267,7 @@ function LinkForm({
       !Number.isInteger(minutes) ||
       minutes < MIN_MINUTES ||
       minutes > MAX_MINUTES ||
-      !validLengths(parseLengths(submitted.offered ?? "")) ||
+      lengthsProblem(parseLengths(submitted.offered ?? "")) !== undefined ||
       (submitted.video === "own" && !submitted.location.trim())
     )
       return;
@@ -352,7 +357,9 @@ function LinkForm({
         <Field
           label={t("scheduling.offeredLengths")}
           hint={t("scheduling.offeredLengthsHelp")}
-          error={offeredError ? t("scheduling.lengthInvalid") : undefined}
+          error={
+            offeredProblem && t(offeredProblem, { max: String(MAX_OFFERED) })
+          }
         >
           {(control) => (
             <TextInput

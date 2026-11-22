@@ -2200,7 +2200,7 @@ export const en = {
   "brief.weekly.learnings.caveat":
     "These observations describe associations in recorded work; they do not establish what caused the outcome.",
   "brief.plan.open": "Open weekly plan",
-  "worklist.source.weekly_commitment": "Weekly commitment",
+  "worklist.source.weekly_commitment": "Commitment",
   "worklist.untitled.weekly_commitment": "Weekly commitment",
   "worklist.source.awaiting_reply": "Follow-up",
   "worklist.untitled.awaiting_reply": "Follow-up",
@@ -5230,6 +5230,28 @@ export const en = {
   "compose.reason.membersOnly": "Held: mail between colleagues",
   "compose.reason.noCounterparty": "Held: no counterparty",
   "compose.audience": "Change visibility",
+  "activity.audience.noteTitle": "Who may read this note?",
+  "activity.audience.noteLegend": "Note visibility",
+  "activity.audience.noteScope":
+    "Applies to this note only, not to the records it is filed on.",
+  "activity.audience.callTitle": "Who may see this call?",
+  "activity.audience.callLegend": "Call visibility",
+  "activity.audience.callScope":
+    "Applies to this call only, not to the records it is filed on.",
+  "activity.audience.meetingTitle": "Who may see this meeting?",
+  "activity.audience.meetingLegend": "Meeting visibility",
+  "activity.audience.meetingScope":
+    "Applies to this meeting only, not to the records it is filed on.",
+  "activity.audience.taskTitle": "Who may see this task?",
+  "activity.audience.taskLegend": "Task visibility",
+  "activity.audience.taskScope":
+    "Applies to this task only, not to the records it is filed on.",
+  "activity.audience.workspaceHint":
+    "Anyone who can open the records this is filed against can read it.",
+  "activity.audience.participantsHint":
+    "Only the people on it can read its details. Others see only that it happened that day.",
+  "activity.audience.selectedHint":
+    "Only the people and teams you name, plus anyone already on it.",
   "compose.audienceTitle": "Who may read this message?",
   "compose.audienceLegend": "Message visibility",
   // The canonical email row and its detail. "Team" never means the whole
@@ -7367,7 +7389,7 @@ export const en = {
   "plan.contract.cancel": "Cancel",
   "plan.contract.crowded": "Week already full",
   "plan.contract.crowdedBody":
-    "{committed} items are already booked and {commitments} commitments are planned. Something will not fit.",
+    "Already booked: {committed}. Commitments planned: {commitments}. Something will not fit.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
   "plan.help.send": "Send",
@@ -8869,6 +8891,7 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.isOpen": "Open",
   "tasks.logged": "Logged",
+  "tasks.heldBy": "Held by",
   "tasks.origin.no_activity_reminder":
     "Created by the no-activity reminder: nothing was logged on this record for its set number of days. Get in touch, then mark the task done.",
   "tasks.origin.check_in_cadence":
@@ -22901,6 +22924,8 @@ export const en = {
     "Other takes any length from 15 minutes to 8 hours.",
   "scheduling.lengthMinutes": "Length in minutes",
   "scheduling.lengthInvalid": "Enter a length from 15 to 480 minutes.",
+  "scheduling.lengthRepeated": "Name each length once.",
+  "scheduling.lengthsTooMany": "Name at most {max} extra lengths.",
   "scheduling.video.meetHelp":
     "A new Meet link is created for every booking and added to the invitation. Uses your Google Calendar, {account}.",
   "scheduling.video.teamsHelp":
@@ -22921,9 +22946,9 @@ export const en = {
   "scheduling.locationLabel": "Link or address",
   "scheduling.locationRequired": "Enter a link or an address.",
   "scheduling.usesHours":
-    "Uses your hours: {days}, {from} to {until} {zone} time, at least {notice} ahead.",
+    "Uses your hours: {days}, {from} to {until} ({zone}), at least {notice} ahead.",
   "scheduling.usesHoursAnyNotice":
-    "Uses your hours: {days}, {from} to {until} {zone} time.",
+    "Uses your hours: {days}, {from} to {until} ({zone}).",
   "scheduling.dayRange": "{from} to {until}",
   "scheduling.changeHours": "Change hours",
   "scheduling.saveLink": "Save link",

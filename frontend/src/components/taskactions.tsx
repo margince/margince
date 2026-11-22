@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import {
@@ -23,7 +22,6 @@ import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { taskDueChoice, taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
-import { isVersionSkewOf } from "../lib/problem";
 import { isWebsiteInquiryTask } from "../lib/websiteinquiries";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
@@ -38,10 +36,11 @@ import { useTaskContact } from "../lib/taskcontact";
 import { useViewerZone } from "../lib/viewerzone";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
-import { TaskNextSteps } from "./tasknextsteps";
+import { useTaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
 import { TaskOutcomeForm } from "./taskoutcome";
 import type { useTaskUpdate } from "./taskwrite";
+import { TaskWriteFailure } from "./taskwritefailure";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -132,6 +131,7 @@ export function TaskQuickActions({
   update,
   showComplete = true,
   completeLabel,
+  quiet = false,
 }: Readonly<{
   activityId: string;
   version: number | undefined;
@@ -142,6 +142,8 @@ export function TaskQuickActions({
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
   completeLabel?: string;
+  /** Done steps back to a plain button beside another filled verb. */
+  quiet?: boolean;
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
@@ -153,7 +155,7 @@ export function TaskQuickActions({
     <>
       {showComplete && (
         <Button
-          variant="primary"
+          variant={quiet ? undefined : "primary"}
           disabled={pending}
           onClick={() => complete(activityId, version)}
         >
@@ -361,7 +363,15 @@ export function TaskDetailDialog({
                 {task.is_done && (
                   <Badge tone="success">{t("tasks.isDone")}</Badge>
                 )}
-                <TaskAssignee id={task.assignee_id} />
+                {/* A held task names its holder after a label, as Logged
+                  names its time; an unheld one reads Unassigned alone. */}
+                {task.assignee_id ? (
+                  <span>
+                    {t("tasks.heldBy")} <TaskAssignee id={task.assignee_id} />
+                  </span>
+                ) : (
+                  <TaskAssignee id={task.assignee_id} />
+                )}
                 {/* A task an agent wrote says so, so a reader knows it was
                   read out of a conversation rather than typed by a colleague. */}
                 {provenanceOf(task.captured_by).kind === "agent" && (
@@ -416,10 +426,15 @@ function TaskDetailActions({
   const t = useT();
   const [logging, setLogging] = useState(false);
   const canAct = !task.is_done && !readOnly && writable && !logging;
+  // The type's own step is the panel's one filled verb, so Done steps back.
+  const next = useTaskNextSteps(task, true);
   return (
     <>
-      {!logging && (
-        <TaskNextSteps task={task} className="task-detail-actions" />
+      {!logging && (next.steps !== null || next.others) && (
+        <div className="task-detail-actions">
+          {next.steps}
+          {next.others}
+        </div>
       )}
       {canAct && (
         <div ref={verbs} className="task-detail-verbs">
@@ -436,6 +451,7 @@ function TaskDetailActions({
               dueHasTime={task.due_has_time}
               dueIntent={task.due_intent}
               update={update}
+              quiet={next.fills}
             />
             <Button onClick={() => setLogging(true)}>
               {t("tasks.log.action")}
@@ -463,38 +479,5 @@ function TaskDetailActions({
         />
       )}
     </>
-  );
-}
-
-// Drawn outside the verbs. A task changed elsewhere is refetched as done or
-// gone, and its verbs vanish; the refusal must outlive them.
-export function TaskWriteFailure({
-  taskId,
-  update,
-}: Readonly<{
-  taskId: string;
-  update: ReturnType<typeof useTaskUpdate>;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  if (!update.isError || update.variables?.id !== taskId) return null;
-  return (
-    <ErrorLine
-      error={update.error}
-      actions={
-        isVersionSkewOf(update.error) && (
-          <Button
-            onClick={() => {
-              update.reset();
-              void queryClient.invalidateQueries({
-                queryKey: ["activity", taskId],
-              });
-            }}
-          >
-            {t("decision.reRead")}
-          </Button>
-        )
-      }
-    />
   );
 }
