@@ -95,8 +95,7 @@ func (s *Store) OpenCycle(ctx context.Context, scope string) (ids.UUID, error) {
 	if strings.TrimSpace(scope) == "" {
 		return ids.UUID{}, errCycleScopeEmpty
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
+	if _, ok := principal.Actor(ctx); !ok {
 		return ids.UUID{}, errNoActorForCycle
 	}
 	var id ids.UUID
@@ -105,10 +104,10 @@ func (s *Store) OpenCycle(ctx context.Context, scope string) (ids.UUID, error) {
 		// scope is refused by the database rather than by a check that read the
 		// table a moment earlier. Two callers racing both see the constraint.
 		err := tx.QueryRow(ctx, `
-			INSERT INTO assurance_cycle (scope, opened_by)
-			VALUES (btrim($1), $2)
+			INSERT INTO assurance_cycle (scope)
+			VALUES (btrim($1))
 			ON CONFLICT (scope) WHERE closed_at IS NULL DO NOTHING
-			RETURNING id`, scope, actor.ID).Scan(&id)
+			RETURNING id`, scope).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errCycleAlreadyOpen
 		}

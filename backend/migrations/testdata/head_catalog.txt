@@ -1065,10 +1065,8 @@ public.ai_call.agent_run_id uuid gen=- def=-
 public.ai_call.ai_call_cache_write_tokens_js_safe CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_cached_tokens_js_safe CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_config_fk FOREIGN KEY (config_hash) REFERENCES ai_call_config(hash)
-public.ai_call.ai_call_context_bytes_check CHECK ((context_bytes >= 0))
 public.ai_call.ai_call_context_fingerprint_check CHECK (((context_fingerprint = ''::text) OR (context_fingerprint ~ '^[0-9a-f]{64}$'::text)))
 public.ai_call.ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['identity'::text, 'positioning'::text, 'sales'::text, 'offer'::text, 'market'::text, 'proof'::text, 'administrative'::text]))
-public.ai_call.ai_call_context_tokens_estimate_check CHECK ((context_tokens_estimate >= 0))
 public.ai_call.ai_call_decision_answer_kind CHECK (((decision_choice IS NULL) OR (kind = 'decision'::text)))
 public.ai_call.ai_call_decision_answer_shape CHECK (((decision_choice IS NULL) = (decision_confidence IS NULL)))
 public.ai_call.ai_call_decision_confidence_range CHECK (((decision_confidence IS NULL) OR ((decision_confidence >= (0)::numeric) AND (decision_confidence <= (1)::numeric))))
@@ -1076,8 +1074,6 @@ public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 
 public.ai_call.ai_call_latency_ms_js_safe CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
 public.ai_call.ai_call_reasoning_tokens_js_safe CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))
-public.ai_call.ai_call_schema_downgrade_check CHECK ((schema_downgrade = ANY (ARRAY[''::text, 'relaxed'::text, 'unenforced'::text, 'dropped'::text])))
-public.ai_call.ai_call_secrets_removed_check CHECK ((secrets_removed >= 0))
 public.ai_call.ai_call_source_check CHECK ((served_identity_source = ANY (ARRAY['response'::text, 'echo'::text, 'configured'::text])))
 public.ai_call.ai_call_subject_shape CHECK (((subject_type IS NULL) = (subject_id IS NULL)))
 public.ai_call.ai_call_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))
@@ -1085,20 +1081,16 @@ public.ai_call.ai_call_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740
 public.ai_call.attempt integer NOT NULL gen=- def=1
 public.ai_call.attempt_reason text NOT NULL gen=- def=''::text
 public.ai_call.cache_hit boolean NOT NULL gen=- def=false
-public.ai_call.cache_off boolean NOT NULL gen=- def=false
 public.ai_call.cache_write_tokens bigint NOT NULL gen=- def=0
 public.ai_call.cached_tokens bigint NOT NULL gen=- def=0
 public.ai_call.config_hash text gen=- def=-
-public.ai_call.context_bytes bigint NOT NULL gen=- def=0
 public.ai_call.context_fingerprint text NOT NULL gen=- def=''::text
 public.ai_call.context_scopes text[] NOT NULL gen=- def='{}'::text[]
-public.ai_call.context_tokens_estimate bigint NOT NULL gen=- def=0
 public.ai_call.correlation_id uuid gen=- def=-
 public.ai_call.decision_choice text gen=- def=-
 public.ai_call.decision_confidence numeric(4,3) gen=- def=-
 public.ai_call.degraded boolean NOT NULL gen=- def=false
 public.ai_call.error_sentinel text gen=- def=-
-public.ai_call.finish_reason text NOT NULL gen=- def=''::text
 public.ai_call.id uuid NOT NULL gen=- def=uuidv7()
 public.ai_call.is_terminal boolean NOT NULL gen=- def=true
 public.ai_call.kind text NOT NULL gen=- def='completion'::text
@@ -1108,18 +1100,14 @@ public.ai_call.model_id text NOT NULL gen=- def=''::text
 public.ai_call.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.ai_call.provider text NOT NULL gen=- def=''::text
 public.ai_call.reasoning_tokens bigint NOT NULL gen=- def=0
-public.ai_call.request_fingerprint text NOT NULL gen=- def=-
-public.ai_call.schema_downgrade text NOT NULL gen=- def=''::text
-public.ai_call.secret_kinds text[] NOT NULL gen=- def='{}'::text[]
-public.ai_call.secrets_removed bigint NOT NULL gen=- def=0
 public.ai_call.served_identity_source text NOT NULL gen=- def='configured'::text
 public.ai_call.served_model text NOT NULL gen=- def=''::text
 public.ai_call.served_provider text NOT NULL gen=- def=''::text
 public.ai_call.subject_id uuid gen=- def=-
 public.ai_call.subject_type text gen=- def=-
 public.ai_call.task text NOT NULL gen=- def=-
-public.ai_call.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_call FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "secret_kinds": 20000, "served_model": 20000, "subject_type": 20000, "finish_reason": 2000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "schema_downgrade": 20000, "context_fingerprint": 20000, "request_fingerprint": 20000, "served_identity_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"finish_reason":2000,"kind":20000,"model_id":20000,"provider":20000,"request_fingerprint":20000,"schema_downgrade":20000,"secret_kinds":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')
-public.ai_call.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_call FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "secret_kinds": 20000, "served_model": 20000, "subject_type": 20000, "finish_reason": 2000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "schema_downgrade": 20000, "context_fingerprint": 20000, "request_fingerprint": 20000, "served_identity_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"finish_reason":2000,"kind":20000,"model_id":20000,"provider":20000,"request_fingerprint":20000,"schema_downgrade":20000,"secret_kinds":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')
+public.ai_call.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_call FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "served_model": 20000, "subject_type": 20000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "context_fingerprint": 20000, "served_identity_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"kind":20000,"model_id":20000,"provider":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')
+public.ai_call.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_call FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "served_model": 20000, "subject_type": 20000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "context_fingerprint": 20000, "served_identity_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"kind":20000,"model_id":20000,"provider":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')
 public.ai_call.tier text NOT NULL gen=- def=''::text
 public.ai_call.tokens_in bigint NOT NULL gen=- def=0
 public.ai_call.tokens_out bigint NOT NULL gen=- def=0
@@ -1164,11 +1152,10 @@ public.ai_feedback.corrected_value text gen=- def=-
 public.ai_feedback.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.ai_feedback.id uuid NOT NULL gen=- def=uuidv7()
 public.ai_feedback.note text gen=- def=-
-public.ai_feedback.source text NOT NULL gen=- def=-
 public.ai_feedback.subject_id uuid NOT NULL gen=- def=-
 public.ai_feedback.subject_type text NOT NULL gen=- def=-
-public.ai_feedback.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_feedback FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "source": 20000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"source":20000,"subject_type":20000,"value_shown":20000,"verdict":20000}')
-public.ai_feedback.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_feedback FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "source": 20000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"source":20000,"subject_type":20000,"value_shown":20000,"verdict":20000}')
+public.ai_feedback.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_feedback FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"subject_type":20000,"value_shown":20000,"verdict":20000}')
+public.ai_feedback.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_feedback FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"subject_type":20000,"value_shown":20000,"verdict":20000}')
 public.ai_feedback.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.ai_feedback.value_captured_at timestamp with time zone gen=- def=-
 public.ai_feedback.value_shown text gen=- def=-
@@ -1514,13 +1501,11 @@ public.assurance_cycle.assurance_cycle_closes_after_opening CHECK (((closed_at I
 public.assurance_cycle.assurance_cycle_pkey PRIMARY KEY (id)
 public.assurance_cycle.assurance_cycle_scope_present CHECK ((length(btrim(scope)) > 0))
 public.assurance_cycle.closed_at timestamp with time zone gen=- def=-
-public.assurance_cycle.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_cycle.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_cycle.opened_at timestamp with time zone NOT NULL gen=- def=now()
-public.assurance_cycle.opened_by text NOT NULL gen=- def=-
 public.assurance_cycle.scope text NOT NULL gen=- def=-
-public.assurance_cycle.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_cycle FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scope": 20000, "opened_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"opened_by":20000,"scope":20000}')
-public.assurance_cycle.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_cycle FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "opened_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"opened_by":20000,"scope":20000}')
+public.assurance_cycle.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_cycle FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scope": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"scope":20000}')
+public.assurance_cycle.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_cycle FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"scope":20000}')
 public.assurance_cycle_one_open_per_scope CREATE UNIQUE INDEX assurance_cycle_one_open_per_scope ON public.assurance_cycle USING btree (scope) WHERE (closed_at IS NULL)
 public.assurance_cycle_pkey CREATE UNIQUE INDEX assurance_cycle_pkey ON public.assurance_cycle USING btree (id)
 public.assurance_deal_receipt acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -1529,17 +1514,13 @@ public.assurance_deal_receipt.assurance_deal_receipt_outcome_check CHECK ((outco
 public.assurance_deal_receipt.assurance_deal_receipt_pkey PRIMARY KEY (deal_id)
 public.assurance_deal_receipt.assurance_deal_receipt_run_id_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
 public.assurance_deal_receipt.assurance_deal_receipt_valid_after_assessed CHECK ((valid_until >= assessed_at))
-public.assurance_deal_receipt.captured_by text NOT NULL gen=- def=-
-public.assurance_deal_receipt.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_deal_receipt.deal_id uuid NOT NULL gen=- def=-
 public.assurance_deal_receipt.input_fingerprint text NOT NULL gen=- def=-
 public.assurance_deal_receipt.outcome text NOT NULL gen=- def=-
 public.assurance_deal_receipt.policy_version text NOT NULL gen=- def=-
-public.assurance_deal_receipt.reasons text[] NOT NULL gen=- def='{}'::text[]
 public.assurance_deal_receipt.run_id uuid gen=- def=-
-public.assurance_deal_receipt.silent_days integer NOT NULL gen=- def=-
-public.assurance_deal_receipt.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_deal_receipt FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000, "reasons": 2000, "captured_by": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000, "verdict_prompt_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"reasons":2000,"verdict_basis_digest":20000,"verdict_input_checksum":20000,"verdict_prompt_version":20000}')
-public.assurance_deal_receipt.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_deal_receipt FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "reasons": 2000, "captured_by": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000, "verdict_prompt_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"reasons":2000,"verdict_basis_digest":20000,"verdict_input_checksum":20000,"verdict_prompt_version":20000}')
+public.assurance_deal_receipt.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_deal_receipt FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"verdict_basis_digest":20000,"verdict_input_checksum":20000}')
+public.assurance_deal_receipt.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_deal_receipt FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"verdict_basis_digest":20000,"verdict_input_checksum":20000}')
 public.assurance_deal_receipt.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_deal_receipt.valid_until timestamp with time zone NOT NULL gen=- def=-
 public.assurance_deal_receipt.verdict_actions jsonb gen=- def=-
@@ -1547,7 +1528,6 @@ public.assurance_deal_receipt.verdict_assessed_at timestamp with time zone gen=-
 public.assurance_deal_receipt.verdict_basis_digest text gen=- def=-
 public.assurance_deal_receipt.verdict_input_checksum text gen=- def=-
 public.assurance_deal_receipt.verdict_next_due_at timestamp with time zone gen=- def=-
-public.assurance_deal_receipt.verdict_prompt_version text gen=- def=-
 public.assurance_deal_receipt_by_run CREATE INDEX assurance_deal_receipt_by_run ON public.assurance_deal_receipt USING btree (run_id)
 public.assurance_deal_receipt_pkey CREATE UNIQUE INDEX assurance_deal_receipt_pkey ON public.assurance_deal_receipt USING btree (deal_id)
 public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -1563,12 +1543,10 @@ public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subjec
 public.assurance_exception.assurance_exception_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
-public.assurance_exception.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.currency currency_code gen=- def=-
 public.assurance_exception.delivered_assignee_id uuid gen=- def=-
 public.assurance_exception.delivery_attempts integer NOT NULL gen=- def=0
 public.assurance_exception.delivery_state text gen=- def=-
-public.assurance_exception.episode integer NOT NULL gen=- def=1
 public.assurance_exception.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_exception.last_seen_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1590,13 +1568,11 @@ public.assurance_input_change acl=margince_owner=arwdDxt/margince_owner,margince
 public.assurance_input_change.assurance_input_change_pkey PRIMARY KEY (subject_kind, subject_id)
 public.assurance_input_change.assurance_input_change_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'workspace'::text])))
 public.assurance_input_change.changed_at timestamp with time zone NOT NULL gen=- def=now()
-public.assurance_input_change.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_input_change.generation bigint NOT NULL gen=- def=-
 public.assurance_input_change.subject_id uuid NOT NULL gen=- def=-
 public.assurance_input_change.subject_kind text NOT NULL gen=- def=-
 public.assurance_input_change.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_input_change FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"subject_kind":20000}')
 public.assurance_input_change.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_input_change FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"subject_kind":20000}')
-public.assurance_input_change.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_input_change_by_generation CREATE INDEX assurance_input_change_by_generation ON public.assurance_input_change USING btree (generation)
 public.assurance_input_change_pkey CREATE UNIQUE INDEX assurance_input_change_pkey ON public.assurance_input_change USING btree (subject_kind, subject_id)
 public.assurance_input_generation_seq acl=margince_owner=rwU/margince_owner,margince_app=rU/margince_owner rls=false force=false
@@ -1630,10 +1606,8 @@ public.assurance_run.assurance_run_counts_are_tallies CHECK (((eligible_deals >=
 public.assurance_run.assurance_run_pkey PRIMARY KEY (id)
 public.assurance_run.assurance_run_readiness_check CHECK (((readiness IS NULL) OR (readiness = ANY (ARRAY['ready'::text, 'ready_with_exceptions'::text, 'needs_review'::text, 'checks_incomplete'::text]))))
 public.assurance_run.assurance_run_readiness_matches_status CHECK (((status = 'running'::text) = (readiness IS NULL)))
-public.assurance_run.assurance_run_requester_is_named CHECK (((requested_by IS NULL) OR (length(btrim(requested_by)) > 0)))
 public.assurance_run.assurance_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'complete'::text, 'incomplete'::text])))
 public.assurance_run.captured_by text NOT NULL gen=- def=-
-public.assurance_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run.digest text gen=- def=-
 public.assurance_run.eligible_deal_owners uuid[] gen=- def=-
 public.assurance_run.eligible_deals integer NOT NULL gen=- def=0
@@ -1643,18 +1617,15 @@ public.assurance_run.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_run.outbox_inputs_tracked boolean NOT NULL gen=- def=false
 public.assurance_run.read_through_generation bigint gen=- def=-
 public.assurance_run.readiness text gen=- def=-
-public.assurance_run.requested_by text gen=- def=-
-public.assurance_run.rule_versions jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_run.status text NOT NULL gen=- def='running'::text
 public.assurance_run.subject_deal_id uuid gen=- def=-
-public.assurance_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}')
-public.assurance_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}')
+public.assurance_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"status":20000}')
+public.assurance_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"status":20000}')
 public.assurance_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run_finding acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_run_finding.assurance_run_finding_exception_id_fkey FOREIGN KEY (exception_id) REFERENCES assurance_exception(id) ON DELETE CASCADE
 public.assurance_run_finding.assurance_run_finding_pkey PRIMARY KEY (run_id, exception_id)
 public.assurance_run_finding.assurance_run_finding_run_id_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
-public.assurance_run_finding.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run_finding.exception_id uuid NOT NULL gen=- def=-
 public.assurance_run_finding.observed_at timestamp with time zone NOT NULL gen=- def=-
 public.assurance_run_finding.run_id uuid NOT NULL gen=- def=-
@@ -1669,14 +1640,12 @@ public.assurance_source_coverage.assurance_source_coverage_source_check CHECK ((
 public.assurance_source_coverage.assurance_source_coverage_state_check CHECK ((state = ANY (ARRAY['checked'::text, 'stale'::text, 'unavailable'::text, 'permission_limited'::text, 'not_connected'::text])))
 public.assurance_source_coverage.captured_by text NOT NULL gen=- def=-
 public.assurance_source_coverage.checked_through timestamp with time zone gen=- def=-
-public.assurance_source_coverage.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_source_coverage.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_source_coverage.run_id uuid NOT NULL gen=- def=-
 public.assurance_source_coverage.source text NOT NULL gen=- def=-
 public.assurance_source_coverage.state text NOT NULL gen=- def=-
 public.assurance_source_coverage.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_source_coverage FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}')
 public.assurance_source_coverage.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_source_coverage FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}')
-public.assurance_source_coverage.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_source_coverage.uq_assurance_source_coverage_run_source UNIQUE (run_id, source)
 public.assurance_source_coverage_pkey CREATE UNIQUE INDEX assurance_source_coverage_pkey ON public.assurance_source_coverage USING btree (id)
 public.assurance_task_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
@@ -32,10 +31,6 @@ func (s *Store) RecordReceipts(
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return err
 	}
-	capturedBy, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return err
-	}
 	batch := &pgx.Batch{}
 	for _, subject := range subjects {
 		dealID, err := ids.Parse(subject.DealID)
@@ -45,17 +40,16 @@ func (s *Store) RecordReceipts(
 		answer := receiptOf(subject.Viability)
 		batch.Queue(`
 			INSERT INTO assurance_deal_receipt
-			    (deal_id, run_id, outcome, reasons, silent_days, policy_version,
-			     input_fingerprint, assessed_at, valid_until, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			    (deal_id, run_id, outcome, policy_version, input_fingerprint, assessed_at, valid_until)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			ON CONFLICT (deal_id) DO UPDATE
-			SET run_id = EXCLUDED.run_id, outcome = EXCLUDED.outcome, reasons = EXCLUDED.reasons,
-			    silent_days = EXCLUDED.silent_days, policy_version = EXCLUDED.policy_version,
+			SET run_id = EXCLUDED.run_id, outcome = EXCLUDED.outcome,
+			    policy_version = EXCLUDED.policy_version,
 			    input_fingerprint = EXCLUDED.input_fingerprint, assessed_at = EXCLUDED.assessed_at,
-			    valid_until = EXCLUDED.valid_until, captured_by = EXCLUDED.captured_by,
+			    valid_until = EXCLUDED.valid_until,
 			    updated_at = now()`,
-			dealID, runID, string(answer.Outcome), reasonCodes(answer.Reasons), answer.SilentDays,
-			viability.PolicyVersion, answer.Fingerprint, asOf, validUntil(asOf, lifetime, answer.NextChange), capturedBy)
+			dealID, runID, string(answer.Outcome),
+			viability.PolicyVersion, answer.Fingerprint, asOf, validUntil(asOf, lifetime, answer.NextChange))
 	}
 	if err := tx.SendBatch(ctx, batch).Close(); err != nil {
 		return fmt.Errorf("assurance: recording the viability receipts: %w", err)
@@ -81,12 +75,4 @@ func validUntil(asOf time.Time, lifetime time.Duration, nextChange *time.Time) t
 		return asOf
 	}
 	return until
-}
-
-func reasonCodes(reasons []viability.Reason) []string {
-	out := make([]string, 0, len(reasons))
-	for _, reason := range reasons {
-		out = append(out, string(reason))
-	}
-	return out
 }

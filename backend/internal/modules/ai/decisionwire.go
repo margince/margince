@@ -104,7 +104,7 @@ func (c *decisionClient) Decide(ctx context.Context, req decision.Request) (deci
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	c.authorize(httpReq)
-	resp, err := sendModelRequest(c.http, httpReq)
+	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return decision.Response{}, fmt.Errorf("ai: decision: %w", err)
 	}

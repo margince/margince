@@ -55,8 +55,7 @@ func (s *Store) MarkInputsChanged(ctx context.Context, tx pgx.Tx, subjects []Cha
 		  FROM unnest($1::text[], $2::uuid[]) AS changed(kind, subject_id)
 		ON CONFLICT (subject_kind, subject_id) DO UPDATE
 		SET generation = GREATEST(assurance_input_change.generation, EXCLUDED.generation),
-		    changed_at = now(),
-		    updated_at = now()`, kinds, subjectIDs); err != nil {
+		    changed_at = now()`, kinds, subjectIDs); err != nil {
 		return fmt.Errorf("assurance: recording which inputs changed: %w", err)
 	}
 	return nil

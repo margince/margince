@@ -42,7 +42,7 @@ func TestTheInputCheckReadsAPastCloseInTheInstallationZone(t *testing.T) {
 
 	scanner := assurance.NewScanner(assurance.NewStore(compose.InstallationDB(e.Pool)),
 		compose.AssuranceSubjects, compose.AssuranceCoverage, compose.AssuranceConfig())
-	if _, err := scanner.Scan(e.Admin(), asOf, nil); err != nil {
+	if _, err := scanner.Scan(e.Admin(), asOf); err != nil {
 		t.Fatalf("running the check: %v", err)
 	}
 	var raised int
