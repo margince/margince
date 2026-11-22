@@ -3,35 +3,23 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Box, Check, Copy } from "lucide-react";
-import { useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import { NAV } from "../../app/nav";
 import { EntityRef } from "../../components/entityref";
 import { SeatAvatar } from "../../components/seatavatar";
-import {
-  Avatar,
-  Badge,
-  EmptyState,
-  Field,
-  TextInput,
-} from "../../design-system/atoms";
+import { Avatar, Badge, EmptyState } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { useSettledValue } from "../../design-system/debouncedsearch";
-import { FilterBar } from "../../design-system/filterbar";
 import { IconAction } from "../../design-system/iconaction";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { Chip } from "../../design-system/readings";
-import { Select } from "../../design-system/select";
-import { forReader } from "../../format/collate";
 import { formatDateTime } from "../../format/format";
 import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { useLocale, useT } from "../../i18n";
 import { actorAttribution } from "../../lib/auditactor";
 import { useCan } from "../../lib/capability";
 import { ENTITY, isEntityKind } from "../../lib/entity";
@@ -39,21 +27,19 @@ import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  ACTOR_ICON,
-  AUDIT_ACTION_VALUES,
-  actionLabel,
-  entityLabel,
-} from "./audit";
+import { ACTOR_ICON, actionLabel, entityLabel } from "./audit";
 import { AuditDetail } from "./settings-audit.detail";
+import { AuditLogFilterBar } from "./settings-audit.filters";
 import {
   ACTION_TONE,
   type AuditLogEntry,
   type AuditLogFilters,
+  auditLogFiltersOf,
   auditLogQueryParams,
   idTail,
   isNarrowed,
-  linkedAuditLogFilters,
+  isRangeReversed,
+  withAuditLogFilters,
 } from "./settings-audit.format";
 import "./settings-audit.css";
 
@@ -61,26 +47,28 @@ type Viewer = Readonly<{ id?: string; name?: string; photo?: string }>;
 
 const RELATIVE_TICK_MS = 60_000;
 
-// Each dial applies on its own, so there is nothing to submit.
 export function AuditLogCard() {
   const user = useMe().data?.user;
   const canSee = useCan("audit_log", "read");
-  const [params] = useUrlParams();
-  const linked = linkedAuditLogFilters(params);
-  const link = `${linked.entityType}/${linked.entityId}`;
-  const [shownLink, setShownLink] = useState(link);
-  const [filters, setFilters] = useState<AuditLogFilters>(linked);
-  // A second notice followed while the log is open names another record.
-  if (link !== shownLink) {
-    setShownLink(link);
-    setFilters(linked);
-  }
+  const [params, setParams] = useUrlParams();
+  const filters = auditLogFiltersOf(params);
   const asked = useSettledValue(filters);
+  const query = useAuditLog(asked, canSee);
+  const entries: AuditLogEntry[] =
+    query.data?.pages.flatMap((page) => page.data) ?? [];
   return (
     <>
-      {canSee && <AuditLogFilterBar filters={filters} onChange={setFilters} />}
+      {canSee && (
+        <AuditLogFilterBar
+          filters={filters}
+          entries={entries}
+          onChange={(next) => setParams(withAuditLogFilters(params, next))}
+        />
+      )}
       <Panel>
         <AuditLogEntries
+          query={query}
+          entries={entries}
           filters={asked}
           viewer={{
             id: user?.id,
@@ -93,91 +81,11 @@ export function AuditLogCard() {
   );
 }
 
-function AuditLogFilterBar({
-  filters,
-  onChange,
-}: Readonly<{
-  filters: AuditLogFilters;
-  onChange: (next: AuditLogFilters) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const set = (key: keyof AuditLogFilters) => (value: string) =>
-    onChange({ ...filters, [key]: value });
-  const textDial = (
-    key: "actor" | "entityType" | "entityId",
-    label: MessageKey,
-    placeholder?: MessageKey,
-  ) => (
-    <Field label={t(label)}>
-      {(field) => (
-        <TextInput
-          {...field}
-          value={filters[key]}
-          placeholder={placeholder && t(placeholder)}
-          onChange={(event) => set(key)(event.target.value)}
-        />
-      )}
-    </Field>
-  );
-  const dateDial = (key: "from" | "to", label: MessageKey) => (
-    <Field label={t(label)}>
-      {(field) => (
-        <DateInput
-          {...field}
-          value={isoOrBlank(filters[key])}
-          onChange={(event) => set(key)(event.target.value)}
-        />
-      )}
-    </Field>
-  );
-  return (
-    <FilterBar label={t("settings.auditFilters")}>
-      <div className="auditlog-dials">
-        {textDial("actor", "settings.auditActor", "settings.auditActorExample")}
-        {textDial(
-          "entityType",
-          "settings.auditEntity",
-          "settings.auditEntityExample",
-        )}
-        <Field label={t("settings.auditAction")}>
-          {(field) => (
-            <Select
-              {...field}
-              value={filters.action}
-              onChange={set("action")}
-              options={[
-                { value: "", label: t("settings.auditAnyAction") },
-                ...actionOptions(t, locale),
-              ]}
-            />
-          )}
-        </Field>
-        {textDial("entityId", "settings.auditEntityId")}
-        {dateDial("from", "settings.auditFrom")}
-        {dateDial("to", "settings.auditTo")}
-      </div>
-    </FilterBar>
-  );
-}
-
-function actionOptions(t: Translator, locale: Locale) {
-  return AUDIT_ACTION_VALUES.map((action) => ({
-    value: action,
-    label: actionLabel(action, t),
-  })).sort((a, b) => forReader(a.label, b.label, locale));
-}
-
-function AuditLogEntries({
-  filters,
-  viewer,
-}: Readonly<{ filters: AuditLogFilters; viewer: Viewer }>) {
-  const t = useT();
-  // Withheld, not absent: a missing trail would read as nothing having happened.
-  const canSee = useCan("audit_log", "read");
-  const query = useInfiniteQuery({
+// A reversed window is said at its field and never asked of the server.
+function useAuditLog(filters: AuditLogFilters, canSee: boolean) {
+  return useInfiniteQuery({
     queryKey: ["audit-log", filters],
-    enabled: canSee,
+    enabled: canSee && !isRangeReversed(filters),
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
       return unwrap(
@@ -188,13 +96,34 @@ function AuditLogEntries({
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
-  const entries: AuditLogEntry[] =
-    query.data?.pages.flatMap((page) => page.data) ?? [];
+}
+
+function AuditLogEntries({
+  query,
+  entries,
+  filters,
+  viewer,
+}: Readonly<{
+  query: ReturnType<typeof useAuditLog>;
+  entries: readonly AuditLogEntry[];
+  filters: AuditLogFilters;
+  viewer: Viewer;
+}>) {
+  const t = useT();
+  // Withheld, not absent: a missing trail would read as nothing having happened.
+  const canSee = useCan("audit_log", "read");
 
   if (!canSee) {
     return (
       <PanelBody>
         <EmptyState>{t("settings.auditAdminOnly")}</EmptyState>
+      </PanelBody>
+    );
+  }
+  if (isRangeReversed(filters)) {
+    return (
+      <PanelBody>
+        <EmptyState>{t("settings.auditRangeReversed")}</EmptyState>
       </PanelBody>
     );
   }

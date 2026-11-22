@@ -234,6 +234,50 @@ func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
 	})
 }
 
+// TestAuditLogActorFilterIncludesWhatAnAgentDidForThePerson holds the Actor
+// filter's two meanings. A person includes the rows an agent wrote for them,
+// and an agent matches only its own rows.
+func TestAuditLogActorFilterIncludesWhatAnAgentDidForThePerson(t *testing.T) {
+	e := Setup(t)
+	contactID := e.SeedContact(t, "Delegation Subject", nil)
+	base := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
+
+	ada := seedWorkspaceUser(t, e, "Ada Delegator")
+	grace := seedWorkspaceUser(t, e, "Grace Bystander")
+	adaAgent := "agent:" + ids.NewV7().String()
+	own := seedRecordAuditRow(t, e, "update", contactID, "human", "human:"+ada.String(),
+		nil, nil, map[string]any{"title": "CTO"}, base.Add(time.Hour))
+	delegated := seedRecordAuditRow(t, e, "update", contactID, "agent", adaAgent,
+		&ada, nil, map[string]any{"title": "CEO"}, base.Add(2*time.Hour))
+	others := seedRecordAuditRow(t, e, "update", contactID, "agent", "agent:"+ids.NewV7().String(),
+		&grace, nil, map[string]any{"title": "VP"}, base.Add(3*time.Hour))
+
+	for _, tc := range []struct {
+		name, actor    string
+		want, withheld []ids.UUID
+	}{
+		{name: "the person", actor: "human:" + ada.String(), want: []ids.UUID{own, delegated}, withheld: []ids.UUID{others}},
+		{name: "the person's agent", actor: adaAgent, want: []ids.UUID{delegated}, withheld: []ids.UUID{own, others}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			page, err := privacy.ListAuditLog(e.Admin(), e.DB(), privacy.AuditFilter{EntityID: &contactID, Actor: &tc.actor})
+			if err != nil {
+				t.Fatalf("actor list: %v", err)
+			}
+			for _, id := range tc.want {
+				if !carriesRow(page.Entries, id) {
+					t.Errorf("filtering by %s left out row %s", tc.actor, id)
+				}
+			}
+			for _, id := range tc.withheld {
+				if carriesRow(page.Entries, id) {
+					t.Errorf("filtering by %s answered row %s, which neither they nor an agent for them wrote", tc.actor, id)
+				}
+			}
+		})
+	}
+}
+
 // carriesRow reports whether a page holds one particular audit line.
 func carriesRow(entries []privacy.AuditEntry, id ids.UUID) bool {
 	for _, entry := range entries {
