@@ -13940,6 +13940,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/unrouted-mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The mail in your mailbox that was sent to addresses that are not yours.
+         * @description Mail your own connected mailbox brought in that names none of your addresses, so no seat
+         *     imported it and nothing judges it. Listed per address, most mail first, with the number of
+         *     messages. `messages` counts each message once.
+         *
+         *     Answer one address with `POST /capture/owner-identities` (it is yours: the mail is then
+         *     checked like the rest) or `PUT /capture/unrouted-mail/{address}/refusal` (it is not: the
+         *     mail stays hidden and the address leaves this list).
+         *
+         *     Your own mailbox and nobody else's: the mail is private to its mailbox owner, so there is
+         *     no id here that reaches a colleague's list and no admin view of one.
+         */
+        get: operations["listUnroutedMail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capture/unrouted-mail/{address}/refusal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The email address the mail was sent to. */
+                address: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say that you do not receive this address.
+         * @description The mail sent to it stays hidden and the address is no longer counted. It is never learned
+         *     as one of your addresses from later mail either. Idempotent on the folded address.
+         */
+        put: operations["refuseUnroutedAddress"];
+        post?: never;
+        /**
+         * Take back "not mine" for an address.
+         * @description The address is counted again when mail to it is still unjudged. Idempotent.
+         */
+        delete: operations["restoreUnroutedAddress"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/email-domains/{domain}": {
         parameters: {
             query?: never;
@@ -31256,6 +31313,16 @@ export interface components {
         };
         CaptureOwnerIdentityListResponse: {
             data: components["schemas"]["CaptureOwnerIdentity"][];
+        };
+        UnroutedMailResponse: {
+            /** @description Messages counted once each, however many listed addresses they name. */
+            messages: number;
+            data: components["schemas"]["UnroutedMailAddress"][];
+        };
+        UnroutedMailAddress: {
+            address: string;
+            /** @description Messages in your mailbox sent to this address. */
+            messages: number;
         };
         CreateCaptureOwnerIdentityRequest: {
             kind: components["schemas"]["CaptureOwnerIdentityKind"];
@@ -88038,6 +88105,76 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listUnroutedMail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's unjudged mail, per address. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnroutedMailResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    refuseUnroutedAddress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The email address the mail was sent to. */
+                address: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreUnroutedAddress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The email address the mail was sent to. */
+                address: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Taken back. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

@@ -17859,6 +17859,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Địa chỉ này đã có lại trong danh sách.",
   "ownerIdentities.addDescriptionEmpty":
     "Chưa thêm địa chỉ nào. Đồng nghiệp không bao giờ thấy danh sách này.",
+  "unroutedMail.title": "Thư gửi đến địa chỉ không phải của bạn",
+  "unroutedMail.sub":
+    "Hộp thư của bạn có thư được gửi đến những địa chỉ khác. Chưa có gì kiểm tra chúng cho đến khi bạn cho biết bạn có nhận địa chỉ đó không. Chỉ bạn thấy danh sách này.",
+  "unroutedMail.summary_one":
+    "{count} thư trong hộp thư của bạn được gửi đến một địa chỉ không phải của bạn.",
+  "unroutedMail.summary_other":
+    "{count} thư trong hộp thư của bạn được gửi đến những địa chỉ không phải của bạn.",
+  "unroutedMail.count_one": "{count} thư",
+  "unroutedMail.count_other": "{count} thư",
+  "unroutedMail.receive": "Tôi nhận địa chỉ này",
+  "unroutedMail.receiveLabel": "Tôi nhận địa chỉ này: {value}",
+  "unroutedMail.notMine": "Không phải của tôi",
+  "unroutedMail.notMineLabel": "Không phải của tôi: {value}",
+  "unroutedMail.received":
+    "Đã thêm địa chỉ. Thư của địa chỉ này được kiểm tra như các thư khác.",
+  "unroutedMail.refused": "Đã ẩn. Địa chỉ này không còn được đếm.",
+  "unroutedMail.restored": "Đã đếm lại.",
+  "unroutedMail.removedClaim": "Đã gỡ địa chỉ.",
+  "unroutedMail.needsConfirmation":
+    "Địa chỉ này thuộc về một liên hệ hoặc công ty đã có. Hãy thêm nó trong Các địa chỉ email khác của bạn để xác nhận.",
+  "unroutedMail.loading": "Thư gửi đến địa chỉ khác",
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
   "captureValue.refusedDomain":
     "Nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",

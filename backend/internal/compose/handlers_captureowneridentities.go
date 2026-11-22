@@ -6,7 +6,8 @@ package compose
 // The owner-identity surface: list the caller's own other addresses, declare
 // one, withdraw one, put a withdrawn one back. Thin transport: the capture
 // store owns the gate (a human seat, and the row must be theirs) and the
-// audited write.
+// audited write. The unrouted-mail list and its "not mine" answer sit here
+// too: "I receive this address" is this surface's own declare call.
 
 import (
 	"net/http"
@@ -76,4 +77,36 @@ func toContractOwnerIdentity(identity capture.OwnerIdentity) crmcontracts.Captur
 		Source:    crmcontracts.CaptureOwnerIdentitySource(identity.Source),
 		CreatedAt: identity.CreatedAt,
 	}
+}
+
+func (h captureOwnerIdentityHandlers) ListUnroutedMail(w http.ResponseWriter, r *http.Request) {
+	mail, err := h.store.UnroutedMail(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.UnroutedMailResponse{
+		Messages: mail.Messages,
+		Data:     make([]crmcontracts.UnroutedMailAddress, 0, len(mail.Addresses)),
+	}
+	for _, row := range mail.Addresses {
+		out.Data = append(out.Data, crmcontracts.UnroutedMailAddress{Address: row.Address, Messages: row.Messages})
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h captureOwnerIdentityHandlers) RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request, address string) {
+	if err := h.store.RefuseUnroutedAddress(r.Context(), address); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h captureOwnerIdentityHandlers) RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request, address string) {
+	if err := h.store.RestoreUnroutedAddress(r.Context(), address); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

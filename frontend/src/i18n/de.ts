@@ -18344,6 +18344,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Adresse steht schon wieder in deiner Liste.",
   "ownerIdentities.addDescriptionEmpty":
     "Noch keine hinzugefügt. Teammitglieder sehen diese Liste nie.",
+  "unroutedMail.title": "Mails an Adressen, die nicht deine sind",
+  "unroutedMail.sub":
+    "Dein Postfach enthält Mails, die an andere Adressen gingen. Sie werden nicht geprüft, bis du sagst, ob du diese Adresse empfängst. Nur du siehst diese Liste.",
+  "unroutedMail.summary_one":
+    "{count} Mail in deinem Postfach ging an eine Adresse, die nicht deine ist.",
+  "unroutedMail.summary_other":
+    "{count} Mails in deinem Postfach gingen an Adressen, die nicht deine sind.",
+  "unroutedMail.count_one": "{count} Mail",
+  "unroutedMail.count_other": "{count} Mails",
+  "unroutedMail.receive": "Diese Adresse empfange ich",
+  "unroutedMail.receiveLabel": "Diese Adresse empfange ich: {value}",
+  "unroutedMail.notMine": "Nicht meine",
+  "unroutedMail.notMineLabel": "Nicht meine: {value}",
+  "unroutedMail.received":
+    "Adresse hinzugefügt. Ihre Mails werden wie die übrigen geprüft.",
+  "unroutedMail.refused":
+    "Ausgeblendet. Diese Adresse wird nicht mehr gezählt.",
+  "unroutedMail.restored": "Wieder gezählt.",
+  "unroutedMail.removedClaim": "Adresse entfernt.",
+  "unroutedMail.needsConfirmation":
+    "Diese Adresse gehört zu einem Kontakt oder Unternehmen, das schon erfasst ist. Füge sie unter Deine weiteren E-Mail-Adressen hinzu, um sie zu bestätigen.",
+  "unroutedMail.loading": "Mails an andere Adressen",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
