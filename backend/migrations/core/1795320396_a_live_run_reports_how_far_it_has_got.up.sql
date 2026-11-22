@@ -13,8 +13,8 @@
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE ai_task_run
-  ADD COLUMN progress_processed integer NULL,
-  ADD COLUMN progress_total integer NULL,
+  ADD COLUMN IF NOT EXISTS progress_processed integer NULL,
+  ADD COLUMN IF NOT EXISTS progress_total integer NULL,
   ADD CONSTRAINT ai_task_run_progress_processed_check
     CHECK (progress_processed IS NULL OR progress_processed >= 0) NOT VALID,
   ADD CONSTRAINT ai_task_run_progress_total_check

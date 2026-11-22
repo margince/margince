@@ -35,7 +35,8 @@ func (f *websiteReadFixture) liveItem(t *testing.T) aiactivity.Item {
 
 func TestARunningWebsiteReadSurfacesItsPageCountWithoutATotal(t *testing.T) {
 	f := newWebsiteReadFixture(t)
-	if _, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease); err != nil {
+	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	if err != nil {
 		t.Fatalf("BeginSiteRead: %v", err)
 	}
 	f.drain(t)
@@ -44,7 +45,7 @@ func TestARunningWebsiteReadSurfacesItsPageCountWithoutATotal(t *testing.T) {
 	}
 
 	pages := []contacts.SiteReadPage{{URL: "https://acme.example", Kind: "home"}, {URL: "https://acme.example/about", Kind: "about"}}
-	if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, "crawling", pages, siteReadLease); err != nil {
+	if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, claim.ClaimedAt, "crawling", pages, siteReadLease); err != nil {
 		t.Fatalf("UpdateSiteReadProgress: %v", err)
 	}
 	f.drain(t)
@@ -60,7 +61,7 @@ func TestARunningWebsiteReadSurfacesItsPageCountWithoutATotal(t *testing.T) {
 	}
 
 	more := append(slices.Clone(pages), contacts.SiteReadPage{URL: "https://acme.example/team", Kind: "team"})
-	if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, "crawling", more, siteReadLease); err != nil {
+	if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, claim.ClaimedAt, "crawling", more, siteReadLease); err != nil {
 		t.Fatalf("UpdateSiteReadProgress: %v", err)
 	}
 	f.drain(t)
@@ -76,7 +77,7 @@ func TestASettledWebsiteReadCarriesNoCount(t *testing.T) {
 		t.Fatalf("BeginSiteRead: %v", err)
 	}
 	pages := []contacts.SiteReadPage{{URL: "https://acme.example", Kind: "home"}}
-	if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, "crawling", pages, siteReadLease); err != nil {
+	if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, claim.ClaimedAt, "crawling", pages, siteReadLease); err != nil {
 		t.Fatalf("UpdateSiteReadProgress: %v", err)
 	}
 	f.drain(t)
@@ -95,5 +96,88 @@ func TestASettledWebsiteReadCarriesNoCount(t *testing.T) {
 	}
 	if processed != nil {
 		t.Fatalf("a settled read still holds processed = %d; a settled run reports its outcome, not a position", *processed)
+	}
+}
+
+// siteReadFacts is what the dossier row and the staged events say about one read,
+// read straight from the tables so a refused write is seen to change nothing.
+type siteReadFacts struct {
+	pagesRead, outbox, ledger int
+	phase                     *string
+}
+
+func (f *websiteReadFixture) facts(t *testing.T) siteReadFacts {
+	t.Helper()
+	var got siteReadFacts
+	err := f.env.Pool.QueryRow(t.Context(), `
+		SELECT pages_read, phase,
+		       (SELECT count(*) FROM event_outbox
+		         WHERE envelope->>'type' = 'ai_task.state_changed'
+		           AND envelope->'payload'->>'occurrence_key' = $1),
+		       (SELECT count(*) FROM system_log
+		         WHERE action = 'ai_task.state_changed' AND detail->>'occurrence_key' = $1)
+		  FROM site_read WHERE id = $2`, f.readID.String(), f.readID).
+		Scan(&got.pagesRead, &got.phase, &got.outbox, &got.ledger)
+	if err != nil {
+		t.Fatalf("reading the dossier and its staged events: %v", err)
+	}
+	return got
+}
+
+func TestProgressFromAReclaimedAttemptIsRefusedAndChangesNothing(t *testing.T) {
+	f := newWebsiteReadFixture(t)
+	first, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	if err != nil {
+		t.Fatalf("BeginSiteRead: %v", err)
+	}
+	if _, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, time.Microsecond); err != nil {
+		t.Fatalf("the reclaim: %v", err)
+	}
+	before := f.facts(t)
+
+	pages := []contacts.SiteReadPage{{URL: "https://acme.example", Kind: "home"}}
+	if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, first.ClaimedAt, "crawling", pages, siteReadLease); err != nil {
+		t.Fatalf("a stale claim is a no-op, not an error: %v", err)
+	}
+	if after := f.facts(t); after != before {
+		t.Fatalf("the abandoned worker's progress changed the dossier or staged an event: before %+v, after %+v", before, after)
+	}
+}
+
+func TestAnInvalidLeaseMutatesNeitherTheDossierNorTheProjection(t *testing.T) {
+	f := newWebsiteReadFixture(t)
+	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	if err != nil {
+		t.Fatalf("BeginSiteRead: %v", err)
+	}
+	before := f.facts(t)
+	pages := []contacts.SiteReadPage{{URL: "https://acme.example", Kind: "home"}}
+	for _, lease := range []time.Duration{0, -time.Minute} {
+		if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, claim.ClaimedAt, "crawling", pages, lease); err == nil {
+			t.Fatalf("lease %v was accepted; it would store no stale_after and a dead read would never stall", lease)
+		}
+	}
+	if after := f.facts(t); after != before {
+		t.Fatalf("a refused progress write changed state: before %+v, after %+v", before, after)
+	}
+}
+
+func TestACrawlStartCommitsItsDossierLedgerAndOutboxRowsTogether(t *testing.T) {
+	f := newWebsiteReadFixture(t)
+	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	if err != nil {
+		t.Fatalf("BeginSiteRead: %v", err)
+	}
+	before := f.facts(t)
+	if err := f.env.Contacts.UpdateSiteReadProgress(f.worker, f.readID, claim.ClaimedAt, "crawling", nil, siteReadLease); err != nil {
+		t.Fatalf("UpdateSiteReadProgress: %v", err)
+	}
+	after := f.facts(t)
+	if after.phase == nil || *after.phase != "crawling" {
+		t.Fatalf("phase = %v, want crawling", after.phase)
+	}
+	if after.outbox != before.outbox+1 || after.ledger != before.ledger+1 {
+		t.Fatalf("the phase change staged outbox %d->%d and ledger %d->%d rows, want one of each",
+			before.outbox, after.outbox, before.ledger, after.ledger)
 	}
 }

@@ -96,8 +96,10 @@ func NewStore(db *database.DB) *Store {
 // settled row carries none at all, and every one of those compares false.
 //
 // The other equal-tuple write is progress: the same attempt and state with a
-// higher processed count than the row holds. Redelivery and out-of-order
-// delivery carry an equal or lower count, so they compare false.
+// higher processed count than the row holds. At an equal tuple the lease only
+// ever lengthens and the count pair only ever advances, so a delayed renewal
+// cannot erase newer progress and a delayed progress event cannot shorten the
+// lease. Only a higher tuple replaces both outright.
 //
 // Every column is written from EXCLUDED rather than merged: a reopened
 // occurrence must LOSE the previous attempt's finished_at, degrade_reason and
@@ -118,12 +120,25 @@ ON CONFLICT (source, occurrence_key) DO UPDATE SET
   passport_id = EXCLUDED.passport_id,
   state = EXCLUDED.state, queued_at = EXCLUDED.queued_at,
   started_at = EXCLUDED.started_at, finished_at = EXCLUDED.finished_at,
-  stale_after = EXCLUDED.stale_after,
+  stale_after = CASE
+    WHEN (EXCLUDED.attempt, ai_task_run_state_rank(EXCLUDED.state))
+       > (ai_task_run.attempt, ai_task_run_state_rank(ai_task_run.state))
+    THEN EXCLUDED.stale_after
+    ELSE GREATEST(ai_task_run.stale_after, EXCLUDED.stale_after) END,
   subject_type = EXCLUDED.subject_type, subject_id = EXCLUDED.subject_id,
   subject_label = EXCLUDED.subject_label,
   quantity = EXCLUDED.quantity, quantity_unit = EXCLUDED.quantity_unit,
   degrade_reason = EXCLUDED.degrade_reason, summary = EXCLUDED.summary,
-  progress_processed = EXCLUDED.progress_processed, progress_total = EXCLUDED.progress_total,
+  progress_processed = CASE
+    WHEN (EXCLUDED.attempt, ai_task_run_state_rank(EXCLUDED.state))
+       > (ai_task_run.attempt, ai_task_run_state_rank(ai_task_run.state))
+      OR EXCLUDED.progress_processed > COALESCE(ai_task_run.progress_processed, -1)
+    THEN EXCLUDED.progress_processed ELSE ai_task_run.progress_processed END,
+  progress_total = CASE
+    WHEN (EXCLUDED.attempt, ai_task_run_state_rank(EXCLUDED.state))
+       > (ai_task_run.attempt, ai_task_run_state_rank(ai_task_run.state))
+      OR EXCLUDED.progress_processed > COALESCE(ai_task_run.progress_processed, -1)
+    THEN EXCLUDED.progress_total ELSE ai_task_run.progress_total END,
   seq = nextval('ai_task_run_seq')
 WHERE (EXCLUDED.attempt, ai_task_run_state_rank(EXCLUDED.state))
     > (ai_task_run.attempt, ai_task_run_state_rank(ai_task_run.state))
