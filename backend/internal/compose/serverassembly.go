@@ -311,7 +311,7 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{
-		store:    capture.NewOwnDomainStore(InstallationDB(pool)),
+		store:    capture.NewOwnDomainStore(InstallationDB(pool)).WithRemoved(queueStageEvidenceReread),
 		evidence: deals.NewStore(InstallationDB(pool), DealsInstallation()), log: log,
 	}
 	// The installation's own identity and reporting basis (ADR-0090/A135):

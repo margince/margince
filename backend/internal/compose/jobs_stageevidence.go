@@ -8,14 +8,19 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/evidencereread"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // StageEvidenceReadArgs is one queued reading of one activity against one
@@ -27,6 +32,9 @@ type StageEvidenceReadArgs struct {
 	// whole history: it is what just landed, so it is the only text that can
 	// have changed the answer.
 	ActivityID ids.UUID `json:"activity_id"`
+	// RereadFor is the own-domain removal a second reading answers, and nil
+	// on a first one. It keeps the insert from coalescing with the first.
+	RereadFor *ids.UUID `json:"reread_for,omitempty"`
 }
 
 // Kind is the string River persists for this job.
@@ -95,5 +103,80 @@ func newStageEvidenceReadWorker(
 		reader: NewStageEvidenceReader(pool, StageEvidenceDeals(pool),
 			StageEvidenceDomains(pool), brain, time.Now, log),
 		log: log,
+	}
+}
+
+// StageEvidenceRereadArgs is one page of the mail a removed own domain sent,
+// to be read against its deals' criteria again.
+type StageEvidenceRereadArgs struct {
+	Workspace ids.UUID `json:"workspace_id"`
+	Domain    string   `json:"domain"`
+	// Removal is the audit row of the removal, so a later removal of the same
+	// domain is its own sweep.
+	Removal ids.UUID `json:"removal_id"`
+	// After is the last activity the page before this one judged.
+	After ids.UUID `json:"after_activity_id"`
+}
+
+// Kind is the string River persists for this job.
+func (StageEvidenceRereadArgs) Kind() string { return "stage_evidence_reread" }
+
+// WorkspaceID declares the one tenant this job's work belongs to.
+func (a StageEvidenceRereadArgs) WorkspaceID() ids.UUID { return a.Workspace }
+
+// SentFrom is the removed domain whose mail the page reads.
+func (a StageEvidenceRereadArgs) SentFrom() string { return a.Domain }
+
+// PageAfter is the cursor the page starts after.
+func (a StageEvidenceRereadArgs) PageAfter() ids.UUID { return a.After }
+
+// stageEvidenceRereadPriority is River's lowest. A whole domain's mail waits
+// behind the first readings and transcript reads that share its queue.
+const stageEvidenceRereadPriority = 4
+
+// stageEvidenceRereadOpts coalesces a page River queues twice. The cursor is
+// in the args, so each page of a sweep is its own job.
+func stageEvidenceRereadOpts() *river.InsertOpts {
+	return jobs.QueuedAs[StageEvidenceRereadArgs](&river.InsertOpts{
+		MaxAttempts: oneOffJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true},
+	})
+}
+
+// queueStageEvidenceReread queues the sweep in the transaction that removes an
+// own domain, so a committed removal has its sweep.
+func queueStageEvidenceReread(ctx context.Context, tx pgx.Tx, domain string, removal ids.UUID) error {
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return errors.New("compose: an own domain was removed outside a bound workspace")
+	}
+	queue, err := ownerChangeMail()
+	if err != nil {
+		return err
+	}
+	return queue.EnqueueTx(ctx, tx,
+		StageEvidenceRereadArgs{Workspace: ws, Domain: domain, Removal: removal}, stageEvidenceRereadOpts())
+}
+
+// newStageEvidenceRereadWorker assembles the sweep. Without a model lane it
+// queues nothing, because no worker on this role would run the readings.
+func newStageEvidenceRereadWorker(
+	pool *pgxpool.Pool, lane bool, log *slog.Logger,
+) *evidencereread.Worker[StageEvidenceRereadArgs] {
+	return &evidencereread.Worker[StageEvidenceRereadArgs]{
+		Bind: workspaceJobCtx, Pool: pool, Log: log, Reads: lane,
+		Queue: func() (evidencereread.Enqueuer, error) { return ownerChangeMail() },
+		Own:   ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))},
+		Reading: func(job StageEvidenceRereadArgs, deal ids.DealID, activity ids.UUID) (river.JobArgs, *river.InsertOpts) {
+			opts := stageEvidenceReadInsertOpts()
+			opts.Priority = stageEvidenceRereadPriority
+			return StageEvidenceReadArgs{
+				Workspace: job.Workspace, DealID: deal.UUID, ActivityID: activity, RereadFor: &job.Removal,
+			}, opts
+		},
+		Next: func(job StageEvidenceRereadArgs, after ids.UUID) (river.JobArgs, *river.InsertOpts) {
+			job.After = after
+			return job, stageEvidenceRereadOpts()
+		},
 	}
 }
