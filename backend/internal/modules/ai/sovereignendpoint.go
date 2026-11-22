@@ -20,7 +20,9 @@ package ai
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -33,6 +35,13 @@ import (
 var localBaseURLDefaults = projectProviders(
 	func(d providerDescriptor) string { return d.defaultBaseURL },
 	func(d providerDescriptor) bool { return d.defaultBaseURL != "" })
+
+// LocalHostProviders names the local providers that dial an endpoint of their
+// own and take no key, in name order. An administrator sets a host for these
+// and nothing else.
+func LocalHostProviders() []string {
+	return slices.Sorted(maps.Keys(localBaseURLDefaults))
+}
 
 // requireSovereignEndpoint refuses a binding whose resolved endpoint is not on
 // infrastructure the customer controls.
