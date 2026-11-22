@@ -22,7 +22,9 @@ import (
 // about what it does, and that is the disagreement this test refuses.
 const (
 	e2eLLMRunnerScript  = "../../../scripts/e2e-llm.sh"
-	e2eLLMWritesReadBy  = `check.py" --lint`
+	e2eLLMWritesReadBy  = `scenariolint.py"`
+	e2eLLMLintEntry     = "../../../e2e/llm/scenariolint.py"
+	e2eLLMLintRunsCheck = "check.lint(path)"
 	e2eLLMLinter        = "../../../e2e/llm/check.py"
 	e2eLLMLintReadsIt   = `data["writes"] not in ("true", "false")`
 	e2eLLMWritesDeclare = "writes: true"
@@ -125,7 +127,12 @@ func TestEveryWritingScenarioDeclaresThatItWrites(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the lane's linter at %s: %v", e2eLLMLinter, err)
 	}
-	if !strings.Contains(string(runner), e2eLLMWritesReadBy) || !strings.Contains(string(linter), e2eLLMLintReadsIt) {
+	entry, err := os.ReadFile(e2eLLMLintEntry)
+	if err != nil {
+		t.Fatalf("reading the lane's lint entry at %s: %v", e2eLLMLintEntry, err)
+	}
+	if !strings.Contains(string(runner), e2eLLMWritesReadBy) || !strings.Contains(string(entry), e2eLLMLintRunsCheck) ||
+		!strings.Contains(string(linter), e2eLLMLintReadsIt) {
 		t.Errorf("%s no longer lints the scenarios' %q with %q, or the lint no longer refuses a value "+
 			"other than true or false, so the declarations this test holds decide nothing",
 			e2eLLMRunnerScript, e2eLLMWritesDeclare, e2eLLMWritesReadBy)

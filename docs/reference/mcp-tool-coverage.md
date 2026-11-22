@@ -202,14 +202,17 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 > `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 83 cases.
 
+<!-- prose:allow sentence a generated list of case names -->
 > `claude-sonnet-5-5@claude-cli` below its bar on: case75_sofia_is_leaving, case88_send_it_anyway, case91_add_a_review_stage
 
 > `gemini-4-hydrogen-medium@agy-cli` has no committed run for 2 of 83 cases.
 
+<!-- prose:allow sentence a generated list of case names -->
 > `gemini-4-hydrogen-medium@agy-cli` below its bar on: case78_she_asked_us_to_stop, case88_send_it_anyway
 
 > `gpt-5.6-sol@codex-cli` has no committed run for 1 of 83 cases.
 
+<!-- prose:allow sentence a generated list of case names -->
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case10_finish_the_import, case46_get_us_in_a_room, case47_tidy_the_fair_list, case49_who_can_introduce_us, case75_sofia_is_leaving, case86_tell_her_what_we_hold, case88_send_it_anyway
 
 ## Your AI assistant and the night helpers

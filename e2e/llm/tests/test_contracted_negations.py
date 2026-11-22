@@ -32,7 +32,7 @@ class ContractedNegationTest(unittest.TestCase):
             ("case40-sort-the-queue.yaml", "going anywhere", "Bruno is not going anywhere, so Bruno is closed.",
              "Bruno isn't going anywhere, so Bruno is closed."),
             ("case40-sort-the-queue.yaml", "recorded", "The title is not recorded.", "The title hasn't been recorded."),
-            ("case56-not-the-same.yaml", "a duplicate", "They are not the same person.", "They aren't the same person."),
+            ("case56-not-the-same.yaml", "a duplicate", "They are not the same contact.", "They aren't the same contact."),
             ("case64-catch-me-up-and-the-brief.yaml", "brief", "The brief has not been generated.",
              "The brief hasn't been generated."),
         ):
