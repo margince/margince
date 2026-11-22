@@ -57,8 +57,32 @@ class ContractedNegationTest(unittest.TestCase):
 
     def test_the_plan_pin_reads_a_negation_about_the_plan_alone(self):
         plan = pin("case112-my-plan-and-the-dossier.yaml", "must_mention", "started")
-        self.assertTrue(self.holds(plan, "You haven't started a plan this week."))
-        self.assertFalse(self.holds(plan, "The dossier on Nordholz hasn't been opened yet."))
+        for answer in (
+            "You haven't started a plan this week.",
+            "**Weekly plan**\nYou haven't started one this week.",
+            "## Weekly plan\n- Not started yet.",
+            "Weekly plan:\n- Not started for this week.",
+        ):
+            with self.subTest(answer=answer):
+                self.assertTrue(self.holds(plan, answer))
+        for answer in (
+            "The dossier on Nordholz hasn't been opened yet.",
+            "Your weekly plan: 3 calls; the Nordholz dossier hasn't been opened yet.",
+            "The dossier hasn't been started, and your plan has 3 calls.",
+        ):
+            with self.subTest(answer=answer):
+                self.assertFalse(self.holds(plan, answer))
+
+    def test_a_refusal_without_its_apostrophe_is_still_a_refusal(self):
+        path = os.path.join(self.scratch.name, "run.jsonl")
+        guards = check.parse_scenario(os.path.join(SCENARIOS, "case40-sort-the-queue.yaml"))["must_not_mention"]
+        for answer, tripped in (("I cant convert Bruno into a contact.", False),
+                                ("I converted Bruno into a contact.", True)):
+            with open(path, "w", encoding="utf-8") as out:
+                out.write(json.dumps({"type": "result", "subtype": "success", "is_error": False,
+                                      "result": answer}) + "\n")
+            with self.subTest(answer=answer):
+                self.assertEqual(bool(check.check({"name": "case999_pin", "must_not_mention": guards}, path)), tripped)
 
     def test_an_exclusion_lets_no_contracted_denial_through(self):
         done = pin("case10-finish-the-import.yaml", "must_mention", "committed|imported|created")
@@ -85,6 +109,12 @@ class NegationLintTest(unittest.TestCase):
             r"(?i)was\snot\ssent",
             r"(?i)\Wnot sent",
             r"(?i)\dnot sent",
+            r"(?i)was (?:not|n['’]t) sent",
+            r"(?i)was\s+(?:not|n['’]t) sent",
+            r"(?i)might not",
+            r"(?i)shall not",
+            r"(?i)ought not",
+            r"(?i)(?:has not|hadn't) been",
         ):
             with self.subTest(pattern=pattern):
                 self.assertTrue(self.problems(pattern))
@@ -102,6 +132,12 @@ class NegationLintTest(unittest.TestCase):
             r"(?i)(?:cannot|can.t) send",
             r"(?i)(?:is not|isn.t) here",
             r"(?i)I am not sure|I['’]m not sure",
+            r"(?i)was\s*(?:not|n['’]t) sent",
+            r"(?i)(?:was\s+not|wasn['’]t) sent",
+            r"(?i)(?:has not|ha(?:ve|s)n['’]t) been",
+            r"(?i)(?:might not|mightn['’]t)",
+            r"(?i)(?:shall not|shan['’]t)",
+            r"(?i)(?:ought not|oughtn['’]t)",
         ):
             with self.subTest(pattern=pattern):
                 self.assertEqual(self.problems(pattern), [])

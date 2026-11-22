@@ -41,12 +41,15 @@ _DEFERS_TO_A_TOOL = re.compile(
 # alternation group around it, a sibling that reads the same with the negation
 # contracted: `(?:could not|couldn't) send`, `is(?: not|n't)`.
 _APOSTROPHE = r"(?:\[[^\]]*['’.][^\]]*\]\??|['’.]\??)"
-_SHORT = re.compile(r"(?i)(?<![A-Za-z\\])((?:\\w[*+]?|\[[^\]]*\][*+?]?|[A-Za-z])*)n" + _APOSTROPHE + "t")
+_SHORT = re.compile(r"(?i)(?<![A-Za-z\\])((?:\\w[*+]?|\[[^\]]*\][*+?]?|\(\?:[A-Za-z|]*\)|[A-Za-z])*)n"
+                    + _APOSTROPHE + "t")
 _AUXILIARIES = ("am", "can", "could", "does", "do", "did", "is", "are", "was", "were", "has", "have", "had",
-                "will", "would", "should", "must", "need")
-_SPELLED = re.compile(r"(?i)(?<![A-Za-z'’])(?:(%s)\s+not|(cannot)|(not))(?![A-Za-z'’])" % "|".join(_AUXILIARIES))
+                "will", "would", "shall", "should", "might", "must", "need", "ought")
+_SPELLED = re.compile(r"(?i)(?<![A-Za-z'’])(?:(%s)(?:\s[+*?]?)+not|(cannot)|(not))(?![A-Za-z'’])" % "|".join(_AUXILIARIES))
 _I_AM = re.compile(r"(?:" + _APOSTROPHE + r")m\s+$")
-_STEM = {"cannot": "ca", "can": "ca", "will": "wo"}
+_STEM = {"cannot": "ca", "can": "ca", "will": "wo", "shall": "sha"}
+# Whitespace a pin must match: "was (?:not|n't)" can never read "wasn't".
+_SPACE_REQUIRED = re.compile(r"(?:\\s|\s)\+?$")
 # What two siblings may differ by and still read the same: spacing, word
 # edges and an inline flag such as (?i).
 _SPACING = re.compile(r"(?:\\[bBsW]|\s)[?*+]?|\(\?[a-zA-Z]+\)")
@@ -86,8 +89,8 @@ def _levels(source):
         elif char == ")" and stack:
             start = stack.pop() + 1
             prefix = _GROUP_PREFIX.match(source, start)
-            spans.append((prefix.end() if prefix else start, index))
-    return sorted(spans, key=lambda span: span[1] - span[0]) + [(0, len(source))]
+            spans.append((start - 1, prefix.end() if prefix else start, index))
+    return sorted(spans, key=lambda span: span[2] - span[1]) + [(0, 0, len(source))]
 
 
 def _branches(source, start, end):
@@ -122,13 +125,22 @@ def _short_form_fits(stem, prefix):
     negation: a generic `\w*n't` contracts any, and a spelled word its own."""
     if "\\" in prefix or "[" in prefix:
         return True
+    words = _spellings(prefix.lower())
     if stem is None:
-        return prefix.lower() not in ("ca", "wo")
-    return prefix.lower() == stem
+        return not words & {"ca", "wo"}
+    return stem in words
+
+
+def _spellings(prefix):
+    """The words a prefix such as ha(?:ve|s) spells: {"have", "has"}."""
+    group = re.fullmatch(r"([a-z]*)\(\?:([a-z|]*)\)([a-z]*)", prefix)
+    if not group:
+        return {prefix}
+    return {group[1] + middle + group[3] for middle in group[2].split("|")}
 
 
 def _contracted_beside(source, start, end, stem):
-    for low, high in _levels(source):
+    for opening, low, high in _levels(source):
         if not low <= start < end <= high:
             continue
         branches = _branches(source, low, high)
@@ -143,7 +155,9 @@ def _contracted_beside(source, start, end, stem):
                 continue
             sibling = source[low_b:high_b]
             for short in _SHORT.finditer(sibling):
-                if _short_form_fits(stem, short.group(1)) and \
+                before = sibling[:short.start()] if short.start() or not opening else source[:opening]
+                attached = short.group(1) or not _SPACE_REQUIRED.search(before)
+                if attached and _short_form_fits(stem, short.group(1)) and \
                         _key(sibling[:short.start()] + "\0" + sibling[short.end():]) == spelled:
                     return True
     return False
