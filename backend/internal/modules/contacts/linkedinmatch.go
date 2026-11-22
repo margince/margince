@@ -99,6 +99,9 @@ func runLinkedInMatch(ctx context.Context, s *Store, owner, onlyContact ids.UUID
 	}
 	var out LinkedInMatchResult
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := releaseOrphanedSuggestions(ctx, tx, owner); err != nil {
+			return err
+		}
 		return matchInTx(ctx, tx, owner, onlyContact, canConfirm, &out)
 	})
 	return out, err
