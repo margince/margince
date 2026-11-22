@@ -1,0 +1,74 @@
+{
+  "scenario": "case93_count_that_stage_as_won",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "05bf735b214ce609",
+    "tools": "be284dd70e030734",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:37:58Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:57Z"
+  },
+  "usage": {
+    "input_tokens": 33100,
+    "output_tokens": 1553,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 233216,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "list_pipelines",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "list_pipelines",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 2,
+      "max": 4
+    },
+    "refused": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 133158,
+      "min": 113940,
+      "max": 152376
+    },
+    "output_tokens": {
+      "median": 776.5,
+      "min": 624,
+      "max": 929
+    }
+  }
+}

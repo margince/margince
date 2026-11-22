@@ -1,0 +1,90 @@
+{
+  "scenario": "case64_catch_me_up_and_the_brief",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "7a9198cf19ca3ce1",
+    "tools": "b5fb28241f1608b1",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:26:01Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:30Z"
+  },
+  "usage": {
+    "input_tokens": 79480,
+    "output_tokens": 5011,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 428800,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "get_worklist",
+        "list_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "review_commitments",
+        "whats_slipping_this_week"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_worklist",
+        "list_records",
+        "read_context",
+        "read_my_brief_delivery",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 16,
+      "min": 14,
+      "max": 18
+    },
+    "refused": {
+      "median": 3.5,
+      "min": 1,
+      "max": 6
+    },
+    "prompt_tokens": {
+      "median": 254140,
+      "min": 242581,
+      "max": 265699
+    },
+    "output_tokens": {
+      "median": 2505.5,
+      "min": 2345,
+      "max": 2666
+    }
+  }
+}

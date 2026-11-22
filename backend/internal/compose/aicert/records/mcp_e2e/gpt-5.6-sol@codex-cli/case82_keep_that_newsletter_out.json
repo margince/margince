@@ -1,0 +1,79 @@
+{
+  "scenario": "case82_keep_that_newsletter_out",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "1230d1b26a0a56d1",
+    "tools": "8b7f08f09bc4505e",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T04:41:33Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:56Z"
+  },
+  "usage": {
+    "input_tokens": 41737,
+    "output_tokens": 1471,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 331392,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "add_capture_exclusion",
+        "change_capture",
+        "describe_router_actions",
+        "list_capture_exclusions",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "add_capture_exclusion",
+        "change_capture",
+        "describe_router_actions",
+        "list_capture_exclusions",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6.5,
+      "min": 5,
+      "max": 8
+    },
+    "refused": {
+      "median": 2.5,
+      "min": 1,
+      "max": 4
+    },
+    "prompt_tokens": {
+      "median": 186564.5,
+      "min": 134127,
+      "max": 239002
+    },
+    "output_tokens": {
+      "median": 735.5,
+      "min": 628,
+      "max": 843
+    }
+  }
+}

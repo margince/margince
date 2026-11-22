@@ -4,7 +4,7 @@
     1,
     6
   ],
-  "passed": 2,
+  "passed": 3,
   "runs": 3,
   "pass_at": 2,
   "driver": "claude:cli",
@@ -17,11 +17,11 @@
     "tools": "b1ff58b347f273dc",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "6432db3c67020a56",
+    "harness": "024566e70b0c3db3",
     "commit": "1d06e4e790e4733576f87296a1fcadc09dafe0ae",
     "ran_at": "2026-11-22T04:56:33Z",
-    "graded_commit": "1d06e4e790e4733576f87296a1fcadc09dafe0ae",
-    "graded_at": "2026-11-22T04:56:33Z"
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:55:19Z"
   },
   "usage": {
     "input_tokens": 18,
@@ -34,7 +34,7 @@
   },
   "tools_by_run": [
     {
-      "passed": false,
+      "passed": true,
       "tools": [
         "describe_import_format",
         "preview_import",

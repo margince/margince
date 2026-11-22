@@ -18,11 +18,11 @@
     "tools": "7dda97412143352f",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "b2091c50a55ce041",
+    "harness": "024566e70b0c3db3",
     "commit": "9a581c6ac594cfb52a822844bac75407a05ad3ea+uncommitted",
     "ran_at": "2026-11-22T03:50:07Z",
-    "graded_commit": "9a581c6ac594cfb52a822844bac75407a05ad3ea+uncommitted",
-    "graded_at": "2026-11-22T03:50:07Z"
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:05Z"
   },
   "usage": {
     "input_tokens": 55832,
