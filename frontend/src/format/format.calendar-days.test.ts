@@ -13,9 +13,9 @@ import { calendarDaysBetween, daysAgoText } from "./format";
 // (shared/kernel/elapsed), and these cases are the ones where the two spellings
 // visibly disagree.
 
-// Mirrors the real translator's parameter type rather than a wider one: the
-// whole point of the last case below is what `daysAgoText` hands across, and a
-// double that accepted a number would have accepted the defect too.
+// Mirrors the real translator's parameter type rather than a wider one. A
+// double that accepted a number would accept the raw count `daysAgoText` must
+// not hand across.
 const t = (key: string, vars?: Record<string, string>) =>
   vars ? `${key}:${JSON.stringify(vars)}` : key;
 

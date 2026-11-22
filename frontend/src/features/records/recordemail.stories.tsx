@@ -10,10 +10,9 @@ import { LocaleProvider } from "../../i18n";
 import { EmailVerb, RecordEmailVerb } from "./recordemail";
 
 // The header verb is the write every record page shares: a square whose
-// envelope is its whole label. Judging it needs the neighbours it
-// sits beside, so the verb stories draw the row rather than the button alone —
-// what a reader has to be able to tell at a glance is which of these squares is
-// the one the page is for, and whether the refused one still says why.
+// envelope is its whole label. The stories draw the row it sits in. A reader
+// must tell at a glance which square the page is for, and see why a refused
+// one is refused.
 
 const meta: Meta<typeof EmailVerb> = {
   title: "Records/Record 360/Email box",

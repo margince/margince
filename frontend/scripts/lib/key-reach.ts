@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// WHICH CATALOG KEYS THE SHIPPED BUNDLE RENDERS, by symbol rather than module.
+// Which catalog keys the shipped bundle renders, by symbol rather than module.
 //
-// bundle-reach says which modules load. A loaded module can still hold an
-// export nothing renders, and a key that export names is not rendered either.
-// This walks from what runs at load (statements that are not inert
-// declarations, and every export of an entry) through the symbols those
-// statements name, using the type checker to follow imports and re-exports.
+// bundle-reach says which modules load; a loaded module can still hold an
+// export nothing renders. This starts from what runs at load and follows the
+// symbols it names with the type checker.
 //
-// A template key is read with its types: `a.${kind}` vouches only for the keys
-// the literal union of `kind` can produce, and for every key under `a.` when
-// `kind` is a plain string.
+// A template key is read with its types. `a.${kind}` vouches only for what the
+// literal union of `kind` can produce; a plain `string` vouches for all of `a.`.
 
 import ts from "typescript";
 import {
@@ -216,7 +213,7 @@ function templatePattern(
 }
 
 // Naming a member, a label or a JSX attribute asks the checker for the type of
-// what it hangs off; only names that a scope lookup resolves are references.
+// its owner. Only names a scope lookup resolves count as references.
 function isReference(node: ts.Identifier): boolean {
   const parent = node.parent;
   const named =

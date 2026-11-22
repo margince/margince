@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// A key is live only when code the shipped bundle runs names it: an export
-// nothing renders, a story, a test or a module nothing imports vouches for
-// nothing, and a template vouches only for what its types can produce.
+// A key is live only when code the shipped bundle runs names it.
+// An unrendered export, a story, a test or an unimported module vouches for
+// nothing. A template vouches only for what its types can produce.
 
 import { join, relative } from "node:path";
 import {
@@ -22,8 +22,9 @@ import {
 import { srcModules } from "./caption-tables.census";
 
 /**
- * Keys no live code renders: not named literally, not produced by a template
- * whose types allow it, and not an arm of a plural pair whose base is.
+ * Keys no live code renders. A key is rendered when it is named literally or a
+ * template's types can produce it. It is also rendered as an arm of a plural
+ * pair whose base is.
  */
 export function orphanKeys(keys: readonly string[], use: KeyUse): string[] {
   const catalog = new Set(keys);
@@ -64,8 +65,7 @@ function keyUseOf(corpus: readonly CensusFile[], tree: CensusTree): KeyUse {
 export const rule: CensusRule = {
   name: "orphan-keys",
   corpus: srcModules,
-  // A pass that read fewer modules than the bundle loads would call keys dead
-  // that a module it skipped renders.
+  // A pass that skipped a loaded module would call dead a key it renders.
   floors: (corpus, tree) => {
     const use = keyUseOf(corpus, tree);
     return [
