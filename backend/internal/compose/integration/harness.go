@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -134,8 +133,8 @@ func Setup(t *testing.T) *Env {
 	e.AgentPassport = ids.NewV7()
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO passport (id, on_behalf_of, granted_by, token_hash, scopes, expires_at)
-		VALUES ($1, $2, $2, $3, ARRAY['read', 'write'], now() + interval '30 days')`,
-		e.AgentPassport, e.Rep1, storekit.TokenHash(e.AgentPassport.String())); err != nil {
+		VALUES ($1, $2, $2, encode(sha256($1::uuid::text::bytea), 'hex'), ARRAY['read', 'write'], now() + interval '30 days')`,
+		e.AgentPassport, e.Rep1); err != nil {
 		t.Fatal(err)
 	}
 	for _, team := range []ids.UUID{e.Team1, e.Team2} {

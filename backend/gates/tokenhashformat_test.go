@@ -26,8 +26,8 @@ import (
 var catalogColumnLine = regexp.MustCompile(`^public\.(\w+)\.(\w+) (.+?)(?: NOT NULL)? gen=`)
 
 // hashColumnsByAnotherName hold a SHA-256 under a name the corpus rule cannot
-// derive: the one-time code an OAuth client trades for its tokens, and a draft
-// reference that is looked up by its hash.
+// derive. One is the code an OAuth client trades for its tokens. The other is
+// a draft reference that is looked up by its hash.
 var hashColumnsByAnotherName = []string{
 	"oauth_authorization_code.code_hash",
 	"voice_learning_signal.draft_ref_hash",
@@ -58,7 +58,7 @@ func hashColumnsWithoutFormat(catalog string) (off map[string]string, seen []str
 	types := map[string]string{}
 	for line := range strings.SplitSeq(catalog, "\n") {
 		line = strings.TrimSpace(line)
-		// An unvalidated check keeps its NOT VALID suffix in the definition.
+		// An unvalidated check keeps a suffix in its definition, so it never equals the format.
 		if m := checkLine.FindStringSubmatch(line); m != nil {
 			checks[m[1]] = append(checks[m[1]], m[2])
 		}
