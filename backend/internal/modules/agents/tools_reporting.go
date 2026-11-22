@@ -110,6 +110,7 @@ func metricReferenceSchema() json.RawMessage {
 		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; a shape that cannot marshal must fail boot.
 		panic(fmt.Sprintf("render metric reference: %v", err))
 	}
+	recordReflectedInput(reflect.TypeFor[crmcontracts.ReportMetricReference](), raw)
 	return raw
 }
 
@@ -130,5 +131,6 @@ func describedSchema[T any](description, rule string) json.RawMessage {
 		//craft:ignore panic-in-domain A schema encoding failure is a composition defect, before any request is admitted.
 		panic(fmt.Sprintf("encode tool input: %v", err))
 	}
+	recordReflectedInput(reflect.TypeFor[T](), raw)
 	return raw
 }

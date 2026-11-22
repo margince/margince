@@ -42,7 +42,7 @@ Body:
 		"named":  {`"all" "software"`, "Which part of the value counts."},
 		"listed": {`"x"`, ""},
 	} {
-		values, note, err := fieldEnum(all["Body"].Properties[field], all)
+		values, _, note, err := fieldEnum(all["Body"].Properties[field], all)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -50,7 +50,7 @@ Body:
 			t.Errorf("%s: got %s %q, want %s %q", field, got, note, want.values, want.note)
 		}
 	}
-	if values, _, _ := fieldEnum(all["Body"].Properties["free"], all); len(values) != 0 {
+	if values, _, _, _ := fieldEnum(all["Body"].Properties["free"], all); len(values) != 0 {
 		t.Errorf("a free string reported values %v", values)
 	}
 }
@@ -60,5 +60,28 @@ func TestFirstParagraphKeepsWholeSentencesWithinTheBound(t *testing.T) {
 	got := firstParagraph(strings.Repeat(sentence, 6))
 	if len(got) > maxNoteBytes || !strings.HasSuffix(got, "end.") {
 		t.Errorf("got %d bytes ending %q", len(got), got[len(got)-10:])
+	}
+}
+
+func TestFieldEnumKeepsAResponseOnlyValueOutOfTheRequestValues(t *testing.T) {
+	var all schemas
+	const doc = `
+Body:
+  type: object
+  properties:
+    scoped:
+      type: string
+      enum: [owner, team, managed]
+      x-response-only-values: [managed]
+`
+	if err := yaml.Unmarshal([]byte(doc), &all); err != nil {
+		t.Fatal(err)
+	}
+	values, hidden, _, err := fieldEnum(all["Body"].Properties["scoped"], all)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(values, " ") + "|" + strings.Join(hidden, " "); got != `"owner" "team"|"managed"` {
+		t.Errorf("got %s", got)
 	}
 }

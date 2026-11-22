@@ -58857,11 +58857,13 @@ type MeetingReadyRequest struct {
 
 // MeetingRecordLink defines model for MeetingRecordLink.
 type MeetingRecordLink struct {
-	EntityId   openapi_types.UUID          `json:"entity_id"`
+	EntityId openapi_types.UUID `json:"entity_id"`
+
+	// EntityType The kind of record the meeting is filed on.
 	EntityType MeetingRecordLinkEntityType `json:"entity_type"`
 }
 
-// MeetingRecordLinkEntityType defines model for MeetingRecordLink.EntityType.
+// MeetingRecordLinkEntityType The kind of record the meeting is filed on.
 type MeetingRecordLinkEntityType string
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
@@ -63939,11 +63941,13 @@ type ReportRunSummary struct {
 
 // ReportScope defines model for ReportScope.
 type ReportScope struct {
-	Id   *openapi_types.UUID `json:"id,omitempty"`
-	Kind ReportScopeKind     `json:"kind"`
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.
+	Kind ReportScopeKind `json:"kind"`
 }
 
-// ReportScopeKind defines model for ReportScope.Kind.
+// ReportScopeKind Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.
 type ReportScopeKind string
 
 // ReportSetupObjective defines model for ReportSetupObjective.

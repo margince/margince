@@ -74,11 +74,14 @@ type node struct {
 	Type   yaml.Node `yaml:"type"`
 	Format string    `yaml:"format"`
 	// Description feeds the field notes a served tool schema carries.
-	Description string           `yaml:"description"`
-	Enum        []any            `yaml:"enum"`
-	Items       *node            `yaml:"items"`
-	Properties  map[string]*node `yaml:"properties"`
-	Required    []string         `yaml:"required"`
+	Description string `yaml:"description"`
+	Enum        []any  `yaml:"enum"`
+	// ResponseOnly is `x-response-only-values`: enum members the server
+	// answers with and a request never offers.
+	ResponseOnly []string         `yaml:"x-response-only-values"`
+	Items        *node            `yaml:"items"`
+	Properties   map[string]*node `yaml:"properties"`
+	Required     []string         `yaml:"required"`
 	// AllOf carries the one-element wrapper the contract uses to attach a
 	// description (or nullability) to a $ref without overriding the ref itself,
 	// which JSON Schema does not otherwise allow. Unwrapped in resolve: without

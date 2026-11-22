@@ -6,7 +6,10 @@ package compose
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/agents"
 )
 
 // A model sent value_basis "amount" and close_window "all_open" and got another
@@ -44,5 +47,20 @@ func TestTheReportRoutersServeTheSelectionsClosedFieldsWithTheirValues(t *testin
 					tool, name, served.Enum, served.Description, values)
 			}
 		}
+	}
+}
+
+// The census reads every input derived from a Go type once the surface is built.
+// An input registered anywhere is held to values and a sentence.
+func TestEveryReflectedToolInputServesItsContractEnumsWithValuesAndASentence(t *testing.T) {
+	servedSurface(t)
+	gaps, checked := agents.ContractEnumGaps()
+	for _, want := range []string{"MeetingInvitationRequest", "ReportScope", "ReportingRead"} {
+		if !slices.ContainsFunc(checked, func(name string) bool { return strings.HasSuffix(name, "."+want) }) {
+			t.Errorf("the census never met %s: %v", want, checked)
+		}
+	}
+	for _, gap := range gaps {
+		t.Error(gap)
 	}
 }

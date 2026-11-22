@@ -40908,7 +40908,7 @@ components:
       type: object
       required: [entity_type, entity_id]
       properties:
-        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_type: {type: string, enum: [contact, company, deal, lead, project], description: The kind of record the meeting is filed on.}
         entity_id: {type: string, format: uuid}
     MeetingAvailability:
       type: object
@@ -50901,7 +50901,7 @@ components:
       additionalProperties: false
       required: [kind]
       properties:
-        kind: {type: string, enum: [owner, team, workspace]}
+        kind: {type: string, enum: [owner, team, workspace], description: 'Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.'}
         id: {type: string, format: uuid}
     RunReportRequest:
       type: object

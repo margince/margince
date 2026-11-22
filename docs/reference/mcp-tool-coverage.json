@@ -7444,7 +7444,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 3263,
+      "tokens": 3289,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -7915,7 +7915,7 @@
     },
     {
       "name": "change_reports",
-      "tokens": 2012,
+      "tokens": 2008,
       "agents": [],
       "required_by_cases": [
         "case113_after_the_sales_review"
@@ -8083,7 +8083,7 @@
     },
     {
       "name": "read_analytics",
-      "tokens": 1370,
+      "tokens": 1366,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [
@@ -8526,7 +8526,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 500,
+      "tokens": 515,
       "agents": [],
       "required_by_cases": [
         "case46_get_us_in_a_room"

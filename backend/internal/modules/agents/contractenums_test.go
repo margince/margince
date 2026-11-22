@@ -12,64 +12,31 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// servedInputs are the report tools' input types whose selection a model fills in.
-var servedInputs = map[string]json.RawMessage{
-	"read_reporting":   reportingReadInput,
-	"draft_report":     reportDraftInput,
-	"metric_reference": reportingMetricInput,
+// A contract enum a model must spell is served with its values and the
+// contract's sentence, and without a value only a response carries. The census
+// is every input derived from a Go type, as recorded when it was derived.
+func TestEveryContractEnumAnInputTakesIsServedWithItsValuesAndASentence(t *testing.T) {
+	gaps, checked := ContractEnumGaps()
+	if len(checked) == 0 {
+		t.Fatal("no derived input was recorded, so the census checked nothing")
+	}
+	for _, gap := range gaps {
+		t.Error(gap)
+	}
 }
 
-// A contract enum a model must spell is served with its values and the
-// contract's sentence, wherever a body reaches it. This walks the Go type beside
-// the served schema, so a field added to the selection is held to it too.
-func TestEveryContractEnumAnInputTakesIsServedWithItsValuesAndASentence(t *testing.T) {
-	roots := map[string]reflect.Type{
-		"read_reporting":   reflect.TypeFor[ReportingRead](),
-		"draft_report":     reflect.TypeFor[ReportDraftRequest](),
-		"metric_reference": reflect.TypeFor[crmcontracts.ReportMetricReference](),
+// The scope kind the contract marks response-only is not offered to a request.
+func TestAResponseOnlyScopeKindIsNotServedToARequest(t *testing.T) {
+	entry := contractFieldEnums["ReportingScope.kind"]
+	if !slices.Contains(entry.ResponseOnly, "managed_teams") || slices.Contains(entry.Values, "managed_teams") {
+		t.Fatalf("scope kind values %v, response-only %v", entry.Values, entry.ResponseOnly)
 	}
-	for tool, root := range roots {
-		var served jsonSchema
-		if err := json.Unmarshal(servedInputs[tool], &served); err != nil {
-			t.Fatalf("%s: input schema does not parse: %v", tool, err)
-		}
-		checked := 0
-		var visit func(path string, typ reflect.Type, node *jsonSchema)
-		visit = func(path string, typ reflect.Type, node *jsonSchema) {
-			for typ.Kind() == reflect.Pointer || typ.Kind() == reflect.Slice {
-				typ = typ.Elem()
-			}
-			if typ.Kind() != reflect.Struct || node == nil {
-				return
-			}
-			err := eachWireField(typ, func(name string, _ bool, field reflect.StructField) error {
-				member := node.Properties[name]
-				if member == nil {
-					return nil
-				}
-				leaf := member
-				if leaf.Items != nil {
-					leaf = leaf.Items
-				}
-				fieldPath := path + "." + name
-				if _, open := openValueFields[typ.Name()+"."+name]; !open && isContractEnum(field.Type) {
-					checked++
-					if len(leaf.Enum) == 0 || member.Description == "" {
-						t.Errorf("%s serves %s as a bare string: it has %d values and description %q",
-							tool, fieldPath, len(leaf.Enum), member.Description)
-					}
-				}
-				visit(fieldPath, field.Type, leaf)
-				return nil
-			})
-			if err != nil {
-				t.Fatalf("%s: %v", path, err)
-			}
-		}
-		visit(tool, root, &served)
-		if checked == 0 {
-			t.Errorf("%s: the walk met no contract enum, so it checked nothing", tool)
-		}
+	var served jsonSchema
+	if err := json.Unmarshal(reportingReadInput, &served); err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(served.Properties["selection"].Properties["scope"].Properties["kind"].Enum, "managed_teams") {
+		t.Error("selection.scope.kind offers managed_teams, which a request names by sending no scope")
 	}
 }
 

@@ -43503,7 +43503,10 @@ export interface components {
             links?: components["schemas"]["MeetingRecordLink"][];
         };
         MeetingRecordLink: {
-            /** @enum {string} */
+            /**
+             * @description The kind of record the meeting is filed on.
+             * @enum {string}
+             */
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
@@ -53325,7 +53328,10 @@ export interface components {
             page: components["schemas"]["PageInfo"];
         };
         ReportScope: {
-            /** @enum {string} */
+            /**
+             * @description Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.
+             * @enum {string}
+             */
             kind: "owner" | "team" | "workspace";
             /** Format: uuid */
             id?: string;

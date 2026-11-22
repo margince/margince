@@ -4,16 +4,22 @@
 package agents
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
+	"sync"
 )
 
 // contractFieldEnum is what the contract says about one enum-valued property:
 // the values it takes and what they change.
 type contractFieldEnum struct {
-	Values      []string
-	Description string
+	Values []string
+	// ResponseOnly are members the server answers with and a request never
+	// offers; the contract marks them.
+	ResponseOnly []string
+	Description  string
 }
 
 const namedByCatalog = "the catalog mode names the metrics this caller may read"
@@ -93,4 +99,79 @@ func isContractEnum(t reflect.Type) bool {
 	}
 	_, ok := t.MethodByName("Valid")
 	return ok
+}
+
+// reflectedInputs are the inputs derived from a Go type, with what each was
+// served as. ContractEnumGaps reads them, so a census covers every such input
+// rather than a list kept beside them.
+var reflectedInputs = struct {
+	mu   sync.Mutex
+	list []reflectedInput
+}{}
+
+type reflectedInput struct {
+	typ    reflect.Type
+	schema json.RawMessage
+}
+
+func recordReflectedInput(typ reflect.Type, schema json.RawMessage) {
+	reflectedInputs.mu.Lock()
+	defer reflectedInputs.mu.Unlock()
+	reflectedInputs.list = append(reflectedInputs.list, reflectedInput{typ: typ, schema: schema})
+}
+
+// ContractEnumGaps names every contract enum field of an input derived from a Go
+// type that is served with a defect. The defects are no values, no sentence, or
+// a value the contract marks response-only. It also returns the types it checked.
+// A gate can tell a full census from an empty one.
+func ContractEnumGaps() (gaps, checked []string) {
+	reflectedInputs.mu.Lock()
+	inputs := slices.Clone(reflectedInputs.list)
+	reflectedInputs.mu.Unlock()
+	for _, input := range inputs {
+		var served jsonSchema
+		if err := json.Unmarshal(input.schema, &served); err != nil {
+			gaps = append(gaps, fmt.Sprintf("%s: the served schema does not parse: %v", input.typ, err))
+			continue
+		}
+		checked = append(checked, input.typ.String())
+		gaps = append(gaps, enumGapsIn(input.typ.String(), input.typ, &served)...)
+	}
+	return gaps, checked
+}
+
+func enumGapsIn(path string, typ reflect.Type, node *jsonSchema) (gaps []string) {
+	for typ.Kind() == reflect.Pointer || typ.Kind() == reflect.Slice {
+		typ = typ.Elem()
+	}
+	if typ.Kind() != reflect.Struct || node == nil {
+		return nil
+	}
+	err := eachWireField(typ, func(name string, _ bool, field reflect.StructField) error {
+		member := node.Properties[name]
+		if member == nil {
+			return nil
+		}
+		leaf := member
+		if leaf.Items != nil {
+			leaf = leaf.Items
+		}
+		key, fieldPath := typ.Name()+"."+name, path+"."+name
+		if _, open := openValueFields[key]; !open && isContractEnum(field.Type) {
+			if len(leaf.Enum) == 0 || member.Description == "" {
+				gaps = append(gaps, fmt.Sprintf("%s has %d values and description %q", fieldPath, len(leaf.Enum), member.Description))
+			}
+			for _, hidden := range contractFieldEnums[key].ResponseOnly {
+				if slices.Contains(leaf.Enum, hidden) {
+					gaps = append(gaps, fmt.Sprintf("%s offers %s, which the contract says only a response carries", fieldPath, hidden))
+				}
+			}
+		}
+		gaps = append(gaps, enumGapsIn(fieldPath, field.Type, leaf)...)
+		return nil
+	})
+	if err != nil {
+		gaps = append(gaps, fmt.Sprintf("%s: %v", path, err))
+	}
+	return gaps
 }
