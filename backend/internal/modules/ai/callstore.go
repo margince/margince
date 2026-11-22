@@ -74,7 +74,11 @@ type Call struct {
 	// report describes one marshalled body and a retry's body can differ.
 	SecretsRemoved int
 	SecretKinds    []string
-	CorrelationID  *ids.UUID
+	// Extension names the extension a call ran for, as "<unit>/<task>", and is
+	// empty for the product's own calls. It lets an operator list every call an
+	// installed extension caused.
+	Extension     string
+	CorrelationID *ids.UUID
 	// Subject is the record the call was about, when the site that made it
 	// said so. It travels to the rail's occurrence — what the reader is told
 	// this work is about — and to ai_call's own citation columns, which is what
@@ -351,6 +355,7 @@ func aiCallBindings(c Call) []boundColumn {
 		{"config_hash", c.ConfigHash},
 		{"secrets_removed", c.SecretsRemoved},
 		{"secret_kinds", secretKinds},
+		{"extension", c.Extension},
 		{"subject_type", subjectType},
 		{"subject_id", subjectID},
 		{"decision_choice", decisionChoice},

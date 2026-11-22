@@ -89,7 +89,12 @@ type Input struct {
 	// relation to whatever the open deals are priced in, so it must never be
 	// labelled with theirs.
 	WonCurrency string `json:"won_currency,omitempty"`
-	lang        textlang.Lang
+	// OpenPipelineMinor is the card's open total in the workspace base
+	// currency, which only the grounding check reads: the prompt never carries
+	// it. Zero with no currency when the card shows none.
+	OpenPipelineMinor    int64  `json:"-"`
+	OpenPipelineCurrency string `json:"-"`
+	lang                 textlang.Lang
 	// LostCount is nil when the reader cannot see deals: a zero there would
 	// tell the writer a fact about the section it was told to stay silent on.
 	LostCount *int     `json:"lost_count,omitempty"`
@@ -290,6 +295,7 @@ func FromView(view crmcontracts.Company360) Input {
 		}
 	}
 	foldDeals(view, &in)
+	foldOpenPipeline(view, &in)
 	foldTasks(view, &in)
 	foldCommitments(view, &in)
 	foldOpenWorkGaps(view, &in)
@@ -301,32 +307,6 @@ func FromView(view crmcontracts.Company360) Input {
 		}
 	}
 	return in
-}
-
-func foldDeals(view crmcontracts.Company360, in *Input) {
-	if view.Deals == nil {
-		return
-	}
-	lost := view.Deals.LostCount
-	in.LostCount = &lost
-	if view.Deals.WonLifetime.AmountMinor != nil && view.Deals.WonLifetime.Currency != nil {
-		in.WonCurrency = *view.Deals.WonLifetime.Currency
-		in.WonLifetime = *view.Deals.WonLifetime.AmountMinor
-	}
-	for _, deal := range view.Deals.Data {
-		d := DealIn{ID: deal.DealId.String(), Name: deal.Name, Stalled: deal.Stalled}
-		if deal.StageName != nil {
-			d.Stage = *deal.StageName
-		}
-		// Both halves or neither: a figure with no currency cannot be rendered
-		// into major units at all, and one printed without its code is a number
-		// whose scale the reader has to guess — which is the whole defect.
-		if deal.Amount != nil && deal.Amount.AmountMinor != nil && deal.Amount.Currency != nil {
-			d.Currency = *deal.Amount.Currency
-			d.AmountMinor = *deal.Amount.AmountMinor
-		}
-		in.OpenDeals = append(in.OpenDeals, d)
-	}
 }
 
 func foldTasks(view crmcontracts.Company360, in *Input) {

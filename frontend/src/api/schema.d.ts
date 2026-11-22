@@ -1335,9 +1335,10 @@ export interface paths {
          *     workspace's AI usage meter and the model-call audit row, exactly as every other
          *     model-backed read on this page does.
          *
-         *     **Grounded, per viewer.** The draft is written from the caller's own contact 360,
-         *     assembled inside the normal gates, so it can only mention records that caller could
-         *     open themselves. What it stands on is what the contact page stands on: who they are
+         *     **Grounded, per viewer, plus the company profile.** The draft is written from the
+         *     caller's own contact 360, assembled inside the normal gates, so it can only mention
+         *     contact records that caller could open themselves. The model also receives the
+         *     installation's own company profile, which every member may read. What it stands on is what the contact page stands on: who they are
          *     and where they work, the open deal and the money on it, the claims they have made —
          *     what they asked for, promised, or objected to — and the recent conversation. A
          *     section the caller has no grant for is absent from the view and therefore absent from
@@ -3326,9 +3327,12 @@ export interface paths {
          *     other model-backed read on this page does. A drafting call a workspace cannot see
          *     in its own budget would be worse than one it can.
          *
-         *     **Grounded, per viewer.** The draft is written from the caller's own 360, assembled
-         *     inside the normal gates, so it can only mention records that caller could open
-         *     themselves. Grounding order is A132's: the caller's intent, then the recipient and
+         *     **Grounded, per viewer, plus the company profile.** The draft is written from the
+         *     caller's own gated read of the account, assembled inside the normal gates, so it can
+         *     only mention account records that caller could open themselves. The model also
+         *     receives the installation's own company profile (what we sell, our positioning and
+         *     proof), which every member may read, so a first email to a company knows our offer
+         *     as well as the account. Grounding order is A132's: the caller's intent, then the recipient and
          *     our relationship with them, then the deal and what we last committed to, then the
          *     recent conversation, then the dossier, then the writer's voice. Every input but
          *     the intent is untrusted text and is fenced.
@@ -9480,7 +9484,9 @@ export interface paths {
          *     rep's unsent message is a separate, explicit act at `PUT /mail-drafts`, which this
          *     route never performs.
          *
-         *     **Grounded, per viewer.** The draft stands on what the lead page stands on: who they
+         *     **Grounded, per viewer, plus the company profile.** The model also receives the
+         *     installation's own company profile, which every member may read. The draft stands on
+         *     what the lead page stands on: who they
          *     are, the company they wrote from, where the lead sits on its ladder, and the recent
          *     correspondence filed against it. A lead has no deal, no project and no claims — those
          *     belong to a contact that exists, and a lead is by definition the record before one
@@ -28980,6 +28986,24 @@ export interface components {
              */
             confidentiality_pass_cap: number;
             /**
+             * @description How many unresolved senders one counterparty verdict run asks the model about per run, answered or not. The senders beyond the cap wait for the next run.
+             *     Read at the start of every run, so a change applies without a restart.
+             *     Default 200.
+             */
+            verdict_pass_cap: number;
+            /**
+             * @description How many captured messages one labelling run settles per run, answered or not. The messages beyond the cap stay unlabelled until the next run.
+             *     Read at the start of every run, so a change applies without a restart.
+             *     Default 500.
+             */
+            classify_pass_cap: number;
+            /**
+             * @description How many new messages one owed-reply run judges per run, answered or not. The messages beyond the cap wait for the next run. The re-judge of older mail has its own budget.
+             *     Read at the start of every run, so a change applies without a restart.
+             *     Default 500.
+             */
+            owed_classify_pass_cap: number;
+            /**
              * @description The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
              *     Company auto-enrichment and domain triage spend it from one counter. It paces and only
              *     paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
@@ -29884,6 +29908,12 @@ export interface components {
             mail_sync_interval_seconds?: number;
             /** @description Set how many held mail threads one confidentiality pass judges. */
             confidentiality_pass_cap?: number;
+            /** @description Set how many unresolved senders one counterparty verdict run judges. */
+            verdict_pass_cap?: number;
+            /** @description Set how many captured messages one labelling run settles. */
+            classify_pass_cap?: number;
+            /** @description Set how many new messages one owed-reply run judges. */
+            owed_classify_pass_cap?: number;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */
@@ -53938,7 +53968,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "chat_task_reading" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "chat_task_reading" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "extension_task" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -53964,7 +53994,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary" | "chat_task_reading";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "extension_task" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary" | "chat_task_reading";
         AiActivityItem: {
             /** Format: uuid */
             id: string;

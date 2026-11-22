@@ -14516,6 +14516,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.capture_connection": "Trình kết nối",
   "audit.kind.capture_exclusion": "Loại trừ khỏi thu thập",
   "audit.kind.capture_pending_counterparty": "Địa chỉ gửi mới cần xem lại",
+  "audit.kind.capture_personal_sweep": "Dọn thư riêng tư",
   "audit.kind.capture_settings": "Cài đặt thu thập",
   "audit.kind.chat_link": "Liên kết trò chuyện",
   "audit.kind.commission": "Hoa hồng",
@@ -17689,6 +17690,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số chuỗi thư đang bị giữ mà một lượt rà soát xem xét, từ 1 đến 200. Các chuỗi còn lại chờ lượt sau. Hãy tăng khi thư mới bị ẩn với đồng nghiệp lâu hơn lịch chạy, do Tình trạng hệ thống đặt. Mặc định 40.",
   "captureReview.passCap.refusal":
     "Nhập số chuỗi thư là số nguyên từ 1 đến 200.",
+  "captureReview.verdictCap.label": "Số bên gửi được xét mỗi lượt",
+  "captureReview.verdictCap.help":
+    "Số bên gửi chưa rõ mà một lượt xét bên gửi đưa cho mô hình, từ 1 đến 1000. Các bên gửi còn lại chờ lượt sau. Hãy tăng khi bên gửi mới chưa được xét lâu hơn lịch chạy. Mặc định 200.",
+  "captureReview.verdictCap.refusal":
+    "Nhập số bên gửi là số nguyên từ 1 đến 1000.",
+  "captureReview.classifyCap.label": "Số thư được gắn nhãn mỗi lượt",
+  "captureReview.classifyCap.help":
+    "Số thư đã thu thập mà một lượt gắn nhãn xử lý, từ 1 đến 2500. Các thư còn lại chờ lượt sau. Hãy tăng khi thư mới chưa có nhãn lâu hơn lịch chạy. Mặc định 500.",
+  "captureReview.classifyCap.refusal":
+    "Nhập số thư là số nguyên từ 1 đến 2500.",
+  "captureReview.owedCap.label": "Số thư được kiểm tra cần trả lời mỗi lượt",
+  "captureReview.owedCap.help":
+    "Số thư mới mà một lượt kiểm tra thư chờ trả lời xét, từ 1 đến 2500. Các thư còn lại chờ lượt sau. Hãy tăng khi thư đang chờ bạn trả lời hiện muộn. Mặc định 500.",
+  "captureReview.owedCap.refusal": "Nhập số thư là số nguyên từ 1 đến 2500.",
   "agentConnections.title": "Kết nối agent",
   "agentConnections.sub":
     "Thời gian một agent kết nối qua MCP giữ passport trước khi gia hạn. Thay đổi áp dụng cho passport cấp tiếp theo.",
@@ -23123,6 +23138,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Trích xuất tài liệu",
   "aiTask.name.draft_reply": "Soạn bản nháp trả lời",
   "aiTask.name.enrich": "Bổ sung thông tin từ chữ ký",
+  "aiTask.name.extension_task": "Tác vụ AI của tiện ích mở rộng",
   "aiTask.name.growth_fit": "Đánh giá mức độ phù hợp của công ty",
   "aiTask.name.nl_search": "Tìm kiếm bằng ngôn ngữ tự nhiên",
   "aiTask.name.offer_draft": "Soạn bản nháp báo giá",
