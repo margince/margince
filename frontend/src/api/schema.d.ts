@@ -37273,17 +37273,18 @@ export interface components {
         };
         /**
          * @description One enriched field with the evidence it was read from. Evidence-or-omit: a row
-         *     exists only where a verbatim snippet was captured. A phone is a list, so a contact
-         *     has one `phone` row per number, told apart by `value_key`; every other field has at
-         *     most one row.
+         *     exists only where a verbatim snippet was captured. A phone and an email are lists,
+         *     so a contact has one `phone` row per number and one `email` row per further address,
+         *     told apart by `value_key`; every other field has at most one row.
          */
         ContactProfileField: {
             /** @enum {string} */
-            field: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
+            field: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website" | "email";
             value: string;
             /**
-             * @description What tells two rows of one field apart: the E.164 number for a `phone` row, empty
-             *     for every other field. Pass it to the restore to name which number to undo.
+             * @description What tells two rows of one field apart: the E.164 number for a `phone` row, the
+             *     lowercased address for an `email` row, empty for every other field. Pass it to the
+             *     restore to name which number to undo.
              */
             value_key?: string;
             /**
@@ -64623,7 +64624,7 @@ export interface components {
         /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
         BriefProjectId: string;
         /** @description The profile field's key — the same closed vocabulary `ContactProfileField.field` carries. */
-        ContactProfileFieldKey: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
+        ContactProfileFieldKey: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website" | "email";
         /** @description The profile field's key — the same closed vocabulary `CompanyProfileField.field` carries. */
         ProfileFieldKey: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
         /**
