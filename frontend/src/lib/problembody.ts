@@ -29,6 +29,17 @@ export function problemExistingId(
   return code && typeof id === "string" && id !== "" ? { id, code } : null;
 }
 
+// problemRequestId is the server's X-Request-Id, which the API client copies
+// into the body of a failed answer (api/requestreference.ts). Null when the
+// answer had none, as a proxy's own failure has not.
+export function problemRequestId(problem: unknown): string | null {
+  return isRecord(problem) &&
+    typeof problem.request_id === "string" &&
+    problem.request_id !== ""
+    ? problem.request_id
+    : null;
+}
+
 // problemCode pulls the RFC-7807 `code` out of a problem body, or null when
 // absent. A caller keys on the server condition (e.g. webhooks_not_configured),
 // not the bare HTTP status, which a transient dependency failure can share.

@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -113,28 +114,49 @@ func (h *correlationHandler) WithGroup(name string) slog.Handler {
 	return &correlationHandler{inner: h.inner.WithGroup(name)}
 }
 
-// AccessLog logs one line per request (method, path, status, duration);
-// the correlation_id rides in via the ctx-aware handler, so it must be
-// mounted inside Correlate. The path is the request path, not the route
-// pattern — the access log answers "what did clients ask", the metrics
-// answer "how did routes behave".
+// AccessLog logs one line per request: method, path, route, status, duration
+// and the database cost. The correlation_id rides in via the ctx-aware
+// handler, so it must be mounted inside Correlate.
+//
+// route is the matched pattern and is absent for a mount that never reaches
+// chi. The line is written in a defer so a panicking handler is still logged
+// under its id. RecoverPanics answers the 500 afterwards, and its own log line
+// carries no id.
 //
 // A path segment that is a bearer credential is redacted before the line is
-// written, by shared/kernel/capabilitypath, which owns both the redaction and
-// the list of routes that carry one. That list does NOT arrive as an argument
-// here: it used to, and five of this function's six mount sites passed
-// nothing, so a mount reached the log unredacted by saying less rather than
-// by saying something wrong.
+// written. shared/kernel/capabilitypath owns the redaction and the list of
+// routes that carry one, so no mount site has to name them.
 func AccessLog(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+		ctx, meter := database.WithStatementMeter(r.Context())
+		trace := &requestTrace{}
+		r = r.WithContext(context.WithValue(ctx, requestTraceKey{}, trace))
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		rec.beforeHeader = func(h http.Header) {
+			if trace.signedIn {
+				h.Set("Server-Timing", serverTiming(time.Since(start)))
+			}
+		}
+		returned := false
+		defer func() {
+			status := rec.status
+			if !returned && !rec.wrote {
+				status = http.StatusInternalServerError
+			}
+			cost := meter.Cost()
+			log.InfoContext(r.Context(), "http request",
+				"method", r.Method,
+				"path", capabilitypath.Redact(r.URL.Path),
+				"route", trace.route,
+				"status", status,
+				"duration_ms", time.Since(start).Milliseconds(),
+				"db_ms", cost.DBTime.Milliseconds(),
+				"pool_wait_ms", cost.PoolWait.Milliseconds(),
+				"statements", cost.Statements)
+		}()
 		next.ServeHTTP(rec, r)
-		log.InfoContext(r.Context(), "http request",
-			"method", r.Method,
-			"path", capabilitypath.Redact(r.URL.Path),
-			"status", rec.status,
-			"duration_ms", time.Since(start).Milliseconds())
+		returned = true
 	})
 }
 
@@ -144,10 +166,14 @@ func AccessLog(log *slog.Logger, next http.Handler) http.Handler {
 // zero value of status has to be the 200 net/http sends for a handler that just
 // returns, so the field alone cannot tell those apart. The HTTP metrics need
 // that distinction to record a panicking handler honestly -- see Measure.
+//
+// beforeHeader runs once, before the status line goes out: the last moment a
+// header can still be set.
 type statusRecorder struct {
 	http.ResponseWriter
-	status int
-	wrote  bool
+	status       int
+	wrote        bool
+	beforeHeader func(http.Header)
 }
 
 // WriteHeader records the FIRST status only, because that is the only one the
@@ -164,8 +190,30 @@ func (r *statusRecorder) WriteHeader(status int) {
 	if !r.wrote {
 		r.status = status
 		r.wrote = true
+		if r.beforeHeader != nil {
+			r.beforeHeader(r.Header())
+		}
 	}
 	r.ResponseWriter.WriteHeader(status)
+}
+
+// Write sends the implicit 200 through WriteHeader first, because a handler
+// that only calls Write would otherwise reach the wire with no beforeHeader.
+func (r *statusRecorder) Write(body []byte) (int, error) {
+	if !r.wrote {
+		r.WriteHeader(http.StatusOK)
+	}
+	return r.ResponseWriter.Write(body)
+}
+
+// FlushError commits the status line through WriteHeader before it flushes. A
+// stream that flushes before it writes then still carries Server-Timing and
+// counts as answered. http.NewResponseController finds this before it unwraps.
+func (r *statusRecorder) FlushError() error {
+	if !r.wrote {
+		r.WriteHeader(http.StatusOK)
+	}
+	return http.NewResponseController(r.ResponseWriter).Flush()
 }
 
 // Unwrap exposes the wrapped writer so http.NewResponseController can reach
