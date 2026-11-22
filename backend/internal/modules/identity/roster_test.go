@@ -175,8 +175,8 @@ func TestRosterQueryPlaceholdersMatchTheArgsTheirPagerSends(t *testing.T) {
 		{"listUsersFiltered", listUsersFilteredQuery, 1, filteredPagerArgs},
 		{"listUsersAll", listUsersAllQuery, 1, plainPagerArgs},
 		{"listUsersAllFiltered", listUsersAllFilteredQuery, 1, filteredPagerArgs},
-		{"listTeams", listTeamsQuery, 0, plainPagerArgs},
-		{"listTeamsFiltered", listTeamsFilteredQuery, 0, filteredPagerArgs},
+		{"listTeams", listTeamsQuery, 1, plainPagerArgs},
+		{"listTeamsFiltered", listTeamsFilteredQuery, 1, filteredPagerArgs},
 	} {
 		want := c.leadArgs + c.pager
 		if got := highestPlaceholder(c.query); got != want {
