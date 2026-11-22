@@ -17,8 +17,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Standings is the dealstatus.ManagerStandings read.
-func Standings(ctx context.Context, tx pgx.Tx, owners map[ids.UUID]ids.UUID) (map[ids.UUID]dealstatus.ManagerStanding, error) {
+// ForecastReader is the forecasting store's lens-scoped standing read.
+type ForecastReader interface {
+	DealStandings(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID) (map[ids.UUID]forecasting.DealStanding, error)
+}
+
+// Standings is the dealstatus.ManagerStandings read over a forecast store, so
+// the forecast-based reasons follow the reader's own forecast access.
+func Standings(forecast ForecastReader) dealstatus.ManagerStandings {
+	return func(ctx context.Context, tx pgx.Tx, owners map[ids.UUID]ids.UUID) (map[ids.UUID]dealstatus.ManagerStanding, error) {
+		return standings(ctx, tx, forecast, owners)
+	}
+}
+
+func standings(ctx context.Context, tx pgx.Tx, store ForecastReader, owners map[ids.UUID]ids.UUID) (map[ids.UUID]dealstatus.ManagerStanding, error) {
 	dealIDs := make([]ids.UUID, 0, len(owners))
 	leads := map[ids.UUID][]ids.UUID{}
 	for deal, owner := range owners {
@@ -32,7 +44,7 @@ func Standings(ctx context.Context, tx pgx.Tx, owners map[ids.UUID]ids.UUID) (ma
 		}
 		leads[owner] = found
 	}
-	forecast, err := forecasting.DealStandings(ctx, tx, dealIDs)
+	forecast, err := store.DealStandings(ctx, tx, dealIDs)
 	if err != nil {
 		return nil, err
 	}

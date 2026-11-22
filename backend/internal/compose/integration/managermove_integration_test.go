@@ -11,12 +11,14 @@ package integration
 
 import (
 	"context"
+	"maps"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/managermove"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -24,7 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type managerMoveFixture struct {
@@ -36,24 +40,32 @@ type managerMoveFixture struct {
 	stage    ids.StageID
 }
 
+// repReadingForecast is the rep's grants with the forecast read added or not.
+func repReadingForecast(read bool) principal.Permissions {
+	perms := AccountRepPerms
+	perms.Objects = maps.Clone(AccountRepPerms.Objects)
+	perms.Objects["forecast"] = principal.ObjectGrant{Read: read}
+	return perms
+}
+
 func newManagerMoveFixture(t *testing.T) managerMoveFixture {
 	t.Helper()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	now := clocktest.Now(t)
 	svc := dealstatus.NewService(e.Pool, e.Deals, e.Activities, dealrooms.NewStore(e.DB()), func() time.Time { return now }).
-		WithManagerStandings(managermove.Standings)
+		WithManagerStandings(managermove.Standings(compose.ForecastStoreForTest(e.Pool)))
 	return managerMoveFixture{
-		e: e, svc: svc, rep: e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), now: now, pipeline: pipeline, stage: stage,
+		e: e, svc: svc, rep: e.As(e.Rep1, []ids.UUID{e.Team1}, repReadingForecast(true)), now: now, pipeline: pipeline, stage: stage,
 	}
 }
 
 // touched logs a call on the deal, so it counts as worked with no contact engaged.
 func (f managerMoveFixture) touched(t *testing.T, deal ids.UUID) {
 	t.Helper()
-	at := f.now.Add(-72 * time.Hour)
+	at, subject := f.now.Add(-72*time.Hour), "Intro call"
 	if _, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{
-		Kind: "call", OccurredAt: &at, Source: "manual",
+		Kind: "call", Subject: &subject, OccurredAt: &at, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
 	}); err != nil {
 		t.Fatalf("logging the call: %v", err)
@@ -64,12 +76,16 @@ func (f managerMoveFixture) touched(t *testing.T, deal ids.UUID) {
 // daily job does, so a deal's size and risk signals are read from it.
 func (f managerMoveFixture) freeze(t *testing.T, at time.Time, rows ...forecasting.Contribution) {
 	t.Helper()
+	f.freezeTeam(t, f.e.Team1, at, rows...)
+}
+
+func (f managerMoveFixture) freezeTeam(t *testing.T, team ids.UUID, at time.Time, rows ...forecasting.Contribution) {
+	t.Helper()
 	period, err := forecasting.ResolvePeriod(forecasting.PeriodQuarter, f.now, 1, time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}
 	store := forecasting.NewStore(f.e.DB())
-	team := f.e.Team1
 	if err := store.InTx(f.e.Admin(), func(ctx context.Context, tx pgx.Tx) error {
 		_, err := store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
 			Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeTeam, ID: &team},
@@ -162,7 +178,7 @@ func TestSettingTheManagerMoveAsideHoldsUntilAFactChanges(t *testing.T) {
 	owner := f.e.Rep1
 	big := f.e.SeedDeal(t, "Big renewal", f.pipeline, f.stage, &owner)
 	other := f.e.SeedDeal(t, "Ordinary add-on", f.pipeline, f.stage, &owner)
-	f.freeze(t, f.now.Add(-2*time.Hour), openRow(big, 900_000), openRow(other, 100_000))
+	f.freeze(t, f.now.Add(-30*time.Hour), openRow(big, 900_000), openRow(other, 100_000))
 
 	offered := f.move(t, f.rep, big)
 	if offered == nil || offered.Fingerprint == nil {
@@ -178,5 +194,87 @@ func TestSettingTheManagerMoveAsideHoldsUntilAFactChanges(t *testing.T) {
 	f.freeze(t, f.now.Add(-time.Hour), openRow(big, 950_000), openRow(other, 100_000))
 	if got := f.move(t, f.rep, big); got == nil {
 		t.Error("the deal's amount changed and the move is still set aside")
+	}
+}
+
+func TestForecastReasonsFollowTheReadersForecastAccess(t *testing.T) {
+	f := newManagerMoveFixture(t)
+	f.e.GrantRole(t, f.e.Rep2, "manager")
+	owner, other := f.e.Rep1, f.e.Rep3
+	stuck := f.e.SeedDeal(t, "Stalled expansion", f.pipeline, f.stage, &owner)
+	foreign := f.e.SeedDeal(t, "Other team's stalled deal", f.pipeline, f.stage, &other)
+	f.freeze(t, f.now.Add(-time.Hour),
+		openRow(stuck, 100_000, forecasting.Signal{Code: "stuck", StageID: f.stage.String()}))
+	f.freezeTeam(t, f.e.Team2, f.now.Add(-time.Hour),
+		openRow(foreign, 100_000, forecasting.Signal{Code: "stuck", StageID: f.stage.String()}))
+	store := compose.ForecastStoreForTest(f.e.Pool)
+	standings := func(ctx context.Context) map[ids.UUID]forecasting.DealStanding {
+		t.Helper()
+		var got map[ids.UUID]forecasting.DealStanding
+		err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+			var err error
+			got, err = store.DealStandings(ctx, tx, []ids.UUID{stuck, foreign})
+			return err
+		})
+		if err != nil {
+			t.Fatalf("reading the standings: %v", err)
+		}
+		return got
+	}
+
+	if got := standings(f.rep); !got[stuck].Stuck {
+		t.Fatalf("a rep reading the forecast sees %+v for their own stuck deal, want stuck", got[stuck])
+	}
+	if got := standings(f.rep); got[foreign].Stuck {
+		t.Errorf("a rep sees the stuck flag of a deal outside their teams: %+v", got[foreign])
+	}
+	blind := f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, repReadingForecast(false))
+	if got := standings(blind); len(got) != 0 {
+		t.Errorf("a reader without forecast read gets %+v, want no standings and no error", got)
+	}
+	if got := f.move(t, blind, stuck); got != nil {
+		t.Errorf("a reader without forecast read is offered %+v for a deal only the forecast calls stuck", got)
+	}
+}
+
+func TestDealActionsBetweenNamesTasksDoneAndMeetingsHeldInsideTheWindow(t *testing.T) {
+	f := newManagerMoveFixture(t)
+	owner := f.e.Rep1
+	deal := f.e.SeedDeal(t, "Worked deal", f.pipeline, f.stage, &owner)
+	link := []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}}
+	subject, held := "Send the contract", "held"
+	task, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{Kind: "task", Subject: &subject, Source: "manual", Links: link})
+	if err != nil {
+		t.Fatalf("logging the task: %v", err)
+	}
+	if _, err := f.e.Activities.CompleteTask(f.e.Admin(), ids.From[ids.ActivityKind](ids.UUID(task.Id)), f.now.Add(48*time.Hour)); err != nil {
+		t.Fatalf("completing the task: %v", err)
+	}
+	meetingAt, meeting := f.now.Add(-2*time.Hour), "Review meeting"
+	if _, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: &meeting, MeetingStatus: &held, OccurredAt: &meetingAt, Source: "manual", Links: link,
+	}); err != nil {
+		t.Fatalf("logging the meeting: %v", err)
+	}
+	read := func(after, until time.Time) []activities.DealAction {
+		t.Helper()
+		var got []activities.DealAction
+		err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+			var err error
+			got, err = activities.DealActionsBetweenTx(f.e.Admin(), tx, []ids.UUID{deal}, after, until)
+			return err
+		})
+		if err != nil {
+			t.Fatalf("reading the actions: %v", err)
+		}
+		return got
+	}
+
+	got := read(f.now.Add(-24*time.Hour), f.now.Add(24*time.Hour))
+	if len(got) != 2 || got[0].Kind != activities.DealActionMeetingHeld || got[1].Kind != activities.DealActionTaskDone {
+		t.Fatalf("actions = %+v, want the meeting held then the task done, oldest first", got)
+	}
+	if got := read(f.now.Add(12*time.Hour), f.now.Add(24*time.Hour)); len(got) != 0 {
+		t.Errorf("a window after both actions lists %+v, want none", got)
 	}
 }

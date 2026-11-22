@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"log/slog"
 	"net/http"
 	"time"
@@ -146,3 +147,6 @@ func governedInto[T river.JobArgs](reg *jobRegistry, into *river.Worker[T]) erro
 	*into = jobs.Govern[T](work, spec)
 	return nil
 }
+
+// ForecastStoreForTest is the forecasting store as the server builds it, lens included.
+func ForecastStoreForTest(pool *pgxpool.Pool) *forecasting.Store { return newForecastStoreFor(pool) }
