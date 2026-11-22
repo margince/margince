@@ -7,6 +7,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
 
 import check  # noqa: E402
+import scenariolint  # noqa: E402
 
 SCENARIO = """name: case999_lint
 criteria: [1]
@@ -24,7 +25,7 @@ def problems(criterion):
     handle = tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False, encoding="utf-8")
     with handle as out:
         out.write(SCENARIO % criterion)
-    return [p for p in check.lint(handle.name) if "defers to a tool's answer" in p]
+    return [p for p in scenariolint.lint(handle.name) if "defers to a tool's answer" in p]
 
 
 class JudgeCriterionLintTest(unittest.TestCase):

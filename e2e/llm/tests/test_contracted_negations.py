@@ -8,6 +8,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
 
 import check  # noqa: E402
+import scenariolint  # noqa: E402
 
 SCENARIOS = os.path.join(HERE, "scenarios")
 
@@ -52,7 +53,7 @@ def lint_problems(pattern):
     with handle as out:
         out.write('name: case999_lint\ncriteria: [1]\nwrites: false\nprompt: |\n  Hi.\n'
                   f'must_mention:\n  - "{pattern}"\nruns: 3\npass_at: 2\n')
-    return [p for p in check.lint(handle.name) if "n't form" in p]
+    return [p for p in scenariolint.lint(handle.name) if "n't form" in p]
 
 
 class NegationLintTest(unittest.TestCase):

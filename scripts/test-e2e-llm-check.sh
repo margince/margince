@@ -1388,7 +1388,7 @@ fi
 #
 # A misspelled key would switch its check off with nothing failing, so every
 # committed scenario is linted the way the lane lints it before a paid run.
-if lint="$(python3 "$check" --lint "$root"/e2e/llm/scenarios/*.yaml 2>&1)"; then
+if lint="$(python3 "$root/e2e/llm/scenariolint.py" "$root"/e2e/llm/scenarios/*.yaml 2>&1)"; then
 	echo "ok: every scenario lints clean"
 else
 	echo "FAIL: a scenario does not lint"

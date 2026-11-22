@@ -243,43 +243,7 @@ def lint(path):
 
         if data["setup"] not in casesetup.STEPS:
             problems.append(f"setup {data['setup']!r} is no step in casesetup.py")
-    return (problems + _entry_problems(data) + _door_problems(data) + _judge_problems(data)
-            + _negation_problems(data))
-
-
-# A judged criterion is read beside the final answer alone, so one that defers
-# to what a tool answered asks for a reading the judge cannot make: name the
-# expected facts in the criterion instead.
-_DEFERS_TO_A_TOOL = re.compile(
-    r"\b(?:as the tools? (?:reports?|says?|shows?|returns?|returned|gives?|flagged)"
-    r"|the tools?(?:'s)? (?:answer|output|result|reading|data)"
-    r"|tool (?:results?|output|answers?)"
-    r"|(?:that|which|what) the tools? (?:flag|report|return|say|show)\w*"
-    r"|the tools? (?:did not|didn't|does not|doesn't|never) (?:flag|report|return|say|show)\w*"
-    r"|(?:reading|read) it made|against (?:the|what the) tools?)\b",
-    re.IGNORECASE,
-)
-
-
-# "not" in a pin also reads "isn't", "hasn't" and "couldn't", which no `not`
-# matches: a positive pin then fails a true answer, and an exclusion lets a
-# negated claim through.
-_BARE_NOT = re.compile(r"(?<![\w'’])not(?![\w'’])", re.IGNORECASE)
-_CONTRACTED_NOT = re.compile(r"n(?:\[['’]+\]\??|['’]\??)t")
-
-
-def _negation_problems(data):
-    return [f"{key} entry {number} spells a negation as `not` with no n't form; add n['’]t beside it"
-            for key in ("must_mention", "must_not_mention")
-            for number, pattern in enumerate(data.get(key, []), 1)
-            if _BARE_NOT.search(pattern) and not _CONTRACTED_NOT.search(pattern)]
-
-
-def _judge_problems(data):
-    return [f"judge criterion {number} defers to a tool's answer ({match.group(0)!r}), which the judge never "
-            "sees: name the expected facts in the criterion"
-            for number, criterion in enumerate(data.get("judge", []), 1)
-            for match in [_DEFERS_TO_A_TOOL.search(criterion)] if match]
+    return problems + _entry_problems(data) + _door_problems(data)
 
 
 def _door_problems(data):
