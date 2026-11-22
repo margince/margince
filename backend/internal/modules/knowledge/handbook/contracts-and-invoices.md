@@ -154,7 +154,7 @@ nobody has ever invoiced has no money to report.
 You need finance read access to see the tab. It shows only on a company that
 you own or that someone shared with you, not on one a teammate owns. An admin
 who reads every record sees it on every company. An invoice can carry
-what a person is paid, so reading the company is not enough. The same rule decides who sees an
+what someone is paid, so reading the company is not enough. The same rule decides who sees an
 invoice or payment on Home, in the Worklist and in a merge review.
 
 ### How do I create an invoice?

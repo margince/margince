@@ -15,7 +15,7 @@ import (
 )
 
 // LedgerVisibleClause is the predicate over a company alias for the companies
-// whose ledger the caller may read. An invoice can carry what a person is paid,
+// whose ledger the caller may read. An invoice can carry a salary,
 // so reading the company is not enough. The caller must own it, hold a record
 // grant on it, or read every row; a teammate of the owner reads no ledger.
 // Empty means unbounded.
@@ -50,13 +50,22 @@ func LedgerRowReadableSQL(ctx context.Context, alias string, arg func(any) int) 
 		pgx.Identifier{alias}.Sanitize(), clause), nil
 }
 
-// ensureLedgerVisible answers ErrNotFound unless the company exists, is live
-// when live is set, and passes LedgerVisibleClause. Every read of one
+// ensureLedgerVisible answers ErrNotFound unless the company passes the
+// company probe, live when live is set, and LedgerVisibleClause. Every read of one
 // company's invoices or payments asks it. A ledger the caller may not read
 // then looks the same as no ledger at all.
 func ensureLedgerVisible(ctx context.Context, tx pgx.Tx, company ids.UUID, live bool) error {
 	if !auth.ReadGranted(ctx, "company") {
 		return auth.HideRow(ctx, "company")
+	}
+	var probe error
+	if live {
+		probe = auth.EnsureVisibleLive(ctx, tx, "company", company)
+	} else {
+		probe = auth.EnsureVisible(ctx, tx, "company", company)
+	}
+	if probe != nil {
+		return probe
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

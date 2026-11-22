@@ -217,7 +217,7 @@ func (f placedFixture) ledgerReads(t *testing.T) map[string]func(ctx context.Con
 // admin reads every ledger but works on none of these records.
 const homeLedger = "Home and the Worklist"
 
-// An invoice can carry what a person is paid. A seat with the finance and
+// An invoice can carry a salary. A seat with the finance and
 // company grants reads a company's ledger only in three cases. It owns the
 // company, holds a record grant on it, or has every row in scope. A teammate of the owner and a seat
 // on another team read none of it, through any read; each is refused with 404.
