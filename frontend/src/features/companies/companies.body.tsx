@@ -319,6 +319,8 @@ export function CompanyRecordBody({
       {receipt.cited && (
         <EvidenceModal
           companyId={company.id}
+          anchor={company.is_anchor}
+          canEdit={company.writable}
           cited={receipt.cited}
           onClose={receipt.close}
           onStep={receipt.step}

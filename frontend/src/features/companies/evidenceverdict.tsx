@@ -79,6 +79,12 @@ export function profileFieldsKey(companyId: string) {
   return ["company-profile-fields", companyId] as const;
 }
 
+// The receipt drawer's read of one cited claim. A verdict makes the receipt
+// stale (the badge, the verified line), so settle invalidates this key too.
+export function claimEvidenceKey(companyId: string) {
+  return ["claim-evidence", companyId] as const;
+}
+
 export function profileFieldClaim(
   companyId: string,
   field: ProfileField,
@@ -181,6 +187,7 @@ export function EvidenceVerdict({
       // the page keeps offering a verdict on a claim the human already settled.
       queryClient.invalidateQueries({ queryKey: profileFieldsKey(companyId) }),
       queryClient.invalidateQueries({ queryKey: factsKey(companyId) }),
+      queryClient.invalidateQueries({ queryKey: claimEvidenceKey(companyId) }),
     ]);
   };
   // The claim travels as a variable rather than through these closures: it

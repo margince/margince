@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -56,6 +56,8 @@ function show(
       <LocaleProvider initial="en">
         <EvidenceModal
           companyId="o-1"
+          anchor={false}
+          canEdit={false}
           cited={{ entityType: "profile_field", entityId: "p-1" }}
           onClose={() => {}}
           onStep={onStep}
@@ -210,4 +212,121 @@ describe("the receipt is a drawer beside the claim, not a box over it", () => {
       expect(screen.queryByText(/AI extracted/)).toBeNull();
     },
   );
+});
+
+// The reader who sees a claim is the one who can rule on it. The stub keeps the
+// row's state, so the receipt the drawer re-reads after a confirmation is the
+// one the server would now return.
+describe("ruling on the claim from the drawer", () => {
+  const ROW = {
+    id: "p-1",
+    field: "icp",
+    value: "Load-shifting software",
+    source: "site_read",
+    captured_by: "agent:deepread",
+    updated_at: "2026-08-01T09:00:00Z",
+    version: 2,
+  };
+
+  function serve() {
+    let confirmed = false;
+    const posts: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (request.method === "POST") {
+          posts.push(
+            `${url.pathname} if-match=${request.headers.get("If-Match")}`,
+          );
+          confirmed = true;
+          return json({});
+        }
+        if (url.pathname.endsWith("/profile-fields")) {
+          return json({
+            data: [
+              confirmed
+                ? {
+                    ...ROW,
+                    source: "human",
+                    verified_at: "2026-08-06T09:00:00Z",
+                  }
+                : ROW,
+            ],
+          });
+        }
+        if (url.pathname.endsWith("/facts")) {
+          return json({ data: [] });
+        }
+        return json(
+          confirmed
+            ? {
+                ...SITE_READ,
+                source_kind: "human",
+                last_verified_at: "2026-08-06T09:00:00Z",
+              }
+            : SITE_READ,
+        );
+      }),
+    );
+    return posts;
+  }
+
+  function json(body: unknown) {
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  function open(canEdit: boolean) {
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <LocaleProvider initial="en">
+          <EvidenceModal
+            companyId="o-1"
+            anchor={false}
+            canEdit={canEdit}
+            cited={{ entityType: "profile_field", entityId: "p-1" }}
+            onClose={() => {}}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("confirms from the drawer and the unconfirmed mark is gone on the next read", async () => {
+    const posts = serve();
+    open(true);
+    expect(
+      await screen.findByText("Extracted by AI · not confirmed"),
+    ).toBeTruthy();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Confirm" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText("Extracted by AI · not confirmed")).toBeNull(),
+    );
+    expect(posts).toEqual([
+      "/v1/companies/o-1/profile-fields/icp/confirm if-match=2",
+    ]);
+    // The snippet the machine read stays beside the person's word.
+    expect(
+      screen.getByText(/We build load-shifting software for industry/),
+    ).toBeTruthy();
+  });
+
+  it("offers neither verb to a reader who may not change the company", async () => {
+    serve();
+    open(false);
+    await screen.findByText("Extracted by AI · not confirmed");
+    expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Correct" })).toBeNull();
+  });
 });

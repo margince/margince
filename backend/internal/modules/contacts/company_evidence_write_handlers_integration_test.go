@@ -307,3 +307,75 @@ func TestAnAgentCorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 	}
 	t.Fatal("the corrected phone fact is gone entirely")
 }
+
+// Confirming is the verdict that changes no value, so the one thing it leaves
+// the nightly re-read to take away would be the claim that a person agreed.
+// Both sidecars are driven through the real ApplyDeepRead, with a proposal that
+// differs from the stored value.
+func TestAConfirmedClaimSurvivesTheNextDeepRead(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	companyID := seedCompanyWithEvidence(ctx, t, e)
+
+	if _, err := e.store.ConfirmCompanyFact(ctx, companyID, "phone:", FactWriteInput{}); err != nil {
+		t.Fatalf("confirm phone: %v", err)
+	}
+	if _, err := e.store.ConfirmCompanyProfileField(ctx, companyID, "icp", ProfileFieldWriteInput{}); err != nil {
+		t.Fatalf("confirm icp: %v", err)
+	}
+	facts, err := e.store.ListCompanyFacts(ctx, companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields, err := e.store.ListCompanyProfileFields(ctx, companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var phone, icp string
+	for _, f := range facts {
+		if string(f.Field) == "phone" {
+			phone = f.Value
+		}
+	}
+	for _, f := range fields {
+		if string(f.Field) == "icp" {
+			icp = f.Value
+		}
+	}
+
+	if err := e.store.ApplyDeepRead(ctx, DeepReadProposal{
+		CompanyID:  companyID,
+		SourceURL:  "https://voltaq.test/impressum",
+		SiteReadID: ids.NewV7(),
+		Fields: []DeepReadField{{
+			Field: "icp", Value: "Retail chains", EvidenceSnippet: `"for retail chains"`,
+			SourceURL: "https://voltaq.test/about", Confidence: 0.9,
+		}},
+		Facts: []DeepReadFact{{
+			Category: "company", Field: "phone", Value: "+49 30 0000", ValueKey: "",
+			EvidenceSnippet: `"+49 30 0000"`, SourceURL: "https://voltaq.test/impressum",
+			Confidence: 0.95,
+		}},
+	}); err != nil {
+		t.Fatalf("ApplyDeepRead: %v", err)
+	}
+
+	facts, err = e.store.ListCompanyFacts(ctx, companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields, err = e.store.ListCompanyProfileFields(ctx, companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range facts {
+		if string(f.Field) == "phone" && (f.Value != phone || f.VerifiedAt == nil || string(f.Source) != "human") {
+			t.Errorf("phone = %q source %q after a deep read, want the confirmed %q kept as a person's", f.Value, f.Source, phone)
+		}
+	}
+	for _, f := range fields {
+		if string(f.Field) == "icp" && (f.Value != icp || f.VerifiedAt == nil || string(f.Source) != "human") {
+			t.Errorf("icp = %q source %q after a deep read, want the confirmed %q kept as a person's", f.Value, f.Source, icp)
+		}
+	}
+}

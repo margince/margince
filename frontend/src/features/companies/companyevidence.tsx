@@ -17,6 +17,15 @@ import { isEntityKind } from "../../lib/entity";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useCompanyFacts } from "./companyfactspanel";
+import {
+  claimEvidenceKey,
+  type EvidenceClaim,
+  EvidenceVerdict,
+  factClaim,
+  profileFieldClaim,
+  useCompanyProfileFields,
+} from "./evidenceverdict";
 
 type Receipt = components["schemas"]["ClaimEvidence"];
 type SourceKind = Receipt["source_kind"];
@@ -55,11 +64,17 @@ export type CitedRecord = {
  */
 export function EvidenceModal({
   companyId,
+  anchor,
+  canEdit,
   cited,
   onClose,
   onStep,
 }: Readonly<{
   companyId: string;
+  // The record's `is_anchor` and its update grant, as the rest of the company
+  // page reads them; they decide whether the verdict verbs are offered.
+  anchor: boolean;
+  canEdit: boolean;
   cited: CitedRecord;
   onClose: () => void;
   // Move to the neighbouring claim in the list that opened this. The ORDER is
@@ -71,7 +86,11 @@ export function EvidenceModal({
   const t = useT();
   const { locale } = useLocale();
   const receipt = useQuery({
-    queryKey: ["claim-evidence", companyId, cited.entityType, cited.entityId],
+    queryKey: [
+      ...claimEvidenceKey(companyId),
+      cited.entityType,
+      cited.entityId,
+    ],
     queryFn: async () => {
       return unwrap(
         await api.GET("/companies/{id}/evidence/{entityType}/{entityId}", {
@@ -131,6 +150,12 @@ export function EvidenceModal({
               {shown.excerpt}
             </blockquote>
           )}
+          <CitedVerdict
+            companyId={companyId}
+            anchor={anchor}
+            canEdit={canEdit}
+            cited={cited}
+          />
           <EvidenceIdentity identity={shown.identity} />
           <EvidenceTimes
             retrievedAt={shown.retrieved_at}
@@ -156,6 +181,46 @@ export function EvidenceModal({
       )}
       <EvidenceSteps onStep={onStep} />
     </Modal>
+  );
+}
+
+// Confirm and Correct for the claim the receipt is about. The receipt names its
+// claim by row id and the verbs address it by field key and version, so the row
+// comes from the same list reads the Overview cards use; their keys are what
+// the verdict invalidates, which keeps this and those cards agreeing.
+function CitedVerdict({
+  companyId,
+  anchor,
+  canEdit,
+  cited,
+}: Readonly<{
+  companyId: string;
+  anchor: boolean;
+  canEdit: boolean;
+  cited: CitedRecord;
+}>) {
+  const fields = useCompanyProfileFields(companyId);
+  const facts = useCompanyFacts(companyId);
+  let claim: EvidenceClaim | undefined;
+  if (cited.entityType === "profile_field") {
+    const row = fields.data?.find((each) => each.id === cited.entityId);
+    claim = row && profileFieldClaim(companyId, row);
+  } else if (cited.entityType === "fact") {
+    const row = facts.data?.find((each) => each.id === cited.entityId);
+    claim = row && factClaim(companyId, row);
+  }
+  if (!claim) {
+    return null;
+  }
+  return (
+    <p className="co-evidence-line">
+      <EvidenceVerdict
+        companyId={companyId}
+        anchor={anchor}
+        claim={claim}
+        canEdit={canEdit}
+      />
+    </p>
   );
 }
 
