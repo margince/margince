@@ -62,3 +62,20 @@ func TestAModelsCallsPerCaseIsTheMedianOverTheCasesThatMeasuredThem(t *testing.T
 		}
 	}
 }
+
+func TestTheSummaryMediansShowADashForAMetricNoCaseCarried(t *testing.T) {
+	measured := []*Efficiency{
+		{Runs: 2, Calls: &Spread{Median: 4, Min: 3, Max: 5}},
+		{Runs: 2, Calls: &Spread{Median: 7, Min: 7, Max: 7}},
+	}
+	if got := MedianCalls(measured); got != "5.5" {
+		t.Errorf("MedianCalls = %q, want 5.5", got)
+	}
+	if got := MedianTurns(measured); got != Dash {
+		t.Errorf("MedianTurns with no case counting turns = %q, want %q and never 0", got, Dash)
+	}
+	measured[0].Turns = &Spread{Median: 6, Min: 6, Max: 6}
+	if got := MedianTurns(measured); got != "6" {
+		t.Errorf("MedianTurns over the one case that counted them = %q, want 6", got)
+	}
+}

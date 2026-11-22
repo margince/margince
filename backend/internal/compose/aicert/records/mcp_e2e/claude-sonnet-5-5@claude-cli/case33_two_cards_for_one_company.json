@@ -15,15 +15,15 @@
   "door": "mcp",
   "self_judged": true,
   "stamp": {
-    "scenario": "e8c47978eebfee17",
+    "scenario": "c68ee8489bbd506e",
     "tools": "c3fc57ca06ff039c",
     "instructions": "c5c644eee9719be0",
     "judge": "",
     "harness": "024566e70b0c3db3",
     "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
     "ran_at": "2026-11-21T08:30:23Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:29:51Z"
+    "graded_commit": "c7d8c959b7e859b9765ae0637afffe55d0de36a2",
+    "graded_at": "2026-11-22T14:04:18Z"
   },
   "usage": {
     "input_tokens": 22,
