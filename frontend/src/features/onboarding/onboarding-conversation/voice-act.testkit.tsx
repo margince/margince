@@ -184,8 +184,9 @@ export type StubOptions = {
   afterRemove?: CorpusSummary;
   /** A failing status for that sources GET, after the DELETE landed. */
   afterRemoveStatus?: number;
-  /** Held until the test settles it, so that sources GET stays in flight. */
-  afterRemoveRelease?: Promise<void>;
+  /** The first sources GETs after a removal, in order; the options above
+   * answer every one past them. */
+  afterRemoveReads?: readonly RemovalRead[];
   /** Held until the test settles it, so a removal stays in flight. */
   removeRelease?: Promise<void>;
 };
@@ -208,8 +209,16 @@ export function jsonResponse(body: unknown, status = 200) {
 
 // The stub's memory across one test: which ingest and build fixture is next,
 // and the poll rows each build still has to hand out.
+/** One sources GET after a removal: a failing status, or a summary. */
+export type RemovalRead = Readonly<{
+  status?: number;
+  summary?: CorpusSummary;
+  release?: Promise<void>;
+}>;
+
 type StubCursor = {
   ingestIndex: number;
+  removalReadIndex: number;
   buildIndex: number;
   buildPolls: Map<string, BuildRow[]>;
 };
@@ -318,20 +327,21 @@ async function answerRemoval(
   method: string,
   path: string,
   options: StubOptions,
+  cursor: StubCursor,
 ): Promise<Response | null> {
   if (method === "DELETE" && path.includes("/sources/")) {
     await options.removeRelease;
     return jsonResponse({ id: path.slice(path.lastIndexOf("/") + 1) });
   }
   if (method === "GET" && path.endsWith("/sources")) {
-    await options.afterRemoveRelease;
-    if (options.afterRemoveStatus !== undefined) {
-      return jsonResponse(
-        { detail: "sources read failed" },
-        options.afterRemoveStatus,
-      );
+    const planned = options.afterRemoveReads?.[cursor.removalReadIndex];
+    cursor.removalReadIndex += 1;
+    await planned?.release;
+    const status = planned ? planned.status : options.afterRemoveStatus;
+    if (status !== undefined) {
+      return jsonResponse({ detail: "sources read failed" }, status);
     }
-    const summary = options.afterRemove ?? summaryOf(0);
+    const summary = planned?.summary ?? options.afterRemove ?? summaryOf(0);
     return jsonResponse({ data: [], summary, page: { next_cursor: null } });
   }
   return null;
@@ -357,7 +367,7 @@ async function answer(
     return answerIngest(request, options, cursor);
   }
   if (path.includes("/sources")) {
-    const removal = await answerRemoval(request.method, path, options);
+    const removal = await answerRemoval(request.method, path, options, cursor);
     if (removal !== null) {
       return removal;
     }
@@ -372,6 +382,7 @@ export function stubApi(options: StubOptions = {}) {
   const calls: Request[] = [];
   const cursor: StubCursor = {
     ingestIndex: 0,
+    removalReadIndex: 0,
     buildIndex: 0,
     buildPolls: new Map(Object.entries(options.builds ?? {})),
   };

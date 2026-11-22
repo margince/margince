@@ -25,7 +25,6 @@ import type {
 } from "./conversation-machine";
 import { diffCorpus, useNarrationQueue } from "./narration";
 import {
-  refreshedProbeSummary,
   VOICE_PROBE_KEY,
   type VoiceRestoreProbe,
   voiceCorpusOwner,
@@ -440,10 +439,13 @@ export function useVoiceCorpus({ state, dispatch }: UseVoiceCorpusArgs) {
               () => {
                 patchProbe(() => ({ meterStale: true }));
                 // Its own stamp, issued now: an ingest that settled since the
-                // DELETE must not make this newer read look stale.
+                // DELETE must not make this newer read look stale. Its answer
+                // goes through the order, never straight into the probe.
                 const reread = order.issue();
-                return refreshedProbeSummary(queryClient).then(
-                  (next) => next && applyRemovalSummary(reread, next),
+                return readCorpusSummary(profileId).then(
+                  (next) => applyRemovalSummary(reread, next),
+                  // A second failure leaves the meter unknown until the next sample.
+                  () => undefined,
                 );
               },
             );
@@ -467,7 +469,7 @@ export function useVoiceCorpus({ state, dispatch }: UseVoiceCorpusArgs) {
           }
         });
     },
-    [applyRemovalSummary, noteFailure, patchProbe, queryClient, t, order],
+    [applyRemovalSummary, noteFailure, patchProbe, t, order],
   );
 
   return {

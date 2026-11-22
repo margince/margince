@@ -92,26 +92,6 @@ export function voiceCorpusOwner(client: QueryClient): VoiceCorpusOwner {
   return owner;
 }
 
-/** Reads the restore probe again and answers its summary, or null when that
- *  read failed or the probe is not on screen to be read. */
-export async function refreshedProbeSummary(
-  client: QueryClient,
-): Promise<VoiceRestoreProbe["summary"]> {
-  const probe = client
-    .getQueryCache()
-    .find<VoiceRestoreProbe>({ queryKey: VOICE_PROBE_KEY });
-  if (probe === undefined || !probe.isActive()) {
-    await client.invalidateQueries({ queryKey: VOICE_PROBE_KEY });
-    return null;
-  }
-  // The read's own answer, never a timestamp: a write in the same millisecond
-  // would otherwise pass for a fresh read.
-  return probe.fetch(undefined, { cancelRefetch: true }).then(
-    (fresh) => fresh.summary,
-    () => null,
-  );
-}
-
 export type RestoreInputs = Readonly<{
   /** GET /onboarding/state; null when nothing was persisted (404). */
   state: OnboardingState | null;
