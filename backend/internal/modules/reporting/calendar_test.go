@@ -155,15 +155,17 @@ func TestTheHorizonRunsPastTheCutoffToThePeriodsOwnEnd(t *testing.T) {
 	}
 }
 
-// Under a fiscal year that opens in April, the last quarter and year are the
-// last ones completed in that calendar, whole, and never the current one.
+// The fiscal year here opens in April. The last quarter and year are the last
+// whole ones completed in that calendar, never the current one.
 func TestLastQuarterAndYearAreTheLastCompletedFiscalPeriods(t *testing.T) {
 	zone, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
 		t.Fatal(err)
 	}
 	april := Calendar{Timezone: zone.String(), Currency: "EUR", FiscalStartMonth: 4}
-	local := func(year int, month time.Month, day int) time.Time { return time.Date(year, month, day, 0, 0, 0, 0, zone) }
+	local := func(year int, month time.Month, day int) time.Time {
+		return time.Date(year, month, day, 0, 0, 0, 0, zone)
+	}
 	for _, tc := range []struct {
 		name, period string
 		at, start    time.Time
