@@ -222,6 +222,9 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 			return CommitmentRemembered, ids.Nil, err
 		}
 		if offered != nil {
+			if err := d.settleEarlierUnnamedClaims(ctx, tx, c); err != nil {
+				return CommitmentRemembered, ids.Nil, err
+			}
 			return d.reconcilePendingRecipients(ctx, tx, c, *offered, bundleID, late)
 		}
 	}
@@ -241,6 +244,9 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 			return CommitmentRemembered, ids.UUID{}, err
 		}
 		if written {
+			if err := d.settleEarlierUnnamedClaims(ctx, tx, c); err != nil {
+				return CommitmentRemembered, ids.UUID{}, err
+			}
 			outcome, id, err := d.reconcileTaskRecipients(filing, tx, c, reason, bundleID)
 			if err != nil || outcome == CommitmentProposed {
 				return outcome, id, err

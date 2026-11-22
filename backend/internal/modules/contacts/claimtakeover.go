@@ -82,7 +82,7 @@ func (s *Store) PromiseToTakeTx(ctx context.Context, tx pgx.Tx, claimID ids.UUID
 	if err := s.readPromiseState(ctx, tx, &out); err != nil {
 		return PromiseToTake{}, err
 	}
-	claims, err := s.ownerlessCopies(ctx, tx, out)
+	claims, err := s.ownerlessCopies(ctx, tx, out, nil)
 	if err != nil {
 		return PromiseToTake{}, err
 	}
@@ -121,14 +121,15 @@ func (s *Store) readPromiseState(ctx context.Context, tx pgx.Tx, p *PromiseToTak
 }
 
 // ownerlessCopies lists the open claims of this promise, on every contact it
-// was filed on, that nobody holds yet and the caller may read.
-func (s *Store) ownerlessCopies(ctx context.Context, tx pgx.Tx, p PromiseToTake) ([]ids.UUID, error) {
+// was filed on, that nobody holds yet and the caller may read. A non-empty
+// onlyContacts limits the copies to those contacts.
+func (s *Store) ownerlessCopies(ctx context.Context, tx pgx.Tx, p PromiseToTake, onlyContacts []ids.UUID) ([]ids.UUID, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	sourcePos, locatorPos := arg(p.Source), arg(p.Locator)
+	sourcePos, locatorPos, contactsPos := arg(p.Source), arg(p.Locator), arg(onlyContacts)
 	scope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
 	if err != nil {
 		return nil, err
@@ -142,8 +143,9 @@ func (s *Store) ownerlessCopies(ctx context.Context, tx pgx.Tx, p PromiseToTake)
   WHERE c.source_activity_id = $%d AND c.evidence_fingerprint = $%d
     AND c.kind = 'commitment_ours' AND c.status = 'open' AND c.archived_at IS NULL
     AND c.task_activity_id IS NULL AND c.taken_by_user_id IS NULL AND (%s)
+    AND (COALESCE(cardinality($%d::uuid[]), 0) = 0 OR c.contact_id = ANY($%d::uuid[]))
   ORDER BY c.id
-    FOR UPDATE OF c`, sourcePos, locatorPos, scope), args...)
+    FOR UPDATE OF c`, sourcePos, locatorPos, scope, contactsPos, contactsPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the copies of the promise: %w", err)
 	}

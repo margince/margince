@@ -218,3 +218,46 @@ func TestANamedProposalSettlesTheEarlierUnplacedClaimToo(t *testing.T) {
 		t.Errorf("tasks held by %q before the proposal is accepted, want none", got)
 	}
 }
+
+func TestASettlementLeavesTheUnplacedClaimOfAnotherRecipientOpen(t *testing.T) {
+	r := newTakeoverReading(t)
+	const contract = "I will send the signed contract by Friday."
+	claimOfA := r.unplacedClaimOf(t, contract)
+	other, err := r.e.Contacts.CreateContact(r.e.Admin(), contacts.CreateContactInput{
+		FullName: "Herr Berger", Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: "berger@kunde.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contactB := ids.From[ids.ContactKind](ids.UUID(other.Id))
+
+	named := r.reading(contract, &r.e.Rep1)
+	named.PromisedTo = &contactB
+	r.dispatchOnce(t, named)
+	if got := r.tasks(t); got != r.e.Rep1.String() {
+		t.Fatalf("tasks held by %q, want only Robin's", got)
+	}
+	if got := r.claimStatus(t, claimOfA); got != "open" {
+		t.Errorf("the claim on the other recipient is %q, want it still open", got)
+	}
+}
+
+func TestARerunOfANamedReadingClosesAnUnplacedClaimStillOpen(t *testing.T) {
+	for name, confirm := range map[string]bool{"task": false, "proposal": true} {
+		t.Run(name, func(t *testing.T) {
+			r := newTakeoverReading(t)
+			const contract = "I will send the signed contract by Friday."
+			claim := r.unplacedClaimOf(t, contract)
+			named := r.reading(contract, &r.e.Rep1)
+			named.NeedsConfirmation = confirm
+			r.dispatchOnce(t, named)
+			r.e.WsExec(t, `UPDATE conversation_claim SET status = 'open' WHERE id = $1`, claim)
+
+			r.dispatchOnce(t, named)
+			if got := r.claimStatus(t, claim); got != "dismissed" {
+				t.Errorf("the unplaced claim after the rerun is %q, want dismissed", got)
+			}
+		})
+	}
+}

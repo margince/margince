@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -18,18 +19,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ambiguousLeadWithTwoContacts builds a lead whose email two live contacts hold.
+// ambiguousLeadWithTwoContacts builds a lead one contact holds the email of
+// and another is linked to. A live email sits on one contact only, so a lead
+// matches two contacts through different lanes.
 func ambiguousLeadWithTwoContacts(t *testing.T, e *integration.Env, tag string) (ids.LeadID, ids.ContactID, ids.ContactID) {
 	t.Helper()
 	email := tag + "@pairs.example.test"
 	lead := repairLead(t, e, tag+" Lead", &email)
-	first := repairContact(t, e, tag+" First")
-	second := repairContact(t, e, tag+" Second")
-	for _, contact := range []ids.ContactID{first, second} {
-		e.WsExec(t, `INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by)
-			VALUES ($1, $2, 'work', true, 0, 'manual', 'human:test')`, contact, email)
-	}
-	return lead, first, second
+	linked := repairContact(t, e, tag+" Linked")
+	holder := repairContact(t, e, tag+" Holder")
+	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by)
+		VALUES ($1, $2, 'work', true, 0, 'manual', 'human:test')`, holder, email)
+	e.WsExec(t, `UPDATE lead SET from_contact_id = $2 WHERE id = $1`, lead, linked)
+	return lead, linked, holder
 }
 
 // runLeadPairsBatch is one run of the cleanup from the start of the lead list.
@@ -137,10 +139,9 @@ func TestADismissedPairLeavesTheLeadAloneAndOutOfTheCleanup(t *testing.T) {
 func TestALeadMatchingThreeContactsStaysUntilEveryPairIsDismissed(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	_, first, second := ambiguousLeadWithTwoContacts(t, e, "three")
+	lead, first, second := ambiguousLeadWithTwoContacts(t, e, "three")
 	third := repairContact(t, e, "three Third")
-	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by)
-		VALUES ($1, 'three@pairs.example.test', 'work', true, 0, 'manual', 'human:test')`, third)
+	e.WsExec(t, `UPDATE contact SET converted_from_lead_id = $2 WHERE id = $1`, third, lead)
 
 	runLeadPairsBatch(ctx, t, e)
 	if got := e.WsCount(t, `SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'contact'`); got != 3 {
@@ -159,5 +160,28 @@ func TestALeadMatchingThreeContactsStaysUntilEveryPairIsDismissed(t *testing.T) 
 	}
 	if got := leadPairsEstimate(ctx, t, e); got != 0 {
 		t.Errorf("every pair dismissed leaves %d leads in the cleanup, want none", got)
+	}
+}
+
+func TestALeadMatchingMoreContactsThanTheCapFilesNothingAndStaysInScope(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	lead := repairLead(t, e, "Crowded Lead", nil)
+	e.WsExec(t, `UPDATE lead SET linkedin_url = 'https://www.linkedin.com/in/crowded' WHERE id = $1`, lead)
+	for i := range 11 {
+		contact := repairContact(t, e, fmt.Sprintf("Crowded %02d", i))
+		e.WsExec(t, `INSERT INTO contact_social (contact_id, platform, handle)
+			VALUES ($1, 'linkedin', 'https://www.linkedin.com/in/crowded')`, contact)
+	}
+
+	out := runLeadPairsBatch(ctx, t, e)
+	if out.Changed != 0 {
+		t.Errorf("the crowded lead changed %d rows, want none", out.Changed)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'contact'`); got != 0 {
+		t.Errorf("the lead over the cap filed %d pairs, want none", got)
+	}
+	if got := leadPairsEstimate(ctx, t, e); got != 1 {
+		t.Errorf("the lead over the cap leaves %d leads in the cleanup, want 1", got)
 	}
 }

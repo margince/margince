@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -181,7 +183,16 @@ type leadContactPair struct {
 	ContactIDs []ids.UUID
 	Fields     []string
 	Values     []string
+	Email      *string
+	LinkedIn   *string
 }
+
+// leadPairColumns is what one lead's pair read returns, in leadContactPair order.
+const leadPairColumns = `l.id, matches.contact_ids, matches.fields, matches.match_values, l.email, l.linkedin_url `
+
+// maxContactsPerLeadReview bounds the pairs one lead files in one transaction.
+// A lead matching more contacts stays unmerged and in the cleanup's scope.
+const maxContactsPerLeadReview = 10
 
 // existingLeadContactPairs lists live leads that share an identity with a live
 // contact, and skips a lead whose every pair of contacts a person already
@@ -228,7 +239,7 @@ func (s *Store) MergeExistingLeadContactPairsTx(ctx context.Context, tx pgx.Tx, 
 	if err := auth.RequireSystem(ctx); err != nil {
 		return leadContactRepairPage{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT l.id, matches.contact_ids, matches.fields, matches.match_values `+existingLeadContactPairs+`
+	rows, err := tx.Query(ctx, `SELECT `+leadPairColumns+existingLeadContactPairs+`
 		 AND l.id > $1 ORDER BY l.id LIMIT $2`, after, limit)
 	if err != nil {
 		return leadContactRepairPage{}, fmt.Errorf("contacts: reading lead and contact pairs: %w", err)
@@ -262,17 +273,68 @@ func (s *Store) MergeExistingLeadContactPairsTx(ctx context.Context, tx pgx.Tx, 
 
 // fileContactPairs puts every pair of the contacts one lead matches on the
 // duplicate review. A pair the queue already holds, open or dismissed, stays as it is.
+// A lead over the cap, or whose matches changed since the page was read, files nothing.
 func (p leadContactPair) fileContactPairs(ctx context.Context, tx pgx.Tx, by string) error {
-	for i := range p.ContactIDs {
-		for j := i + 1; j < len(p.ContactIDs); j++ {
-			_, err := recordDedupeCandidate(ctx, tx, entityContact, p.ContactIDs[i], p.ContactIDs[j], 0,
-				p.evidence(i, j), leadContactCleanupSource, by)
+	if len(p.ContactIDs) > maxContactsPerLeadReview {
+		return nil
+	}
+	fresh, current, err := p.rereadUnderLocks(ctx, tx)
+	if err != nil || !current {
+		return err
+	}
+	for i := range fresh.ContactIDs {
+		for j := i + 1; j < len(fresh.ContactIDs); j++ {
+			_, err := recordDedupeCandidate(ctx, tx, entityContact, fresh.ContactIDs[i], fresh.ContactIDs[j], 0,
+				fresh.evidence(i, j), leadContactCleanupSource, by)
 			if err != nil {
 				return fmt.Errorf("contacts: filing the contacts one lead matches: %w", err)
 			}
 		}
 	}
 	return nil
+}
+
+// rereadUnderLocks locks the matched contacts in id order, then the lead's
+// identities, the order a contact edit takes them in, and reads the lead's
+// matches again. It answers false when they are no longer the contacts the page
+// saw, so a concurrent edit is left for the next run.
+func (p leadContactPair) rereadUnderLocks(ctx context.Context, tx pgx.Tx) (leadContactPair, bool, error) {
+	for _, contact := range p.ContactIDs {
+		if err := auth.EnsureWritableLive(ctx, tx, contactEntity, contact); err != nil {
+			if errors.Is(err, apperrors.ErrNotFound) {
+				return leadContactPair{}, false, nil
+			}
+			return leadContactPair{}, false, err
+		}
+		if _, err := storekit.LockRow(ctx, tx, contactEntity, contact, storekit.LiveOnly); err != nil {
+			if errors.Is(err, apperrors.ErrNotFound) {
+				return leadContactPair{}, false, nil
+			}
+			return leadContactPair{}, false, err
+		}
+	}
+	keys := storekit.IdentityKeys{}
+	if p.Email != nil {
+		keys.Emails = []string{*p.Email}
+	}
+	if p.LinkedIn != nil {
+		keys.LinkedInURLs = []string{*p.LinkedIn}
+	}
+	if _, err := storekit.LockIdentityHolders(ctx, tx, keys); err != nil {
+		return leadContactPair{}, false, err
+	}
+	rows, err := tx.Query(ctx, `SELECT `+leadPairColumns+existingLeadContactPairs+` AND l.id = $1`, p.LeadID)
+	if err != nil {
+		return leadContactPair{}, false, fmt.Errorf("contacts: rereading a lead's contacts: %w", err)
+	}
+	fresh, err := pgx.CollectRows(rows, pgx.RowToStructByPos[leadContactPair])
+	if err != nil {
+		return leadContactPair{}, false, fmt.Errorf("contacts: scanning a lead's contacts: %w", err)
+	}
+	if len(fresh) != 1 || !slices.Equal(fresh[0].ContactIDs, p.ContactIDs) {
+		return leadContactPair{}, false, nil
+	}
+	return fresh[0], true, nil
 }
 
 // evidence shows the identity both contacts matched the lead on, or the

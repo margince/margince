@@ -156,7 +156,12 @@ func (d *CommitmentDispatcher) settleEarlierUnnamedClaims(ctx context.Context, t
 	if err := lockPromiseSource(ctx, tx, c.SourceActivityID); err != nil {
 		return err
 	}
-	return d.claims.WithdrawUnplacedCopiesTx(extractorContext(ctx, c.Extractor), tx, c.SourceActivityID, earlierUnnamedLocators(c))
+	recipients := commitmentRecipients(c)
+	only := make([]ids.UUID, 0, len(recipients))
+	for _, recipient := range recipients {
+		only = append(only, recipient.UUID)
+	}
+	return d.claims.WithdrawUnplacedCopiesTx(extractorContext(ctx, c.Extractor), tx, c.SourceActivityID, earlierUnnamedLocators(c), only)
 }
 
 // lockPromiseSource serializes a takeover and a reading of one message's
