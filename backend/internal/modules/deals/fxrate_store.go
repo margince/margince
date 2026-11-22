@@ -151,7 +151,8 @@ func replacedFxRate(ctx context.Context, tx pgx.Tx, from, base string, effDate t
 	var rate string
 	err = tx.QueryRow(ctx, `
 		SELECT rate::text FROM fx_rate
-		WHERE from_currency = $1 AND to_currency = $2 AND rate_date = $3`,
+		WHERE from_currency = $1 AND to_currency = $2 AND rate_date = $3
+		  AND `+RateVersionSQL("", ""),
 		from, base, effDate).Scan(&rate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, nil
@@ -220,31 +221,33 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 		out  FxRateRow
 		fxID ids.UUID
 	)
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
-		VALUES ($1, $2, $3::numeric, $4)
-		ON CONFLICT (from_currency, to_currency, rate_date)
-		DO UPDATE SET rate = EXCLUDED.rate
-		RETURNING id, from_currency, to_currency, rate::text, rate_date`,
-		from, base, rate, effDate,
-	).Scan(&fxID, &out.FromCurrency, &out.ToCurrency, &out.Rate, &out.RateDate); err != nil {
-		return FxRateRow{}, fmt.Errorf("upsert fx_rate: %w", err)
+	// A correction supersedes the day's row and appends a version, so older
+	// figures stay reproducible. One instant stamps both, so no read sees neither.
+	var changedAt time.Time
+	if err := tx.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&changedAt); err != nil {
+		return FxRateRow{}, fmt.Errorf("read the correction instant: %w", err)
 	}
-	// Audit-only by ratification (EVT-NOEVT-3): the closed event catalog
-	// defines no fx_rate.* type and the rate sheet is workspace config
-	// recomputed price-on-read — the same ruling as the deals-owned
-	// product rate-card (CreateProduct is audit-only). Ratified in
-	// writeshape_test.go; inventing an fx_rate.* verb on the deal stream
-	// would violate the closed catalog (contract-first, P3).
-	//
-	// The audit verb is the SAME word the gate above demanded, so
-	// authorization_rule attributes the grant that actually admitted the write
-	// rather than a plausible-looking one.
-	// Both images read PERSISTED values: `before` is the displaced row as the
-	// column stores it, so the after image has to be the stored row too. Echoing
-	// the caller's raw string instead would diff a scale-10 numeric against
-	// whatever the request happened to spell — 0.9000000000 against 0.9 — and
-	// report a rate change where only the spelling moved.
+	if replacing {
+		if _, err := tx.Exec(ctx, `
+			UPDATE fx_rate SET superseded_at = $4
+			WHERE from_currency = $1 AND to_currency = $2 AND rate_date = $3
+			  AND `+RateVersionSQL("", ""), from, base, effDate, changedAt); err != nil {
+			return FxRateRow{}, fmt.Errorf("supersede fx_rate: %w", err)
+		}
+	}
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date, created_at)
+		VALUES ($1, $2, $3::numeric, $4, $5)
+		RETURNING id, from_currency, to_currency, rate::text, rate_date`,
+		from, base, rate, effDate, changedAt,
+	).Scan(&fxID, &out.FromCurrency, &out.ToCurrency, &out.Rate, &out.RateDate); err != nil {
+		return FxRateRow{}, fmt.Errorf("insert fx_rate: %w", err)
+	}
+	// Audit-only by ratification (writeshape_test.go): the closed event catalog
+	// has no fx_rate.* type and the sheet is config recomputed on read, like the
+	// product rate card. The audit verb is the one the gate above demanded.
+	// Both images read persisted values, so a scale-10 numeric is never diffed
+	// against whatever spelling the request used.
 	if _, err := storekit.Audit(ctx, tx, string(action), "fx_rate", fxID, before,
 		fxRateImage(out.FromCurrency, out.ToCurrency, out.Rate, out.RateDate)); err != nil {
 		return FxRateRow{}, fmt.Errorf("audit fx_rate %s: %w", action, err)
@@ -263,7 +266,7 @@ func refuseRewritingHistory(ctx context.Context, tx pgx.Tx, from string, effDate
 	}
 	var earliest *time.Time
 	if err := tx.QueryRow(ctx,
-		`SELECT min(rate_date) FROM fx_rate WHERE from_currency = $1`, from).Scan(&earliest); err != nil {
+		`SELECT min(rate_date) FROM fx_rate /* every version */ WHERE from_currency = $1`, from).Scan(&earliest); err != nil {
 		return fmt.Errorf("read the earliest fx_rate for %s: %w", from, err)
 	}
 	if earliest == nil || effDate.Before(*earliest) {
@@ -350,7 +353,7 @@ func (s *Store) RateSheetCurrencies(ctx context.Context) (string, []string, erro
 func sheetHeadTx(ctx context.Context, tx pgx.Tx, base string) ([]FxRateRow, error) {
 	r, err := tx.Query(ctx, `
 		SELECT DISTINCT ON (from_currency) from_currency, to_currency, rate::text, rate_date
-		FROM fx_rate WHERE to_currency = $1
+		FROM fx_rate WHERE to_currency = $1 AND `+RateVersionSQL("", "")+`
 		ORDER BY from_currency, rate_date DESC`, base)
 	if err != nil {
 		return nil, fmt.Errorf("list fx_rate: %w", err)
@@ -386,6 +389,7 @@ func (s *Store) ListEffectiveFxRates(ctx context.Context) ([]FxRateRow, error) {
 			FROM fx_rate
 			 WHERE rate_date <= $1
 			   AND to_currency = $2
+			   AND `+RateVersionSQL("", "")+`
 			ORDER BY from_currency, rate_date DESC`, today, base)
 		if err != nil {
 			return fmt.Errorf("list effective fx_rate: %w", err)
@@ -420,6 +424,7 @@ func (s *Store) EffectiveFxRateInTx(ctx context.Context, tx pgx.Tx, fromCurrency
 	err = tx.QueryRow(ctx, `
 		SELECT rate::text FROM fx_rate
 		WHERE from_currency = $1 AND rate_date <= $2
+		  AND `+RateVersionSQL("", "")+`
 		ORDER BY rate_date DESC LIMIT 1`, from, asOf).Scan(&rate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", asOf, false, nil
@@ -467,7 +472,7 @@ func (s *Store) FxRateHistory(ctx context.Context, fromCurrency string) ([]FxRat
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		r, err := tx.Query(ctx, `
 			SELECT from_currency, to_currency, rate::text, rate_date
-			FROM fx_rate WHERE from_currency = $1
+			FROM fx_rate WHERE from_currency = $1 AND `+RateVersionSQL("", "")+`
 			ORDER BY rate_date DESC`, from)
 		if err != nil {
 			return fmt.Errorf("fx_rate history: %w", err)

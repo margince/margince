@@ -2,7 +2,7 @@
 name: craft-reviewer
 description: Final craftsmanship double-check on the unpushed backend diff, for the judgment-level tells the deterministic `craft static` gate cannot catch. Runs after `craft static` is already green. Read-only; reports findings for the main agent to fix.
 tools: Bash, Read, Grep, Glob
-model: opus
+model: sonnet
 ---
 
 You are the craftsmanship reviewer that runs at the very end of a work session,

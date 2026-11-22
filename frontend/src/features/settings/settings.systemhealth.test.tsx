@@ -321,8 +321,8 @@ it("files the changes Home leaves out under For information, never Passing", asy
   ).toBeVisible();
   const value = (term: string) =>
     screen.getByText(term, { selector: "dt" }).nextElementSibling;
-  expect(value("product · update")).toHaveTextContent("3");
-  expect(value("list · added")).toHaveTextContent("1");
+  expect(value("notice · update")).toHaveTextContent("3");
+  expect(value("booking_page · update")).toHaveTextContent("2");
   const chip = screen
     .getByText(/Changes Home leaves out/, { selector: ".disclosure-label" })
     .querySelector(".badge");

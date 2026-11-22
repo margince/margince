@@ -95,9 +95,8 @@ export const unplacedSource: components["schemas"]["HealthSource"] = {
   count: 5,
   unit: "items",
   unplaced_changes: [
-    { entity_type: "product", action: "update", count: 3 },
-    { entity_type: "list", action: "added", count: 1 },
-    { entity_type: "tag", action: "applied", count: 1 },
+    { entity_type: "notice", action: "update", count: 3 },
+    { entity_type: "booking_page", action: "update", count: 2 },
   ],
 };
 export const informationReport: Report = {

@@ -8403,6 +8403,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.footer.objection": "hướng dẫn từ chối nhận email",
   "sendPermission.footer.privateLink": "liên kết từ chối riêng",
   "sendPermission.footer.publicLink": "liên kết từ chối hoạt động",
+  "sendPermission.footer.unsubscribeLink": "liên kết từ chối cho địa chỉ này",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
   "sendPermission.appliesTo": "Điều này áp dụng cho {address}.",
@@ -22359,6 +22360,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.create_attachment": "Đã thêm tệp vào",
   "magic.action.update_attachment": "Đã thay đổi tệp của",
   "magic.action.archive_attachment": "Đã lưu trữ tệp của",
+  "magic.action.create_deal_suggestion": "Đã đề xuất deal cho",
+  "magic.action.update_deal_suggestion": "Đã thay đổi đề xuất deal của",
+  "magic.action.schedule_send": "Đã lên lịch email cho",
+  "magic.action.update_scheduled_send": "Đã thay đổi email đã lên lịch của",
+  "magic.action.create_invoice": "Đã ghi nhận hóa đơn cho",
+  "magic.action.update_invoice": "Đã thay đổi hóa đơn của",
+  "magic.action.create_payment": "Đã ghi nhận khoản thanh toán của",
+  "magic.action.update_payment": "Đã thay đổi khoản thanh toán của",
   "magic.action.archive_activity":
     "Đã chuyển email hoặc cuộc họp vào kho lưu trữ",
   "magic.action.archive_activity_email": "Đã chuyển email vào kho lưu trữ",

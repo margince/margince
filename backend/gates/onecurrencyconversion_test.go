@@ -73,6 +73,10 @@ var fxConversionExempt = gatekit.Waive(map[string]string{
 		"protects, called here rather than re-spelled",
 	"internal/compose/rateproposals_integration_test.go": "a test seeding and asserting on rate rows. It reads " +
 		"the table to arrange and to check, never to convert an amount for a reader",
+	"internal/compose/integration/fxrateversions_integration_test.go": "a test counting and inserting rate rows to " +
+		"prove the one-current-row rule and the snapshot pin. It reads the table to check, never to convert",
+	"gates/fxrateversion_test.go": "the gate that holds the version rule on every fx_rate read. Its probes are " +
+		"planted unversioned reads, so judging them would report its own evidence as a finding",
 	"gates/onecurrencyconversion_test.go": "this gate itself: the probes below are planted defects, and " +
 		"judging them would report its own evidence as a finding. The file holds nothing but the gate, so " +
 		"skipping it whole costs no coverage — unlike a census whose probes sit beside real code, where the " +
