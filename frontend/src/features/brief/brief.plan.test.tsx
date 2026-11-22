@@ -303,12 +303,15 @@ describe("the week ahead", () => {
     expect(screen.queryByLabelText(en["plan.help.label"])).toBeNull();
 
     await userEvent.click(ask);
+    expect(
+      screen.getByRole("dialog", { name: en["plan.help.label"] }),
+    ).toBeTruthy();
     await userEvent.type(
-      screen.getByLabelText(en["plan.help.label"]),
+      screen.getByRole("textbox", { name: en["plan.help.label"] }),
       "Need you on the pricing call",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: en["plan.help.send"] }),
+      screen.getByRole("button", { name: en["record.save"] }),
     );
 
     await waitFor(() => expect(writes(calls)).toHaveLength(1));

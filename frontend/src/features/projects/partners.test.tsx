@@ -304,6 +304,7 @@ describe("PartnerTab — existing partner", () => {
     expect(screen.getByText("Live")).toBeTruthy();
     await user.click(screen.getByTestId("edit-partner"));
 
+    expect(screen.getByRole("dialog", { name: "Edit partner" })).toBeTruthy();
     expect(screen.queryByLabelText("Next step")).toBeNull();
     const segments = await screen.findByLabelText("Served segments");
     await user.clear(segments);
@@ -320,6 +321,7 @@ describe("PartnerTab — existing partner", () => {
     // The old free-text step is never sent, so the save keeps it.
     expect(putBody).not.toHaveProperty("next_step");
     expect(putBody).not.toHaveProperty("next_step_due_at");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("keeps an old next step readable and offers a task for the next one", async () => {

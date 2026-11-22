@@ -669,6 +669,7 @@ describe("whether the staged mail may go", () => {
     vi.stubGlobal("fetch", fetched);
     render(<ApprovalRow approval={heldDraft()} />);
     await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    expect(screen.getByRole("dialog", { name: en["trust.edit"] })).toBeTruthy();
     const subject = screen.getByLabelText(/Subject/);
     await userEvent.clear(subject);
     await userEvent.type(subject, "My own words");

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ServiceAccountKeyField } from "../../design-system/serviceaccountkeyfield";
@@ -22,7 +21,7 @@ export function credentialKindOf(status: ProviderStatus): CredentialKind {
 }
 
 // The field the secret is typed into: a password box for a pasted key, the
-// key-file control for a service account. Save and Remove ride along.
+// key-file control for a service account.
 export function KeyEntry({
   kind,
   configured,
@@ -31,7 +30,6 @@ export function KeyEntry({
   hint,
   refusal,
   onChange,
-  verbs,
 }: Readonly<{
   kind: CredentialKind;
   configured: boolean;
@@ -40,23 +38,17 @@ export function KeyEntry({
   hint: string;
   refusal: MessageKey | undefined;
   onChange: (value: string) => void;
-  verbs: ReactNode;
 }>) {
   const t = useT();
   if (kind === "service_account") {
-    // One column with one rhythm: the field, its file box and the verbs each
-    // carry their own label or hint, and stacked bare they ran into each other.
     return (
-      <div className="ai-key-stack">
-        <ServiceAccountKeyField
-          value={value}
-          disabled={disabled}
-          hint={hint}
-          error={refusal ? t(refusal) : undefined}
-          onChange={onChange}
-        />
-        <div className="ai-key-verbs">{verbs}</div>
-      </div>
+      <ServiceAccountKeyField
+        value={value}
+        disabled={disabled}
+        hint={hint}
+        error={refusal ? t(refusal) : undefined}
+        onChange={onChange}
+      />
     );
   }
   return (
@@ -65,27 +57,23 @@ export function KeyEntry({
       hint={hint}
       error={refusal ? t(refusal) : undefined}
     >
-      {/* One paste and the verbs that act on it, on one line. */}
       {(control) => (
-        <div className="ai-key-entry">
-          <TextInput
-            {...control}
-            // A password field, so the browser does not offer to remember
-            // a credential this app deliberately never stores
-            // client-side, and so a screenshare does not carry it.
-            type="password"
-            autoComplete="off"
-            value={value}
-            disabled={disabled}
-            placeholder={
-              configured
-                ? t("aiProviderKeys.replacePlaceholder")
-                : t("aiProviderKeys.addPlaceholder")
-            }
-            onChange={(e) => onChange(e.target.value)}
-          />
-          {verbs}
-        </div>
+        <TextInput
+          {...control}
+          // A password field, so the browser does not offer to remember
+          // a credential this app deliberately never stores
+          // client-side, and so a screenshare does not carry it.
+          type="password"
+          autoComplete="off"
+          value={value}
+          disabled={disabled}
+          placeholder={
+            configured
+              ? t("aiProviderKeys.replacePlaceholder")
+              : t("aiProviderKeys.addPlaceholder")
+          }
+          onChange={(e) => onChange(e.target.value)}
+        />
       )}
     </Field>
   );

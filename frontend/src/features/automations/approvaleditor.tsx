@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
 import {
   RosterFailedLine,
@@ -20,6 +20,8 @@ import {
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
+import { Heading } from "../../design-system/heading";
+import { Modal } from "../../design-system/modal";
 import { focusFirstRefused } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { isRealCalendarDay } from "../../format/calendarday";
@@ -94,7 +96,7 @@ export function editableSeed(entry: EditableField, staged: unknown): string {
 }
 
 /**
- * The inline staged-draft editor: the string fields of the proposed_change, in
+ * The staged-draft editor: the string fields of the proposed_change, in
  * the shape the kind declared for them, going up as `edited_payload`.
  *
  * It is handed to the card as its `editor` slot rather than living inside the
@@ -194,6 +196,40 @@ export function StagedEditor({
         </Button>
       </ActionRow>
     </div>
+  );
+}
+
+/**
+ * The staged-draft editor in the app's one dialog. It stays mounted only while
+ * the caller is editing, so each opening starts from the draft the caller seeds.
+ * Escape, the X and the backdrop ask first when `unsaved`, and wait while the
+ * decision is out.
+ */
+export function StagedEditDialog({
+  unsaved,
+  ...editor
+}: Readonly<
+  Parameters<typeof StagedEditor>[0] & {
+    /** Typed text the dialog's Escape, X and backdrop must ask about. */
+    unsaved: boolean;
+  }
+>) {
+  const t = useT();
+  const headingId = useId();
+  return (
+    <Modal
+      open
+      onClose={editor.onCancel}
+      labelledBy={headingId}
+      intent="drawer"
+      unsaved={unsaved}
+      closeDisabled={editor.pending}
+    >
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
+        {t("trust.edit")}
+      </Heading>
+      <StagedEditor {...editor} />
+    </Modal>
   );
 }
 

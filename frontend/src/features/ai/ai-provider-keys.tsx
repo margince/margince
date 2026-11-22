@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import type { components } from "../../api/schema";
 import {
   KeyTestButton,
@@ -10,6 +10,7 @@ import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
+import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { serviceAccountProblem } from "../../design-system/serviceaccountkeyfield";
 import { type FieldLock, lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
@@ -280,10 +281,11 @@ function ProviderConnection({
   const t = useT();
   const [value, setValue] = useState("");
   const [confirming, setConfirming] = useState(false);
-  // Whether this row's paste field is open. Folded by default: the row is a
-  // READING of whether the vendor is keyed, and six open password boxes make a
-  // page nobody can audit at a glance.
+  // Whether this row's paste field is open, in a dialog: the row is a READING
+  // of whether the vendor is keyed, and six open password boxes make a page
+  // nobody can audit at a glance.
   const [editing, setEditing] = useState(false);
+  const formId = useId();
   // Set by a Save press on a service-account key the browser can already tell
   // is not one; cleared as soon as the reader edits it.
   const [refusal, setRefusal] = useState<MessageKey | undefined>();
@@ -329,56 +331,47 @@ function ProviderConnection({
 
   const entryHint = keyEntryHint(status, t);
   const adminOnly = canManage ? undefined : t("aiProviderKeys.adminOnly");
-  // Save and Remove, the same pair whichever field holds the secret.
+  const closeEntry = () => {
+    // Closing DROPS what was typed. The field holds a credential, and one left
+    // in state comes back the next time the dialog opens, on a screenshare or
+    // for whoever is at the desk next.
+    setValue("");
+    setRefusal(undefined);
+    setEditing(false);
+  };
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // The other mutation's failure is no longer the current story; without
+    // this its Callout stays under the row it did not come from.
+    remove.reset();
+    const problem =
+      trimmed === ""
+        ? "record.fieldRequired"
+        : kind === "service_account"
+          ? serviceAccountProblem(trimmed)
+          : undefined;
+    if (problem) {
+      save.reset();
+      setRefusal(problem);
+      event.currentTarget
+        .querySelector<HTMLElement>("input, textarea")
+        ?.focus();
+      return;
+    }
+    save.mutate(
+      { provider: status.provider, kind, secret: trimmed },
+      {
+        // Cleared on success only: a failed save leaves what was typed so it
+        // can be retried without being re-pasted. The dialog closes on the
+        // same success, because the question it was opened to answer has been
+        // answered.
+        onSuccess: closeEntry,
+      },
+    );
+  };
+  // Cancel, Remove and Save, the same trio whichever field holds the secret.
   const verbs = (
     <>
-      <Button
-        variant="primary"
-        // `pending` on the control that is waiting, `disabled` only
-        // for the reasons it may not be pressed at all. A button
-        // carrying both is natively disabled, which drops the focus
-        // and announces nothing — see Button's own note on the
-        // precedence.
-        pending={save.isPending}
-        disabled={!canManage || remove.isPending}
-        onClick={(event) => {
-          // The other mutation's failure is no longer the current
-          // story; without this its Callout stays under the row it
-          // did not come from.
-          remove.reset();
-          const problem =
-            trimmed === ""
-              ? "record.fieldRequired"
-              : kind === "service_account"
-                ? serviceAccountProblem(trimmed)
-                : undefined;
-          if (problem) {
-            save.reset();
-            setRefusal(problem);
-            event.currentTarget
-              .closest(".ai-key-entry, .ai-key-stack")
-              ?.querySelector<HTMLElement>("input, textarea")
-              ?.focus();
-            return;
-          }
-          save.mutate(
-            { provider: status.provider, kind, secret: trimmed },
-            {
-              // Cleared on success only: a failed save leaves what
-              // was typed so it can be retried without being
-              // re-pasted. The row folds shut on the same success,
-              // because the question it was opened to answer has
-              // been answered.
-              onSuccess: () => {
-                setValue("");
-                setEditing(false);
-              },
-            },
-          );
-        }}
-      >
-        {t("aiProviderKeys.save")}
-      </Button>
       {status.configured ? (
         <Button
           variant="danger"
@@ -394,6 +387,23 @@ function ProviderConnection({
           {t("aiProviderKeys.remove")}
         </Button>
       ) : null}
+      <Button disabled={busy} onClick={closeEntry}>
+        {t("create.cancel")}
+      </Button>
+      <Button
+        variant="primary"
+        type="submit"
+        form={formId}
+        // `pending` on the control that is waiting, `disabled` only
+        // for the reasons it may not be pressed at all. A button
+        // carrying both is natively disabled, which drops the focus
+        // and announces nothing — see Button's own note on the
+        // precedence.
+        pending={save.isPending}
+        disabled={!canManage || remove.isPending}
+      >
+        {t("aiProviderKeys.save")}
+      </Button>
     </>
   );
 
@@ -414,17 +424,7 @@ function ProviderConnection({
                 <KeyTestButton provider={status.provider} test={test} />
               )}
               <Button
-                // Closing DROPS what was typed. The field holds a credential,
-                // and one left in state comes back the next time the row is
-                // opened — on a screenshare, or for whoever is at the desk next.
-                onClick={() => {
-                  if (editing) {
-                    setValue("");
-                    setRefusal(undefined);
-                  }
-                  setEditing((open) => !open);
-                }}
-                aria-expanded={editing}
+                onClick={() => setEditing(true)}
                 reason={lock.disabled ? lock.reason : adminOnly}
               >
                 {status.configured
@@ -435,21 +435,35 @@ function ProviderConnection({
           )}
         </div>
         <KeyTestOutcome test={test} keyHeld={status.configured} />
-        {editing && !lock.disabled && (
-          <KeyEntry
-            kind={kind}
-            configured={status.configured}
-            value={value}
-            disabled={!canManage || busy}
-            hint={entryHint}
-            refusal={refusal}
-            onChange={(next) => {
-              setRefusal(undefined);
-              setValue(next);
-            }}
-            verbs={verbs}
-          />
-        )}
+        <RecordFormDialog
+          open={editing && !lock.disabled}
+          title={t(
+            kind === "service_account"
+              ? "serviceAccountKey.label"
+              : "aiProviderKeys.field",
+          )}
+          onClose={closeEntry}
+          fieldCount={1}
+          unsaved={value !== ""}
+          closeDisabled={busy}
+          form={
+            <form id={formId} noValidate onSubmit={submit}>
+              <KeyEntry
+                kind={kind}
+                configured={status.configured}
+                value={value}
+                disabled={!canManage || busy}
+                hint={entryHint}
+                refusal={refusal}
+                onChange={(next) => {
+                  setRefusal(undefined);
+                  setValue(next);
+                }}
+              />
+            </form>
+          }
+          actions={verbs}
+        />
         {failure ? (
           <Callout
             tone="danger"

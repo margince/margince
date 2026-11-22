@@ -40,7 +40,7 @@ import {
   cardRecords,
   DecideOutcome,
   editableSeed,
-  StagedEditor,
+  StagedEditDialog,
 } from "./approvaleditor";
 import { ApprovalEvidence } from "./approvalevidence";
 import {
@@ -73,7 +73,7 @@ import "./approvalrow.css";
 // carries the one outcome the row cannot show itself.
 //
 // The row is the CANONICAL 🟡 affordance: per-row approve/reject plus the
-// inline staged-draft editor. String fields of the proposed_change are editable
+// staged-draft editor, in a dialog. String fields of the proposed_change are editable
 // and go up as edited_payload, which the server RE-ADMITS from scratch
 // (re-tiered, re-RBAC'd, new diff_hash — ADR-0036); an edit can never silently
 // escalate the effect. A 409 version-skew comes back as an honest "the world
@@ -354,7 +354,8 @@ function DecidableApprovalRow({
       }
       editor={
         editing ? (
-          <StagedEditor
+          <StagedEditDialog
+            unsaved={editedAwayFromProposal(editing, strings, change, draft)}
             disabled={!acceptable}
             required={required}
             acceptLabel={approvalAcceptLabel(

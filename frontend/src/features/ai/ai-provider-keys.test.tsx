@@ -100,7 +100,7 @@ async function openSheet(
   return screen.findByTestId(`ai-provider-key-${provider}`);
 }
 
-/** Opens one vendor's paste field, the way a reader does. */
+/** Opens one vendor's key dialog, the way a reader does, and returns it. */
 async function openKey(
   user: ReturnType<typeof userEvent.setup>,
   provider: string,
@@ -109,7 +109,7 @@ async function openKey(
   await user.click(
     within(row).getByRole("button", { name: /^(add|replace)$/i }),
   );
-  return row;
+  return screen.findByRole("dialog", { name: /key/i });
 }
 
 // Returns the client alongside the rendered tree: one case asserts on what
@@ -242,6 +242,7 @@ describe("AiProviderKeysCard", () => {
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
+    expect(row).toHaveAccessibleName("API key");
     await user.type(
       within(row).getByPlaceholderText(/paste api key/i),
       "  sk-openai-pasted  ",
@@ -269,10 +270,10 @@ describe("AiProviderKeysCard", () => {
     await user.type(input, "sk-openai");
     await user.click(within(row).getByRole("button", { name: /save key/i }));
 
-    // The field folds away with the row on success, which is the strongest
-    // form of "not on screen any more".
+    // The dialog closes on success, which is the strongest form of "not on
+    // screen any more".
     await waitFor(() =>
-      expect(within(row).queryByPlaceholderText(/paste/i)).toBeNull(),
+      expect(screen.queryByPlaceholderText(/paste/i)).toBeNull(),
     );
   });
 
@@ -525,9 +526,9 @@ describe("AiProviderKeysCard", () => {
       "sk-typed-then-abandoned",
     );
     // Close, then open again: the field is empty, not holding what was typed.
-    await user.click(within(row).getByRole("button", { name: /^add$/i }));
-    await user.click(within(row).getByRole("button", { name: /^add$/i }));
-    expect(within(row).getByPlaceholderText(/paste api key/i)).toHaveValue("");
+    await user.click(within(row).getByRole("button", { name: /^cancel$/i }));
+    await user.click(await screen.findByRole("button", { name: /^add$/i }));
+    expect(screen.getByPlaceholderText(/paste api key/i)).toHaveValue("");
   });
 });
 
@@ -611,16 +612,22 @@ describe("AiProviderKeysCard after a key changes", () => {
       models: [],
       unavailable: "unreachable",
     });
-    const row = await openKey(user, "anthropic");
-    const sheet = screen.getByRole("dialog");
+    const entry = await openKey(user, "anthropic");
+    const row = screen.getByTestId("ai-provider-key-anthropic");
+    const sheet = screen.getByRole("dialog", {
+      name: /anthropic/i,
+      hidden: true,
+    });
     expect(within(row).getByText(/^not set$/i)).toBeTruthy();
     expect(await within(sheet).findByText(/^no key$/i)).toBeTruthy();
 
     await user.type(
-      within(row).getByPlaceholderText(/paste api key/i),
+      within(entry).getByPlaceholderText(/paste api key/i),
       "sk-ant-new",
     );
-    await user.click(within(row).getByRole("button", { name: /^save key$/i }));
+    await user.click(
+      within(entry).getByRole("button", { name: /^save key$/i }),
+    );
 
     expect(await within(row).findByText(/^configured$/i)).toBeTruthy();
     expect(within(row).queryByText(/^not set$/i)).toBeNull();
