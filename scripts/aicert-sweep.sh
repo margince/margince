@@ -26,9 +26,9 @@ fi
 waits=0
 while :; do
   attempt="$(mktemp)"
+  # The log grows as the lane writes, so a long attempt can be read while it runs.
   status=0
-  make -C backend e2e-ai "$@" > "$attempt" 2>&1 || status=$?
-  cat "$attempt" >> "$log"
+  make -C backend e2e-ai "$@" 2>&1 | tee -a "$log" > "$attempt" || status=${PIPESTATUS[0]}
   if [[ $status -eq 0 ]]; then
     rm -f "$attempt"
     echo "aicert-sweep: finished after $waits wait(s)"
