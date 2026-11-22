@@ -30,6 +30,7 @@ import { DealProductsCard } from "./deal360/dealproducts";
 import { DealRoomCard } from "./deal360/dealroomcard";
 import type { DealStandingInputs } from "./deal360/dealstanding";
 import { DealEditContext } from "./dealedit";
+import { StartDeliveryPrompt } from "./dealproject";
 import type { Deal, Offer } from "./deals";
 import { DealStatusCardPanel, unreadHead } from "./dealstatus";
 import "./deal360/deal360.css";
@@ -228,6 +229,9 @@ export function DealOverviewPane({
     : undefined;
   return (
     <>
+      {/* A won deal's hand-over to delivery sits where the deal opens, so
+          the reader who just won it meets the offer first. */}
+      <StartDeliveryPrompt deal={deal} />
       {/* The server refuses an archived deal's status card, so its reading
           is the records' own and nothing model-written is claimed. */}
       {deal.archived_at ? (
