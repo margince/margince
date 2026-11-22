@@ -150,7 +150,7 @@ func TestAGeminiNotesMailLandsAsTheTranscriptOfItsMeeting(t *testing.T) {
 	}
 	outsider := readerCtx(e, e.Rep3)
 	err := database.WithWorkspaceTx(outsider, e.Pool, func(tx pgx.Tx) error {
-		return auth.EnsureActivityVisible(outsider, tx, mail)
+		return auth.EnsureActivityContentVisible(outsider, tx, mail)
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("a seat outside the participants opening the notes mail got %v, want not found", err)

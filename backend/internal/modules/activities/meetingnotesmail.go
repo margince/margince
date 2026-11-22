@@ -30,6 +30,9 @@ import (
 // meetingNotesMailSource is the source of a transcript landed from a notes mail.
 const meetingNotesMailSource = "meeting_notes_mail"
 
+// argOwner names the mailbox owner in the match query.
+const argOwner = "owner"
+
 // meetingNotesMailRawKey preserves which mail the transcript was read from.
 const meetingNotesMailRawKey = "notes_mail"
 
@@ -83,7 +86,7 @@ func notesMailMeetingTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMailInput
 		return ids.ActivityID{}, false, nil
 	}
 	rows, err := tx.Query(ctx, notesMailMeetingSQL, pgx.NamedArgs{
-		"title": title, "until": in.SentAt.Add(time.Second), "earliest": in.SentAt.Add(-notesMailWindow), "owner": in.Owner,
+		"title": title, "until": in.SentAt.Add(time.Second), "earliest": in.SentAt.Add(-notesMailWindow), argOwner: in.Owner,
 	})
 	if err != nil {
 		return ids.ActivityID{}, false, fmt.Errorf("activities: finding the meeting a notes mail names: %w", err)
@@ -134,21 +137,7 @@ func (s *Store) LandMeetingNotesMailTx(ctx context.Context, tx pgx.Tx, in Meetin
 		return false, err
 	}
 	key := "mail:" + in.MessageID
-	if err := storekit.LockWriteIdentity(ctx, tx, "activity_source", transcriptSourceSystem+":"+key); err != nil {
-		return false, err
-	}
-	if err := storekit.LockMeetingAttendeeChecks(ctx, tx, id.UUID); err != nil {
-		return false, err
-	}
-	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
-		return false, err
-	}
-	// The match was read before the locks. A title, start or guest changed since
-	// then no longer names this meeting, so it is asked again under them.
-	if again, still, err := notesMailMeetingTx(ctx, tx, in); err != nil || !still || again != id {
-		return false, err
-	}
-	if held, err := meetingHoldsTranscriptTx(ctx, tx, id); err != nil || held {
+	if free, err := lockNotesMailMeetingTx(ctx, tx, in, id, key); err != nil || !free {
 		return false, err
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, id.UUID); err != nil {
@@ -173,4 +162,26 @@ func (s *Store) LandMeetingNotesMailTx(ctx context.Context, tx pgx.Tx, in Meetin
 	}
 	_, created, err := s.LogActivityTx(ctx, tx, transcript)
 	return created, err
+}
+
+// lockNotesMailMeetingTx takes the locks a landing needs and answers whether it
+// may go on. The attendee lock comes before the row lock. The match was read
+// before the locks, so it is asked again under them. A title, start or guest
+// that changed since no longer names this meeting. A meeting with a transcript
+// takes no second one.
+func lockNotesMailMeetingTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMailInput, id ids.ActivityID, key string) (bool, error) {
+	if err := storekit.LockWriteIdentity(ctx, tx, "activity_source", transcriptSourceSystem+":"+key); err != nil {
+		return false, err
+	}
+	if err := storekit.LockMeetingAttendeeChecks(ctx, tx, id.UUID); err != nil {
+		return false, err
+	}
+	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+		return false, err
+	}
+	if again, still, err := notesMailMeetingTx(ctx, tx, in); err != nil || !still || again != id {
+		return false, err
+	}
+	held, err := meetingHoldsTranscriptTx(ctx, tx, id)
+	return !held, err
 }
