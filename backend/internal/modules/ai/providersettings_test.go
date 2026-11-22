@@ -723,9 +723,9 @@ func TestResolve_AnUnknownProvidersLaneKeepsItsHost(t *testing.T) {
 	}
 }
 
-// A host an administrator saves on a local provider's sheet reaches every lane
-// bound to it, the embeddings lane included unless it names its own server,
-// and is stored on the provider rather than on a lane.
+// A host saved on a local provider's sheet reaches every lane bound to it. The
+// embeddings lane follows unless it names its own server. The host is stored
+// on the provider, never on a lane.
 func TestWithProviderSettings_ALocalProvidersHostReachesEveryLane(t *testing.T) {
 	for _, provider := range []string{"ollama", "vllm"} {
 		t.Run(provider, func(t *testing.T) {

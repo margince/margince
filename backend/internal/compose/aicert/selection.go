@@ -64,8 +64,8 @@ func ladderForTask(role string, binding ai.ProviderConfig, profile ai.Profile, t
 	}
 	doc := ladderDocument(binding, profile, tiers)
 	// Finalized as a stored document is, so the lanes' hosts and pins resolve
-	// from the providers block exactly as they do in production. The keys come
-	// from the environment: a binding names providers and never credentials.
+	// from the providers block as they do in production. Keys come from the
+	// environment, because a binding names providers and never credentials.
 	cfg, err := ai.FromStored(doc, config.FromOS)
 	if err != nil {
 		return ai.RoutingConfig{}, fmt.Errorf("aicert: the %s binding %s:%s under profile %s: %w",
@@ -74,8 +74,8 @@ func ladderForTask(role string, binding ai.ProviderConfig, profile ai.Profile, t
 	return cfg, nil
 }
 
-// ladderDocument is the routing a run certifies, written the way the shipped
-// presets are: the host and pins sit once in the providers block, and no lane
+// ladderDocument is the routing a run certifies, written like the shipped
+// presets. The host and pins sit once in the providers block, and no lane
 // repeats them.
 //
 // The embed lane is bound to the same model because the router requires one,
@@ -87,7 +87,7 @@ func ladderDocument(binding ai.ProviderConfig, profile ai.Profile, tiers map[ai.
 		Profile:    profile,
 		Tiers:      tiers,
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: embeddings},
-	}.Canonical()
+	}.AsStored()
 }
 
 // groupByTask buckets scenarios by their Task field, keeping only tasks

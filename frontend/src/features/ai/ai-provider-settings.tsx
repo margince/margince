@@ -49,8 +49,8 @@ type Service = Readonly<{
 type ProviderServices = Readonly<{
   services: readonly Service[];
   other: OtherHost & { label: MessageKey };
-  // A host typed straight into one field, with no service to pick: a local
-  // server has no vendor, and a blank host is its compiled default.
+  // A host typed into one field with no service to pick. A local server has
+  // no vendor, and a blank host is its compiled default.
   direct?: true;
 }>;
 
@@ -248,7 +248,7 @@ const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
   ],
 ]);
 
-// The providers whose sheet is only a host: they take no key, so the server's
+// The providers whose sheet is only a host. They take no key, so the server's
 // key list never names them and the table adds their rows itself.
 export const LOCAL_PROVIDERS: readonly string[] = [...SERVICES]
   .filter(([, catalog]) => catalog.direct)

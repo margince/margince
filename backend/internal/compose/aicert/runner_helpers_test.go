@@ -196,8 +196,8 @@ func TestASovereignRunTakesACloudJudgeAndStillRefusesACloudCandidate(t *testing.
 	}
 }
 
-// The routing a run certifies is written the way the shipped presets are: the
-// broker's host and pins sit once on the provider, and no lane repeats them.
+// The routing a run certifies is written like the shipped presets. The broker's
+// host and pins sit once on the provider, and no lane repeats them.
 func TestLadderDocumentWritesTheProvidersBlockAndNoPerLaneHost(t *testing.T) {
 	binding := ai.ProviderConfig{
 		Provider: "openai_compatible",
