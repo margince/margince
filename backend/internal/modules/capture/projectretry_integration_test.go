@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -361,5 +362,84 @@ func TestAnActivityAlreadyFiledIsNotRefiledByTheLadder(t *testing.T) {
 	}
 	if events, audits := projectFilingEvents(t, owner); events != 0 || audits != 0 {
 		t.Errorf("a filed activity produced %d event(s) and %d audit row(s), want none", events, audits)
+	}
+}
+
+// attributionSink is a sink whose ladder always answers project, on the real
+// filing write.
+func attributionSink(pool *pgxpool.Pool, ws ids.UUID, project ids.UUID) *capture.Sink {
+	return capture.NewSink(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))).
+		WithProjectAttribution(capture.ProjectAttribution{
+			Keys:  &failingOnceMatcher{project: project, calls: 1},
+			Stamp: activities.StampCorrespondenceForProject,
+			File:  activities.FileOnProjectTx,
+		})
+}
+
+// A principal that may update activities but has no authority over this one
+// files nothing: the write refuses it, and that is no fault. The activity is
+// linked to a contact another seat owns, so no arm of the authority check
+// admits the mailbox's own-scope principal.
+func TestAMailboxWithoutAuthorityOverTheActivityFilesNothing(t *testing.T) {
+	owner, pool := setupCaptureDB(t)
+	ctx := context.Background()
+	ws := ids.NewV7()
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+		t.Fatalf("seeding workspace: %v", err)
+	}
+	project := seedProjectForCapture(t, owner, "retry")
+	activity := ids.NewV7()
+	if _, err := owner.Exec(ctx, `
+		WITH a AS (INSERT INTO activity (id, kind, subject, audience, source, captured_by)
+		           VALUES ($1, 'email', 'the rollout plan', 'workspace', 'manual', 'human:colleague')),
+		     c AS (INSERT INTO contact (full_name, visibility, source, captured_by)
+		           VALUES ('Alice Demo', 'workspace', 'manual', 'human:colleague') RETURNING id)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id) SELECT $1, 'contact', c.id FROM c`, activity); err != nil {
+		t.Fatalf("seeding the colleague's activity: %v", err)
+	}
+	mailbox := captureSinkContextFor(ctx, ws)
+	actor, _ := principal.Actor(mailbox)
+	actor.Permissions.RowScope = principal.RowScopeOwn
+	mailbox = principal.WithActor(mailbox, actor)
+
+	var landed bool
+	err := database.WithWorkspaceTx(mailbox, pool, func(tx pgx.Tx) error {
+		var err error
+		landed, err = activities.FileOnProjectTx(mailbox, tx, ids.From[ids.ActivityKind](activity), project, nil)
+		return err
+	})
+	if err != nil || landed {
+		t.Fatalf("the filing answered landed=%v, err=%v, want a refusal that is no fault", landed, err)
+	}
+	if linked := projectLinkCount(t, owner, ws); linked != 0 {
+		t.Errorf("a mailbox without authority filed %d project link(s), want none", linked)
+	}
+	if events, audits := projectFilingEvents(t, owner); events != 0 || audits != 0 {
+		t.Errorf("a refused filing produced %d event(s) and %d audit row(s), want none", events, audits)
+	}
+}
+
+// A project the mailbox owner can no longer reach is not filed, even when the
+// ladder names it.
+func TestAProjectTheMailboxCannotReachIsNotFiled(t *testing.T) {
+	owner, pool := setupCaptureDB(t)
+	ctx := context.Background()
+	ws := ids.NewV7()
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+		t.Fatalf("seeding workspace: %v", err)
+	}
+	project := seedProjectForCapture(t, owner, "retry")
+	if _, err := owner.Exec(ctx, `UPDATE project SET archived_at = now() WHERE id = $1`, project); err != nil {
+		t.Fatalf("archiving the project: %v", err)
+	}
+	sink := attributionSink(pool, ws, project)
+	if _, err := sink.Upsert(captureSinkContextFor(ctx, ws), aProjectSubjectRecord()); err != nil {
+		t.Fatalf("the capture failed: %v", err)
+	}
+	if linked := projectLinkCount(t, owner, ws); linked != 0 {
+		t.Errorf("a project outside the mailbox's reach was filed %d time(s), want none", linked)
+	}
+	if events, audits := projectFilingEvents(t, owner); events != 0 || audits != 0 {
+		t.Errorf("a refused filing produced %d event(s) and %d audit row(s), want none", events, audits)
 	}
 }
