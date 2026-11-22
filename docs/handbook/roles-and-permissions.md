@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/roles-settings.tsx frontend/src/features/settings/roles-detail.tsx frontend/src/features/settings/roles-drawer.tsx frontend/src/features/settings/grantmatrix.tsx frontend/src/lib/roles.queries.ts -->
+<!-- describes: frontend/src/features/settings/roles-settings.tsx frontend/src/features/settings/roles-detail.tsx frontend/src/features/settings/roles-drawer.tsx frontend/src/features/settings/grantmatrix.tsx frontend/src/lib/roles.queries.ts backend/internal/modules/identity/rolelifecycle.go backend/internal/modules/identity/roles.go -->
 # Roles and permissions
 
 The **Roles and permissions** page in Settings, under **People**, lists every role your company defines. Open a role to see what its members may do, and whose records they may change.
@@ -10,7 +10,8 @@ This page is for the screen. For what each built-in role allows, and how row sco
 You need the right to read roles to see the page. If your role can read roles but not change them, the page says "Your role can read roles but not change them." The page is then read only.
 
 Changing is split by what it does:
-- **Rename a role, turn a right off, narrow whose records it reaches, or archive a custom role**: any member whose role may change roles. Archiving also needs the right to delete roles.
+- **Rename a role, turn a right off, or narrow whose records it reaches**: any member whose role may change roles.
+- **Archive a custom role**: any member whose role may delete roles.
 - **Create or restore a role, turn a right on, or widen whose records a role reaches**: an Admin only. Without the Admin role, the controls stay off, and the server refuses the change too.
 
 ### What does the list show?

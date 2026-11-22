@@ -76,3 +76,27 @@ func TestTheTestRunNamesARepeatInALaterSliceAsTheCommitDoes(t *testing.T) {
 		t.Fatalf("created: test run %d, commit %d", preview.Disposition.Created, commit.Disposition.Created)
 	}
 }
+
+// A company whose ref reads like the identity of a company named by its name
+// is still a different company. Notes of one text on the two stay two notes.
+func TestTheTestRunKeepsApartACompanyRefThatLooksLikeANamedCompany(t *testing.T) {
+	e := setupImportApp(t)
+	parts := append([]AnyMap{
+		{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "name": "display_name"}},
+	}, activityImportParts()...)
+	run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, map[string]string{
+		"companies.csv": "ref,name\nname:acme,Other Works\nC-9,Acme\n",
+		"activities.csv": activityHeader + "\n" +
+			"A-1,note,Visit,Went by,2025-03-02,company:name:acme,,,\n" +
+			"A-2,note,Visit,Went by,2025-03-02,company:Acme,,,\n",
+	})).SourceRef, "crm", parts)
+	preview := readImportReport(t, e, run.ID)
+	approveAndRead(t, e, run.ID)
+	commit := readImportReport(t, e, run.ID)
+	if issuesWith(preview, "note_repeated") != 0 || issuesWith(commit, "note_repeated") != 0 {
+		t.Fatalf("repeats: test run %+v, commit %+v, want none", preview.Issues, commit.Issues)
+	}
+	if preview.Disposition.Created != commit.Disposition.Created {
+		t.Fatalf("created: test run %d, commit %d", preview.Disposition.Created, commit.Disposition.Created)
+	}
+}

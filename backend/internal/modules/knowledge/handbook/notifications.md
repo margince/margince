@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/notification-settings.tsx frontend/src/features/settings/notifications.queries.ts backend/internal/modules/notices/preference.go -->
+<!-- describes: frontend/src/features/settings/notification-settings.tsx frontend/src/features/settings/notifications.queries.ts backend/internal/modules/notices/preference.go backend/internal/modules/notices/centre.go frontend/src/features/settings/settings.tsx frontend/src/features/brief/briefdelivery.tsx -->
 # Notifications
 
 The **Notifications** page in Settings, under **You**, decides how each kind of notice reaches you. The choice is yours alone. No colleague, and no admin, can change it for you.

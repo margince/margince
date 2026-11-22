@@ -23,7 +23,7 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 	w.rememberRow(row, outcome)
 	typed, _, _ := w.landingCells(row)
 	w.claimRow(row, typed)
-	w.links.markNaturalPending(w.object, textFields(row.Fields)[naturalKeyField(w.object)], row.ExternalID)
+	w.links.markNaturalPending(w.object, textFields(row.Fields)[naturalKeyField(w.object)], rowRef(row.ExternalID))
 	if w.object == migration.ObjectCompany {
 		fields := textFields(row.Fields)
 		creates := outcome == predictCreate || outcome == predictCollides

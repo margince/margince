@@ -232,7 +232,7 @@ func (r *linkResolver) resolveLink(ctx context.Context, object, raw string) (lin
 
 func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, error) {
 	if r.pending[key] {
-		return linkAnswer{Pending: true, PendingRef: key.Key}, nil
+		return linkAnswer{Pending: true, PendingRef: rowRef(key.Key)}, nil
 	}
 	if natural, ok := naturalKeyFor(key.Object, key.Key); ok {
 		if ref, pending := r.pendingNatural[natural]; pending {
@@ -317,9 +317,12 @@ func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (li
 	return employerAnswer(hit, key), err
 }
 
-// employerRef is the ref a company implied by a name answers with. The name
-// folds, so two spellings of it agree.
-func employerRef(name string) string { return "name:" + employerKey(name) }
+// rowRef and employerRef are the two kinds of pending identity. Each starts
+// with its own kind, so no row ref a file spells can equal an implied employer.
+// The name folds, so two spellings of an employer agree.
+func rowRef(ref string) string { return "row:" + strings.TrimSpace(ref) }
+
+func employerRef(name string) string { return "employer:" + employerKey(name) }
 
 // employerAnswer reads a name's candidates as a link. One links, and several is
 // a question for a human. None falls through to the next step.
