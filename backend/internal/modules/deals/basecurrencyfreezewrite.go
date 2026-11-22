@@ -180,6 +180,7 @@ func (s *Store) freezeFx(ctx context.Context, tx pgx.Tx,
 	err = tx.QueryRow(ctx,
 		`SELECT rate::text FROM fx_rate
 		 WHERE from_currency = $1 AND to_currency = $2 AND rate_date <= $3
+		   AND `+RateVersionSQL("", "")+`
 		 ORDER BY rate_date DESC LIMIT 1`,
 		currency, base, asOfDate).Scan(&rate)
 	if errors.Is(err, pgx.ErrNoRows) {

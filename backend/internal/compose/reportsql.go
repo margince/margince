@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -60,6 +61,10 @@ type reportFrame struct {
 	// Held by: TestAReportIsLabelledWithTheInstantItWasComputedAt
 	// (backend/gates/reportasof_test.go)
 	AsOf time.Time
+	// RatesAt is the revision of the rate sheet the answer was computed from.
+	// A handle carries it, so a drill-through reads the rate versions that
+	// headline read, whatever the sheet says by then.
+	RatesAt time.Time
 }
 
 // readReportFrame reads the three installation settings that place a number.
@@ -85,6 +90,9 @@ func readReportFrame(ctx context.Context, tx pgx.Tx) (reportFrame, error) {
 	// this frame converts at one instant even when they run milliseconds apart.
 	if err = tx.QueryRow(ctx, `SELECT now()`).Scan(&frame.AsOf); err != nil {
 		return reportFrame{}, fmt.Errorf("compose: reading the report's as-of: %w", err)
+	}
+	if frame.RatesAt, err = deals.RateSheetRevision(ctx, tx); err != nil {
+		return reportFrame{}, err
 	}
 	return frame, nil
 }
@@ -318,6 +326,9 @@ const (
 	// reportAsOfToken stands in for the instant the answer is true at — the
 	// date an open deal's exchange rate is looked up on or before.
 	reportAsOfToken = "<<report-as-of>>" //nolint:gosec // an SQL placeholder the engine substitutes, not a credential
+	// reportRatesAtToken stands in for the instant whose rate sheet a
+	// drill-through reads. NULL reads the current sheet.
+	reportRatesAtToken = "<<report-rates-at>>" //nolint:gosec // an SQL placeholder the engine substitutes, not a credential
 )
 
 // bindReportTokens substitutes every token the assembled statement carries
@@ -353,6 +364,12 @@ func bindReportTokens(
 	bindValue(reportBaseCurrencyToken, frame.BaseCurrency)
 	bindValue(reportFiscalStartMonthToken, frame.FiscalYearStartMonth)
 	bindValue(reportAsOfToken, frame.AsOf)
+	// A frame built without reading the sheet reads the current rates.
+	if frame.RatesAt.IsZero() {
+		bindValue(reportRatesAtToken, nil)
+	} else {
+		bindValue(reportRatesAtToken, frame.RatesAt)
+	}
 	bindScope := func(token string, resolve func() (string, error)) error {
 		if !strings.Contains(sql, token) {
 			return nil

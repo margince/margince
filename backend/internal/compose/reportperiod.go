@@ -373,7 +373,7 @@ func winLossSpec() reportSpec {
 		// at the same revenue looked identical to one that was not.
 		measures: map[string]string{
 			fieldAmountMinor:     colAmountMinor,
-			fieldAmountBaseMinor: wonSalesValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t"),
+			fieldAmountBaseMinor: wonSalesValueAtSQL(reportAsOfToken, reportRatesAtToken, reportBaseCurrencyToken, "t"),
 			fieldDaysToClose:     daysToCloseExpr,
 		},
 		sumCoverage: baseMoneyCoverage(fieldAmountBaseMinor),
