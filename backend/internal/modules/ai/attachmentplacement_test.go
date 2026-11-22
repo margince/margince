@@ -279,6 +279,7 @@ var placementReaders = map[string]func([]byte) ([]wireTurn, error){
 	providerAnthropic:        readAnthropic,
 	providerOllama:           readOllama,
 	providerOpenAICompatible: readOpenAICompat,
+	providerAzureOpenAI:      readOpenAICompat,
 	// vllm rides the openai_compatible transport, so it is the same wire and
 	// the same walk; it is listed because it is a separate knownProviders entry
 	// that carries images, not because it is a separate mapping.

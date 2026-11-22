@@ -181,7 +181,7 @@ func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q
 		return out
 	}
 	lister, ok := client.(model.Lister)
-	if !ok {
+	if !ok || hasCustomModelIDs(provider) {
 		out.Unavailable = AvailabilityNotPublished
 		return out
 	}
@@ -203,6 +203,13 @@ func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q
 		out.Models[i] = AvailableModel{Info: m}
 	}
 	return out
+}
+
+// hasCustomModelIDs is whether provider's model ids are the customer's own
+// names, which no vendor list can enumerate.
+func hasCustomModelIDs(provider string) bool {
+	d, _ := providerByName(provider)
+	return d.customModelIDs
 }
 
 // isKeyFault reports whether the held credential, not the vendor, is why a

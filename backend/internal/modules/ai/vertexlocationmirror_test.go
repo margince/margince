@@ -6,17 +6,33 @@ package ai
 import (
 	"encoding/json"
 	"os"
+	"regexp"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 )
 
-// The contract and the editor schema each spell the location rule as a
-// pattern, and both must be vertexLocationShape exactly: a looser copy admits
-// a location the parser refuses, a stricter one refuses one it serves.
+// The editor schema states each provider's location shape: the Vertex shape
+// for gemini_vertex and the Azure region shape for azure_openai. A looser Vertex
+// copy admits a location the parser refuses. The contract's location fields
+// carry no pattern; only the Vertex-only query parameter keeps one.
 //
 // Every pattern on a field named location is collected, wherever it sits, and
 // the count is pinned, so a copy moved or dropped fails instead of vanishing.
+// azureRegionSchemaPattern is the editor's spelling of an Azure region name. The
+// parser decides by lookup, so the pattern only has to admit every listed region.
+const azureRegionSchemaPattern = "^[A-Za-z][A-Za-z0-9]{2,30}$"
+
+func TestEveryAzureRegionFitsTheSchemaPattern(t *testing.T) {
+	t.Parallel()
+	pattern := regexp.MustCompile(azureRegionSchemaPattern)
+	for region := range azureRegionCountries {
+		if !pattern.MatchString(region) {
+			t.Errorf("region %q is listed but the editor schema's pattern refuses it", region)
+		}
+	}
+}
+
 func TestEveryLocationPatternIsTheParsersShape(t *testing.T) {
 	t.Parallel()
 	for _, doc := range []struct {
@@ -24,8 +40,8 @@ func TestEveryLocationPatternIsTheParsersShape(t *testing.T) {
 		decode func([]byte, any) error
 		copies int
 	}{
-		{"../../../api/crm.yaml", yaml.Unmarshal, 3},
-		{"../../../../config/margince.schema.json", json.Unmarshal, 3},
+		{"../../../api/crm.yaml", yaml.Unmarshal, 1},
+		{"../../../../config/margince.schema.json", json.Unmarshal, 6},
 	} {
 		raw, err := os.ReadFile(doc.path)
 		if err != nil {
@@ -40,8 +56,8 @@ func TestEveryLocationPatternIsTheParsersShape(t *testing.T) {
 			t.Errorf("%s carries %d location pattern(s), want %d — a copy was added or lost; update this count only after checking it", doc.path, len(patterns), doc.copies)
 		}
 		for _, p := range patterns {
-			if p != vertexLocationShape.String() {
-				t.Errorf("%s: location pattern %q, want vertexLocationShape %q", doc.path, p, vertexLocationShape.String())
+			if p != vertexLocationShape.String() && p != azureRegionSchemaPattern {
+				t.Errorf("%s: location pattern %q, want vertexLocationShape %q or the Azure region pattern %q", doc.path, p, vertexLocationShape.String(), azureRegionSchemaPattern)
 			}
 		}
 	}
