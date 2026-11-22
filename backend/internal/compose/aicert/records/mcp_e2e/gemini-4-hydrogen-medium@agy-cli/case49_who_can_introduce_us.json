@@ -15,21 +15,21 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "f9bb95c721ae6c54",
+    "scenario": "d9d67383493933a8",
     "tools": "2fab8ff230a8b4aa",
     "instructions": "c5c644eee9719be0",
     "judge": "claude-haiku-5-5",
-    "harness": "024566e70b0c3db3",
-    "commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
-    "ran_at": "2026-11-21T22:55:52Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:34:21Z"
+    "harness": "b2091c50a55ce041",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T04:04:05Z",
+    "graded_commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "graded_at": "2026-11-22T04:04:05Z"
   },
   "usage": {
-    "input_tokens": 132318,
-    "output_tokens": 28288,
+    "input_tokens": 181741,
+    "output_tokens": 29171,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 394216,
+    "cache_read_input_tokens": 555832,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -39,16 +39,17 @@
       "passed": true,
       "tools": [
         "at_risk_relationships",
-        "describe_list_filters",
         "find_records",
         "get_company_coverage",
+        "get_company_linked_in_reach",
         "list_records",
         "read_attention",
+        "read_details",
         "read_record",
         "read_relationships",
         "read_reporting",
         "read_reports",
-        "read_workspace",
+        "search_context",
         "search_records",
         "whats_slipping_this_week",
         "whoami"
@@ -58,15 +59,11 @@
       "passed": true,
       "tools": [
         "at_risk_relationships",
-        "catch_me_up_on",
         "describe_list_filters",
         "find_records",
         "get_company_coverage",
-        "get_company_linked_in_reach",
         "list_records",
         "read_attention",
-        "read_context",
-        "read_details",
         "read_record",
         "read_relationships",
         "read_reporting",
@@ -81,29 +78,29 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 20,
-      "min": 20,
-      "max": 20
+      "median": 19.5,
+      "min": 18,
+      "max": 21
     },
     "turns": {
-      "median": 7.5,
-      "min": 7,
+      "median": 8,
+      "min": 8,
       "max": 8
     },
     "refused": {
-      "median": 2.5,
-      "min": 2,
+      "median": 3,
+      "min": 3,
       "max": 3
     },
     "prompt_tokens": {
-      "median": 263267,
-      "min": 221110,
-      "max": 305424
+      "median": 368786.5,
+      "min": 268590,
+      "max": 468983
     },
     "output_tokens": {
-      "median": 14144,
-      "min": 13633,
-      "max": 14655
+      "median": 14585.5,
+      "min": 13013,
+      "max": 16158
     }
   }
 }
