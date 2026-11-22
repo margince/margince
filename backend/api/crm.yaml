@@ -50598,6 +50598,13 @@ components:
       properties:
         entity_type: { type: string, enum: [company, fact, profile_field], x-extensible-enum: true }
         entity_id: { type: string, format: uuid }
+        claim_version:
+          type: integer
+          format: int64
+          description: |
+            The version of the stored claim this receipt was built from, the same number the claim's
+            list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+            receipt shows.
         source_kind:
           type: string
           enum: [site_read, connector, human, migration, rule]

@@ -41002,6 +41002,11 @@ type CitedProvision struct {
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
 // names the gap in `gaps` rather than substituting a plausible value.
 type ClaimEvidence struct {
+	// ClaimVersion The version of the stored claim this receipt was built from, the same number the claim's
+	// list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+	// receipt shows.
+	ClaimVersion *int64 `json:"claim_version,omitempty"`
+
 	// Confidence The model's confidence. ABSENT for the `connector`, `human` and `migration` kinds — none
 	// of them carries a model confidence, and printing one would fabricate a number
 	// (DOSS-AC-16).

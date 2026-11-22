@@ -35844,6 +35844,13 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
             /**
+             * Format: int64
+             * @description The version of the stored claim this receipt was built from, the same number the claim's
+             *     list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+             *     receipt shows.
+             */
+            claim_version?: number;
+            /**
              * @description How this record came to exist.
              *
              *     `migration` is not in the spec's DOSS-PARAM-9 vocabulary, and is carried here because
