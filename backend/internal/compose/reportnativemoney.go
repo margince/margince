@@ -5,11 +5,11 @@ package compose
 
 // Money denominated PER ROW, and the one rule that makes summing it honest.
 //
-// Its own file because the rule and the declaration it reads have to be found
-// together: a spec offering a native measure and forgetting to declare it gets
-// no refusal at all, so the two are one idea rather than a check and a field.
+// The rule reads each measure's SQL, so no spec declares which measures it covers.
 
 import (
+	"regexp"
+
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 )
 
@@ -52,11 +52,11 @@ var convertedMeasure = map[string]string{
 	fieldWeightedAmountMinor: fieldWeightedBaseMinor,
 }
 
-// perRowCurrency says how a measure of this spec is denominated, nil unless it
-// is declared native. It names the converted measure only when this spec
+// perRowCurrency says how a measure of this spec is denominated, nil unless its
+// SQL is per-row money. It names the converted measure only when this spec
 // offers it, so a refusal never points at a measure the caller cannot ask for.
 func (s reportSpec) perRowCurrency(measure string) *analyticsquery.PerRowCurrency {
-	if !s.nativeMeasures[measure] {
+	if !perRowMoneySQL(s.measures[measure]) {
 		return nil
 	}
 	money := &analyticsquery.PerRowCurrency{By: fieldCurrency}
@@ -68,16 +68,17 @@ func (s reportSpec) perRowCurrency(measure string) *analyticsquery.PerRowCurrenc
 	return money
 }
 
-// nativeMoney names the measures a spec denominates per row.
-//
-// A constructor rather than a map literal per spec: four specs declare one, and
-// the set is the whole point — a spec that offers a native measure and forgets
-// to name it here is the defect, so the shortest possible spelling is what
-// keeps that from happening by accident.
-func nativeMoney(fields ...string) map[string]bool {
-	out := make(map[string]bool, len(fields))
-	for _, field := range fields {
-		out[field] = true
-	}
-	return out
+// perRowMoneySQL reads the measure's own SQL, never its name, so a new money
+// measure is covered under any name. It is money in each row's currency when
+// it reads a minor-unit column and never looks up a rate to the base currency.
+func perRowMoneySQL(expression string) bool {
+	return minorUnitColumn.MatchString(expression) && !baseConversion.MatchString(expression)
 }
+
+// minorUnitColumn is an amount in its row's currency. It leaves out the
+// `*_minor_base` column, which already holds the base-currency amount.
+var minorUnitColumn = regexp.MustCompile(`\b[a-z_]+_minor\b`)
+
+// baseConversion is the rate lookup deals.BaseValueSQL converts through. Naming
+// the base currency alone converts nothing, as a filter on it shows.
+var baseConversion = regexp.MustCompile(`(?i)\bfrom\s+fx_rate\b`)
