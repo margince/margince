@@ -29,9 +29,9 @@ type (
 // keeps the source it held, so the system and id an old value packed stay readable.
 func DataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795346931_record_source_channels", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795346931_record_source_channels"),
-		Requires: []string{"core/1795346931"},
+		ID: "core/1795363335_record_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795363335_record_source_channels"),
+		Requires: []string{"core/1795363335"},
 		Steps: []datatask.Step{
 			step("deal_sources", deals.CorrectDealSourcesTx, deals.CountUnlistedDealSources),
 			step("offer_sources", deals.CorrectOfferSourcesTx, deals.CountUnlistedOfferSources),
