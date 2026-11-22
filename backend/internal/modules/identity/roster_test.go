@@ -205,11 +205,13 @@ func highestPlaceholder(query string) int {
 func TestWireTeam(t *testing.T) {
 	id := ids.NewV7()
 	created := time.Date(2026, 6, 2, 9, 30, 0, 0, time.UTC)
+	archived := created.Add(time.Hour)
 	got := wireTeam(teamRow{
 		ID:          id,
 		Name:        "Deal Desk",
 		MemberCount: 3,
 		CreatedAt:   created,
+		ArchivedAt:  &archived,
 	})
 
 	if got.Id != openapi_types.UUID(id) {
@@ -220,6 +222,9 @@ func TestWireTeam(t *testing.T) {
 	}
 	if got.MemberCount == nil || *got.MemberCount != 3 {
 		t.Errorf("MemberCount = %v, want 3", got.MemberCount)
+	}
+	if got.ArchivedAt == nil || !got.ArchivedAt.Equal(archived) {
+		t.Errorf("ArchivedAt = %v, want %v", got.ArchivedAt, archived)
 	}
 	if got.CreatedAt == nil || !got.CreatedAt.Equal(created) {
 		t.Errorf("CreatedAt = %v, want %v", got.CreatedAt, created)

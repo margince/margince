@@ -113,7 +113,7 @@ Team lead, Management, Ops and Admin may archive a contact, company or deal. So 
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
-An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags and pipelines have their own **Restore**; an archived team comes back with **Undo** on the "Team archived" notice.
+An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags, pipelines and teams have their own **Restore**; for a team, an Admin turns on **Show archived teams** first.
 Also called: unarchive, undelete, recover.
 
 ### How do I change how long Margince keeps data?

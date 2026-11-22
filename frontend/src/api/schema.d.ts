@@ -21075,7 +21075,8 @@ export interface paths {
         /**
          * List workspace teams — cursor-paginated. Read-only.
          * @description Teams available as record-share subjects, with a member count. Any authenticated member may read.
-         *     Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
+         *     Excludes archived teams unless `include_archived` is true, which needs `team_admin.read`.
+         *     Bounded by authenticated membership, like the member roster beside it.
          */
         get: operations["listTeams"];
         put?: never;
@@ -97355,6 +97356,8 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Case-insensitive match over team name that ignores diacritics on both sides. */
                 q?: string;
+                /** @description True also lists archived teams, each carrying `archived_at`, so an admin can restore one. */
+                include_archived?: boolean;
             };
             header?: never;
             path?: never;
@@ -97372,6 +97375,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

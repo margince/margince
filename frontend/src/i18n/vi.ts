@@ -16033,6 +16033,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.teamParent": "Thuộc {name}",
   "users.teamRename": "Đổi tên",
   "users.teamArchive": "Chuyển vào kho lưu trữ",
+  "users.teamRestore": "Khôi phục",
+  "users.teamArchivedBadge": "Trong kho lưu trữ",
+  "users.showArchivedTeams": "Hiển thị nhóm trong kho lưu trữ",
+  "users.showArchivedTeamsSub":
+    "Nhóm trong kho lưu trữ không cho thành viên sửa gì cho đến khi bạn khôi phục.",
+  "users.archiveTeamTitle": "Chuyển “{name}” vào kho lưu trữ?",
+  "users.archiveTeamBody_one":
+    "{count} thành viên sẽ không còn sửa được những gì nhóm này cho phép. Bạn có thể khôi phục nhóm trong “Hiển thị nhóm trong kho lưu trữ”.",
+  "users.archiveTeamBody_other":
+    "{count} thành viên sẽ không còn sửa được những gì nhóm này cho phép. Bạn có thể khôi phục nhóm trong “Hiển thị nhóm trong kho lưu trữ”.",
   "users.teamRenameTitle": "Đổi tên nhóm",
   "users.teamRenameSave": "Lưu tên",
   "users.teamRenamed": "Đã đổi tên nhóm thành “{name}”",

@@ -16488,6 +16488,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.teamParent": "Teil von {name}",
   "users.teamRename": "Umbenennen",
   "users.teamArchive": "Archivieren",
+  "users.teamRestore": "Wiederherstellen",
+  "users.teamArchivedBadge": "Archiviert",
+  "users.showArchivedTeams": "Archivierte Teams anzeigen",
+  "users.showArchivedTeamsSub":
+    "Ein archiviertes Team lässt seine Mitglieder nichts bearbeiten, bis du es wiederherstellst.",
+  "users.archiveTeamTitle": "„{name}“ archivieren?",
+  "users.archiveTeamBody_one":
+    "{count} Mitglied kann dann nicht mehr bearbeiten, was dieses Team erlaubt. Du kannst das Team unter „Archivierte Teams anzeigen“ wiederherstellen.",
+  "users.archiveTeamBody_other":
+    "{count} Mitglieder können dann nicht mehr bearbeiten, was dieses Team erlaubt. Du kannst das Team unter „Archivierte Teams anzeigen“ wiederherstellen.",
   "users.teamRenameTitle": "Team umbenennen",
   "users.teamRenameSave": "Namen speichern",
   "users.teamRenamed": "Team in „{name}“ umbenannt",
