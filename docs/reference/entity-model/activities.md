@@ -1318,6 +1318,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 **Rules**
 
 - `meeting_proposal_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `meeting_proposal_token_hash_check`: `CHECK (((token_hash ~ '^[0-9a-f]{64}$') OR (token_hash ~ '^erased:[0-9a-f-]{36}$')))`
 - `meeting_proposal_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**

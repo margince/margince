@@ -18,6 +18,7 @@ import (
 	"errors"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -84,6 +85,42 @@ func TestCompanyDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
 		if doc.Filename == "their-private-note.pdf" {
 			t.Error("a file on a contact the caller cannot read reached the account library")
 		}
+	}
+}
+
+// A deal's file follows the deal. The row still carries the company it was
+// filed under at upload, as an older row does, and the list does not read it.
+func TestADealMovedToAnotherCompanyTakesItsDocumentsAlong(t *testing.T) {
+	e := Setup(t)
+	store := activities.NewStore(e.DB())
+	pipeline, stage, _ := DealFixture(t, e)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+
+	before := e.SeedCompany(t, "Acme", &e.Rep1)
+	after := e.SeedCompany(t, "Acme Holding", &e.Rep1)
+	deal := e.SeedDeal(t, "Framework", pipeline, stage, &e.Rep1)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, before)
+	file := seedDocument(t, e, before, "deal", deal, "framework.pdf", "contract", false)
+
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, after)
+
+	listed := func(company ids.UUID) []crmcontracts.Attachment {
+		t.Helper()
+		docs, _, err := store.ListCompanyDocuments(ctx, company, activities.DocumentFilters{})
+		if err != nil {
+			t.Fatalf("list documents: %v", err)
+		}
+		return docs
+	}
+	now := listed(after)
+	if len(now) != 1 || ids.UUID(now[0].Id) != file {
+		t.Fatalf("the deal's new company lists %d documents, want the deal's one file", len(now))
+	}
+	if now[0].CompanyId == nil || ids.UUID(*now[0].CompanyId) != after {
+		t.Errorf("the file names company %v, want the deal's company as it is now", now[0].CompanyId)
+	}
+	if left := listed(before); len(left) != 0 {
+		t.Errorf("the deal's former company still lists %d of its documents", len(left))
 	}
 }
 

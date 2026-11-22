@@ -175,21 +175,13 @@ func refuseListedLink(ctx context.Context, tx pgx.Tx, in LinkInput) error {
 }
 
 func insertAttachmentLink(ctx context.Context, tx pgx.Tx, in LinkInput, by string) (ids.UUID, error) {
-	rollUp, hasAccount, err := accountRollUp(ctx, tx, in.EntityType, in.EntityID)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	var account *ids.UUID
-	if hasAccount {
-		account = &rollUp
-	}
 	id := ids.NewV7()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source,
-			captured_by, company_id, contract_id, bytes_withheld, url, title, category)
-		VALUES ($1, $2, $3, $4, '', $5, $6, $7, $8, true, $9, $10, $11)`,
+			captured_by, contract_id, bytes_withheld, url, title, category)
+		VALUES ($1, $2, $3, $4, '', $5, $6, $7, true, $8, $9, $10)`,
 		id, in.EntityType, in.EntityID, linkHostOf(in.URL), linkSource, by,
-		account, in.ContractID, in.URL, nullIfEmpty(in.Title), storedCategory(in.Category)); err != nil {
+		in.ContractID, in.URL, nullIfEmpty(in.Title), storedCategory(in.Category)); err != nil {
 		return ids.UUID{}, fmt.Errorf("activities: listing a link: %w", err)
 	}
 	return id, nil
