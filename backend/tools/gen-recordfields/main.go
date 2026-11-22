@@ -70,13 +70,15 @@ type schemas map[string]*node
 // string as `type: [string, 'null']`, which no fixed Go type reads, so `type`
 // stays a raw yaml.Node and typeNames normalizes it.
 type node struct {
-	Ref        string           `yaml:"$ref"`
-	Type       yaml.Node        `yaml:"type"`
-	Format     string           `yaml:"format"`
-	Enum       []any            `yaml:"enum"`
-	Items      *node            `yaml:"items"`
-	Properties map[string]*node `yaml:"properties"`
-	Required   []string         `yaml:"required"`
+	Ref    string    `yaml:"$ref"`
+	Type   yaml.Node `yaml:"type"`
+	Format string    `yaml:"format"`
+	// Description feeds the field notes a served tool schema carries.
+	Description string           `yaml:"description"`
+	Enum        []any            `yaml:"enum"`
+	Items       *node            `yaml:"items"`
+	Properties  map[string]*node `yaml:"properties"`
+	Required    []string         `yaml:"required"`
 	// AllOf carries the one-element wrapper the contract uses to attach a
 	// description (or nullability) to a $ref without overriding the ref itself,
 	// which JSON Schema does not otherwise allow. Unwrapped in resolve: without
@@ -188,6 +190,9 @@ func render(all schemas, shared map[string]*parameter, paths map[string]map[stri
 		return nil, err
 	}
 	if err := renderEnums(&b, all); err != nil {
+		return nil, err
+	}
+	if err := renderFieldEnums(&b, all); err != nil {
 		return nil, err
 	}
 	if err := renderListFilters(&b, shared, paths); err != nil {

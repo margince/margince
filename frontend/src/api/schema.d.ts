@@ -49149,7 +49149,11 @@ export interface components {
             oldest_waiting_since?: string;
         };
         ReportingScope: {
-            /** @enum {string} */
+            /**
+             * @description Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id`
+             *     naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.
+             * @enum {string}
+             */
             kind: "owner" | "team" | "workspace" | "managed_teams";
             /** Format: uuid */
             id?: string;
@@ -49167,7 +49171,12 @@ export interface components {
         ReportingInitiativeId: string;
         ReportingCountry: string;
         ReportingIndustry: string;
-        /** @enum {string} */
+        /**
+         * @description Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+         *     the default, `software` and `implementation` count only that component of it. Open figures
+         *     take only `all`.
+         * @enum {string}
+         */
         ReportingValueBasis: "all" | "software" | "implementation";
         ReportingSelection: {
             scope: components["schemas"]["ReportingScope"];
@@ -49182,7 +49191,10 @@ export interface components {
              */
             period: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
             interval?: components["schemas"]["ReportingWindow"];
-            /** @enum {string} */
+            /**
+             * @description Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.
+             * @enum {string}
+             */
             target_basis: "month" | "fiscal_quarter";
             /**
              * @description Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter`
@@ -49331,6 +49343,10 @@ export interface components {
             /** @description Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins. */
             scope_holds_deals?: boolean;
         };
+        /**
+         * @description How much of the population the figure could be computed for. A `partial` reading with a
+         *     `priced_count` of 0 priced nothing, so its figure is not one to report.
+         */
         ReportingCoverage: {
             status: components["schemas"]["ReportingStatus"];
             reason?: string;
