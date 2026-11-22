@@ -328,30 +328,59 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 	}
 	destroyed := 0
 	for _, seat := range seats {
-		var subject capture.PurgeSubject
-		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-			floor, _, err := purgeFloorTx(ctx, tx)
-			if err != nil {
-				return err
-			}
-			subject, err = capture.SelectPersonalPurgeTx(ctx, tx, seat, windows, floor, personalSweepBatch)
-			return err
-		}); err != nil {
-			return destroyed, fmt.Errorf("verdict: selecting personal mail for one seat: %w", err)
-		}
-		// No contacts are anonymised here. A `personal` verdict creates NO
-		// counterparty record in the first place — captureverdict's KindPersonal
-		// arm returns without one — so there is nothing this sweep could match,
-		// and passing a selector that looked for one would either find a contact
-		// somebody made for another reason or find nothing while implying it had
-		// looked.
-		n, err := p.purgePersonalSelection(ctx, subject, seat, windows)
+		outcome, err := p.sweepSeat(ctx, seat, windows)
 		if err != nil {
-			return destroyed, fmt.Errorf("verdict: destroying personal mail: %w", err)
+			return destroyed, err
 		}
-		destroyed += n
+		destroyed += outcome.Destroyed
 	}
 	return destroyed, nil
+}
+
+// sweepSeat destroys one seat's due personal mail and writes the receipt for the
+// pass. A pass that destroyed nothing writes none, so a seat whose due mail the
+// shields keep does not add an audit row per tick.
+//
+// The kept numbers are counted over every due message of the seat, apart from
+// the batch the destroy reached.
+func (p *CapturePurger) sweepSeat(ctx context.Context, seat ids.UUID, windows capture.PersonalPurgeWindows) (PurgeOutcome, error) {
+	var subject capture.PurgeSubject
+	var kept capture.KeptCounts
+	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		floor, _, err := purgeFloorTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if subject, err = capture.SelectPersonalPurgeTx(ctx, tx, seat, windows, floor, personalSweepBatch); err != nil {
+			return err
+		}
+		kept, err = capture.CountPersonalKeptTx(ctx, tx, seat, windows, floor)
+		return err
+	}); err != nil {
+		return PurgeOutcome{}, fmt.Errorf("verdict: selecting personal mail for one seat: %w", err)
+	}
+	// No contacts are anonymised here. A `personal` verdict creates NO
+	// counterparty record in the first place — captureverdict's KindPersonal
+	// arm returns without one — so there is nothing this sweep could match,
+	// and passing a selector that looked for one would either find a contact
+	// somebody made for another reason or find nothing while implying it had
+	// looked.
+	n, err := p.purgePersonalSelection(ctx, subject, seat, windows)
+	if err != nil {
+		return PurgeOutcome{}, fmt.Errorf("verdict: destroying personal mail: %w", err)
+	}
+	outcome := PurgeOutcome{
+		Destroyed: n,
+		Skipped:   kept.UnderStatute + kept.UnderRequest + kept.UnderUndeterminedFloor,
+		Kept:      keptFromCounts(kept),
+	}
+	if outcome.Destroyed == 0 {
+		return outcome, nil
+	}
+	if err := p.auditPersonalSweepReceipt(ctx, seat, outcome); err != nil {
+		return PurgeOutcome{}, fmt.Errorf("verdict: recording the personal sweep receipt: %w", err)
+	}
+	return outcome, nil
 }
 
 // purgeableRule reads the rule this caller may act on, and reports whether it is

@@ -65,12 +65,7 @@ type KeptBreakdown struct {
 // read it as the rule that applied to their deletion, when in fact nothing of
 // theirs was a Handelsbrief.
 func keptBreakdown(subject capture.PurgeSubject, policy privacy.FloorPolicy) KeptBreakdown {
-	kept := KeptBreakdown{
-		Held:                   len(subject.Held),
-		UnderStatute:           len(subject.UnderStatute),
-		UnderRequest:           len(subject.UnderRequest),
-		UnderUndeterminedFloor: len(subject.UnderUndeterminedFloor),
-	}
+	kept := keptFromCounts(subject.KeptCounts())
 	if kept.UnderStatute > 0 {
 		class := policy.StrictestClass(time.Now())
 		keep := class.Keep
@@ -85,6 +80,29 @@ func keptBreakdown(subject capture.PurgeSubject, policy privacy.FloorPolicy) Kep
 		}
 	}
 	return kept
+}
+
+// keptFromCounts is the breakdown without a statutory class, for a count that
+// has no message list to narrow the floor policy by.
+func keptFromCounts(counts capture.KeptCounts) KeptBreakdown {
+	return KeptBreakdown{
+		Held:                   counts.Held,
+		UnderStatute:           counts.UnderStatute,
+		UnderRequest:           counts.UnderRequest,
+		UnderUndeterminedFloor: counts.UnderUndeterminedFloor,
+	}
+}
+
+// receiptEvidence is the audit row's copy of a receipt: the same numbers, so
+// the trail and the screen cannot disagree.
+func receiptEvidence(outcome PurgeOutcome) map[string]any {
+	return map[string]any{
+		"destroyed": outcome.Destroyed, "released": outcome.Released,
+		"skipped": outcome.Skipped, "anonymised": outcome.Anonymised,
+		"kept_held": outcome.Kept.Held, "kept_under_statute": outcome.Kept.UnderStatute,
+		"kept_under_request":            outcome.Kept.UnderRequest,
+		"kept_under_undetermined_floor": outcome.Kept.UnderUndeterminedFloor,
+	}
 }
 
 // auditPurgeReceipt records what the owner was told, from the same struct they
@@ -105,13 +123,19 @@ func keptBreakdown(subject capture.PurgeSubject, policy privacy.FloorPolicy) Kep
 func (p *CapturePurger) auditPurgeReceipt(ctx context.Context, ruleID ids.UUID, outcome PurgeOutcome) error {
 	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		_, err := storekit.AuditWithEvidence(ctx, tx, "archive", "capture_exclusion", ruleID, nil, nil,
-			map[string]any{
-				"destroyed": outcome.Destroyed, "released": outcome.Released,
-				"skipped": outcome.Skipped, "anonymised": outcome.Anonymised,
-				"kept_held": outcome.Kept.Held, "kept_under_statute": outcome.Kept.UnderStatute,
-				"kept_under_request":            outcome.Kept.UnderRequest,
-				"kept_under_undetermined_floor": outcome.Kept.UnderUndeterminedFloor,
-			})
+			receiptEvidence(outcome))
+		return err
+	})
+}
+
+// auditPersonalSweepReceipt records what one sweep pass did for one seat, from
+// the receipt's own numbers. The per-message rows say what happened to each
+// message; this is the summary nothing else writes, including what the shields
+// kept.
+func (p *CapturePurger) auditPersonalSweepReceipt(ctx context.Context, seat ids.UUID, outcome PurgeOutcome) error {
+	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		_, err := storekit.AuditWithEvidence(ctx, tx, "archive", "capture_personal_sweep", seat, nil, nil,
+			receiptEvidence(outcome))
 		return err
 	})
 }
