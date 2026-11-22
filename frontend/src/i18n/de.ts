@@ -17150,9 +17150,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.fiscalImpactKept_other":
     "{count} Berichte haben eine Karte, die nach einem Zeitraum filtert, und behalten ihre Daten.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} Bericht liest dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgt dem neuen Beginn.",
+    "{count} Bericht liest dieses Quartal, das letzte abgeschlossene Quartal oder Jahr, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgt dem neuen Beginn.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} Berichte lesen dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgen dem neuen Beginn.",
+    "{count} Berichte lesen dieses Quartal, das letzte abgeschlossene Quartal oder Jahr, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgen dem neuen Beginn.",
   "installationSettings.fiscalImpactLoading":
     "Gespeicherte Arbeit, die diese Änderung betrifft, wird gezählt…",
   "installationSettings.forwardMeasure": "Grundlage der Hochrechnung",

@@ -17010,9 +17010,9 @@ export const en = {
   "installationSettings.fiscalImpactKept_other":
     "{count} reports have a card that filters on a period. They keep their dates.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} report reads this quarter, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
+    "{count} report reads this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} reports read this quarter, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
+    "{count} reports read this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
   "installationSettings.fiscalImpactLoading":
     "Counting the saved work this change concerns…",
   "installationSettings.forwardMeasure": "Projection basis",

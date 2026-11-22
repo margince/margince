@@ -16686,9 +16686,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.fiscalImpactKept_other":
     "{count} báo cáo có thẻ lọc theo một kỳ. Các báo cáo giữ nguyên ngày.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+    "{count} báo cáo đọc quý này, quý hoặc năm đã hoàn tất gần nhất, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+    "{count} báo cáo đọc quý này, quý hoặc năm đã hoàn tất gần nhất, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
   "installationSettings.fiscalImpactLoading":
     "Đang đếm các phần đã lưu mà thay đổi này liên quan…",
   "installationSettings.forwardMeasure": "Cơ sở tính dự kiến",

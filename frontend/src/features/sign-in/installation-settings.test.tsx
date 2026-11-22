@@ -861,7 +861,7 @@ it("states how many saved questions and reports a new fiscal start concerns, bef
   ).toBeTruthy();
   expect(
     within(dialog).getByText(
-      "3 reports read this quarter, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
+      "3 reports read this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
     ),
   ).toBeTruthy();
 });
