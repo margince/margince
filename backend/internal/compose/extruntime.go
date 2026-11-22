@@ -110,8 +110,7 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 
 // AI is the unit's AI port for this call, guarded by this Runtime's lifetime.
 func (r *callRuntime) AI() extension.AI { //nolint:ireturn // the published port, as Secrets.
-	return extai.Port{Scope: r.scoped, Unit: r.unit, Declared: ComposedExtensions, Pool: r.deps.pool,
-		PDF: processPDFReader, MaxDocumentBytes: maxDocumentBytes, MaxInputChars: maxDocumentTextChars}
+	return extai.Port{Scope: r.scoped, Unit: r.unit, Declared: ComposedExtensions, Pool: r.deps.pool, PDF: processPDFReader, MaxDocumentBytes: maxDocumentBytes, MaxInputChars: maxDocumentTextChars}
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than
