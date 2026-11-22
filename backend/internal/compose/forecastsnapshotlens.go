@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/focusactions"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -22,7 +23,7 @@ import (
 // newForecastStore is the one way compose builds a forecasting store, so every
 // snapshot read passes through forecastSnapshotReadLens.
 func newForecastStore(db *database.DB) *forecasting.Store {
-	return forecasting.NewStore(db).WithSnapshotLens(forecastSnapshotReadLens)
+	return forecasting.NewStore(db).WithSnapshotLens(forecastSnapshotReadLens).WithFocusActions(focusactions.Between)
 }
 
 // forecastSnapshotReadLens is forecastSnapshotLens for a snapshot read whole,

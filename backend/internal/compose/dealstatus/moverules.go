@@ -20,6 +20,7 @@ const (
 	ruleFirstOutreach   moveRule = "first_outreach"
 	ruleNextStep        moveRule = "next_step"
 	ruleMeetingRequest  moveRule = "meeting_request"
+	ruleBringInManager  moveRule = "bring_in_manager"
 )
 
 type moveRuleDefinition struct {
@@ -38,6 +39,7 @@ var moveRules = map[moveRule]moveRuleDefinition{
 	ruleFirstOutreach:   {ActionDraftEmail, sameCurrentBasis},
 	ruleNextStep:        {ActionCreateTask, sameCurrentBasis},
 	ruleMeetingRequest:  {ActionCreateTask, sameCurrentBasis},
+	ruleBringInManager:  {ActionBringInManager, sameCurrentBasis},
 }
 
 func ruleMove(rule moveRule, reason string, args map[string]any, evidence ...crmcontracts.DealNextBestActionEvidence) crmcontracts.DealStatusCardMove {

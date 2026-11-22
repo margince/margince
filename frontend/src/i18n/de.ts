@@ -2009,6 +2009,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
   "aiAdmin.decisionSkip.unbound":
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
+  "aiAdmin.certification.certified":
+    "{model} ist für diese Aufgabe zertifiziert.",
+  "aiAdmin.certification.degraded":
+    "{model} wird für diese Aufgabe mit verminderter Qualität unterstützt.",
+  "aiAdmin.certification.notSupported":
+    "{model} ist für diese Aufgabe nicht zertifiziert. Es wird trotzdem verwendet, prüfe also, was es liefert.",
+  "aiAdmin.certification.unrecorded":
+    "{model} wurde für diese Aufgabe mit diesen Einstellungen nicht gemessen.",
+  "aiAdmin.certification.stale": "Der Nachweis stammt aus früheren Prompts.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -3480,6 +3489,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Inhalt konnte nicht geladen werden. Bitte lade die Seite neu.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Es wurde keine Ursache gemeldet.",
+  "common.errorReference": "Referenz",
   "common.assistantUnavailable":
     "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
   "common.providerOutOfCredit":
@@ -14347,6 +14357,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal360.readFull": "Vollständigen Bericht lesen",
   "deal360.openTask": "Aufgabe öffnen",
   "deal360.createTask": "Folgeaufgabe erstellen",
+  "deal360.bringInManager": "Führungskraft einbinden",
+  "deal360.managerAsked": "Führungskraft gefragt",
   "deal360.followUpCreated": "Folgeaufgabe erstellt",
   "deal360.openBrief": "Terminvorbereitung öffnen",
   "deal360.unreadable":
@@ -17926,6 +17938,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.jev":
     "Vollständige Endpunkt-URL. Ohne Eintrag wird die API von TypeSafe selbst genutzt.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "Der Endpunkt der Ressource, ohne Pfad. Der API-Schlüssel geht nur an einen Host auf .openai.azure.com. Pflichtangabe.",
+  "aiRouting.baseUrl.placeholder.azure":
+    "https://meine-ressource.openai.azure.com",
+  "aiRouting.azureRegion.label": "Azure-Region",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
+  "aiRouting.azureRegion.help":
+    "Die Region, in der die Ressource läuft, etwa swedencentral. Eine unbekannte Region wird gesperrt, damit deine Daten dort bleiben, wo ihr es vereinbart habt.",
+  "aiRouting.model.help.azure":
+    "Gib den Namen ein, den du diesem Modell in Azure gegeben hast, nicht den Modellnamen.",
   "aiRouting.baseUrl.help.jevCompatible":
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -18383,6 +18405,27 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Adresse steht schon wieder in deiner Liste.",
   "ownerIdentities.addDescriptionEmpty":
     "Noch keine hinzugefügt. Teammitglieder sehen diese Liste nie.",
+  "unroutedMail.title": "Mails an Adressen, die nicht deine sind",
+  "unroutedMail.sub":
+    "Dein Postfach enthält Mails, die an andere Adressen gingen. Diese Mails werden nicht geprüft, bis du sagst, ob du diese Adresse empfängst. Nur du siehst diese Liste.",
+  "unroutedMail.summary_one":
+    "{count} Mail in deinem Postfach ging an eine Adresse, die nicht deine ist.",
+  "unroutedMail.summary_other":
+    "{count} Mails in deinem Postfach gingen an Adressen, die nicht deine sind.",
+  "unroutedMail.count_one": "{count} Mail",
+  "unroutedMail.count_other": "{count} Mails",
+  "unroutedMail.receive": "Das ist meine Adresse",
+  "unroutedMail.receiveLabel": "Das ist meine Adresse: {value}",
+  "unroutedMail.notMine": "Nicht meine",
+  "unroutedMail.notMineLabel": "Nicht meine: {value}",
+  "unroutedMail.received":
+    "Adresse hinzugefügt. Die Mails werden wie die übrigen geprüft.",
+  "unroutedMail.refused":
+    "Ausgeblendet. Diese Adresse wird nicht mehr gezählt.",
+  "unroutedMail.restored": "Wieder gezählt.",
+  "unroutedMail.removedClaim": "Adresse entfernt.",
+  "unroutedMail.more":
+    "Die Liste ist gekürzt. Beantworte diese Adressen, dann erscheinen die nächsten.",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
@@ -21768,6 +21811,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.gap.tab": "Lücke schließen",
   "worklist.gap.title": "Lücke schließen",
   "worklist.gap.loading": "Gereihte Deals werden geladen…",
+  "worklist.gap.requested.title": "Um deine Hilfe gebeten",
+  "worklist.gap.requested.done": "Als erledigt markieren",
+  "worklist.gap.reason.big_deal": "Wert über dem Median des Teams",
+  "worklist.gap.reason.single_contact": "Nur ein Kontakt eingebunden",
+  "worklist.gap.reason.stuck": "Steckt in seiner Phase fest",
   "worklist.gap.empty":
     "Noch kein Team hat eine gereihte Liste. Margince reiht die Deals jedes erfassten Teams einmal am Tag.",
   "worklist.gap.behind":
@@ -22589,6 +22637,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviderSettings.service.otherChat": "Anderer OpenAI-kompatibler Dienst",
   "aiProviderSettings.service.otherDecisions": "Anderer Entscheidungsserver",
   "aiProviderSettings.service.otherAddress": "Andere Adresse",
+  "aiProviderSettings.service.azureResource": "Deine Azure-OpenAI-Ressource",
   "aiProviderSettings.service.learnMore": "Über OpenRouter EU",
   "aiProviderSettings.host.line": "Host: {host}",
   "aiProviderSettings.host.default": "Nutzt die eigene Adresse des Dienstes.",
@@ -22599,6 +22648,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-kompatibel",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",

@@ -1095,6 +1095,18 @@ func (stubs) ReadCaptureTracePipeline(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "ReadCaptureTracePipeline")
 }
 
+func (stubs) ListUnroutedMail(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListUnroutedMail")
+}
+
+func (stubs) RestoreUnroutedAddress(w nethttp.ResponseWriter, r *nethttp.Request, address string) {
+	httperr.NotImplemented(w, r, "RestoreUnroutedAddress")
+}
+
+func (stubs) RefuseUnroutedAddress(w nethttp.ResponseWriter, r *nethttp.Request, address string) {
+	httperr.NotImplemented(w, r, "RefuseUnroutedAddress")
+}
+
 func (stubs) CatchUpOnRecord(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CatchUpOnRecordParams) {
 	httperr.NotImplemented(w, r, "CatchUpOnRecord")
 }
@@ -2097,6 +2109,14 @@ func (stubs) RemoveDealLine(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 
 func (stubs) UpdateDealLine(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, lineId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "UpdateDealLine")
+}
+
+func (stubs) ClearDealManagerRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ClearDealManagerRequest")
+}
+
+func (stubs) RequestDealManager(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RequestDealManager")
 }
 
 func (stubs) ListDealMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListDealMarginceChangesParams) {

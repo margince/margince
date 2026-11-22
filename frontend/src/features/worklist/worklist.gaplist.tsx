@@ -24,6 +24,7 @@ import {
   type ForecastFocusDeal,
   useForecastFocus,
 } from "./worklist.queries";
+import { RequestedDeals } from "./worklist.requests";
 
 type FocusTeam = ForecastFocus["teams"][number];
 
@@ -37,17 +38,22 @@ export function CloseTheGap() {
   // without a list, so the page says which of the two it is.
   const withheld = focus.data?.withheld === true;
   return (
-    <SurfaceState
-      state={state}
-      emptyLabel={t(withheld ? "worklist.gap.withheld" : "worklist.gap.empty")}
-      loadingLabel={t("worklist.gap.loading")}
-      detail={{ onRetry: () => void focus.refetch() }}
-    >
-      {teams?.map((team) => (
-        <TeamGap key={team.team_id} team={team} />
-      ))}
-      {withheld && <p className="t-caption">{t("worklist.gap.withheld")}</p>}
-    </SurfaceState>
+    <>
+      <RequestedDeals requests={focus.data?.requests ?? []} />
+      <SurfaceState
+        state={state}
+        emptyLabel={t(
+          withheld ? "worklist.gap.withheld" : "worklist.gap.empty",
+        )}
+        loadingLabel={t("worklist.gap.loading")}
+        detail={{ onRetry: () => void focus.refetch() }}
+      >
+        {teams?.map((team) => (
+          <TeamGap key={team.team_id} team={team} />
+        ))}
+        {withheld && <p className="t-caption">{t("worklist.gap.withheld")}</p>}
+      </SurfaceState>
+    </>
   );
 }
 

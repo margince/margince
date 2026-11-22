@@ -1959,6 +1959,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Mô hình theo chính sách",
   "aiAdmin.decisionSkip.unbound":
     "Không dùng mô hình quyết định: chưa gán mô hình nào.",
+  "aiAdmin.certification.certified":
+    "{model} đã được chứng nhận cho tác vụ này.",
+  "aiAdmin.certification.degraded":
+    "{model} được hỗ trợ cho tác vụ này nhưng chất lượng giảm.",
+  "aiAdmin.certification.notSupported":
+    "{model} chưa được chứng nhận cho tác vụ này. Mô hình vẫn được dùng, vì vậy hãy kiểm tra kết quả.",
+  "aiAdmin.certification.unrecorded":
+    "{model} chưa được đo cho tác vụ này với các cài đặt này.",
+  "aiAdmin.certification.stale": "Bản ghi có trước các prompt hiện tại.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -3379,6 +3388,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "common.error": "Không thể tải màn hình này. Tải lại trang.",
   "common.errorNoCause": "Yêu cầu không thành công. Không rõ nguyên nhân.",
+  "common.errorReference": "Mã tham chiếu",
   "common.assistantUnavailable":
     "AI không phản hồi. Hãy thử lại, hoặc liên hệ quản trị viên để kiểm tra Cài đặt, mục AI.",
   "common.providerOutOfCredit":
@@ -11086,26 +11096,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "automaticWork.last7": "7 ngày qua",
   "automaticWork.last30": "30 ngày qua",
   "automaticWork.howCounted":
-    "Mỗi mục được đếm một lần, vào ngày nó được tạo ({range}), với kết quả hiện tại. Nếu tỷ lệ Không phải của tôi trên {threshold} với ít nhất {sample} mục, cần xem lại cách giao việc cho loại đó. Tỷ lệ này tự nó không thay đổi gì.",
+    "Mỗi mục được đếm một lần, vào ngày nó được tạo ({range}), với kết quả hiện tại. Nếu tỷ lệ Không phải địa chỉ của bạn trên {threshold} với ít nhất {sample} mục, cần xem lại cách giao việc cho loại đó. Tỷ lệ này tự nó không thay đổi gì.",
   "automaticWork.none":
     "Margince không tạo việc tự động nào trong những ngày này.",
   "automaticWork.col.colleague": "Đồng nghiệp",
   "automaticWork.col.kind": "Loại",
   "automaticWork.col.created": "Đã tạo",
-  "automaticWork.col.notMine": "Không phải của tôi",
+  "automaticWork.col.notMine": "Không phải địa chỉ của bạn",
   "automaticWork.col.rerouted": "Quy tắc đã chuyển",
   "automaticWork.col.dismissed": "Đã bỏ qua",
   "automaticWork.col.rejected": "Đã từ chối",
   "automaticWork.col.completed": "Đã xong hoặc đã chấp nhận",
   "automaticWork.col.expired": "Đã hết hạn",
   "automaticWork.col.open": "Đang mở",
-  "automaticWork.col.share": "Tỷ lệ Không phải của tôi",
+  "automaticWork.col.share": "Tỷ lệ Không phải địa chỉ của bạn",
   "automaticWork.col.day": "Ngày",
-  "automaticWork.col.waitingNotMine": "Đã đánh dấu Không phải của tôi",
+  "automaticWork.col.waitingNotMine": "Đã đánh dấu Không phải địa chỉ của bạn",
   "automaticWork.kind.promise_task": "Việc từ một cam kết",
   "automaticWork.kind.reply_reminder": "Nhắc trả lời",
   "automaticWork.kind.approval_request": "Yêu cầu phê duyệt",
-  "automaticWork.noNotMine": "Không có lựa chọn Không phải của tôi",
+  "automaticWork.noNotMine": "Không có lựa chọn Không phải địa chỉ của bạn",
   "automaticWork.needsLook": "{share}, cần xem lại",
   "automaticWork.fewItems": "{share}, quá ít mục để đánh giá",
   "automaticWork.inactive": "{name} (không hoạt động)",
@@ -11118,7 +11128,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} mục thuộc về đồng nghiệp đã bị xóa.",
   "automaticWork.unattributed_other":
     "{count} mục thuộc về đồng nghiệp đã bị xóa.",
-  "automaticWork.waiting": "Tin nhắn đang chờ được đánh dấu Không phải của tôi",
+  "automaticWork.waiting":
+    "Tin nhắn đang chờ được đánh dấu Không phải địa chỉ của bạn",
   "automaticWork.waitingSub":
     "Margince không tạo tin nhắn đang chờ cho ai, nên nó không có tỷ lệ. Mỗi tin nhắn được đếm một lần.",
   "recoveryHealth.adminOnly":
@@ -13965,6 +13976,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal360.readFull": "Đọc bản tóm tắt đầy đủ",
   "deal360.openTask": "Mở việc cần làm",
   "deal360.createTask": "Tạo việc tiếp theo",
+  "deal360.bringInManager": "Mời quản lý tham gia",
+  "deal360.managerAsked": "Đã nhờ quản lý",
   "deal360.followUpCreated": "Đã tạo việc tiếp theo",
   "deal360.openBrief": "Mở bản tóm tắt cuộc họp",
   "deal360.unreadable":
@@ -17446,6 +17459,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.jev":
     "URL endpoint đầy đủ. Để trống thì dùng API riêng của TypeSafe.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "Endpoint của tài nguyên, không có đường dẫn. Khóa API chỉ được gửi tới máy chủ có đuôi .openai.azure.com. Bắt buộc.",
+  "aiRouting.baseUrl.placeholder.azure":
+    "https://tai-nguyen-cua-toi.openai.azure.com",
+  "aiRouting.azureRegion.label": "Vùng Azure",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
+  "aiRouting.azureRegion.help":
+    "Vùng nơi tài nguyên chạy, ví dụ swedencentral. Vùng mà hệ thống không nhận ra sẽ bị chặn, để dữ liệu ở đúng nơi đã thỏa thuận.",
+  "aiRouting.model.help.azure":
+    "Nhập tên bạn đã đặt cho mô hình này trong Azure, không phải tên của chính mô hình.",
   "aiRouting.baseUrl.help.jevCompatible":
     "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -17895,6 +17918,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Địa chỉ này đã có lại trong danh sách.",
   "ownerIdentities.addDescriptionEmpty":
     "Chưa thêm địa chỉ nào. Đồng nghiệp không bao giờ thấy danh sách này.",
+  "unroutedMail.title": "Thư gửi đến địa chỉ không phải của bạn",
+  "unroutedMail.sub":
+    "Hộp thư của bạn có thư được gửi đến những địa chỉ khác. Chưa có gì kiểm tra chúng cho đến khi bạn cho biết bạn có nhận địa chỉ đó không. Chỉ bạn thấy danh sách này.",
+  "unroutedMail.summary_one":
+    "{count} thư trong hộp thư của bạn được gửi đến những địa chỉ không phải của bạn.",
+  "unroutedMail.summary_other":
+    "{count} thư trong hộp thư của bạn được gửi đến những địa chỉ không phải của bạn.",
+  "unroutedMail.count_one": "{count} thư",
+  "unroutedMail.count_other": "{count} thư",
+  "unroutedMail.receive": "Địa chỉ này thuộc về bạn",
+  "unroutedMail.receiveLabel": "Địa chỉ này thuộc về bạn: {value}",
+  "unroutedMail.notMine": "Không phải địa chỉ của bạn",
+  "unroutedMail.notMineLabel": "Không phải địa chỉ của bạn: {value}",
+  "unroutedMail.received":
+    "Đã thêm địa chỉ. Thư của địa chỉ này được kiểm tra như các thư khác.",
+  "unroutedMail.refused": "Đã ẩn. Địa chỉ này không còn được đếm.",
+  "unroutedMail.restored": "Đã đếm lại.",
+  "unroutedMail.removedClaim": "Đã gỡ địa chỉ.",
+  "unroutedMail.more":
+    "Danh sách đã bị cắt bớt. Hãy trả lời các địa chỉ này để thấy những địa chỉ tiếp theo.",
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
   "captureValue.refusedDomain":
     "Nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",
@@ -21191,6 +21234,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.gap.tab": "Thu hẹp khoảng cách",
   "worklist.gap.title": "Thu hẹp khoảng cách",
   "worklist.gap.loading": "Đang tải các deal đã xếp hạng…",
+  "worklist.gap.requested.title": "Được nhờ bạn hỗ trợ",
+  "worklist.gap.requested.done": "Đánh dấu đã xử lý",
+  "worklist.gap.reason.big_deal": "Giá trị cao hơn mức trung vị của nhóm",
+  "worklist.gap.reason.single_contact": "Chỉ có một liên hệ tham gia",
+  "worklist.gap.reason.stuck": "Đang bị kẹt ở giai đoạn hiện tại",
   "worklist.gap.empty":
     "Chưa nhóm nào có danh sách xếp hạng. Margince xếp hạng deal mỗi ngày một lần cho từng nhóm được ghi nhận.",
   "worklist.gap.behind":
@@ -21992,6 +22040,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviderSettings.service.otherChat": "Dịch vụ tương thích OpenAI khác",
   "aiProviderSettings.service.otherDecisions": "Máy chủ quyết định khác",
   "aiProviderSettings.service.otherAddress": "Địa chỉ khác",
+  "aiProviderSettings.service.azureResource": "Tài nguyên Azure OpenAI của bạn",
   "aiProviderSettings.service.learnMore": "Về OpenRouter EU",
   "aiProviderSettings.host.line": "Máy chủ: {host}",
   "aiProviderSettings.host.default": "Dùng địa chỉ riêng của dịch vụ.",
@@ -22002,6 +22051,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini trên Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Tương thích Jev",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",

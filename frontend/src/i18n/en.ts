@@ -1932,6 +1932,14 @@ export const en = {
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
+  "aiAdmin.certification.certified": "{model} is certified for this task.",
+  "aiAdmin.certification.degraded":
+    "{model} is supported for this task with reduced quality.",
+  "aiAdmin.certification.notSupported":
+    "{model} is not certified for this task. It is still used, so check what it produces.",
+  "aiAdmin.certification.unrecorded":
+    "{model} has not been measured for this task with these settings.",
+  "aiAdmin.certification.stale": "The record predates the current prompts.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -3387,6 +3395,7 @@ export const en = {
   // fetch and a bug in our own code both report in wording nobody authored for
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
+  "common.errorReference": "Reference",
   "common.assistantUnavailable":
     "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
   "common.providerOutOfCredit":
@@ -14303,6 +14312,8 @@ export const en = {
   "deal360.readFull": "Read full brief",
   "deal360.openTask": "Open task",
   "deal360.createTask": "Create follow-up",
+  "deal360.bringInManager": "Bring in manager",
+  "deal360.managerAsked": "Manager asked",
   "deal360.followUpCreated": "Follow-up created",
   "deal360.openBrief": "Open meeting brief",
   "deal360.unreadable":
@@ -17769,6 +17780,15 @@ export const en = {
   "aiRouting.baseUrl.help.jev":
     "Full endpoint URL. Blank uses TypeSafe’s own API.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "The resource endpoint, with no path. The API key is sent only to a host ending in .openai.azure.com. Required.",
+  "aiRouting.baseUrl.placeholder.azure": "https://my-resource.openai.azure.com",
+  "aiRouting.azureRegion.label": "Azure region",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
+  "aiRouting.azureRegion.help":
+    "The region the resource runs in, such as swedencentral. A region this installation does not know is blocked, so data stays where you agreed.",
+  "aiRouting.model.help.azure":
+    "Enter the name you gave this model in Azure, not the model’s own name.",
   "aiRouting.baseUrl.help.jevCompatible":
     "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -18215,6 +18235,25 @@ export const en = {
     "This address is already back in your list.",
   "ownerIdentities.addDescriptionEmpty":
     "None added yet. Colleagues never see this list.",
+  "unroutedMail.title": "Mail sent to addresses that are not yours",
+  "unroutedMail.sub":
+    "Your mailbox holds mail that was sent to other addresses. Nothing checks it until you say whether you receive that address. Only you see this list.",
+  "unroutedMail.summary_one":
+    "{count} message in your mailbox was sent to an address that is not yours.",
+  "unroutedMail.summary_other":
+    "{count} messages in your mailbox were sent to addresses that are not yours.",
+  "unroutedMail.count_one": "{count} message",
+  "unroutedMail.count_other": "{count} messages",
+  "unroutedMail.receive": "This address is mine",
+  "unroutedMail.receiveLabel": "This address is mine: {value}",
+  "unroutedMail.notMine": "Not mine",
+  "unroutedMail.notMineLabel": "Not mine: {value}",
+  "unroutedMail.received": "Address added. Its mail is checked like the rest.",
+  "unroutedMail.refused": "Hidden. This address is no longer counted.",
+  "unroutedMail.restored": "Counted again.",
+  "unroutedMail.removedClaim": "Address removed.",
+  "unroutedMail.more":
+    "The list is cut. Answer these addresses and the next ones appear.",
   "captureValue.refusedAddress":
     "Enter one email address, for example name@example.com.",
   "captureValue.refusedDomain":
@@ -21462,6 +21501,11 @@ export const en = {
   "worklist.gap.tab": "Close the gap",
   "worklist.gap.title": "Close the gap",
   "worklist.gap.loading": "Loading the ranked deals…",
+  "worklist.gap.requested.title": "Asked for your help",
+  "worklist.gap.requested.done": "Mark handled",
+  "worklist.gap.reason.big_deal": "Above the team’s median value",
+  "worklist.gap.reason.single_contact": "Only one contact engaged",
+  "worklist.gap.reason.stuck": "Stuck in its stage",
   "worklist.gap.empty":
     "No team has a ranked list yet. Margince ranks deals once a day for each captured team.",
   "worklist.gap.behind":
@@ -22276,6 +22320,7 @@ export const en = {
   "aiProviderSettings.service.otherChat": "Other OpenAI-compatible service",
   "aiProviderSettings.service.otherDecisions": "Other decision server",
   "aiProviderSettings.service.otherAddress": "Other address",
+  "aiProviderSettings.service.azureResource": "Your Azure OpenAI resource",
   "aiProviderSettings.service.learnMore": "About OpenRouter EU",
   "aiProviderSettings.host.line": "Host: {host}",
   "aiProviderSettings.host.default": "Uses the service’s own address.",
@@ -22286,6 +22331,7 @@ export const en = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini on Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-compatible",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",

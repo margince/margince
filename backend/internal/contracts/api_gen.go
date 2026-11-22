@@ -1768,6 +1768,7 @@ func (e AiProfileName) Valid() bool {
 // Defines values for AiProfileProviders.
 const (
 	AiProfileProvidersAnthropic        AiProfileProviders = "anthropic"
+	AiProfileProvidersAzureOpenai      AiProfileProviders = "azure_openai"
 	AiProfileProvidersGemini           AiProfileProviders = "gemini"
 	AiProfileProvidersGeminiVertex     AiProfileProviders = "gemini_vertex"
 	AiProfileProvidersOllama           AiProfileProviders = "ollama"
@@ -1780,6 +1781,8 @@ const (
 func (e AiProfileProviders) Valid() bool {
 	switch e {
 	case AiProfileProvidersAnthropic:
+		return true
+	case AiProfileProvidersAzureOpenai:
 		return true
 	case AiProfileProvidersGemini:
 		return true
@@ -2647,6 +2650,7 @@ func (e AssignmentSubjectKind) Valid() bool {
 // Defines values for AssistantConfiguredModelProvider.
 const (
 	AssistantConfiguredModelProviderAssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
+	AssistantConfiguredModelProviderAssistantModelProviderAzureOpenAI      AssistantConfiguredModelProvider = "azure_openai"
 	AssistantConfiguredModelProviderAssistantModelProviderGemini           AssistantConfiguredModelProvider = "gemini"
 	AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex     AssistantConfiguredModelProvider = "gemini_vertex"
 	AssistantConfiguredModelProviderAssistantModelProviderOllama           AssistantConfiguredModelProvider = "ollama"
@@ -2659,6 +2663,8 @@ const (
 func (e AssistantConfiguredModelProvider) Valid() bool {
 	switch e {
 	case AssistantConfiguredModelProviderAssistantModelProviderAnthropic:
+		return true
+	case AssistantConfiguredModelProviderAssistantModelProviderAzureOpenAI:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderGemini:
 		return true
@@ -2764,6 +2770,7 @@ func (e AssistantProfileName) Valid() bool {
 // Defines values for AssistantProfileProviders.
 const (
 	AssistantProfileProvidersAnthropic        AssistantProfileProviders = "anthropic"
+	AssistantProfileProvidersAzureOpenai      AssistantProfileProviders = "azure_openai"
 	AssistantProfileProvidersGemini           AssistantProfileProviders = "gemini"
 	AssistantProfileProvidersGeminiVertex     AssistantProfileProviders = "gemini_vertex"
 	AssistantProfileProvidersOllama           AssistantProfileProviders = "ollama"
@@ -2776,6 +2783,8 @@ const (
 func (e AssistantProfileProviders) Valid() bool {
 	switch e {
 	case AssistantProfileProvidersAnthropic:
+		return true
+	case AssistantProfileProvidersAzureOpenai:
 		return true
 	case AssistantProfileProvidersGemini:
 		return true
@@ -13999,6 +14008,27 @@ func (e ForecastContributionProbabilitySource) Valid() bool {
 	}
 }
 
+// Defines values for ForecastFocusRequestedReasons.
+const (
+	ForecastFocusRequestedReasonsBigDeal       ForecastFocusRequestedReasons = "big_deal"
+	ForecastFocusRequestedReasonsSingleContact ForecastFocusRequestedReasons = "single_contact"
+	ForecastFocusRequestedReasonsStuck         ForecastFocusRequestedReasons = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the ForecastFocusRequestedReasons enum.
+func (e ForecastFocusRequestedReasons) Valid() bool {
+	switch e {
+	case ForecastFocusRequestedReasonsBigDeal:
+		return true
+	case ForecastFocusRequestedReasonsSingleContact:
+		return true
+	case ForecastFocusRequestedReasonsStuck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastFocusTeamStatus.
 const (
 	ForecastFocusTeamStatusBehind   ForecastFocusTeamStatus = "behind"
@@ -14144,6 +14174,7 @@ func (e ForecastMovementBucketName) Valid() bool {
 const (
 	ForecastMovementDealCausesAmount             ForecastMovementDealCauses = "amount"
 	ForecastMovementDealCausesCategory           ForecastMovementDealCauses = "category"
+	ForecastMovementDealCausesFocusActions       ForecastMovementDealCauses = "focus_actions"
 	ForecastMovementDealCausesFx                 ForecastMovementDealCauses = "fx"
 	ForecastMovementDealCausesLost               ForecastMovementDealCauses = "lost"
 	ForecastMovementDealCausesNew                ForecastMovementDealCauses = "new"
@@ -14162,6 +14193,8 @@ func (e ForecastMovementDealCauses) Valid() bool {
 		return true
 	case ForecastMovementDealCausesCategory:
 		return true
+	case ForecastMovementDealCausesFocusActions:
+		return true
 	case ForecastMovementDealCausesFx:
 		return true
 	case ForecastMovementDealCausesLost:
@@ -14179,6 +14212,27 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesStageWeight:
 		return true
 	case ForecastMovementDealCausesWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementFocusActionKind.
+const (
+	ForecastMovementFocusActionKindMailSent    ForecastMovementFocusActionKind = "mail_sent"
+	ForecastMovementFocusActionKindMeetingHeld ForecastMovementFocusActionKind = "meeting_held"
+	ForecastMovementFocusActionKindTaskDone    ForecastMovementFocusActionKind = "task_done"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementFocusActionKind enum.
+func (e ForecastMovementFocusActionKind) Valid() bool {
+	switch e {
+	case ForecastMovementFocusActionKindMailSent:
+		return true
+	case ForecastMovementFocusActionKindMeetingHeld:
+		return true
+	case ForecastMovementFocusActionKindTaskDone:
 		return true
 	default:
 		return false
@@ -22294,6 +22348,27 @@ func (e ReportingValueBasis) Valid() bool {
 	}
 }
 
+// Defines values for RequestDealManagerRequestReasons.
+const (
+	RequestDealManagerRequestReasonsBigDeal       RequestDealManagerRequestReasons = "big_deal"
+	RequestDealManagerRequestReasonsSingleContact RequestDealManagerRequestReasons = "single_contact"
+	RequestDealManagerRequestReasonsStuck         RequestDealManagerRequestReasons = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the RequestDealManagerRequestReasons enum.
+func (e RequestDealManagerRequestReasons) Valid() bool {
+	switch e {
+	case RequestDealManagerRequestReasonsBigDeal:
+		return true
+	case RequestDealManagerRequestReasonsSingleContact:
+		return true
+	case RequestDealManagerRequestReasonsStuck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolveInputCheckOutcome.
 const (
 	ResolveInputCheckOutcomeAddedEvidence ResolveInputCheckOutcome = "added_evidence"
@@ -29034,6 +29109,7 @@ func (e WorklistItemSource) Valid() bool {
 
 // Defines values for WorklistMoveAction.
 const (
+	WorklistMoveActionBringInManager   WorklistMoveAction = "bring_in_manager"
 	WorklistMoveActionCreateTask       WorklistMoveAction = "create_task"
 	WorklistMoveActionDraftEmail       WorklistMoveAction = "draft_email"
 	WorklistMoveActionDraftReply       WorklistMoveAction = "draft_reply"
@@ -29046,6 +29122,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistMoveAction enum.
 func (e WorklistMoveAction) Valid() bool {
 	switch e {
+	case WorklistMoveActionBringInManager:
+		return true
 	case WorklistMoveActionCreateTask:
 		return true
 	case WorklistMoveActionDraftEmail:
@@ -35180,18 +35258,18 @@ type AiEmbeddingsBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// Location On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
 	// it is accepted only when empty or equal to the provider's, and a different one is a 422
 	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
 	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-	// Refused on every provider but `gemini_vertex`.
+	// Refused on every provider but `gemini_vertex` and `azure_openai`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini | gemini_vertex. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
@@ -35766,13 +35844,15 @@ type AiProviderKeyTestResultReason string
 // AiProviderSettings One provider's configuration. An entry no lane binds is held to its shape only, so a
 // host can be set before anything is bound to it.
 type AiProviderSettings struct {
-	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`.
+	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. On `azure_openai` it is required while a lane binds it and is the resource endpoint, `https://<resource>.openai.azure.com`.
 	BaseUrl *string `json:"base_url,omitempty"`
 
-	// Location The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
-	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-	// while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
-	// Google about each bound model at the new location first; one it does not serve is a 422.
+	// Location Where the provider processes the call. On `gemini_vertex` the Vertex AI location: `eu`,
+	// `us`, `global`, or a region such as `europe-west4`. Moving it asks Google about each
+	// bound model at the new location first; one it does not serve is a 422. On `azure_openai`
+	// the Azure region of the resource, such as `swedencentral`; a region this build does not
+	// know is a 422, and under the `eu_hosted` profile so is a region outside the EU.
+	// Required while a lane binds either provider, and refused on every other provider.
 	Location *string `json:"location,omitempty"`
 
 	// Upstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
@@ -35783,10 +35863,21 @@ type AiProviderSettings struct {
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
-	Model      string `json:"model"`
-	Processing string `json:"processing"`
-	Provider   string `json:"provider"`
-	Tier       string `json:"tier"`
+	// Certification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+	Certification *AiRouteCertification `json:"certification,omitempty"`
+	Model         string                `json:"model"`
+	Processing    string                `json:"processing"`
+	Provider      string                `json:"provider"`
+	Tier          string                `json:"tier"`
+}
+
+// AiRouteCertification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+type AiRouteCertification struct {
+	// Current Every record behind the verdict still describes the prompts this build sends.
+	Current bool `json:"current"`
+
+	// Verdict The worst verdict across the task's sites and across the records of this model.
+	Verdict string `json:"verdict"`
 }
 
 // AiRouting The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
@@ -35808,8 +35899,10 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
-	// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-	// connection's and the location's to say.
+	// `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+	// `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+	// Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+	// the location's to say.
 	Profile AiRoutingProfile `json:"profile"`
 
 	// Providers Provider name to what that provider is configured with, independent of any lane: its
@@ -35824,8 +35917,10 @@ type AiRouting struct {
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
-// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-// connection's and the location's to say.
+// `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+// `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+// Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+// the location's to say.
 type AiRoutingProfile string
 
 // AiRoutingEffective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
@@ -36008,18 +36103,18 @@ type AiTierBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// Location On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
 	// it is accepted only when empty or equal to the provider's, and a different one is a 422
 	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
 	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-	// Refused on every provider but `gemini_vertex`.
+	// Refused on every provider but `gemini_vertex` and `azure_openai`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini | gemini_vertex. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
@@ -41026,6 +41121,11 @@ type CitedProvision struct {
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
 // names the gap in `gaps` rather than substituting a plausible value.
 type ClaimEvidence struct {
+	// ClaimVersion The version of the stored claim this receipt was built from, the same number the claim's
+	// list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+	// receipt shows.
+	ClaimVersion *int64 `json:"claim_version,omitempty"`
+
 	// Confidence The model's confidence. ABSENT for the `connector`, `human` and `migration` kinds — none
 	// of them carries a model confidence, and printing one would fabricate a number
 	// (DOSS-AC-16).
@@ -52591,6 +52691,9 @@ type ForecastFocus struct {
 	PeriodEnd   openapi_types.Date `json:"period_end"`
 	PeriodStart openapi_types.Date `json:"period_start"`
 
+	// Requests Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out.
+	Requests *[]ForecastFocusRequested `json:"requests,omitempty"`
+
 	// Teams One entry per team with a daily freeze this quarter, ordered by team id.
 	Teams []ForecastFocusTeam `json:"teams"`
 
@@ -52621,6 +52724,23 @@ type ForecastFocusReason struct {
 	ClosesInDays *int                 `json:"closes_in_days,omitempty"`
 	Signals      []ForecastRiskSignal `json:"signals"`
 }
+
+// ForecastFocusRequested defines model for ForecastFocusRequested.
+type ForecastFocusRequested struct {
+	DealId   openapi_types.UUID `json:"deal_id"`
+	DealName string             `json:"deal_name"`
+
+	// OwnerId Absent when individual performance is off.
+	OwnerId     *openapi_types.UUID             `json:"owner_id,omitempty"`
+	Reasons     []ForecastFocusRequestedReasons `json:"reasons"`
+	RequestedAt time.Time                       `json:"requested_at"`
+
+	// RequestedBy Absent when individual performance is off.
+	RequestedBy *openapi_types.UUID `json:"requested_by,omitempty"`
+}
+
+// ForecastFocusRequestedReasons defines model for ForecastFocusRequested.Reasons.
+type ForecastFocusRequestedReasons string
 
 // ForecastFocusTeam defines model for ForecastFocusTeam.
 type ForecastFocusTeam struct {
@@ -52678,9 +52798,12 @@ type ForecastMovement struct {
 	ClosingMinor int64                    `json:"closing_minor"`
 
 	// Deals One row per deal that moved, each in exactly one bucket.
-	Deals        []ForecastMovementDeal  `json:"deals"`
-	OpeningMinor int64                   `json:"opening_minor"`
-	Reading      ForecastMovementReading `json:"reading"`
+	Deals []ForecastMovementDeal `json:"deals"`
+
+	// FocusActions How much of the change came from deals on the opening snapshot's stored focus list that were worked between the two snapshots. Absent when no listed deal was worked. It is a cause beside the buckets, not a bucket, so the buckets still add up.
+	FocusActions *ForecastMovementFocusActions `json:"focus_actions,omitempty"`
+	OpeningMinor int64                         `json:"opening_minor"`
+	Reading      ForecastMovementReading       `json:"reading"`
 }
 
 // ForecastMovementReading defines model for ForecastMovement.Reading.
@@ -52718,6 +52841,37 @@ type ForecastMovementDeal struct {
 
 // ForecastMovementDealCauses defines model for ForecastMovementDeal.Causes.
 type ForecastMovementDealCauses string
+
+// ForecastMovementFocusAction defines model for ForecastMovementFocusAction.
+type ForecastMovementFocusAction struct {
+	ActivityId openapi_types.UUID              `json:"activity_id"`
+	At         time.Time                       `json:"at"`
+	Kind       ForecastMovementFocusActionKind `json:"kind"`
+	Subject    *string                         `json:"subject,omitempty"`
+}
+
+// ForecastMovementFocusActionKind defines model for ForecastMovementFocusAction.Kind.
+type ForecastMovementFocusActionKind string
+
+// ForecastMovementFocusActions defines model for ForecastMovementFocusActions.
+type ForecastMovementFocusActions struct {
+	// AmountMinor The change of the worked focus-list deals, in the reading drawn.
+	AmountMinor int64 `json:"amount_minor"`
+
+	// Deals The worked deals, largest change first, each with links to what was done.
+	Deals []ForecastMovementFocusDeal `json:"deals"`
+
+	// ShareBps That change as a share of the whole change, in basis points. Absent when the whole change is zero.
+	ShareBps *int `json:"share_bps,omitempty"`
+}
+
+// ForecastMovementFocusDeal defines model for ForecastMovementFocusDeal.
+type ForecastMovementFocusDeal struct {
+	// Actions Up to five of the actions, oldest first.
+	Actions     []ForecastMovementFocusAction `json:"actions"`
+	AmountMinor int64                         `json:"amount_minor"`
+	DealId      openapi_types.UUID            `json:"deal_id"`
+}
 
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
@@ -65146,6 +65300,15 @@ type RequestDeadline struct {
 	Rule string `json:"rule"`
 }
 
+// RequestDealManagerRequest defines model for RequestDealManagerRequest.
+type RequestDealManagerRequest struct {
+	// Reasons Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them.
+	Reasons []RequestDealManagerRequestReasons `json:"reasons"`
+}
+
+// RequestDealManagerRequestReasons defines model for RequestDealManagerRequest.Reasons.
+type RequestDealManagerRequestReasons string
+
 // RequestLegalReviewRequest defines model for RequestLegalReviewRequest.
 type RequestLegalReviewRequest struct {
 	Note             *string             `json:"note,omitempty"`
@@ -70420,6 +70583,25 @@ type Undoability struct {
 // UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
 type UndoabilityReason string
 
+// UnroutedMailAddress defines model for UnroutedMailAddress.
+type UnroutedMailAddress struct {
+	Address string `json:"address"`
+
+	// Messages Messages in your mailbox sent to this address.
+	Messages int `json:"messages"`
+}
+
+// UnroutedMailResponse defines model for UnroutedMailResponse.
+type UnroutedMailResponse struct {
+	Data []UnroutedMailAddress `json:"data"`
+
+	// Messages Messages counted once each, however many listed addresses they name.
+	Messages int `json:"messages"`
+
+	// More True when the list is cut: at most 50 addresses are listed, from the newest 5000 messages.
+	More bool `json:"more"`
+}
+
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
 type UpdateAcquisitionSourceRequest struct {
 	Active    *bool   `json:"active,omitempty"`
@@ -75159,6 +75341,13 @@ type WorklistMove struct {
 	// `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 	// sends the reader to reauthorize a source that stopped answering.
 	//
+	// `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+	// one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+	// `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+	// deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+	// requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+	// when one of those facts changes.
+	//
 	// `none` is a producer's answer that there is nothing to do — a closed deal has
 	// no next step. It is a member of this enum so a producer that computes one has
 	// a word for it, but NO row carries it: a step of "nothing" and no step at all
@@ -75201,6 +75390,9 @@ type WorklistMove struct {
 	// No mailbox identity, credential, cursor or colleague account travels.
 	MailCoverage *MailCaptureCoverage `json:"mail_coverage,omitempty"`
 
+	// Reason One sentence saying why this move is offered. Carried by `bring_in_manager`, whose reasons are facts about the deal; the other verbs leave it absent and the row's own reason stands.
+	Reason *string `json:"reason,omitempty"`
+
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 }
@@ -75214,6 +75406,13 @@ type WorklistMove struct {
 // `draft_email` opens a new message, `create_task` agrees a next step,
 // `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 // sends the reader to reauthorize a source that stopped answering.
+//
+// `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+// one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+// `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+// deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+// requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+// when one of those facts changes.
 //
 // `none` is a producer's answer that there is nothing to do — a closed deal has
 // no next step. It is a member of this enum so a producer that computes one has
@@ -85960,6 +86159,9 @@ type UseDealEstimateJSONRequestBody = DealRevisionRequest
 
 // UpdateDealLineJSONRequestBody defines body for UpdateDealLine for application/json ContentType.
 type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
+
+// RequestDealManagerJSONRequestBody defines body for RequestDealManager for application/json ContentType.
+type RequestDealManagerJSONRequestBody = RequestDealManagerRequest
 
 // MoveDealPipelineJSONRequestBody defines body for MoveDealPipeline for application/json ContentType.
 type MoveDealPipelineJSONRequestBody = MoveDealPipelineRequest
@@ -101149,6 +101351,15 @@ type ServerInterface interface {
 	// The same ladder, opened from a row of the capture-activity window.
 	// (GET /capture/traces/{id})
 	ReadCaptureTracePipeline(w http.ResponseWriter, r *http.Request, id Id)
+	// The mail in your mailbox that was sent to addresses that are not yours.
+	// (GET /capture/unrouted-mail)
+	ListUnroutedMail(w http.ResponseWriter, r *http.Request)
+	// Take back "not mine" for an address.
+	// (DELETE /capture/unrouted-mail/{address}/refusal)
+	RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request, address string)
+	// Say that you do not receive this address.
+	// (PUT /capture/unrouted-mail/{address}/refusal)
+	RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request, address string)
 	// What has been going on with one record, in one cited picture.
 	// (GET /catch-up)
 	CatchUpOnRecord(w http.ResponseWriter, r *http.Request, params CatchUpOnRecordParams)
@@ -101902,6 +102113,12 @@ type ServerInterface interface {
 	// Change one line of a deal; omit a field to leave it as it is, send null to clear it.
 	// (PATCH /deals/{id}/lines/{lineId})
 	UpdateDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID)
+	// Mark the manager request on this deal as handled.
+	// (DELETE /deals/{id}/manager-request)
+	ClearDealManagerRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Ask the team's manager to look at this deal.
+	// (POST /deals/{id}/manager-request)
+	RequestDealManager(w http.ResponseWriter, r *http.Request, id Id)
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
@@ -105343,6 +105560,24 @@ func (_ Unimplemented) ReadCaptureTracePipeline(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The mail in your mailbox that was sent to addresses that are not yours.
+// (GET /capture/unrouted-mail)
+func (_ Unimplemented) ListUnroutedMail(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back "not mine" for an address.
+// (DELETE /capture/unrouted-mail/{address}/refusal)
+func (_ Unimplemented) RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request, address string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say that you do not receive this address.
+// (PUT /capture/unrouted-mail/{address}/refusal)
+func (_ Unimplemented) RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request, address string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What has been going on with one record, in one cited picture.
 // (GET /catch-up)
 func (_ Unimplemented) CatchUpOnRecord(w http.ResponseWriter, r *http.Request, params CatchUpOnRecordParams) {
@@ -106846,6 +107081,18 @@ func (_ Unimplemented) RemoveDealLine(w http.ResponseWriter, r *http.Request, id
 // Change one line of a deal; omit a field to leave it as it is, send null to clear it.
 // (PATCH /deals/{id}/lines/{lineId})
 func (_ Unimplemented) UpdateDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark the manager request on this deal as handled.
+// (DELETE /deals/{id}/manager-request)
+func (_ Unimplemented) ClearDealManagerRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask the team's manager to look at this deal.
+// (POST /deals/{id}/manager-request)
+func (_ Unimplemented) RequestDealManager(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -122589,6 +122836,90 @@ func (siw *ServerInterfaceWrapper) ReadCaptureTracePipeline(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// ListUnroutedMail operation middleware
+func (siw *ServerInterfaceWrapper) ListUnroutedMail(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUnroutedMail(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreUnroutedAddress operation middleware
+func (siw *ServerInterfaceWrapper) RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "address" -------------
+	var address string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "address", chi.URLParam(r, "address"), &address, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "address", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreUnroutedAddress(w, r, address)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RefuseUnroutedAddress operation middleware
+func (siw *ServerInterfaceWrapper) RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "address" -------------
+	var address string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "address", chi.URLParam(r, "address"), &address, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "address", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefuseUnroutedAddress(w, r, address)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CatchUpOnRecord operation middleware
 func (siw *ServerInterfaceWrapper) CatchUpOnRecord(w http.ResponseWriter, r *http.Request) {
 
@@ -135155,6 +135486,74 @@ func (siw *ServerInterfaceWrapper) UpdateDealLine(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateDealLine(w, r, id, lineId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClearDealManagerRequest operation middleware
+func (siw *ServerInterfaceWrapper) ClearDealManagerRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearDealManagerRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestDealManager operation middleware
+func (siw *ServerInterfaceWrapper) RequestDealManager(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestDealManager(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -161205,6 +161604,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/capture/traces/{id}", wrapper.ReadCaptureTracePipeline)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/unrouted-mail", wrapper.ListUnroutedMail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/capture/unrouted-mail/{address}/refusal", wrapper.RestoreUnroutedAddress)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/capture/unrouted-mail/{address}/refusal", wrapper.RefuseUnroutedAddress)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/catch-up", wrapper.CatchUpOnRecord)
 	})
 	r.Group(func(r chi.Router) {
@@ -161956,6 +162364,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/deals/{id}/lines/{lineId}", wrapper.UpdateDealLine)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/deals/{id}/manager-request", wrapper.ClearDealManagerRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/manager-request", wrapper.RequestDealManager)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)

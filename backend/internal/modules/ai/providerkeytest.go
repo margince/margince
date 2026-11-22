@@ -144,7 +144,8 @@ func probeProviderKey(
 		out.Reason = vendorKeyTestFailure(provider, err)
 		return out
 	}
-	out.OK, out.ModelCount, out.Counted = true, len(models), true
+	// The list still proves the key; its length is no count of bindable models.
+	out.OK, out.ModelCount, out.Counted = true, len(models), !hasCustomModelIDs(provider)
 	return out
 }
 

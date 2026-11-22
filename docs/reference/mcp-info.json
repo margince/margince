@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 288331,
+    "tool_catalog_bytes": 288465,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 73488,
+    "approx_wire_tokens_total": 73521,
     "largest_tool_bytes": 18033,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 55541,
-      "input_schema_bytes": 167697,
+      "input_schema_bytes": 167831,
       "output_schema_bytes": 52985,
-      "description_plus_input_schema_bytes": 223238
+      "description_plus_input_schema_bytes": 223372
     }
   },
   "tools": {
@@ -1245,7 +1245,7 @@
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "read_workspace topic actions lists each action's body\naccept_applied_change: Deprecated: Accept a recorded automatic deal change\naccept_deal_suggestion: Open the suggested deal or link the evidence to an existing deal\naccept_tag_suggestion: Apply the suggested tag, as the caller\nacknowledge_company_view: Record that the user has now seen this company — the baseline `since_last_visit` counts from\nacknowledge_contact_view: Record that the user has now seen this contact — the baseline `since_last_visit` counts from\nacknowledge_failed_approval: Say you have seen that an approved change did not run, so it leaves your Worklist\nadd_commitment: Write one thing onto this week's plan\nanswer_teammate: Answer a teammate's request for help\narchive_signal: Archive (soft-delete) a signal\nask_for_help: Say what you need from your lead on one commitment\nbrief_item_done: Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes\ncreate_signal: Record a signal (a derived observation, or a raw inbound/web item awaiting resolution)\ndismiss_brief_item: Dismiss a brief item (B-E05.13) — it does not reappear unless a new linked activity arrives after the mark\ndismiss_company_suggestion: Dismiss one next-step suggestion for the calling human\ndismiss_contact_moment: Hide this moment for me until its evidence changes\ndismiss_deal_move: Set the deal card's move aside for me until it changes\ndismiss_deal_suggestion: Record that the suggestion is not a deal, for the whole workspace\ndismiss_nudge: Set a lapsed contact aside, so the Worklist stops raising them for a while\ndismiss_nudges: Set several lapsed contacts aside at once — the Worklist's \"Dismiss all\"\ndismiss_tag_suggestion: Record that the evidence does not earn the tag, for the whole workspace\nedit_commitment: Correct what a commitment says, when it is due, or what it is about\nmark_all_notices_read: Settle the acting contact's whole notification centre in one act\nmark_notice_read: Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane\nmark_rows_done: Take rows off your own Worklist, because there is nothing more to do there\npin_row: Put a row at the top of your own day, above what the ranking chose\nreopen_rows: Put rows back on your own Worklist — the undo behind Done\nresolve_signal: Run the signal→company resolver over the signal's raw_ref (inspectable match, never silently confident)\nrestore_company_suggestion: Show a dismissed suggestion or moment again, the undo behind \"Not now\"\nrestore_contact_moment: Show a dismissed moment again, the undo behind \"Not now\"\nrestore_deal_move: Put a set-aside move back on the deal card, the undo behind \"Not now\"\nrestore_nudge: Put a set-aside contact back on the lane — the undo behind the dismiss verb\nset_commitment_state: Mark one commitment done, reopen it, or drop it\nset_weekly_plan: Say what could go wrong this week, and what room there is for it\nsnooze_brief_item: Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable\nstart_weekly_plan: Open a plan for this week\nunpin_row: Let the ranking have the row back — the undo behind the pin\nunsnooze_brief_item: Take back a snooze — the item returns to the queue immediately\nupdate_signal: Triage a signal (acknowledge / resolve / dismiss, severity)\nvisit_list: Record that the signed-in user has opened this list — the mark `since_last_visit` counts from",
+              "description": "read_workspace topic actions lists each action's body\naccept_applied_change: Deprecated: Accept a recorded automatic deal change\naccept_deal_suggestion: Open the suggested deal or link the evidence to an existing deal\naccept_tag_suggestion: Apply the suggested tag, as the caller\nacknowledge_company_view: Record that the user has now seen this company — the baseline `since_last_visit` counts from\nacknowledge_contact_view: Record that the user has now seen this contact — the baseline `since_last_visit` counts from\nacknowledge_failed_approval: Say you have seen that an approved change did not run, so it leaves your Worklist\nadd_commitment: Write one thing onto this week's plan\nanswer_teammate: Answer a teammate's request for help\narchive_signal: Archive (soft-delete) a signal\nask_for_help: Say what you need from your lead on one commitment\nbrief_item_done: Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes\ncreate_signal: Record a signal (a derived observation, or a raw inbound/web item awaiting resolution)\ndismiss_brief_item: Dismiss a brief item (B-E05.13) — it does not reappear unless a new linked activity arrives after the mark\ndismiss_company_suggestion: Dismiss one next-step suggestion for the calling human\ndismiss_contact_moment: Hide this moment for me until its evidence changes\ndismiss_deal_move: Set the deal card's move aside for me until it changes\ndismiss_deal_suggestion: Record that the suggestion is not a deal, for the whole workspace\ndismiss_nudge: Set a lapsed contact aside, so the Worklist stops raising them for a while\ndismiss_nudges: Set several lapsed contacts aside at once — the Worklist's \"Dismiss all\"\ndismiss_tag_suggestion: Record that the evidence does not earn the tag, for the whole workspace\nedit_commitment: Correct what a commitment says, when it is due, or what it is about\nmark_all_notices_read: Settle the acting contact's whole notification centre in one act\nmark_notice_read: Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane\nmark_rows_done: Take rows off your own Worklist, because there is nothing more to do there\npin_row: Put a row at the top of your own day, above what the ranking chose\nreopen_rows: Put rows back on your own Worklist — the undo behind Done\nrequest_deal_manager: Ask the team's manager to look at this deal\nresolve_signal: Run the signal→company resolver over the signal's raw_ref (inspectable match, never silently confident)\nrestore_company_suggestion: Show a dismissed suggestion or moment again, the undo behind \"Not now\"\nrestore_contact_moment: Show a dismissed moment again, the undo behind \"Not now\"\nrestore_deal_move: Put a set-aside move back on the deal card, the undo behind \"Not now\"\nrestore_nudge: Put a set-aside contact back on the lane — the undo behind the dismiss verb\nset_commitment_state: Mark one commitment done, reopen it, or drop it\nset_weekly_plan: Say what could go wrong this week, and what room there is for it\nsnooze_brief_item: Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable\nstart_weekly_plan: Open a plan for this week\nunpin_row: Let the ranking have the row back — the undo behind the pin\nunsnooze_brief_item: Take back a snooze — the item returns to the queue immediately\nupdate_signal: Triage a signal (acknowledge / resolve / dismiss, severity)\nvisit_list: Record that the signed-in user has opened this list — the mark `since_last_visit` counts from",
               "enum": [
                 "accept_applied_change",
                 "accept_deal_suggestion",
@@ -1273,6 +1273,7 @@
                 "mark_rows_done",
                 "pin_row",
                 "reopen_rows",
+                "request_deal_manager",
                 "resolve_signal",
                 "restore_company_suggestion",
                 "restore_contact_moment",
@@ -1306,7 +1307,7 @@
               "type": "string"
             },
             "id": {
-              "description": "accept_applied_change, accept_deal_suggestion, accept_tag_suggestion, acknowledge_company_view, acknowledge_contact_view, acknowledge_failed_approval, answer_teammate, archive_signal, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_tag_suggestion, edit_commitment, mark_notice_read, resolve_signal, restore_company_suggestion, restore_contact_moment, restore_deal_move, restore_nudge, set_commitment_state, update_signal, visit_list only",
+              "description": "accept_applied_change, accept_deal_suggestion, accept_tag_suggestion, acknowledge_company_view, acknowledge_contact_view, acknowledge_failed_approval, answer_teammate, archive_signal, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_tag_suggestion, edit_commitment, mark_notice_read, request_deal_manager, resolve_signal, restore_company_suggestion, restore_contact_moment, restore_deal_move, restore_nudge, set_commitment_state, update_signal, visit_list only",
               "type": "string"
             },
             "idempotency_key": {
@@ -1323,7 +1324,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, reopen_rows, request_deal_manager, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "row_id": {
@@ -14744,6 +14745,14 @@
           "route": "POST /v1/brief/items/{itemId}/act"
         },
         {
+          "action": "clear_deal_manager_request",
+          "does": "Mark the manager request on this deal as handled.",
+          "ids": [
+            "id"
+          ],
+          "route": "DELETE /v1/deals/{id}/manager-request"
+        },
+        {
           "action": "create_signal",
           "body": {
             "properties": {
@@ -15297,6 +15306,37 @@
           },
           "does": "Put rows back on your own Worklist — the undo behind Done.",
           "route": "POST /v1/worklist/done/undo"
+        },
+        {
+          "action": "request_deal_manager",
+          "body": {
+            "additionalProperties": false,
+            "properties": {
+              "reasons": {
+                "description": "Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them.",
+                "items": {
+                  "enum": [
+                    "big_deal",
+                    "single_contact",
+                    "stuck"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "required": [
+              "reasons"
+            ],
+            "type": "object"
+          },
+          "does": "Ask the team's manager to look at this deal.",
+          "ids": [
+            "id"
+          ],
+          "route": "POST /v1/deals/{id}/manager-request"
         },
         {
           "action": "resolve_signal",
@@ -24248,8 +24288,7 @@
                     "type": "array"
                   },
                   "location": {
-                    "description": "On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write it is accepted only when empty or equal to the provider's, and a different one is a 422 `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an embedding model at fewer locations than a chat model, so the lane may sit elsewhere. Refused on every provider but `gemini_vertex`.",
-                    "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
+                    "description": "On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write it is accepted only when empty or equal to the provider's, and a different one is a 422 `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an embedding model at fewer locations than a chat model, so the lane may sit elsewhere. Refused on every provider but `gemini_vertex` and `azure_openai`.",
                     "type": "string"
                   },
                   "model": {
@@ -24257,7 +24296,7 @@
                     "type": "string"
                   },
                   "provider": {
-                    "description": "The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The credential is never part of this document.",
+                    "description": "The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.",
                     "type": "string"
                   },
                   "routing": {
@@ -24538,7 +24577,7 @@
                 "type": "array"
               },
               "profile": {
-                "description": "The location ladder (§4). `sovereign` means zero egress by construction: a cloud provider on any tier is refused, and so is a local provider pointed at another host. `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the connection's and the location's to say.",
+                "description": "The location ladder (§4). `sovereign` means zero egress by construction: a cloud provider on any tier is refused, and so is a local provider pointed at another host. `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and the location's to say.",
                 "enum": [
                   "eu_hosted",
                   "sovereign",
@@ -24552,12 +24591,11 @@
                   "additionalProperties": false,
                   "properties": {
                     "base_url": {
-                      "description": "Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`.",
+                      "description": "Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. On `azure_openai` it is required while a lane binds it and is the resource endpoint, `https://\u003cresource\u003e.openai.azure.com`.",
                       "type": "string"
                     },
                     "location": {
-                      "description": "The Vertex AI location a `gemini_vertex` provider is served from, which is where Google processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks Google about each bound model at the new location first; one it does not serve is a 422.",
-                      "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
+                      "description": "Where the provider processes the call. On `gemini_vertex` the Vertex AI location: `eu`, `us`, `global`, or a region such as `europe-west4`. Moving it asks Google about each bound model at the new location first; one it does not serve is a 422. On `azure_openai` the Azure region of the resource, such as `swedencentral`; a region this build does not know is a 422, and under the `eu_hosted` profile so is a region outside the EU. Required while a lane binds either provider, and refused on every other provider.",
                       "type": "string"
                     },
                     "upstream": {
@@ -24625,8 +24663,7 @@
                       "type": "array"
                     },
                     "location": {
-                      "description": "On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write it is accepted only when empty or equal to the provider's, and a different one is a 422 `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an embedding model at fewer locations than a chat model, so the lane may sit elsewhere. Refused on every provider but `gemini_vertex`.",
-                      "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
+                      "description": "On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write it is accepted only when empty or equal to the provider's, and a different one is a 422 `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an embedding model at fewer locations than a chat model, so the lane may sit elsewhere. Refused on every provider but `gemini_vertex` and `azure_openai`.",
                       "type": "string"
                     },
                     "model": {
@@ -24634,7 +24671,7 @@
                       "type": "string"
                     },
                     "provider": {
-                      "description": "The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The credential is never part of this document.",
+                      "description": "The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.",
                       "type": "string"
                     },
                     "routing": {

@@ -9,6 +9,7 @@ import {
 } from "../lib/connectivity";
 import { EmptySuccessError } from "../lib/problem";
 import { beginModelCall, endModelCall } from "./model-inflight";
+import { withRequestReference } from "./requestreference";
 
 // The ONE API seam (architecture/01: the frontend depends on the generated
 // contract, never Go internals). Types come from src/api/schema.d.ts —
@@ -178,7 +179,7 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
   }
   reportAnswer(response, request);
   refuseForeignReadAnswer(response, request);
-  return withGatewayProblem(response, request);
+  return withRequestReference(withGatewayProblem(response, request));
 }
 
 // The success statuses no read in the contract answers with; client.test.ts

@@ -1404,6 +1404,7 @@ public.app_user.work_start_minute smallint gen=- def=-
 public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING btree (id)
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.approval.acknowledged_effect_failed_at timestamp with time zone gen=- def=-
+public.approval.approval_co_target_entity_type_check CHECK (((co_target_entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text, 'list'::text, 'signal'::text, 'saved_view'::text, 'tag'::text, 'custom_field'::text, 'webhook_subscription'::text, 'import_run'::text, 'report_definition'::text, 'app_user'::text, 'user_admin'::text, 'team'::text, 'record_grant'::text, 'data_subject_request'::text, 'fx_rate'::text, 'ai_model_rate'::text, 'legal_review'::text, 'brief'::text, 'stage'::text])) OR (co_target_entity_type ~ '^ext_[a-z0-9]+(_[a-z0-9]+)*$'::text)))
 public.approval.approval_co_target_whole CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))
 public.approval.approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL))))
 public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL (decided_by)
@@ -1418,6 +1419,7 @@ public.approval.approval_requested_decider_source_check CHECK ((requested_decide
 public.approval.approval_staged_by_connection_fkey FOREIGN KEY (staged_by_connection) REFERENCES oauth_grant(id) ON DELETE SET NULL
 public.approval.approval_staged_in_conversation_of_fkey FOREIGN KEY (staged_in_conversation_of) REFERENCES app_user(id) ON DELETE SET NULL
 public.approval.approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))
+public.approval.approval_target_entity_type_check CHECK (((target_entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text, 'list'::text, 'signal'::text, 'saved_view'::text, 'tag'::text, 'custom_field'::text, 'webhook_subscription'::text, 'import_run'::text, 'report_definition'::text, 'app_user'::text, 'user_admin'::text, 'team'::text, 'record_grant'::text, 'data_subject_request'::text, 'fx_rate'::text, 'ai_model_rate'::text, 'legal_review'::text, 'brief'::text, 'stage'::text])) OR (target_entity_type ~ '^ext_[a-z0-9]+(_[a-z0-9]+)*$'::text)))
 public.approval.approval_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.approval.bundle_id uuid gen=- def=-
 public.approval.co_target_entity_id uuid gen=- def=-
@@ -3364,7 +3366,6 @@ public.company.name_source text NOT NULL gen=- def='human'::text
 public.company.owner_id uuid gen=- def=-
 public.company.parent_company_id uuid gen=- def=-
 public.company.phone text gen=- def=-
-public.company.quarantined_at timestamp with time zone gen=- def=-
 public.company.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(display_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(display_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char"))
 public.company.size_band text gen=- def=-
 public.company.source text NOT NULL gen=- def=-
@@ -4153,6 +4154,7 @@ public.contact_acquisition_evidence.contact_acquisition_evidence_contact_id_fkey
 public.contact_acquisition_evidence.contact_acquisition_evidence_kind CHECK ((kind = ANY (ARRAY['subject_initiated'::text, 'customer_contract'::text, 'requested_quote_or_meeting'::text, 'in_person_permission'::text, 'referral'::text, 'event_or_form'::text, 'public_or_business_source'::text, 'purchased_or_imported'::text, 'unknown_legacy'::text, 'crm_migration'::text, 'mailbox_history'::text])))
 public.contact_acquisition_evidence.contact_acquisition_evidence_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.contact_acquisition_evidence.contact_acquisition_evidence_pkey PRIMARY KEY (id)
+public.contact_acquisition_evidence.contact_acquisition_evidence_source_entity_type_check CHECK ((source_entity_type = ANY (ARRAY['activity'::text, 'deal'::text])))
 public.contact_acquisition_evidence.contact_acquisition_evidence_source_shape CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))
 public.contact_acquisition_evidence.contact_acquisition_evidence_stated_source_check CHECK ((stated_source = ANY (ARRAY['met_in_person'::text, 'business_card'::text, 'referral'::text, 'website'::text, 'other'::text])))
 public.contact_acquisition_evidence.contact_id uuid NOT NULL gen=- def=-
@@ -4991,6 +4993,9 @@ public.deal.legal_hold boolean NOT NULL gen=- def=false
 public.deal.lost_reason text gen=- def=-
 public.deal.lost_reason_basis text gen=- def=-
 public.deal.lost_reason_code text gen=- def=-
+public.deal.manager_request_reasons text[] gen=- def=-
+public.deal.manager_requested_at timestamp with time zone gen=- def=-
+public.deal.manager_requested_by uuid gen=- def=-
 public.deal.name text NOT NULL gen=- def=-
 public.deal.owner_id uuid gen=- def=-
 public.deal.partner_attribution text gen=- def=-
@@ -8094,6 +8099,7 @@ public.notice.notice_subject_present CHECK ((subject <> ''::text))
 public.notice.notice_system_text_retire CREATE TRIGGER notice_system_text_retire BEFORE UPDATE ON public.notice FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()
 public.notice.notice_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192))))
 public.notice.notice_target_paired CHECK (((target_type IS NULL) = (target_id IS NULL)))
+public.notice.notice_target_type_check CHECK (((target_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text, 'list'::text, 'signal'::text, 'saved_view'::text, 'tag'::text, 'custom_field'::text, 'webhook_subscription'::text, 'import_run'::text, 'report_definition'::text, 'app_user'::text, 'user_admin'::text, 'team'::text, 'record_grant'::text, 'data_subject_request'::text, 'fx_rate'::text, 'ai_model_rate'::text, 'legal_review'::text, 'brief'::text, 'stage'::text, 'approval'::text, 'data_task'::text, 'retained_email_signature'::text, 'email_signature'::text, 'signature_template'::text, 'legal_entity'::text, 'knowledge_document'::text, 'approval_history'::text])) OR (target_type ~ '^ext_[a-z0-9]+(_[a-z0-9]+)*$'::text)))
 public.notice.origin jsonb gen=- def=-
 public.notice.read_at timestamp with time zone gen=- def=-
 public.notice.recipient_user_id uuid NOT NULL gen=- def=-
@@ -9390,6 +9396,7 @@ public.report_edition_contribution.metric text NOT NULL gen=- def=-
 public.report_edition_contribution.owner_id uuid gen=- def=-
 public.report_edition_contribution.report_edition_contribution_edition_id_fkey FOREIGN KEY (edition_id) REFERENCES report_edition(id) ON DELETE CASCADE
 public.report_edition_contribution.report_edition_contribution_pkey PRIMARY KEY (edition_id, metric, context_id, contribution_key)
+public.report_edition_contribution.report_edition_contribution_source_type_check CHECK ((source_type = ANY (ARRAY['deal'::text, 'activity'::text, 'lead'::text, 'company'::text, 'sdr_handoff'::text, 'intro_request'::text, 'forecast_projection'::text])))
 public.report_edition_contribution.source_id uuid NOT NULL gen=- def=-
 public.report_edition_contribution.source_type text NOT NULL gen=- def=-
 public.report_edition_contribution.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_edition_contribution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"metric": 20000, "group_key": 20000, "context_id": 20000, "source_type": 20000, "contribution_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"context_id":20000,"contribution_key":20000,"group_key":20000,"metric":20000,"source_type":20000}')

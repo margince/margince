@@ -17,6 +17,7 @@ import { useT } from "../../i18n";
 import { invalidateProviderHealth } from "../../lib/ai-provider-health";
 import { ROUTING_KEY } from "../../lib/ai-routing-query";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { AZURE_PROVIDER, AzureRegionField } from "./ai-azure-region";
 import {
   draftOf,
   type OpenRouterDraft,
@@ -91,6 +92,8 @@ const UNCHOSEN = "";
 export function serviceOf(provider: string, host: string): string {
   if (SERVICES.get(provider)?.direct) return OTHER;
   const known = SERVICES.get(provider)?.services ?? [];
+  // Nothing to choose among: the host is the one the reader types.
+  if (known.length === 0 && SERVICES.has(provider)) return OTHER;
   if (host.trim() === "") {
     return known.find((s) => s.host === "")?.id ?? UNCHOSEN;
   }
@@ -168,6 +171,39 @@ function ServiceCaption({ service }: Readonly<{ service: Service }>) {
       )}
     </>
   );
+}
+
+/** Where the provider processes a call: a Vertex location or an Azure region. */
+function ProviderPlace({
+  provider,
+  location,
+  disabled,
+  onChange,
+}: Readonly<{
+  provider: string;
+  location: string;
+  disabled: boolean;
+  onChange: (location: string) => void;
+}>) {
+  if (provider === AZURE_PROVIDER) {
+    return (
+      <AzureRegionField
+        value={location}
+        disabled={disabled}
+        onChange={onChange}
+      />
+    );
+  }
+  if (provider === VERTEX_PROVIDER) {
+    return (
+      <VertexLocationField
+        value={location}
+        disabled={disabled}
+        onChange={onChange}
+      />
+    );
+  }
+  return null;
 }
 
 export function ProviderSettingsForm({
@@ -260,13 +296,12 @@ export function ProviderSettingsForm({
           disabled={disabled}
         />
       )}
-      {provider === VERTEX_PROVIDER && (
-        <VertexLocationField
-          value={location}
-          disabled={disabled}
-          onChange={setLocation}
-        />
-      )}
+      <ProviderPlace
+        provider={provider}
+        location={location}
+        disabled={disabled}
+        onChange={setLocation}
+      />
       <div className="ai-provider-settings-foot">
         <Button
           variant="primary"

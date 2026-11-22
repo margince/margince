@@ -58,6 +58,10 @@ var (
 		Key: "ai.provider_keys_gemini_vertex", Env: "GEMINI_VERTEX_SA_JSON", Type: config.String, Secret: true, Roles: keyRoles,
 		Doc: "BYOK service-account key (the JSON key file's contents) for the gemini_vertex provider; required only when a binding names it.",
 	}, providerKeyStore)
+	AzureOpenAIKey = config.DefineStored(config.Spec[string]{
+		Key: "ai.provider_keys_azure_openai", Env: "AZURE_OPENAI_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
+		Doc: "BYOK API key for the azure_openai provider (the Azure OpenAI resource's static key); required only when a binding names it.",
+	}, providerKeyStore)
 	JevKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_jev", Env: "TYPESAFE_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
 		Doc: "API key for the TypeSafe decision provider; required only when the decisions lane binds it.",
