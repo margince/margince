@@ -15,11 +15,16 @@ package activities
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -473,5 +478,108 @@ func TestATransitionRollsBackWithItsWrite(t *testing.T) {
 	}
 	if got := len(historyOf(t, e, id)); got != before {
 		t.Errorf("history grew from %d to %d across a refused write", before, got)
+	}
+}
+
+// seedCreditedGuests logs a human-booked meeting, adds one guest beside its
+// host, and holds it three days after it was booked.
+func seedCreditedGuests(t *testing.T, e *sendEnv) ids.ActivityID {
+	t.Helper()
+	id := bookMeeting(t, e, "Credit snapshot", time.Now().Add(-72*time.Hour))
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity_participant (activity_id, user_id, role, address)
+		VALUES ($1, $2, 'attendee', 'guest@snapshot.test')`, id.UUID, e.other); err != nil {
+		t.Fatalf("adding a guest: %v", err)
+	}
+	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
+	return id
+}
+
+// creditedSeats reads the seats a closed week credits the meeting to: the held
+// transition's snapshot beside the live rule.
+func creditedSeats(t *testing.T, e *sendEnv, id ids.ActivityID) []string {
+	t.Helper()
+	rows, err := e.owner.Query(context.Background(), `
+		SELECT credit.id::text FROM activity a JOIN activity_meeting_history h ON h.activity_id = a.id AND h.status = 'held'
+		CROSS JOIN LATERAL `+storekit.MeetingCreditedSeatsAtChangeSQL("a", "false", "h.host_id_at_change", "h.credited_seats_at_change")+`
+		WHERE a.id = $1 ORDER BY 1`, id.UUID)
+	if err != nil {
+		t.Fatalf("reading the credited seats: %v", err)
+	}
+	seats, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatalf("reading the credited seats: %v", err)
+	}
+	return seats
+}
+
+// A holding keeps the seats the credit rule named at that moment, so a later
+// sync of the guest list cannot take them back. A booking keeps none, and a
+// guest who is added after the holding still adds credit.
+func TestAHoldingKeepsItsCreditedSeatsAndALaterGuestStillAdds(t *testing.T) {
+	e := setupSend(t)
+	ctx := context.Background()
+	id := seedCreditedGuests(t, e)
+
+	var booked []string
+	if err := e.owner.QueryRow(ctx, `
+		SELECT credited_seats_at_change::text[] FROM activity_meeting_history WHERE activity_id = $1 AND status = 'booked'`,
+		id.UUID).Scan(&booked); err != nil || booked != nil {
+		t.Fatalf("the booking kept seats %v (%v), want none", booked, err)
+	}
+	both := []string{e.rep.String(), e.other.String()}
+	slices.Sort(both)
+	if got := creditedSeats(t, e, id); !slices.Equal(got, both) {
+		t.Fatalf("credited seats = %v, want %v", got, both)
+	}
+	if _, err := e.owner.Exec(ctx, `DELETE FROM activity_participant WHERE activity_id = $1`, id.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if got := creditedSeats(t, e, id); !slices.Equal(got, both) {
+		t.Errorf("after the guest list was rewritten the credited seats = %v, want %v", got, both)
+	}
+	if _, err := e.owner.Exec(ctx, `UPDATE activity_meeting_history SET credited_seats_at_change = ARRAY[$2::uuid] WHERE activity_id = $1`, id.UUID, e.rep); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, user_id, role, address)
+		VALUES ($1, $2, 'attendee', 'late@snapshot.test')`, id.UUID, e.other); err != nil {
+		t.Fatal(err)
+	}
+	if got := creditedSeats(t, e, id); !slices.Equal(got, both) {
+		t.Errorf("a guest who joined after the holding gives credited seats %v, want %v", got, both)
+	}
+}
+
+// A meeting two colleagues attended is listed under each of them where a figure
+// groups by colleague, and counted once where it does not.
+func TestAMeetingIsListedUnderEveryCreditedColleagueAndCountedOnceInTotal(t *testing.T) {
+	e := setupSend(t)
+	id := seedCreditedGuests(t, e)
+	ctx := context.Background()
+
+	rows, err := e.owner.Query(ctx, `SELECT `+storekit.MeetingCreditedSeatListSQL("a")+`::text AS seat, count(*) FROM activity a WHERE a.id = $1 GROUP BY 1 ORDER BY 1`, id.UUID)
+	if err != nil {
+		t.Fatalf("grouping by colleague: %v", err)
+	}
+	type listed struct {
+		Seat string
+		N    int
+	}
+	got, err := pgx.CollectRows(rows, pgx.RowToStructByPos[listed])
+	if err != nil {
+		t.Fatalf("grouping by colleague: %v", err)
+	}
+	want := []listed{{e.rep.String(), 1}, {e.other.String(), 1}}
+	slices.SortFunc(want, func(a, b listed) int { return strings.Compare(a.Seat, b.Seat) })
+	if !slices.Equal(got, want) {
+		t.Errorf("the meeting is listed %v, want once under each credited colleague %v", got, want)
+	}
+	var total int
+	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM activity a WHERE a.id = $1 AND `+storekit.MeetingCreditSQL("a", "$2"), id.UUID, e.other).Scan(&total); err != nil || total != 1 {
+		t.Errorf("filtered to the guest the meeting counts %d (%v), want 1", total, err)
+	}
+	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM activity a WHERE a.id = $1`, id.UUID).Scan(&total); err != nil || total != 1 {
+		t.Errorf("ungrouped the meeting counts %d (%v), want once", total, err)
 	}
 }

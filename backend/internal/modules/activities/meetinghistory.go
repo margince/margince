@@ -30,6 +30,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -138,9 +139,15 @@ func recordMeetingTransition(ctx context.Context, tx pgx.Tx, in meetingTransitio
 	placeholders := storekit.Placeholders(args)
 	args = append(args, in.RecordedAt)
 	recordedParameter := fmt.Sprintf("$%d", len(args))
+	args = append(args, meetingoutcome.Held)
+	heldParameter := fmt.Sprintf("$%d", len(args))
+	// A hold snapshots the credited seats, so a later sync of a guest's answer
+	// cannot move a closed week's credit.
 	_, err := tx.Exec(ctx, `INSERT INTO activity_meeting_history
-        (activity_id,status,scheduled_start,scheduled_precision,actor,source_system,source_id,host_id_at_change,effective_at,customer_eligible_at_change)
-        SELECT `+placeholders+`,a.host_user_id,COALESCE(`+recordedParameter+`::timestamptz,now()),`+CustomerMeetingSQL("a")+` FROM activity a WHERE a.id=`+activityParameter, args...)
+        (activity_id,status,scheduled_start,scheduled_precision,actor,source_system,source_id,host_id_at_change,effective_at,customer_eligible_at_change,credited_seats_at_change)
+        SELECT `+placeholders+`,a.host_user_id,COALESCE(`+recordedParameter+`::timestamptz,now()),`+CustomerMeetingSQL("a")+`,
+        CASE WHEN $2::text = `+heldParameter+`::text THEN ARRAY(SELECT credit.id FROM `+storekit.MeetingCreditedSeatsSQL("a")+`) END
+        FROM activity a WHERE a.id=`+activityParameter, args...)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			// This exact connector event is already on record.

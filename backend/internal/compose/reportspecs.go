@@ -35,7 +35,7 @@ const heldHostUnrecorded = "held.host_id_at_change IS NULL"
 // answered no for every colleague but the one it happened to pick.
 func creditedSeatIsFilter() string {
 	return "(t.kind = 'meeting' AND EXISTS (SELECT 1 FROM " +
-		storekit.MeetingCreditedSeatsAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") +
+		storekit.MeetingCreditedSeatsAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change", "held.credited_seats_at_change") +
 		" WHERE credit.id = %s))"
 }
 
@@ -469,7 +469,7 @@ var prebuiltReports = map[string]reportSpec{
 // host as it stood then. Its latest one, because a meeting re-held under a new
 // host is credited to that host.
 const heldTransitionJoin = `LEFT JOIN LATERAL (
-        SELECT h.host_id_at_change
+        SELECT h.host_id_at_change, h.credited_seats_at_change
         FROM activity_meeting_history h
         WHERE h.activity_id = t.id AND h.status = 'held'
         ORDER BY h.effective_at DESC, h.id DESC

@@ -50,7 +50,7 @@ func MeetingCreditSQL(meeting, seat string) string {
 // MeetingCreditedSeatsSQL renders a row source of the seats MeetingCreditSQL
 // credits, as `credit(id)`, for a caller that narrows them to a population.
 func MeetingCreditedSeatsSQL(meeting string) string {
-	return meetingCreditedSeatsSQL(meeting, meeting+".host_user_id")
+	return meetingCreditedSeatsSQL(meeting, meeting+".host_user_id", "")
 }
 
 // MeetingCreditedSeatsAtChangeSQL is MeetingCreditedSeatsSQL for a status
@@ -58,38 +58,55 @@ func MeetingCreditedSeatsSQL(meeting string) string {
 // then does not move credit for a meeting already held. Where legacy holds, the
 // change recorded nothing and the meeting's own host is read. Only a host a
 // human logged counts either way.
-func MeetingCreditedSeatsAtChangeSQL(meeting, legacy, recorded string) string {
-	return meetingCreditedSeatsSQL(meeting, recordedHostSQL(meeting, legacy, recorded))
+// kept is the uuid[] of seats the held transition credited. A later sync of a
+// guest's answer cannot remove them, and the live rule still adds new ones.
+func MeetingCreditedSeatsAtChangeSQL(meeting, legacy, recorded, kept string) string {
+	return meetingCreditedSeatsSQL(meeting, recordedHostSQL(meeting, legacy, recorded), kept)
 }
 
-// MeetingCreditedSeatAtChangeSQL is MeetingCreditedSeatSQL over the host a
-// status change recorded, as MeetingCreditedSeatsAtChangeSQL reads it.
+// MeetingCreditedSeatAtChangeSQL is the one seat a meeting is listed under,
+// over the host a status change recorded, as MeetingCreditedSeatsAtChangeSQL reads it.
 func MeetingCreditedSeatAtChangeSQL(meeting, legacy, recorded string) string {
 	return meetingCreditedSeatSQL(meeting, recordedHostSQL(meeting, legacy, recorded))
+}
+
+// MeetingCreditedSeatListSQL lists a meeting under every seat MeetingCreditSQL
+// credits, and under NULL when it credits none. The set-returning call fans a
+// row out only where a statement groups by it. A total counts the meeting once.
+// A per-colleague figure counts it once for each credited colleague.
+func MeetingCreditedSeatListSQL(meeting string) string {
+	return "unnest(COALESCE(NULLIF(ARRAY(SELECT credit.id FROM " + MeetingCreditedSeatsSQL(meeting) +
+		"), '{}'::uuid[]), ARRAY[NULL::uuid]))"
+}
+
+// MeetingLowestCreditedSeatSQL is the lowest seat MeetingCreditSQL credits, NULL
+// when it credits none: one value per meeting where a column cannot be a set.
+func MeetingLowestCreditedSeatSQL(meeting string) string {
+	return "(SELECT credit.id FROM " + MeetingCreditedSeatsSQL(meeting) + " ORDER BY credit.id LIMIT 1)"
 }
 
 func recordedHostSQL(meeting, legacy, recorded string) string {
 	return fmt.Sprintf("(CASE WHEN %s THEN %s.host_user_id ELSE %s END)", legacy, meeting, recorded)
 }
 
-func meetingCreditedSeatsSQL(meeting, host string) string {
-	return fmt.Sprintf(`(SELECT seat.id FROM (
+func meetingCreditedSeatsSQL(meeting, host, kept string) string {
+	seats := fmt.Sprintf(`SELECT seat.id FROM (
 	     SELECT %[2]s
 	     UNION SELECT seen.user_id FROM activity_participant seen WHERE seen.activity_id = %[1]s.id AND %[4]s
 	     UNION SELECT hosted.host_user_id FROM meeting_invitation hosted WHERE hosted.activity_id = %[1]s.id) seat(id)
-	    WHERE seat.id IS NOT NULL AND %[3]s) credit(id)`, meeting, host, meetingCreditSQL(meeting, host, "seat.id"),
+	    WHERE seat.id IS NOT NULL AND %[3]s`, meeting, host, meetingCreditSQL(meeting, host, "seat.id"),
 		auth.ParticipantStandsSQL("seen", meeting))
+	if kept != "" {
+		seats += " UNION SELECT kept.id FROM unnest(" + kept + ") kept(id) WHERE kept.id IS NOT NULL"
+	}
+	return "(" + seats + ") credit(id)"
 }
 
-// MeetingCreditedSeatSQL renders the one seat a meeting is listed under where
+// meetingCreditedSeatSQL renders the one seat a meeting is listed under where
 // a figure groups by colleague. In order: the human-logged host, the organizer,
 // the seat that booked it, and the first guest who accepted. Each of them is
 // credited by MeetingCreditSQL; this only picks the label for a one-row grain.
 // NULL when nobody is credited.
-func MeetingCreditedSeatSQL(meeting string) string {
-	return meetingCreditedSeatSQL(meeting, meeting+".host_user_id")
-}
-
 func meetingCreditedSeatSQL(meeting, host string) string {
 	return fmt.Sprintf(`COALESCE(
 	   CASE WHEN NOT starts_with(%[1]s.captured_by, 'connector:') THEN %[3]s END,
