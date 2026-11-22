@@ -2,7 +2,7 @@
 <!-- describes: frontend/src/features/settings/roles-settings.tsx frontend/src/features/settings/roles-detail.tsx frontend/src/features/settings/roles-drawer.tsx frontend/src/features/settings/grantmatrix.tsx frontend/src/lib/roles.queries.ts backend/internal/modules/identity/rolelifecycle.go backend/internal/modules/identity/roles.go -->
 # Roles and permissions
 
-The **Roles and permissions** page in Settings, under **People**, lists every role your company defines. Open a role to see what its members may do, and whose records they may change.
+The **Roles and permissions** page in Settings, under **People**, lists every role your company has. Open a role to see what its members may do, and whose records they may change.
 This page is for the screen. For what each built-in role allows, and how row scope works, see [Seats, roles and who can see what](seats-roles-and-access.md).
 
 ### Who can open this page, and who can change a role?
@@ -10,9 +10,9 @@ This page is for the screen. For what each built-in role allows, and how row sco
 You need the right to read roles to see the page. If your role can read roles but not change them, the page says "Your role can read roles but not change them." The page is then read only.
 
 Changing is split by what it does:
-- **Rename a role, turn a right off, or narrow whose records it reaches**: any member whose role may change roles.
-- **Archive a custom role**: any member whose role may delete roles.
-- **Create or restore a role, turn a right on, or widen whose records a role reaches**: an Admin only. Without the Admin role, the controls stay off, and the server refuses the change too.
+- Rename a role, turn a right off, or narrow whose records it reaches: any member whose role may change roles.
+- Archive a custom role: any member whose role may delete roles.
+- Create or restore a role, turn a right on, or widen whose records a role reaches: an Admin only. Without the Admin role, the controls stay off, and the server refuses the change too.
 
 ### What does the list show?
 Each row is one role. It shows the role's name, a line on whose records its members change, and how many members hold it. The member count shows only if you may read members.
@@ -50,7 +50,7 @@ Open the role, then choose **Archive role** or **Restore role**.
 - Only an Admin restores a role.
 - An archived role is read only. Restore it to change it.
 
-The Admin role keeps its rights to manage users, roles and teams. Margince refuses a change that would remove them, so your company can always be administered.
+The Admin role keeps its rights to manage users, roles and teams. Margince refuses a change that would remove them, so an Admin can always run your company.
 
 ### How do I put a built-in role back as it shipped?
 Open a built-in role and choose **Restore shipped grants**, then confirm. Every switch goes back to what Margince ships, and your changes to that role's rights are lost. A custom role has no shipped rights, so it has no such button.

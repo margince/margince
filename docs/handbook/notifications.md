@@ -16,9 +16,9 @@ The page lists these kinds under **Delivery by kind**. Each row has a short note
 | **Project health set by the AI** | The AI marked a project of yours at risk, off track or back on track. | **In the app** |
 | **Automations that ran** | A rule your company set fired, or could not. | **In the app** |
 | **Leads past their deadline** | A lead nobody has answered inside the time your team agreed. | **In the app** |
-| **Mail capture** | Trouble reading a mailbox of yours, or a backlog that has stopped moving. | **In the app** |
-| **System notices** | Maintenance, a limit reached, and anything else the installation has to tell you. | **In the app** |
-| **Nudges from colleagues** | A teammate pointing you to a deal, a reply or a backlog of yours. | **In the app** |
+| **Mail capture** | A mailbox of yours cannot be read, or its mail has stopped coming in. | **In the app** |
+| **System notices** | A time when the system is down, a limit reached, and anything else the installation has to tell you. | **In the app** |
+| **Nudges from colleagues** | A teammate pointing you to a deal, a reply or work of yours that is waiting. | **In the app** |
 
 The standing choice is what you get until you pick one. It follows the installation, so it can change for you until you choose. A choice you make stays as you made it.
 
