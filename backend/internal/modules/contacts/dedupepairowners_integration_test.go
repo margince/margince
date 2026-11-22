@@ -38,11 +38,7 @@ func TestACompanyPairBelongsToTheOwnersOfEitherEnd(t *testing.T) {
 		if err != nil {
 			t.Fatalf("list the pairs of %+v: %v", owners, err)
 		}
-		counted, err = e.store.CountOpenDedupePairsOf(ctx, owners, entityCompany)
-		if err != nil {
-			t.Fatalf("count the pairs of %+v: %v", owners, err)
-		}
-		return len(rows), counted
+		return len(rows), openTotal(ctx, t, e.store, owners, entityCompany)
 	}
 	cases := []struct {
 		name   string
@@ -131,9 +127,8 @@ func TestTheOwnerAndRecordFiltersKeepTheBothSidesRule(t *testing.T) {
 		if err != nil || len(listed) != tc.want {
 			t.Errorf("%s: Mine lists %d pairs, err %v, want %d", tc.name, len(listed), err, tc.want)
 		}
-		counted, err := e.store.CountOpenDedupePairsOf(tc.reader, tc.owners, entityCompany)
-		if err != nil || counted != tc.want {
-			t.Errorf("%s: Mine counts %d pairs, err %v, want %d", tc.name, counted, err, tc.want)
+		if counted := openTotal(tc.reader, t, e.store, tc.owners, entityCompany); counted != tc.want {
+			t.Errorf("%s: Mine counts %d pairs, want %d", tc.name, counted, tc.want)
 		}
 		named, _, err := e.store.ListDedupeCandidates(tc.reader, DedupeQueueInput{EntityType: entityCompany, RecordID: &tc.record})
 		if err != nil || len(named) != tc.want {
@@ -180,7 +175,90 @@ func TestAFormerMembersCompaniesLeaveTheirPairUnassigned(t *testing.T) {
 	if err != nil || len(rows) != 1 || len(rows[0].Owners) != 0 {
 		t.Fatalf("a pair of a removed owner's companies lists %d as unassigned with owners %v, err %v, want 1 and none", len(rows), rows, err)
 	}
-	if counted, err := e.store.CountOpenDedupePairsOf(ctx, unassigned, entityCompany); err != nil || counted != 1 {
-		t.Fatalf("the unassigned count = %d, err %v, want 1", counted, err)
+	if counted := openTotal(ctx, t, e.store, unassigned, entityCompany); counted != 1 {
+		t.Fatalf("the unassigned count = %d, want 1", counted)
+	}
+}
+
+// openTotal is the number of open pairs the reader may see, from the page read.
+func openTotal(ctx context.Context, t *testing.T, store *Store, owners *storekit.OwnerSet, entityTypes ...string) int {
+	t.Helper()
+	_, total, err := store.ListFirstDedupePage(ctx, FirstDedupePageInput{EntityTypes: entityTypes, Owners: owners, Limit: 1})
+	if err != nil {
+		t.Fatalf("counting open pairs: %v", err)
+	}
+	return total
+}
+
+// The counted first page returns the pairs and the total of every pair the
+// reader may see, even when the page holds fewer. The expectation is built from
+// the seeded records and their owners, not from another read of the queue.
+func TestTheCountedFirstPageHoldsExactlyTheSeededPairsOfItsFilter(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	companyOf := func(owner ids.UUID, name string) [2]ids.UUID {
+		var pair [2]ids.UUID
+		for i := range pair {
+			company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: name, Source: "manual", OwnerID: new(ids.From[ids.UserKind](owner))})
+			if err != nil {
+				t.Fatalf("create %s: %v", name, err)
+			}
+			pair[i] = ids.UUID(company.Id)
+		}
+		return pair
+	}
+	setOwner := func(table string, owner *ids.UUID, id ids.UUID) {
+		setRowVisibility(ctx, t, e, `UPDATE `+table+` SET owner_id = $1 WHERE id = $2`, owner, id)
+	}
+	alpha, beta := companyOf(e.rep, "Alpha Trading GmbH"), companyOf(e.otherRep, "Beta Freight GmbH")
+	left, right := seedContactPair(ctx, t, e, "John Doe", "john@queue.test", "Jon Doe", "jon@queue.test", "queue.test")
+	setOwner("contact", &e.rep, left)
+	setOwner("contact", &e.rep, right)
+	leadLeft := e.createLead(ctx, t, "Jonas Petersen", "jonas@nordwind.test", "Nordwind Logistik")
+	leadRight := e.createLead(ctx, t, "Jonas Peterson", "", "Nordwind Logistik")
+	setOwner("lead", nil, leadLeft.UUID)
+	setOwner("lead", nil, leadRight.UUID)
+	contact, lead := [2]ids.UUID{left, right}, [2]ids.UUID{leadLeft.UUID, leadRight.UUID}
+
+	key := func(pair [2]ids.UUID) [2]ids.UUID {
+		if pair[0].String() > pair[1].String() {
+			pair[0], pair[1] = pair[1], pair[0]
+		}
+		return pair
+	}
+	for _, tc := range []struct {
+		name   string
+		types  []string
+		owners *storekit.OwnerSet
+		limit  int
+		want   [][2]ids.UUID
+		page   int
+	}{
+		{"everything", nil, nil, 10, [][2]ids.UUID{alpha, beta, contact, lead}, 4},
+		{"everything, truncated", nil, nil, 2, [][2]ids.UUID{alpha, beta, contact, lead}, 2},
+		{"companies", []string{entityCompany}, nil, 10, [][2]ids.UUID{alpha, beta}, 2},
+		{"contacts", []string{entityContact}, nil, 10, [][2]ids.UUID{contact}, 1},
+		{"companies and leads", []string{entityCompany, entityLead}, nil, 10, [][2]ids.UUID{alpha, beta, lead}, 3},
+		{"the first rep", nil, &storekit.OwnerSet{IDs: []ids.UUID{e.rep}}, 10, [][2]ids.UUID{alpha, contact}, 2},
+		{"the second rep", nil, &storekit.OwnerSet{IDs: []ids.UUID{e.otherRep}}, 10, [][2]ids.UUID{beta}, 1},
+		{"the first rep's companies", []string{entityCompany}, &storekit.OwnerSet{IDs: []ids.UUID{e.rep}}, 10, [][2]ids.UUID{alpha}, 1},
+		{"unassigned", nil, &storekit.OwnerSet{Unassigned: true}, 10, [][2]ids.UUID{lead}, 1},
+	} {
+		page, total, err := e.store.ListFirstDedupePage(ctx, FirstDedupePageInput{EntityTypes: tc.types, Owners: tc.owners, Limit: tc.limit})
+		if err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+		if total != len(tc.want) || len(page) != tc.page {
+			t.Errorf("%s: page %d, total %d; want page %d, total %d", tc.name, len(page), total, tc.page, len(tc.want))
+		}
+		wanted := map[[2]ids.UUID]bool{}
+		for _, pair := range tc.want {
+			wanted[key(pair)] = true
+		}
+		for _, row := range page {
+			if !wanted[key([2]ids.UUID{row.LeftID, row.RightID})] {
+				t.Errorf("%s: the page holds the pair %s and %s, which the filter does not name", tc.name, row.LeftID, row.RightID)
+			}
+		}
 	}
 }

@@ -72,7 +72,7 @@ var wholeVocabularyCheck = regexp.MustCompile(
 // extensionArm is the open arm an extension-widened CHECK carries beside its
 // closed list: the `ext:` spelling an extension kind uses. The closed list is
 // the column's vocabulary, so the arm is set aside before the list is read.
-var extensionArm = regexp.MustCompile(` OR \([a-z_][a-z0-9_]* ~ '\^ext:[^']*'::text\)`)
+var extensionArm = regexp.MustCompile(` OR \([a-z_][a-z0-9_]* ~ '\^ext[:_][^']*'::text\)`)
 
 // readWholeVocabulary reads a CHECK body that is a whole vocabulary, behind
 // an extension arm or not. It returns the submatches of wholeVocabularyCheck,
