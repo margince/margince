@@ -13,6 +13,7 @@ import { en } from "../../i18n/en";
 import { vi as viCatalog } from "../../i18n/vi";
 import { MAGIC_SENTENCE_KEYS } from "../../lib/magickeys";
 import { line, receipt, renderMagic, stub } from "../../testing/magic.testkit";
+import { lineNotes } from "./magic.lines";
 
 afterEach(() => {
   cleanup();
@@ -361,5 +362,21 @@ describe("a line names its record once", () => {
       "Someone new wrote to you. Keep as a contact?",
     );
     expect(item.querySelector(".magic-line-sep")).not.toBeNull();
+  });
+});
+
+describe("the coverage a watching line states", () => {
+  const watching = (consequence: string) =>
+    lineNotes(line({ lane: "watching", consequence }), (key) => key, "en")
+      .coverage;
+
+  it("states a capture consequence", () => {
+    expect(watching("magic.consequence.capture_not_collecting")).toBe(
+      "magic.consequence.capture_not_collecting",
+    );
+  });
+
+  it("states nothing for another registered consequence", () => {
+    expect(watching("magic.consequence.stage_moved")).toBeNull();
   });
 });
