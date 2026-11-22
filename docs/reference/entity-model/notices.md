@@ -73,7 +73,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `user_id` | `app_user` | the parent cannot be deleted while this row points at it |
+| `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
 

@@ -76,7 +76,7 @@
   "migration": {},
   "notices": {
     "notice.notice_recipient_user_id_fkey": "FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE",
-    "notification_digest_run.notification_digest_run_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT",
+    "notification_digest_run.notification_digest_run_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE",
     "notification_preference.notification_preference_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE"
   },
   "privacy": {},

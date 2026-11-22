@@ -52,10 +52,17 @@ SELECT count(*) FROM pg_constraint c
   JOIN pg_namespace n ON n.oid = t.relnamespace
  WHERE c.contype = 'f' AND n.nspname = 'public'`
 
+// standardCatalogCounts answers the key total and the `NO ACTION` total from
+// information_schema, which is not built from the pg_constraint rows above.
+const standardCatalogCounts = `
+SELECT count(*), count(*) FILTER (WHERE delete_rule = 'NO ACTION')
+  FROM information_schema.referential_constraints
+ WHERE constraint_schema = 'public'`
+
 // TestEveryForeignKeyStatesItsDeleteRule fails on a key with no stated delete rule.
 //
-// A row the parent owns CASCADEs. An attribution the record outlives is SET NULL.
-// A catalog or versioned parent is RESTRICT. So is a NOT NULL reference to app_user:
+// A row the parent owns `CASCADE`s. An attribution the record outlives is `SET NULL`.
+// A catalog or versioned parent is `RESTRICT`. So is a NOT NULL reference to app_user:
 // a user is deactivated and handed over, never deleted.
 func TestEveryForeignKeyStatesItsDeleteRule(t *testing.T) {
 	ownerDSN, _ := dsns(t)
@@ -63,15 +70,19 @@ func TestEveryForeignKeyStatesItsDeleteRule(t *testing.T) {
 	headSchema(t, conn)
 	ctx := context.Background()
 
-	var keys int
+	// The two counts come from different catalogs. pg_constraint is what the rule
+	// below reads; information_schema.referential_constraints is built apart from it.
+	// A query that stops recognising keys makes them disagree instead of passing.
+	var keys, keysByStandardCatalog, unwrittenByStandardCatalog int
 	if err := conn.QueryRow(ctx, foreignKeyCount).Scan(&keys); err != nil {
 		t.Fatalf("counting foreign keys: %v", err)
 	}
-	// A collapse means the query stopped recognising keys. Every key would then
-	// read as answered.
-	if keys < 400 {
-		t.Fatalf("this gate found %d foreign key(s) and expects at least 400 — it has stopped "+
-			"recognising them rather than the schema having given them up", keys)
+	if err := conn.QueryRow(ctx, standardCatalogCounts).Scan(&keysByStandardCatalog, &unwrittenByStandardCatalog); err != nil {
+		t.Fatalf("counting foreign keys in the standard catalog: %v", err)
+	}
+	if keys == 0 || keys != keysByStandardCatalog {
+		t.Fatalf("pg_constraint holds %d foreign key(s) and the standard catalog %d; the query has "+
+			"stopped recognising them", keys, keysByStandardCatalog)
 	}
 
 	rows, err := conn.Query(ctx, unwrittenDeleteRule)
@@ -81,6 +92,10 @@ func TestEveryForeignKeyStatesItsDeleteRule(t *testing.T) {
 	unwritten, err := pgx.CollectRows(rows, pgx.RowTo[string])
 	if err != nil {
 		t.Fatalf("reading the keys that state no delete rule: %v", err)
+	}
+	if len(unwritten) != unwrittenByStandardCatalog {
+		t.Fatalf("pg_constraint reports %d key(s) with no delete rule and the standard catalog %d",
+			len(unwritten), unwrittenByStandardCatalog)
 	}
 	for _, key := range unwritten {
 		t.Errorf("%s leaves a parent delete to the default. Say what the delete does — CASCADE "+

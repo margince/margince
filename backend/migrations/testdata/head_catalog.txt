@@ -2205,7 +2205,7 @@ public.brief_run.brief_run_pkey PRIMARY KEY (id)
 public.brief_run.brief_run_revenue_norm_currency_check CHECK (((revenue_norm_currency = ''::text) OR (revenue_norm_currency ~ '^[A-Z]{3}$'::text)))
 public.brief_run.brief_run_revenue_norm_minor_check CHECK ((revenue_norm_minor > 0))
 public.brief_run.brief_run_revenue_norm_minor_js_safe CHECK (((revenue_norm_minor >= '-9007199254740991'::bigint) AND (revenue_norm_minor <= '9007199254740991'::bigint)))
-public.brief_run.brief_run_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.brief_run.brief_run_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.brief_run.candidate_count integer NOT NULL gen=- def=-
 public.brief_run.factors_omitted text[] NOT NULL gen=- def='{}'::text[]
 public.brief_run.generated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2219,7 +2219,7 @@ public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
 public.brief_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.brief_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"narrative": 2000, "mail_error": 500, "factors_omitted": 20000, "revenue_norm_currency": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"factors_omitted":20000,"mail_error":500,"narrative":2000,"revenue_norm_currency":20000}')
 public.brief_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.brief_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"narrative": 2000, "mail_error": 500, "factors_omitted": 20000, "revenue_norm_currency": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"factors_omitted":20000,"mail_error":500,"narrative":2000,"revenue_norm_currency":20000}')
 public.brief_run.uq_brief_run_user_day UNIQUE (user_id, local_day)
-public.brief_run.user_id uuid gen=- def=-
+public.brief_run.user_id uuid NOT NULL gen=- def=-
 public.brief_run_pkey CREATE UNIQUE INDEX brief_run_pkey ON public.brief_run USING btree (id)
 public.bulk_confirmation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.bulk_confirmation.affected uuid[] NOT NULL gen=- def=-
@@ -5601,18 +5601,33 @@ public.deal_suggestion_evidence.activity_id uuid gen=- def=-
 public.deal_suggestion_evidence.attachment_id uuid gen=- def=-
 public.deal_suggestion_evidence.deal_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.deal_suggestion_evidence.deal_suggestion_evidence_attachment_id_fkey FOREIGN KEY (attachment_id) REFERENCES attachment(id) ON DELETE SET NULL
+public.deal_suggestion_evidence.deal_suggestion_evidence_keeps_source_gone CREATE TRIGGER deal_suggestion_evidence_keeps_source_gone BEFORE INSERT OR UPDATE ON public.deal_suggestion_evidence FOR EACH ROW EXECUTE FUNCTION deal_suggestion_evidence_keeps_its_source_gone()
 public.deal_suggestion_evidence.deal_suggestion_evidence_kind_check CHECK ((kind = ANY (ARRAY['meeting'::text, 'signal'::text, 'attachment'::text])))
 public.deal_suggestion_evidence.deal_suggestion_evidence_pkey PRIMARY KEY (id)
-public.deal_suggestion_evidence.deal_suggestion_evidence_shape CHECK ((((kind = 'meeting'::text) AND (signal_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'signal'::text) AND (activity_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'attachment'::text) AND (activity_id IS NULL) AND (signal_id IS NULL))))
+public.deal_suggestion_evidence.deal_suggestion_evidence_shape CHECK ((((kind = 'meeting'::text) AND (signal_id IS NULL) AND (attachment_id IS NULL) AND ((activity_id IS NOT NULL) OR source_gone)) OR ((kind = 'signal'::text) AND (activity_id IS NULL) AND (attachment_id IS NULL) AND ((signal_id IS NOT NULL) OR source_gone)) OR ((kind = 'attachment'::text) AND (activity_id IS NULL) AND (signal_id IS NULL) AND ((attachment_id IS NOT NULL) OR source_gone))))
 public.deal_suggestion_evidence.deal_suggestion_evidence_signal_id_fkey FOREIGN KEY (signal_id) REFERENCES signal(id) ON DELETE SET NULL
 public.deal_suggestion_evidence.deal_suggestion_evidence_suggestion_id_fkey FOREIGN KEY (suggestion_id) REFERENCES deal_suggestion(id) ON DELETE CASCADE
 public.deal_suggestion_evidence.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_suggestion_evidence.kind text NOT NULL gen=- def=-
 public.deal_suggestion_evidence.occurred_at timestamp with time zone NOT NULL gen=- def=-
 public.deal_suggestion_evidence.signal_id uuid gen=- def=-
+public.deal_suggestion_evidence.source_gone boolean NOT NULL gen=- def=false
 public.deal_suggestion_evidence.suggestion_id uuid NOT NULL gen=- def=-
 public.deal_suggestion_evidence.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_suggestion_evidence FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')
 public.deal_suggestion_evidence.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_suggestion_evidence FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')
+public.deal_suggestion_evidence_keeps_its_source_gone() secdef=false cfg=- acl=- 
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    NEW.source_gone := false;
+    RETURN NEW;
+  END IF;
+  NEW.source_gone := OLD.source_gone
+    OR (OLD.activity_id IS NOT NULL AND NEW.activity_id IS NULL)
+    OR (OLD.signal_id IS NOT NULL AND NEW.signal_id IS NULL)
+    OR (OLD.attachment_id IS NOT NULL AND NEW.attachment_id IS NULL);
+  RETURN NEW;
+END;
+
 public.deal_suggestion_evidence_pkey CREATE UNIQUE INDEX deal_suggestion_evidence_pkey ON public.deal_suggestion_evidence USING btree (id)
 public.deal_suggestion_pkey CREATE UNIQUE INDEX deal_suggestion_pkey ON public.deal_suggestion USING btree (id)
 public.dedupe_candidate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -8101,7 +8116,7 @@ public.notification_digest_run.mail_attempted_at timestamp with time zone NOT NU
 public.notification_digest_run.mail_error text gen=- def=-
 public.notification_digest_run.notification_digest_error_bounded CHECK ((length(mail_error) <= 500))
 public.notification_digest_run.notification_digest_run_pkey PRIMARY KEY (user_id, digest_date)
-public.notification_digest_run.notification_digest_run_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.notification_digest_run.notification_digest_run_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.notification_digest_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.notification_digest_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mail_error": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"mail_error":500}')
 public.notification_digest_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.notification_digest_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mail_error": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"mail_error":500}')
 public.notification_digest_run.user_id uuid NOT NULL gen=- def=-
@@ -9450,13 +9465,13 @@ public.report_projection_fence.singleton boolean NOT NULL gen=- def=true
 public.report_projection_fence_pkey CREATE UNIQUE INDEX report_projection_fence_pkey ON public.report_projection_fence USING btree (singleton)
 public.report_question_source CREATE INDEX report_question_source ON public.report_edition_question_source USING btree (source_type, source_id)
 public.report_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.report_run.asked_by uuid gen=- def=-
+public.report_run.asked_by uuid NOT NULL gen=- def=-
 public.report_run.captured_by text NOT NULL gen=- def=-
 public.report_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.report_run.group_floor integer NOT NULL gen=- def=-
 public.report_run.id uuid NOT NULL gen=- def=uuidv7()
 public.report_run.query jsonb NOT NULL gen=- def=-
-public.report_run.report_run_asked_by_fkey FOREIGN KEY (asked_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.report_run.report_run_asked_by_fkey FOREIGN KEY (asked_by) REFERENCES app_user(id) ON DELETE CASCADE
 public.report_run.report_run_floor_is_not_negative CHECK ((group_floor >= 0))
 public.report_run.report_run_pkey PRIMARY KEY (id)
 public.report_run.report_run_result_columns_is_a_list CHECK ((jsonb_typeof(result_columns) = 'array'::text))
@@ -12200,13 +12215,13 @@ public.worklist_snapshot.created_at timestamp with time zone NOT NULL gen=- def=
 public.worklist_snapshot.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.worklist_snapshot.id uuid NOT NULL gen=- def=uuidv7()
 public.worklist_snapshot.params_fingerprint text NOT NULL gen=- def=-
-public.worklist_snapshot.reader_id uuid gen=- def=-
+public.worklist_snapshot.reader_id uuid NOT NULL gen=- def=-
 public.worklist_snapshot.rows jsonb NOT NULL gen=- def=-
 public.worklist_snapshot.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.worklist_snapshot FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"params_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"params_fingerprint":20000}')
 public.worklist_snapshot.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.worklist_snapshot FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"params_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"params_fingerprint":20000}')
 public.worklist_snapshot.worklist_snapshot_forward CHECK ((expires_at > created_at))
 public.worklist_snapshot.worklist_snapshot_pkey PRIMARY KEY (id)
-public.worklist_snapshot.worklist_snapshot_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.worklist_snapshot.worklist_snapshot_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.worklist_snapshot_by_reader CREATE INDEX worklist_snapshot_by_reader ON public.worklist_snapshot USING btree (reader_id, created_at DESC)
 public.worklist_snapshot_pkey CREATE UNIQUE INDEX worklist_snapshot_pkey ON public.worklist_snapshot USING btree (id)
 public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

@@ -23,14 +23,14 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [collections](collections.md) | 13 | 108 | 1 | 10 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
-| [compose](compose.md) | 47 | 433 | 3 | 40 | 33 |
+| [compose](compose.md) | 47 | 433 | 3 | 40 | 36 |
 | [consent](consent.md) | 23 | 321 | 2 | 42 | 23 |
 | [contacts](contacts.md) | 49 | 715 | 77 | 35 | 12 |
 | [continuity](continuity.md) | 1 | 8 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 95 | 0 | 8 | 1 |
-| [deals](deals.md) | 26 | 382 | 26 | 17 | 2 |
+| [deals](deals.md) | 26 | 383 | 26 | 17 | 2 |
 | [finance](finance.md) | 5 | 85 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 95 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 206 | 157 | 6 | 5 |
@@ -39,7 +39,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 39 | 0 | 0 | 0 |
 | [migration](migration.md) | 2 | 42 | 0 | 0 | 0 |
-| [notices](notices.md) | 3 | 26 | 0 | 3 | 2 |
+| [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
 | [platform](platform.md) | 13 | 94 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
 | [projects](projects.md) | 3 | 42 | 11 | 3 | 0 |
@@ -152,7 +152,7 @@ No outbound foreign keys.
 ### notices
 
 - `notice.notice_recipient_user_id_fkey`: `FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE`
-- `notification_digest_run.notification_digest_run_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `notification_digest_run.notification_digest_run_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE`
 - `notification_preference.notification_preference_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE`
 
 ### privacy
