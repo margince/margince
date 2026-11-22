@@ -674,16 +674,17 @@ describe("useVoiceCorpus — writes that settle across a step change", () => {
       act(() => result.current.removeSample(added));
     }
     await waitFor(() => expect(result.current.manifest).toEqual([]));
-    act(() => {
-      result.current.addPaste("Another paragraph of mine.", "Pasted");
-    });
-    return { client, result };
+    const addAnother = () =>
+      act(() => {
+        result.current.addPaste("Another paragraph of mine.", "Pasted");
+      });
+    return { client, result, addAnother };
   }
 
   it("takes the read again after a failed removal read, though an ingest settled in between", async () => {
     const failedRead = gate();
     const reread = gate();
-    const { result } = await removedWithReadsAfter(
+    const { result, addAnother } = await removedWithReadsAfter(
       [
         { stats: documentStats, summary: summaryOf(900) },
         { stats: documentStats, summary: summaryOf(1800) },
@@ -693,6 +694,7 @@ describe("useVoiceCorpus — writes that settle across a step change", () => {
         { summary: summaryOf(900), release: reread.held },
       ],
     );
+    addAnother();
     await waitFor(() => expect(result.current.summary?.total_words).toBe(1800));
 
     failedRead.open();
@@ -706,7 +708,7 @@ describe("useVoiceCorpus — writes that settle across a step change", () => {
   it("keeps a newer ingest's meter and samples when the read again answers after it", async () => {
     const ingest = gate();
     const reread = gate();
-    const { client, result } = await removedWithReadsAfter(
+    const { client, result, addAnother } = await removedWithReadsAfter(
       [
         { stats: documentStats, summary: summaryOf(900) },
         {
@@ -718,6 +720,8 @@ describe("useVoiceCorpus — writes that settle across a step change", () => {
       [{ status: 500 }, { summary: summaryOf(0), release: reread.held }],
     );
     await waitFor(() => expect(result.current.meterStale).toBe(true));
+    // Issued after the read again, so its stamp is the newer one.
+    addAnother();
 
     ingest.open();
     await waitFor(() => expect(result.current.manifest).toHaveLength(1));
