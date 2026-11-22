@@ -190,9 +190,8 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // ceilings. Lower them in the diff that removes statements or exchanges. The
 // read is the assembly a cache miss pays; the cache's own lookup and store are
 // outside it.
-// Both count waiting_customers' private_mail_requests read, and the undated
-// tasks' planned, row_names and subject_labels reads, and needs_you's read of
-// the reader's duplicate pairs, a list and a count.
+// Both count waiting_customers' private_mail_requests read, the undated tasks'
+// planned, row_names and subject_labels reads, and needs_you's duplicate pairs.
 const (
 	homeReadStatementCeiling = 103
 	homeReadRoundTripCeiling = 70
