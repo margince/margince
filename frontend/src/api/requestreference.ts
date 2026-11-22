@@ -7,12 +7,10 @@ const REQUEST_ID_HEADER = "X-Request-Id";
 
 // Copies the X-Request-Id of a failed answer into its problem body as
 // `request_id`. Readers of a problem see the body and never the headers.
-// So this is where the id can reach the error a reader reports.
 // problemMessageOf then shows it as "Reference: <id>".
 //
-// An answer with no id, such as a proxy's own page, or with no JSON problem
-// body passes through untouched, without waiting a tick: a success is returned
-// as it came, so no caller sees its timing change.
+// Any other answer is returned as it came, without waiting a tick, so no
+// caller sees its timing change.
 export function withRequestReference(
   response: Response,
 ): Response | Promise<Response> {
