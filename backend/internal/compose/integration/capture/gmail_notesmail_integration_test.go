@@ -30,10 +30,16 @@ const (
 // geminiNotesMail is the mail Google sends after a recorded meeting. authentic
 // adds Gmail's DMARC pass for google.com.
 func geminiNotesMail(msgID string, sent time.Time, authentic bool) []byte {
+	return notesMailAbout(msgID, meetingTitle, captureOwner, "", sent, authentic)
+}
+
+// notesMailAbout is geminiNotesMail for another title, another To line and a
+// subject prefix such as "Fwd: ".
+func notesMailAbout(msgID, title, to, prefix string, sent time.Time, authentic bool) []byte {
 	raw := []byte(strings.Join([]string{
 		"From: Gemini Notes <gemini-notes@google.com>",
-		"To: " + captureOwner,
-		fmt.Sprintf("Subject: Notes: \"%s\" %s", meetingTitle, sent.Format("Jan 2, 2006")),
+		"To: " + to,
+		fmt.Sprintf("Subject: %sNotes: \"%s\" %s", prefix, title, sent.Format("Jan 2, 2006")),
 		"Date: " + sent.Format(time.RFC1123Z),
 		"Message-ID: <" + msgID + ">",
 		"Content-Type: text/plain", "", notesBody,
@@ -198,5 +204,37 @@ func TestADocNotesReadingFollowsNoNotesMail(t *testing.T) {
 	}
 	if got := notesTranscriptCount(t, env.e); got != 1 {
 		t.Errorf("%d transcripts from the notes mail, want 1", got)
+	}
+}
+
+// The subject names "Quarterly Review", and the meeting is called "Review". A
+// title is matched whole, so the notes of one meeting never land on another.
+func TestANotesMailLandsOnlyOnAMeetingWithTheWholeTitle(t *testing.T) {
+	start := captureNow.Add(-4 * time.Hour)
+	w := syncedMeetings(t, map[string]time.Time{"review": start}, "Review")
+
+	w.env.sync(t, notesMailAbout("notes7@google.com", "Quarterly Review", captureOwner, "", start.Add(2*time.Hour), true))
+	if got := notesTranscriptCount(t, w.env.e); got != 0 {
+		t.Fatalf("%d transcripts on a meeting whose title is only part of the subject's, want none", got)
+	}
+
+	w.env.sync(t, notesMailAbout("notes8@google.com", "  review ", captureOwner, "", start.Add(2*time.Hour), true))
+	if got := notesTranscriptCount(t, w.env.e); got != 1 {
+		t.Errorf("%d transcripts from the exact title in other case and spacing, want 1", got)
+	}
+}
+
+// A copy somebody forwarded, or one the owner only received as a Cc, is not
+// Google's mail to the owner about the owner's own meeting.
+func TestAForwardedNotesMailLandsNoTranscript(t *testing.T) {
+	start := captureNow.Add(-4 * time.Hour)
+	w := syncedMeetings(t, map[string]time.Time{"review": start}, meetingTitle)
+
+	w.env.sync(t,
+		notesMailAbout("notes9@google.com", meetingTitle, "other@client-co.example", "Fwd: ", start.Add(2*time.Hour), true),
+		notesMailAbout("notes10@google.com", meetingTitle, "other@client-co.example\r\nCc: "+captureOwner, "", start.Add(2*time.Hour), true))
+
+	if got := notesTranscriptCount(t, w.env.e); got != 0 {
+		t.Errorf("%d transcripts from forwarded or copied notes, want none", got)
 	}
 }

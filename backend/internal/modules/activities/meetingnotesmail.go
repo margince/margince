@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -45,15 +46,29 @@ type MeetingNotesMailInput struct {
 	Text      string
 }
 
+// notesSubject is Gemini's subject: Notes: "<title>" <date>. The title sits
+// between the first opening quote and the last closing one, straight or curly.
+var notesSubject = regexp.MustCompile(`^\s*Notes:\s*["“”](.+)["“”][^"“”]*$`)
+
+// notesMailTitle is the meeting title a Gemini subject names, with whitespace
+// folded and case dropped. A subject in any other shape names no meeting.
+func notesMailTitle(subject string) (string, bool) {
+	found := notesSubject.FindStringSubmatch(subject)
+	if found == nil {
+		return "", false
+	}
+	title := strings.ToLower(strings.Join(strings.Fields(found[1]), " "))
+	return title, title != ""
+}
+
 // notesMailMeetingSQL lists the live meetings the mailbox owner is on whose
-// title the mail's subject names and which started within notesMailWindow
-// before the mail. A transcript is not a meeting of its own.
+// title equals the one the subject names, compared whole, and which started
+// within notesMailWindow before the mail. A transcript is not a meeting.
 const notesMailMeetingSQL = `
 	SELECT a.id FROM activity a
 	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	   AND a.source_system IS DISTINCT FROM '` + transcriptSourceSystem + `'
-	   AND btrim(coalesce(a.subject, '')) <> ''
-	   AND strpos(lower(@subject), lower(btrim(a.subject))) > 0
+	   AND lower(regexp_replace(btrim(coalesce(a.subject, '')), '\s+', ' ', 'g')) = @title
 	   AND a.occurred_at <= @sent AND a.occurred_at > @earliest
 	   AND EXISTS (SELECT 1 FROM activity_participant o WHERE o.activity_id = a.id AND o.user_id = @owner)
 	 ORDER BY a.occurred_at DESC, a.id
@@ -62,8 +77,12 @@ const notesMailMeetingSQL = `
 // notesMailMeetingTx answers the one meeting a notes mail names. Two candidates
 // name none: the mail cannot say which meeting it is about.
 func notesMailMeetingTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMailInput) (ids.ActivityID, bool, error) {
+	title, ok := notesMailTitle(in.Subject)
+	if !ok {
+		return ids.ActivityID{}, false, nil
+	}
 	rows, err := tx.Query(ctx, notesMailMeetingSQL, pgx.NamedArgs{
-		"subject": in.Subject, "sent": in.SentAt, "earliest": in.SentAt.Add(-notesMailWindow), "owner": in.Owner,
+		"title": title, "sent": in.SentAt, "earliest": in.SentAt.Add(-notesMailWindow), "owner": in.Owner,
 	})
 	if err != nil {
 		return ids.ActivityID{}, false, fmt.Errorf("activities: finding the meeting a notes mail names: %w", err)
@@ -93,12 +112,11 @@ func meetingHoldsTranscriptTx(ctx context.Context, tx pgx.Tx, meeting ids.Activi
 
 // LandMeetingNotesMailTx lands a Gemini notes mail as the transcript of the one
 // meeting it names, and answers whether it landed. Nothing lands when no single
-// meeting matches, the meeting already has a transcript, or the text is blank
-// or too large to read.
+// meeting matches, the meeting already has a transcript, or the text is unusable.
 //
 // The transcript takes the meeting's audience, parties and contact links, as a
 // notes Doc does. The meeting is locked before the transcript check, so two
-// colleagues' copies of one notes mail land one transcript.
+// copies of one notes mail land one transcript.
 func (s *Store) LandMeetingNotesMailTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMailInput) (bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return false, err
@@ -118,7 +136,15 @@ func (s *Store) LandMeetingNotesMailTx(ctx context.Context, tx pgx.Tx, in Meetin
 	if err := storekit.LockWriteIdentity(ctx, tx, "activity_source", transcriptSourceSystem+":"+key); err != nil {
 		return false, err
 	}
+	if err := storekit.LockMeetingAttendeeChecks(ctx, tx, id.UUID); err != nil {
+		return false, err
+	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+		return false, err
+	}
+	// The match was read before the locks. A title, start or guest changed since
+	// then no longer names this meeting, so it is asked again under them.
+	if again, still, err := notesMailMeetingTx(ctx, tx, in); err != nil || !still || again != id {
 		return false, err
 	}
 	if held, err := meetingHoldsTranscriptTx(ctx, tx, id); err != nil || held {

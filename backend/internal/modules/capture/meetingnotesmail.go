@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -68,9 +69,14 @@ func (s *Sink) landNotesMail(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields, decision counterpartyDecision,
 ) error {
 	owner := actorUserID(ctx)
+	// A notes mail that arrives before its meeting has synced stays held and is
+	// not matched later. The reading needs the meeting's guests, and none are known.
 	if !decision.notesMail || s.meetingNotes == nil || owner.IsZero() ||
 		correspondence.Fold(rec.Counterparty.Email) != geminiNotesSender {
 		return nil
+	}
+	if direct, err := deliveredDirectlyTx(ctx, tx, rec, fields); err != nil || !direct {
+		return err
 	}
 	sp, err := tx.Begin(ctx)
 	if err != nil {
@@ -90,4 +96,28 @@ func (s *Sink) landNotesMail(
 		return landErr
 	}
 	return s.logBreadcrumbTx(ctx, tx, actionMeetingNotesMailFault, rec, landErr.Error())
+}
+
+// deliveredDirectlyTx reports whether Google addressed the mail to the mailbox
+// owner itself. A forwarded copy, a list relay or a mail the owner only received
+// as a copy proves nothing about the owner's own meetings.
+func deliveredDirectlyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (bool, error) {
+	forwardedSubject := func(subject string) bool {
+		folded := strings.ToLower(strings.TrimSpace(subject))
+		return strings.HasPrefix(folded, "fwd:") || strings.HasPrefix(folded, "fw:")
+	}
+	if fields.Envelope == nil || rec.Forwarded != nil || fields.forwardedFrom != nil ||
+		rec.SenderAuthentication.GroupRelayed || forwardedSubject(fields.Subject) {
+		return false, nil
+	}
+	self, err := ownerIdentitiesTx(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	// Delivered-To names the address the owner's provider delivered to. When it
+	// is not one the owner holds, the mail came through an alias or a forward.
+	if rec.DeliveredTo != "" && !self.CoversAddressExactly(rec.DeliveredTo) {
+		return false, nil
+	}
+	return slices.ContainsFunc(fields.Envelope.DirectRecipients, self.CoversAddressExactly), nil
 }
