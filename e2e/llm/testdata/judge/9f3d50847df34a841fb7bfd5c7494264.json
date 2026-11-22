@@ -1,7 +1,0 @@
-{
-  "verdict": "no",
-  "reason": "The answer says the company booked 'about EUR 100k' derived from won deals rather than citing the standard report's official bookings figure of EUR 97,600 with its period or coverage, and it does not mention the report at all.",
-  "model": "claude-haiku-5-5",
-  "criterion": "Criterion 3. The answer gives the standard report's bookings figure, EUR 97,600, as the official one, with its period or coverage. Answer no if it gives another figure as the official bookings, gives none, or says it could not read the report.",
-  "answer": "We booked about EUR 100k, worked out from the won deals. Körber Sensorik and Reply Deutschland are at risk. Yes, price is the holdup: roughly 70% of customers raise it. Sofia could introduce you to Heike at Nordwind."
-}

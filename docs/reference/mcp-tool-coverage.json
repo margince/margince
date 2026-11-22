@@ -65,8 +65,8 @@
       "cases_that_reached_their_bar": 74,
       "cases_below_their_bar": 8,
       "runs": 174,
-      "passed": 149,
-      "reliability": 0.8563218390804598,
+      "passed": 150,
+      "reliability": 0.8620689655172413,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room",
         "case10_finish_the_import",
@@ -3948,7 +3948,8 @@
               "max": 19
             },
             "turns": null
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -4026,7 +4027,8 @@
               "max": 20
             },
             "turns": null
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -4736,7 +4738,8 @@
               "min": 13,
               "max": 14
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4758,12 +4761,13 @@
               "min": 7,
               "max": 10
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 3,
-          "passed": 0,
+          "passed": 1,
           "pass_at": 2,
           "held": false,
           "driver": "gpt:cli",
@@ -4894,7 +4898,8 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5013,7 +5018,8 @@
               "max": 9
             },
             "turns": null
-          }
+          },
+          "regraded": true
         }
       ]
     },
@@ -8466,8 +8472,8 @@
         },
         "gpt-5.6-sol@codex-cli": {
           "runs": 3,
-          "passed": 0,
-          "reliability": 0,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
           "cases_below_their_bar": [
             "case49_who_can_introduce_us"
           ]
