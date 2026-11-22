@@ -409,14 +409,14 @@ func openaiError(ctx context.Context, resp *http.Response) error {
 		if json.Unmarshal(apiErr.Error.Code, &code) == nil && openaiPolicyCodes[code] {
 			return withheldError{wire: providerOpenAI, reason: code, detail: safeProviderText(ctx, apiErr.Error.Message)}
 		}
-		err := providerRefusal(resp, "", fmt.Errorf("ai: openai: %s: %s (http %d)",
-			safeProviderText(ctx, apiErr.Error.Type), safeProviderText(ctx, apiErr.Error.Message), resp.StatusCode))
+		err := providerRefusalAfter(resp, "", fmt.Errorf("ai: openai: %s: %s (http %d)",
+			safeProviderText(ctx, apiErr.Error.Type), safeProviderText(ctx, apiErr.Error.Message), resp.StatusCode), openaiRetryWait(resp))
 		if openAIRejectsTheRequest(apiErr.Error.Code) {
 			return rejectedRequest(err)
 		}
 		return err
 	}
-	return providerRefusal(resp, "", fmt.Errorf("ai: openai: http %d", resp.StatusCode))
+	return providerRefusalAfter(resp, "", fmt.Errorf("ai: openai: http %d", resp.StatusCode), openaiRetryWait(resp))
 }
 
 // openaiStream parses the Responses SSE stream, yielding text deltas from

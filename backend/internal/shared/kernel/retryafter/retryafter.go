@@ -30,28 +30,14 @@ import (
 	"time"
 )
 
-// resetHeaders are OpenAI's per-limit reset intervals ("1s", "6m0s", "20ms").
-// They stand in only when Retry-After is absent: a limited call carries both.
-var resetHeaders = []string{"x-ratelimit-reset-requests", "x-ratelimit-reset-tokens"}
-
-// Of reads how long a response says to wait. Zero means it did not say: the
-// header was absent, unparseable, or named an instant already past. The caller
-// then falls back to its own backoff. Retry-After wins. Without it the longest
-// x-ratelimit-reset-* interval is the wait, since every limit must clear.
+// Of reads how long a response says to wait. Zero means it did not say — the
+// header was absent, unparseable, or named an instant already past — and the
+// caller falls back to its own backoff.
 func Of(resp *http.Response) time.Duration {
 	if resp == nil {
 		return 0
 	}
-	if wait := Header(resp.Header.Get("Retry-After")); wait > 0 {
-		return wait
-	}
-	var longest time.Duration
-	for _, name := range resetHeaders {
-		if wait, err := time.ParseDuration(strings.TrimSpace(resp.Header.Get(name))); err == nil {
-			longest = max(longest, wait)
-		}
-	}
-	return longest
+	return Header(resp.Header.Get("Retry-After"))
 }
 
 // Header is Of, for a caller that already holds the value.
@@ -93,4 +79,26 @@ func HeaderAt(value string, now time.Time) time.Duration {
 		return wait
 	}
 	return 0
+}
+
+// openAIResetCeiling bounds an OpenAI reset interval. Its daily limits can
+// state hours, which no caller should sleep on.
+const openAIResetCeiling = 10 * time.Minute
+
+// OpenAIReset reads the wait OpenAI states in x-ratelimit-reset-requests and
+// x-ratelimit-reset-tokens ("1s", "6m0s", "20ms"): the longest of the two,
+// capped, or zero when neither reads. Only the OpenAI adapter calls it, because
+// no other provider is known to spell these headers this way; Of stays the
+// reading for everything else.
+func OpenAIReset(resp *http.Response) time.Duration {
+	if resp == nil {
+		return 0
+	}
+	var longest time.Duration
+	for _, name := range []string{"x-ratelimit-reset-requests", "x-ratelimit-reset-tokens"} {
+		if wait, err := time.ParseDuration(strings.TrimSpace(resp.Header.Get(name))); err == nil {
+			longest = max(longest, wait)
+		}
+	}
+	return min(longest, openAIResetCeiling)
 }

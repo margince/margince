@@ -63,8 +63,8 @@ type openAICompatChatWire struct {
 	Messages  []openAICompatMessage `json:"messages"`
 	Tools     []ollamaToolWire      `json:"tools,omitempty"`
 	MaxTokens int                   `json:"max_tokens,omitempty"`
-	// MaxCompletionTokens replaces MaxTokens where the target is OpenAI or a
-	// reasoning model (sendsMaxCompletionTokens); never both.
+	// MaxCompletionTokens replaces MaxTokens on OpenAI and Azure OpenAI hosts
+	// (sendsMaxCompletionTokens); never both.
 	MaxCompletionTokens int `json:"max_completion_tokens,omitempty"`
 	// ReasoningEffort is OpenAI's own knob; the broker's Reasoning object below
 	// is a different field for a different host.
@@ -429,7 +429,7 @@ func (c *openAICompatClient) chatWire(req model.Request, stream bool) openAIComp
 	if wire.MaxTokens <= 0 {
 		wire.MaxTokens = unsetMaxOutputTokens
 	}
-	if sendsMaxCompletionTokens(c.baseURL, wire.Model) {
+	if sendsMaxCompletionTokens(c.baseURL) {
 		wire.MaxCompletionTokens, wire.MaxTokens = wire.MaxTokens, 0
 	}
 	wire.ReasoningEffort = chatReasoningEffort(c.baseURL, wire.Model, req.ThinkingLevel, req.ThinkingFloor)

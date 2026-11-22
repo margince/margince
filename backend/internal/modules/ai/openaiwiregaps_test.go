@@ -38,8 +38,10 @@ func TestTheChatWireNamesTheOutputCeilingByWhatItsTargetReads(t *testing.T) {
 	t.Parallel()
 	for name, tc := range map[string]struct{ baseURL, model, sent string }{
 		"OpenAI's own host, any model":       {"https://api.openai.com", "gpt-4o", "max_completion_tokens"},
-		"a gateway serving an o-series id":   {"https://gw.example/openai", "o3-mini", "max_completion_tokens"},
-		"a gateway serving a gpt-5 id":       {"https://gw.example", "gpt-5-mini", "max_completion_tokens"},
+		"Azure OpenAI by its host":           {"https://res.openai.azure.com", "o3-mini", "max_completion_tokens"},
+		"vLLM serving a reasoning model id":  {"http://vllm:8000", "o3", "max_tokens"},
+		"a gateway serving a gpt-5 id":       {"https://gw.example", "gpt-5-mini", "max_tokens"},
+		"a lookalike of Azure's host":        {"https://res.openai.azure.com.evil.test", "o3", "max_tokens"},
 		"vLLM serving an open model":         {"http://vllm:8000", "qwen3-32b", "max_tokens"},
 		"a broker serving a vendor-prefixed": {"https://openrouter.ai/api", "openai/o3", "max_tokens"},
 		"a lookalike of OpenAI's host":       {"https://api.openai.com.evil.test", "llama", "max_tokens"},
@@ -211,19 +213,25 @@ func TestAStreamedRefusalEndsAsAWithheldAnswer(t *testing.T) {
 	}
 }
 
-func TestA429CarryingOnlyARateLimitResetIsAThrottle(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("x-ratelimit-reset-tokens", "6m0s")
-		w.WriteHeader(http.StatusTooManyRequests)
-		_, _ = io.WriteString(w, `{"error":{"type":"requests","message":"Limit reached.","code":"x"}}`)
-	}))
-	t.Cleanup(srv.Close)
-	client, err := selectLocalBrain(ProviderConfig{Provider: providerOpenAI, BaseURL: srv.URL, Model: "gpt-x"}, cloudKeyFor("openai", testOpenAIKey))
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
-	if !errors.Is(err, ErrProviderThrottled) {
-		t.Errorf("a 429 naming a reset interval read as %v, want a throttle", err)
+// A bare 429 with a reset header is a throttle on OpenAI's adapter. On every
+// other provider it stays unclassified, as before.
+func TestOnlyOpenAIsAdapterReadsTheRateLimitResetHeaders(t *testing.T) {
+	for provider, wantThrottle := range map[string]bool{providerOpenAI: true, providerOpenAICompatible: false} {
+		t.Run(provider, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("x-ratelimit-reset-tokens", "6m0s")
+				w.WriteHeader(http.StatusTooManyRequests)
+				_, _ = io.WriteString(w, `{"error":{"type":"requests","message":"Limit reached.","code":"x"}}`)
+			}))
+			t.Cleanup(srv.Close)
+			client, err := selectLocalBrain(ProviderConfig{Provider: provider, BaseURL: srv.URL, Model: "gpt-x"}, allCloudKeys(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
+			if got := errors.Is(err, ErrProviderThrottled); got != wantThrottle {
+				t.Errorf("throttle = %v (%v), want %v", got, err, wantThrottle)
+			}
+		})
 	}
 }

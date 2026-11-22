@@ -21,17 +21,21 @@ func pointsAtOpenAI(baseURL string) bool {
 	return err == nil && sendableHTTPScheme(parsed) && strings.EqualFold(parsed.Hostname(), openAIHost)
 }
 
+// azureOpenAIHostSuffix marks Azure OpenAI by its host, the one positive
+// identification a binding gives.
+const azureOpenAIHostSuffix = ".openai.azure.com"
+
 // sendsMaxCompletionTokens reports whether the output ceiling goes out as
-// max_completion_tokens. OpenAI refuses max_tokens for o-series models, so its
-// own host always gets the new name. So does a bare reasoning model id (o3,
-// gpt-5-mini) behind a gateway such as Azure. Every other model keeps
-// max_tokens, the name vLLM and brokers read.
-func sendsMaxCompletionTokens(baseURL, modelID string) bool {
+// max_completion_tokens. OpenAI refuses max_tokens for o-series models, and
+// Azure OpenAI does too. Both are identified by host alone: a model id says
+// nothing about the server, and a vLLM or LiteLLM deployment named o3 reads
+// max_tokens. Every other host keeps max_tokens.
+func sendsMaxCompletionTokens(baseURL string) bool {
 	if pointsAtOpenAI(baseURL) {
 		return true
 	}
-	_, reasons := openaiDefaultEffort(modelID)
-	return reasons
+	parsed, err := url.Parse(baseURL)
+	return err == nil && sendableHTTPScheme(parsed) && strings.HasSuffix(strings.ToLower(parsed.Hostname()), azureOpenAIHostSuffix)
 }
 
 // chatReasoningEffort is the reasoning_effort a request's admin level or floor
