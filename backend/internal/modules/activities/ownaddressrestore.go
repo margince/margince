@@ -108,7 +108,7 @@ func restoreOwnAddressUnlinkTx(ctx context.Context, tx pgx.Tx, u ownAddressUnlin
 		}
 	}
 	evidence := map[string]any{evidenceReason: ownAddressReleasedReason, evidenceUndoOf: u.audit}
-	after := map[string]any{"entity_type": linkEntityContact, fieldEntityID: link.Contact}
+	after := map[string]any{fieldEntityType: linkEntityContact, fieldEntityID: link.Contact}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", u.activity.UUID, nil, after, evidence)
 	if err != nil {
 		return false, err

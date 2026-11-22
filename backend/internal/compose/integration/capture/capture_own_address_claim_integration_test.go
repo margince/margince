@@ -47,11 +47,11 @@ func claimCount(t *testing.T, e *integration.SearchEnv, query string, args ...an
 	return n
 }
 
-func claimText(t *testing.T, e *integration.SearchEnv, query string, args ...any) string {
+func claimText(t *testing.T, e *integration.SearchEnv, query string) string {
 	t.Helper()
 	var out string
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), query, args...).Scan(&out)
+		return tx.QueryRow(context.Background(), query).Scan(&out)
 	})
 	if err != nil {
 		t.Fatalf("reading %q: %v", query, err)
@@ -84,13 +84,13 @@ func claimSeat(e *integration.SearchEnv, user ids.UUID) context.Context {
 	})
 }
 
-// claimAsOwn declares the address as the user's own, answering the question the
+// claimAsOwn declares the former address as the user's own, answering the question the
 // product asks first about an address a contact already holds.
-func claimAsOwn(t *testing.T, e *integration.SearchEnv, user ids.UUID, address string) capturemod.OwnerIdentity {
+func claimAsOwn(t *testing.T, e *integration.SearchEnv, user ids.UUID) capturemod.OwnerIdentity {
 	t.Helper()
-	identity, err := claimStore(e).AddConfirmed(claimSeat(e, user), capturemod.IdentityKindAddress, address, true)
+	identity, err := claimStore(e).AddConfirmed(claimSeat(e, user), capturemod.IdentityKindAddress, claimedFormer, true)
 	if err != nil {
-		t.Fatalf("claiming %s: %v", address, err)
+		t.Fatalf("claiming %s: %v", claimedFormer, err)
 	}
 	return identity
 }
@@ -150,7 +150,7 @@ func claimBuyerRows(t *testing.T, e *integration.SearchEnv) int {
 func claimProvenFormer(t *testing.T, e *integration.SearchEnv) capturemod.OwnerIdentity {
 	t.Helper()
 	claimProve(t, e, e.Rep1, claimedFormer)
-	return claimAsOwn(t, e, e.Rep1, claimedFormer)
+	return claimAsOwn(t, e, e.Rep1)
 }
 
 func archiveRows(t *testing.T, e *integration.SearchEnv, contact ids.UUID) int {
@@ -203,7 +203,7 @@ func TestATypedClaimOfACustomersAddressArchivesNothing(t *testing.T) {
 	contact := claimMintFormerContact(t, env)
 	before := contactLinkCount(t, e, contact)
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimAsOwn(t, e, e.Rep1)
 
 	if !claimContactLive(t, e, contact) {
 		t.Error("an unproven claim archived the contact of the address it named")
@@ -216,7 +216,7 @@ func TestATypedClaimOfACustomersAddressArchivesNothing(t *testing.T) {
 	}
 }
 
-func readableBy(t *testing.T, e *integration.SearchEnv, reader context.Context) []bool {
+func readableBy(reader context.Context, t *testing.T, e *integration.SearchEnv) []bool {
 	t.Helper()
 	var ids_ []ids.UUID
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -251,7 +251,7 @@ func TestRefilingKeepsWhoMayReadTheMail(t *testing.T) {
 		SELECT coalesce(string_agg(a.id::text || ':' || a.audience || ':' || coalesce(a.restricted_at::text, ''), ',' ORDER BY a.id), '')
 		  FROM activity a WHERE a.kind = 'email'`
 	before := claimText(t, e, readers)
-	seenBefore := readableBy(t, e, colleague)
+	seenBefore := readableBy(colleague, t, e)
 	const members = `SELECT count(*) FROM activity_participant WHERE user_id IS NOT NULL AND user_id <> $1`
 	othersBefore := claimCount(t, e, members, e.Rep1)
 
@@ -260,7 +260,7 @@ func TestRefilingKeepsWhoMayReadTheMail(t *testing.T) {
 	if after := claimText(t, e, readers); after != before {
 		t.Errorf("refiling changed the audience of the mail:\n before %s\n after  %s", before, after)
 	}
-	seenAfter := readableBy(t, e, colleague)
+	seenAfter := readableBy(colleague, t, e)
 	for i := range seenBefore {
 		if seenAfter[i] && !seenBefore[i] {
 			t.Errorf("message %d became readable to a colleague after the refile", i)
@@ -332,7 +332,7 @@ func TestAContactTwoSeatsClaimIsLeft(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
-	claimAsOwn(t, e, e.Rep3, claimedFormer)
+	claimAsOwn(t, e, e.Rep3)
 
 	claimProvenFormer(t, e)
 
@@ -511,7 +511,7 @@ func TestClaimingTheSameAddressAgainChangesNothing(t *testing.T) {
 	const trail = `SELECT count(*) FROM audit_log WHERE entity_type IN ('contact', 'activity') AND action IN ('archive', 'activity_relink')`
 	first := claimCount(t, e, trail)
 
-	claimAsOwn(t, e, e.Rep1, claimedFormer)
+	claimAsOwn(t, e, e.Rep1)
 
 	if second := claimCount(t, e, trail); second != first {
 		t.Errorf("a second claim wrote %d more audit rows", second-first)
