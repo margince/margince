@@ -87,12 +87,8 @@ func ListedRecordSourceSQL(column string) string {
 }
 
 // LegacyRecordSourceChannelSQL names the channel of a source written before
-// the list was fixed. An unrecognized value is read as a client's: the public
-// create wire took free text. column is a compile-time SQL expression.
+// the list was fixed, through the database's own mapping. column is a
+// compile-time SQL expression.
 func LegacyRecordSourceChannelSQL(column string) string {
-	return "CASE WHEN " + ListedRecordSourceSQL(column) + " THEN " + column +
-		" WHEN " + column + " IN ('" + strings.Join(retiredRecordSourceSpellings, "', '") + "') OR " + column + " LIKE 'lead:%' THEN '" + RecordSourceManual + "'" +
-		" WHEN " + column + " LIKE '" + ReservedSourceSystemPrefix + "%' OR " + column + " LIKE 'ext:%' OR " + column + " LIKE 'import:%' THEN '" + RecordSourceImport + "'" +
-		" WHEN " + column + " LIKE 'agent:%' THEN '" + RecordSourceAutomation + "'" +
-		" ELSE '" + RecordSourceAPI + "' END"
+	return "record_source_channel(" + column + ")"
 }

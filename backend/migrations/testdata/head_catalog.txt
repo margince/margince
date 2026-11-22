@@ -4909,6 +4909,7 @@ public.deal.deal_priority_check CHECK (((priority IS NULL) OR (priority = ANY (A
 public.deal.deal_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.deal.deal_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.deal.deal_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.deal.deal_source_channel CREATE TRIGGER deal_source_channel BEFORE UPDATE ON public.deal FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_source_onto_its_channel()
 public.deal.deal_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.deal.deal_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
 public.deal.deal_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
@@ -7980,6 +7981,12 @@ BEGIN
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
 
+public.move_source_onto_its_channel() secdef=false cfg=- acl=- 
+BEGIN
+ NEW.source := record_source_channel(NEW.source);
+ RETURN NEW;
+END;
+
 public.named_time_zone(zone_name text) secdef=false cfg=search_path=pg_catalog acl=- 
 DECLARE
  canonical text;
@@ -8176,6 +8183,7 @@ public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)
 public.offer.offer_number_shape CHECK ((offer_number ~ '^A-[0-9]+$'::text))
 public.offer.offer_pkey PRIMARY KEY (id)
 public.offer.offer_revision_check CHECK ((revision >= 1))
+public.offer.offer_source_channel CREATE TRIGGER offer_source_channel BEFORE UPDATE ON public.offer FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_source_onto_its_channel()
 public.offer.offer_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.offer.offer_source_commercial_revision_js_safe CHECK (((source_commercial_revision >= 0) AND (source_commercial_revision <= '9007199254740991'::bigint)))
 public.offer.offer_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'sent'::text, 'accepted'::text, 'rejected'::text, 'expired'::text, 'superseded'::text])))
@@ -8606,6 +8614,7 @@ public.project.project_phase_check CHECK ((phase = ANY (ARRAY['initiative'::text
 public.project.project_pkey PRIMARY KEY (id)
 public.project.project_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.project.project_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.project.project_source_channel CREATE TRIGGER project_source_channel BEFORE UPDATE ON public.project FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_source_onto_its_channel()
 public.project.project_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.project.project_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
 public.project.project_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
@@ -9013,6 +9022,15 @@ public.record_role.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.record_role.version bigint NOT NULL gen=- def=1
 public.record_role_key_key CREATE UNIQUE INDEX record_role_key_key ON public.record_role USING btree (key)
 public.record_role_pkey CREATE UNIQUE INDEX record_role_pkey ON public.record_role USING btree (id)
+public.record_source_channel(source text) secdef=false cfg=- acl=- 
+ SELECT CASE
+  WHEN source IN ('api', 'automation', 'capture', 'import', 'manual', 'webform') THEN source
+  WHEN source IN ('mcp', 'ui') OR source LIKE 'lead:%' THEN 'manual'
+  WHEN source LIKE 'mirror:%' OR source LIKE 'ext:%' OR source LIKE 'import:%' THEN 'import'
+  WHEN source LIKE 'agent:%' THEN 'automation'
+  ELSE 'api'
+ END
+
 public.record_stored_object_intent(requested_kind text, requested_key text) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner BEGIN
     INSERT INTO stored_object_intent (storage_key, kind)
     VALUES (requested_key, requested_kind)

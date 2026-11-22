@@ -2758,7 +2758,7 @@ type Deal struct {
 	ProjectId *string                 `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
 
-	// Source The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
 	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.

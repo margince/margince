@@ -41549,7 +41549,7 @@ export interface components {
             readonly stalled?: boolean;
             /** @description The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant. */
             readonly last_email?: components["schemas"]["DealLastEmail"] | null;
-            /** @description The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
+            /** @description The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -42186,7 +42186,7 @@ export interface components {
              * @description The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
-            /** @description The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
+            /** @description The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -59101,7 +59101,7 @@ export interface components {
              * @description The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.
              */
             readonly source_commercial_revision?: number | null;
-            /** @description The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
+            /** @description The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;

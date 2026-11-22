@@ -48590,7 +48590,7 @@ type Deal struct {
 	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
 
-	// Source The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
 	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
@@ -48764,7 +48764,7 @@ type DealAdvanced struct {
 	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
 
-	// Source The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
 	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
@@ -59791,7 +59791,7 @@ type Offer struct {
 	// Revision Bumped when a sent offer is regenerated; the prior revision becomes superseded.
 	Revision *int `json:"revision,omitempty"`
 
-	// Source The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	// Source The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
 	Source string `json:"source"`
 
 	// SourceCommercialRevision The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.
@@ -61334,7 +61334,7 @@ type Project struct {
 	Phase *ProjectPhase           `json:"phase,omitempty"`
 	Raw   *map[string]interface{} `json:"raw,omitempty"`
 
-	// Source The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	// Source The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
 	Source        string              `json:"source"`
 	StartedAt     *openapi_types.Date `json:"started_at,omitempty"`
 	TargetEndDate *openapi_types.Date `json:"target_end_date,omitempty"`

@@ -39243,7 +39243,7 @@ components:
           readOnly: true
           description: >-
             The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
-        source: {type: string, description: 'The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
+        source: {type: string, description: 'The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         created_by:
           allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
@@ -39771,7 +39771,7 @@ components:
           format: date-time
           readOnly: true
           description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
-        source: {type: string, description: 'The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
+        source: {type: string, description: 'The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
@@ -55269,7 +55269,7 @@ components:
           items: {$ref: '#/components/schemas/OfferLineItem'}
         money_withheld: {type: boolean, readOnly: true, description: 'True for a reader the deal''s amount is masked from. Such a reader gets zero totals, no lines, no exchange rate and no PDF: the offer states the deal''s amount by another name.'}
         source_commercial_revision: {type: [integer, 'null'], format: int64, readOnly: true, description: 'The deal''s `commercial_revision` the lines were copied from. Such an offer''s lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.'}
-        source: {type: string, description: 'The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
+        source: {type: string, description: 'The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied.}
         version: {$ref: '#/components/schemas/RowVersion'}
         created_at: {type: string, format: date-time}

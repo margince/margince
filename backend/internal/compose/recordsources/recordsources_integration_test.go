@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -75,11 +76,12 @@ func (o older) source(table string, id ids.UUID) string {
 // audit row keeps the value it replaced.
 func TestTheTaskMovesEveryOlderSourceOntoItsChannel(t *testing.T) {
 	o := seedOlder(t)
+	channels := map[string]string{
+		"mirror:csv:deal:42": "import", "ext:finance:erp": "import", "agent:dealscout": "automation",
+		"lead:018f0000-0000-7000-8000-000000000001": "manual", "ui": "manual", "seed": "api", "": "api",
+	}
 	deals := map[string]ids.UUID{}
-	for source := range map[string]string{
-		"mirror:csv:deal:42": "", "ext:finance:erp": "", "agent:dealscout": "",
-		"lead:018f0000-0000-7000-8000-000000000001": "", "ui": "", "seed": "", "": "",
-	} {
+	for source := range channels {
 		deals[source] = o.deal(source)
 	}
 	typed := o.e.SeedDeal(t, "Typed deal", o.pipeline, o.stage, nil)
@@ -92,10 +94,7 @@ func TestTheTaskMovesEveryOlderSourceOntoItsChannel(t *testing.T) {
 	}
 	o.e.RunDataTask(ctx, t, DataTask())
 
-	for source, want := range map[string]string{
-		"mirror:csv:deal:42": "import", "ext:finance:erp": "import", "agent:dealscout": "automation",
-		"lead:018f0000-0000-7000-8000-000000000001": "manual", "ui": "manual", "seed": "api", "": "api",
-	} {
+	for source, want := range channels {
 		if got := o.source("deal", deals[source]); got != want {
 			t.Errorf("a deal stored with source %q now reads %q, want %q", source, got, want)
 		}
@@ -113,6 +112,16 @@ func TestTheTaskMovesEveryOlderSourceOntoItsChannel(t *testing.T) {
 		AND action = 'update' AND before->>'source' = 'mirror:csv:deal:42' AND after->>'source' = 'import'
 		AND evidence ? 'data_task_run'`, deals["mirror:csv:deal:42"]); n != 1 {
 		t.Errorf("%d audit row(s) keep the imported deal's older source, want 1", n)
+	}
+	if n := o.e.WsCount(t, `SELECT count(*) FROM event_outbox o
+		JOIN audit_log a ON a.id = (o.envelope->'trace'->>'audit_log_id')::uuid
+		WHERE a.entity_id = ANY($1) AND o.envelope->>'type' IN ('deal.updated', 'project.updated')
+		AND a.after->>'source' IS NOT NULL`, []ids.UUID{deals["seed"], project}); n != 2 {
+		t.Errorf("%d update event(s) announce the corrected deal and project, want 2", n)
+	}
+	if n := o.e.WsCount(t, `SELECT count(*) FROM event_outbox o
+		WHERE o.envelope->'entity'->>'id' = $1`, offer.String()); n != 0 {
+		t.Errorf("the corrected offer sent %d event(s), want none", n)
 	}
 	if n := o.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`, typed); n != 0 {
 		t.Errorf("a deal already on the list got %d audit row(s)", n)
@@ -204,7 +213,58 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	if err := database.WithWorkspaceTx(member, o.e.Pool, func(tx pgx.Tx) error {
 		_, err := move(member, tx, datatask.BatchIn{Limit: 2})
 		return err
-	}); err == nil {
-		t.Fatal("a member ran the correction; only the system may")
+	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a member running the correction: err = %v, want permission denied", err)
+	}
+}
+
+// An unvalidated check still judges an older row when it is next written. An
+// edit before the task has run goes through, and leaves the row on its channel.
+func TestAnEditBeforeTheTaskMovesAnOlderRowOntoItsChannel(t *testing.T) {
+	o := seedOlder(t)
+	deal := o.deal("mirror:csv:deal:7")
+	for table, id := range map[string]ids.UUID{
+		"deal": deal, "offer": o.offer(deal, "A-7", "agent:dealscout"), "project": o.project("OLD7", "seed"),
+	} {
+		if _, err := o.owner.Exec(context.Background(),
+			`UPDATE `+pgx.Identifier{table}.Sanitize()+` SET updated_at = now() WHERE id = $1`, id); err != nil {
+			t.Fatalf("editing an older %s: %v", table, err)
+		}
+	}
+	for table, want := range map[string]string{"deal": "import", "offer": "automation", "project": "api"} {
+		if n := o.e.WsCount(t, `SELECT count(*) FROM `+pgx.Identifier{table}.Sanitize()+` WHERE source = $1`, want); n != 1 {
+			t.Errorf("%d %s row(s) read %q after the edit, want 1", n, table, want)
+		}
+	}
+	if err := o.e.WsExecErr(t, `UPDATE deal SET source = 'seed' WHERE id = $1`, deal); err != nil {
+		t.Fatalf("an update naming an unlisted source: %v", err)
+	}
+	if got := o.source("deal", deal); got != "api" {
+		t.Errorf("an update naming an unlisted source stored %q, want its channel api", got)
+	}
+}
+
+// A new revision copies the offer it revises. An older offer's revision takes
+// the channel, so revising it does not wait for the task.
+func TestARevisionOfAnOlderOfferTakesItsChannel(t *testing.T) {
+	o := seedOlder(t)
+	deal := o.e.SeedDeal(t, "Quoted deal", o.pipeline, o.stage, nil)
+	sent := integration.SeedBeforeSourceCheck(t, o.owner, "offer",
+		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency, source, captured_by)
+		 VALUES ($1, $2, 'A-9', 1, 'sent', 'EUR', 'mirror:csv:offer:9', 'human:x')`, deal)
+
+	desk := o.e.As(o.e.AdminUser, nil, principal.Permissions{
+		RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{
+			"deal": {Read: true, Update: true}, "offer": {Create: true, Read: true, Update: true},
+			"company": {Read: true}, "installation_settings": {Read: true},
+		},
+	})
+	revision, err := o.e.Deals.RegenerateOffer(desk, ids.From[ids.OfferKind](sent))
+	if err != nil {
+		t.Fatalf("revising an older offer: %v", err)
+	}
+	if revision.Source != "import" {
+		t.Errorf("the revision's source = %q, want import", revision.Source)
 	}
 }

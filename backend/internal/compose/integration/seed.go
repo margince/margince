@@ -215,8 +215,9 @@ func WonByImport() *string {
 }
 
 // SeedBeforeSourceCheck inserts a row as one written before table's source
-// check existed, which refuses it today. The check is put back as it was, in
-// the same transaction, so a concurrent write still meets it.
+// check existed, which refuses it today. The check is re-added unvalidated in
+// the same transaction, so a concurrent write still meets it. It is for deal,
+// offer and project, whose checks are not validated.
 func SeedBeforeSourceCheck(t *testing.T, owner *pgx.Conn, table, sql string, args ...any) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
