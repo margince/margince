@@ -130,6 +130,7 @@
     "changeUserRole": "admin_settings",
     "claimRecord": "business",
     "clearActivityDisposition": "business",
+    "clearDealManagerRequest": "business",
     "clearLeadManualSignal": "business",
     "closeDealRoom": "business",
     "compareReportingEditions": "business",
@@ -763,6 +764,7 @@
     "replyDealRoomThread": "business",
     "requestAttachmentAccess": "business",
     "requestCompanyVatCheck": "business",
+    "requestDealManager": "business",
     "requestDetailsConfirmation": "compliance",
     "requestEditAccess": "business",
     "requestLegalReview": "business",
@@ -1023,6 +1025,7 @@
     "claimRecord": "sharing",
     "claimTaskReminderDelivery": "activities",
     "clearActivityDisposition": "activities",
+    "clearDealManagerRequest": "deals",
     "clearLeadManualSignal": "leads",
     "clearVoiceCorpus": "voice",
     "closeDealRoom": "deal_rooms",
@@ -1829,6 +1832,7 @@
     "requestAttachmentAccess": "documents",
     "requestBookingReturn": "booking_pages",
     "requestCompanyVatCheck": "companies",
+    "requestDealManager": "deals",
     "requestDealRoomLink": "buyer_rooms",
     "requestDetailsConfirmation": "consent",
     "requestEditAccess": "sharing",
@@ -2298,6 +2302,9 @@
     ],
     "clear_activity_disposition": [
       "activities"
+    ],
+    "clear_deal_manager_request": [
+      "deals"
     ],
     "clear_lead_manual_signal": [
       "leads"
@@ -3742,6 +3749,9 @@
     "request_company_vat_check": [
       "companies"
     ],
+    "request_deal_manager": [
+      "deals"
+    ],
     "request_details_confirmation": [
       "consent"
     ],
@@ -4437,6 +4447,9 @@
       "business"
     ],
     "clear_activity_disposition": [
+      "business"
+    ],
+    "clear_deal_manager_request": [
       "business"
     ],
     "clear_lead_manual_signal": [
@@ -5834,6 +5847,9 @@
       "business"
     ],
     "request_company_vat_check": [
+      "business"
+    ],
+    "request_deal_manager": [
       "business"
     ],
     "request_details_confirmation": [

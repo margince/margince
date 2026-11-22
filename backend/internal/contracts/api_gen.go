@@ -13984,6 +13984,27 @@ func (e ForecastContributionProbabilitySource) Valid() bool {
 	}
 }
 
+// Defines values for ForecastFocusRequestedReasons.
+const (
+	ForecastFocusRequestedReasonsBigDeal       ForecastFocusRequestedReasons = "big_deal"
+	ForecastFocusRequestedReasonsSingleContact ForecastFocusRequestedReasons = "single_contact"
+	ForecastFocusRequestedReasonsStuck         ForecastFocusRequestedReasons = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the ForecastFocusRequestedReasons enum.
+func (e ForecastFocusRequestedReasons) Valid() bool {
+	switch e {
+	case ForecastFocusRequestedReasonsBigDeal:
+		return true
+	case ForecastFocusRequestedReasonsSingleContact:
+		return true
+	case ForecastFocusRequestedReasonsStuck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastFocusTeamStatus.
 const (
 	ForecastFocusTeamStatusBehind   ForecastFocusTeamStatus = "behind"
@@ -14129,6 +14150,7 @@ func (e ForecastMovementBucketName) Valid() bool {
 const (
 	ForecastMovementDealCausesAmount             ForecastMovementDealCauses = "amount"
 	ForecastMovementDealCausesCategory           ForecastMovementDealCauses = "category"
+	ForecastMovementDealCausesFocusActions       ForecastMovementDealCauses = "focus_actions"
 	ForecastMovementDealCausesFx                 ForecastMovementDealCauses = "fx"
 	ForecastMovementDealCausesLost               ForecastMovementDealCauses = "lost"
 	ForecastMovementDealCausesNew                ForecastMovementDealCauses = "new"
@@ -14147,6 +14169,8 @@ func (e ForecastMovementDealCauses) Valid() bool {
 		return true
 	case ForecastMovementDealCausesCategory:
 		return true
+	case ForecastMovementDealCausesFocusActions:
+		return true
 	case ForecastMovementDealCausesFx:
 		return true
 	case ForecastMovementDealCausesLost:
@@ -14164,6 +14188,27 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesStageWeight:
 		return true
 	case ForecastMovementDealCausesWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementFocusActionKind.
+const (
+	ForecastMovementFocusActionKindMailSent    ForecastMovementFocusActionKind = "mail_sent"
+	ForecastMovementFocusActionKindMeetingHeld ForecastMovementFocusActionKind = "meeting_held"
+	ForecastMovementFocusActionKindTaskDone    ForecastMovementFocusActionKind = "task_done"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementFocusActionKind enum.
+func (e ForecastMovementFocusActionKind) Valid() bool {
+	switch e {
+	case ForecastMovementFocusActionKindMailSent:
+		return true
+	case ForecastMovementFocusActionKindMeetingHeld:
+		return true
+	case ForecastMovementFocusActionKindTaskDone:
 		return true
 	default:
 		return false
@@ -22279,6 +22324,27 @@ func (e ReportingValueBasis) Valid() bool {
 	}
 }
 
+// Defines values for RequestDealManagerRequestReasons.
+const (
+	RequestDealManagerRequestReasonsBigDeal       RequestDealManagerRequestReasons = "big_deal"
+	RequestDealManagerRequestReasonsSingleContact RequestDealManagerRequestReasons = "single_contact"
+	RequestDealManagerRequestReasonsStuck         RequestDealManagerRequestReasons = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the RequestDealManagerRequestReasons enum.
+func (e RequestDealManagerRequestReasons) Valid() bool {
+	switch e {
+	case RequestDealManagerRequestReasonsBigDeal:
+		return true
+	case RequestDealManagerRequestReasonsSingleContact:
+		return true
+	case RequestDealManagerRequestReasonsStuck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolveInputCheckOutcome.
 const (
 	ResolveInputCheckOutcomeAddedEvidence ResolveInputCheckOutcome = "added_evidence"
@@ -29019,6 +29085,7 @@ func (e WorklistItemSource) Valid() bool {
 
 // Defines values for WorklistMoveAction.
 const (
+	WorklistMoveActionBringInManager   WorklistMoveAction = "bring_in_manager"
 	WorklistMoveActionCreateTask       WorklistMoveAction = "create_task"
 	WorklistMoveActionDraftEmail       WorklistMoveAction = "draft_email"
 	WorklistMoveActionDraftReply       WorklistMoveAction = "draft_reply"
@@ -29031,6 +29098,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistMoveAction enum.
 func (e WorklistMoveAction) Valid() bool {
 	switch e {
+	case WorklistMoveActionBringInManager:
+		return true
 	case WorklistMoveActionCreateTask:
 		return true
 	case WorklistMoveActionDraftEmail:
@@ -52496,6 +52565,9 @@ type ForecastFocus struct {
 	PeriodEnd   openapi_types.Date `json:"period_end"`
 	PeriodStart openapi_types.Date `json:"period_start"`
 
+	// Requests Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out.
+	Requests *[]ForecastFocusRequested `json:"requests,omitempty"`
+
 	// Teams One entry per team with a daily freeze this quarter, ordered by team id.
 	Teams []ForecastFocusTeam `json:"teams"`
 
@@ -52526,6 +52598,23 @@ type ForecastFocusReason struct {
 	ClosesInDays *int                 `json:"closes_in_days,omitempty"`
 	Signals      []ForecastRiskSignal `json:"signals"`
 }
+
+// ForecastFocusRequested defines model for ForecastFocusRequested.
+type ForecastFocusRequested struct {
+	DealId   openapi_types.UUID `json:"deal_id"`
+	DealName string             `json:"deal_name"`
+
+	// OwnerId Absent when individual performance is off.
+	OwnerId     *openapi_types.UUID             `json:"owner_id,omitempty"`
+	Reasons     []ForecastFocusRequestedReasons `json:"reasons"`
+	RequestedAt time.Time                       `json:"requested_at"`
+
+	// RequestedBy Absent when individual performance is off.
+	RequestedBy *openapi_types.UUID `json:"requested_by,omitempty"`
+}
+
+// ForecastFocusRequestedReasons defines model for ForecastFocusRequested.Reasons.
+type ForecastFocusRequestedReasons string
 
 // ForecastFocusTeam defines model for ForecastFocusTeam.
 type ForecastFocusTeam struct {
@@ -52583,9 +52672,12 @@ type ForecastMovement struct {
 	ClosingMinor int64                    `json:"closing_minor"`
 
 	// Deals One row per deal that moved, each in exactly one bucket.
-	Deals        []ForecastMovementDeal  `json:"deals"`
-	OpeningMinor int64                   `json:"opening_minor"`
-	Reading      ForecastMovementReading `json:"reading"`
+	Deals []ForecastMovementDeal `json:"deals"`
+
+	// FocusActions How much of the change came from deals on the opening snapshot's stored focus list that were worked between the two snapshots. Absent when no listed deal was worked. It is a cause beside the buckets, not a bucket, so the buckets still add up.
+	FocusActions *ForecastMovementFocusActions `json:"focus_actions,omitempty"`
+	OpeningMinor int64                         `json:"opening_minor"`
+	Reading      ForecastMovementReading       `json:"reading"`
 }
 
 // ForecastMovementReading defines model for ForecastMovement.Reading.
@@ -52623,6 +52715,37 @@ type ForecastMovementDeal struct {
 
 // ForecastMovementDealCauses defines model for ForecastMovementDeal.Causes.
 type ForecastMovementDealCauses string
+
+// ForecastMovementFocusAction defines model for ForecastMovementFocusAction.
+type ForecastMovementFocusAction struct {
+	ActivityId openapi_types.UUID              `json:"activity_id"`
+	At         time.Time                       `json:"at"`
+	Kind       ForecastMovementFocusActionKind `json:"kind"`
+	Subject    *string                         `json:"subject,omitempty"`
+}
+
+// ForecastMovementFocusActionKind defines model for ForecastMovementFocusAction.Kind.
+type ForecastMovementFocusActionKind string
+
+// ForecastMovementFocusActions defines model for ForecastMovementFocusActions.
+type ForecastMovementFocusActions struct {
+	// AmountMinor The change of the worked focus-list deals, in the reading drawn.
+	AmountMinor int64 `json:"amount_minor"`
+
+	// Deals The worked deals, largest change first, each with links to what was done.
+	Deals []ForecastMovementFocusDeal `json:"deals"`
+
+	// ShareBps That change as a share of the whole change, in basis points. Absent when the whole change is zero.
+	ShareBps *int `json:"share_bps,omitempty"`
+}
+
+// ForecastMovementFocusDeal defines model for ForecastMovementFocusDeal.
+type ForecastMovementFocusDeal struct {
+	// Actions Up to five of the actions, oldest first.
+	Actions     []ForecastMovementFocusAction `json:"actions"`
+	AmountMinor int64                         `json:"amount_minor"`
+	DealId      openapi_types.UUID            `json:"deal_id"`
+}
 
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
@@ -65037,6 +65160,15 @@ type RequestDeadline struct {
 	Rule string `json:"rule"`
 }
 
+// RequestDealManagerRequest defines model for RequestDealManagerRequest.
+type RequestDealManagerRequest struct {
+	// Reasons Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them.
+	Reasons []RequestDealManagerRequestReasons `json:"reasons"`
+}
+
+// RequestDealManagerRequestReasons defines model for RequestDealManagerRequest.Reasons.
+type RequestDealManagerRequestReasons string
+
 // RequestLegalReviewRequest defines model for RequestLegalReviewRequest.
 type RequestLegalReviewRequest struct {
 	Note             *string             `json:"note,omitempty"`
@@ -75069,6 +75201,13 @@ type WorklistMove struct {
 	// `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 	// sends the reader to reauthorize a source that stopped answering.
 	//
+	// `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+	// one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+	// `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+	// deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+	// requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+	// when one of those facts changes.
+	//
 	// `none` is a producer's answer that there is nothing to do — a closed deal has
 	// no next step. It is a member of this enum so a producer that computes one has
 	// a word for it, but NO row carries it: a step of "nothing" and no step at all
@@ -75111,6 +75250,9 @@ type WorklistMove struct {
 	// No mailbox identity, credential, cursor or colleague account travels.
 	MailCoverage *MailCaptureCoverage `json:"mail_coverage,omitempty"`
 
+	// Reason One sentence saying why this move is offered. Carried by `bring_in_manager`, whose reasons are facts about the deal; the other verbs leave it absent and the row's own reason stands.
+	Reason *string `json:"reason,omitempty"`
+
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 }
@@ -75124,6 +75266,13 @@ type WorklistMove struct {
 // `draft_email` opens a new message, `create_task` agrees a next step,
 // `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 // sends the reader to reauthorize a source that stopped answering.
+//
+// `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+// one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+// `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+// deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+// requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+// when one of those facts changes.
 //
 // `none` is a producer's answer that there is nothing to do — a closed deal has
 // no next step. It is a member of this enum so a producer that computes one has
@@ -85870,6 +86019,9 @@ type UseDealEstimateJSONRequestBody = DealRevisionRequest
 
 // UpdateDealLineJSONRequestBody defines body for UpdateDealLine for application/json ContentType.
 type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
+
+// RequestDealManagerJSONRequestBody defines body for RequestDealManager for application/json ContentType.
+type RequestDealManagerJSONRequestBody = RequestDealManagerRequest
 
 // MoveDealPipelineJSONRequestBody defines body for MoveDealPipeline for application/json ContentType.
 type MoveDealPipelineJSONRequestBody = MoveDealPipelineRequest
@@ -101791,6 +101943,12 @@ type ServerInterface interface {
 	// Change one line of a deal; omit a field to leave it as it is, send null to clear it.
 	// (PATCH /deals/{id}/lines/{lineId})
 	UpdateDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID)
+	// Mark the manager request on this deal as handled.
+	// (DELETE /deals/{id}/manager-request)
+	ClearDealManagerRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Ask the team's manager to look at this deal.
+	// (POST /deals/{id}/manager-request)
+	RequestDealManager(w http.ResponseWriter, r *http.Request, id Id)
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
@@ -106753,6 +106911,18 @@ func (_ Unimplemented) RemoveDealLine(w http.ResponseWriter, r *http.Request, id
 // Change one line of a deal; omit a field to leave it as it is, send null to clear it.
 // (PATCH /deals/{id}/lines/{lineId})
 func (_ Unimplemented) UpdateDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark the manager request on this deal as handled.
+// (DELETE /deals/{id}/manager-request)
+func (_ Unimplemented) ClearDealManagerRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask the team's manager to look at this deal.
+// (POST /deals/{id}/manager-request)
+func (_ Unimplemented) RequestDealManager(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -135155,6 +135325,74 @@ func (siw *ServerInterfaceWrapper) UpdateDealLine(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ClearDealManagerRequest operation middleware
+func (siw *ServerInterfaceWrapper) ClearDealManagerRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearDealManagerRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestDealManager operation middleware
+func (siw *ServerInterfaceWrapper) RequestDealManager(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestDealManager(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDealMarginceChanges operation middleware
 func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request) {
 
@@ -161956,6 +162194,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/deals/{id}/lines/{lineId}", wrapper.UpdateDealLine)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/deals/{id}/manager-request", wrapper.ClearDealManagerRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/manager-request", wrapper.RequestDealManager)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)

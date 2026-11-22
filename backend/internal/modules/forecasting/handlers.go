@@ -80,7 +80,9 @@ type Handlers struct {
 	readerRows ReaderRowsFunc
 	// goalReadable answers whether the reader may read a team's goal.
 	goalReadable GoalReadableFunc
-	now          func() time.Time
+	// managerRequests lists the deals sellers asked their manager to look at.
+	managerRequests ManagerRequestsFunc
+	now             func() time.Time
 }
 
 // GoalReadableFunc answers whether the reader may read the goal of scope.

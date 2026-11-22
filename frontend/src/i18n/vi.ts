@@ -3388,6 +3388,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "common.error": "Không thể tải màn hình này. Tải lại trang.",
   "common.errorNoCause": "Yêu cầu không thành công. Không rõ nguyên nhân.",
+  "common.errorReference": "Mã tham chiếu",
   "common.assistantUnavailable":
     "AI không phản hồi. Hãy thử lại, hoặc liên hệ quản trị viên để kiểm tra Cài đặt, mục AI.",
   "common.providerOutOfCredit":
@@ -13954,6 +13955,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal360.readFull": "Đọc bản tóm tắt đầy đủ",
   "deal360.openTask": "Mở việc cần làm",
   "deal360.createTask": "Tạo việc tiếp theo",
+  "deal360.bringInManager": "Mời quản lý tham gia",
+  "deal360.managerAsked": "Đã nhờ quản lý",
   "deal360.followUpCreated": "Đã tạo việc tiếp theo",
   "deal360.openBrief": "Mở bản tóm tắt cuộc họp",
   "deal360.unreadable":
@@ -21195,6 +21198,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.gap.tab": "Thu hẹp khoảng cách",
   "worklist.gap.title": "Thu hẹp khoảng cách",
   "worklist.gap.loading": "Đang tải các deal đã xếp hạng…",
+  "worklist.gap.requested.title": "Được nhờ bạn hỗ trợ",
+  "worklist.gap.requested.done": "Đánh dấu đã xử lý",
+  "worklist.gap.reason.big_deal": "Giá trị cao hơn mức trung vị của nhóm",
+  "worklist.gap.reason.single_contact": "Chỉ có một liên hệ tham gia",
+  "worklist.gap.reason.stuck": "Đang bị kẹt ở giai đoạn hiện tại",
   "worklist.gap.empty":
     "Chưa nhóm nào có danh sách xếp hạng. Margince xếp hạng deal mỗi ngày một lần cho từng nhóm được ghi nhận.",
   "worklist.gap.behind":
