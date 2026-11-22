@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/search backend/internal/compose/embeddriftsweep.go backend/internal/compose/embedreindextransport.go backend/internal/compose/jobs_embedreindex.go backend/internal/compose/embedreadyz.go backend/internal/shared/ports/retrieval -->
+<!-- describes: backend/internal/modules/search backend/internal/compose/embeddriftsweep.go backend/internal/compose/embedreindextransport.go backend/internal/compose/jobs_embedreindex.go backend/internal/compose/embedreadyz.go backend/internal/shared/ports/retrieval backend/internal/shared/kernel/mailquote/owntext.go -->
 # Search & retrieval: two arms, one row scope, two kinds of stale data
 
 Search is how a typed query becomes a ranked list of records. Behind one more seam, it is also how
@@ -20,7 +20,7 @@ the groups without guessing a winner. Finding a domain fragment does not add con
 a company name or exact domain can seed the employer arm.
 
 Two separate ranks run for each query. The **lexical** arm is Postgres full-text search over
-generated `search_tsv` columns. The **vector** arm ranks by how much the meaning matches, over
+stored `search_tsv` columns. The **vector** arm ranks by how much the meaning matches, over
 pgvector embeddings. RRF (`reciprocal rank fusion`) merges the two into one list.
 
 One rule holds for both: a search hit *is* a read. So the row-scope authority of the caller is built **into** the query.
@@ -73,12 +73,19 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
 - **`active` does not narrow what search finds.** A product the company no longer offers still stands on
   older offers, and a user who looks one up may be holding one of them. `archived_at`, which every
   branch carries, is the one "is it still live" question that counts when search looks for a record.
-- **The lexical arm** ranks with `ts_rank_cd` over the generated `search_tsv` column of each table.
+- **The lexical arm** ranks with `ts_rank_cd` over the stored `search_tsv` column of each table.
   It pages by a keyset cursor on `(score DESC, rtype, id)`, so the edge of a page holds still while
   others write at the same time. Name fields parse `simple`, with accents removed (`Muller` finds
   `Müller`). They also match the parse with apostrophes removed (`oreilly` finds `O'Reilly`). The
   activity branch also matches German and English stems, so `Vertrag` reaches a row that holds
   `Verträge`.
+- **Mail search reads the sender's own text.** Each writer of `activity.body` stores
+  `body_own_end` beside it: the number of characters before the quoted earlier mail
+  (`mailquote.OwnEnd`). A trigger builds `search_tsv` from the subject and that part of the body, and
+  only when one of them or the language changes. The History tab folds the quoted mail at the same
+  line. A forward keeps the mail it passes on, and a reply written between the quoted lines keeps
+  every line. A mail stored before this rule is found through its quoted text until the data task
+  `core/1795336404_mail_search_text` has passed it.
 - **A mail is one hit.** A mail that several mailboxes captured is one activity hit, the reader's
   own copy where they have one. The timelines group copies the same way
   (`connector.MailCopyGroupFrom`).
@@ -423,7 +430,8 @@ projection, which has its own rules for how it stays current; see
 
 | Part | Where |
 |---|---|
-| Lexical index | generated `search_tsv` columns on `contact`, `company`, `deal`, `activity`, `lead`, `project`, `tag`, and `product` + `offer_template`, with the functions that remove accents and apostrophes (`backend/migrations/core/0001_baseline.up.sql`) |
+| Lexical index | generated `search_tsv` columns on `contact`, `company`, `deal`, `lead`, `project`, `tag`, and `product` + `offer_template`, with the functions that remove accents and apostrophes (`backend/migrations/core/0001_baseline.up.sql`) |
+| Lexical index of activities | `activity.search_tsv`, kept by the trigger function `activity_keeps_search_tsv` from `activity_search_tsv` (`backend/migrations/core/1795336404_mail_search_holds_the_senders_own_text.up.sql`); the boundary rule is `backend/internal/shared/kernel/mailquote/owntext.go` |
 | Vector store | `embedding` (`backend/migrations/core/0001_baseline.up.sql`: identity mark + a `vector` with no fixed length). **Not a tenant table**: no `workspace_id`, no RLS |
 | Binding marker | `embed_store_binding` (`backend/migrations/core/0001_baseline.up.sql`: run, identity and the pending set of workspaces). **Not a tenant table**: no `workspace_id`, no RLS |
 | Interaction projection | `graph_interaction_edge`; see [relationship-graph.md](relationship-graph.md) |

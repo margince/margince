@@ -284,6 +284,52 @@ func TestQuotedHistoryIsTrimmedAndNamedAsOne(t *testing.T) {
 	})
 }
 
+// The boundary the search value is cut at. An inline answer and forwarded mail
+// stay in the message; only quoted earlier mail folds.
+func TestOnlyQuotedEarlierMailLeavesTheMessage(t *testing.T) {
+	t.Parallel()
+	runSplitCases(t, []splitCase{
+		{
+			name: "an inline reply keeps the answers under each quote",
+			body: "On Mon, 3 Mar 2025, Sales wrote:\n> Can you do Friday?\nFriday works.\n> And the price?\nAs quoted.",
+			main: "On Mon, 3 Mar 2025, Sales wrote:\n> Can you do Friday?\nFriday works.\n> And the price?\nAs quoted.",
+		},
+		{
+			name: "a forward keeps the mail it passes on",
+			body: "FYI.\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025 at 10:15\nSubject: Terms\nTo: Sales\n\nNet thirty days.",
+			main: "FYI.\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025 at 10:15\nSubject: Terms\nTo: Sales\n\nNet thirty days.",
+		},
+		{
+			name:    "the history under a forwarded mail folds as a quote",
+			body:    "Zur Info.\n\n-------- Weitergeleitete Nachricht --------\nVon: Dana Roe <dana@buyer.example>\nDatum: Mo., 3. März 2025 10:15\nBetreff: Konditionen\n\nDreißig Tage netto.\n\nAm 28.02.2025 um 09:00 schrieb Vertrieb:\n> Welche Konditionen?",
+			main:    "Zur Info.\n\n-------- Weitergeleitete Nachricht --------\nVon: Dana Roe <dana@buyer.example>\nDatum: Mo., 3. März 2025 10:15\nBetreff: Konditionen\n\nDreißig Tage netto.",
+			trimmed: "Am 28.02.2025 um 09:00 schrieb Vertrieb:\n> Welche Konditionen?",
+			tail:    TailQuote,
+		},
+		{
+			name:    "a Vietnamese attribution travels with its quote",
+			body:    "Bên em đồng ý.\n\nNgày 3 thg 3, 2025, lúc 10:15, Nguyễn Văn An <an@buyer.example> đã viết:\n> Thứ Sáu được không?",
+			main:    "Bên em đồng ý.",
+			trimmed: "Ngày 3 thg 3, 2025, lúc 10:15, Nguyễn Văn An <an@buyer.example> đã viết:\n> Thứ Sáu được không?",
+			tail:    TailQuote,
+		},
+		{
+			name:    "a Vietnamese Outlook block travels as one quote",
+			body:    "Đồng ý.\n\nTừ: Nguyễn Văn An <an@buyer.example>\nĐã gửi: Thứ Hai, 3 Tháng 3, 2025 10:15\nChủ đề: Thứ Sáu\n\nThứ Sáu được không?",
+			main:    "Đồng ý.",
+			trimmed: "Từ: Nguyễn Văn An <an@buyer.example>\nĐã gửi: Thứ Hai, 3 Tháng 3, 2025 10:15\nChủ đề: Thứ Sáu\n\nThứ Sáu được không?",
+			tail:    TailQuote,
+		},
+		{
+			name:    "a signature above the quoted mail still opens the tail",
+			body:    "Works for us.\n\n-- \nDana Roe\n\n> Friday?",
+			main:    "Works for us.",
+			trimmed: "-- \nDana Roe\n\n> Friday?",
+			tail:    TailSignature,
+		},
+	})
+}
+
 func TestEmailSummaryTextIsOneLineOfTheSendersOwnWords(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {

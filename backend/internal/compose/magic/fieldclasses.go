@@ -34,7 +34,7 @@ var syntheticAuditFields = setOf(
 // create or an archive as its own line, never as a changed field. The address
 // columns travel in an image as the contract's one `address` object.
 var sharedInternalColumns = setOf(append(lifecycleStamps,
-	"id", "captured_by", "search_tsv", "legal_hold",
+	"id", "captured_by", "search_tsv", "body_own_end", "legal_hold",
 	"source_author_id", "source_author_name", "source_id", "source_system",
 	"address_city", "address_country", "address_line1", "address_line2",
 	"address_postal_code", "address_region",

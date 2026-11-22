@@ -155,6 +155,9 @@ the line **Works at** and the company's name. They come after the contacts whose
 own name matched. A result that came from a connected system is marked **From a
 connected system**.
 
+An email is found by its subject and by the words its sender wrote or forwarded. Text quoted from an
+earlier email does not find it.
+
 When nothing matches, the **Search results** page offers **Did you mean:** with up to five
 names that are written close to what you typed. It lists only names you may open.
 

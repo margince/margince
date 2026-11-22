@@ -63,6 +63,8 @@ public.activity.activity_restriction_needs_class CHECK (((restricted_at IS NULL)
 public.activity.activity_restriction_window CHECK (((restricted_until IS NULL) OR (restricted_until > restricted_at)))
 public.activity.activity_retention_class_known CHECK (((retention_class IS NULL) OR (retention_class = 'commercial_correspondence'::text)))
 public.activity.activity_retention_class_stamped CHECK (((retention_class IS NULL) = (retention_class_at IS NULL)))
+public.activity.activity_search_tsv_insert CREATE TRIGGER activity_search_tsv_insert BEFORE INSERT ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_keeps_search_tsv()
+public.activity.activity_search_tsv_update CREATE TRIGGER activity_search_tsv_update BEFORE UPDATE OF subject, body, language, body_own_end, search_tsv ON public.activity FOR EACH ROW WHEN ((((((old.subject IS DISTINCT FROM new.subject) OR (old.body IS DISTINCT FROM new.body)) OR (old.language IS DISTINCT FROM new.language)) OR (old.body_own_end IS DISTINCT FROM new.body_own_end)) OR (old.search_tsv IS DISTINCT FROM new.search_tsv))) EXECUTE FUNCTION activity_keeps_search_tsv()
 public.activity.activity_sent_by_colleague_fkey FOREIGN KEY (sent_by_colleague) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
@@ -83,6 +85,7 @@ public.activity.audience text NOT NULL gen=- def='workspace'::text
 public.activity.audience_reason text gen=- def=-
 public.activity.body text gen=- def=-
 public.activity.body_completeness text NOT NULL gen=- def='complete'::text
+public.activity.body_own_end integer gen=- def=-
 public.activity.booking_interval_exact boolean NOT NULL gen=- def=false
 public.activity.bulk_mail_attested boolean NOT NULL gen=- def=false
 public.activity.calendar_event jsonb gen=- def=-
@@ -156,7 +159,7 @@ public.activity.restricted_reason text gen=- def=-
 public.activity.restricted_until timestamp with time zone gen=- def=-
 public.activity.retention_class text gen=- def=-
 public.activity.retention_class_at timestamp with time zone gen=- def=-
-public.activity.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) || setweight(to_tsvector(activity_ts_config(language), f_unaccent(((COALESCE(subject, ''::text) || ' '::text) || COALESCE(body, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))
+public.activity.search_tsv tsvector gen=- def=-
 public.activity.sender_is_machine boolean NOT NULL gen=- def=false
 public.activity.sender_was_stranger boolean gen=- def=-
 public.activity.sent_by_colleague uuid gen=- def=-
@@ -269,6 +272,16 @@ public.activity_identity.text_bound_update CREATE TRIGGER text_bound_update AFTE
 public.activity_identity_activity_idx CREATE INDEX activity_identity_activity_idx ON public.activity_identity USING btree (activity_id, identity_kind, identity_key)
 public.activity_identity_meeting_uid CREATE INDEX activity_identity_meeting_uid ON public.activity_identity USING btree ("left"(identity_key, (length(identity_key) - strpos(reverse(identity_key), '/'::text)))) WHERE (identity_kind = 'meeting'::text)
 public.activity_identity_pkey CREATE UNIQUE INDEX activity_identity_pkey ON public.activity_identity USING btree (identity_kind, identity_key)
+public.activity_keeps_search_tsv() secdef=false cfg=- acl=- 
+DECLARE
+    fresh tsvector := activity_search_tsv(NEW.subject, NEW.body, NEW.body_own_end, NEW.language);
+BEGIN
+    IF NEW.search_tsv IS DISTINCT FROM fresh THEN
+        NEW.search_tsv := fresh;
+    END IF;
+    RETURN NEW;
+END;
+
 public.activity_kind acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_kind.activity_kind_pkey PRIMARY KEY (kind)
 public.activity_kind.kind text NOT NULL gen=- def=-
@@ -920,6 +933,7 @@ public.activity_sales_state.text_bound_insert CREATE TRIGGER text_bound_insert A
 public.activity_sales_state.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_sales_state FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "set_by": 20000, "thread_key": 20000, "channel_provider": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"channel_provider":20000,"kind":20000,"set_by":20000,"thread_key":20000}')
 public.activity_sales_state.thread_key text NOT NULL gen=- def=-
 public.activity_sales_state_pkey CREATE UNIQUE INDEX activity_sales_state_pkey ON public.activity_sales_state USING btree (thread_key, kind, channel_provider)
+public.activity_search_tsv(subject text, body text, body_own_end integer, language text) secdef=false cfg=- acl=- 
 public.activity_ts_config(lang text) secdef=false cfg=- acl=- 
 public.activity_unfolded_counterparty(address text) secdef=false cfg=- acl=- 
     SELECT CASE WHEN address <> lower(address) THEN lower(address) END
@@ -8913,6 +8927,28 @@ public.raw_capture_payload_offload_unchecked CREATE INDEX raw_capture_payload_of
 public.raw_capture_pkey CREATE UNIQUE INDEX raw_capture_pkey ON public.raw_capture USING btree (id)
 public.raw_capture_source_unique CREATE UNIQUE INDEX raw_capture_source_unique ON public.raw_capture USING btree (source_system, source_id)
 public.raw_capture_unslimmed_idx CREATE INDEX raw_capture_unslimmed_idx ON public.raw_capture USING btree (received_at) WHERE (parts_slimmed_at IS NULL)
+public.rebuild_activity_search_text(inspected uuid[], mails uuid[], own_ends integer[]) secdef=false cfg=- acl=- 
+DECLARE
+    moving text := current_setting('margince.last_activity_move', true);
+    filled integer;
+    rebuilt integer;
+BEGIN
+    PERFORM set_config('margince.last_activity_move', 'on', true);
+    UPDATE activity a SET body_own_end = m.own_end
+      FROM unnest(mails, own_ends) AS m(id, own_end)
+     WHERE a.id = m.id AND a.body_own_end IS NULL AND a.restricted_at IS NULL;
+    GET DIAGNOSTICS filled = ROW_COUNT;
+    UPDATE activity a SET search_tsv = activity_search_tsv(a.subject, a.body, a.body_own_end, a.language)
+     WHERE a.id = ANY(inspected) AND a.restricted_at IS NULL
+       AND a.search_tsv IS DISTINCT FROM activity_search_tsv(a.subject, a.body, a.body_own_end, a.language);
+    GET DIAGNOSTICS rebuilt = ROW_COUNT;
+    PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+    RETURN filled + rebuilt;
+EXCEPTION WHEN OTHERS THEN
+    PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+    RAISE;
+END;
+
 public.record_assignment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.record_assignment.archived_at timestamp with time zone gen=- def=-
 public.record_assignment.captured_by text gen=- def=-
@@ -10010,10 +10046,10 @@ public.setting.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE O
 public.setting.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.setting.value jsonb NOT NULL gen=- def=-
 public.setting_pkey CREATE UNIQUE INDEX setting_pkey ON public.setting USING btree (key)
-public.settlement_evidence_activity_keys(row_value activity) secdef=false cfg=- acl=- 
-    SELECT CASE WHEN row_value.kind IN ('email', 'message', 'call', 'meeting') THEN ARRAY[
-        settlement_evidence_key('thread', row_value.thread_key),
-        settlement_evidence_key('address', lower(btrim(row_value.counterparty_email)))] END
+public.settlement_evidence_activity_keys(kind text, thread_key text, counterparty_email text) secdef=false cfg=- acl=- 
+    SELECT CASE WHEN kind IN ('email', 'message', 'call', 'meeting') THEN ARRAY[
+        settlement_evidence_key('thread', thread_key),
+        settlement_evidence_key('address', lower(btrim(counterparty_email)))] END
 
 public.settlement_evidence_contact_email_keys(row_value contact_email) secdef=false cfg=- acl=- 
     SELECT ARRAY[settlement_evidence_key('contact', row_value.contact_id::text),
@@ -10035,13 +10071,15 @@ END
 public.settlement_evidence_share_activity() secdef=false cfg=- acl=- 
 BEGIN
     IF TG_OP = 'DELETE' THEN
-        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(OLD));
+        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(OLD.kind, OLD.thread_key, OLD.counterparty_email));
         RETURN OLD;
     END IF;
     IF TG_OP = 'UPDATE' THEN
-        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(OLD) || settlement_evidence_activity_keys(NEW));
+        PERFORM settlement_evidence_share(
+            settlement_evidence_activity_keys(OLD.kind, OLD.thread_key, OLD.counterparty_email)
+            || settlement_evidence_activity_keys(NEW.kind, NEW.thread_key, NEW.counterparty_email));
     ELSE
-        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(NEW));
+        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(NEW.kind, NEW.thread_key, NEW.counterparty_email));
     END IF;
     RETURN NEW;
 END 

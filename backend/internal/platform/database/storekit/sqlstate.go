@@ -228,7 +228,7 @@ func IsQueryCanceled(err error) bool {
 // IsProgramLimitExceeded detects a 54000: a value the database accepted as
 // input but cannot store or index at that size.
 //
-// The case that earned it is `activity.search_tsv`, a GENERATED column whose
+// The case that earned it is `activity.search_tsv`, a trigger-kept column whose
 // to_tsvector output has a hard 1,048,575-byte ceiling. Output runs about
 // 1.10x input for word-dense text, so a body around 950 KB overflows it —
 // comfortably inside the HTTP chassis's 1 MiB request cap, which means a

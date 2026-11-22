@@ -52,18 +52,31 @@ const ATTRIBUTION = [
   /^On\s.{1,200}\swrote:\s*$/,
   /^Am\s.{1,200}\sschrieb\s?.{0,120}:\s*$/,
   /^Vào\s.{1,200}\sđã viết:\s*$/,
-  /^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Forwarded message|Weitergeleitete Nachricht|Thư được chuyển tiếp|Tin nhắn được chuyển tiếp)/i,
-  /^Begin forwarded message:\s*$/i,
-  /^(Thư được chuyển tiếp|Tin nhắn được chuyển tiếp):\s*$/i,
-  /^Anfang der weitergeleiteten (E-Mail|Nachricht)/i,
+  /^Ngày\s.{1,200}\sđã viết:\s*$/,
+  /^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Thư gốc|Tin nhắn gốc)/i,
   /^_{5,}\s*$/,
 ];
+
+// Lines that open mail the sender passes on. It is new to the reader, so it is
+// never folded away as history.
+const FORWARD = [
+  /^-{2,}\s*(Forwarded message|Weitergeleitete Nachricht|Thư được chuyển tiếp|Thư đã chuyển tiếp|Tin nhắn được chuyển tiếp)/i,
+  /^Begin forwarded message:\s*$/i,
+  /^(Thư được chuyển tiếp|Thư đã chuyển tiếp|Tin nhắn được chuyển tiếp):\s*$/i,
+  /^Anfang der weitergeleiteten (E-Mail|Nachricht)/i,
+];
+
+// One field of the header block under a forward line, and how many lines the
+// block may run.
+const FORWARD_HEADER_LINE = /^\*{0,2}[^\s:>*][^:]{0,30}:/;
+const QUOTED_HEADER_REACH = 8;
 
 // The Outlook top-reply block: a From:/Von: line whose neighbours carry the
 // sent-date field. Recognised as a pair because "Von:" alone is ordinary prose
 // in German mail.
-const REPLY_HEADER_FROM = /^\*{0,2}(Von|From):\*{0,2}\s/;
-const REPLY_HEADER_SENT = /^\*{0,2}(Gesendet|Sent|Datum|Date):\*{0,2}\s/;
+const REPLY_HEADER_FROM = /^\*{0,2}(Von|From|Từ):\*{0,2}\s/;
+const REPLY_HEADER_SENT =
+  /^\*{0,2}(Gesendet|Sent|Datum|Date|Đã gửi|Ngày):\*{0,2}\s/;
 
 // Sign-offs, matched only in the trailing region. The multi-word forms may open
 // a line, since a name usually follows on the same one.
@@ -139,7 +152,7 @@ function isSignOff(line: string): boolean {
   return SIGN_OFF_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
-function isQuoteStart(lines: readonly string[], index: number): boolean {
+function startsQuote(lines: readonly string[], index: number): boolean {
   const line = lines[index] ?? "";
   if (line.startsWith(">")) {
     return true;
@@ -157,13 +170,92 @@ function isQuoteStart(lines: readonly string[], index: number): boolean {
   return false;
 }
 
+const isBlank = (line: string | undefined): boolean => !line?.trim();
+
+// The index after the ">" lines a quote at `index` opens, or -1 when the quote
+// carries no ">" lines.
+function markedRunEnd(lines: readonly string[], index: number): number {
+  let first = index;
+  if (!lines[first]?.startsWith(">")) {
+    first += 1;
+    while (first < lines.length && isBlank(lines[first])) {
+      first += 1;
+    }
+    if (!lines[first]?.startsWith(">")) {
+      return -1;
+    }
+  }
+  let after = first;
+  while (
+    after < lines.length &&
+    (lines[after]?.startsWith(">") || isBlank(lines[after]))
+  ) {
+    after += 1;
+  }
+  return after;
+}
+
+// The index where a forwarded mail's own lines are read from. It passes the
+// header block, whose From and Date fields would read as an Outlook reply
+// header, and a mail forwarded with ">" on every line.
+function forwardedTextStart(lines: readonly string[], from: number): number {
+  let start = from;
+  while (start < lines.length && isBlank(lines[start])) {
+    start += 1;
+  }
+  let end = start;
+  while (
+    end < lines.length &&
+    end - start < QUOTED_HEADER_REACH &&
+    FORWARD_HEADER_LINE.test(lines[end] ?? "")
+  ) {
+    end += 1;
+  }
+  while (
+    end < lines.length &&
+    (lines[end]?.startsWith(">") || isBlank(lines[end]))
+  ) {
+    end += 1;
+  }
+  return end;
+}
+
+/**
+ * ownTextEnd is the index of the first line of quoted earlier mail, or
+ * `lines.length` when the sender wrote or forwarded every line.
+ *
+ * A line a mail program writes above quoted mail ends the text. A quote marked
+ * with ">" ends it only when nothing follows, so an inline reply stays whole. The server stores the same boundary for search.
+ */
+function ownTextEnd(lines: readonly string[]): number {
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i] ?? "";
+    if (FORWARD.some((pattern) => pattern.test(line))) {
+      i = forwardedTextStart(lines, i + 1) - 1;
+      continue;
+    }
+    if (!startsQuote(lines, i)) {
+      continue;
+    }
+    const after = markedRunEnd(lines, i);
+    if (after < 0) {
+      return i;
+    }
+    if (lines.slice(after).every(isBlank)) {
+      // The attribution line directly above a quoted block introduces it, so it
+      // travels with the quote rather than trailing the message.
+      const above = lines[i - 1]?.trim() ?? "";
+      return line.startsWith(">") && i > 0 && above.endsWith(":") ? i - 1 : i;
+    }
+    i = after - 1;
+  }
+  return lines.length;
+}
+
 /**
  * boundaryIndex is the first line that belongs to the tail rather than the
- * message, and WHICH KIND of tail it opens.
- *
- * The kind is not decoration. A sign-off and a quoted reply are both trimmed,
- * and a caller that folds them behind one control saying "show quoted history"
- * hides a sender's own name under a promise of history that is not there.
+ * message, and which kind of tail it opens. A sign-off counts only above the
+ * quoted earlier mail.
  *
  * `at` is -1 when the whole body is the message.
  */
@@ -171,26 +263,18 @@ function boundaryIndex(lines: readonly string[]): {
   at: number;
   kind: "signature" | "quote";
 } {
+  const quote = ownTextEnd(lines);
   const signOffFloor = Math.max(0, lines.length - TRAILING_SCAN_LINES);
-  for (let i = 0; i < lines.length; i += 1) {
+  for (let i = 0; i < quote; i += 1) {
     const line = lines[i] ?? "";
-    if (SIGNATURE_DELIMITER.test(line)) {
-      return { at: i, kind: "signature" };
-    }
-    if (isQuoteStart(lines, i)) {
-      // The attribution line directly above a quoted block introduces it, so it
-      // travels with the quote rather than trailing the message.
-      const above = lines[i - 1]?.trim() ?? "";
-      if (line.startsWith(">") && i > 0 && above.endsWith(":")) {
-        return { at: i - 1, kind: "quote" };
-      }
-      return { at: i, kind: "quote" };
-    }
-    if (i >= signOffFloor && isSignOff(line)) {
+    if (
+      SIGNATURE_DELIMITER.test(line) ||
+      (i >= signOffFloor && isSignOff(line))
+    ) {
       return { at: i, kind: "signature" };
     }
   }
-  return { at: -1, kind: "quote" };
+  return { at: quote < lines.length ? quote : -1, kind: "quote" };
 }
 
 /**
