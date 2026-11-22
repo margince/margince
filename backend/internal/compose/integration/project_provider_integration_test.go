@@ -185,7 +185,7 @@ func TestTheAgentSeamNamesAnEntityItDoesNotServe(t *testing.T) {
 	p := projectProvider(e)
 
 	_, err := p.Create(e.Admin(), datasource.CreateInput{
-		EntityType: datasource.EntityContact, Fields: map[string]any{}, Source: "manual",
+		EntityType: datasource.EntityContact, Fields: map[string]any{}, Source: "agent",
 	})
 	var unsupported *datasource.UnsupportedEntityError
 	if !errors.As(err, &unsupported) {
