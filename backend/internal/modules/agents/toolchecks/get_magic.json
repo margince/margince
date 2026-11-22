@@ -5,13 +5,8 @@
     "automation.read",
     "company.read",
     "contact.read",
-    "contract.read",
     "deal.read",
-    "deal_room.read",
-    "finance.read",
-    "introduction.read",
     "lead.read",
-    "offer.read",
     "project.read",
     "relationship.read"
   ]

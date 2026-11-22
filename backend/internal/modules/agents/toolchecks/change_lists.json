@@ -2,6 +2,7 @@
   "verb": "change_lists",
   "checks": [
     "company.read,contact.read,deal.read,lead.read,project.read",
-    "list.create"
+    "list.create",
+    "list.read"
   ]
 }
