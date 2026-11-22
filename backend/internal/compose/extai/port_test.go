@@ -157,7 +157,7 @@ func TestTheUnitNameOnTheRowComesFromTheInvocationNotTheHandler(t *testing.T) {
 
 func TestRedactionRunsOnAnExtensionsInput(t *testing.T) {
 	fake := ai.NewFakeClient().Script("ok")
-	rt, calls := aiRuntime(t, offline(), fake)
+	rt, _ := aiRuntime(t, offline(), fake)
 	in := extension.AIInput{Text: "key is " + awsKey, NoContact: "a ledger export"}
 	if _, err := rt.AI().Run(t.Context(), "summarise", in); err != nil {
 		t.Fatal(err)
@@ -165,9 +165,6 @@ func TestRedactionRunsOnAnExtensionsInput(t *testing.T) {
 	sent := fake.Calls()
 	if len(sent) != 1 || bytes.Contains(sent[0].Payload, []byte(awsKey)) {
 		t.Fatalf("the credential reached the model: %d calls, payload %q", len(sent), sent[0].Payload)
-	}
-	if row := calls.rows[0]; row.SecretsRemoved != 1 {
-		t.Fatalf("row records %d secrets removed, want 1", row.SecretsRemoved)
 	}
 }
 

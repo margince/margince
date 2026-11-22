@@ -137,6 +137,9 @@ func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, surv
 // on the survivor too, so that guest stays until it drops them. A colleague's
 // own row is left alone: their own calendar decides it.
 func carryRostersTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, survivor.UUID); err != nil {
+		return err
+	}
 	_, err := tx.Exec(ctx, `
 		UPDATE activity_participant s SET `+storekit.StoreRosterSeatsSQL("listed.seats")+`
 		  FROM (SELECT kept.id, array_agg(DISTINCT listing.seat ORDER BY listing.seat) AS seats

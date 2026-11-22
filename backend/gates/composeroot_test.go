@@ -32,11 +32,12 @@ const composeRootDir = "internal/compose"
 // change moves code out. Raising one needs a reason in the pull request.
 const (
 	composeRootProductionFiles = 1375
-	composeRootTestFiles       = 1902
-	// Raised by 7 for the pass-cap settings reads.
-	composeRootProductionLines = 228_991
-	// Raised by 61 for the pass-cap and personal sweep receipt tests.
-	composeRootTestLines = 357_894
+	// Raised by 2 for the derivation column and stage evidence tests.
+	composeRootTestFiles = 1904
+	// Raised by 60 for the derivation columns and the sender warning reads.
+	composeRootProductionLines = 229_051
+	// Raised by 613 for the derivation column, stage evidence and sender warning tests.
+	composeRootTestLines = 358_507
 )
 
 // A read under these floors stopped early or read the wrong place, and would
