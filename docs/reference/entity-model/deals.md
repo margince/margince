@@ -761,15 +761,15 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `activity_id` | `activity` | deleting the parent deletes this row |
-| `attachment_id` | `attachment` | deleting the parent deletes this row |
-| `signal_id` | `signal` | deleting the parent deletes this row |
+| `activity_id` | `activity` | deleting the parent keeps this row and clears the link |
+| `attachment_id` | `attachment` | deleting the parent keeps this row and clears the link |
+| `signal_id` | `signal` | deleting the parent keeps this row and clears the link |
 | `suggestion_id` | `deal_suggestion` | deleting the parent deletes this row |
 
 **Rules**
 
 - `deal_suggestion_evidence_kind_check`: `CHECK ((kind = ANY (ARRAY['meeting', 'signal', 'attachment'])))`
-- `deal_suggestion_evidence_shape`: `CHECK ((((kind = 'meeting') AND (activity_id IS NOT NULL) AND (signal_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'signal') AND (signal_id IS NOT NULL) AND (activity_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'attachment') AND (attachment_id IS NOT NULL) AND (activity_id IS NULL) AND (signal_id IS NULL))))`
+- `deal_suggestion_evidence_shape`: `CHECK ((((kind = 'meeting') AND (signal_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'signal') AND (activity_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'attachment') AND (activity_id IS NULL) AND (signal_id IS NULL))))`
 
 **Indexes**
 

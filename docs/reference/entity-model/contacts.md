@@ -1411,7 +1411,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `origin` | `lead_origin` | the parent cannot be deleted while this row points at it |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `partner_company_id` | `company` | deleting the parent keeps this row and clears the link |
-| `product_id` | `product` | the parent cannot be deleted while this row points at it |
+| `product_id` | `product` | deleting the parent keeps this row and clears the link |
 | `project_id` | `project` | deleting the parent keeps this row and clears the link |
 | `promoted_contact_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `qualified_deal_id` | `deal` | deleting the parent keeps this row and clears the link |
@@ -2180,7 +2180,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `assigned_to` | `app_user` | the parent cannot be deleted while this row points at it |
+| `assigned_to` | `app_user` | deleting the parent keeps this row and clears the link |
 | `company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `deal_id` | `deal` | the parent cannot be deleted while this row points at it |

@@ -216,3 +216,6 @@
 1795316997_the_shared_mailbox_narrowing_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795320397_the_progress_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795331732_a_bulk_change_can_move_deals_to_a_stage_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795400002_catalog_parents_state_their_delete_rule_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795400004_user_references_state_their_delete_rule_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795400006_cited_evidence_outlives_its_source_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

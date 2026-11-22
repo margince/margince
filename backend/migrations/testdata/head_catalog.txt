@@ -13,7 +13,7 @@ public.activity.activity_call_outcome_check CHECK (((call_outcome IS NULL) OR (c
 public.activity.activity_call_outcome_kind_check CHECK (((call_outcome IS NULL) OR (kind = 'call'::text)))
 public.activity.activity_capture_label_check CHECK ((capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'other'::text, 'noise'::text])))
 public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))
-public.activity.activity_channel_provider_fkey FOREIGN KEY (channel_provider) REFERENCES channel_provider(provider)
+public.activity.activity_channel_provider_fkey FOREIGN KEY (channel_provider) REFERENCES channel_provider(provider) ON DELETE RESTRICT
 public.activity.activity_clears_reply_settled CREATE TRIGGER activity_clears_reply_settled AFTER UPDATE OF thread_key, kind, channel_provider, direction, archived_at, occurred_at, occurred_precision, counterparty_email ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_clears_reply_settled()
 public.activity.activity_colleague_mail_is_outbound CHECK (((sent_by_colleague IS NULL) OR (direction = 'outbound'::text)))
 public.activity.activity_day_holds_no_host_slot CHECK (((occurred_precision = 'instant'::text) OR (NOT claims_host_slot)))
@@ -28,7 +28,7 @@ public.activity.activity_intent_insert CREATE TRIGGER activity_intent_insert BEF
 public.activity.activity_intent_update CREATE TRIGGER activity_intent_update BEFORE UPDATE OF due_wall, due_zone, due_at, remind_wall, remind_zone, remind_at ON public.activity FOR EACH ROW WHEN (((new.due_wall IS NOT NULL) OR (new.remind_wall IS NOT NULL) OR (old.due_wall IS NOT NULL) OR (old.remind_wall IS NOT NULL))) EXECUTE FUNCTION maintain_intent_times('due_wall', 'due_zone', 'due_at', 'remind_wall', 'remind_zone', 'remind_at')
 public.activity.activity_internal_mail_remains_restricted CHECK (((internal_mail_authorization IS NULL) OR ((kind = 'email'::text) AND (audience = ANY (ARRAY['participants'::text, 'selected'::text])) AND (jsonb_typeof(internal_mail_authorization) = 'object'::text) AND (internal_mail_authorization ?& ARRAY['connection_id'::text, 'owner_user_id'::text, 'provider'::text, 'generation'::text, 'enrolled_at'::text, 'enrolled_by'::text, 'policy_since'::text]))))
 public.activity.activity_invitation_sender_fkey FOREIGN KEY (invitation_sender) REFERENCES app_user(id) ON DELETE SET NULL
-public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind)
+public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind) ON DELETE RESTRICT
 public.activity.activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text, 'vi'::text]))))
 public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, audience_reason, thread_key, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.audience_reason IS DISTINCT FROM new.audience_reason) OR (old.thread_key IS DISTINCT FROM new.thread_key) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome) OR (old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested))) EXECUTE FUNCTION trg_activity_last_activity()
 public.activity.activity_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
@@ -1064,7 +1064,7 @@ public.ai_call acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margi
 public.ai_call.agent_run_id uuid gen=- def=-
 public.ai_call.ai_call_cache_write_tokens_js_safe CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_cached_tokens_js_safe CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))
-public.ai_call.ai_call_config_fk FOREIGN KEY (config_hash) REFERENCES ai_call_config(hash)
+public.ai_call.ai_call_config_fk FOREIGN KEY (config_hash) REFERENCES ai_call_config(hash) ON DELETE RESTRICT
 public.ai_call.ai_call_context_bytes_check CHECK ((context_bytes >= 0))
 public.ai_call.ai_call_context_fingerprint_check CHECK (((context_fingerprint = ''::text) OR (context_fingerprint ~ '^[0-9a-f]{64}$'::text)))
 public.ai_call.ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['identity'::text, 'positioning'::text, 'sales'::text, 'offer'::text, 'market'::text, 'proof'::text, 'administrative'::text]))
@@ -2205,7 +2205,7 @@ public.brief_run.brief_run_pkey PRIMARY KEY (id)
 public.brief_run.brief_run_revenue_norm_currency_check CHECK (((revenue_norm_currency = ''::text) OR (revenue_norm_currency ~ '^[A-Z]{3}$'::text)))
 public.brief_run.brief_run_revenue_norm_minor_check CHECK ((revenue_norm_minor > 0))
 public.brief_run.brief_run_revenue_norm_minor_js_safe CHECK (((revenue_norm_minor >= '-9007199254740991'::bigint) AND (revenue_norm_minor <= '9007199254740991'::bigint)))
-public.brief_run.brief_run_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.brief_run.brief_run_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.brief_run.candidate_count integer NOT NULL gen=- def=-
 public.brief_run.factors_omitted text[] NOT NULL gen=- def='{}'::text[]
 public.brief_run.generated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2219,7 +2219,7 @@ public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
 public.brief_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.brief_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"narrative": 2000, "mail_error": 500, "factors_omitted": 20000, "revenue_norm_currency": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"factors_omitted":20000,"mail_error":500,"narrative":2000,"revenue_norm_currency":20000}')
 public.brief_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.brief_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"narrative": 2000, "mail_error": 500, "factors_omitted": 20000, "revenue_norm_currency": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"factors_omitted":20000,"mail_error":500,"narrative":2000,"revenue_norm_currency":20000}')
 public.brief_run.uq_brief_run_user_day UNIQUE (user_id, local_day)
-public.brief_run.user_id uuid NOT NULL gen=- def=-
+public.brief_run.user_id uuid gen=- def=-
 public.brief_run_pkey CREATE UNIQUE INDEX brief_run_pkey ON public.brief_run USING btree (id)
 public.bulk_confirmation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.bulk_confirmation.affected uuid[] NOT NULL gen=- def=-
@@ -3946,9 +3946,9 @@ public.consent_event.captured_at timestamp with time zone NOT NULL gen=- def=-
 public.consent_event.captured_by text NOT NULL gen=- def=-
 public.consent_event.confirm_ip text gen=- def=-
 public.consent_event.confirm_user_agent text gen=- def=-
-public.consent_event.consent_event_consent_text_version_id_fkey FOREIGN KEY (consent_text_version_id) REFERENCES consent_text_version(id)
+public.consent_event.consent_event_consent_text_version_id_fkey FOREIGN KEY (consent_text_version_id) REFERENCES consent_text_version(id) ON DELETE RESTRICT
 public.consent_event.consent_event_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
-public.consent_event.consent_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id)
+public.consent_event.consent_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE RESTRICT
 public.consent_event.consent_event_new_state_check CHECK ((new_state = ANY (ARRAY['granted'::text, 'withdrawn'::text])))
 public.consent_event.consent_event_pkey PRIMARY KEY (id)
 public.consent_event.consent_event_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
@@ -4209,7 +4209,7 @@ public.contact_channel_identity.captured_by text NOT NULL gen=- def=-
 public.contact_channel_identity.channel_user_id text NOT NULL gen=- def=-
 public.contact_channel_identity.contact_channel_identity_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_channel_identity.contact_channel_identity_pkey PRIMARY KEY (id)
-public.contact_channel_identity.contact_channel_identity_provider_fkey FOREIGN KEY (provider) REFERENCES channel_provider(provider)
+public.contact_channel_identity.contact_channel_identity_provider_fkey FOREIGN KEY (provider) REFERENCES channel_provider(provider) ON DELETE RESTRICT
 public.contact_channel_identity.contact_channel_identity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact_channel_identity.contact_id uuid NOT NULL gen=- def=-
 public.contact_channel_identity.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -4969,7 +4969,7 @@ public.deal.deal_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES
 public.deal.deal_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.deal.deal_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
 public.deal.deal_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
-public.deal.deal_stage_in_pipeline FOREIGN KEY (stage_id, pipeline_id) REFERENCES stage(id, pipeline_id)
+public.deal.deal_stage_in_pipeline FOREIGN KEY (stage_id, pipeline_id) REFERENCES stage(id, pipeline_id) ON DELETE RESTRICT
 public.deal.deal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text])))
 public.deal.deal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal.deal_win_probability_override_range CHECK (((win_probability_override IS NULL) OR ((win_probability_override >= 0) AND (win_probability_override <= 100))))
@@ -5227,7 +5227,7 @@ public.deal_product.deal_product_known_amount_minor_exact CHECK (((known_amount_
 public.deal_product.deal_product_line_shape CHECK (((source = 'line'::text) = (commercial_revision IS NOT NULL)))
 public.deal_product.deal_product_offer_line_item_id_fkey FOREIGN KEY (offer_line_item_id) REFERENCES offer_line_item(id) ON DELETE SET NULL
 public.deal_product.deal_product_pkey PRIMARY KEY (deal_id, product_id)
-public.deal_product.deal_product_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
+public.deal_product.deal_product_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE RESTRICT
 public.deal_product.deal_product_source_check CHECK ((source = ANY (ARRAY['offer'::text, 'manual'::text, 'line'::text])))
 public.deal_product.known_amount_minor bigint gen=- def=-
 public.deal_product.offer_line_item_id uuid gen=- def=-
@@ -5599,12 +5599,12 @@ public.deal_suggestion.version bigint NOT NULL gen=- def=1
 public.deal_suggestion_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_suggestion_evidence.activity_id uuid gen=- def=-
 public.deal_suggestion_evidence.attachment_id uuid gen=- def=-
-public.deal_suggestion_evidence.deal_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.deal_suggestion_evidence.deal_suggestion_evidence_attachment_id_fkey FOREIGN KEY (attachment_id) REFERENCES attachment(id) ON DELETE CASCADE
+public.deal_suggestion_evidence.deal_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.deal_suggestion_evidence.deal_suggestion_evidence_attachment_id_fkey FOREIGN KEY (attachment_id) REFERENCES attachment(id) ON DELETE SET NULL
 public.deal_suggestion_evidence.deal_suggestion_evidence_kind_check CHECK ((kind = ANY (ARRAY['meeting'::text, 'signal'::text, 'attachment'::text])))
 public.deal_suggestion_evidence.deal_suggestion_evidence_pkey PRIMARY KEY (id)
-public.deal_suggestion_evidence.deal_suggestion_evidence_shape CHECK ((((kind = 'meeting'::text) AND (activity_id IS NOT NULL) AND (signal_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'signal'::text) AND (signal_id IS NOT NULL) AND (activity_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'attachment'::text) AND (attachment_id IS NOT NULL) AND (activity_id IS NULL) AND (signal_id IS NULL))))
-public.deal_suggestion_evidence.deal_suggestion_evidence_signal_id_fkey FOREIGN KEY (signal_id) REFERENCES signal(id) ON DELETE CASCADE
+public.deal_suggestion_evidence.deal_suggestion_evidence_shape CHECK ((((kind = 'meeting'::text) AND (signal_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'signal'::text) AND (activity_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'attachment'::text) AND (activity_id IS NULL) AND (signal_id IS NULL))))
+public.deal_suggestion_evidence.deal_suggestion_evidence_signal_id_fkey FOREIGN KEY (signal_id) REFERENCES signal(id) ON DELETE SET NULL
 public.deal_suggestion_evidence.deal_suggestion_evidence_suggestion_id_fkey FOREIGN KEY (suggestion_id) REFERENCES deal_suggestion(id) ON DELETE CASCADE
 public.deal_suggestion_evidence.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_suggestion_evidence.kind text NOT NULL gen=- def=-
@@ -5848,7 +5848,7 @@ public.field_mask.condition text NOT NULL gen=- def=-
 public.field_mask.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.field_mask.field text NOT NULL gen=- def=-
 public.field_mask.field_mask_condition_check CHECK ((condition = ANY (ARRAY['always'::text, 'outside_write_authority'::text])))
-public.field_mask.field_mask_maskable_fkey FOREIGN KEY (object, field) REFERENCES maskable_field(object, field)
+public.field_mask.field_mask_maskable_fkey FOREIGN KEY (object, field) REFERENCES maskable_field(object, field) ON DELETE RESTRICT
 public.field_mask.field_mask_pkey PRIMARY KEY (id)
 public.field_mask.field_mask_role_key_object_field_key UNIQUE (role_key, object, field)
 public.field_mask.id uuid NOT NULL gen=- def=uuidv7()
@@ -6177,7 +6177,7 @@ public.forecast_snapshot.forecast_snapshot_landing_measure_known CHECK (((landin
 public.forecast_snapshot.forecast_snapshot_likely_threshold_range CHECK (((likely_threshold IS NULL) OR ((likely_threshold >= 1) AND (likely_threshold <= 100))))
 public.forecast_snapshot.forecast_snapshot_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= period_start))
-public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
+public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE RESTRICT
 public.forecast_snapshot.forecast_snapshot_pkey PRIMARY KEY (id)
 public.forecast_snapshot.forecast_snapshot_qualified_policy_present CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> ''::text)))
 public.forecast_snapshot.forecast_snapshot_range_high_minor_js_safe CHECK (((range_high_minor >= '-9007199254740991'::bigint) AND (range_high_minor <= '9007199254740991'::bigint)))
@@ -6917,7 +6917,7 @@ public.intro_request.intro_request_channel_iff_recorded CHECK (((origin = 'recor
 public.intro_request.intro_request_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.intro_request.intro_request_distinct_seats CHECK ((requester_user_id <> introducer_user_id))
 public.intro_request.intro_request_fallback CHECK ((fallback_policy = ANY (ARRAY['name_drop'::text, 'next_route'::text, 'none'::text])))
-public.intro_request.intro_request_introducer_user_id_fkey FOREIGN KEY (introducer_user_id) REFERENCES app_user(id)
+public.intro_request.intro_request_introducer_user_id_fkey FOREIGN KEY (introducer_user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.intro_request.intro_request_introducer_user_id_retirement_guard CREATE TRIGGER intro_request_introducer_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.intro_request FOR EACH ROW WHEN (((new.introducer_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.closed_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('introducer_user_id')
 public.intro_request.intro_request_note_origin CHECK ((note_generated_by = ANY (ARRAY['human'::text, 'model'::text, 'deterministic'::text])))
 public.intro_request.intro_request_origin_known CHECK ((origin = ANY (ARRAY['asked'::text, 'recorded'::text])))
@@ -6925,14 +6925,14 @@ public.intro_request.intro_request_pkey PRIMARY KEY (id)
 public.intro_request.intro_request_reason_by_origin CHECK ((((origin = 'asked'::text) AND (internal_reason IS NOT NULL) AND (internal_reason <> ''::text)) OR ((origin = 'recorded'::text) AND (internal_reason IS NULL))))
 public.intro_request.intro_request_recorded_channel_known CHECK (((recorded_channel IS NULL) OR (recorded_channel = ANY (ARRAY['in_person'::text, 'email'::text, 'call'::text, 'other'::text]))))
 public.intro_request.intro_request_recorded_is_introduced CHECK (((origin <> 'recorded'::text) OR ((status = 'introduced'::text) AND (introduced_at IS NOT NULL) AND (through_contact_id IS NULL) AND (decision_reason IS NULL) AND (suggested_user_id IS NULL) AND (decided_at IS NULL) AND (name_dropped_at IS NULL) AND (replied_at IS NULL) AND (source_activity_id IS NULL) AND (closed_at IS NULL))))
-public.intro_request.intro_request_requester_user_id_fkey FOREIGN KEY (requester_user_id) REFERENCES app_user(id)
+public.intro_request.intro_request_requester_user_id_fkey FOREIGN KEY (requester_user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.intro_request.intro_request_route_shape CHECK (((route_type = 'through_contact'::text) = (through_contact_id IS NOT NULL)))
 public.intro_request.intro_request_route_type CHECK ((route_type = ANY (ARRAY['direct'::text, 'through_contact'::text])))
 public.intro_request.intro_request_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.intro_request.intro_request_status CHECK ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text, 'suggest_other'::text, 'declined'::text, 'introduced'::text, 'name_dropped'::text, 'replied'::text, 'expired'::text, 'cancelled'::text])))
-public.intro_request.intro_request_suggested_user_id_fkey FOREIGN KEY (suggested_user_id) REFERENCES app_user(id)
+public.intro_request.intro_request_suggested_user_id_fkey FOREIGN KEY (suggested_user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.intro_request.intro_request_suggestion_named CHECK (((status <> 'suggest_other'::text) OR (suggested_user_id IS NOT NULL)))
-public.intro_request.intro_request_through_contact_id_fkey FOREIGN KEY (through_contact_id) REFERENCES contact(id)
+public.intro_request.intro_request_through_contact_id_fkey FOREIGN KEY (through_contact_id) REFERENCES contact(id) ON DELETE RESTRICT
 public.intro_request.introduced_at timestamp with time zone gen=- def=-
 public.intro_request.introducer_user_id uuid NOT NULL gen=- def=-
 public.intro_request.name_drop_allowed boolean NOT NULL gen=- def=false
@@ -7300,7 +7300,7 @@ public.lead.lead_owner_id_retirement_guard CREATE TRIGGER lead_owner_id_retireme
 public.lead.lead_partner_acceptance_pairing CHECK (((partner_accepted_at IS NULL) = (partner_accepted_by IS NULL)))
 public.lead.lead_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE SET NULL (partner_company_id)
 public.lead.lead_pkey PRIMARY KEY (id)
-public.lead.lead_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
+public.lead.lead_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE SET NULL
 public.lead.lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.lead.lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES contact(id) ON DELETE SET NULL (promoted_contact_id)
 public.lead.lead_promoted_names_its_contact CHECK (((status <> 'promoted'::text) OR ((promoted_contact_id IS NOT NULL) AND (archived_at IS NOT NULL))))
@@ -7380,7 +7380,7 @@ public.lead_manual_signal.lead_manual_signal_factor_check CHECK ((factor = ANY (
 public.lead_manual_signal.lead_manual_signal_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.lead_manual_signal.lead_manual_signal_pkey PRIMARY KEY (id)
 public.lead_manual_signal.lead_manual_signal_reason_check CHECK ((length(btrim(reason)) > 0))
-public.lead_manual_signal.lead_manual_signal_set_by_fkey FOREIGN KEY (set_by) REFERENCES app_user(id)
+public.lead_manual_signal.lead_manual_signal_set_by_fkey FOREIGN KEY (set_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.lead_manual_signal.lead_manual_signal_signal_kind_check CHECK ((signal_kind = ANY (ARRAY['fact'::text, 'assumption'::text, 'judgement'::text])))
 public.lead_manual_signal.lead_manual_signal_superseded_by_check CHECK (((superseded_by IS NULL) OR (length(btrim(superseded_by)) > 0)))
 public.lead_manual_signal.lead_manual_signal_superseded_shape CHECK (((superseded_at IS NULL) = (superseded_by IS NULL)))
@@ -7900,7 +7900,7 @@ public.meeting_invitation.meeting_invitation_activity_id_fkey FOREIGN KEY (activ
 public.meeting_invitation.meeting_invitation_attention_follows_status CREATE TRIGGER meeting_invitation_attention_follows_status BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW EXECUTE FUNCTION meeting_invitation_attention_follows_status()
 public.meeting_invitation.meeting_invitation_attention_reason_check CHECK ((attention_reason = ANY (ARRAY['delivery_failed'::text, 'calendar_disconnected'::text])))
 public.meeting_invitation.meeting_invitation_command_check CHECK ((command = ANY (ARRAY['create'::text, 'update'::text, 'cancel'::text])))
-public.meeting_invitation.meeting_invitation_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id)
+public.meeting_invitation.meeting_invitation_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.meeting_invitation.meeting_invitation_host_user_id_retirement_guard CREATE TRIGGER meeting_invitation_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND ((new.status <> ALL (ARRAY['canceled'::text, 'erased'::text])) OR (NOT new.cleanup_complete)))) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
 public.meeting_invitation.meeting_invitation_management_hash_key UNIQUE (management_hash)
 public.meeting_invitation.meeting_invitation_pkey PRIMARY KEY (activity_id)
@@ -7942,7 +7942,7 @@ public.meeting_proposal.invitation_id uuid gen=- def=-
 public.meeting_proposal.link_ref text NOT NULL gen=- def=-
 public.meeting_proposal.meeting_proposal_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.meeting_proposal.meeting_proposal_expires_after_creation CHECK ((expires_at > created_at))
-public.meeting_proposal.meeting_proposal_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id)
+public.meeting_proposal.meeting_proposal_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.meeting_proposal.meeting_proposal_host_user_id_retirement_guard CREATE TRIGGER meeting_proposal_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_proposal FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
 public.meeting_proposal.meeting_proposal_invitation_id_fkey FOREIGN KEY (invitation_id) REFERENCES meeting_invitation(activity_id) ON DELETE SET NULL
 public.meeting_proposal.meeting_proposal_pkey PRIMARY KEY (activity_id)
@@ -8101,7 +8101,7 @@ public.notification_digest_run.mail_attempted_at timestamp with time zone NOT NU
 public.notification_digest_run.mail_error text gen=- def=-
 public.notification_digest_run.notification_digest_error_bounded CHECK ((length(mail_error) <= 500))
 public.notification_digest_run.notification_digest_run_pkey PRIMARY KEY (user_id, digest_date)
-public.notification_digest_run.notification_digest_run_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.notification_digest_run.notification_digest_run_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.notification_digest_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.notification_digest_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mail_error": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"mail_error":500}')
 public.notification_digest_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.notification_digest_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mail_error": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"mail_error":500}')
 public.notification_digest_run.user_id uuid NOT NULL gen=- def=-
@@ -8770,7 +8770,7 @@ public.provider_connection.mode text NOT NULL gen=- def=-
 public.provider_connection.preset text NOT NULL gen=- def=-
 public.provider_connection.provider text NOT NULL gen=- def=-
 public.provider_connection.provider_connection_categories_check CHECK ((cardinality(categories) > 0))
-public.provider_connection.provider_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES app_user(id)
+public.provider_connection.provider_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.provider_connection.provider_connection_credential_ref_key UNIQUE (credential_ref)
 public.provider_connection.provider_connection_daily_run_limit_check CHECK ((daily_run_limit > 0))
 public.provider_connection.provider_connection_disconnected_shape CHECK ((((status = 'disconnected'::text) AND (credential_ref IS NULL)) OR (status <> 'disconnected'::text)))
@@ -8853,7 +8853,7 @@ public.provider_run.provider_run_connection_version_js_safe CHECK (((connection_
 public.provider_run.provider_run_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.provider_run.provider_run_external_correlation_id_key UNIQUE (external_correlation_id)
 public.provider_run.provider_run_pkey PRIMARY KEY (id)
-public.provider_run.provider_run_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id)
+public.provider_run.provider_run_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text, 'no_identifiers'::text, 'category_in_flight'::text]))))
 public.provider_run.provider_run_skip_reason_shape CHECK (((state = 'skipped'::text) = (skip_reason IS NOT NULL)))
 public.provider_run.provider_run_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'completed'::text, 'no_match'::text, 'skipped'::text, 'submission_unknown'::text, 'failed'::text, 'cancelled'::text])))
@@ -9313,11 +9313,11 @@ public.report_definition.id uuid NOT NULL gen=- def=uuidv7()
 public.report_definition.name text NOT NULL gen=- def=-
 public.report_definition.owner_id uuid NOT NULL gen=- def=-
 public.report_definition.report_definition_audience_check CHECK ((audience = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
-public.report_definition.report_definition_audience_team_id_fkey FOREIGN KEY (audience_team_id) REFERENCES team(id)
+public.report_definition.report_definition_audience_team_id_fkey FOREIGN KEY (audience_team_id) REFERENCES team(id) ON DELETE RESTRICT
 public.report_definition.report_definition_check CHECK (((audience = 'team'::text) = (audience_team_id IS NOT NULL)))
 public.report_definition.report_definition_draft_after_published CHECK (((draft_revision IS NULL) OR ((draft_revision >= (revision + 1)) AND (draft_revision <= '9007199254740991'::bigint))))
 public.report_definition.report_definition_draft_revision_js_safe CHECK (((draft_revision >= '-9007199254740991'::bigint) AND (draft_revision <= '9007199254740991'::bigint)))
-public.report_definition.report_definition_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.report_definition.report_definition_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.report_definition.report_definition_owner_id_retirement_guard CREATE TRIGGER report_definition_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.report_definition FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.report_definition.report_definition_pkey PRIMARY KEY (id)
 public.report_definition.report_definition_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
@@ -9334,11 +9334,11 @@ public.report_definition_revision.created_by uuid NOT NULL gen=- def=-
 public.report_definition_revision.framework_revision bigint NOT NULL gen=- def=-
 public.report_definition_revision.metric_versions jsonb gen=- def=-
 public.report_definition_revision.question_bindings jsonb NOT NULL gen=- def='{}'::jsonb
-public.report_definition_revision.report_definition_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
+public.report_definition_revision.report_definition_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.report_definition_revision.report_definition_revision_framework_revision_js_safe CHECK (((framework_revision >= '-9007199254740991'::bigint) AND (framework_revision <= '9007199254740991'::bigint)))
 public.report_definition_revision.report_definition_revision_pkey PRIMARY KEY (report_id, revision)
 public.report_definition_revision.report_definition_revision_question_bindings_is_an_object CHECK ((jsonb_typeof(question_bindings) = 'object'::text))
-public.report_definition_revision.report_definition_revision_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id)
+public.report_definition_revision.report_definition_revision_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id) ON DELETE RESTRICT
 public.report_definition_revision.report_definition_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.report_definition_revision.report_id uuid NOT NULL gen=- def=-
 public.report_definition_revision.revision bigint NOT NULL gen=- def=-
@@ -9355,10 +9355,10 @@ public.report_edition.owner_id uuid NOT NULL gen=- def=-
 public.report_edition.publication_audience text NOT NULL gen=- def=-
 public.report_edition.publication_team_id uuid gen=- def=-
 public.report_edition.redacted_at timestamp with time zone gen=- def=-
-public.report_edition.report_edition_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES report_execution(id)
+public.report_edition.report_edition_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES report_execution(id) ON DELETE RESTRICT
 public.report_edition.report_edition_execution_id_key UNIQUE (execution_id)
 public.report_edition.report_edition_pkey PRIMARY KEY (id)
-public.report_edition.report_edition_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id)
+public.report_edition.report_edition_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id) ON DELETE RESTRICT
 public.report_edition.report_edition_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
 public.report_edition.report_id uuid NOT NULL gen=- def=-
 public.report_edition.report_revision bigint NOT NULL gen=- def=-
@@ -9421,11 +9421,11 @@ public.report_execution.reason text gen=- def=-
 public.report_execution.report_execution_attempt_js_safe CHECK (((attempt >= '-9007199254740991'::bigint) AND (attempt <= '9007199254740991'::bigint)))
 public.report_execution.report_execution_check CHECK (((retry_base_attempt >= 0) AND (retry_base_attempt <= attempt)))
 public.report_execution.report_execution_execution_key_key UNIQUE (execution_key)
-public.report_execution.report_execution_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.report_execution.report_execution_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.report_execution.report_execution_pkey PRIMARY KEY (id)
-public.report_execution.report_execution_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES report_definition_revision(report_id, revision)
+public.report_execution.report_execution_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES report_definition_revision(report_id, revision) ON DELETE RESTRICT
 public.report_execution.report_execution_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
-public.report_execution.report_execution_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES report_schedule(id)
+public.report_execution.report_execution_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES report_schedule(id) ON DELETE SET NULL
 public.report_execution.report_execution_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'succeeded'::text, 'partial'::text, 'failed'::text, 'suspended'::text, 'skipped'::text])))
 public.report_execution.report_id uuid NOT NULL gen=- def=-
 public.report_execution.report_revision bigint NOT NULL gen=- def=-
@@ -9450,13 +9450,13 @@ public.report_projection_fence.singleton boolean NOT NULL gen=- def=true
 public.report_projection_fence_pkey CREATE UNIQUE INDEX report_projection_fence_pkey ON public.report_projection_fence USING btree (singleton)
 public.report_question_source CREATE INDEX report_question_source ON public.report_edition_question_source USING btree (source_type, source_id)
 public.report_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.report_run.asked_by uuid NOT NULL gen=- def=-
+public.report_run.asked_by uuid gen=- def=-
 public.report_run.captured_by text NOT NULL gen=- def=-
 public.report_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.report_run.group_floor integer NOT NULL gen=- def=-
 public.report_run.id uuid NOT NULL gen=- def=uuidv7()
 public.report_run.query jsonb NOT NULL gen=- def=-
-public.report_run.report_run_asked_by_fkey FOREIGN KEY (asked_by) REFERENCES app_user(id) ON DELETE CASCADE
+public.report_run.report_run_asked_by_fkey FOREIGN KEY (asked_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.report_run.report_run_floor_is_not_negative CHECK ((group_floor >= 0))
 public.report_run.report_run_pkey PRIMARY KEY (id)
 public.report_run.report_run_result_columns_is_a_list CHECK ((jsonb_typeof(result_columns) = 'array'::text))
@@ -9478,10 +9478,10 @@ public.report_schedule.next_due_at timestamp with time zone NOT NULL gen=- def=-
 public.report_schedule.owner_id uuid NOT NULL gen=- def=-
 public.report_schedule.report_id uuid NOT NULL gen=- def=-
 public.report_schedule.report_revision bigint NOT NULL gen=- def=-
-public.report_schedule.report_schedule_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.report_schedule.report_schedule_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.report_schedule.report_schedule_owner_id_retirement_guard CREATE TRIGGER report_schedule_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.report_schedule FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND new.enabled)) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.report_schedule.report_schedule_pkey PRIMARY KEY (id)
-public.report_schedule.report_schedule_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES report_definition_revision(report_id, revision)
+public.report_schedule.report_schedule_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES report_definition_revision(report_id, revision) ON DELETE RESTRICT
 public.report_schedule.report_schedule_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
 public.report_schedule.report_schedule_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.report_schedule.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_schedule FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"timezone": 20000, "last_status": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"last_status":20000,"timezone":20000}')
@@ -9506,7 +9506,7 @@ public.reporting_framework_revision acl=margince_owner=arwdDxt/margince_owner,ma
 public.reporting_framework_revision.created_by uuid NOT NULL gen=- def=-
 public.reporting_framework_revision.definition jsonb NOT NULL gen=- def=-
 public.reporting_framework_revision.effective_at timestamp with time zone NOT NULL gen=- def=-
-public.reporting_framework_revision.reporting_framework_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
+public.reporting_framework_revision.reporting_framework_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.reporting_framework_revision.reporting_framework_revision_pkey PRIMARY KEY (revision)
 public.reporting_framework_revision.reporting_framework_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.reporting_framework_revision.revision bigint NOT NULL gen=- def=-
@@ -9725,7 +9725,7 @@ public.sales_initiative.name text NOT NULL gen=- def=-
 public.sales_initiative.objective_metric text NOT NULL gen=- def=-
 public.sales_initiative.owner_id uuid NOT NULL gen=- def=-
 public.sales_initiative.sales_initiative_live_has_launch CHECK (((status = 'draft'::text) OR (launch_at IS NOT NULL)))
-public.sales_initiative.sales_initiative_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.sales_initiative.sales_initiative_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.sales_initiative.sales_initiative_owner_id_retirement_guard CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.sales_initiative FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.sales_initiative.sales_initiative_pkey PRIMARY KEY (id)
 public.sales_initiative.sales_initiative_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'live'::text, 'ended'::text])))
@@ -9817,7 +9817,7 @@ public.sales_target.revision bigint NOT NULL gen=- def=-
 public.sales_target.sales_target_check CHECK ((period_end > period_start))
 public.sales_target.sales_target_check1 CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.sales_target.sales_target_period_kind_check CHECK ((period_kind = ANY (ARRAY['month'::text, 'fiscal_quarter'::text])))
-public.sales_target.sales_target_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
+public.sales_target.sales_target_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE RESTRICT
 public.sales_target.sales_target_pkey PRIMARY KEY (id)
 public.sales_target.sales_target_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.sales_target.sales_target_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['owner'::text, 'team'::text, 'workspace'::text])))
@@ -9835,10 +9835,10 @@ public.sales_target_revision.created_by uuid NOT NULL gen=- def=-
 public.sales_target_revision.definition jsonb NOT NULL gen=- def=-
 public.sales_target_revision.effective_at timestamp with time zone NOT NULL gen=- def=-
 public.sales_target_revision.revision bigint NOT NULL gen=- def=-
-public.sales_target_revision.sales_target_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
+public.sales_target_revision.sales_target_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.sales_target_revision.sales_target_revision_pkey PRIMARY KEY (target_id, revision)
 public.sales_target_revision.sales_target_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
-public.sales_target_revision.sales_target_revision_target_id_fkey FOREIGN KEY (target_id) REFERENCES sales_target(id)
+public.sales_target_revision.sales_target_revision_target_id_fkey FOREIGN KEY (target_id) REFERENCES sales_target(id) ON DELETE RESTRICT
 public.sales_target_revision.target_id uuid NOT NULL gen=- def=-
 public.sales_target_revision_pkey CREATE UNIQUE INDEX sales_target_revision_pkey ON public.sales_target_revision USING btree (target_id, revision)
 public.saved_view acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -9921,7 +9921,7 @@ public.sdr_handoff.lead_id uuid gen=- def=-
 public.sdr_handoff.note text gen=- def=-
 public.sdr_handoff.reason_applies_to text gen=- def=-
 public.sdr_handoff.reason_id uuid gen=- def=-
-public.sdr_handoff.sdr_handoff_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES app_user(id)
+public.sdr_handoff.sdr_handoff_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES app_user(id) ON DELETE SET NULL
 public.sdr_handoff.sdr_handoff_assigned_to_retirement_guard CREATE TRIGGER sdr_handoff_assigned_to_retirement_guard BEFORE INSERT OR UPDATE ON public.sdr_handoff FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = 'submitted'::text))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')
 public.sdr_handoff.sdr_handoff_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
 public.sdr_handoff.sdr_handoff_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
@@ -9936,7 +9936,7 @@ public.sdr_handoff.sdr_handoff_reason_matches_status CHECK (((reason_applies_to 
 public.sdr_handoff.sdr_handoff_reason_pair CHECK (((reason_id IS NULL) = (reason_applies_to IS NULL)))
 public.sdr_handoff.sdr_handoff_reason_when_refused CHECK (((status = ANY (ARRAY['rejected'::text, 'recycled'::text])) = (reason_id IS NOT NULL)))
 public.sdr_handoff.sdr_handoff_status CHECK ((status = ANY (ARRAY['submitted'::text, 'accepted'::text, 'rejected'::text, 'recycled'::text])))
-public.sdr_handoff.sdr_handoff_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES app_user(id)
+public.sdr_handoff.sdr_handoff_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.sdr_handoff.sdr_handoff_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.sdr_handoff.status text NOT NULL gen=- def='submitted'::text
 public.sdr_handoff.submitted_at timestamp with time zone NOT NULL gen=- def=now()
@@ -11521,7 +11521,7 @@ public.voice_build.voice_build_profile_fkey FOREIGN KEY (voice_profile_id) REFER
 public.voice_build.voice_build_reason_check CHECK ((reason = ANY (ARRAY['onboarding'::text, 'manual'::text, 'automatic'::text])))
 public.voice_build.voice_build_requester_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id) ON DELETE SET NULL (requested_by)
 public.voice_build.voice_build_result_version_check CHECK ((result_version >= 1))
-public.voice_build.voice_build_result_version_fkey FOREIGN KEY (voice_profile_id, result_version) REFERENCES voice_profile_version(voice_profile_id, profile_version)
+public.voice_build.voice_build_result_version_fkey FOREIGN KEY (voice_profile_id, result_version) REFERENCES voice_profile_version(voice_profile_id, profile_version) ON DELETE RESTRICT
 public.voice_build.voice_build_source_count_check CHECK ((source_count >= 0))
 public.voice_build.voice_build_stage_check CHECK ((stage = ANY (ARRAY['snapshot'::text, 'extract'::text, 'evaluate'::text, 'activate'::text])))
 public.voice_build.voice_build_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text, 'succeeded'::text, 'failed'::text])))
@@ -11600,7 +11600,7 @@ public.voice_learning_signal.voice_learning_signal_profile_fkey FOREIGN KEY (voi
 public.voice_learning_signal.voice_learning_signal_profile_version_check CHECK ((profile_version >= 1))
 public.voice_learning_signal.voice_learning_signal_qualifies_check CHECK (((NOT qualifies_as_source) OR ((outcome = 'edited_sent'::text) AND (final_text IS NOT NULL) AND (final_captured_by ~~ 'human:%'::text))))
 public.voice_learning_signal.voice_learning_signal_similarity_check CHECK (((similarity >= (0)::numeric) AND (similarity <= (1)::numeric)))
-public.voice_learning_signal.voice_learning_signal_version_fkey FOREIGN KEY (voice_profile_id, profile_version) REFERENCES voice_profile_version(voice_profile_id, profile_version)
+public.voice_learning_signal.voice_learning_signal_version_fkey FOREIGN KEY (voice_profile_id, profile_version) REFERENCES voice_profile_version(voice_profile_id, profile_version) ON DELETE RESTRICT
 public.voice_learning_signal.voice_learning_signal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_learning_signal.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_learning_signal_pkey CREATE UNIQUE INDEX voice_learning_signal_pkey ON public.voice_learning_signal USING btree (id)
@@ -11652,11 +11652,11 @@ public.voice_profile_delta.updated_at timestamp with time zone NOT NULL gen=- de
 public.voice_profile_delta.uq_voice_profile_delta_version UNIQUE (voice_profile_id, to_version)
 public.voice_profile_delta.voice_profile_delta_activation_outcome_check CHECK ((activation_outcome = ANY (ARRAY['auto_activated'::text, 'review_required'::text, 'manually_activated'::text, 'rejected'::text, 'rollback'::text])))
 public.voice_profile_delta.voice_profile_delta_classification_check CHECK ((classification = ANY (ARRAY['routine'::text, 'material'::text])))
-public.voice_profile_delta.voice_profile_delta_from_fkey FOREIGN KEY (voice_profile_id, from_version) REFERENCES voice_profile_version(voice_profile_id, profile_version)
+public.voice_profile_delta.voice_profile_delta_from_fkey FOREIGN KEY (voice_profile_id, from_version) REFERENCES voice_profile_version(voice_profile_id, profile_version) ON DELETE RESTRICT
 public.voice_profile_delta.voice_profile_delta_from_version_check CHECK ((from_version >= 1))
 public.voice_profile_delta.voice_profile_delta_pkey PRIMARY KEY (id)
 public.voice_profile_delta.voice_profile_delta_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES voice_profile(id) ON DELETE CASCADE
-public.voice_profile_delta.voice_profile_delta_to_fkey FOREIGN KEY (voice_profile_id, to_version) REFERENCES voice_profile_version(voice_profile_id, profile_version)
+public.voice_profile_delta.voice_profile_delta_to_fkey FOREIGN KEY (voice_profile_id, to_version) REFERENCES voice_profile_version(voice_profile_id, profile_version) ON DELETE RESTRICT
 public.voice_profile_delta.voice_profile_delta_to_version_check CHECK ((to_version >= 1))
 public.voice_profile_delta.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_profile_delta_from_version_ix CREATE INDEX voice_profile_delta_from_version_ix ON public.voice_profile_delta USING btree (voice_profile_id, from_version)
@@ -11694,7 +11694,7 @@ public.voice_profile_version.version bigint NOT NULL gen=- def=1
 public.voice_profile_version.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_profile_version.voice_profile_md text NOT NULL gen=- def=-
 public.voice_profile_version.voice_profile_version_pkey PRIMARY KEY (id)
-public.voice_profile_version.voice_profile_version_predecessor_fkey FOREIGN KEY (voice_profile_id, predecessor_version) REFERENCES voice_profile_version(voice_profile_id, profile_version)
+public.voice_profile_version.voice_profile_version_predecessor_fkey FOREIGN KEY (voice_profile_id, predecessor_version) REFERENCES voice_profile_version(voice_profile_id, profile_version) ON DELETE RESTRICT
 public.voice_profile_version.voice_profile_version_predecessor_version_check CHECK ((predecessor_version >= 1))
 public.voice_profile_version.voice_profile_version_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES voice_profile(id) ON DELETE CASCADE
 public.voice_profile_version.voice_profile_version_profile_version_check CHECK ((profile_version >= 1))
@@ -11907,7 +11907,7 @@ CASE
 END))))
 public.weekly_plan_commitment.weekly_plan_commitment_linked_project_id_fkey FOREIGN KEY (linked_project_id) REFERENCES project(id) ON DELETE SET NULL
 public.weekly_plan_commitment.weekly_plan_commitment_linked_record_shape CHECK ((linked_record_unkeyed OR (linked_record_id IS NULL) OR (num_nonnulls(linked_deal_id, linked_lead_id, linked_contact_id, linked_company_id, linked_project_id) = 1)))
-public.weekly_plan_commitment.weekly_plan_commitment_manager_fkey FOREIGN KEY (manager_user_id) REFERENCES app_user(id)
+public.weekly_plan_commitment.weekly_plan_commitment_manager_fkey FOREIGN KEY (manager_user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.weekly_plan_commitment.weekly_plan_commitment_pkey PRIMARY KEY (id)
 public.weekly_plan_commitment.weekly_plan_commitment_plan_fkey FOREIGN KEY (plan_id) REFERENCES weekly_plan(id) ON DELETE CASCADE
 public.weekly_plan_commitment.weekly_plan_commitment_response_bound CHECK ((length(manager_response) <= 2000))
@@ -12200,13 +12200,13 @@ public.worklist_snapshot.created_at timestamp with time zone NOT NULL gen=- def=
 public.worklist_snapshot.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.worklist_snapshot.id uuid NOT NULL gen=- def=uuidv7()
 public.worklist_snapshot.params_fingerprint text NOT NULL gen=- def=-
-public.worklist_snapshot.reader_id uuid NOT NULL gen=- def=-
+public.worklist_snapshot.reader_id uuid gen=- def=-
 public.worklist_snapshot.rows jsonb NOT NULL gen=- def=-
 public.worklist_snapshot.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.worklist_snapshot FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"params_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"params_fingerprint":20000}')
 public.worklist_snapshot.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.worklist_snapshot FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"params_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"params_fingerprint":20000}')
 public.worklist_snapshot.worklist_snapshot_forward CHECK ((expires_at > created_at))
 public.worklist_snapshot.worklist_snapshot_pkey PRIMARY KEY (id)
-public.worklist_snapshot.worklist_snapshot_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.worklist_snapshot.worklist_snapshot_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.worklist_snapshot_by_reader CREATE INDEX worklist_snapshot_by_reader ON public.worklist_snapshot USING btree (reader_id, created_at DESC)
 public.worklist_snapshot_pkey CREATE UNIQUE INDEX worklist_snapshot_pkey ON public.worklist_snapshot USING btree (id)
 public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

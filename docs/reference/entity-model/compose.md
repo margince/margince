@@ -340,13 +340,13 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `narrative` | `text` |  | At most 2000 characters. |
 | `revenue_norm_currency` | `text`, default `''::text` | yes |  |
 | `revenue_norm_minor` | `bigint` | yes |  |
-| `user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `user_id` | `uuid` |  | Points at `app_user.id`. |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `user_id` | `app_user` | deleting the parent deletes this row |
+| `user_id` | `app_user` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -930,7 +930,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `asked_by` | `uuid` | yes | Whose answer the run originally was. |
+| `asked_by` | `uuid` |  | Whose answer the run originally was. |
 | `group_floor` | `integer` | yes |  |
 | `query` | `jsonb` | yes | The question as it was saved, with one addition: `limit` is always present and is the bound this read applied, including the default when the asker named none. |
 | `result_columns` | `jsonb` | yes |  |
@@ -945,7 +945,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `asked_by` | `app_user` | deleting the parent deletes this row |
+| `asked_by` | `app_user` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -1737,7 +1737,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `buckets` | `jsonb` | yes |  |
 | `expires_at` | `timestamp with time zone` | yes |  |
 | `params_fingerprint` | `text` | yes |  |
-| `reader_id` | `uuid` | yes | Points at `app_user.id`. |
+| `reader_id` | `uuid` |  | Points at `app_user.id`. |
 | `rows` | `jsonb` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -1745,7 +1745,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `reader_id` | `app_user` | deleting the parent deletes this row |
+| `reader_id` | `app_user` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 

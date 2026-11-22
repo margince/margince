@@ -151,6 +151,11 @@ Each string it changes must be the old string with spans replaced by the mask ma
 statutory hold keeps its trail.
 The trigger is in [the repair's migration](../../backend/migrations/core/1794348833_the_credential_repair_may_rewrite_an_audit_image.up.sql).
 
+**Growth.** The table keeps every row for good. No retention rule deletes or anonymizes a row
+because of its age, and no job passes the immutability guard to do so. A row is about 600 bytes with
+its indexes, one for each change to a record. An operator who needs the disk space copies old rows to
+storage outside the product.
+
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.
 

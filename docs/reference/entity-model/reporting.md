@@ -247,7 +247,7 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 |---|---|---|
 | `owner_id` | `app_user` | the parent cannot be deleted while this row points at it |
 | `report_id, report_revision` | `report_definition_revision` | the parent cannot be deleted while this row points at it |
-| `schedule_id` | `report_schedule` | the parent cannot be deleted while this row points at it |
+| `schedule_id` | `report_schedule` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
