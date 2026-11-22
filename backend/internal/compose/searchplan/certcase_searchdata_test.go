@@ -62,3 +62,16 @@ func TestACaseAcceptsEachPlanItLists(t *testing.T) {
 		}
 	}
 }
+
+// An empty list and an absent one ask the same: no grouping is no grouping.
+func TestAnEmptyListComparesAsAnAbsentOne(t *testing.T) {
+	plan := func(groupBy string) Plan {
+		return Plan{Engine: EngineAnalytics, Arguments: `{"entity":"deals-by-stage","measures":[{"fn":"count"}]` + groupBy + `,"scope_kind":"workspace"}`}
+	}
+	if same, err := sameSearchPlanArguments(plan(""), plan(`,"group_by":[]`), ""); err != nil || !same {
+		t.Errorf("group_by [] read as another plan than none (%v)", err)
+	}
+	if same, err := sameSearchPlanArguments(plan(""), plan(`,"group_by":["stage_id"]`), ""); err != nil || same {
+		t.Errorf("a grouping read as no grouping (%v)", err)
+	}
+}

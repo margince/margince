@@ -140,13 +140,32 @@ func sameSearchPlanArguments(want, got Plan, vocabulary string) (bool, error) {
 
 func sameSearchArguments[T any](want, got string) (bool, error) {
 	var expected, actual T
-	if err := DecodeArguments(want, &expected); err != nil {
-		return false, err
-	}
-	if err := DecodeArguments(got, &actual); err != nil {
-		return false, err
+	for target, raw := range map[*T]string{&expected: want, &actual: got} {
+		bare, err := withoutEmptyLists(raw)
+		if err != nil {
+			return false, err
+		}
+		if err := DecodeArguments(bare, target); err != nil {
+			return false, err
+		}
 	}
 	return reflect.DeepEqual(expected, actual), nil
+}
+
+// withoutEmptyLists drops each top-level member holding an empty list, which
+// asks what leaving the member out asks.
+func withoutEmptyLists(raw string) (string, error) {
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &members); err != nil {
+		return "", err
+	}
+	for key, value := range members {
+		if string(bytes.TrimSpace(value)) == "[]" {
+			delete(members, key)
+		}
+	}
+	bare, err := json.Marshal(members)
+	return string(bare), err
 }
 
 func orderedSearchPredicates(raw json.RawMessage, dates map[string]bool) ([]byte, error) {
