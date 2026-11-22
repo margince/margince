@@ -76,6 +76,9 @@ func (s *Store) connectMeetingNotesTx(ctx context.Context, tx pgx.Tx, note notes
 	if err := storekit.LockWriteIdentity(ctx, tx, "activity_source", transcriptSourceSystem+":"+note.URL); err != nil {
 		return false, err
 	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, note.Transcript.UUID); err != nil {
+		return false, err
+	}
 	var meetingID ids.ActivityID
 	err = tx.QueryRow(ctx, `SELECT m.id FROM activity t JOIN activity m ON m.id = @recorded_meeting
  WHERE t.id = @transcript AND `+unlinkedMeetingNotes+` AND `+liveNotesMeeting+` AND t.source_id = @url AND t.raw -> 'google_doc' ->> 'meeting_id' = @stored_meeting FOR UPDATE OF m,t`, pgx.NamedArgs{"recorded_meeting": target, "transcript": note.Transcript, "url": note.URL, "stored_meeting": note.MeetingText}).Scan(&meetingID)

@@ -96,6 +96,14 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.create_attachment",
   "magic.action.update_attachment",
   "magic.action.archive_attachment",
+  "magic.action.create_deal_suggestion",
+  "magic.action.update_deal_suggestion",
+  "magic.action.schedule_send",
+  "magic.action.update_scheduled_send",
+  "magic.action.create_invoice",
+  "magic.action.update_invoice",
+  "magic.action.create_payment",
+  "magic.action.update_payment",
   "magic.action.archive_activity",
   "magic.action.archive_activity_email",
   "magic.action.archive_activity_meeting",
@@ -169,6 +177,7 @@ function registry(
 const SENTENCES = registry(MAGIC_SENTENCE_KEYS);
 const WHYS = registry(MAGIC_WHY_KEYS);
 const BYS = registry(MAGIC_BY_KEYS);
+const CONSEQUENCES = registry(MAGIC_CONSEQUENCE_KEYS);
 
 /** The sentence key this build carries, or null for one it predates. */
 export function magicSentenceKey(key: string): MessageKey | null {
@@ -178,6 +187,11 @@ export function magicSentenceKey(key: string): MessageKey | null {
 /** The reason key this build carries, or null for one it predates. */
 export function magicWhyKey(key: string): MessageKey | null {
   return WHYS.get(key) ?? null;
+}
+
+/** The consequence key this build carries, or null for one it predates. */
+export function magicConsequenceKey(key: string): MessageKey | null {
+  return CONSEQUENCES.get(key) ?? null;
 }
 
 /** The actor-name key this build carries, or null for one it predates. */

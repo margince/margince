@@ -63,10 +63,18 @@ func (s *Store) reconcileMeetingProof(ctx context.Context, own OwnDomainReader) 
 }
 
 // settleMeetingClaims judges each meeting once, under its row lock, and sets
-// every claim on it to what the meeting proves now.
+// every claim on it to what the meeting proves now. The page's attendee locks
+// come first, sorted, so no attendee writer changes a meeting while it is judged.
 func settleMeetingClaims(ctx context.Context, tx pgx.Tx, page []meetingClaim, own OwnDomainReader) (int, error) {
 	if len(page) == 0 {
 		return 0, nil
+	}
+	meetings := make([]ids.UUID, 0, len(page))
+	for _, claim := range page {
+		meetings = append(meetings, claim.SourceID)
+	}
+	if err := storekit.LockMeetingAttendeeChecks(ctx, tx, meetings...); err != nil {
+		return 0, err
 	}
 	parties, err := own.MeetingParties(ctx, tx)
 	if err != nil {

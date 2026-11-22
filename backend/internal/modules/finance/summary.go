@@ -46,16 +46,10 @@ func (s *Store) SummaryFor(
 		State:     crmcontracts.FinanceSummaryStateNoConnection,
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		// The account itself is row-scoped, and a finance grant is not a
-		// licence to learn that a company exists: an account the caller
-		// cannot see answers 404 before any figure is read.
-		//
-		// EnsureVisible alone is not enough. Under row_scope=all it skips the
-		// query entirely — correctly, since everything is visible — so an id
-		// naming no company would come back as a summary of the
-		// workspace's provider rather than a 404. The existence probe is what
-		// makes a made-up id answer the same way a hidden one does.
-		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
+		// A finance grant is not a licence to learn that a company exists, nor
+		// to read a ledger the caller does not own. Either answers 404 before
+		// any figure is read, as a made-up id does.
+		if err := ensureLedgerVisible(ctx, tx, companyID.UUID, false); err != nil {
 			return err
 		}
 		lifecycle, err := companyLifecycle(ctx, tx, companyID)

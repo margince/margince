@@ -197,14 +197,12 @@ func auditMapLiteralKeys(pkg typedPackage, file *ast.File, ident *ast.Ident) ([]
 	return keys, found
 }
 
-func TestEveryAuditedRecordTypeHasWordsInTheAuditLog(t *testing.T) {
-	t.Parallel()
-	census := auditEntityCensusOf(t)
-	if !census.seedInserts {
-		t.Fatalf("%s no longer holds the INSERT into audit_log with a %s parameter, so the census starts from nothing", auditSeedFunc, auditSeedParam)
-	}
-	written := map[string]bool{}
-	named := map[string]bool{}
+// goAuditedRecordTypes are the record types Go code audits: each constant a
+// writer is called with, and each vocabulary a runtime-typed writer draws
+// from. unread are the calls whose type neither names.
+func goAuditedRecordTypes(t *testing.T, census *auditEntityCensus) (written, named map[string]bool, unread []auditEntitySite) {
+	t.Helper()
+	written, named = map[string]bool{}, map[string]bool{}
 	for _, site := range census.sites {
 		if site.opaque == "" {
 			written[site.value] = true
@@ -212,15 +210,28 @@ func TestEveryAuditedRecordTypeHasWordsInTheAuditLog(t *testing.T) {
 		}
 		vocabulary, known := runtimeTypedAuditWriters[site.writer]
 		if !known {
-			t.Errorf("%s writes an audit row whose record type is %s, which this gate cannot read.\n"+
-				"\tPass a constant, or name the Go vocabulary that type is drawn from in runtimeTypedAuditWriters, keyed %q.",
-				site.pos, site.opaque, site.writer)
+			unread = append(unread, site)
 			continue
 		}
 		named[site.writer] = true
 		for _, value := range vocabulary(t) {
 			written[value] = true
 		}
+	}
+	return written, named, unread
+}
+
+func TestEveryAuditedRecordTypeHasWordsInTheAuditLog(t *testing.T) {
+	t.Parallel()
+	census := auditEntityCensusOf(t)
+	if !census.seedInserts {
+		t.Fatalf("%s no longer holds the INSERT into audit_log with a %s parameter, so the census starts from nothing", auditSeedFunc, auditSeedParam)
+	}
+	written, named, unread := goAuditedRecordTypes(t, census)
+	for _, site := range unread {
+		t.Errorf("%s writes an audit row whose record type is %s, which this gate cannot read.\n"+
+			"\tPass a constant, or name the Go vocabulary that type is drawn from in runtimeTypedAuditWriters, keyed %q.",
+			site.pos, site.opaque, site.writer)
 	}
 	for key := range runtimeTypedAuditWriters {
 		if !named[key] {

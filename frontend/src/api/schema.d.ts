@@ -51615,7 +51615,7 @@ export interface components {
         AnalyticsAnswer: {
             /** @description What each value in a row means, in order. */
             columns: string[];
-            /** @description One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own. */
+            /** @description One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -52708,7 +52708,7 @@ export interface components {
         };
         HealthUnplacedChange: {
             entity_type: string;
-            /** @description The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`. */
+            /** @description The audit action. */
             action: string;
             count: number;
         };
@@ -62365,6 +62365,8 @@ export interface components {
              * @description The exact number of admitted items in this category for this read's scope and
              *     owner. Absent when that population has not been counted exactly; a client then
              *     reads `considered` with `more_available` as today. Absent never means zero.
+             *     For `decisions` it counts only what this reader can settle, as the readings'
+             *     `review` does, so a duplicate pair without verbs is left out.
              */
             total?: number;
         };
@@ -62638,10 +62640,12 @@ export interface components {
              *     them as one row — the strip says how much work there is, and the queue says
              *     how much reading it costs.
              *
-             *     Only rows carrying a verb the reader may press. A duplicate pair whose two
-             *     records the reader cannot both write is somebody else's decision, and
-             *     counting it here tells them a contact is waiting on an answer they are not
-             *     able to give.
+             *     The same population as the `decisions` count's `total`, and that total
+             *     wherever it is stated, so Home and the Worklist read one number. An approval
+             *     requested of the reader counts also while its preview is stale, not ready or
+             *     blocked by a conflict: the reader can refresh it. Any other row counts only
+             *     where it carries a verb the reader may press. A duplicate pair whose two
+             *     records the reader cannot both write is somebody else's decision.
              */
             review: number;
             /**

@@ -305,6 +305,8 @@ type reportOutcome struct {
 	// length, so a reader can tell a whole answer from the top of one.
 	TotalRows   int
 	GeneratedAt time.Time
+	// RatesAt is the rate-sheet revision the figures were computed from.
+	RatesAt time.Time
 	// The reading's frame, resolved in the same transaction that ran it. A
 	// number without them is not wrong so much as unplaceable: the reader
 	// cannot tell which zone cut the day, which currency the money is in, or
@@ -406,6 +408,7 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 		// rate sheet effective in that gap would make the label name a moment
 		// the arithmetic did not use.
 		GeneratedAt: frame.AsOf,
+		RatesAt:     frame.RatesAt,
 
 		Timezone:             frame.Timezone,
 		BaseCurrency:         frame.BaseCurrency,

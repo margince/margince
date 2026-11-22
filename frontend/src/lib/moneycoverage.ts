@@ -43,6 +43,19 @@ export function coverageOfWire(stated: unknown): MoneyCoverage | null {
   };
 }
 
+// What a typed answer's row says about one measure column. Null unless the
+// row names that column among the sums its coverage qualifies.
+export function coverageOfMeasure(
+  row: Row,
+  column: string,
+): MoneyCoverage | null {
+  const stated = row._coverage;
+  if (stated == null || typeof stated !== "object") return null;
+  const named = (stated as Row).aggregates;
+  if (!Array.isArray(named) || !named.includes(column)) return null;
+  return coverageOfWire(stated);
+}
+
 export function hasGap(
   coverage: MoneyCoverage | null | undefined,
 ): coverage is MoneyCoverage {
