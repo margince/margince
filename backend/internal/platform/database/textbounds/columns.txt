@@ -586,6 +586,8 @@ public.contact.last_name exempt captured name parts retain the existing ingestio
 public.contact.narrowing_reason note
 public.contact.photo_object_key document
 public.contact.photo_origin document
+public.contact.quarantine_cleared_by document
+public.contact.quarantine_reason document
 public.contact.relationship_mark document
 public.contact.relationship_mark_set_by document
 public.contact.source document

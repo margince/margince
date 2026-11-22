@@ -289,9 +289,9 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"contact": {
 		"captured_by",
-		// A closed vocabulary and the principal that chose it; neither holds
-		// anything a subject wrote.
-		"relationship_mark",
+		// Closed vocabularies and the principals that set or cleared them; none
+		// holds anything a subject wrote.
+		"quarantine_cleared_by", "quarantine_reason", "relationship_mark",
 		"relationship_mark_set_by",
 		"source",
 		// Which system the record was imported FROM — a system's name, not the

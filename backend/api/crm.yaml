@@ -29101,6 +29101,29 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/impersonation-warning/clear:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: clearContactImpersonationWarning
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      x-human-only-reason: security   # mail an agent reads could ask it to clear the warning about its own sender
+      summary: Answer a contact's impersonation warning as fine.
+      description: |
+        Clears the warning `impersonation_warning` serves on the contact. The verdict stays on the
+        record with the moment and the user who cleared it, so a later one can be compared with it.
+        Requires permission to update the contact. A contact the caller cannot see answers `404`.
+        A contact with no warning, or one already cleared, answers `204` and writes nothing.
+        One transaction: the row, its audit row and its `contact.updated` event.
+      responses:
+        '204': { description: The contact carries no warning. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /records/{record_type}/{id}/claim:
     parameters:
       - name: record_type
@@ -49171,6 +49194,13 @@ components:
             name. A rep sets it once and every draft to the contact uses it ahead of what the
             thread suggests. Null means nobody set it, and a draft reads the register from the
             correspondence.
+        impersonation_warning:
+          allOf: [{ $ref: '#/components/schemas/ContactImpersonationWarning' }]
+          readOnly: true
+          description: >-
+            Set while the sender check holds an unanswered sign that this sender pretends to be
+            someone else. Absent when there is none, and after a user cleared it
+            (`clearContactImpersonationWarning`).
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -80083,6 +80113,26 @@ components:
           items: { type: string }
         on_behalf_of: { type: string, format: uuid, description: The human whose RBAC bounds every call this passport makes. }
         expires_at:   { type: string, format: date-time }
+
+    ContactImpersonationWarning:
+      type: object
+      description: >-
+        The sign of impersonation the sender check saw when capture made this contact from a mail.
+      required: [detected_at]
+      properties:
+        reason:
+          type: string
+          enum: [punycode_domain, display_name_other_domain]
+          x-extensible-enum: true
+          description: >-
+            Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can
+            look like another domain. `display_name_other_domain`: the display name holds an
+            address on a domain other than the one the mail came from. Absent on a warning
+            recorded before the reason was stored.
+        detected_at:
+          type: string
+          format: date-time
+          description: When the sender check recorded it.
 
     ContactAcquisitionRequest:
       type: object

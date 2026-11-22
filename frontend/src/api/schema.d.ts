@@ -19824,6 +19824,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/impersonation-warning/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a contact's impersonation warning as fine.
+         * @description Clears the warning `impersonation_warning` serves on the contact. The verdict stays on the
+         *     record with the moment and the user who cleared it, so a later one can be compared with it.
+         *     Requires permission to update the contact. A contact the caller cannot see answers `404`.
+         *     A contact with no warning, or one already cleared, answers `204` and writes nothing.
+         *     One transaction: the row, its audit row and its `contact.updated` event.
+         */
+        post: operations["clearContactImpersonationWarning"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -34795,6 +34822,8 @@ export interface components {
              * @enum {string|null}
              */
             greeting_register?: "formal" | "familiar" | null;
+            /** @description Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`). */
+            readonly impersonation_warning?: components["schemas"]["ContactImpersonationWarning"];
             /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
@@ -59267,6 +59296,19 @@ export interface components {
             on_behalf_of: string;
             /** Format: date-time */
             expires_at: string;
+        };
+        /** @description The sign of impersonation the sender check saw when capture made this contact from a mail. */
+        ContactImpersonationWarning: {
+            /**
+             * @description Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+             * @enum {string}
+             */
+            reason?: "punycode_domain" | "display_name_other_domain";
+            /**
+             * Format: date-time
+             * @description When the sender check recorded it.
+             */
+            detected_at: string;
         };
         /** @description A request to hear from us that the contact's acquisition records. */
         ContactAcquisitionRequest: {
@@ -95286,6 +95328,31 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    clearContactImpersonationWarning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The contact carries no warning. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

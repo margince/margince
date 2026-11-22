@@ -32543,6 +32543,11 @@ components:
           enum: [formal, familiar, null]
           description: >-
             How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+        impersonation_warning:
+          allOf: [{$ref: '#/components/schemas/ContactImpersonationWarning'}]
+          readOnly: true
+          description: >-
+            Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`).
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -55372,6 +55377,21 @@ components:
       type: object
       properties:
         reason: {type: [string, 'null'], description: Optional buyer-given decline reason (rides offer.rejected).}
+    ContactImpersonationWarning:
+      type: object
+      description: >-
+        The sign of impersonation the sender check saw when capture made this contact from a mail.
+      required: [detected_at]
+      properties:
+        reason:
+          type: string
+          enum: [punycode_domain, display_name_other_domain]
+          description: >-
+            Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+        detected_at:
+          type: string
+          format: date-time
+          description: When the sender check recorded it.
     ContactAcquisitionRequest:
       type: object
       description: A request to hear from us that the contact's acquisition records.

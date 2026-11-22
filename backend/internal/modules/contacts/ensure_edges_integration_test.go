@@ -238,7 +238,7 @@ func TestEnsureCounterpartyQuarantinesImpersonationSuspects(t *testing.T) {
 
 	// A display name embedding an address on a DIFFERENT domain — the
 	// classic spoof tell. The row still lands (hiding suspicious mail
-	// would be worse), but quarantined for the review surface.
+	// would be worse), and wears the warning the contact read serves.
 	res, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t,
 		"boss@spoof.test", "ceo@real-corp.example", "spoof.test"))
 	if err != nil {

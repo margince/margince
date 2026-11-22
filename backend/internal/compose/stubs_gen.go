@@ -1735,6 +1735,10 @@ func (stubs) GetContactGraph(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 	httperr.NotImplemented(w, r, "GetContactGraph")
 }
 
+func (stubs) ClearContactImpersonationWarning(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ClearContactImpersonationWarning")
+}
+
 func (stubs) DraftIntroNote(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftIntroNote")
 }

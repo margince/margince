@@ -2748,6 +2748,8 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_cleared":
+    "Impersonation warning cleared",
   "history.field.reason": "Reason",
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
@@ -2788,6 +2790,10 @@ export const en = {
   "history.value.meeting_status.no_show": "No-show",
   "history.value.meeting_status.canceled": "Canceled",
   "history.value.relationship_mark.vendor_marketing": "Vendor marketing",
+  "history.value.impersonation.punycode_domain": "Coded mail domain",
+  "history.value.impersonation.display_name_other_domain":
+    "Other domain in sender name",
+  "history.value.impersonation.unrecorded": "Sign not recorded",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -22104,6 +22110,15 @@ export const en = {
   "contact.follow.stopped": "You stopped following this contact.",
   "contact.follow.setAside": "You set this contact aside until {date}.",
   "contact.follow.resume": "Resume following",
+  "contact.impersonation.title":
+    "This sender may be pretending to be someone else",
+  "contact.impersonation.clear": "Looks fine",
+  "contact.impersonation.reason.punycodeDomain":
+    "The mail domain uses a coded spelling that can look like another domain.",
+  "contact.impersonation.reason.displayNameOtherDomain":
+    "The sender name holds an address on a domain other than the one the mail came from.",
+  "contact.impersonation.reason.unrecorded":
+    "The check did not record which sign it found.",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "Task was not reopened. Retry.",
   // The frame states the fact and the source follows it, rather than the
