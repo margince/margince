@@ -28985,6 +28985,24 @@ export interface components {
              */
             confidentiality_pass_cap: number;
             /**
+             * @description How many unresolved senders one counterparty verdict run asks the model about per run, answered or not. The senders beyond the cap wait for the next run.
+             *     Read at the start of every run, so a change applies without a restart.
+             *     Default 200.
+             */
+            verdict_pass_cap: number;
+            /**
+             * @description How many captured messages one labelling run settles per run, answered or not. The messages beyond the cap stay unlabelled until the next run.
+             *     Read at the start of every run, so a change applies without a restart.
+             *     Default 500.
+             */
+            classify_pass_cap: number;
+            /**
+             * @description How many new messages one owed-reply run judges per run, answered or not. The messages beyond the cap wait for the next run. The re-judge of older mail has its own budget.
+             *     Read at the start of every run, so a change applies without a restart.
+             *     Default 500.
+             */
+            owed_classify_pass_cap: number;
+            /**
              * @description The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
              *     Company auto-enrichment and domain triage spend it from one counter. It paces and only
              *     paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
@@ -29889,6 +29907,12 @@ export interface components {
             mail_sync_interval_seconds?: number;
             /** @description Set how many held mail threads one confidentiality pass judges. */
             confidentiality_pass_cap?: number;
+            /** @description Set how many unresolved senders one counterparty verdict run judges. */
+            verdict_pass_cap?: number;
+            /** @description Set how many captured messages one labelling run settles. */
+            classify_pass_cap?: number;
+            /** @description Set how many new messages one owed-reply run judges. */
+            owed_classify_pass_cap?: number;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */

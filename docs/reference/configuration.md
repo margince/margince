@@ -312,6 +312,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `capture.auto_enrich` | `MARGINCE_CAPTURE_AUTO_ENRICH` | — | `bool`, stored | `true` | api, worker | Read a new contact's company web page automatically. |
 | `capture.auto_enrich_daily_cap` | `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | — | `int`, `1` to `20000`, stored | `500` | api, worker | Automatic company web-page reads the installation may start in one UTC day. |
+| `capture.classify_pass_cap` | `MARGINCE_CAPTURE_CLASSIFY_PASS_CAP` | — | `int`, `1` to `2500`, stored | `500` | api, worker | Captured messages one labeling run may handle; the rest wait for the next run. |
 | `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, `1` to `200`, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
 | `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
@@ -322,6 +323,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `capture.mail_sharing` | `MARGINCE_CAPTURE_MAIL_SHARING` | — | `bool`, stored | `true` | api, worker | Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it. |
 | `capture.mail_sync_interval_seconds` | `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | — | `int`, `30` to `3600`, stored | `120` | api, worker | Seconds a working mailbox connection waits between polls. |
 | `capture.max_backfill_months` | `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` | — | `int` | `0` | api, worker | How far back a mailbox import may reach, for the whole installation; 0 is no cap. |
+| `capture.owed_classify_pass_cap` | `MARGINCE_CAPTURE_OWED_CLASSIFY_PASS_CAP` | — | `int`, `1` to `2500`, stored | `500` | api, worker | New messages one owed-reply run may judge; the rest wait for the next run. |
 | `capture.shared_posture_allowed` | `MARGINCE_CAPTURE_SHARED_POSTURE_ALLOWED` | — | `bool`, stored | `false` | api, worker | Allow a seat to share their mailbox with colleagues as mail lands; turn it on only where a works agreement allows it. |
 | `capture.signature_enrich` | `MARGINCE_CAPTURE_SIGNATURE_ENRICH` | — | `bool`, stored | `true` | api, worker | Read contact details from the signatures and attached cards of captured mail, for every mailbox that has made no choice of its own. |
 | `capture.site_read_max_mib` | `MARGINCE_CAPTURE_SITE_READ_MAX_MIB` | — | `int`, `1` to `128`, stored | `32` | api, worker | MiB one company web-page read may hold, over all its pages. |
@@ -331,6 +333,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `capture.trace_payloads` | `MARGINCE_CAPTURE_TRACE_PAYLOADS` | — | `bool` | `true` | api, worker | Keep each traced message's sender and a bounded subject in the 24-hour capture trace, dropped messages included. |
 | `capture.transactional_extra` | `MARGINCE_CAPTURE_TRANSACTIONAL_EXTRA` | — | `list<string>` | — | api, worker | Domains of mail services added to the built-in list; their mail keeps the activity and derives no counterparty. |
 | `capture.transactional_never` | `MARGINCE_CAPTURE_TRANSACTIONAL_NEVER` | — | `list<string>` | — | api, worker | Domains never held back as system mail, whatever the built-in rules say. |
+| `capture.verdict_pass_cap` | `MARGINCE_CAPTURE_VERDICT_PASS_CAP` | — | `int`, `1` to `1000`, stored | `200` | api, worker | Unresolved senders one counterparty review run may judge; the rest wait for the next run. |
 
 ### `company_context`
 

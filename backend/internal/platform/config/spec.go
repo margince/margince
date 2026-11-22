@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Role is a program that reads a setting.
@@ -67,6 +68,9 @@ type Store struct {
 	// Cacheable lets a read of the row be up to settings.CacheLifetime late:
 	// for a cadence, a display format or a threshold, never a control.
 	Cacheable bool
+	// Changed runs inside the write's transaction after its audit row, for the
+	// owner's event. The audit row's id is the link.
+	Changed func(ctx context.Context, tx pgx.Tx, auditID ids.UUID) error
 }
 
 // Setting is a declared setting, read through Val or StoredVal.
@@ -104,6 +108,9 @@ func DefineStored[T any](s Spec[T], st Store) *Setting[T] {
 	}
 	if st.Cacheable {
 		row = row.AsCacheable()
+	}
+	if st.Changed != nil {
+		row = row.WithChanged(st.Changed)
 	}
 	setting.row = row
 	return setting

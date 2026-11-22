@@ -42446,7 +42446,7 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds, confidentiality_pass_cap]
+      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds, confidentiality_pass_cap, verdict_pass_cap, classify_pass_cap, owed_classify_pass_cap]
       properties:
         internal_mail: { $ref: '#/components/schemas/InternalMailSettings' }
         locks: { $ref: '#/components/schemas/SettingLocks' }
@@ -42461,6 +42461,30 @@ components:
             when `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the
             pass runs. Read at the start of every pass, so a change applies without a restart.
             Default 40.
+        verdict_pass_cap:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: |
+            How many unresolved senders one counterparty verdict run asks the model about per run, answered or not. The senders beyond the cap wait for the next run.
+            Read at the start of every run, so a change applies without a restart.
+            Default 200.
+        classify_pass_cap:
+          type: integer
+          minimum: 1
+          maximum: 2500
+          description: |
+            How many captured messages one labelling run settles per run, answered or not. The messages beyond the cap stay unlabelled until the next run.
+            Read at the start of every run, so a change applies without a restart.
+            Default 500.
+        owed_classify_pass_cap:
+          type: integer
+          minimum: 1
+          maximum: 2500
+          description: |
+            How many new messages one owed-reply run judges per run, answered or not. The messages beyond the cap wait for the next run. The re-judge of older mail has its own budget.
+            Read at the start of every run, so a change applies without a restart.
+            Default 500.
         auto_enrich_daily_cap:
           type: integer
           minimum: 1
@@ -43733,6 +43757,9 @@ components:
         site_read_wall_seconds: { type: integer, minimum: 30, maximum: 600, description: 'Set the time limit of one website crawl, in seconds.' }
         mail_sync_interval_seconds: { type: integer, minimum: 30, maximum: 3600, description: 'Set how long a mailbox waits between syncs, in seconds.' }
         confidentiality_pass_cap: { type: integer, minimum: 1, maximum: 200, description: 'Set how many held mail threads one confidentiality pass judges.' }
+        verdict_pass_cap: { type: integer, minimum: 1, maximum: 1000, description: 'Set how many unresolved senders one counterparty verdict run judges.' }
+        classify_pass_cap: { type: integer, minimum: 1, maximum: 2500, description: 'Set how many captured messages one labelling run settles.' }
+        owed_classify_pass_cap: { type: integer, minimum: 1, maximum: 2500, description: 'Set how many new messages one owed-reply run judges.' }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }

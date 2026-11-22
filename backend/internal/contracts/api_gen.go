@@ -40644,6 +40644,11 @@ type CaptureSettings struct {
 	// without a restart. Default 500.
 	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap" maximum:"20000" minimum:"1"`
 
+	// ClassifyPassCap How many captured messages one labelling run settles per run, answered or not. The messages beyond the cap stay unlabelled until the next run.
+	// Read at the start of every run, so a change applies without a restart.
+	// Default 500.
+	ClassifyPassCap int `json:"classify_pass_cap" maximum:"2500" minimum:"1"`
+
 	// ConfidentialityPassCap How many held mail threads one confidentiality pass asks the model about, per run,
 	// answered or not. The threads beyond the cap wait for the next run, so
 	// the cap sets how fast a backlog drains and never whether a thread is judged. Raise it
@@ -40677,6 +40682,11 @@ type CaptureSettings struct {
 	// Applies from each mailbox's next sync. Default 120.
 	MailSyncIntervalSeconds int `json:"mail_sync_interval_seconds" maximum:"3600" minimum:"30"`
 
+	// OwedClassifyPassCap How many new messages one owed-reply run judges per run, answered or not. The messages beyond the cap wait for the next run. The re-judge of older mail has its own budget.
+	// Read at the start of every run, so a change applies without a restart.
+	// Default 500.
+	OwedClassifyPassCap int `json:"owed_classify_pass_cap" maximum:"2500" minimum:"1"`
+
 	// SharedPostureAllowed Whether a seat may put their mailbox in the `shared` posture at all — colleagues
 	// reading a captured message the moment it lands, before anything has judged it.
 	//
@@ -40707,6 +40717,11 @@ type CaptureSettings struct {
 	// SiteRead What one website read may fetch. Read when a read starts, so a change applies to the next
 	// one. An automatic read also runs under its own lower page ceiling.
 	SiteRead SiteReadLimits `json:"site_read"`
+
+	// VerdictPassCap How many unresolved senders one counterparty verdict run asks the model about per run, answered or not. The senders beyond the cap wait for the next run.
+	// Read at the start of every run, so a change applies without a restart.
+	// Default 200.
+	VerdictPassCap int `json:"verdict_pass_cap" maximum:"1000" minimum:"1"`
 }
 
 // CaptureSharedMailboxConcern A shared mailbox with an active concern. No member owns it, so `account_label` names it.
@@ -70618,6 +70633,9 @@ type UpdateCaptureSettingsRequest struct {
 	// AutoEnrichDailyCap Set the daily ceiling on automatic website reads.
 	AutoEnrichDailyCap *int `json:"auto_enrich_daily_cap,omitempty" maximum:"20000" minimum:"1"`
 
+	// ClassifyPassCap Set how many captured messages one labelling run settles.
+	ClassifyPassCap *int `json:"classify_pass_cap,omitempty" maximum:"2500" minimum:"1"`
+
 	// ConfidentialityPassCap Set how many held mail threads one confidentiality pass judges.
 	ConfidentialityPassCap *int `json:"confidentiality_pass_cap,omitempty" maximum:"200" minimum:"1"`
 
@@ -70629,6 +70647,9 @@ type UpdateCaptureSettingsRequest struct {
 
 	// MailSyncIntervalSeconds Set how long a mailbox waits between syncs, in seconds.
 	MailSyncIntervalSeconds *int `json:"mail_sync_interval_seconds,omitempty" maximum:"3600" minimum:"30"`
+
+	// OwedClassifyPassCap Set how many new messages one owed-reply run judges.
+	OwedClassifyPassCap *int `json:"owed_classify_pass_cap,omitempty" maximum:"2500" minimum:"1"`
 
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
 	SharedPostureAllowed *bool `json:"shared_posture_allowed,omitempty"`
@@ -70644,6 +70665,9 @@ type UpdateCaptureSettingsRequest struct {
 
 	// SiteReadWallSeconds Set the time limit of one website crawl, in seconds.
 	SiteReadWallSeconds *int `json:"site_read_wall_seconds,omitempty" maximum:"600" minimum:"30"`
+
+	// VerdictPassCap Set how many unresolved senders one counterparty verdict run judges.
+	VerdictPassCap *int `json:"verdict_pass_cap,omitempty" maximum:"1000" minimum:"1"`
 }
 
 // UpdateCompanyFactRequest The correction path the fact store never had — without it the page can render a confirmed state nothing is able to produce.
