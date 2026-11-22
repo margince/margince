@@ -227,7 +227,7 @@ The same users who may change a provider may change these.
   If you set the timeout yourself, they stop after twice your value.
 
 **Save settings** applies to the whole installation within a minute. **Reset to defaults** removes the task's own values.
-To check the change, come back to **Recent calls** after some calls. A call's own page shows the **Request settings sent** with it.
+To check the change, come back to **Recent calls** after some calls. A call's own page shows the **Configured request settings** of its task. They are what the task is set to, and not a record of what each model received.
 Also called: AI timeout, reasoning effort, thinking budget, slow AI task.
 
 ### How do I see whether an AI provider is working?

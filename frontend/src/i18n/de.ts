@@ -16924,7 +16924,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aicalls.detail.source": "Quelle der ausgelieferten Identität: {source}",
   "aicalls.detail.attempts": "Versuche",
   "aicalls.detail.request": "Anfrage-Nutzdaten",
-  "aicalls.detail.settings": "Gesendete Anfrage-Einstellungen",
+  "aicalls.detail.settings": "Konfigurierte Anfrage-Einstellungen",
   "aicalls.detail.servedBy": "bedient von {host}",
   "aicalls.detail.response": "Antwort-Nutzdaten",
   "aicalls.payload.off":

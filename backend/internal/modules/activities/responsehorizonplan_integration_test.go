@@ -55,6 +55,34 @@ func (n planNode) walk(visit func(planNode)) {
 	}
 }
 
+// seedSilencedTriggers are the bookkeeping triggers a bulk write of mail pays
+// for: settlement locks, last-activity clocks and contact strength dates. The
+// horizon reads activity rows only, and the strength dates alone cost seconds
+// on a 1500-row link insert. seedMailbox turns them off for its own inserts and
+// on again before it returns.
+var seedSilencedTriggers = []struct{ table, trigger string }{
+	{"activity", "settlement_evidence_share"},
+	{"activity_participant", "settlement_evidence_share"},
+	{"activity_link", "settlement_evidence_share"},
+	{"contact_email", "settlement_evidence_share"},
+	{"activity_link", "activity_link_last_activity"},
+	{"activity_link", "activity_link_project_last_activity"},
+	{"activity_link", "activity_link_strength_dates_added"},
+	{"activity_participant", "activity_participant_strength_dates_added"},
+	{"contact_email", "contact_email_strength_dates_added"},
+}
+
+// seedTriggers is one ALTER TABLE per silenced trigger; action is DISABLE or
+// ENABLE. A trigger renamed in a migration fails the seed loudly here.
+func seedTriggers(action string) string {
+	var b strings.Builder
+	for _, s := range seedSilencedTriggers {
+		fmt.Fprintf(&b, "ALTER TABLE %s %s TRIGGER %s;\n",
+			pgx.Identifier{s.table}.Sanitize(), action, pgx.Identifier{s.trigger}.Sanitize())
+	}
+	return b.String()
+}
+
 // seedMailbox writes a year of mail shaped like a working installation's: each
 // customer has a score of messages to us and several times that many from us,
 // and most of ours are replies to something.
@@ -64,7 +92,7 @@ func (n planNode) walk(visit func(planNode)) {
 // figure the neighbouring tests measure.
 func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShape) {
 	t.Helper()
-	if _, err := tx.Exec(ctx, `
+	if _, err := tx.Exec(ctx, seedTriggers("DISABLE")+`
 	INSERT INTO contact (id, full_name, source, captured_by)
 	  SELECT md5('customer'||g)::uuid, 'Customer '||g, 'manual', 'human:seed' FROM generate_series(1, 400) g;
 	CREATE TEMP TABLE mailbox_customer AS SELECT id, row_number() OVER () n FROM contact WHERE full_name LIKE 'Customer %';
@@ -90,6 +118,7 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShap
 	  SELECT 'email', 'Update '||g, @at::timestamptz - (g * 53 % 364) * interval '1 day', 'outbound', 'manual', 'human:seed', 'out'||g,
 	         'c'||(1 + (g - 1) % 400)::int||'@customers.example', true
 	    FROM generate_series(1, @stray) g;
+	`+seedTriggers("ENABLE")+`
 	ANALYZE activity; ANALYZE activity_participant; ANALYZE activity_link`,
 		pgx.QueryExecModeSimpleProtocol, pgx.NamedArgs{
 			"at": clocktest.Now(t), "reply_percent": int(shape.replyShare * 100), "stray": shape.strayOutbound,

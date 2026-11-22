@@ -699,7 +699,7 @@ it("shows the request settings the attempts were sent with, and the host that se
     ],
   });
   const drawer = await openCall(user);
-  expect(await within(drawer).findByText("Request settings sent")).toBeTruthy();
+  expect(await within(drawer).findByText("Configured request settings")).toBeTruthy();
   expect(within(drawer).getByText(/"deadline_ms": 30000/)).toBeTruthy();
   expect(within(drawer).getByText(/served by Cerebras/)).toBeTruthy();
   expect(
