@@ -79,6 +79,13 @@ function backend(
               credential_kind: "service_account",
             },
             {
+              provider: "azure_openai",
+              configured: true,
+              env_var: "AZURE_OPENAI_API_KEY",
+              usable: true,
+              optional: false,
+            },
+            {
               provider: "gemini",
               configured: true,
               env_var: "GEMINI_API_KEY",
@@ -553,6 +560,39 @@ describe("a provider's settings on its sheet", () => {
     await waitFor(() =>
       expect(puts).toEqual([
         { provider: "gemini_vertex", body: { location: "europe-west4" } },
+      ]),
+    );
+  });
+
+  it("sets an Azure OpenAI endpoint and region on the provider", async () => {
+    const puts = backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    expect(
+      await screen.findByTestId("ai-provider-row-azure_openai"),
+    ).toHaveTextContent("Azure OpenAI");
+    const sheet = await openSheet(user, "azure_openai");
+    // The resource is the customer's own: no listed service to pick from.
+    const host = await within(sheet).findByLabelText("Host");
+    await user.type(host, "https://contoso.openai.azure.com");
+    await user.type(
+      within(sheet).getByLabelText("Azure region"),
+      "Swedencentral",
+    );
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
+
+    await waitFor(() =>
+      expect(puts).toEqual([
+        {
+          provider: "azure_openai",
+          body: {
+            base_url: "https://contoso.openai.azure.com",
+            location: "swedencentral",
+          },
+        },
       ]),
     );
   });

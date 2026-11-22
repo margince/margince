@@ -132,7 +132,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that
   has stopped.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md): use your own key for a
-  cloud model provider.
+  cloud model provider, or [Azure OpenAI](how-to/connect-azure-openai.md).
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
   model provider goes down.
 - [back-up-an-installation.md](how-to/back-up-an-installation.md): which data to copy, when, and who does

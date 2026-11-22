@@ -1932,6 +1932,14 @@ export const en = {
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
+  "aiAdmin.certification.certified": "{model} is certified for this task.",
+  "aiAdmin.certification.degraded":
+    "{model} is supported for this task with reduced quality.",
+  "aiAdmin.certification.notSupported":
+    "{model} is not certified for this task. It is still used, so check what it produces.",
+  "aiAdmin.certification.unrecorded":
+    "{model} has not been measured for this task with these settings.",
+  "aiAdmin.certification.stale": "The record predates the current prompts.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -17734,6 +17742,15 @@ export const en = {
   "aiRouting.baseUrl.help.jev":
     "Full endpoint URL. Blank uses TypeSafe’s own API.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "The resource endpoint, with no path. The API key is sent only to a host ending in .openai.azure.com. Required.",
+  "aiRouting.baseUrl.placeholder.azure": "https://my-resource.openai.azure.com",
+  "aiRouting.azureRegion.label": "Azure region",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
+  "aiRouting.azureRegion.help":
+    "The region the resource runs in, such as swedencentral. A region this installation does not know is blocked, so data stays where you agreed.",
+  "aiRouting.model.help.azure":
+    "Enter the name you gave this model in Azure, not the model’s own name.",
   "aiRouting.baseUrl.help.jevCompatible":
     "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -22241,6 +22258,7 @@ export const en = {
   "aiProviderSettings.service.otherChat": "Other OpenAI-compatible service",
   "aiProviderSettings.service.otherDecisions": "Other decision server",
   "aiProviderSettings.service.otherAddress": "Other address",
+  "aiProviderSettings.service.azureResource": "Your Azure OpenAI resource",
   "aiProviderSettings.service.learnMore": "About OpenRouter EU",
   "aiProviderSettings.host.line": "Host: {host}",
   "aiProviderSettings.host.default": "Uses the service’s own address.",
@@ -22251,6 +22269,7 @@ export const en = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini on Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-compatible",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",
