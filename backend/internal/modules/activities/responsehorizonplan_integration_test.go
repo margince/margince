@@ -57,8 +57,8 @@ func (n planNode) walk(visit func(planNode)) {
 
 // seedReplicaRole skips ordinary triggers for the rest of the transaction.
 // The seed would otherwise pay for settlement locks, last-activity clocks and
-// contact strength dates, and the strength dates alone cost seconds on a
-// 1500-row link insert. The setting is local to the transaction, so no other
+// contact strength dates. The strength dates alone cost seconds on a 1500-row
+// link insert. The setting is local to the transaction, so no other
 // connection skips a trigger. seedOriginRole puts it back before the caller's
 // own writes.
 const (
