@@ -30,9 +30,8 @@ What each list offers:
 ### How do I search a list?
 To search a list in Margince, open the list in the sidebar (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Type in the **Search** box at the left of the toolbar.
 1. Type part of a name. The list gets shorter as you type.
-2. Or type a whole word of a job title (Contacts, Leads), company name (Leads), legal name or industry (Companies).
-3. Or type a whole email address (Contacts, Leads), domain (Companies), LinkedIn URL (Leads) or project key (Projects).
-4. Clear the box to see everything again.
+2. Or type a whole word of a job title (Contacts, Leads), company name (Leads), legal name or industry (Companies). A whole email address (Contacts, Leads), domain (Companies), LinkedIn URL (Leads) or project key (Projects) finds its record too.
+3. Clear the box to see everything again.
 
 Search also offers filters from the list’s filter options. Choose one to apply it and clear the text. It stays in the address and saved view, like a filter chosen through **View**. Arrow keys and Enter choose a filter. Enter with no choice keeps the text search; Escape closes the choices.
 
@@ -107,10 +106,8 @@ Also called: contacts made from notification mail, automatic senders.
 
 ### How do I filter by date?
 On **Deals**, use **View** → **Filters** → **Close date**, shown in the next question. The list screens have no other date filter, so sort them by date, or build a filter on **Filters and views**.
-1. Press **New filter**, pick the record type and press **Add condition**.
-2. Pick a date field: **Created** (every type), **Last activity** (contacts, companies and deals) or **Expected close** (deals). Date custom fields your company has added are there too.
-3. Pick **is after**, **is on or after**, **is before** or **is on or before**. Give the value **On a date**, or as **Days ago** to count back from today.
-
+1. Press **New filter**, pick the record type, press **Add condition** and pick **Created** (every type), **Last activity** (contacts, companies and deals), **Expected close** (deals) or a date custom field.
+2. Pick **is after**, **is on or after**, **is before** or **is on or before**. Give the value **On a date**, or as **Days ago** to count back from today.
 Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, and neither does a newsletter.
 Also called: created this month, filter by created date, date range.
 
@@ -270,7 +267,6 @@ Also called: bulk reassign, hand over accounts, transfer deals, a colleague left
 
 ### What can I do to several records at once?
 The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage**: pick an open stage under **Pick a stage** and press **Move**. On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**). **Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do. Your own company is never archived.
-
 A change of more than 10 records shows a "Large change" warning. On **Leads**, **Assign** and **Disqualify** ask first and name how many leads change, with the same warning above 10. You cannot win or lose many deals at once or change custom fields on many records at once. After a change, the message that says how many changed has an **Undo** button. It opens a window that shows what it puts back, and **Undo change** does it. **Move to stage** and **Disqualify** have no bulk **Undo**. **Move to stage** names the stage and says how many deals move and how many are already there before it moves anything.
 
 Also called: bulk actions, mass archive, bulk disqualify.
