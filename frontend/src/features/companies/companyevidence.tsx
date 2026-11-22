@@ -151,6 +151,8 @@ export function EvidenceModal({
             </blockquote>
           )}
           <CitedVerdict
+            key={`${cited.entityType}:${cited.entityId}`}
+            claimVersion={shown.claim_version}
             companyId={companyId}
             anchor={anchor}
             canEdit={canEdit}
@@ -189,11 +191,15 @@ export function EvidenceModal({
 // So the row comes from the list reads the Overview cards use, and the verdict
 // invalidates those same keys.
 function CitedVerdict({
+  claimVersion,
   companyId,
   anchor,
   canEdit,
   cited,
 }: Readonly<{
+  // The version the displayed receipt was built from. A list row of another
+  // version is a different claim than the one on screen, so it gets no verbs.
+  claimVersion?: number;
   companyId: string;
   anchor: boolean;
   canEdit: boolean;
@@ -202,14 +208,17 @@ function CitedVerdict({
   const fields = useCompanyProfileFields(companyId);
   const facts = useCompanyFacts(companyId);
   let claim: EvidenceClaim | undefined;
+  let version: number | undefined;
   if (cited.entityType === "profile_field") {
     const row = fields.data?.find((each) => each.id === cited.entityId);
     claim = row && profileFieldClaim(companyId, row);
+    version = row?.version;
   } else if (cited.entityType === "fact") {
     const row = facts.data?.find((each) => each.id === cited.entityId);
     claim = row && factClaim(companyId, row);
+    version = row?.version;
   }
-  if (!claim) {
+  if (!claim || claimVersion === undefined || claimVersion !== version) {
     return null;
   }
   return (

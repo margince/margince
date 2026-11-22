@@ -330,16 +330,10 @@ func TestAConfirmedClaimSurvivesTheNextDeepRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var phone, icp string
-	for _, f := range facts {
-		if string(f.Field) == "phone" {
-			phone = f.Value
-		}
-	}
-	for _, f := range fields {
-		if string(f.Field) == "icp" {
-			icp = f.Value
-		}
+	phone, hasPhone := factOf(facts, "phone")
+	icp, hasICP := profileFieldOf(fields, "icp")
+	if !hasPhone || !hasICP {
+		t.Fatalf("seeded rows missing before the deep read: phone=%v icp=%v", hasPhone, hasICP)
 	}
 
 	if err := e.store.ApplyDeepRead(ctx, DeepReadProposal{
@@ -367,14 +361,36 @@ func TestAConfirmedClaimSurvivesTheNextDeepRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	gotPhone, ok := factOf(facts, "phone")
+	if !ok {
+		t.Fatal("the confirmed phone fact is gone after the deep read")
+	}
+	if gotPhone.Value != phone.Value || gotPhone.VerifiedAt == nil || string(gotPhone.Source) != "human" {
+		t.Errorf("phone = %q source %q after a deep read, want the confirmed %q kept as a human's", gotPhone.Value, gotPhone.Source, phone.Value)
+	}
+	gotICP, ok := profileFieldOf(fields, "icp")
+	if !ok {
+		t.Fatal("the confirmed icp field is gone after the deep read")
+	}
+	if gotICP.Value != icp.Value || gotICP.VerifiedAt == nil || string(gotICP.Source) != "human" {
+		t.Errorf("icp = %q source %q after a deep read, want the confirmed %q kept as a human's", gotICP.Value, gotICP.Source, icp.Value)
+	}
+}
+
+func factOf(facts []crmcontracts.CompanyFact, field string) (crmcontracts.CompanyFact, bool) {
 	for _, f := range facts {
-		if string(f.Field) == "phone" && (f.Value != phone || f.VerifiedAt == nil || string(f.Source) != "human") {
-			t.Errorf("phone = %q source %q after a deep read, want the confirmed %q kept as a human's", f.Value, f.Source, phone)
+		if string(f.Field) == field {
+			return f, true
 		}
 	}
+	return crmcontracts.CompanyFact{}, false
+}
+
+func profileFieldOf(fields []crmcontracts.CompanyProfileField, field string) (crmcontracts.CompanyProfileField, bool) {
 	for _, f := range fields {
-		if string(f.Field) == "icp" && (f.Value != icp || f.VerifiedAt == nil || string(f.Source) != "human") {
-			t.Errorf("icp = %q source %q after a deep read, want the confirmed %q kept as a human's", f.Value, f.Source, icp)
+		if string(f.Field) == field {
+			return f, true
 		}
 	}
+	return crmcontracts.CompanyProfileField{}, false
 }

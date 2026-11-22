@@ -8,6 +8,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useFieldFaults } from "../../design-system/savepage";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useHoldsAdminRole } from "../../lib/capability";
 import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -41,6 +42,8 @@ type CompanyFact = components["schemas"]["CompanyFact"];
 // two differ in how they are addressed — a profile field by its key, a fact by
 // `<field>:<value_key>` — and in nothing else that matters here.
 export type EvidenceClaim = {
+  // The claimed field's name, which decides who may correct it.
+  field: string;
   value: string;
   source: string;
   verifiedAt?: string | null;
@@ -90,6 +93,7 @@ export function profileFieldClaim(
   field: ProfileField,
 ): EvidenceClaim {
   return {
+    field: field.field,
     value: field.value,
     source: field.source,
     verifiedAt: field.verified_at,
@@ -128,6 +132,7 @@ export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
   // spelling, not a missing half.
   const factKey = `${fact.field}:${fact.value_key}`;
   return {
+    field: fact.field,
     value: fact.value,
     source: fact.source,
     verifiedAt: fact.verified_at,
@@ -172,6 +177,10 @@ export function EvidenceVerdict({
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const queryClient = useQueryClient();
+  const admin = useHoldsAdminRole();
+  // The installation's own name is an administrator's to change, so a rep who
+  // may confirm it is not offered a correction the server would refuse.
+  const mayCorrect = anchor && claim.field === "display_name" ? admin : true;
   const [correcting, setCorrecting] = useState(false);
   const [draft, setDraft] = useState(claim.value);
 
@@ -288,17 +297,19 @@ export function EvidenceVerdict({
       >
         {t("evidence.confirm")}
       </Button>
-      <Button
-        onClick={() => {
-          // A correction abandoned earlier does not speak for this one.
-          correct.reset();
-          faults.show(new Map());
-          setDraft(claim.value);
-          setCorrecting(true);
-        }}
-      >
-        {t("evidence.correct")}
-      </Button>
+      {mayCorrect && (
+        <Button
+          onClick={() => {
+            // A correction abandoned earlier does not speak for this one.
+            correct.reset();
+            faults.show(new Map());
+            setDraft(claim.value);
+            setCorrecting(true);
+          }}
+        >
+          {t("evidence.correct")}
+        </Button>
+      )}
       {confirmed && <ErrorLine inline>{confirmed}</ErrorLine>}
     </span>
   );
