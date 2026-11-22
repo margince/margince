@@ -164,6 +164,7 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 	res, err := store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
 		LinkOnly:         filing.Shared,
 		ReaderTeam:       filing.ReaderTeam,
+		ReaderAuthority:  identity.ReadAuthorityTx,
 		Email:            in.Email,
 		DisplayName:      in.DisplayName,
 		Domain:           in.Domain,

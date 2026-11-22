@@ -97,6 +97,13 @@ func EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (aut
 	return readEffectiveAuthorityTx(ctx, tx, humanID)
 }
 
+// ReadAuthorityTx reads a member's authority without the authorization lock,
+// for a read check that runs after its transaction locked rows. It holds
+// nothing, so a role change may commit before the caller does.
+func ReadAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return readEffectiveAuthorityTx(ctx, tx, humanID)
+}
+
 func readEffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	seatType, err := liveSeatType(ctx, tx, humanID)
 	if err != nil {

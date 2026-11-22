@@ -4370,6 +4370,7 @@ public.contact_profile_field.evidence_snippet text NOT NULL gen=- def=-
 public.contact_profile_field.field text NOT NULL gen=- def=-
 public.contact_profile_field.id uuid NOT NULL gen=- def=uuidv7()
 public.contact_profile_field.observed_at timestamp with time zone NOT NULL gen=- def=now()
+public.contact_profile_field.signature_support jsonb NOT NULL gen=- def='{}'::jsonb
 public.contact_profile_field.source text NOT NULL gen=- def=-
 public.contact_profile_field.source_ref text NOT NULL gen=- def=-
 public.contact_profile_field.superseded_captured_by text gen=- def=-

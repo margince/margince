@@ -117,8 +117,10 @@ type EnsureCounterpartyInput struct {
 	// LinkOnly files the activity under a record the address already names,
 	// for a mailbox no seat owns. It creates nothing unless OwnerID is set.
 	LinkOnly bool
-	// ReaderTeam reads the mailbox a link-only ensure files for.
-	ReaderTeam ids.UUID
+	// ReaderTeam reads the mailbox a link-only ensure files for, and
+	// ReaderAuthority reads each member's authority to ask what they may read.
+	ReaderTeam      ids.UUID
+	ReaderAuthority MemberAuthority
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to

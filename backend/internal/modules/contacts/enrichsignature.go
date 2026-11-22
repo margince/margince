@@ -318,10 +318,21 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 			continue
 		case fieldEmail:
 			continue
+		case fieldAddress:
+			// A line the snippet does not print is the model's, not the contact's.
+			if !quotesValue(f.Evidence, f.Value) {
+				res.Skipped++
+				continue
+			}
 		}
 		outcome, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
 		if err != nil {
 			return nil, nil, err
+		}
+		if f.Name == fieldAddress && (outcome.landed() || outcome == observedRestated) {
+			if _, err := addSignatureSupportTx(ctx, tx, contactID, fieldAddress, "", strings.TrimSpace(f.Value), sourceRef, f.Evidence); err != nil {
+				return nil, nil, err
+			}
 		}
 		if !outcome.landed() {
 			res.Skipped++

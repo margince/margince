@@ -5,15 +5,21 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
+
+// MemberAuthority reads one member's authority inside a transaction.
+type MemberAuthority func(context.Context, pgx.Tx, ids.UUID) (authz.RBAC, principal.SeatType, error)
 
 // linkExistingCounterparty files a captured activity under the contact or lead
 // an address already names, and writes no record of its own. A mailbox no
@@ -27,10 +33,12 @@ func (s *Store) linkExistingCounterparty(ctx context.Context, tx pgx.Tx, in Ensu
 	if err != nil {
 		return EnsureCounterpartyResult{}, false, err
 	}
+	// The mailbox's own principal reads every row, so each link asks the
+	// readers instead: a record none of them may read gets no shared mail.
 	if !lead.IsZero() {
 		// Filed on the lead, without the qualify task a personal reply files.
-		allowed, err := mayReadLead(ctx)
-		if err != nil || !allowed {
+		readable, err := readableByATeamMemberTx(ctx, tx, in, leadEntity, lead.UUID)
+		if err != nil || !readable {
 			return EnsureCounterpartyResult{}, true, err
 		}
 		return EnsureCounterpartyResult{LeadID: lead}, true, linkActivityToLead(ctx, tx, in.ActivityID, lead)
@@ -38,9 +46,7 @@ func (s *Store) linkExistingCounterparty(ctx context.Context, tx pgx.Tx, in Ensu
 	if match.Decision != DecisionExactCollision {
 		return EnsureCounterpartyResult{}, false, nil
 	}
-	// The mailbox's own principal reads every row, so the link asks the
-	// readers instead: a contact none of them may read gets no shared mail.
-	readable, err := readableByATeamMemberTx(ctx, tx, in.ReaderTeam, match.ContactID)
+	readable, err := readableByATeamMemberTx(ctx, tx, in, entityContact, match.ContactID.UUID)
 	if err != nil || !readable {
 		return EnsureCounterpartyResult{}, true, err
 	}
@@ -48,44 +54,53 @@ func (s *Store) linkExistingCounterparty(ctx context.Context, tx pgx.Tx, in Ensu
 	return res, true, s.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID)
 }
 
-// readableByATeamMemberTx answers whether a live member of team may read the
-// contact under the contact table's own visibility rule. Contacts are read by
-// every seat, so only the member's id and teams decide it: capture privacy and
-// a manual grant.
-func readableByATeamMemberTx(ctx context.Context, tx pgx.Tx, team ids.UUID, contact ids.ContactID) (bool, error) {
-	if team.IsZero() {
+// readableByATeamMemberTx answers whether a live member of in's reader team
+// may read the record under that member's own role and the table's visibility
+// rule. entity names both the object and its table: contact or lead.
+func readableByATeamMemberTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, entity string, record ids.UUID) (bool, error) {
+	if in.ReaderTeam.IsZero() || in.ReaderAuthority == nil {
 		return false, nil
 	}
-	rows, err := tx.Query(ctx, `SELECT m.user_id, array_agg(other.team_id)
-	  FROM team_membership m
+	rows, err := tx.Query(ctx, `SELECT m.user_id FROM team_membership m
 	  JOIN app_user u ON u.id = m.user_id AND `+workforce.LiveMemberSQL("u")+`
-	  JOIN team_membership other ON other.user_id = m.user_id
-	 WHERE m.team_id = $1 GROUP BY m.user_id ORDER BY m.user_id`, team)
+	 WHERE m.team_id = $1 ORDER BY m.user_id`, in.ReaderTeam)
 	if err != nil {
 		return false, fmt.Errorf("contacts: reading the reader team: %w", err)
 	}
-	type member struct {
-		user  ids.UUID
-		teams []ids.UUID
-	}
-	members, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (member, error) {
-		var m member
-		return m, row.Scan(&m.user, &m.teams)
-	})
+	members, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
 		return false, fmt.Errorf("contacts: reading the reader team: %w", err)
 	}
-	for _, m := range members {
-		reader := principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + m.user.String(), UserID: m.user, TeamIDs: m.teams}
-		args := []any{contact.UUID}
-		clause := auth.VisiblePredicate(reader, entityContact, func(v any) int { args = append(args, v); return len(args) })("c")
-		var visible bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM contact c WHERE c.id = $1 AND `+clause+`)`, args...).Scan(&visible); err != nil {
-			return false, fmt.Errorf("contacts: asking whether a reader may read the contact: %w", err)
-		}
-		if visible {
-			return true, nil
+	for _, member := range members {
+		visible, err := memberMayReadTx(ctx, tx, in.ReaderAuthority, member, entity, record)
+		if err != nil || visible {
+			return visible, err
 		}
 	}
 	return false, nil
+}
+
+// memberMayReadTx asks one member's role for read on entity, then the
+// table's visibility rule for the row.
+func memberMayReadTx(ctx context.Context, tx pgx.Tx, authority MemberAuthority, member ids.UUID, entity string, record ids.UUID) (bool, error) {
+	rbac, seat, err := authority(ctx, tx, member)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if !rbac.Permissions.Allows(entity, principal.ActionRead) {
+		return false, nil
+	}
+	reader := principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + member.String(), UserID: member,
+		TeamIDs: rbac.TeamIDs, SeatType: seat, Permissions: rbac.Permissions}
+	args := []any{record}
+	clause := auth.VisiblePredicate(reader, entity, func(v any) int { args = append(args, v); return len(args) })("r")
+	var visible bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM `+pgx.Identifier{entity}.Sanitize()+` r WHERE r.id = $1 AND `+clause+`)`,
+		args...).Scan(&visible); err != nil {
+		return false, fmt.Errorf("contacts: asking whether a reader may read the %s: %w", entity, err)
+	}
+	return visible, nil
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -272,5 +273,37 @@ func TestASenderWhoseContactNoReaderMayReadGetsNoSecondContact(t *testing.T) {
 	s.judgeEveryone(t)
 	if got := s.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE contact_id = $1`, pat); got != 0 {
 		t.Fatal("a verdict filed shared mail under a contact private to a seat outside the reader team")
+	}
+}
+
+func TestSharedMailFilesOnALeadOnlyWhenAReaderMayReadLeads(t *testing.T) {
+	for name, tc := range map[string]struct {
+		withoutLeadRead bool
+		want            int
+	}{
+		"readers who may read leads":     {want: 1},
+		"readers who may not read leads": {withoutLeadRead: true, want: 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := newSharedMailboxSuite(t)
+			box := ids.UUID(s.connect(t, s.e.Team1).Id)
+			full, address := "Lena Lead", "lena@leads.example"
+			lead, _, err := s.e.Contacts.CreateLead(s.e.Admin(), contacts.CreateLeadInput{FullName: &full, Email: &address, Source: "manual"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.withoutLeadRead {
+				s.e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = ANY($1)`, []ids.UUID{s.e.Rep1, s.e.Rep2})
+				s.e.WsExec(t, `WITH r AS (INSERT INTO role (key, name, permissions)
+				  VALUES ('no_leads', 'No leads', '{"contact": {"read": true}, "activity": {"read": true}}') RETURNING id)
+				  INSERT INTO role_assignment (role_id, user_id) SELECT r.id, u FROM r, unnest($1::uuid[]) u`,
+					[]ids.UUID{s.e.Rep1, s.e.Rep2})
+			}
+			s.syncOne(t, box, mailFrom("lena-1@leads.example", address), "hello from "+address)
+
+			if got := s.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE lead_id = $1`, lead.Id); got != tc.want {
+				t.Fatalf("shared mail is filed %d times on the lead, want %d", got, tc.want)
+			}
+		})
 	}
 }

@@ -33,13 +33,17 @@ import (
 const addressColumnsSQL = `address_line1, address_line2, address_region, address_postal_code, address_city, address_country`
 
 // addressDecidedSQL holds when a colleague's or their agent's edit of record
-// alias named its address. A machine fill never writes over that decision,
-// a cleared address included.
-func addressDecidedSQL(entity, alias string) string {
+// alias named its address, after since when since is not empty. A machine
+// fill never writes over that decision, nor takes it back.
+func addressDecidedSQL(entity, alias, since string) string {
+	after := ""
+	if since != "" {
+		after = " AND decided.occurred_at > " + since
+	}
 	return `EXISTS (SELECT 1 FROM audit_log decided
 	  WHERE decided.entity_type = '` + entity + `' AND decided.entity_id = ` + alias + `.id
 	    AND decided.action = 'update' AND decided.after ? 'address_line1'
-	    AND (decided.actor_type = 'human' OR decided.on_behalf_of IS NOT NULL))`
+	    AND (decided.actor_type = 'human' OR decided.on_behalf_of IS NOT NULL)` + after + `)`
 }
 
 // signatureAddressFillSQL fills the contact's address from one split line,
@@ -47,7 +51,7 @@ func addressDecidedSQL(entity, alias string) string {
 var signatureAddressFillSQL = `UPDATE contact c SET (` + addressColumnsSQL + `) = ($2, $3, $4, $5, $6, $7)
 	 WHERE c.id = $1 AND c.archived_at IS NULL
 	   AND (` + addressColumnsSQL + `) IS NOT DISTINCT FROM (NULL::text, NULL::text, NULL::text, NULL::text, NULL::text, NULL::text)
-	   AND NOT ` + addressDecidedSQL(entityContact, "c")
+	   AND NOT ` + addressDecidedSQL(entityContact, "c", "")
 
 // fillSignatureAddressTx writes the structured address a signature's address
 // line states. A line the splitter cannot read stays evidence only.
@@ -71,9 +75,10 @@ func contactAddressArguments(contactID ids.ContactID, a crmcontracts.Address) []
 	return []any{contactID, a.Line1, a.Line2, a.Region, a.PostalCode, a.City, a.Country}
 }
 
-// withdrawSignatureAddress clears the address parts a signature's line filled,
-// while the contact still shows those parts.
-func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, line string) error {
+// withdrawSignatureAddress clears the address parts a signature's line filled
+// at filledAt, while the contact still shows those parts and no colleague has
+// edited the address since.
+func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, line string, filledAt time.Time) error {
 	address, split := SplitAddressText(line)
 	if !split {
 		return nil
@@ -84,10 +89,11 @@ func withdrawSignatureAddress(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 		}
 		return err
 	}
-	args := contactAddressArguments(contactID, address)
-	if _, err := tx.Exec(ctx, `UPDATE contact SET (`+addressColumnsSQL+`) = (NULL, NULL, NULL, NULL, NULL, NULL)
-		 WHERE id = $1 AND archived_at IS NULL
-		   AND (`+addressColumnsSQL+`) IS NOT DISTINCT FROM ($2::text, $3::text, $4::text, $5::text, $6::text, $7::text)`,
+	args := append(contactAddressArguments(contactID, address), filledAt)
+	if _, err := tx.Exec(ctx, `UPDATE contact c SET (`+addressColumnsSQL+`) = (NULL, NULL, NULL, NULL, NULL, NULL)
+		 WHERE c.id = $1 AND c.archived_at IS NULL
+		   AND (`+addressColumnsSQL+`) IS NOT DISTINCT FROM ($2::text, $3::text, $4::text, $5::text, $6::text, $7::text)
+		   AND NOT `+addressDecidedSQL(entityContact, "c", "$8")+``,
 		args...); err != nil {
 		return fmt.Errorf("contacts: clearing the address a signature filled: %w", err)
 	}
@@ -191,6 +197,14 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		if !signatureStatesAddress(src, address, f.Evidence) {
 			continue
 		}
+		// An address a signature already gave this contact gains this mail's support.
+		restated, err := addSignatureSupportTx(ctx, tx, contactID, fieldEmail, address, address, sourceRef, f.Evidence)
+		if err != nil || restated {
+			if err != nil {
+				return 0, err
+			}
+			continue
+		}
 		free, err := freeSignatureEmail(ctx, tx, address)
 		if err != nil {
 			return 0, err
@@ -209,6 +223,9 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		}, supersedeOnNewerObservation); err != nil {
 			return 0, err
 		}
+		if _, err := addSignatureSupportTx(ctx, tx, contactID, fieldEmail, address, evidence, sourceRef, snippet); err != nil {
+			return 0, err
+		}
 		landed++
 	}
 	if landed == 0 {
@@ -221,8 +238,7 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 // signatureStatesAddress holds when the address is on the sender's own domain,
 // no other party of the mail uses it, and the quoted signature line prints it.
 func signatureStatesAddress(src signatureSource, address, evidence string) bool {
-	return owndomain.OfAddress(address) == src.senderDomain && !src.parties[address] &&
-		strings.Contains(strings.ToLower(evidence), address)
+	return owndomain.OfAddress(address) == src.senderDomain && !src.parties[address] && quotesAddress(evidence, address)
 }
 
 // freeSignatureEmail answers whether no record, seat or erasure holds one
@@ -284,7 +300,8 @@ func withdrawSignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 // domains, and the company must hold no address a user stated.
 func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, src signatureSource, fields []SignatureField) error {
 	line, employerName := signatureValue(fields, fieldAddress), signatureValue(fields, fieldCompanyName)
-	if line == "" || employerName == "" || !src.workspace || !src.authenticated || src.senderDomain == "" {
+	if line == "" || employerName == "" || !src.workspace || !src.authenticated || src.senderDomain == "" ||
+		!quotesValue(signatureEvidence(fields, fieldAddress), line) {
 		return nil
 	}
 	var employers int
@@ -311,49 +328,83 @@ func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		employment.CurrentMembershipSQL("j"), contactID).Scan(&current); err != nil || current != 1 {
 		return err
 	}
-	return fillCompanyStreetTx(ctx, tx, *employer, sourceRef, line)
+	supports, err := fillCompanyStreetTx(ctx, tx, *employer, contactID, sourceRef, line)
+	if err != nil || !supports {
+		return err
+	}
+	return markStreetSupportTx(ctx, tx, contactID, sourceRef)
 }
 
-func fillCompanyStreetTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, sourceRef, line string) error {
+// fillCompanyStreetTx fills the company's empty street from the line, and
+// reports whether the company now shows the street this contact's signature
+// filled, by this mail or an earlier one.
+func fillCompanyStreetTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, contactID ids.ContactID, sourceRef, line string) (bool, error) {
 	// A company that went keeps nothing to fill, and the contact's own fields
 	// still land. The pass acts as the system principal, which no RBAC refuses.
 	err := auth.HoldWritableLive(ctx, tx, companyEntity, companyID.UUID)
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil
+		return false, nil
 	}
 	if err != nil {
-		return err
+		return false, err
 	}
 	var decided bool
-	if err := tx.QueryRow(ctx, `SELECT `+addressDecidedSQL(companyEntity, "o")+` FROM company o WHERE o.id = $1`,
+	if err := tx.QueryRow(ctx, `SELECT `+addressDecidedSQL(companyEntity, "o", "")+` FROM company o WHERE o.id = $1`,
 		companyID).Scan(&decided); err != nil || decided {
-		return err
+		return false, err
 	}
 	filled, err := writeCompanyAddress(ctx, tx, companyID, line, fillUnclaimed)
-	if err != nil || !filled {
-		return err
+	if err != nil {
+		return false, err
+	}
+	if !filled {
+		return companyShowsSignerStreetTx(ctx, tx, companyID, contactID, line)
 	}
 	if err := storekit.StampFields(ctx, tx, companyEntity, companyID.UUID, sourceRef, enrichCapturedBy,
 		[]storekit.FieldStamp{{Field: fieldAddress}}); err != nil {
-		return err
+		return false, err
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", companyEntity, companyID.UUID,
 		map[string]any{fieldAddress: nil}, map[string]any{fieldAddress: signatureFieldFilled},
-		map[string]any{auditKeySource: enrichSource, auditKeySourceRef: sourceRef})
+		map[string]any{auditKeySource: enrichSource, auditKeySourceRef: sourceRef, auditKeySigner: contactID.String()})
 	if err != nil {
-		return err
+		return false, err
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, crmcontracts.PublicEventCompanyUpdated{
+	return true, storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, crmcontracts.PublicEventCompanyUpdated{
 		ChangedFields: map[string]any{fieldAddress: signatureFieldFilled, auditKeySource: enrichSource},
 	})
 }
 
-// withdrawEmployerStreetTx clears the street one signature filled on a
-// company, while the company still shows those parts, with the company's own
-// audit row and event.
-func withdrawEmployerStreetTx(ctx context.Context, tx pgx.Tx, line, sourceRef string) error {
+// auditKeySigner names, on a company street fill, the contact whose signature
+// stated it, so the street goes when that contact's last support does.
+const auditKeySigner = "signer"
+
+// companyShowsSignerStreetTx reports whether the company shows the line's
+// street because this contact's signature filled it.
+func companyShowsSignerStreetTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, contactID ids.ContactID, line string) (bool, error) {
 	address, split := SplitAddressText(line)
-	if !split || sourceRef == "" {
+	if !split {
+		return false, nil
+	}
+	var shows bool
+	err := tx.QueryRow(ctx, `SELECT (`+addressColumnsSQL+`) IS NOT DISTINCT FROM ($2::text, $3::text, $4::text, $5::text, $6::text, $7::text)
+		   AND EXISTS (SELECT 1 FROM audit_log filled WHERE filled.entity_type = 'company' AND filled.entity_id = o.id
+		                  AND filled.evidence ->> 'source' = $8 AND filled.evidence ->> 'signer' = $9)
+		  FROM company o WHERE o.id = $1`,
+		companyID, address.Line1, address.Line2, address.Region, address.PostalCode, address.City, address.Country,
+		enrichSource, contactID.String()).Scan(&shows)
+	if err != nil {
+		return false, fmt.Errorf("contacts: reading whether a company shows a signer's street: %w", err)
+	}
+	return shows, nil
+}
+
+// withdrawEmployerStreetTx clears the street this contact's signature filled
+// on a company, while the company still shows those parts and no colleague has
+// edited its address since, with the company's own audit row and event.
+func withdrawEmployerStreetTx(ctx context.Context, tx pgx.Tx, line string, contactID ids.ContactID) error {
+	address, split := SplitAddressText(line)
+	if !split {
 		return nil
 	}
 	rows, err := tx.Query(ctx, `UPDATE company o SET (`+addressColumnsSQL+`) = (NULL, NULL, NULL, NULL, NULL, NULL)
@@ -361,9 +412,11 @@ func withdrawEmployerStreetTx(ctx context.Context, tx pgx.Tx, line, sourceRef st
 		   AND (`+addressColumnsSQL+`) IS NOT DISTINCT FROM ($1::text, $2::text, $3::text, $4::text, $5::text, $6::text)
 		   AND EXISTS (SELECT 1 FROM audit_log filled
 		                WHERE filled.entity_type = 'company' AND filled.entity_id = o.id AND filled.action = 'update'
-		                  AND filled.evidence ->> 'source' = $7 AND filled.evidence ->> 'source_ref' = $8)
+		                  AND filled.evidence ->> 'source' = $7 AND filled.evidence ->> 'signer' = $8
+		                  AND NOT `+addressDecidedSQL(companyEntity, "o", "filled.occurred_at")+`)
 		 RETURNING o.id`,
-		address.Line1, address.Line2, address.Region, address.PostalCode, address.City, address.Country, enrichSource, sourceRef)
+		address.Line1, address.Line2, address.Region, address.PostalCode, address.City, address.Country, enrichSource,
+		contactID.String())
 	if err != nil {
 		return fmt.Errorf("contacts: clearing the street a signature filled: %w", err)
 	}
@@ -374,7 +427,7 @@ func withdrawEmployerStreetTx(ctx context.Context, tx pgx.Tx, line, sourceRef st
 	for _, company := range cleared {
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", companyEntity, company,
 			map[string]any{fieldAddress: signatureFieldFilled}, map[string]any{fieldAddress: nil},
-			map[string]any{auditKeySource: fillRetractSource, auditKeySourceRef: sourceRef})
+			map[string]any{auditKeySource: fillRetractSource, auditKeySigner: contactID.String()})
 		if err != nil {
 			return err
 		}
@@ -385,6 +438,16 @@ func withdrawEmployerStreetTx(ctx context.Context, tx pgx.Tx, line, sourceRef st
 		}
 	}
 	return nil
+}
+
+// signatureEvidence is the snippet of the one field of that name, or empty.
+func signatureEvidence(fields []SignatureField, name string) string {
+	for _, f := range fields {
+		if f.Name == name {
+			return f.Evidence
+		}
+	}
+	return ""
 }
 
 // signatureValue is the trimmed value of the one field of that name, or empty.

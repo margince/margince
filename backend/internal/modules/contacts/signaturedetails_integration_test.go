@@ -48,11 +48,18 @@ func (e *dedupeEnv) signedMail(ctx context.Context, t *testing.T, name string, m
 		t.Fatalf("seed contact: %v", err)
 	}
 	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	return contactID, e.mailFrom(ctx, t, contactID, from, mail)
+}
+
+// mailFrom seeds one more mail the contact wrote from address from, dated
+// after every mail seeded before it.
+func (e *dedupeEnv) mailFrom(ctx context.Context, t *testing.T, contactID ids.ContactID, from string, mail signerMail) ids.UUID {
+	t.Helper()
 	activityID := ids.NewV7()
 	audience := map[bool]string{false: "workspace", true: "participants"}[mail.private]
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by, audience,
-			inbound_sender_authenticated) VALUES ($1, 'email', $2, 'inbound', now(), 'gmail:seed', 'connector:gmail', $3, $4)`,
+			inbound_sender_authenticated) VALUES ($1, 'email', $2, 'inbound', clock_timestamp(), 'gmail:seed', 'connector:gmail', $3, $4)`,
 			activityID, signedBlock, audience, !mail.spoofed); err != nil {
 			return err
 		}
@@ -81,7 +88,7 @@ func (e *dedupeEnv) signedMail(ctx context.Context, t *testing.T, name string, m
 	}); err != nil {
 		t.Fatalf("seed the signed mail: %v", err)
 	}
-	return contactID, activityID
+	return activityID
 }
 
 func (e *dedupeEnv) applySigned(ctx context.Context, t *testing.T, contactID ids.ContactID, activityID ids.UUID, fields ...SignatureField) {
@@ -304,5 +311,119 @@ func TestASignatureFillsItsOneEmployersEmptyStreet(t *testing.T) {
 		if got := e.count(ctx, t, `SELECT count(*) FROM company WHERE id = $1 AND address_line1 IS NULL`, company); got != 1 {
 			t.Errorf("with %s the company's street was filled", what)
 		}
+	}
+}
+
+// senderOf is the contact's primary address, the one its seeded mail is from.
+func (e *dedupeEnv) senderOf(ctx context.Context, t *testing.T, contactID ids.ContactID) string {
+	t.Helper()
+	var from string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT email FROM contact_email WHERE contact_id = $1 AND is_primary`, contactID).Scan(&from)
+	}); err != nil {
+		t.Fatalf("reading the sender: %v", err)
+	}
+	return from
+}
+
+// narrow limits each mail to its participants and takes back what it stated.
+func (e *dedupeEnv) narrow(ctx context.Context, t *testing.T, mails ...ids.UUID) {
+	t.Helper()
+	for _, mail := range mails {
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, `UPDATE activity SET audience = 'participants' WHERE id = $1`, mail); err != nil {
+				return err
+			}
+			return RetractSignatureFieldsTx(ctx, tx, mail)
+		}); err != nil {
+			t.Fatalf("narrowing a mail: %v", err)
+		}
+	}
+}
+
+func TestAValueTheSnippetDoesNotPrintWritesNothing(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	contactID, mail := e.signedMail(ctx, t, "Dana Injected", signerMail{domain: "acme-logistics.example"})
+	employer := e.employee(ctx, t, &contactID, "Acme Logistics", true, "acme-logistics.example", false)
+	e.applySigned(ctx, t, contactID, mail,
+		signed(fieldAddress, "Evil Road 1, 10115 Berlin"),
+		signed(fieldEmail, "attacker@acme-logistics.example"),
+		quoted(fieldEmail, "victim@acme-logistics.example", "Dana Weber | notvictim@acme-logistics.example"),
+		signed(fieldCompanyName, "Acme Logistics"))
+
+	if got := e.count(ctx, t, `SELECT count(*) FROM contact WHERE id = $1 AND address_line1 IS NULL`, contactID); got != 1 {
+		t.Error("an address the snippet does not print filled the contact's address")
+	}
+	if got := e.count(ctx, t, `SELECT count(*) FROM contact_profile_field WHERE contact_id = $1 AND field IN ('address', 'email')`, contactID); got != 0 {
+		t.Errorf("%d evidence rows for values the snippet does not print, want none", got)
+	}
+	if got := e.count(ctx, t, `SELECT count(*) FROM contact_email WHERE contact_id = $1 AND NOT is_primary`, contactID); got != 0 {
+		t.Error("an address the snippet does not print, or prints only inside a longer one, became the contact's email")
+	}
+	if got := e.count(ctx, t, `SELECT count(*) FROM company WHERE id = $1 AND address_line1 IS NULL`, employer); got != 1 {
+		t.Error("a street the snippet does not print filled the employer's address")
+	}
+}
+
+func TestASignatureValueStaysWhileAnotherMailStillStatesIt(t *testing.T) {
+	street := `SELECT count(*) FROM company WHERE id = $1 AND address_city = 'Hamburg'`
+	email := `SELECT count(*) FROM contact_email WHERE contact_id = $1 AND email = 'dana.weber@acme-mail.example' AND archived_at IS NULL`
+	address := `SELECT count(*) FROM contact WHERE id = $1 AND address_city = 'Hamburg'`
+	for name, tc := range map[string]struct {
+		narrowFirst, narrowSecond bool
+		want                      int
+	}{
+		"narrowing only the first mail keeps the values":  {narrowFirst: true, want: 1},
+		"narrowing only the second mail keeps the values": {narrowSecond: true, want: 1},
+		"narrowing both mails takes the values back":      {narrowFirst: true, narrowSecond: true, want: 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupDedupe(t)
+			ctx := e.as()
+			contactID, first := e.signedMail(ctx, t, "Dana Twice", signerMail{})
+			employer := e.employee(ctx, t, &contactID, "Acme Logistics", true, "acme-mail.example", false)
+			statement := []SignatureField{signed(fieldAddress, signedAddress), signed(fieldEmail, "dana.weber@acme-mail.example"),
+				signed(fieldCompanyName, "Acme Logistics")}
+			e.applySigned(ctx, t, contactID, first, statement...)
+			second := e.mailFrom(ctx, t, contactID, e.senderOf(ctx, t, contactID), signerMail{})
+			e.applySigned(ctx, t, contactID, second, statement...)
+			if tc.narrowFirst {
+				e.narrow(ctx, t, first)
+			}
+			if tc.narrowSecond {
+				e.narrow(ctx, t, second)
+			}
+			for what, query := range map[string]string{"street": street, "email": email, "address": address} {
+				subject := contactID.UUID
+				if what == "street" {
+					subject = employer.UUID
+				}
+				if got := e.count(ctx, t, query, subject); got != tc.want {
+					t.Errorf("the %s is present %d times, want %d", what, got, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestANarrowingKeepsAnAddressAColleagueSetAgain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	contactID, mail := e.signedMail(ctx, t, "Dana Decided", signerMail{})
+	e.applySigned(ctx, t, contactID, mail, signed(fieldAddress, signedAddress))
+	other, signedStreet := "Elsewhere 2", "Hafenstrasse 12"
+	city, code, country := "Hamburg", "20457", "DE"
+	for _, line := range []*string{&other, &signedStreet} {
+		if _, err := e.store.UpdateContact(ctx, contactID, UpdateContactInput{Address: &crmcontracts.Address{
+			Line1: line, City: &city, PostalCode: &code, Country: &country,
+		}}); err != nil {
+			t.Fatalf("setting the address: %v", err)
+		}
+	}
+	e.narrow(ctx, t, mail)
+
+	if got := e.count(ctx, t, `SELECT count(*) FROM contact WHERE id = $1 AND address_line1 = 'Hafenstrasse 12'`, contactID); got != 1 {
+		t.Fatal("narrowing the mail took back an address a colleague set after the fill")
 	}
 }
