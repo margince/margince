@@ -481,6 +481,43 @@ describe("the call the server leads an owed promise with", () => {
     expect(screen.getByRole("button", { name: "Write to them" })).toBeTruthy();
   });
 
+  it("keeps the call on the card that asks whether the promise is done", async () => {
+    show(withPhone, {
+      ...OWED,
+      recommended_action: {
+        kind: "complete_task",
+        label: "Done",
+        state: "available",
+      },
+      secondary_actions: [OWED.recommended_action],
+      may_be_done: {
+        promise_type: "task",
+        promise_id: "a-7",
+        email_activity_id: "e-1",
+        wrote_at: "2026-08-12T10:00:00Z",
+      },
+    });
+
+    const call = await screen.findByRole("link", { name: "Call them" });
+    expect(call.getAttribute("href")).toBe("tel:+49301234567");
+  });
+
+  it("does not draw a kind it does not know, with no surface, as a dead button", async () => {
+    const client = show(withPhone, {
+      ...OWED,
+      recommended_action: {
+        kind: "ring_them" as ContactMoment["recommended_action"]["kind"],
+        label: "Ring them",
+        state: "available",
+      },
+      secondary_actions: undefined,
+    });
+
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(screen.queryByRole("button", { name: "Ring them" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Ring them" })).toBeNull();
+  });
+
   it("derives no call of its own when the server led with writing", async () => {
     show(withPhone, {
       ...OWED,

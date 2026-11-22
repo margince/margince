@@ -63,6 +63,9 @@ func TestAPromiseFiledFromACallLeadsWithTheCall(t *testing.T) {
 			if lead.Label != "Call them" {
 				t.Errorf("label = %q", lead.Label)
 			}
+			if d := lead.Destination; d == nil || d.Surface != crmcontracts.ContactMomentDestinationSurfaceActivityLog {
+				t.Errorf("destination = %v, want the log form an older client can follow", d)
+			}
 			if got.SecondaryActions == nil || len(*got.SecondaryActions) != 1 ||
 				(*got.SecondaryActions)[0].Kind != crmcontracts.ContactMomentActionKindDraftReply {
 				t.Fatalf("second = %v, want writing kept reachable", got.SecondaryActions)

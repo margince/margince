@@ -24,6 +24,10 @@ func (said momentCopy) callsBack(moment *crmcontracts.ContactMoment, task crmcon
 		Kind:  crmcontracts.ContactMomentActionKindCall,
 		Label: said.Say(momentWords.Call),
 		State: crmcontracts.ContactMomentActionStateAvailable,
+		// A client that predates `call` follows this to the log form, which a
+		// call is written down in, so its button opens something. A client that
+		// knows `call` dials and ignores it.
+		Destination: &crmcontracts.ContactMomentDestination{Surface: crmcontracts.ContactMomentDestinationSurfaceActivityLog},
 	}
 	moment.SecondaryActions = &[]crmcontracts.ContactMomentAction{write}
 }

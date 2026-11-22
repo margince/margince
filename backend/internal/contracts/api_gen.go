@@ -45825,9 +45825,12 @@ type ContactMoment struct {
 	// a moment becomes a lie. The state is honest for the same reason: an action the caller
 	// cannot take says so instead of failing.
 	//
-	// `call` dials the contact's primary phone number and has no destination. The server names
-	// it only for a promise whose task was filed from a logged call, on a live contact that has
-	// a number; writing to them then stays as the second action.
+	// `call` dials the contact's primary phone number; a client that knows it ignores the
+	// destination. The destination is `activity_log`, so a client that predates `call` opens the
+	// log form instead of drawing a button that does nothing. The server names it only for a
+	// promise whose task was filed from a logged call, on a live contact that has a number.
+	// Writing to them then stays as the second action, and a card that asks whether the promise
+	// is done carries the call as a second action too.
 	RecommendedAction ContactMomentAction `json:"recommended_action"`
 
 	// Rule Which rung of the fixed ladder selected this moment (ADR-0096 D2), in priority order.
@@ -45859,9 +45862,12 @@ type ContactMomentConfidence string
 // a moment becomes a lie. The state is honest for the same reason: an action the caller
 // cannot take says so instead of failing.
 //
-// `call` dials the contact's primary phone number and has no destination. The server names
-// it only for a promise whose task was filed from a logged call, on a live contact that has
-// a number; writing to them then stays as the second action.
+// `call` dials the contact's primary phone number; a client that knows it ignores the
+// destination. The destination is `activity_log`, so a client that predates `call` opens the
+// log form instead of drawing a button that does nothing. The server names it only for a
+// promise whose task was filed from a logged call, on a live contact that has a number.
+// Writing to them then stays as the second action, and a card that asks whether the promise
+// is done carries the call as a second action too.
 type ContactMomentAction struct {
 	BlockedReason *string `json:"blocked_reason,omitempty"`
 

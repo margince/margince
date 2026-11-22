@@ -19,7 +19,7 @@ import { useSourceOpener } from "../../lib/opensource";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { displayedSubject } from "../../lib/systemdisplay";
 import { taskDetail } from "../../lib/taskdetail";
-import { momentVerbWrites } from "../../lib/writeverbs";
+import { MOMENT_VERB_WRITES, momentVerbWrites } from "../../lib/writeverbs";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
 import {
@@ -188,6 +188,11 @@ function MomentBar({
           (action) => action.kind === "draft_reply",
         )
       : undefined;
+  // A card asking whether the promise is done leads with Done, and carries the
+  // call as a second action.
+  const calls = moment.secondary_actions?.filter(
+    (action) => action.kind === "call",
+  );
   return (
     <RecordNextBar
       // A meeting about to happen, or a promise past its date, outranks what
@@ -210,11 +215,21 @@ function MomentBar({
       }
       action={
         moment.may_be_done ? (
-          <MayBeDoneVerbs
-            moment={moment}
-            question={moment.may_be_done}
-            view={view}
-          />
+          <>
+            <MayBeDoneVerbs
+              moment={moment}
+              question={moment.may_be_done}
+              view={view}
+            />
+            {calls?.map((action) => (
+              <ActionVerb
+                key={action.kind}
+                action={action}
+                contact={view.contact}
+                onAction={onAction}
+              />
+            ))}
+          </>
         ) : (
           <>
             <ActionVerb
@@ -422,6 +437,11 @@ function ActionVerb(props: ActionVerbProps) {
         record={{ entityType: "contact", entityId: contact.id }}
       />
     );
+  }
+  // A kind this build does not know, with no surface to open, would draw a
+  // button that does nothing.
+  if (!action.destination && !Object.hasOwn(MOMENT_VERB_WRITES, action.kind)) {
+    return null;
   }
   return <SurfaceVerb {...props} />;
 }
