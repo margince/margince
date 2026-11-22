@@ -1105,7 +1105,7 @@ db-up: ## Start the dev stack (docker-compose.dev.yml) and create the app role
 PSQL = bash ../scripts/dev-psql.sh $(PG_PORT)
 
 db-init: ## (Re)apply scripts/db-init.sql to the running Postgres
-	$(PSQL) $(DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
+	$(PSQL) postgres -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
 
 seed-reset: ## Clear the demo RECORDS, keeping the installation and its config (scripts/seed-reset.sql); make seed-dev refills it, no restart needed
 	$(PSQL) $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-reset.sql

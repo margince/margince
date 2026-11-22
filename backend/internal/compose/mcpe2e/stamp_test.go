@@ -323,6 +323,51 @@ func TestTheHarnessHoldsEveryModuleTheGraderImports(t *testing.T) {
 	}
 }
 
+// lintEntrySpellings are the ways a caller would run check.py's own lint, which
+// skips the wording rules; scenariolint.py is the lane's one lint entry.
+var lintEntrySpellings = []string{"check.py --lint", `check.py" --lint`}
+
+func TestTheLaneLintsThroughScenariolintAlone(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "..")
+	dirs := []string{"scripts", "docs", ".github", "e2e"}
+	if err := gatekit.DeclareInputs(os.Getenv, "../../../../scripts", "../../../../docs", "../../../../.github",
+		"../../../../e2e", "../../../../Makefile", "../../../Makefile"); err != nil {
+		t.Fatal(err)
+	}
+	files := []string{filepath.Join(root, "Makefile"), filepath.Join(root, "backend", "Makefile")}
+	for _, dir := range dirs {
+		err := filepath.WalkDir(filepath.Join(root, dir), func(path string, entry os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() && (entry.Name() == "node_modules" || entry.Name() == "records") {
+				return filepath.SkipDir
+			}
+			if !entry.IsDir() && slices.Contains([]string{".sh", ".md", ".yml", ".yaml", ".py"}, filepath.Ext(path)) {
+				files = append(files, path)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, path := range files {
+		body, err := os.ReadFile(path) // #nosec G304 -- a file of this repository
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, spelling := range lintEntrySpellings {
+			if strings.Contains(string(body), spelling) {
+				t.Errorf("%s runs %s, which skips scenariolint.py's wording rules; call e2e/llm/scenariolint.py", path, spelling)
+			}
+		}
+	}
+	if len(files) < 10 {
+		t.Fatalf("read %d files; the walk found too little to hold anything", len(files))
+	}
+}
+
 func TestTheGraderWalkReadsEveryImportForm(t *testing.T) {
 	root := t.TempDir()
 	for name, body := range map[string]string{

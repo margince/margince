@@ -44,7 +44,9 @@ judge:
   - "Criterion 2. The answer says the valantic Migrationsprojekt deal (EUR 9,500) left this quarter's pipeline — slipped out or moved to a later date — and does not call it lost, closed or won. Answer no if it calls it lost or won, gives a different cause, or leaves the deal out."
   # The judge reads the answer alone, so the causes are named here: a criterion
   # that defers to "the tool" asks for a reading the judge cannot make.
-  - "Criterion 3. The answer gives the opening and closing open-pipeline figures, EUR 179,000 and EUR 164,500, and accounts for the EUR 14,500 between them by the EUR 5,000 repricing and the EUR 9,500 slip. Answer no if it gives other figures, names a cause beyond those two, or says it cannot explain the change."
+  # Whether the EUR 9,500 is a slip or a loss is criterion 2's; this one holds
+  # the amounts.
+  - "Criterion 3. The answer gives the opening and closing open-pipeline figures, EUR 179,000 and EUR 164,500, and accounts for the EUR 14,500 between them by the EUR 5,000 repricing of the Vorort deal and the EUR 9,500 of the valantic deal. Answer no if it gives other figures, names a cause beyond those two, or says it cannot explain the change."
 
 runs: 3
 pass_at: 2

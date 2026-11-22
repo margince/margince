@@ -22,10 +22,11 @@ pass_at: 2
 
 
 def problems(criterion):
-    handle = tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False, encoding="utf-8")
-    with handle as out:
-        out.write(SCENARIO % criterion)
-    return [p for p in scenariolint.lint(handle.name) if "defers to a tool's answer" in p]
+    with tempfile.TemporaryDirectory() as scratch:
+        path = os.path.join(scratch, "case999-lint.yaml")
+        with open(path, "w", encoding="utf-8") as out:
+            out.write(SCENARIO % criterion)
+        return [p for p in scenariolint.lint(path) if "defers to a tool's answer" in p]
 
 
 class JudgeCriterionLintTest(unittest.TestCase):
@@ -38,6 +39,10 @@ class JudgeCriterionLintTest(unittest.TestCase):
             "Criterion 1. It quotes the figure from the standard reporting reading it made. Answer no otherwise.",
             "Criterion 1. Every figure matches the tool result. Answer no otherwise.",
             "Criterion 1. It names only deals that the tool flagged. Answer no otherwise.",
+            "Criterion 1. Every figure reported by the tool is quoted. Answer no otherwise.",
+            "Criterion 1. It quotes the tool's figures. Answer no otherwise.",
+            "Criterion 1. It names the deals the tools flagged. Answer no otherwise.",
+            "Criterion 1. It gives the result of the read. Answer no otherwise.",
         ):
             with self.subTest(criterion=criterion):
                 self.assertEqual(len(problems(criterion)), 1)

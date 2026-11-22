@@ -26,23 +26,100 @@ _DEFERS_TO_A_TOOL = re.compile(
     r"|tool (?:results?|output|answers?)"
     r"|(?:that|which|what) the tools? (?:flag|report|return|say|show)\w*"
     r"|the tools? (?:did not|didn't|does not|doesn't|never) (?:flag|report|return|say|show)\w*"
-    r"|(?:reading|read) it made|against (?:the|what the) tools?)\b",
+    r"|(?:reading|read) it made|against (?:the|what the) tools?"
+    r"|(?:reported|returned|flagged|shown|listed|given) by the tools?"
+    r"|the tools?(?:'s|s'|’s)? (?:figures?|numbers?|values?|totals?|counts?)"
+    r"|the tools? (?:flagged|reported|returned|showed|listed|gave)"
+    r"|(?:the )?results? of the (?:read|reads|call|calls|lookup|query|tool))\b",
     re.IGNORECASE,
 )
 
 
-# "not" in a pin also reads "isn't", "hasn't" and "couldn't", which no `not`
-# matches: a positive pin then fails a true answer, and an exclusion lets a
-# negated claim through.
-_BARE_NOT = re.compile(r"(?<![\w'’])not(?![\w'’])", re.IGNORECASE)
-_CONTRACTED_NOT = re.compile(r"n(?:\[['’]+\]\??|['’]\??)t")
+# A negation an answer contracts must read the same as the one it spells out:
+# a positive pin that misses "isn't" fails a true answer, and an exclusion
+# that misses it lets a denial through. Each spelled negation is held on its
+# own: an auxiliary one ("could not", "cannot") needs its own short form
+# ("couldn't", "can't"), and a bare `not` needs a generic n't in a group
+# around it, not merely somewhere in the pin.
+_APOSTROPHE = r"(?:\[['’]+\]\??|['’]\??)"
+_GENERIC_NT = re.compile(r"(?<![A-Za-z])n" + _APOSTROPHE + "t")
+# Beside a bare `not`, "wasn't" or "isn't" is its short form too; "can't" and
+# "won't" stand only for their own verbs.
+_ANY_NT = re.compile(r"(?<!ca)(?<!wo)n" + _APOSTROPHE + "t", re.IGNORECASE)
+_AUXILIARIES = ("can", "could", "does", "do", "did", "is", "are", "was", "were", "has", "have", "had",
+                "will", "would", "should", "must", "need")
+_SPELLED = re.compile(r"(?i)(?<![A-Za-z'’])(?:(%s) ?not|(cannot)|(not))(?![A-Za-z'’])" % "|".join(_AUXILIARIES))
+_SHORT_FORM = {"can": "can", "will": "won"}
+
+
+def _groups_around(source, at):
+    """The text of every parenthesized group that encloses index at, innermost first."""
+    stack, spans, escaped, in_class = [], [], False, False
+    for index, char in enumerate(source):
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif in_class:
+            in_class = char != "]"
+        elif char == "[":
+            in_class = True
+        elif char == "(":
+            stack.append(index)
+        elif char == ")" and stack:
+            start = stack.pop()
+            if start < at < index:
+                spans.append((start, index))
+    return [source[start:end + 1] for start, end in sorted(spans, key=lambda span: span[1] - span[0])]
+
+
+def _branches_beside(source, at):
+    """The top-level alternative of the pin that holds index at, and the ones
+    on either side of it: a short form listed next to its spelled form."""
+    depth, start, escaped, in_class, branches, holder = 0, 0, False, False, [], 0
+    for index, char in enumerate(source + "|"):
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif in_class:
+            in_class = char != "]"
+        elif char == "[":
+            in_class = True
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        elif char == "|" and depth == 0:
+            if start <= at < index:
+                holder = len(branches)
+            branches.append(source[start:index])
+            start = index + 1
+    return branches[max(0, holder - 1):holder + 2]
+
+
+def _short_form_near(source, at, auxiliary):
+    if auxiliary:
+        word = "can" if auxiliary.lower() == "cannot" else auxiliary.lower()
+        short = _SHORT_FORM.get(word, re.escape(word) + "n")
+        attached = re.compile("(?i)" + short + _APOSTROPHE + "t")
+        grouped = re.compile("(?i)" + re.escape(word) + r"\(\?:[^()]*?" + _GENERIC_NT.pattern + r"[^()]*\)")
+        return bool(attached.search(source) or grouped.search(source))
+    nearby = _groups_around(source, at) or _branches_beside(source, at)
+    return any(_ANY_NT.search(text) for text in nearby)
 
 
 def _negation_problems(data):
-    return [f"{key} entry {number} spells a negation as `not` with no n't form; add n['’]t beside it"
-            for key in ("must_mention", "must_not_mention")
-            for number, pattern in enumerate(data.get(key, []), 1)
-            if _BARE_NOT.search(pattern) and not _CONTRACTED_NOT.search(pattern)]
+    problems = []
+    for key in ("must_mention", "must_not_mention"):
+        for number, pattern in enumerate(data.get(key, []), 1):
+            source = pattern.replace("\\b", "  ").replace("\\B", "  ")
+            for match in _SPELLED.finditer(source):
+                auxiliary = match.group(1) or match.group(2)
+                if not _short_form_near(source, match.start(), auxiliary):
+                    problems.append(f"{key} entry {number} spells {match.group(0)!r} with no short form of it; "
+                                    "add the n't form beside it")
+    return problems
 
 
 def _judge_problems(data):

@@ -1,5 +1,5 @@
+import json
 import os
-import re
 import sys
 import tempfile
 import unittest
@@ -22,12 +22,24 @@ def pin(scenario, key, marker):
 
 
 class ContractedNegationTest(unittest.TestCase):
-    """A negation an answer contracts reads the same as the one it spells out."""
+    """A negation an answer contracts reads the same as the one it spells out,
+    graded by check.py's own must_mention, case-insensitive as the lane grades."""
+
+    def setUp(self):
+        self.scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(self.scratch.cleanup)
+
+    def holds(self, pattern, answer):
+        path = os.path.join(self.scratch.name, "run.jsonl")
+        with open(path, "w", encoding="utf-8") as out:
+            out.write(json.dumps({"type": "result", "subtype": "success", "is_error": False, "result": answer}) + "\n")
+        problems = check.check({"name": "case999_pin", "must_mention": [pattern]}, path)
+        return not any("never said anything matching" in problem for problem in problems)
 
     def test_a_positive_pin_holds_the_contracted_answer_as_well(self):
         for scenario, marker, spelled, contracted in (
-            ("case3-spreadsheet.yaml", "imported", "Not imported: the row with no name.",
-             "It wasn't imported, the row with no name."),
+            ("case3-spreadsheet.yaml", "imported", "It was not imported: the Ostfalen line.",
+             "It wasn't imported: the Ostfalen line."),
             ("case3-spreadsheet.yaml", "imported", "The last row could not be used.", "The last row couldn't be used."),
             ("case40-sort-the-queue.yaml", "going anywhere", "Bruno is not going anywhere, so Bruno is closed.",
              "Bruno isn't going anywhere, so Bruno is closed."),
@@ -35,35 +47,50 @@ class ContractedNegationTest(unittest.TestCase):
             ("case56-not-the-same.yaml", "a duplicate", "They are not the same contact.", "They aren't the same contact."),
             ("case64-catch-me-up-and-the-brief.yaml", "brief", "The brief has not been generated.",
              "The brief hasn't been generated."),
+            ("case112-my-plan-and-the-dossier.yaml", "started", "Your plan has not been started.",
+             "Your plan hasn't been started."),
         ):
             pattern = pin(scenario, "must_mention", marker)
             with self.subTest(scenario=scenario, marker=marker):
-                self.assertRegex(spelled, pattern)
-                self.assertRegex(contracted, pattern)
+                self.assertTrue(self.holds(pattern, spelled))
+                self.assertTrue(self.holds(pattern, contracted))
 
     def test_an_exclusion_lets_no_contracted_denial_through(self):
         done = pin("case10-finish-the-import.yaml", "must_mention", "committed|imported|created")
-        self.assertRegex("The four companies are imported.", done)
-        self.assertIsNone(re.search(done, "I haven't imported them yet."))
-        self.assertIsNone(re.search(done, "I have not imported them yet."))
-
-
-def lint_problems(pattern):
-    handle = tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False, encoding="utf-8")
-    with handle as out:
-        out.write('name: case999_lint\ncriteria: [1]\nwrites: false\nprompt: |\n  Hi.\n'
-                  f'must_mention:\n  - "{pattern}"\nruns: 3\npass_at: 2\n')
-    return [p for p in scenariolint.lint(handle.name) if "n't form" in p]
+        self.assertTrue(self.holds(done, "The four companies are imported."))
+        self.assertFalse(self.holds(done, "I haven't imported them yet."))
+        self.assertFalse(self.holds(done, "I have not imported them yet."))
 
 
 class NegationLintTest(unittest.TestCase):
-    def test_a_pin_with_a_bare_not_fails_lint(self):
-        self.assertEqual(len(lint_problems(r"(?i)not (?:sent|delivered)")), 1)
+    """scenariolint holds each spelled negation to its own short form."""
 
-    def test_a_pin_that_also_reads_the_contraction_lints_clean(self):
-        for pattern in (r"(?i)(?:not|n['’]t) (?:sent|delivered)", r"(?i)(?:can'?t|could not) send", r"(?i)nothing was sent"):
+    def problems(self, pattern):
+        return scenariolint._negation_problems({"must_mention": [pattern]})
+
+    def test_a_spelled_negation_with_no_short_form_beside_it_fails(self):
+        for pattern in (
+            r"(?i)\bnot\b (?:sent|delivered)",
+            r"(?i)(?:can'?t|could not) send",
+            r"(?i)cannot send",
+            r"(?i)will not do",
+            r"(?i)(?:not|can'?t) sent",
+            r"(?i)not able|x|y|z|n['’]t able",
+        ):
             with self.subTest(pattern=pattern):
-                self.assertEqual(lint_problems(pattern), [])
+                self.assertTrue(self.problems(pattern))
+
+    def test_a_negation_with_its_short_form_beside_it_lints_clean(self):
+        for pattern in (
+            r"(?i)(?:not|n['’]t) (?:sent|delivered)",
+            r"(?i)(?:can'?t|could(?: not|n['’]t)) send",
+            r"(?i)(?:cannot|can['’]?t) send",
+            r"(?i)not able|n['’]t able",
+            r"(?i)not saved|wasn't saved",
+            r"(?i)nothing was sent",
+        ):
+            with self.subTest(pattern=pattern):
+                self.assertEqual(self.problems(pattern), [])
 
 
 if __name__ == "__main__":

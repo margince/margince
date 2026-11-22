@@ -3,7 +3,8 @@
 -- not the table owner — its grants bind it with no exception path.
 
 -- The roles below are cluster-wide, so one run at a time changes them: a
--- session lock, held until this psql session ends.
+-- session lock, held until this psql session ends. An advisory lock is per
+-- database, so every caller runs this script in the `postgres` database.
 DO $$ BEGIN PERFORM pg_advisory_lock(7300148210); END $$;
 DO $$
 BEGIN

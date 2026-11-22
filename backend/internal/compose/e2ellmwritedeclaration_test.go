@@ -30,7 +30,7 @@ const (
 	e2eLLMWritesDeclare = "writes: true"
 )
 
-// e2eWritesDeclaration mirrors the lane's `check.py --lint` read of writes:, which
+// e2eWritesDeclaration mirrors the lane's lint (scenariolint.py, then check.lint) read of writes:, which
 // this Go test cannot call; a trailing YAML comment is allowed as YAML allows it.
 var e2eWritesDeclaration = regexp.MustCompile(`(?m)^writes:\s*(\S+)\s*(?:#.*)?$`)
 
