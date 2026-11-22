@@ -1761,16 +1761,15 @@ export const en = {
   "scheduling.saveTime": "Confirm new time",
   "scheduling.hostRecovery":
     "Reconnect your calendar if needed, then retry. The time remains reserved while delivery is uncertain.",
-  "scheduling.guestRecovery":
+  "book.recovery":
     "The host needs to check this invitation. Your booking request is saved.",
-  "scheduling.deliveryUnknown":
+  "book.deliveryUnknown":
     "The server did not return an invitation. Check with the host before trying again.",
-  "scheduling.personalGuest":
+  "book.personalGuest":
     "This invitation is for the recipient of this link. The meeting will use the email address chosen by the host.",
-  "scheduling.proposalGreeting": "Hello,",
-  "scheduling.proposalChoose": "Choose a time here, or find another opening:",
-  "scheduling.proposalReply":
-    "You can also reply with a time that works for you.",
+  "book.proposalGreeting": "Hello,",
+  "book.proposalChoose": "Choose a time here, or find another opening:",
+  "book.proposalReply": "You can also reply with a time that works for you.",
   "scheduling.proposalHelp":
     "These options do not reserve your calendar. The personal link can book once and expires after seven days or the last offered time.",
   "scheduling.createPersonalLink": "Create personal link",
@@ -1788,7 +1787,7 @@ export const en = {
   "scheduling.blockingCalendars": "Other calendars that block time",
   "scheduling.blockingHelp":
     "The event calendar always blocks time. Private event names stay in your calendar.",
-  "scheduling.savedRequest":
+  "book.savedRequest":
     "Your meeting request is saved. Open it to check the invitation, change the time or cancel.",
   "scheduling.openMeeting": "View your meeting",
   "scheduling.emailReminder": "Email reminder one hour before",
@@ -1902,7 +1901,7 @@ export const en = {
 
   "scheduling.invite": "Send an invite",
   "scheduling.contact": "Who are you meeting?",
-  "scheduling.guestAgenda": "What would you like to discuss?",
+  "book.agenda": "What would you like to discuss?",
   "scheduling.agenda": "Message for your guest",
   "scheduling.chooseTime": "Choose a time",
   "scheduling.date": "Starting date",
@@ -1926,8 +1925,7 @@ export const en = {
   "scheduling.book": "Confirm meeting",
   "scheduling.pausedUnavailable":
     "{host} is not taking bookings through this page right now.",
-  "scheduling.unavailable":
-    "This booking page is unavailable. Contact your host.",
+  "book.unavailable": "This booking page is unavailable. Contact your host.",
   "scheduling.publicUrlMissing":
     "Set a public address for this installation before sharing external booking links.",
   "scheduling.new": "Book a meeting",
@@ -1953,13 +1951,19 @@ export const en = {
   "scheduling.attentionTitle": "The calendar did not accept the invitation",
   "scheduling.retryHelp":
     "Retry sends the same invitation again, so the guest does not get a second one.",
-  "scheduling.videoApp": "{app} · link in your invite",
+  "book.videoApp": "{app} · link in your invite",
   "scheduling.pickDay": "Choose a day",
   "scheduling.changeTime": "Change time",
   "scheduling.confirmAt": "Confirm {day}, {time}",
   "scheduling.suggestedTimes": "Suggested times",
-  "scheduling.noTimesDay": "No free times on this day. Choose another day.",
-  "scheduling.noTimesMonth": "No free times this month. Try the next month.",
+  "book.noTimesDay": "No free times on this day. Choose another day.",
+  "book.noTimesMonth": "No free times this month. Try the next month.",
+  "book.noTimes": "No available times in this window. Try another date.",
+  "book.rescheduleHelp":
+    "Your current time stays reserved until the calendar confirms the change.",
+  "book.meetingChanged":
+    "The meeting changed. Review the updated details and try again.",
+  "book.cancelConfirm": "Cancel this meeting?",
   "conversationSuggestions.title": "On this conversation, not in Margince yet",
   "conversationSuggestions.add": "Add as contact",
   "conversationSuggestions.limited":
@@ -14224,8 +14228,8 @@ export const en = {
   "book.returnRequestAction": "Send me the link",
   "book.returnRequestSent":
     "Check your inbox. If this address can be stored again, a link to confirm is on its way.",
-  "book.attendee": "Attendee email",
-  "book.subject": "Meeting via Margince",
+  "scheduling.attendeeEmail": "Attendee email",
+  "scheduling.defaultSubject": "Meeting via Margince",
   "book.name": "Your name",
   "book.email": "Your email",
   "book.consentWording":

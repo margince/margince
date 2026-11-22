@@ -57,11 +57,14 @@ deine, deinem, deinen, deiner, deines. Never Sie, Ihr or Ihnen to the user.
   statuses, table headers, menu items and most help text are impersonal. Use du
   only where the English says "you" or "your", or where an error or
   confirmation tells the reader what to do next.
-- **Four families keep Sie**, and they are the only Sie in the catalog:
-  `privacynotice.`, `confirm.`, `buyer.` and `prefs.`. Each is read by someone
-  outside the installation: a stranger reading the privacy notice, a contact
-  answering a consent question, a buyer in a Deal Room, a visitor choosing what
-  may still be sent. Outbound mail to a contact is written in Sie, and the
+- **Five families keep Sie**, and they are the only Sie in the catalog:
+  `privacynotice.`, `confirm.`, `buyer.`, `prefs.` and `book.`. Each is read
+  by someone outside the installation: a stranger reading the privacy notice, a
+  contact answering a consent question, a buyer in a Deal Room, a visitor
+  choosing what may still be sent, a guest booking a meeting. They never say
+  du. A screen that both host and guest open, such as the meeting page, takes
+  a `book.` key for the guest and a `scheduling.` key for the host. Outbound
+  mail to a contact is written in Sie, and the
   consent question is published by the server in that wording, so a screen in
   du would ask one question and record another. Their instructions take the
   Sie imperative too: "Öffnen Sie Ihre Einstellungen".
@@ -366,7 +369,7 @@ source file, key and value. Placeholders are removed before the word rules run.
 | No exclamation marks | Any `!` |
 | Imperative with -e | A short du imperative as a whole word, in lower case or with a capital: leg, schreib, prüf, markier, zieh, füg, trag, schick, geh, mach, frag, sag, verschieb, setz, bleib; and "versuch es", because Versuch alone is a noun |
 | Share is teilen | freigeben or Freigabe in any case or compound, or "gib … frei", in a value whose English says share, shares, shared or sharing and does not say approve |
-| "Bitte" only before a recovery step | Read on the raw value. "bitte" in any case, unless it opens a sentence (at the start, or after a period, question mark, exclamation mark, colon or `}` and a space) straight before versuche, lade or wende, or in the four outsider families before versuchen Sie, laden Sie or wenden Sie; a second one in a value; one in a value with no sentence period |
+| "Bitte" only before a recovery step | Read on the raw value. "bitte" in any case, unless it opens a sentence (at the start, or after a period, question mark, exclamation mark, colon or `}` and a space) straight before versuche, lade or wende, or in the five outsider families before versuchen Sie, laden Sie or wenden Sie; a second one in a value; one in a value with no sentence period |
 | Abbreviations | z. B., d. h., usw., u. a., ggf., bzgl., bzw., inkl., ca., Tg., with or without the inner space |
 | No contractions | ’s or 's straight after a letter |
 | Percent | A digit or a closing `}` followed by `%`, or by an ordinary space and `%` |
@@ -379,8 +382,8 @@ A last test compares the code-format words of the Never column with the words
 the test retires, and fails a difference in either direction.
 
 `frontend/census/rules/address-register.census.ts` holds the address: no Sie, Ihr or
-Ihnen outside the four outsider families, and no capitalised du-pronoun
-mid-sentence. A sentence opening with "Sie" as she or they is rephrased, since
+Ihnen outside the five outsider families, no du-pronoun inside them, and no
+capitalised du-pronoun mid-sentence. A sentence opening with "Sie" as she or they is rephrased, since
 the capital cannot be read off the page.
 
 `frontend/src/i18n/record-noun.test.ts` holds the record noun in `de.ts`. It

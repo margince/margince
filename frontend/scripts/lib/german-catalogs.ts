@@ -10,6 +10,8 @@ export const LETTER = "A-Za-zÄÖÜäöüß";
 // mailcopy/catalog.go) and the server publishes the consent question in it.
 // Every other key speaks du.
 export const READ_BY_AN_OUTSIDER: Readonly<Record<string, string>> = {
+  "book.":
+    "ein Gast, der über einen Buchungslink oder eine Terminanfrage einen Termin bucht",
   "buyer.": "die Käuferseite im Deal Room, die hier keinen Sitzplatz hat",
   "confirm.":
     "ein Kontakt, der die serverseitig gestellte Einwilligungsfrage beantwortet",
