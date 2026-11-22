@@ -67,7 +67,7 @@ func TestASeamRoomCreateRefusesAKeyItDoesNotKnow(t *testing.T) {
 	_, err := offlineProvider().Create(ungrantedSeller(), datasource.CreateInput{
 		EntityType: datasource.EntityDealRoom,
 		Fields:     map[string]any{"deal_id": ids.NewV7().String(), "title": "Acme rollout", "expires": "2027-01-01T00:00:00Z"},
-		Source:     "agent",
+		Source:     "manual",
 	})
 
 	var unknown *datasource.UnknownFieldError

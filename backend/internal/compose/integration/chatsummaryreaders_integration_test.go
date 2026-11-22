@@ -32,7 +32,7 @@ func TestAChatSummaryNoteNeedsReadOnItsDealOnEveryReadPath(t *testing.T) {
 	e.WsExec(t, `INSERT INTO pipeline (id, name) VALUES ($1, 'Chat')`, pipeline)
 	e.WsExec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	e.WsExec(t, `INSERT INTO deal (id, name, status, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Brandt renewal', 'open', $2, $3, 'seed', 'system')`, deal, pipeline, stage)
+		VALUES ($1, 'Brandt renewal', 'open', $2, $3, 'manual', 'system')`, deal, pipeline, stage)
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, audience, source, source_system, captured_by)
 		VALUES ($1, 'note', $2, $2, 'workspace', 'chat_links', $3, 'system')`, note, chatSummaryWord+" discount agreed", provenance.ChatSummarySource)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, note, deal)

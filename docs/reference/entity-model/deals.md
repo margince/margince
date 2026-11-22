@@ -125,7 +125,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean`, default `false` | yes | True while a litigation or investigation hold is preserving this record. |
 | `search_tsv` | `tsvector`, generated as `((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char"))` |  | Computed by the database. It cannot be written directly. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -166,6 +166,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_partner_attribution_pairing`: `CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))`
 - `deal_priority_check`: `CHECK (((priority IS NULL) OR (priority = ANY (ARRAY['low', 'medium', 'high']))))`
 - `deal_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `deal_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `deal_source_id_length`: `CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))`
 - `deal_source_id_needs_a_source`: `CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))`
 - `deal_status_check`: `CHECK ((status = ANY (ARRAY['open', 'won', 'lost'])))`
@@ -893,7 +894,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -917,6 +918,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_number_rev_unique`: `UNIQUE (offer_number, revision)`
 - `offer_number_shape`: `CHECK ((offer_number ~ '^A-[0-9]+$'))`
 - `offer_revision_check`: `CHECK ((revision >= 1))`
+- `offer_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `offer_source_commercial_revision_js_safe`: `CHECK (((source_commercial_revision >= 0) AND (source_commercial_revision <= '9007199254740991'::bigint)))`
 - `offer_status_check`: `CHECK ((status = ANY (ARRAY['draft', 'sent', 'accepted', 'rejected', 'expired', 'superseded'])))`
 - `offer_tax_minor_js_safe`: `CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))`

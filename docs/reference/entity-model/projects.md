@@ -30,7 +30,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean`, default `false` | yes | True while a litigation or investigation hold is preserving this record. |
 | `search_tsv` | `tsvector`, generated as `(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(key, ''::text))), 'A'::"char"))` |  | Computed by the database. It cannot be written directly. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | The channel this record arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -50,6 +50,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `project_key_shape`: `CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$')))`
 - `project_phase_check`: `CHECK ((phase = ANY (ARRAY['initiative', 'pursuing', 'delivering', 'closed'])))`
 - `project_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `project_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `project_source_id_length`: `CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))`
 - `project_source_id_needs_a_source`: `CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))`
 - `project_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`

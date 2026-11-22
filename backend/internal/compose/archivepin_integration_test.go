@@ -156,7 +156,7 @@ func seedForArchivePin(as context.Context, t *testing.T, p *Provider,
 ) datasource.EntityRef {
 	t.Helper()
 	ref, err := p.Create(as, datasource.CreateInput{
-		EntityType: entity, Fields: json.RawMessage(fields), Source: "test",
+		EntityType: entity, Fields: json.RawMessage(fields), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the %s: %v", entity, err)

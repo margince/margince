@@ -73,7 +73,8 @@ func seedLosses(ctx context.Context, t *testing.T, e *integration.Env) {
 	} {
 		amount := loss.amount
 		made, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{
-			Name: fmt.Sprintf("Loss %d", i), PipelineID: pipeline, StageID: open, AmountMinor: &amount, Currency: &eur,
+			Source: "manual",
+			Name:   fmt.Sprintf("Loss %d", i), PipelineID: pipeline, StageID: open, AmountMinor: &amount, Currency: &eur,
 		})
 		if err != nil {
 			t.Fatalf("creating loss %d: %v", i, err)
@@ -288,7 +289,7 @@ func TestAReloseCountsOnceUnderItsLastLoss(t *testing.T) {
 		}
 	}
 	amount, eur := int64(7000), "EUR"
-	made, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{Name: "Lost twice", PipelineID: pipeline, StageID: open, AmountMinor: &amount, Currency: &eur})
+	made, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{Source: "manual", Name: "Lost twice", PipelineID: pipeline, StageID: open, AmountMinor: &amount, Currency: &eur})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -54,7 +54,8 @@ func seedHandoffScene(t *testing.T, e *integration.Env, dealCount int) handoffSc
 	for i := range dealCount {
 		amount, currency := int64(1_000+i), "EUR"
 		if _, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-			Name: fmt.Sprintf("Licence %02d", i), PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+			Source: "manual",
+			Name:   fmt.Sprintf("Licence %02d", i), PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 			ProjectID: &scene.project, AmountMinor: &amount, Currency: &currency, OwnerID: &owner,
 		}); err != nil {
 			t.Fatalf("create deal %d: %v", i, err)

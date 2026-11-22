@@ -139,7 +139,7 @@ func seedDealForPinRace(as context.Context, t *testing.T, p *Provider, owner ids
 		EntityType: datasource.EntityDeal,
 		Fields: json.RawMessage(`{"name":"Pin race","owner_id":"` + owner.String() +
 			`","pipeline_id":"` + pipeline.String() + `","stage_id":"` + open.String() + `"}`),
-		Source: "test",
+		Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)

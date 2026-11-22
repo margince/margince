@@ -195,11 +195,11 @@ func TestWhatANewbornDealClaimsAboutThePartnerItNames(t *testing.T) {
 		want *string
 	}{
 		"a bare partner link is the sourced motion": {
-			in:   CreateDealInput{PartnerCompanyID: companyIDPtr(t)},
+			in:   CreateDealInput{Source: "manual", PartnerCompanyID: companyIDPtr(t)},
 			want: &[]string{attributionSourced}[0],
 		},
 		"an explicit claim wins over the default": {
-			in:   CreateDealInput{PartnerCompanyID: companyIDPtr(t), PartnerAttribution: &influenced},
+			in:   CreateDealInput{Source: "manual", PartnerCompanyID: companyIDPtr(t), PartnerAttribution: &influenced},
 			want: &influenced,
 		},
 		// The pairing CHECK admits both columns populated or neither, so a deal
@@ -229,7 +229,7 @@ func TestWhatANewbornDealClaimsAboutThePartnerItNames(t *testing.T) {
 func TestANewbornDealsAttributionWithoutAPartnerIsRefused(t *testing.T) {
 	sourced := attributionSourced
 
-	_, err := birthAttribution(CreateDealInput{PartnerAttribution: &sourced})
+	_, err := birthAttribution(CreateDealInput{Source: "manual", PartnerAttribution: &sourced})
 
 	var unpaired *PartnerAttributionUnpairedError
 	if !errors.As(err, &unpaired) {
@@ -243,7 +243,7 @@ func TestANewbornDealsAttributionWithoutAPartnerIsRefused(t *testing.T) {
 func TestANewbornDealsUnknownAttributionIsRefusedBeforeTheDatabaseSeesIt(t *testing.T) {
 	bogus := "co_sold"
 
-	_, err := birthAttribution(CreateDealInput{PartnerCompanyID: companyIDPtr(t), PartnerAttribution: &bogus})
+	_, err := birthAttribution(CreateDealInput{Source: "manual", PartnerCompanyID: companyIDPtr(t), PartnerAttribution: &bogus})
 
 	var invalid *PartnerAttributionValueError
 	if !errors.As(err, &invalid) {

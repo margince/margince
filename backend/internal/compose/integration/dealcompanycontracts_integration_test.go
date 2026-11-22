@@ -50,7 +50,8 @@ func newCompanyMoveFixture(t *testing.T) companyMoveFixture {
 func (f companyMoveFixture) dealFor(t *testing.T, company *ids.CompanyID, owner *ids.UUID) ids.DealID {
 	t.Helper()
 	deal, err := f.e.Deals.CreateDeal(f.e.Admin(), deals.CreateDealInput{
-		Name: "Expansion", PipelineID: f.pipeline, StageID: f.open, CompanyID: company, OwnerID: userIDPtr(owner),
+		Source: "manual",
+		Name:   "Expansion", PipelineID: f.pipeline, StageID: f.open, CompanyID: company, OwnerID: userIDPtr(owner),
 	})
 	if err != nil {
 		t.Fatal(err)

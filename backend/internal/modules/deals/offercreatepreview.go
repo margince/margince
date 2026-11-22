@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // OfferCreationLine retains the resolved product alongside the figures the writer will use.
@@ -136,6 +137,9 @@ func (s *Store) PreviewOfferCreation(ctx context.Context, dealID ids.DealID, in 
 }
 
 func admitOfferCreation(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput) (CreateOfferInput, error) {
+	if err := provenance.AdmitRecordSource(in.Source); err != nil {
+		return CreateOfferInput{}, err
+	}
 	if err := checkCurrency(in.Currency); err != nil {
 		return CreateOfferInput{}, err
 	}

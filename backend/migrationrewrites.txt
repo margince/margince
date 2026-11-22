@@ -218,3 +218,5 @@
 1795336761_the_text_limits_follow_the_unread_capture_and_chat_columns.down.sql | * | restores the two text-bound triggers on seven tables as they stood before; no existing row is changed
 1795336758_unread_capture_chat_and_run_columns_are_dropped.up.sql | * | the trigger statement re-creates the version trigger of chat_link without a dropped column in its list; the migration drops columns and changes no existing row
 1795336758_unread_capture_chat_and_run_columns_are_dropped.down.sql | * | the trigger statements restore the version trigger of chat_link and the touch trigger of capture_sync_state; the columns return with defaults and no existing row is rewritten
+1795346931_a_record_source_names_a_channel.up.sql | partner | the UPDATE touches the partner table once, one row per partner company, and only rows whose source is off the list; the deal, offer and project rows are left to a data task
+1795347186_the_partner_source_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

@@ -79,7 +79,8 @@ func TestAnInheritedProjectGivesItsOwnerNoSayOverTheNote(t *testing.T) {
 	}
 	pipeline, open, _ := DealFixture(t, e)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(company)),
+		Source: "manual",
+		Name:   "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(company)),
 		ProjectID: new(projectIDOf(ids.UUID(project.Id))), OwnerID: userIDPtr(&e.Rep1),
 	})
 	if err != nil {

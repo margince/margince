@@ -5855,6 +5855,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.source.referral": "Giới thiệu",
   "lead.source.import": "Nhập dữ liệu",
   "lead.source.crawl": "Tìm hiểu trên web",
+  "lead.source.api": "Tích hợp",
+  "lead.source.automation": "Tự động hóa",
+  "lead.source.capture": "Ghi nhận từ một cuộc trao đổi",
   "lead.source.siteread": "Từ trang web công ty",
   "lead.source.unknown": "Nguồn không rõ",
   "leadSources.removeOnlyTitle":

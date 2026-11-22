@@ -169,6 +169,9 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 	if err := requireBodyID("stage_id", req.StageId); err != nil {
 		return CreateDealInput{}, err
 	}
+	if err := provenance.AdmitRecordSource(req.Source); err != nil {
+		return CreateDealInput{}, err
+	}
 	in := CreateDealInput{
 		ReferencesFromRequest: true,
 		Name:                  req.Name,

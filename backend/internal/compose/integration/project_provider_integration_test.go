@@ -55,7 +55,7 @@ func TestTheAgentSeamChoosesAKeyUnderTheSameRefusal(t *testing.T) {
 	company := e.SeedCompany(t, "Minted GmbH", nil)
 	create := func(fields map[string]any) (string, error) {
 		created, err := p.Create(ctx, datasource.CreateInput{
-			EntityType: datasource.EntityProject, Fields: fields, Source: "agent",
+			EntityType: datasource.EntityProject, Fields: fields, Source: "manual",
 		})
 		if err != nil {
 			return "", err
@@ -91,7 +91,7 @@ func TestProjectThroughTheAgentSeam(t *testing.T) {
 		Fields: map[string]any{
 			"name": "Agent-opened work", "company_id": company.String(),
 		},
-		Source: "agent",
+		Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create through the seam: %v", err)
@@ -139,7 +139,7 @@ func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 		fields := map[string]any{"name": "Typo carrier", "company_id": company.String()}
 		maps.Copy(fields, extra)
 		_, err := p.Create(e.Admin(), datasource.CreateInput{
-			EntityType: datasource.EntityProject, Fields: fields, Source: "agent",
+			EntityType: datasource.EntityProject, Fields: fields, Source: "manual",
 		})
 		return err
 	}
@@ -170,7 +170,7 @@ func TestTheAgentSeamAppliesTheSameProjectRulesAsREST(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := p.Create(e.Admin(), datasource.CreateInput{
-				EntityType: datasource.EntityProject, Fields: fields, Source: "agent",
+				EntityType: datasource.EntityProject, Fields: fields, Source: "manual",
 			}); err == nil {
 				t.Fatalf("the seam accepted %s", name)
 			}
@@ -185,7 +185,7 @@ func TestTheAgentSeamNamesAnEntityItDoesNotServe(t *testing.T) {
 	p := projectProvider(e)
 
 	_, err := p.Create(e.Admin(), datasource.CreateInput{
-		EntityType: datasource.EntityContact, Fields: map[string]any{}, Source: "agent",
+		EntityType: datasource.EntityContact, Fields: map[string]any{}, Source: "manual",
 	})
 	var unsupported *datasource.UnsupportedEntityError
 	if !errors.As(err, &unsupported) {
@@ -210,7 +210,7 @@ func TestTheAgentSeamStillEnforcesTheProjectGrant(t *testing.T) {
 	_, err := p.Create(readOnly, datasource.CreateInput{
 		EntityType: datasource.EntityProject,
 		Fields:     map[string]any{"name": "Not allowed", "company_id": company.String()},
-		Source:     "agent",
+		Source:     "manual",
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a principal without project.create was answered %v, want a permission denial", err)

@@ -49,7 +49,7 @@ func roomWriter(t *testing.T, e *apptest.AppEnv) context.Context {
 
 func seamCreate(ctx context.Context, t *testing.T, seam *dealrooms.Provider, entity datasource.EntityType, fields map[string]any) datasource.EntityRef {
 	t.Helper()
-	ref, err := seam.Create(ctx, datasource.CreateInput{EntityType: entity, Fields: fields, Source: "agent"})
+	ref, err := seam.Create(ctx, datasource.CreateInput{EntityType: entity, Fields: fields, Source: "manual"})
 	if err != nil || ref.ID.IsZero() {
 		t.Fatalf("creating a %s on the seam answered %+v (%v)", entity, ref, err)
 	}

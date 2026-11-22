@@ -6018,6 +6018,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
   "lead.source.crawl": "Webrecherche",
+  "lead.source.api": "Integration",
+  "lead.source.automation": "Automatisierung",
+  "lead.source.capture": "Aus einer Unterhaltung erfasst",
   "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.unknown": "Unbekannte Quelle",
   "leadSources.removeOnlyTitle":

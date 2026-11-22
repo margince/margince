@@ -72,7 +72,7 @@ func TestTheSeamRefusesARecordTheRoomDoesNotHold(t *testing.T) {
 	_, err := p.Create(ctx, datasource.CreateInput{
 		EntityType: datasource.EntityDealRoomDocument,
 		Fields:     map[string]any{"deal_room_id": ids.NewV7().String()},
-		Source:     "agent",
+		Source:     "manual",
 	})
 	if !errors.As(err, &unsupported) {
 		t.Errorf("creating a document through the seam answered %v, want unsupported", err)
@@ -143,7 +143,7 @@ func TestASeamWriteOpensOnlyARoom(t *testing.T) {
 	p := offlineProvider()
 	ctx := ungrantedSeller()
 	create := func(entity datasource.EntityType, fields any) error {
-		_, err := p.Create(ctx, datasource.CreateInput{EntityType: entity, Fields: fields, Source: "agent"})
+		_, err := p.Create(ctx, datasource.CreateInput{EntityType: entity, Fields: fields, Source: "manual"})
 		return err
 	}
 	wantFieldRefusal(t, create(datasource.EntityDealRoom, json.RawMessage(`[1]`)), "fields")
@@ -165,7 +165,7 @@ func TestASeamWriteDecodesStrictlyAndThenPassesTheWriteGate(t *testing.T) {
 	}{
 		{datasource.EntityDealRoom, map[string]any{"deal_id": ids.NewV7().String(), "title": "Acme rollout"}, "title"},
 	} {
-		in := datasource.CreateInput{EntityType: tc.entity, Fields: tc.fields, Source: "agent"}
+		in := datasource.CreateInput{EntityType: tc.entity, Fields: tc.fields, Source: "manual"}
 		if _, err := p.Create(ctx, in); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("a well-formed %s answered %v, want the write gate's refusal", tc.entity, err)
 		}

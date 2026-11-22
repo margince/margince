@@ -228,7 +228,7 @@ deal() {
   if [[ -z "$id" ]]; then
     expect "201" "POST /deals ($ref)" "$(api POST /deals "$(jq -n --argjson f "$fields" \
       --arg p "$PIPELINE_ID" --arg k "$KEY" --arg r "$ref" \
-      '{pipeline_id:$p, source:"seed", source_system:$k, source_id:$r} + $f')")"
+      '{pipeline_id:$p, source:"api", source_system:$k, source_id:$r} + $f')")"
     id="$(jq -r '.id' "$workdir/body")"
   fi
   printf '%s' "$id"

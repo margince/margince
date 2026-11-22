@@ -99,7 +99,8 @@ func TestRetiringAPipelineLeavesItsDealsWhereTheyAre(t *testing.T) {
 	stageID := ids.From[ids.StageKind](ids.UUID(stage.Id))
 	owner := ids.From[ids.UserKind](e.Rep1)
 	deal, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{
-		Name: "Mid-flight", PipelineID: pipelineID, StageID: stageID,
+		Source: "manual",
+		Name:   "Mid-flight", PipelineID: pipelineID, StageID: stageID,
 		OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {

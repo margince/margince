@@ -145,8 +145,8 @@ func TestAcceptingOpensTheDealWithTheRepsCorrections(t *testing.T) {
 		t.Fatalf("reading the deal: %v", err)
 	}
 	if deal.Name != name || deal.AmountMinor == nil || *deal.AmountMinor != amount ||
-		deal.CompanyId == nil || ids.UUID(*deal.CompanyId) != acme || deal.Source != "agent:dealscout" {
-		t.Fatalf("deal = %+v, want the rep's name and amount on Acme, sourced from the scout", deal)
+		deal.CompanyId == nil || ids.UUID(*deal.CompanyId) != acme || deal.Source != "automation" {
+		t.Fatalf("deal = %+v, want the rep's name and amount on Acme, opened by automation", deal)
 	}
 	if deal.CloseDateProvisional != nil && *deal.CloseDateProvisional {
 		t.Fatal("a close date the rep chose is marked provisional")
