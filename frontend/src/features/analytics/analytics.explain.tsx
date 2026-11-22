@@ -147,8 +147,8 @@ function derivationHeader(
 
 // The id is noise beside a name, but only once EVERY row has one: a name is
 // withheld per row, and dropping the id then blanks that row's only identifier.
-// Which record a row IS leads, whatever order the plan selected, because the
-// columns past a narrow drawer's edge are the ones a reader never sees.
+// The record and its company lead, whatever order the plan selected. Columns
+// past a narrow drawer's edge are the ones a reader never sees.
 export function derivationColumns(
   derivation: Pick<Derivation, "columns" | "rows">,
 ): string[] {
@@ -160,11 +160,11 @@ export function derivationColumns(
   const shown = derivation.columns.filter(
     (col) => !everyRowNamed || col !== "id",
   );
-  const identity = IDENTITY_COLUMNS.filter((col) => shown.includes(col));
-  return [...identity, ...shown.filter((col) => !identity.includes(col))];
+  const lead = LEAD_COLUMNS.filter((col) => shown.includes(col));
+  return [...lead, ...shown.filter((col) => !lead.includes(col))];
 }
 
-const IDENTITY_COLUMNS = ["label", "id"];
+const LEAD_COLUMNS = ["label", "id", "company_id"];
 
 // Whether a money column is counted in the base currency, read from the
 // declared native set: two project measures named `_minor` are already base.

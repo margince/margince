@@ -620,6 +620,32 @@ describe("drill-through columns", () => {
     ).toEqual(["label", "currency", "owner_id", "amount_base_minor"]);
   });
 
+  it("puts the deal's own company right after the record", () => {
+    expect(
+      derivationColumns(
+        shaped(
+          [
+            "id",
+            "label",
+            "close_month",
+            "currency",
+            "partner_company_id",
+            "company_id",
+            "amount_base_minor",
+          ],
+          [{ id: "a", label: "Acme" }],
+        ),
+      ),
+    ).toEqual([
+      "label",
+      "company_id",
+      "close_month",
+      "currency",
+      "partner_company_id",
+      "amount_base_minor",
+    ]);
+  });
+
   it("keeps the id when no row could be named", () => {
     expect(
       derivationColumns(shaped(["id", "amount_minor"], [{ id: "a" }])),
