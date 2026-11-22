@@ -18,6 +18,7 @@ path with no cloud, see [enrich-with-a-local-llm.md](enrich-with-a-local-llm.md)
 | `openai` | GPT (its own Responses API: how much it reasons, token use for the prompt cache and for reasoning, image and PDF input) | `OPENAI_API_KEY` | you may set it (default `api.openai.com`) |
 | `gemini` | Gemini (its own `generateContent`: thinking level, signed thinking kept across turns, image and PDF input) | `GEMINI_API_KEY` | you may set it (default `…/v1beta`) |
 | `gemini_vertex` | the same Gemini wire, served by Vertex AI at a `location` you choose. That is where Google runs the call (step 5) | `GEMINI_VERTEX_SA_JSON` (a key for a service account) | **refused**: the host comes from `location` |
+| `azure_openai` | an OpenAI model you deployed in Azure OpenAI. The model is the name you gave the deployment, and the Azure region is where the call runs ([Azure OpenAI](connect-azure-openai.md)) | `AZURE_OPENAI_API_KEY` (the static key of the resource) | **required**, `https://<resource>.openai.azure.com`, no path |
 | `openai_compatible` | the many smaller vendors on the OpenAI wire: Mistral, DeepSeek, Groq, Together, OpenRouter, a gateway you host, … | `OPENAI_COMPATIBLE_API_KEY` | **required** |
 
 A binding names only the provider. **The BYOK key lives in the key vault.** You put it there under

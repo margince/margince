@@ -29342,14 +29342,16 @@ export interface components {
          *     host can be set before anything is bound to it.
          */
         AiProviderSettings: {
-            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. */
+            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. On `azure_openai` it is required while a lane binds it and is the resource endpoint, `https://<resource>.openai.azure.com`. */
             base_url?: string;
             upstream?: components["schemas"]["AiOpenRouterUpstream"];
             /**
-             * @description The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
-             *     processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-             *     while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
-             *     Google about each bound model at the new location first; one it does not serve is a 422.
+             * @description Where the provider processes the call. On `gemini_vertex` the Vertex AI location: `eu`,
+             *     `us`, `global`, or a region such as `europe-west4`. Moving it asks Google about each
+             *     bound model at the new location first; one it does not serve is a 422. On `azure_openai`
+             *     the Azure region of the resource, such as `swedencentral`; a region this build does not
+             *     know is a 422, and under the `eu_hosted` profile so is a region outside the EU.
+             *     Required while a lane binds either provider, and refused on every other provider.
              */
             location?: string;
         };
@@ -29382,7 +29384,7 @@ export interface components {
         AiTierBinding: {
             /**
              * @description The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-             *     | openai | gemini | gemini_vertex. The credential is never part of this document.
+             *     | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
              */
             provider: string;
             /** @description The provider-native model id. */
@@ -29395,11 +29397,11 @@ export interface components {
              */
             base_url?: string;
             /**
-             * @description On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+             * @description On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
              *     it is accepted only when empty or equal to the provider's, and a different one is a 422
              *     `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
              *     embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-             *     Refused on every provider but `gemini_vertex`.
+             *     Refused on every provider but `gemini_vertex` and `azure_openai`.
              */
             location?: string;
             /**
@@ -50655,7 +50657,7 @@ export interface components {
             /** @enum {string} */
             inference_mode: "cloud" | "local" | "hybrid" | "none" | "development";
             /** @description Distinct configured provider keys, sorted; fake is never returned. */
-            providers: ("anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
+            providers: ("anthropic" | "azure_openai" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
         };
         AiProfile: {
             /** @enum {string} */
@@ -50667,7 +50669,7 @@ export interface components {
             /** @enum {string} */
             inference_mode: "cloud" | "local" | "hybrid" | "none" | "development";
             /** @description Distinct configured provider keys, sorted; fake is never returned. */
-            providers: ("anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
+            providers: ("anthropic" | "azure_openai" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
             /** @description Authenticated tier-to-model bindings. Credentials and endpoints never appear here. */
             configured_models: components["schemas"]["AssistantConfiguredModel"][];
         };
@@ -50675,7 +50677,7 @@ export interface components {
             /** @enum {string} */
             tier: "local_small" | "cheap_cloud" | "premium" | "frontier" | "local_large";
             /** @enum {string} */
-            provider: "anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm";
+            provider: "anthropic" | "azure_openai" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm";
             model: string;
         };
         /** @description The fixed answer of `GET /status`. */

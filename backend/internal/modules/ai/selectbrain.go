@@ -106,6 +106,7 @@ const (
 	providerOpenAI           = "openai"
 	providerGemini           = "gemini"
 	providerGeminiVertex     = "gemini_vertex"
+	providerAzureOpenAI      = "azure_openai"
 )
 
 // knownProviders is the provider names SelectBrain accepts: the registry's
@@ -233,6 +234,8 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 		}, nil
 	case providerGeminiVertex:
 		return selectVertex(cfg, keys, httpc)
+	case providerAzureOpenAI:
+		return selectAzureOpenAI(cfg, keys, httpc)
 	case "":
 		return nil, errors.New("ai: binding has no provider")
 	default:

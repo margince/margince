@@ -17410,6 +17410,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.jev":
     "URL endpoint đầy đủ. Để trống thì dùng API riêng của TypeSafe.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "Điểm cuối của tài nguyên, không có đường dẫn. Khóa API chỉ được gửi tới máy chủ có đuôi .openai.azure.com. Bắt buộc.",
+  "aiRouting.baseUrl.placeholder.azure":
+    "https://tai-nguyen-cua-toi.openai.azure.com",
+  "aiRouting.azureRegion.label": "Vùng Azure",
+  "aiRouting.azureRegion.help":
+    "Vùng nơi tài nguyên chạy, ví dụ swedencentral. Vùng mà hệ thống không nhận ra sẽ bị chặn, để dữ liệu ở đúng nơi đã thỏa thuận.",
+  "aiRouting.model.help.azure":
+    "Nhập tên bạn đã đặt cho mô hình này trong Azure, không phải tên của chính mô hình.",
   "aiRouting.baseUrl.help.jevCompatible":
     "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -21956,6 +21965,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviderSettings.service.otherChat": "Dịch vụ tương thích OpenAI khác",
   "aiProviderSettings.service.otherDecisions": "Máy chủ quyết định khác",
   "aiProviderSettings.service.otherAddress": "Địa chỉ khác",
+  "aiProviderSettings.service.azureResource": "Tài nguyên Azure OpenAI của bạn",
   "aiProviderSettings.service.learnMore": "Về OpenRouter EU",
   "aiProviderSettings.host.line": "Máy chủ: {host}",
   "aiProviderSettings.host.default": "Dùng địa chỉ riêng của dịch vụ.",
@@ -21966,6 +21976,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini trên Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Tương thích Jev",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",

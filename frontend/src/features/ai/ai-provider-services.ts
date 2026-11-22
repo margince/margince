@@ -197,6 +197,17 @@ export const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
     },
   ],
   [
+    "azure_openai",
+    {
+      services: [],
+      other: {
+        label: "aiProviderSettings.service.azureResource",
+        help: "aiRouting.baseUrl.help.azure",
+        placeholder: "aiRouting.baseUrl.placeholder.azure",
+      },
+    },
+  ],
+  [
     "jev",
     {
       services: [
