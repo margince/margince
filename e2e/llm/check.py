@@ -243,7 +243,8 @@ def lint(path):
 
         if data["setup"] not in casesetup.STEPS:
             problems.append(f"setup {data['setup']!r} is no step in casesetup.py")
-    return problems + _entry_problems(data) + _door_problems(data) + _judge_problems(data)
+    return (problems + _entry_problems(data) + _door_problems(data) + _judge_problems(data)
+            + _negation_problems(data))
 
 
 # A judged criterion is read beside the final answer alone, so one that defers
@@ -258,6 +259,20 @@ _DEFERS_TO_A_TOOL = re.compile(
     r"|(?:reading|read) it made|against (?:the|what the) tools?)\b",
     re.IGNORECASE,
 )
+
+
+# "not" in a pin also reads "isn't", "hasn't" and "couldn't", which no `not`
+# matches: a positive pin then fails a true answer, and an exclusion lets a
+# negated claim through.
+_BARE_NOT = re.compile(r"(?<![\w'’])not(?![\w'’])", re.IGNORECASE)
+_CONTRACTED_NOT = re.compile(r"n(?:\[['’]+\]\??|['’]\??)t")
+
+
+def _negation_problems(data):
+    return [f"{key} entry {number} spells a negation as `not` with no n't form; add n['’]t beside it"
+            for key in ("must_mention", "must_not_mention")
+            for number, pattern in enumerate(data.get(key, []), 1)
+            if _BARE_NOT.search(pattern) and not _CONTRACTED_NOT.search(pattern)]
 
 
 def _judge_problems(data):

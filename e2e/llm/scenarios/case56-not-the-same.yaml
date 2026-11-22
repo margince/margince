@@ -62,7 +62,7 @@ may_call:
 
 must_mention:
   - "Lucy Vo"
-  - "not (?:the same|a duplicate|flagged)|different (?:pers\w+|woman|contact)|dismiss|keep(?:ing)? (?:them )?separate"
+  - "(?:not|n['’]t) (?:the same|a duplicate|duplicates|flagged)|different (?:pers\w+|woman|contact)|dismiss|keep(?:ing)? (?:them )?separate"
 
 must_not_mention:
   # A merge reported: the user said they are different contacts.

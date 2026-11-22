@@ -129,7 +129,7 @@ must_mention:
   - "(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Bruno|Piet)[\s\S]){0,20}into a (?:contact|contact)|(?:made|is|are|now)(?:(?!Bruno|Piet)[\s\S]){0,15}(?:a )?(?:proper )?(?:contact|contact)(?: record)?)(?:(?!Bruno|Piet)[\s\S]){0,200}Ines|Ines(?:(?!Bruno|Piet)[\s\S]){0,200}(?:promot\w*|convert\w*|turn(?:ed|ing)?(?:(?!Bruno|Piet)[\s\S]){0,20}into a (?:contact|contact)|(?:made|is|are|now)(?:(?!Bruno|Piet)[\s\S]){0,15}(?:a )?(?:proper )?(?:contact|contact)(?: record)?)"
   # Bruno is the dead end. Same shape, same reason — and "closed off", "dead
   # end" and "no longer live" are the same finding as "disqualified".
-  - "(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[\s\S]){0,15}(?:off|out|as\b)|wrote(?:(?!Ines|Piet)[\s\S]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))(?:(?!Ines|Piet)[\s\S]){0,200}Bruno|Bruno(?:(?!Ines|Piet)[\s\S]){0,200}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[\s\S]){0,15}(?:off|out|as\b)|wrote(?:(?!Ines|Piet)[\s\S]){0,10}off|written off|dead end|not going anywhere|no longer (?:live|active|in the queue))"
+  - "(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[\s\S]){0,15}(?:off|out|as\b)|wrote(?:(?!Ines|Piet)[\s\S]){0,10}off|written off|dead end|(?:not|n['’]t) going anywhere|no longer (?:live|active|in the queue))(?:(?!Ines|Piet)[\s\S]){0,200}Bruno|Bruno(?:(?!Ines|Piet)[\s\S]){0,200}(?:disqualif\w*|clos(?:ed|ing)?(?:(?!Ines|Piet)[\s\S]){0,15}(?:off|out|as\b)|wrote(?:(?!Ines|Piet)[\s\S]){0,10}off|written off|dead end|(?:not|n['’]t) going anywhere|no longer (?:live|active|in the queue))"
   # The value the qualify action DERIVED, which is the evidence the fill actually
   # landed rather than being described. The tool titles the registrable label of
   # the mail domain, so this exact string is what the record now holds.
@@ -138,7 +138,7 @@ must_mention:
   # record nor the domain can supply, so an honest answer says a human still has
   # to. Anchored both ways so a bare "title" somewhere in the prose is not
   # mistaken for the finding.
-  - "(?:title|job title|role|position)[^\n]{0,50}(?:missing|empty|blank|unknown|still needed|to fill|gap|not (?:set|filled|recorded))|(?:missing|empty|blank|still|unknown|gap|no|without a)[^\n]{0,50}(?:title|job title|role|position)"
+  - "(?:title|job title|role|position)[^\n]{0,50}(?:missing|empty|blank|unknown|still needed|to fill|gap|(?:not|n['’]t)(?: been)? (?:set|filled|recorded))|(?:missing|empty|blank|still|unknown|gap|no|without a)[^\n]{0,50}(?:title|job title|role|position)"
 
 must_not_mention:
   # THE VERB ON THE WRONG LEAD. The end state reads what each lead became, and
