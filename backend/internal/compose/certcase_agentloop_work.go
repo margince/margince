@@ -11,9 +11,9 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -43,8 +43,6 @@ type agentLoopWork struct {
 	wrote func(args json.RawMessage, list agentLoopWorklist) ([]string, error)
 	// acknowledge is what the tool answers an accepted write with.
 	acknowledge func(args, fixed json.RawMessage) (json.RawMessage, error)
-	// content names what the goal asks of one write beyond its subject.
-	content func(args json.RawMessage) []string
 }
 
 // agentLoopWorks is keyed by scheduled agent; TestEveryScheduledAgentHasAGradableWork
@@ -55,7 +53,7 @@ var agentLoopWorks = map[string]agentLoopWork{
 	},
 	"overnight_at_risk_sweep": {
 		list: "whats_slipping_this_week", onceEach: true, read: readSlippingWorklist, wrote: loggedDeals,
-		acknowledge: acknowledgeLoggedNote, content: noteWithoutBody,
+		acknowledge: acknowledgeLoggedNote,
 	},
 }
 
@@ -127,20 +125,24 @@ func acknowledgeAnnotation(args, _ json.RawMessage) (json.RawMessage, error) {
 
 // agentLoopLoggedNote is what the sweep's grader reads of one log_activity call.
 type agentLoopLoggedNote struct {
-	Kind  string `json:"kind"`
-	Body  string `json:"body"`
+	Kind  string  `json:"kind"`
+	Body  *string `json:"body"`
 	Links []struct {
 		EntityType string `json:"entity_type"`
 		EntityID   string `json:"entity_id"`
 	} `json:"links"`
 }
 
-// loggedDeals is the deals one note is about. It refuses nothing the activity
-// store accepts, so a note on the wrong deal is acknowledged and graded wrong.
+// loggedDeals is the deals one note is about. It refuses what the activity
+// store refuses of a scheduled run's note, a missing body, and nothing more, so
+// a note on the wrong deal is acknowledged and graded wrong.
 func loggedDeals(args json.RawMessage, _ agentLoopWorklist) ([]string, error) {
 	var note agentLoopLoggedNote
 	if err := json.Unmarshal(args, &note); err != nil {
 		return nil, httperr.Validation("kind", "invalid", err.Error())
+	}
+	if err := activities.RunNoteBodyRefusal(note.Body); err != nil {
+		return nil, err
 	}
 	var deals []string
 	for _, link := range note.Links {
@@ -161,8 +163,7 @@ func acknowledgeLoggedNote(_, fixed json.RawMessage) (json.RawMessage, error) {
 }
 
 // gradeWrites holds the writes a run made to its worklist: every subject
-// written about, none outside the list, once each where the agent logs once,
-// and a sweep's note carrying the body its goal requires.
+// written about, none outside the list, and once each where the agent logs once.
 func (w agentLoopWork) gradeWrites(writes []json.RawMessage, list agentLoopWorklist) []string {
 	listed := map[string]bool{}
 	for _, subject := range list.subjects {
@@ -185,9 +186,6 @@ func (w agentLoopWork) gradeWrites(writes []json.RawMessage, list agentLoopWorkl
 			}
 			counts[subject]++
 		}
-		if w.content != nil {
-			problems = append(problems, w.content(args)...)
-		}
 	}
 	for _, subject := range list.subjects {
 		switch n := counts[subject]; {
@@ -198,14 +196,4 @@ func (w agentLoopWork) gradeWrites(writes []json.RawMessage, list agentLoopWorkl
 		}
 	}
 	return problems
-}
-
-// noteWithoutBody names a sweep note with no body, which its goal says the
-// store refuses.
-func noteWithoutBody(args json.RawMessage) []string {
-	var note agentLoopLoggedNote
-	if json.Unmarshal(args, &note) != nil || strings.TrimSpace(note.Body) == "" {
-		return []string{"a note was logged without a body"}
-	}
-	return nil
 }

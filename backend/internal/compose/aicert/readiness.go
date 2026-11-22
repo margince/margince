@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // The four states a shipped site's certification can be in. They are separate
@@ -105,7 +106,11 @@ type Standing struct {
 	// build grades with: a new judge moves scores on its own, so such a record
 	// is stale until that judge grades it again.
 	GradedBy string
-	// judgeOnly says GradedBy alone made the record stale: its stamps still match.
+	// WireMoved says the provider's wire translation changed since the run, so
+	// the model was answering a request this build no longer sends it.
+	WireMoved bool
+	// judgeOnly says GradedBy or WireMoved alone made the record stale: its
+	// stamps still match.
 	judgeOnly bool
 	// TaskStampOnly marks a record written before ScenarioRecord.Stamp existed.
 	// There is nothing finer to compare than the task stamp it carries, so its
@@ -191,6 +196,14 @@ func (s Standing) Reason() string {
 	default:
 		reason = fmt.Sprintf("%d scenarios it scored have changed since (%s): %s",
 			len(s.Moved), s.movedCauses(), namesUpTo(s.Moved, movedNamesShown))
+	}
+	if s.WireMoved {
+		wire := "the provider's wire translation changed since the run"
+		if reason == "" {
+			reason = wire
+		} else {
+			reason += "; " + wire
+		}
 	}
 	if s.GradedBy != "" {
 		judge := fmt.Sprintf("graded by judge %s, and this build grades with %s", s.GradedBy, DefaultJudgeModel)
@@ -351,9 +364,12 @@ func Readiness(census Census, taskStamps map[string]string, perScenario map[stri
 			claimed[RecordKey(rec)] = true
 			measured = true
 			standing := scenarioStanding(rec, site.Variant, perScenario[task+"/"+site.Variant], taskStamps[task])
+			standing.judgeOnly = !standing.Stale
 			if gradedElsewhere(rec) {
-				standing.judgeOnly = !standing.Stale
 				standing.Stale, standing.GradedBy = true, rec.JudgeServedModel
+			}
+			if rec.WireRule != ai.WireRule(rec.Provider) {
+				standing.Stale, standing.WireMoved = true, true
 			}
 			rows = append(rows, ReadinessRow{
 				Site: site, Scope: scope, Record: rec, Tally: tally, Certified: true, Standing: standing,

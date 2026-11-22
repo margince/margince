@@ -414,7 +414,7 @@ func TestReadinessReportLeavesOutATaskNoSiteAsksContextFor(t *testing.T) {
 func TestAGrownCorpusLeavesTheMeasuredScenariosCurrent(t *testing.T) {
 	sites := []aitasks.Site{{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}}
 	rec := aicert.Record{
-		Task: "rate_extract", Provider: "gemini", ServedModel: "gemini-3.5-flash",
+		Task: "rate_extract", Provider: "gemini", ServedModel: "gemini-3.5-flash", WireRule: ai.WireRule("gemini"),
 		EnvClass: "eu_hosted", PromptVersion: "p-whatever-the-task-stamp-was",
 		Runs: 3, Passed: 3, Verdict: "certified",
 		Scenarios: []aicert.ScenarioRecord{

@@ -66,6 +66,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		Task:                 string(task),
 		Provider:             acc.provider,
 		ServedModel:          acc.servedModel,
+		WireRule:             ai.WireRule(acc.provider),
 		EnvClass:             string(profile),
 		PromptVersion:        promptVersion,
 		CorpusVersion:        corpusVersionV1,

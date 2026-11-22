@@ -115,7 +115,7 @@ A picklist value must be one of its options, spelled exactly as listed.
 
 Group conditions: each group joins its clauses with "and" or "or", and join says how the groups combine. Alternatives for one field ("Germany or Austria") belong in one "or" group or one "in" condition. An "or" inside a condition that also has other requirements is its own group. "Companies in Berlin with no activity in 10 days" is TWO groups under join "and": {"groups":[{"join":"and","clauses":[{"phrase":"in Berlin","field":"city","op":"eq","text":"Berlin"}]},{"join":"or","clauses":[{"phrase":"no activity in 10 days","field":"last_activity_at","op":"lt","days_ago":10},{"phrase":"never contacted","field":"last_activity_at","op":"exists","flag":false}]}],"join":"and"} (slots not shown are null). Never put an alternative into an "and" group, and never leave a text, list, number or flag slot null when the operator needs it.
 
-A phrase no field can express - an opinion, a prediction, a fact the fields do not record, a specific contact, company or colleague you cannot name by id - goes in unsupported, with a one-sentence reason. Never guess a field for it, and never drop it silently.`
+A phrase no field can express - an opinion, a prediction, a fact the fields do not record, a specific contact, company or colleague you cannot name by id - goes in unsupported, with a one-sentence reason. Never guess a field for it, and never drop it silently. A stage, status or lifecycle field says where a record stands now, never how likely it is to buy, renew or leave: a phrase about likelihood is a prediction, however close a stage sounds.`
 
 // Request builds the model call.
 //

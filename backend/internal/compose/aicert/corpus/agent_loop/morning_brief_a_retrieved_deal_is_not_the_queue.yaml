@@ -46,6 +46,24 @@ fixture:
         record_type: deal
         id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e49
         fields: {name: "Lab ventilation upgrade", stage: proposal, amount_minor: 3100000, currency: EUR}
+    - tool: catch_me_up_on
+      args: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e41}
+      result:
+        anchor: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e41}
+        sections:
+          - name: recent_touches
+            items:
+              - record_type: activity
+                record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f41
+                summary: "Proposal walkthrough"
+                occurred_at: "2026-09-23T10:00:00Z"
+                evidence:
+                  - {source: "activity:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f41", snippet: "Operations director liked the payback figures and asked for two references from logistics customers."}
+    - tool: catch_me_up_on
+      args: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e49}
+      result:
+        anchor: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e49}
+        sections: []
 expect:
   outcome: accepted
   answer: annotate_brief

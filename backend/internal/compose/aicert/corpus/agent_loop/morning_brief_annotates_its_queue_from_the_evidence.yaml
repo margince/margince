@@ -60,6 +60,32 @@ fixture:
         record_type: activity
         id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f22
         fields: {kind: call, occurred_at: "2026-09-10T09:00:00Z", subject: "Discovery call", body: "Facility manager interested; wants a site visit before any proposal. No date agreed."}
+    - tool: catch_me_up_on
+      args: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e21}
+      result:
+        anchor: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e21}
+        sections:
+          - name: recent_touches
+            items:
+              - record_type: activity
+                record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f21
+                summary: "Re: retrofit proposal"
+                occurred_at: "2026-09-23T15:20:00Z"
+                evidence:
+                  - {source: "activity:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f21", snippet: "Thanks for the revised proposal. Our CFO signs off on Thursday; please send the final quote with the two-year service option by Wednesday."}
+    - tool: catch_me_up_on
+      args: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e22}
+      result:
+        anchor: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e22}
+        sections:
+          - name: recent_touches
+            items:
+              - record_type: activity
+                record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f22
+                summary: "Discovery call"
+                occurred_at: "2026-09-10T09:00:00Z"
+                evidence:
+                  - {source: "activity:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f22", snippet: "Facility manager interested; wants a site visit before any proposal. No date agreed."}
 expect:
   outcome: accepted
   answer: annotate_brief

@@ -35,6 +35,16 @@ fixture:
         record_type: activity
         id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c3f00
         fields: {kind: note}
+    - tool: catch_me_up_on
+      args: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e71}
+      result:
+        anchor: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e71}
+        sections: []
+    - tool: catch_me_up_on
+      args: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e79}
+      result:
+        anchor: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e79}
+        sections: []
 expect:
   outcome: accepted
   answer: log_activity

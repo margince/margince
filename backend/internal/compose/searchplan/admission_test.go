@@ -104,3 +104,28 @@ func TestAListThatOnlyResemblesAWonCountStaysAList(t *testing.T) {
 		}
 	}
 }
+
+// The vocabulary a planner reads says the unit admission scales from: a field
+// it scales reads major units in the vocabulary's words, and a 50k threshold on
+// amount_minor crosses into the stored minor units once, never twice.
+func TestTheVocabularySaysTheUnitAdmissionScalesFrom(t *testing.T) {
+	encoded, err := json.Marshal(Vocabulary{})
+	if err != nil {
+		t.Fatalf("encoding: %v", err)
+	}
+	var wire struct {
+		MoneyOperands string `json:"money_operands"`
+	}
+	if err := json.Unmarshal(encoded, &wire); err != nil || !strings.Contains(wire.MoneyOperands, "MAJOR") {
+		t.Fatalf("money_operands = %q (%v), want the major-unit rule", wire.MoneyOperands, err)
+	}
+	for _, field := range []string{"amount_minor", "amount_minor_base"} {
+		if !scaledMoneyField(field) || !strings.Contains(wire.MoneyOperands, strings.TrimPrefix(field, "amount")) {
+			t.Errorf("%s: scaled %v, named by the rule %v", field, scaledMoneyField(field), strings.Contains(wire.MoneyOperands, strings.TrimPrefix(field, "amount")))
+		}
+	}
+	got, err := searchMoneyOperands(json.RawMessage(`{"where":[{"field":"currency","op":"eq","value":"EUR"},{"field":"amount_minor","op":"gt","value":50000}]}`), "EUR")
+	if err != nil || !strings.Contains(string(got), `"value":5000000`) {
+		t.Errorf("a 50000 EUR threshold admitted as %s (%v), want 5000000 minor units", got, err)
+	}
+}

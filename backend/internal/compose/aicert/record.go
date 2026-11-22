@@ -138,6 +138,9 @@ type Record struct {
 	// record without them predates the product default being applied here.
 	CandidateUpstream *ai.OpenRouterRouting `json:"candidate_upstream,omitempty"`
 	JudgeUpstream     *ai.OpenRouterRouting `json:"judge_upstream,omitempty"`
+	// WireRule is the provider's wire translation the runs went through
+	// (ai.WireRule), absent for a provider that declares none.
+	WireRule string `json:"wire_rule,omitempty"`
 	// ThinkingLevel is the candidate binding's own `thinking_level`, absent where
 	// it names none. It changes how the model answers, so a record carrying one
 	// speaks only for a preset whose rung sets the same level.

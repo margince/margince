@@ -856,7 +856,7 @@ func attributeMeasured(presets []aiCertPreset, records ...aicert.Record) []aiCer
 func measuredRecord(task ai.Task, binding ai.ProviderConfig, profile ai.Profile, verdict string, abandoned int) aicert.Record {
 	return aicert.Record{
 		Task: string(task), Provider: binding.Provider, ServedModel: binding.Model, EnvClass: string(profile),
-		Verdict: verdict, Runs: 6, Passed: 6 - abandoned,
+		WireRule: ai.WireRule(binding.Provider), Verdict: verdict, Runs: 6, Passed: 6 - abandoned,
 		Scenarios: []aicert.ScenarioRecord{{Runs: 6, Passed: 6 - abandoned, Abandoned: abandoned}},
 	}
 }

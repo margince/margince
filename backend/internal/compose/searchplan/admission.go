@@ -141,11 +141,11 @@ func searchMoneyFilters(held json.RawMessage, baseCurrency string) (json.RawMess
 		return nil, err
 	}
 	for index, filter := range filters {
-		if filter.Op == "exists" || !strings.HasSuffix(filter.Field, "_minor") && !strings.HasSuffix(filter.Field, "_minor_base") {
+		if filter.Op == "exists" || !scaledMoneyField(filter.Field) {
 			continue
 		}
 		unit := currency
-		if strings.HasSuffix(filter.Field, "_minor_base") {
+		if strings.HasSuffix(filter.Field, baseMoneySuffix) {
 			unit = baseCurrency
 		}
 		if unit == "" {
@@ -162,6 +162,19 @@ func searchMoneyFilters(held json.RawMessage, baseCurrency string) (json.RawMess
 		*operand = minor
 	}
 	return json.Marshal(filters)
+}
+
+// The suffixes of the money fields whose planner operand is a major-unit number
+// the admission scales into the stored minor units: in the row's own currency,
+// or for baseMoneySuffix in the base currency.
+const (
+	moneySuffix     = "_minor"
+	baseMoneySuffix = "_minor_base"
+)
+
+// scaledMoneyField says the admission scales field's operand from major units.
+func scaledMoneyField(field string) bool {
+	return strings.HasSuffix(field, moneySuffix) || strings.HasSuffix(field, baseMoneySuffix)
 }
 
 func filterCurrency(filters []searchFilterOperand) (string, error) {

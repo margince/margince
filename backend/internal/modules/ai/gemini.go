@@ -188,6 +188,9 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 	}
 	resp := spent
 	resp.Text = text.String()
+	if len(req.ResponseSchema) > 0 {
+		resp.Text = geminiDropPaddedNulls(req.ResponseSchema, resp.Text)
+	}
 	resp.ServedModel = out.ModelVersion
 	resp.FinishReason = geminiFinishReason(finish)
 	if len(signatures) > 0 {
@@ -311,6 +314,13 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 		wire.SystemInstruction = &geminiContent{Parts: []geminiPart{{Text: req.System}}}
 	}
 	wire.GenerationConfig = geminiGenerationConfig(req, genModel, opts)
+	// Only a whole reply can have its padding taken back out, so a stream is
+	// sent the caller's schema as it is.
+	if format := wire.GenerationConfig.ResponseFormat; format != nil && !stream {
+		if strict, err := geminiStrictSchema(req.ResponseSchema); err == nil {
+			format.Text.Schema = strict
+		}
+	}
 
 	method := "generateContent"
 	query := ""

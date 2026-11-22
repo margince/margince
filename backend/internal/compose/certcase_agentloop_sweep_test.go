@@ -73,8 +73,15 @@ func TestAgentLoopSweepIsGradedOnItsNotes(t *testing.T) {
 			"written about 2 times", agentLoopSlippingStep, agentLoopNote(agentLoopSlippingDeal, quiet),
 			agentLoopNote(agentLoopSlippingDeal, quiet), agentLoopFinalReply)
 	})
-	t.Run("a note without a body", func(t *testing.T) {
+	// The store refuses a scheduled run's note with no body, so the run sees the
+	// refusal and can write it again; one that does not has written nothing.
+	t.Run("a note without a body is refused", func(t *testing.T) {
 		agentLoopOutcome(t, agentLoopSweep, agentLoopSweepFixture(t), "log_activity", aitasks.OutcomeWrongAnswer,
-			"without a body", agentLoopSlippingStep, agentLoopNote(agentLoopSlippingDeal, " "), agentLoopFinalReply)
+			"ended without writing", agentLoopSlippingStep, agentLoopNote(agentLoopSlippingDeal, " "), agentLoopFinalReply)
+	})
+	t.Run("a refused note written again with its body", func(t *testing.T) {
+		agentLoopOutcome(t, agentLoopSweep, agentLoopSweepFixture(t), "log_activity", aitasks.OutcomeAccepted,
+			"on every item", agentLoopSlippingStep, agentLoopNote(agentLoopSlippingDeal, " "),
+			agentLoopNote(agentLoopSlippingDeal, quiet), agentLoopFinalReply)
 	})
 }

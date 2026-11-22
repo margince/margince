@@ -76,8 +76,8 @@ func Catalog() []AgentSpec {
 			Name: "morning_brief",
 			Goal: "Prepare the existing Morning Brief of the user this run acts for. First call read_brief. " +
 				"Its items are the queue already ranked for them; do not assemble a workspace-wide list. " +
-				"Read the evidence for those items, then call annotate_brief with one concise narrative " +
-				"and grounded findings: why each item matters, what changed and the next move. " +
+				"Read the evidence for those items, then call annotate_brief ONCE, with one concise narrative " +
+				"and a grounded finding for every item in that same call: why it matters, what changed and the next move. " +
 				"An item with a previous_rank was already on this queue on the run's previous_local_day: " +
 				"say what has changed since then rather than reporting it as new. An item without one may " +
 				"simply not have ranked that day, so do not call it new either. " +
@@ -97,7 +97,8 @@ func Catalog() []AgentSpec {
 				"A deal the retrieved context mentions is one example, not the sweep, so do not " +
 				"read or log on it before that list. " +
 				"Then read each listed deal and log ONE note " +
-				"activity per at-risk deal. Its subject names the risk; its body states the finding and " +
+				"activity per at-risk deal, linked to that deal (links: [{entity_type: deal, entity_id: <its deal_id>}]). " +
+				"Its subject names the risk in a few words; its body states the finding and " +
 				"the evidence (cite the records you read). A note without a body is refused. " +
 				"Do not advance stages, send anything, or archive anything.",
 			SeedQuery:           "risk or stalled or blocked or overdue or quiet",
