@@ -228,6 +228,10 @@ func TestTheCommittedTreeStampsEveryScenario(t *testing.T) {
 // on its own, so a change to them moves no verdict and they are not harness.
 var judgeTransport = []string{"e2e/llm/clean.py", "e2e/llm/providers.py"}
 
+// lintOnly are lane modules that check how a scenario is written and grade no
+// run. They stay outside the harness stamp only while no grader imports them.
+var lintOnly = []string{"e2e/llm/scenariolint.py"}
+
 // importLine and fromLine are one import statement of a lane module, at any
 // indentation, since the grader imports some lazily: `import a, b as c` and
 // `from x import y`.
@@ -307,6 +311,14 @@ func TestTheHarnessHoldsEveryModuleTheGraderImports(t *testing.T) {
 	for _, module := range judgeTransport {
 		if _, reached := closure[module]; !reached {
 			t.Errorf("judgeTransport exempts %s, which nothing the grader imports reaches any more", module)
+		}
+	}
+	for _, module := range lintOnly {
+		if _, err := os.Stat(filepath.Join(root, module)); err != nil {
+			t.Errorf("lintOnly names %s, which does not exist", module)
+		}
+		if by, reached := closure[module]; reached {
+			t.Errorf("%s imports %s, a lint module, which puts a wording rule into every verdict's harness stamp", by, module)
 		}
 	}
 }
