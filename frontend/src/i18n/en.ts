@@ -17952,6 +17952,21 @@ export const en = {
     "How many held mail threads one privacy review looks at, 1 to 200. The rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the run schedule, which System health sets. Default 40.",
   "captureReview.passCap.refusal":
     "Enter a whole number of threads from 1 to 200.",
+  "captureReview.verdictCap.label": "Senders judged per run",
+  "captureReview.verdictCap.help":
+    "How many unresolved senders one counterparty review run asks the model about, 1 to 1000. The rest wait for the next run. Raise it when new senders stay unresolved for longer than the run schedule. Default 200.",
+  "captureReview.verdictCap.refusal":
+    "Enter a whole number of senders from 1 to 1000.",
+  "captureReview.classifyCap.label": "Messages labelled per run",
+  "captureReview.classifyCap.help":
+    "How many captured messages one labelling run settles, 1 to 2500. The rest wait for the next run. Raise it when new mail stays unlabelled for longer than the run schedule. Default 500.",
+  "captureReview.classifyCap.refusal":
+    "Enter a whole number of messages from 1 to 2500.",
+  "captureReview.owedCap.label": "Messages checked for a reply per run",
+  "captureReview.owedCap.help":
+    "How many new messages one owed-reply run judges, 1 to 2500. The rest wait for the next run. Raise it when mail waiting for your reply shows up late. Default 500.",
+  "captureReview.owedCap.refusal":
+    "Enter a whole number of messages from 1 to 2500.",
   "agentConnections.title": "Agent connections",
   "agentConnections.sub":
     "How long an agent connected over MCP keeps its passport before it renews. A change applies to the next passport issued.",

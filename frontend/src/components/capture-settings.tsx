@@ -223,12 +223,16 @@ export function CaptureSettingsCard() {
 }
 
 // How often a connected mailbox is checked for new mail, and how many held
-// threads one privacy-review run looks at, mirrored as READ_LIMITS is. Both
-// sit on the mail card, which draws them from here.
+// threads one privacy-review run looks at, and how many items each other model
+// pass of the pipeline handles per run, mirrored as READ_LIMITS is. All sit on
+// the mail card, which draws them from here.
 export const MAIL_SYNC_BOUNDS = {
   mail_sync_interval_seconds: { min: 30, max: 3_600 },
 } as const;
 
 export const MAIL_REVIEW_BOUNDS = {
   confidentiality_pass_cap: { min: 1, max: 200 },
+  verdict_pass_cap: { min: 1, max: 1_000 },
+  classify_pass_cap: { min: 1, max: 2_500 },
+  owed_classify_pass_cap: { min: 1, max: 2_500 },
 } as const;

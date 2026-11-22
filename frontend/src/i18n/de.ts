@@ -18112,6 +18112,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wie viele zurückgehaltene Mail-Threads eine Prüfung der Vertraulichkeit je Durchlauf durchgeht, 1 bis 200. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Mails für das Team länger unsichtbar bleiben als der Rhythmus der Durchläufe. Den Rhythmus legt der Systemzustand fest. Standard 40.",
   "captureReview.passCap.refusal":
     "Gib eine ganze Zahl von Threads von 1 bis 200 ein.",
+  "captureReview.verdictCap.label": "Beurteilte Absender pro Durchlauf",
+  "captureReview.verdictCap.help":
+    "Wie viele ungeklärte Absender ein Durchlauf der Absenderprüfung dem Modell vorlegt, 1 bis 1000. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Absender länger ungeklärt bleiben als der Rhythmus der Durchläufe. Standard 200.",
+  "captureReview.verdictCap.refusal":
+    "Gib eine ganze Zahl von Absendern von 1 bis 1000 ein.",
+  "captureReview.classifyCap.label":
+    "Gekennzeichnete Nachrichten pro Durchlauf",
+  "captureReview.classifyCap.help":
+    "Wie viele erfasste Nachrichten ein Durchlauf der Kennzeichnung bearbeitet, 1 bis 2500. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Mails länger ungekennzeichnet bleiben als der Rhythmus der Durchläufe. Standard 500.",
+  "captureReview.classifyCap.refusal":
+    "Gib eine ganze Zahl von Nachrichten von 1 bis 2500 ein.",
+  "captureReview.owedCap.label":
+    "Auf Antwort geprüfte Nachrichten pro Durchlauf",
+  "captureReview.owedCap.help":
+    "Wie viele neue Nachrichten ein Durchlauf der Antwortprüfung beurteilt, 1 bis 2500. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn Mails, die auf deine Antwort warten, spät erscheinen. Standard 500.",
+  "captureReview.owedCap.refusal":
+    "Gib eine ganze Zahl von Nachrichten von 1 bis 2500 ein.",
   "agentConnections.title": "Agent-Verbindungen",
   "agentConnections.sub":
     "Wie lange ein Passport für MCP-Verbindungen gültig ist, bevor eine Erneuerung nötig ist. Eine Änderung gilt ab dem nächsten ausgestellten Passport.",

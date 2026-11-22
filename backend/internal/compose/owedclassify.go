@@ -59,17 +59,12 @@ const (
 	// to carry the gist.
 	owedPriorBodyLimit = 600
 	// owedRestaleCap bounds the re-judge sweep per workspace per pass,
-	// separately from owedCatchUpCap. Two budgets because they are two
+	// separately from the new-mail cap. Two budgets because they are two
 	// populations: new mail must never wait behind a sweep of history.
 	owedRestaleCap = 200
 	// owedConfidenceFloor: below it the message is re-asked SOLO, and below it
 	// again it stays unjudged and reviewable, without claiming Focus priority.
 	owedConfidenceFloor = 0.7
-	// owedCatchUpCap bounds one pass PER WORKSPACE. Per workspace rather than
-	// shared, for the reason capture_counterparty_verdict states: a shared
-	// counter lets one large backlog spend the budget and starve every
-	// workspace behind it.
-	owedCatchUpCap = 500
 )
 
 // owedVerdicts is the closed set the validator admits, derived from the store's
@@ -88,6 +83,10 @@ var owedVerdicts = map[string]bool{
 type OwedClassifier struct {
 	pool  *pgxpool.Pool
 	store *activities.Store
+	// caps answers how many new messages one run may judge, per workspace: the
+	// admin's setting. Per workspace rather than shared, because a shared
+	// counter lets one large backlog spend the budget and starve the rest.
+	caps  *capture.PassCaps
 	brain completer
 	log   *slog.Logger
 	// now bounds the backlog read at an instant, and is a field so a test can
@@ -111,6 +110,7 @@ func NewOwedClassifier(pool *pgxpool.Pool, brain completer, now func() time.Time
 		pool: pool,
 		store: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}).WithRecordZone(installationZoneTx),
+		caps:  capture.NewPassCaps(db),
 		brain: brain,
 		log:   log,
 		now:   now,
@@ -175,7 +175,11 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 		return nil
 	}
 	if maxVerdicts <= 0 {
-		maxVerdicts = owedCatchUpCap
+		passCap, err := c.caps.OwedClassify(ctx)
+		if err != nil {
+			return err
+		}
+		maxVerdicts = passCap
 	}
 	if err := c.drain(ctx, maxVerdicts, "backlog", func() ([]owedCandidate, time.Time, error) {
 		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)

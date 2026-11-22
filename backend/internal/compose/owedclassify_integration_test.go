@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"log/slog"
 	"strings"
 	"testing"
@@ -231,7 +232,7 @@ func TestABacklogTheModelWillNotCommitToStillEndsThePass(t *testing.T) {
 	if brain.calls == 0 {
 		t.Fatal("the pass made no model call for a seeded backlog")
 	}
-	if brain.calls > owedCatchUpCap {
+	if brain.calls > capture.DefaultOwedClassifyPassCap {
 		t.Errorf("the pass made %d calls on a backlog it cannot finish", brain.calls)
 	}
 }

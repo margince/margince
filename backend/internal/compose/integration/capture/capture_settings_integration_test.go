@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -233,5 +234,54 @@ func TestTheConfidentialityPassCapIsASettingOnlyTheUpdateGrantChanges(t *testing
 	if reread, err := store.Get(rep); err != nil || reread.ConfidentialityPassCap != passCap {
 		t.Fatalf("after the refusals the pass cap reads %d (err %v), want the %d that stood",
 			reread.ConfidentialityPassCap, err, passCap)
+	}
+}
+
+// The three sibling pass caps ride the same store and gate as the confidentiality
+// cap: every role reads the declared default, only the update grant saves a
+// change, and a value past the ceiling is refused.
+func TestTheOtherPassCapsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
+	e := integration.SetupSearch(t)
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
+	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})
+	rep := captureSettingsCtx(e, principal.ObjectGrant{Read: true})
+
+	got, err := store.Get(rep)
+	if err != nil {
+		t.Fatalf("rep read: %v", err)
+	}
+	saved := 17
+	for _, tc := range []struct {
+		name    string
+		entry   *config.Setting[int]
+		def, mx int
+		read    func(capturemod.Settings) int
+		patch   func(*int) capturemod.SettingsPatch
+	}{
+		{"verdict", capturemod.VerdictPassCap, capturemod.DefaultVerdictPassCap, capturemod.MaxVerdictPassCap,
+			func(s capturemod.Settings) int { return s.VerdictPassCap },
+			func(v *int) capturemod.SettingsPatch { return capturemod.SettingsPatch{VerdictPassCap: v} }},
+		{"classify", capturemod.ClassifyPassCap, capturemod.DefaultClassifyPassCap, capturemod.MaxClassifyPassCap,
+			func(s capturemod.Settings) int { return s.ClassifyPassCap },
+			func(v *int) capturemod.SettingsPatch { return capturemod.SettingsPatch{ClassifyPassCap: v} }},
+		{"owed", capturemod.OwedClassifyPassCap, capturemod.DefaultOwedClassifyPassCap, capturemod.MaxOwedClassifyPassCap,
+			func(s capturemod.Settings) int { return s.OwedClassifyPassCap },
+			func(v *int) capturemod.SettingsPatch { return capturemod.SettingsPatch{OwedClassifyPassCap: v} }},
+	} {
+		if tc.read(got) != tc.def {
+			t.Errorf("%s: an untouched installation reads %d, want %d", tc.name, tc.read(got), tc.def)
+		}
+		if _, err := store.Update(rep, tc.patch(&saved)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s: rep update err = %v, want permission denied", tc.name, err)
+		}
+		updated, err := store.Update(admin, tc.patch(&saved))
+		if err != nil || tc.read(updated) != saved {
+			t.Errorf("%s: admin update returned %d (err %v), want %d", tc.name, tc.read(updated), err, saved)
+		}
+		over := tc.mx + 1
+		var invalid settings.InvalidValue
+		if _, err := store.Update(admin, tc.patch(&over)); !errors.As(err, &invalid) || invalid.Setting != tc.entry.Key() {
+			t.Errorf("%s: a cap of %d gave %v, want the setting's own refusal", tc.name, over, err)
+		}
 	}
 }

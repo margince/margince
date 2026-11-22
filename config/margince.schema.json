@@ -551,6 +551,16 @@
           "maximum": 20000,
           "default": 500
         },
+        "classify_pass_cap": {
+          "description": "Captured messages one labelling run may settle; the rest wait for the next run.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 2500,
+          "default": 500
+        },
         "confidentiality_pass_cap": {
           "description": "Held mail threads one review pass may judge; the rest wait for the next pass.",
           "type": [
@@ -639,6 +649,16 @@
           ],
           "default": 0
         },
+        "owed_classify_pass_cap": {
+          "description": "New messages one owed-reply run may judge; the rest wait for the next run.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 2500,
+          "default": 500
+        },
         "shared_posture_allowed": {
           "description": "Allow a seat to share their mailbox with colleagues as mail lands; turn it on only where a works agreement allows it.",
           "type": [
@@ -720,6 +740,16 @@
           "items": {
             "type": "string"
           }
+        },
+        "verdict_pass_cap": {
+          "description": "Unresolved senders one counterparty review run may judge; the rest wait for the next run.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 200
         }
       }
     },
