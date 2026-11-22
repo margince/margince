@@ -722,7 +722,7 @@ the tool as the answer. That lane asks which tool a goal should reach for, which
 it sees that a name appeared, never whether it was the right first reach. `Near miss in` names the tasks that only check
 a model does not reach for the tool, which says nothing about whether one can use it.
 
-So of the 5 tools no use case requires, **0 are graded elsewhere** as an expected answer and 5 are untried by any lane. Of the untried, 1 appear elsewhere only as a near miss.
+So of the 5 tools no use case requires, **1 are graded elsewhere** as an expected answer and 4 are untried by any lane. Of the untried, 0 appear elsewhere only as a near miss.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -731,6 +731,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `change_record_parts` | 1017 | - | - | - | - |
 | `change_relationships` | 816 | - | - | - | - |
 | `change_lists` | 620 | - | - | `case47_tidy_the_fair_list` | - |
-| `annotate_brief` | 417 | - | `agent_loop` | - | `morning_brief` |
+| `annotate_brief` | 417 | `agent_loop` | `agent_loop` | - | `morning_brief` |
 | `enrich` | 395 | - | - | - | - |
 

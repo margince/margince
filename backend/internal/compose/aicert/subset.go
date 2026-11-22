@@ -112,9 +112,11 @@ func mergeIntoCommitted(dir string, measured Record, corpus []Scenario) (Record,
 	merged.CertifiedScope = aitasks.NarrowerScope(prior.CertifiedScope, measured.CertifiedScope)
 	merged.ContextApplied = prior.ContextApplied && measured.ContextApplied
 	// Every row the record pools vouches for these, so each reads the worse run:
-	// a judge of the candidate's family, and the oldest measurement.
+	// a judge of the candidate's family, and the oldest row it still keeps.
 	merged.SelfJudged = prior.SelfJudged || measured.SelfJudged
-	merged.RanAt = olderRanAt(prior.RanAt, measured.RanAt)
+	if len(rows) > len(measured.Scenarios) {
+		merged.RanAt = olderRanAt(prior.RanAt, measured.RanAt)
+	}
 	merged.LatencyP50, merged.LatencyP95 = prior.LatencyP50, prior.LatencyP95
 	merged.MeanTokens, merged.MeanTokensIn, merged.MeanTokensOut = prior.MeanTokens, prior.MeanTokensIn, prior.MeanTokensOut
 	merged.MeanCachedTokens, merged.MeanCacheWriteTokens = prior.MeanCachedTokens, prior.MeanCacheWriteTokens

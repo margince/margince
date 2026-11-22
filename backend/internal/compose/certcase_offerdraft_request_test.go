@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -131,8 +132,10 @@ func assertOrchestratorAgrees(
 	t *testing.T, c *offerDraftCase, trace aitasks.Trace, wantStaged []deals.StagedOfferLineInput,
 ) {
 	t.Helper()
+	// The model path prepares every call with the installation's company context
+	// before it reaches a model, so production is driven through the same provider.
 	brain := &replyBrainStub{response: model.Response{Text: trace.Output}}
-	orchestrator := offerDrafter{brain: brain, rateCard: c.drafter.rateCard}
+	orchestrator := offerDrafter{brain: certContextBrain{task: ai.TaskOfferDraft, next: brain}, rateCard: c.drafter.rateCard}
 	candidates, err := orchestrator.draftCandidates(context.Background(), c.dealContext, c.catalog, offerDraftCaseLanguage)
 	if err != nil {
 		t.Fatalf("the orchestrator refused the reply outright: %v", err)

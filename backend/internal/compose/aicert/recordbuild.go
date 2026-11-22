@@ -78,7 +78,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		ReportedInvalid:      tally.invalid,
 		ReportedAbstained:    tally.abstained,
 		CertifiedScope:       acc.certifiedScope,
-		ContextApplied:       n > 0 && acc.contextServed == n,
+		ContextApplied:       acc.contextOwed > 0 && acc.contextServed == acc.contextOwed,
 		ContextScopes:        declaredCompanyContextScopes(task),
 		JudgeScoreP50:        judgeP50,
 		JudgeScoreMin:        judgeMin,

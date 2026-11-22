@@ -1,0 +1,85 @@
+name: morning_brief_annotates_its_queue_from_the_evidence
+task: agent_loop
+site: morning_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  trigger_ref: morning_brief:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202
+  grounding: []
+  tools:
+    - tool: read_brief
+      result:
+        brief_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c2a00
+        generated_at: "2026-09-24T04:10:00Z"
+        as_of: "2026-09-24T04:00:00Z"
+        local_day: "2026-09-24"
+        candidate_count: 2
+        previous_local_day: "2026-09-23"
+        factors_omitted: []
+        items:
+          - item_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c2a01
+            deal_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e21
+            rank: 1
+            composite: 0.81
+            factors: {winnability: 0.7, revenue: 0.9, timing: 0.9, momentum: 0.8, warmth: 0.6}
+            state: new
+            previous_rank: 3
+            evidence_ids:
+              - 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e21
+              - 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f21
+          - item_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c2a02
+            deal_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e22
+            rank: 2
+            composite: 0.64
+            factors: {winnability: 0.6, revenue: 0.5, timing: 0.7, momentum: 0.3, warmth: 0.7}
+            state: new
+            evidence_ids:
+              - 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e22
+              - 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f22
+    - tool: read_record
+      args: {record_type: deal, id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e21}
+      result:
+        record_type: deal
+        id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e21
+        fields: {name: "Heat recovery retrofit", stage: proposal, amount_minor: 4800000, currency: EUR, expected_close_date: "2026-10-15", last_activity_at: "2026-09-23T15:20:00Z"}
+    - tool: read_record
+      args: {record_type: activity, id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f21}
+      result:
+        record_type: activity
+        id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f21
+        fields: {kind: email, direction: inbound, occurred_at: "2026-09-23T15:20:00Z", subject: "Re: retrofit proposal", body: "Thanks for the revised proposal. Our CFO signs off on Thursday; please send the final quote with the two-year service option by Wednesday."}
+    - tool: read_record
+      args: {record_type: deal, id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e22}
+      result:
+        record_type: deal
+        id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e22
+        fields: {name: "Boiler room controls", stage: qualification, amount_minor: 1200000, currency: EUR, last_activity_at: "2026-09-10T09:00:00Z"}
+    - tool: read_record
+      args: {record_type: activity, id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f22}
+      result:
+        record_type: activity
+        id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f22
+        fields: {kind: call, occurred_at: "2026-09-10T09:00:00Z", subject: "Discovery call", body: "Facility manager interested; wants a site visit before any proposal. No date agreed."}
+expect:
+  outcome: accepted
+  answer: annotate_brief
+  near_misses:
+    - list_records
+  rubric: >
+    Grade the findings the run wrote with annotate_brief, read against the
+    records its steps show it read. The run's goal is one finding per queued
+    item: why it matters, what changed and the next move, citing that item's
+    evidence. Item 1 (Heat recovery retrofit) moved up from rank 3; its latest
+    email says the CFO signs off on Thursday and asks for the final quote with
+    the two-year service option by Wednesday, so its next move is that quote by
+    Wednesday. Item 2 (Boiler room controls) has been quiet since a 10
+    September discovery call that asked for a site visit with no date agreed,
+    so its next move is proposing a date for that visit. Score high when each
+    finding states what its evidence says and the right next move. Score low
+    when a finding invents a fact no record carries (a price change, a meeting,
+    a competitor), calls item 2 new news, or gives a next move its evidence
+    does not support.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

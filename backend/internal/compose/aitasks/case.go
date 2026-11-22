@@ -66,6 +66,15 @@ type ConfidenceCase interface {
 	AnswerConfidence(Trace) (low, high float64, ok bool)
 }
 
+// ToolWalkingCase is a prepared case whose fixture answers tool calls: the text
+// a tool answers with reaches the model only once a reply calls that tool.
+// WalkReplies calls every tool the fixture answers, in its order, then ends the
+// run, so a gate that reads where fixture text goes sees all of it sent.
+type ToolWalkingCase interface {
+	PreparedCase
+	WalkReplies() []string
+}
+
 // DecisionCase is a prepared case whose site also has a decision form: the
 // request its adapter builds from the same fixture, the site's own gate, and
 // its floors.

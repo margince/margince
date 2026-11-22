@@ -69,11 +69,10 @@ func PresetRungs(ctx context.Context, routing ai.RoutingConfig, corpus []Scenari
 func presetRungState(routing ai.RoutingConfig, task ai.Task, scenarios []Scenario, rows []ReadinessRow) PresetRungState {
 	rungs := boundLadder(routing, task)
 	first := rungs[0]
+	firstState, firstVerdict := RungGrade(rows, scenarios, first.Binding, routing.Profile, task)
 	state := PresetRungState{
 		Task: task, FirstTier: first.Tier, FirstModel: first.Binding.Model,
-		FirstState:    rungState(rows, scenarios, first.Binding, routing.Profile, task),
-		FirstVerdict:  rungVerdict(rows, scenarios, first.Binding, routing.Profile, task),
-		FallbackState: RungNone,
+		FirstState: firstState, FirstVerdict: firstVerdict, FallbackState: RungNone,
 	}
 	if len(rungs) < 2 {
 		return state
@@ -84,9 +83,16 @@ func presetRungState(routing ai.RoutingConfig, task ai.Task, scenarios []Scenari
 		state.FallbackState = RungSameModel
 		return state
 	}
-	state.FallbackState = rungState(rows, scenarios, next.Binding, routing.Profile, task)
-	state.FallbackVerdict = rungVerdict(rows, scenarios, next.Binding, routing.Profile, task)
+	state.FallbackState, state.FallbackVerdict = RungGrade(rows, scenarios, next.Binding, routing.Profile, task)
 	return state
+}
+
+// RungGrade is the state and verdict of the record grading binding on task, as
+// every surface that grades a rung reads them: the report, the certification
+// page and the product's own grade table. rows are task's readiness rows and
+// scenarios its corpus.
+func RungGrade(rows []ReadinessRow, scenarios []Scenario, binding ai.ProviderConfig, profile ai.Profile, task ai.Task) (state, verdict string) {
+	return rungState(rows, scenarios, binding, profile, task), rungVerdict(rows, scenarios, binding, profile, task)
 }
 
 // rungVerdict is the worst verdict across the sites task's scenarios run on of

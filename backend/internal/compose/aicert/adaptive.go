@@ -128,8 +128,8 @@ func caseBorderline(c caseStats) bool {
 
 // poolUndecided says the pooled evidence meets a certified bar on its point
 // estimate but not on its bound: pass rate ≥ certifiedPassPercent with a Wilson
-// lower bound under certifiedPassBoundPercent, or a mean certified_min margin
-// ≥ 0 with a lower bound under 0.
+// lower bound under certifiedPassBoundPercent or fewer than certifiedMinRuns
+// runs, or a mean certified_min margin ≥ 0 with a lower bound under 0.
 func poolUndecided(cases []caseStats) bool {
 	runs, passed := 0, 0
 	for _, c := range cases {
@@ -137,7 +137,7 @@ func poolUndecided(cases []caseStats) bool {
 		passed += c.passed
 	}
 	lower, _ := wilsonBounds(passed, runs)
-	if passed*100 >= certifiedPassPercent*runs && lower*100 < certifiedPassBoundPercent {
+	if passed*100 >= certifiedPassPercent*runs && (lower*100 < certifiedPassBoundPercent || runs < certifiedMinRuns) {
 		return true
 	}
 	margins := marginsOver(cases, func(b Bands) int { return b.CertifiedMin })

@@ -53,7 +53,7 @@
       "percent_of_ceiling": 13,
       "headroom_tokens": 18771,
       "dangling_cross_references": [],
-      "temptation_weight": 5
+      "temptation_weight": 4
     },
     {
       "name": "overnight_at_risk_sweep",
@@ -79,7 +79,7 @@
         "log_activity → send_outbound",
         "whats_slipping_this_week → draft_outbound"
       ],
-      "temptation_weight": 6
+      "temptation_weight": 4
     }
   ],
   "tool_cost": [
@@ -278,28 +278,20 @@
   ],
   "corpus_wrong_reach": [
     {
-      "name": "log_activity",
-      "scenarios_naming_it_as_the_wrong_reach": 3
+      "name": "list_records",
+      "scenarios_naming_it_as_the_wrong_reach": 6
     },
     {
       "name": "annotate_brief",
-      "scenarios_naming_it_as_the_wrong_reach": 2
-    },
-    {
-      "name": "catch_me_up_on",
-      "scenarios_naming_it_as_the_wrong_reach": 2
-    },
-    {
-      "name": "list_records",
-      "scenarios_naming_it_as_the_wrong_reach": 2
+      "scenarios_naming_it_as_the_wrong_reach": 1
     },
     {
       "name": "read_record",
-      "scenarios_naming_it_as_the_wrong_reach": 2
+      "scenarios_naming_it_as_the_wrong_reach": 1
     }
   ],
   "corpus": {
-    "scenarios": 6,
+    "scenarios": 7,
     "skipped_by_the_scan": null,
     "near_misses_not_offered": null,
     "read_by_prose": null

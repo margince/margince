@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -187,6 +188,38 @@ func TestAMergedRecordKeepsTheWorstOfItsTwoRuns(t *testing.T) {
 	}
 	if merged.RanAt != committed.RanAt {
 		t.Errorf("merged ran_at %s, want the older measurement %s: most rows were not measured today", merged.RanAt, committed.RanAt)
+	}
+}
+
+// A filtered run that measured every row again dates the record by itself.
+func TestAMergeThatReplacesEveryRowTakesTheNewDate(t *testing.T) {
+	dir := t.TempDir()
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	committed.RanAt = "2026-09-01T08:00:00Z"
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	measured := certifyCorpusWith(t, corpus, "")
+	measured.RanAt = "2026-09-02T08:00:00Z"
+	merged, err := mergeIntoCommitted(dir, measured, corpus)
+	if err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	if merged.RanAt != measured.RanAt {
+		t.Errorf("merged ran_at %s, want %s: no row of the older run is left", merged.RanAt, measured.RanAt)
+	}
+}
+
+// STALE_ONLY measures a record past its age again; an unreadable date is old.
+func TestARecordPastItsAgeIsNoLongerCurrent(t *testing.T) {
+	now := time.Date(2026, 11, 22, 0, 0, 0, 0, time.UTC)
+	young := Record{Task: "a", RanAt: now.Add(-recordMaxAge).Format(time.RFC3339)}
+	old := Record{Task: "b", RanAt: now.Add(-recordMaxAge - time.Hour).Format(time.RFC3339)}
+	undated := Record{Task: "c", RanAt: "not a date"}
+	kept := recordsWithin([]Record{young, old, undated}, now, recordMaxAge)
+	if len(kept) != 1 || kept[0].Task != "a" {
+		t.Errorf("kept %+v, want the record at the age limit alone", kept)
 	}
 }
 

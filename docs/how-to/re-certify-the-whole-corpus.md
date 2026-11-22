@@ -59,8 +59,10 @@ cd backend
 make e2e-ai ROUTING=config/presets/gemini_cloud.yaml \
   TRACE="$PWD/../.tmp/aicert/gemini" RESUME="$PWD/../.tmp/aicert/gemini/resume"
 
-# openrouter_cloud: the default judge grades it too, as no task it certifies leads on Claude.
-make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
+# openrouter_cloud binds a Claude model for signal_extract, and the default judge refuses a
+# Claude candidate. So run each other task with TASK=<task> under the default judge, and
+# signal_extract alone with JUDGE=gemini:gemini-3.1-flash-lite.
+make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml TASK=<task> \
   TRACE="$PWD/../.tmp/aicert/openrouter" RESUME="$PWD/../.tmp/aicert/openrouter/resume"
 ```
 
@@ -103,8 +105,8 @@ Expect these outcomes:
   README of the preset says so.
 - **A sweep also measures fallbacks.** A routed run certifies every
   separate model that the ladder of a task points to. So a preset whose tiers point to different
-  models costs about twice as much as one with one model. `frontier` is on the ladder of no shipped
-  task, so a model set only there is never reached.
+  models costs about twice as much as one with one model. `frontier` leads only the ladder of
+  `signal_extract`, so a model set only there answers that task alone.
 - **A sweep skips what is already current** (`STALE_ONLY`, on by default). A
   change to the whole tree leaves records stale, so they run all the same. `STALE_ONLY=0` is
   for a new sample of current records, such as a check of how much one prompt moves between runs.

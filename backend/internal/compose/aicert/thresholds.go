@@ -14,6 +14,14 @@ const certifiedPassPercent = 90
 // bound may sit, so a pool too small to tell 90% from 70% cannot certify.
 const certifiedPassBoundPercent = 80
 
+// certifiedMinRuns is the fewest pooled runs a certified grade rests on. Wilson
+// passes 9 of 9 at 85% where the exact bound is 77%; from 12 both clear 80%.
+const certifiedMinRuns = 12
+
+// minJudgeScores is the fewest judge scores a judged case needs before its
+// quality can certify: with one score the bound is the score itself.
+const minJudgeScores = 3
+
 // casePassPercent is the share of its own runs every case must pass for the
 // task to certify, so one case failing systematically cannot hide in a pool.
 const casePassPercent = 50
@@ -50,11 +58,11 @@ const defaultRepeats = 3
 const privacyMinRuns = 15
 
 // adaptiveRound is how many runs a borderline case gains per extension, and
-// adaptiveMaxRuns the most any case reaches: at most 9 candidate calls a case,
-// and at most maxJudgeOpinions judge calls for each.
+// adaptiveMaxRuns the most any case reaches, so a task of one case can still
+// reach certifiedMinRuns; each run costs at most maxJudgeOpinions judge calls.
 const (
 	adaptiveRound   = 3
-	adaptiveMaxRuns = 9
+	adaptiveMaxRuns = certifiedMinRuns
 )
 
 // A run is graded once, and asked again only where one reading could decide

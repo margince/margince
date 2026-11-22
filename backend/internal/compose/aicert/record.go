@@ -304,7 +304,8 @@ type RowBands struct {
 // from measuring it and finding nothing, which is why it is not a zero tally.
 //
 // The verdict is Verdict's rule over the site's scenario rows, the same rule
-// the task's own verdict is. A row with no bands predates rows keeping their
+// the task's own verdict is, or SiteTooFewRuns where that rule could only
+// withhold a grade for want of runs. A row with no bands predates rows keeping their
 // bands and scores and cannot be re-graded, and one such row leaves the pool
 // incomplete, so the site reads stored verdicts instead: the record's own when
 // the site's rows are the whole record, else the worst any of its rows holds.
@@ -334,11 +335,19 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 		tally.Verdict = r.Verdict
 	case legacy:
 		tally.Verdict = worst
+	case tally.Runs < certifiedMinRuns && worst == VerdictCertified:
+		tally.Verdict = SiteTooFewRuns
 	default:
 		tally.Verdict, _ = verdictOver(cases)
 	}
 	return tally, true
 }
+
+// SiteTooFewRuns is a site's grade when every case of it clears the per-case
+// gates on its own and the site holds fewer runs than a certified grade rests
+// on: the pooled rule could only call it weak, and nothing it measured is.
+// The task's own verdict pools these runs with its other sites'.
+const SiteTooFewRuns = "too_few_runs"
 
 // sanitizeForPath maps a raw identifier (a provider name, or a served-model
 // string like "accounts/fireworks/models/llama-v3-70b-instruct" that

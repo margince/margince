@@ -174,6 +174,7 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			row.Defaults = &crmcontracts.AiTaskSettings{
 				DecisionTimeoutMs: int(defaults.DecisionTimeout.Milliseconds()), AttemptTimeoutMs: int(defaults.AttemptTimeout.Milliseconds()),
 			}
+			row.Certification = leadCertification(task, normal, normalConfig.Profile)
 		}
 		decisionRoute(&row, effectiveConfig, task, blocked)
 		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) {
@@ -214,4 +215,15 @@ func plannedModels(plan []plannedBinding) []boundModel {
 		out = append(out, boundModel{provider: rung.config.Provider, model: rung.config.Model})
 	}
 	return out
+}
+
+// leadCertification grades the model that answers task first under the normal
+// band, the binding the router reaches for before any failure moves it on.
+func leadCertification(task Task, plan []plannedBinding, profile Profile) *crmcontracts.AiTaskCertification {
+	if len(plan) == 0 {
+		return nil
+	}
+	lead := plan[0].config
+	cert := CertificationFor(task, lead, profile)
+	return &crmcontracts.AiTaskCertification{Grade: cert.Grade, Model: lead.Model, RecheckPending: cert.RecheckPending}
 }

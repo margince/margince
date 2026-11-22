@@ -21,8 +21,8 @@ The heaviest menu is `overnight_at_risk_sweep`: 6705 of the window's 32768 token
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2055 | 1653 | 4439 | 13% | 18771 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3354 | 2620 | 6705 | 20% | 16505 | 4 | 6 |
+| `morning_brief` | 5 | 5 of 48 | 2055 | 1653 | 4439 | 13% | 18771 | 0 | 4 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3354 | 2620 | 6705 | 20% | 16505 | 4 | 4 |
 | _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 51581 |  |  | 157% |  |  |  |
 
 ### `morning_brief`
@@ -142,7 +142,7 @@ menu. Lowering it is not always an improvement either: a tool its goal needs rai
 this count whenever its copy names a neighbour.
 
 **Temptation weight** sums, over an agent's tools, how many of that agent's own
-certification scenarios (of 6 in the corpus) name the tool as the wrong reach. Each
+certification scenarios (of 7 in the corpus) name the tool as the wrong reach. Each
 scenario certifies one scheduled agent's window (its goal and its tools), so a near
 miss is a tool that run can see and reach for.
 

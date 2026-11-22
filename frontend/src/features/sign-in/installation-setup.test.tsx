@@ -15,9 +15,20 @@ import { pickOption, pickSuggestion } from "../../design-system/select-testing";
 import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { forgetSetupDeclines } from "../../lib/installation-setup.decline";
+import { MODEL_SETUPS } from "../../lib/modelsetups.gen";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { InstallationSetup, outstandingStep } from "./installation-setup";
+
+// The model field is the advanced choice behind one tick; the graded preset is
+// what the step binds otherwise.
+async function chooseOneModel(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole("checkbox", {
+      name: "Use one model for every tier instead",
+    }),
+  );
+}
 
 afterEach(() => {
   // Every case starts with the platform question unanswered by this account.
@@ -686,11 +697,35 @@ describe("the first-run setup gate", () => {
       "local_small",
       "premium",
     ]);
-    for (const bound of Object.values(routing.tiers)) {
+    // The graded preset, tier by tier: the setup the certification measured,
+    // which binds a stronger model above the cheap tiers.
+    for (const [tier, bound] of Object.entries(routing.tiers)) {
       expect(bound.provider).toBe("gemini");
+      expect(bound.model, tier).toBe(
+        MODEL_SETUPS.gemini_cloud.routing.tiers[tier]?.model,
+      );
+    }
+    expect(new Set(Object.values(routing.tiers).map((b) => b.model)).size).toBe(
+      2,
+    );
+    expect(routing.embeddings.model).toBe("gemini-embedding-001");
+  });
+
+  // The one-model choice is still there, and puts that model on every tier.
+  it("binds one model on every tier when the reader asks for it", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await chooseOneModel(user);
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(2));
+    const routing = writes[1].body as {
+      tiers: Record<string, { model: string }>;
+    };
+    for (const bound of Object.values(routing.tiers)) {
       expect(bound.model).toBe("gemini-3.1-flash-lite");
     }
-    expect(routing.embeddings.model).toBe("gemini-embedding-001");
   });
 
   // OpenRouter is a preset, and openai_compatible fails closed without a
@@ -856,6 +891,7 @@ describe("the first-run setup gate", () => {
     const user = userEvent.setup();
     mount(setupReport(false, false));
     await screen.findByText("Choose a model provider");
+    await chooseOneModel(user);
 
     await user.click(screen.getByRole("combobox", { name: "Model" }));
     expect(
@@ -880,6 +916,7 @@ describe("the first-run setup gate", () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
     await screen.findByText("Choose a model provider");
+    await chooseOneModel(user);
 
     await pickSuggestion(
       user,
@@ -903,6 +940,7 @@ describe("the first-run setup gate", () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
     await screen.findByText("Choose a model provider");
+    await chooseOneModel(user);
 
     const model = screen.getByRole("combobox", { name: "Model" });
     await user.clear(model);
@@ -930,6 +968,7 @@ describe("the first-run setup gate", () => {
       screen.getByRole("combobox", { name: "Provider" }),
       "OpenRouter",
     );
+    await chooseOneModel(user);
     await user.click(screen.getByRole("combobox", { name: "Model" }));
     expect(
       within(screen.getByRole("listbox"))

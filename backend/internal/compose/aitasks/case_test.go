@@ -64,11 +64,11 @@ func TestACaseIsReadAtTheScopeItDeclares(t *testing.T) {
 }
 
 // A declaration exists to narrow. One that claims MORE than its site's kind
-// allows — a whole invocation from a case that grades one turn of a loop — would
+// allows — a whole invocation from a case that grades one turn of a conversation — would
 // make the record's most cautious number come from its least cautious source,
 // and no reader could tell which claim to believe.
 func TestValidateRefusesAScopeThatIsNotANarrowing(t *testing.T) {
-	loop := aitasks.Site{Task: ai.TaskAgentLoop, Variant: "loop", Kind: ai.SiteKindAgentLoop}
+	conversation := aitasks.Site{Task: ai.TaskColdStart, Variant: "acts", Kind: ai.SiteKindMultiTurn}
 	cases := []struct {
 		name  string
 		scope string
@@ -80,8 +80,8 @@ func TestValidateRefusesAScopeThatIsNotANarrowing(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := aitasks.NewRegistry()
-			r.Register(loop)
-			r.BindCase(loop, scopedStubCase{site: loop, scope: tc.scope})
+			r.Register(conversation)
+			r.BindCase(conversation, scopedStubCase{site: conversation, scope: tc.scope})
 
 			err := r.Validate()
 			if err == nil {

@@ -39,9 +39,9 @@ frames. A 0 means no fenced region was found in that call at all.
 
 | task | site | isolation | spans in this scenario | calls |
 |---|---|---|---:|---:|
-| `account_scan` | `company_scan` | one fenced item | 1 | 1 |
-| `agent_loop` | `morning_brief` | one fenced item | 1 | 1 |
-| `agent_loop` | `overnight_at_risk_sweep` | one fenced item | 1 | 1 |
+| `account_scan` | `company_scan` | several fenced items | 2 | 1 |
+| `agent_loop` | `morning_brief` | several fenced items | 2 | 3 |
+| `agent_loop` | `overnight_at_risk_sweep` | one fenced item | 1 | 3 |
 | `brief_ranking` | `rank` | one fenced item | 0 | 1 |
 | `capture_classify` | `classify` | one fenced item | 1 | 1 |
 | `capture_classify` | `deal_topic` | several fenced items | 7 | 1 |
@@ -59,16 +59,16 @@ frames. A 0 means no fenced region was found in that call at all.
 | `document_extract` | `cards` | one fenced item | 0 | 1 |
 | `document_extract` | `chat` | one fenced item | 0 | 1 |
 | `document_extract` | `fields` | several fenced items | 2 | 1 |
-| `draft_reply` | `account` | one fenced item | 1 | 1 |
-| `draft_reply` | `contact` | one fenced item | 1 | 1 |
-| `draft_reply` | `intro` | one fenced item | 1 | 1 |
-| `draft_reply` | `intro_note` | one fenced item | 1 | 1 |
-| `draft_reply` | `reply` | one fenced item | 1 | 1 |
+| `draft_reply` | `account` | several fenced items | 2 | 1 |
+| `draft_reply` | `contact` | several fenced items | 2 | 1 |
+| `draft_reply` | `intro` | several fenced items | 2 | 1 |
+| `draft_reply` | `intro_note` | several fenced items | 2 | 1 |
+| `draft_reply` | `reply` | several fenced items | 2 | 1 |
 | `enrich` | `signature` | several fenced items | 2 | 1 |
 | `growth_fit` | `growth_fit` | several fenced items | 2 | 1 |
-| `nl_search` | `filter_propose` | several fenced items | 2 | 1 |
+| `nl_search` | `filter_propose` | several fenced items | 3 | 1 |
 | `nl_search` | `search_data_plan` | one fenced item | 1 | 1 |
-| `offer_draft` | `draft` | one fenced item | 1 | 1 |
+| `offer_draft` | `draft` | several fenced items | 2 | 1 |
 | `owed_verdict` | `owed` | several fenced items | 2 | 1 |
 | `propose_roles` | `committee` | several fenced items | 5 | 1 |
 | `rate_extract` | `fx` | one fenced item | 1 | 1 |

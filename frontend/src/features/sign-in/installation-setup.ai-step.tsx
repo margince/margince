@@ -8,6 +8,8 @@ import {
 import { DEFAULT_VERTEX_LOCATION } from "../../components/vertex-location";
 import { Button, Field } from "../../design-system/atoms";
 import { ComboBox } from "../../design-system/combobox";
+import { FactList } from "../../design-system/factlist";
+import { Checkbox } from "../../design-system/field";
 import { StageActions } from "../../design-system/onboarding-stage";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { Select } from "../../design-system/select";
@@ -21,9 +23,12 @@ import {
   type VendorCatalogue,
   vendorSuggestions,
 } from "../../lib/ai-models";
+import { tierLabel, tierRank } from "../../lib/ai-tier-label";
+import { MODEL_SETUPS } from "../../lib/modelsetups.gen";
 import {
   SETUP_PROVIDER_IDS,
   SETUP_PROVIDERS,
+  type SetupProvider,
   type SetupProviderId,
 } from "../../lib/setup-providers";
 import {
@@ -139,6 +144,8 @@ export function AiStep({
   const [keyRefusal, setKeyRefusal] = useState<MessageKey | undefined>();
   const keyFile = preset.credential === "service_account";
   const [chatModel, setChatModel] = useState(preset.chatModel);
+  // The graded preset by default; one model on every tier only when asked for.
+  const [oneModel, setOneModel] = useState(false);
   const [embedModel, setEmbedModel] = useState(preset.embedModel);
   const saveKey = useSetProviderKey();
   const bind = useBindModels();
@@ -187,7 +194,7 @@ export function AiStep({
       apiKey.trim() === "",
       keyFile ? t("serviceAccountKey.label") : t("firstRun.ai.key"),
     ],
-    [chatModel.trim() === "", t("firstRun.ai.chatModel")],
+    [oneModel && chatModel.trim() === "", t("firstRun.ai.chatModel")],
     [embedModel.trim() === "", t("firstRun.ai.embedModel")],
   ]
     .filter((need): need is [true, string] => need[0] === true)
@@ -214,6 +221,7 @@ export function AiStep({
         location: preset.location ? location : undefined,
         embedLocation: preset.embedLocation,
         profile: preset.profile,
+        setup: oneModel ? undefined : preset.setup,
         chatModel: chatModel.trim(),
         embedModel: embedModel.trim(),
       },
@@ -352,40 +360,48 @@ export function AiStep({
             }}
             onLocation={setLocation}
           />
-          {/* Both fields offer what the sheet can price for the chosen vendor,
-            in the lane that field binds — and take anything typed, because the
-            server accepts any id its vendor serves and the whole point of the
-            preset below is that it is a starting point. */}
-          <Field
-            label={t("firstRun.ai.chatModel")}
-            hint={`${t("firstRun.ai.modelHint")} ${chatListNote(t, vendor.data)}`.trim()}
-          >
-            {(control) => (
-              <ComboBox
-                {...control}
-                value={chatModel}
-                // The sheet first, then what the vendor is serving today. The
-                // sheet's rows are the ones this installation can already price.
-                // The live rows answer a different question: what else is there.
-                suggestions={[
-                  ...suggestionsFor(
-                    catalogue.data,
-                    preset.provider,
-                    "chat",
-                    locale,
-                  ),
-                  ...vendorSuggestions(
-                    vendor.data,
-                    catalogue.data,
-                    preset.provider,
-                    locale,
-                  ),
-                ]}
-                disabled={busy}
-                onChange={setChatModel}
-              />
-            )}
-          </Field>
+          <SetupTiers preset={preset} hidden={oneModel} />
+          <Checkbox
+            label={t("firstRun.ai.oneModel")}
+            checked={oneModel}
+            disabled={busy}
+            onChange={(e) => setOneModel(e.target.checked)}
+          />
+          {/* Both model fields offer what the sheet can price for the chosen
+            vendor, in the lane that field binds, and take anything typed,
+            because the server accepts any id its vendor serves. */}
+          {oneModel && (
+            <Field
+              label={t("firstRun.ai.chatModel")}
+              hint={`${t("firstRun.ai.modelHint")} ${chatListNote(t, vendor.data)}`.trim()}
+            >
+              {(control) => (
+                <ComboBox
+                  {...control}
+                  value={chatModel}
+                  // The sheet first, then what the vendor is serving today. The
+                  // sheet's rows are the ones this installation can already price.
+                  // The live rows answer a different question: what else is there.
+                  suggestions={[
+                    ...suggestionsFor(
+                      catalogue.data,
+                      preset.provider,
+                      "chat",
+                      locale,
+                    ),
+                    ...vendorSuggestions(
+                      vendor.data,
+                      catalogue.data,
+                      preset.provider,
+                      locale,
+                    ),
+                  ]}
+                  disabled={busy}
+                  onChange={setChatModel}
+                />
+              )}
+            </Field>
+          )}
           <Field label={t("firstRun.ai.embedModel")}>
             {(control) => (
               <ComboBox
@@ -411,7 +427,9 @@ export function AiStep({
             catalogue={catalogue.data}
             vendor={vendor.data}
             provider={preset.provider}
-            chatModel={chatModel}
+            // The graded setup binds a model per tier, each listed above with
+            // its tier; the plate prices the one model only when one is chosen.
+            chatModel={oneModel ? chatModel : ""}
             embedModel={embedModel}
             locale={locale}
           />
@@ -419,5 +437,39 @@ export function AiStep({
       </Panel>
       {panel === undefined && <StageActions>{actions}</StageActions>}
     </StepForm>
+  );
+}
+
+/**
+ * The graded preset's models, tier by tier, which onboarding binds unless the
+ * reader asks for one model on every tier.
+ */
+function SetupTiers({
+  preset,
+  hidden,
+}: Readonly<{ preset: SetupProvider; hidden: boolean }>) {
+  const t = useT();
+  if (hidden) {
+    return null;
+  }
+  const setup = MODEL_SETUPS[preset.setup];
+  const tiers = Object.entries(setup.routing.tiers).sort(
+    ([a], [b]) => tierRank(a) - tierRank(b),
+  );
+  return (
+    <Field
+      label={t("firstRun.ai.setup", { setup: setup.title })}
+      hint={t("firstRun.ai.setupHint")}
+    >
+      {() => (
+        <FactList
+          facts={tiers.map(([tier, binding]) => ({
+            key: tier,
+            term: tierLabel(tier, t),
+            value: binding.model,
+          }))}
+        />
+      )}
+    </Field>
   );
 }

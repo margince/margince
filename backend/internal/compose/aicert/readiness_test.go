@@ -10,6 +10,9 @@ package aicert_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -154,6 +157,56 @@ func TestTheNamedScenariosAreOrdered(t *testing.T) {
 		if strings.Join(got, ",") != strings.Join(want, ",") {
 			t.Fatalf("the moved scenarios came back as %v, want them sorted as %v", got, want)
 		}
+	}
+}
+
+// A new judge moves scores on its own, so a record another judge graded is stale
+// until this build's judge grades it, unless the candidate is of that judge's own
+// family, which another judge must grade.
+func TestARecordAnotherJudgeGradedIsStale(t *testing.T) {
+	stamped := func(served, judge string) aicert.Record {
+		return aicert.Record{
+			Task: "rate_extract", Provider: "gemini", ServedModel: served, EnvClass: "eu_hosted",
+			PromptVersion: "p", JudgeServedModel: judge, Runs: 3, Passed: 3, Verdict: aicert.VerdictCertified,
+			Scenarios: []aicert.ScenarioRecord{{Scenario: "fx_one", Site: "fx", Stamp: "s", Runs: 3, Passed: 3}},
+		}
+	}
+	perSite := map[string]map[string]string{"rate_extract/fx": {"fx_one": "s"}}
+	for _, tc := range []struct {
+		name, served, judge, want string
+	}{
+		{"graded by this build's judge", "gemini-3.5-flash", aicert.DefaultJudgeModel, aicert.StatusCurrent},
+		{"graded by an older judge", "gemini-3.5-flash", "claude-sonnet-4-6", aicert.StatusStale},
+		{"graded by no judge", "gemini-3.5-flash", "", aicert.StatusCurrent},
+		{"a Claude candidate graded by another family", "anthropic/claude-sonnet-4.6", "gemini-3.1-flash-lite", aicert.StatusCurrent},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rows, _ := aicert.Readiness(aicert.Census{Sites: []aitasks.Site{fxSite}},
+				map[string]string{"rate_extract": "p"}, perSite, []aicert.Record{stamped(tc.served, tc.judge)})
+			row := fxRow(t, rows)
+			if row.Status() != tc.want {
+				t.Fatalf("status = %q, want %q", row.Status(), tc.want)
+			}
+			reason := row.Standing.Reason()
+			if tc.want == aicert.StatusStale && (!strings.Contains(reason, tc.judge) || strings.Contains(reason, "scenario")) {
+				t.Errorf("the reason does not name the judge alone: %q", reason)
+			}
+		})
+	}
+}
+
+// The judge a record must name is the one `make e2e-ai` grades with by default.
+func TestTheDefaultJudgeIsTheOneTheLaneRunsWith(t *testing.T) {
+	makefile, err := os.ReadFile(filepath.Join("..", "..", "..", "Makefile"))
+	if err != nil {
+		t.Fatalf("reading backend/Makefile: %v", err)
+	}
+	line := regexp.MustCompile(`(?m)^AICERT_DEFAULT_JUDGE\s*:=\s*\S+:(\S+)\s*$`).FindSubmatch(makefile)
+	if line == nil {
+		t.Fatal("backend/Makefile declares no `AICERT_DEFAULT_JUDGE := <provider>:<model>`")
+	}
+	if got := string(line[1]); got != aicert.DefaultJudgeModel {
+		t.Errorf("the lane grades with %s and aicert.DefaultJudgeModel says %s", got, aicert.DefaultJudgeModel)
 	}
 }
 

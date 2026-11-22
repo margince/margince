@@ -3,6 +3,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { VertexLocationField } from "../../components/vertex-location";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ServiceAccountKeyField } from "../../design-system/serviceaccountkeyfield";
@@ -11,6 +12,7 @@ import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRouting } from "../../lib/ai-routing-query";
 import { useCan } from "../../lib/capability";
+import { MODEL_SETUPS, type ModelSetupId } from "../../lib/modelsetups.gen";
 import { unwrap } from "../../lib/problem";
 import type { SetupProvider } from "../../lib/setup-providers";
 
@@ -41,6 +43,9 @@ export function useBindModels() {
       // Where the embedder is bound when the chat location serves none.
       embedLocation?: string;
       profile: SetupProvider["profile"];
+      // The graded preset to bind tier by tier; absent when the reader chose
+      // one model for every tier.
+      setup?: ModelSetupId;
       chatModel: string;
       embedModel: string;
       routingLocked?: boolean;
@@ -48,18 +53,8 @@ export function useBindModels() {
       if (vars.routingLocked) {
         return;
       }
-      // Every chat tier on the one model the reader chose. A tier left unbound
-      // degrades honestly at runtime, but an onboarding that bound only some of
-      // them would have the product answer for one task and refuse another with
-      // no way for the reader to tell which they had configured.
       const host = vars.baseUrl ? { base_url: vars.baseUrl } : {};
       const embedLocation = vars.embedLocation ?? vars.location;
-      const binding = {
-        provider: vars.provider,
-        model: vars.chatModel,
-        ...host,
-        ...(vars.location ? { location: vars.location } : {}),
-      };
       unwrap(
         await api.PUT("/ai/routing", {
           body: {
@@ -68,12 +63,7 @@ export function useBindModels() {
             // eu_hosted), eu_hosted for Vertex at an EU location. A first-time admin
             // cannot yet answer a location ladder before binding anything.
             profile: vars.profile,
-            tiers: {
-              local_small: binding,
-              cheap_cloud: binding,
-              premium: binding,
-              frontier: binding,
-            },
+            tiers: chatTiers(vars, host),
             embeddings: {
               provider: vars.provider,
               model: vars.embedModel,
@@ -99,6 +89,48 @@ export function useBindModels() {
       vars: Omit<Parameters<typeof bind.mutate>[0], "routingLocked">,
       options?: Parameters<typeof bind.mutate>[1],
     ) => bind.mutate({ ...vars, routingLocked: locked }, options),
+  };
+}
+
+type ChatTiers = components["schemas"]["AiRouting"]["tiers"];
+
+/**
+ * Every chat tier, bound. A tier left unbound degrades honestly at runtime, but
+ * an onboarding that bound only some would have the product answer for one task
+ * and refuse another with no way for the reader to tell which they configured.
+ * The graded preset binds each tier to its own model, at the location the
+ * reader chose; the advanced choice puts the one model on all four.
+ */
+export function chatTiers(
+  vars: Readonly<{
+    provider: string;
+    location?: string;
+    setup?: ModelSetupId;
+    chatModel: string;
+  }>,
+  host: Readonly<{ base_url?: string }>,
+): ChatTiers {
+  const at = vars.location ? { location: vars.location } : {};
+  if (vars.setup) {
+    const tiers: ChatTiers = {};
+    for (const [tier, binding] of Object.entries(
+      MODEL_SETUPS[vars.setup].routing.tiers,
+    )) {
+      tiers[tier] = { ...binding, ...at };
+    }
+    return tiers;
+  }
+  const binding = {
+    provider: vars.provider,
+    model: vars.chatModel,
+    ...host,
+    ...at,
+  };
+  return {
+    local_small: binding,
+    cheap_cloud: binding,
+    premium: binding,
+    frontier: binding,
   };
 }
 

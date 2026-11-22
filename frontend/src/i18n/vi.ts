@@ -17317,7 +17317,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.ai.keyHint": "Lưu trong kho khóa và không bao giờ hiện lại.",
   "firstRun.ai.chatModel": "Mô hình",
   "firstRun.ai.modelHint":
-    "Chỉ là điểm khởi đầu. Mô hình nào nhà cung cấp phục vụ cũng dùng được.",
+    "Mô hình nào nhà cung cấp phục vụ cũng dùng được. Các bài kiểm tra đã chấm bộ mô hình ở trên, không phải một mô hình cho mọi tầng.",
+  "firstRun.ai.setup": "Mô hình: {setup}",
+  "firstRun.ai.setupHint":
+    "Bộ mô hình mà các bài kiểm tra đã chấm cho nhà cung cấp này, mỗi tầng một mô hình. Bạn có thể đổi bất kỳ mô hình nào sau này trong Cài đặt, mục AI.",
+  "firstRun.ai.oneModel": "Dùng một mô hình cho mọi tầng",
+  "aiCert.ready": "Sẵn sàng",
+  "aiCert.withCare": "Dùng được nhưng cần kiểm tra",
+  "aiCert.notReliable": "Chưa đáng tin cậy",
+  "aiCert.notMeasured": "Chưa đo",
+  "aiCert.recheckPending": "{grade}, đang chờ kiểm tra lại",
+  "aiCert.title": "Điểm kiểm tra của {model} cho tính năng này",
   "firstRun.ai.embedModel": "Mô hình embedding",
   "firstRun.ai.keyFailed": "Không thể lưu khóa",
   "firstRun.ai.bindFailed": "Không thể gán nhà cung cấp",

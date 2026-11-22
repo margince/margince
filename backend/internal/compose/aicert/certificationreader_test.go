@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -45,7 +46,10 @@ const (
 	aiCertCare     = "⚠️ Usable with care"
 	aiCertNotYet   = "❌ Not reliable yet"
 	aiCertUnproven = "❔ Not measured"
-	aiCertOff      = "➖ Off"
+	// aiCertTooFew is a place's grade, never a feature's: right on every case,
+	// on too few tries for the place to be graded alone.
+	aiCertTooFew = "🔹 Right every time, too few tries to grade alone"
+	aiCertOff    = "➖ Off"
 )
 
 // aiCertVerdictSource is the file whose Verdict doc comment states the rule.
@@ -91,6 +95,12 @@ func loadAICertVerdictRule(t *testing.T) string {
 		if want := fmt.Sprintf("%d%%", percent); !strings.Contains(joined, want) {
 			t.Fatalf("Verdict's documented rule does not state the %s the code applies:\n%s", want, joined)
 		}
+	}
+	if want := fmt.Sprintf("N ≥ %d ∧", aicert.CertifiedMinRuns); !strings.Contains(joined, want) {
+		t.Fatalf("Verdict's documented rule does not state the %s fewest runs a certified grade rests on:\n%s", want, joined)
+	}
+	if want := fmt.Sprintf("≥ %d graded runs", aicert.MinJudgeScores); !strings.Contains(joined, want) {
+		t.Fatalf("Verdict's documented rule does not state the %s a judged case needs:\n%s", want, joined)
 	}
 	if want := fmt.Sprintf("⌈%dN/%d⌉", aicert.MajorityNumerator, aicert.MajorityDenominator); !strings.Contains(joined, want) {
 		t.Fatalf("Verdict's documented rule does not state the %s degraded pooled majority the code applies:\n%s", want, joined)
@@ -174,10 +184,31 @@ func writeAICertPresetSummary(page *strings.Builder, presets []aiCertPreset) {
 			p.Bands.Certified, p.Bands.SupportedDegraded, p.Bands.NotSupported, p.Untested, aiCertBottomLine(p))
 	}
 	page.WriteString("\n")
+	if judges := aiCertPresetJudges(presets); len(judges) > 1 {
+		fmt.Fprintf(page, "**These grades were scored by %d different judges** (%s). A judge is the second model that\n"+
+			"scores how good an answer is, and two judges do not score on one scale: each feature below names its own.\n\n",
+			len(judges), aiCertCodeList(judges))
+	}
 	writeAICertLegend(page, presets)
 	for _, p := range presets {
 		writeAICertPresetDetail(page, p)
 	}
+}
+
+// aiCertPresetJudges names the judges behind the measured preset grades, sorted.
+func aiCertPresetJudges(presets []aiCertPreset) []string {
+	seen := map[string]bool{}
+	var judges []string
+	for _, p := range presets {
+		for _, row := range p.Tasks {
+			if row.Band != "" && row.Judge != "" && !seen[row.Judge] {
+				seen[row.Judge] = true
+				judges = append(judges, row.Judge)
+			}
+		}
+	}
+	sort.Strings(judges)
+	return judges
 }
 
 // writeAICertLegend says what each grade means for the reader's own decision:
@@ -190,8 +221,8 @@ func writeAICertLegend(page *strings.Builder, presets []aiCertPreset) {
 	}
 	page.WriteString("**What the grades mean**\n\n")
 	page.WriteString("| Grade | What we measured | What to do |\n|---|---|---|\n")
-	fmt.Fprintf(page, "| %s | Right in at least %d of every 100 tries, no test case clearly broken, and good answers. | Turn it on and rely on it. |\n",
-		aiCertReady, aicert.CertifiedPassPercent)
+	fmt.Fprintf(page, "| %s | Right in at least %d of every 100 of at least %d tries, and so very likely right in at least %d of every 100 calls; no test case clearly broken, and good answers. It holds for the test cases we ran, at the scope shown beside it. | Turn it on and rely on it. |\n",
+		aiCertReady, aicert.CertifiedPassPercent, aicert.CertifiedMinRuns, aicert.CertifiedPassBoundPercent)
 	fmt.Fprintf(page, "| %s | Right in at least %s of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |\n",
 		aiCertCare, aiCertMajorityWords())
 	fmt.Fprintf(page, "| %s | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |\n", aiCertNotYet)
@@ -204,6 +235,10 @@ func writeAICertLegend(page *strings.Builder, presets []aiCertPreset) {
 	page.WriteString("The router falls back only when a call fails: an error, a timeout, an answer broken\n")
 	page.WriteString("off midway. It never falls back because an answer was wrong, so a fallback does not\n")
 	page.WriteString("rescue a feature graded below. *no separate fallback* means both tiers bind the same model.\n")
+	page.WriteString("\n*at least N%* after a count is the cautious end of the margin: with that many tries, the\n")
+	page.WriteString("feature is very likely right at least that often. *one model call of it* or *one turn of it*\n")
+	page.WriteString("means the test reaches only that part of the feature, and the grade says nothing about the rest.\n")
+	page.WriteString("*scored by* names the model that judged the answers' quality; grades two judges gave are not on one scale.\n")
 	page.WriteString("\n*re-check pending* after a grade means the product has changed since it was\n")
 	page.WriteString("measured. The grade is the last one we have, and it is shown until the next test replaces it.\n")
 	page.WriteString("[How the scoring works](#how-the-scoring-works) explains how a grade is reached.\n\n")
@@ -376,10 +411,15 @@ func aiCertPlainWords(row aiCertPresetTask) string {
 	switch {
 	case row.Tier == "":
 		return "Off: this preset has no model for it"
+	case row.Band == "" && len(row.Unmeasured) > 0:
+		return "Not measured yet: no test of " + aiCertCodeList(row.Unmeasured) + " on this model"
 	case row.Band == "":
 		return "Not measured yet"
 	}
-	words := aiCertTriesWords(row.Runs, row.Passed)
+	words := aiCertTriesWords(row.Runs, row.Passed) + aiCertScopeWords(row.Scope)
+	if row.WithoutCompanyContext {
+		words += "; tested without the company profile your install adds"
+	}
 	if row.Band != aicert.VerdictCertified {
 		if row.CasesFailingOften > 0 {
 			words += "; " + aiCertCases(row.CasesFailingOften) + " wrong too often"
@@ -387,6 +427,9 @@ func aiCertPlainWords(row aiCertPresetTask) string {
 		if row.CasesBelowQualityBar > 0 {
 			words += "; answer quality below the bar in " + aiCertCases(row.CasesBelowQualityBar)
 		}
+	}
+	if row.Judge != "" {
+		words += "; scored by `" + row.Judge + "`"
 	}
 	switch row.State {
 	case aicert.StatusStale:
@@ -397,15 +440,40 @@ func aiCertPlainWords(row aiCertPresetTask) string {
 	return words
 }
 
+// aiCertTriesWords is a pass count with the cautious end of its margin, the
+// Wilson lower bound the grade itself reads.
 func aiCertTriesWords(runs, passed int) string {
-	switch {
-	case runs == 0:
+	if runs == 0 {
 		return "No tries recorded"
-	case passed == runs:
-		return fmt.Sprintf("Right every time (%d of %d)", passed, runs)
-	default:
-		return fmt.Sprintf("Right in %d of %d tries", passed, runs)
 	}
+	cautious := int(aicert.ReliabilityIntervalOf(passed, runs).Lower * 100)
+	if passed == runs {
+		return fmt.Sprintf("Right every time (%d of %d, at least %d%%)", passed, runs, cautious)
+	}
+	return fmt.Sprintf("Right in %d of %d tries (at least %d%%)", passed, runs, cautious)
+}
+
+// aiCertScopeWords says how much of the feature a grade's test reached, and
+// nothing when it reached all of it.
+func aiCertScopeWords(scope string) string {
+	switch scope {
+	case "", aitasks.ScopeFullInvocation:
+		return ""
+	case aitasks.ScopeSingleCall:
+		return "; tested on one model call of it"
+	case aitasks.ScopeSingleTurn:
+		return "; tested on one turn of it"
+	default:
+		return "; tested on part of it (`" + scope + "`)"
+	}
+}
+
+func aiCertCodeList(names []string) string {
+	quoted := make([]string, len(names))
+	for i, name := range names {
+		quoted[i] = "`" + name + "`"
+	}
+	return strings.Join(quoted, ", ")
 }
 
 func aiCertCases(n int) string {
@@ -426,11 +494,13 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars
 	fmt.Fprintf(page, "2. **Several tries.** Each test case is run %d times at first (`RUNS=` can change\n"+
 		"   that for one run), because a model can answer the same question differently\n"+
 		"   each time. A test case whose result sits close to a line gets %d more tries at a\n"+
-		"   time, up to %d, so a close call is settled by more evidence rather than by luck.\n",
-		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns)
+		"   time, up to %d, so a close call is settled by more evidence rather than by luck.\n"+
+		"   A feature is never graded %s on fewer than %d tries in all: one that looks ready\n"+
+		"   sooner gets more tries first.\n",
+		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns, aiCertReady, aicert.CertifiedMinRuns)
 	page.WriteString("3. **Two checks on every try.**\n")
 	page.WriteString("   - *Is it right?* The answer is checked mechanically against what we expect: the\n")
-	page.WriteString("     right label, the right record, no invented facts, fast enough.\n")
+	page.WriteString("     right label, the right record, no invented facts.\n")
 	page.WriteString("   - *Is it good?* A second AI model, chosen so that it is not the one being tested,\n")
 	page.WriteString("     scores the answer from 0 to 100 against a written description of a good answer.\n")
 	page.WriteString("     A test case whose own check already sees everything that description asks is\n")
@@ -447,8 +517,8 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars
 		"   is not paid for %d times.\n", aicert.ReaskBandMargin, aicert.ReaskDisagreement, aicert.MaxJudgeOpinions)
 	page.WriteString("5. **The grade.** All the tries of a feature are then read together:\n\n")
 	page.WriteString("| Grade | Right answers | Every test case | Quality |\n|---|---|---|---|\n")
-	fmt.Fprintf(page, "| %s | at least %d of every 100 tries, and enough tries to be sure of at least %d | right in at least half its tries, and not clearly broken | good on average across all tries, even allowing for doubt |\n",
-		aiCertReady, aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent)
+	fmt.Fprintf(page, "| %s | at least %d of every 100 of at least %d tries, and enough tries to be sure of at least %d | right in at least half its tries, and not clearly broken | good on average across all tries, even allowing for doubt, and scored on at least %d tries of every test case |\n",
+		aiCertReady, aicert.CertifiedPassPercent, aicert.CertifiedMinRuns, aicert.CertifiedPassBoundPercent, aicert.MinJudgeScores)
 	fmt.Fprintf(page, "| %s | at least %s of all tries | not failing nearly every try, and not clearly very poor | acceptable on average, even allowing for doubt |\n",
 		aiCertCare, aiCertMajorityWords())
 	fmt.Fprintf(page, "| %s | anything less, or a test case the scoring model never scored | | |\n\n", aiCertNotYet)
@@ -477,10 +547,11 @@ func writeAICertExactRule(page *strings.Builder, rule string, selfJudged int) {
 		"count k of n satisfies (2k − n)² ≤ n, or its median score is within one standard\n"+
 		"error of `certified_min` or `degraded_min`. Every case extends while the pool is\n"+
 		"undecided: the pooled pass rate is at least %d%% but its Wilson bound is under %d%%, or\n"+
-		"the pooled `certified_min` margin averages at least 0 but its bound is under 0. The\n"+
-		"decision reads only scored runs, so a resumed run replays the same extensions.\n",
+		"the pooled `certified_min` margin averages at least 0 but its bound is under 0, or the\n"+
+		"pool holds fewer than %d runs while its rate is at least %d%%. The decision reads only\n"+
+		"scored runs, so a resumed run replays the same extensions.\n",
 		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns,
-		aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent)
+		aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent, aicert.CertifiedMinRuns, aicert.CertifiedPassPercent)
 	fmt.Fprintf(page, "The grades map to the record's words as %s = `%s`, %s = `%s`, %s = `%s`, and\n"+
 		"%s = no record for that model.\n",
 		aiCertReady, aicert.VerdictCertified, aiCertCare, aicert.VerdictSupportedDegraded,
@@ -540,6 +611,8 @@ func writeAICertThresholds(page *strings.Builder, bars []aiCertQualityBar) {
 		aiCertReady, aicert.CertifiedPassPercent)
 	fmt.Fprintf(page, "| How sure that must be, for %s | the pass rate's lower bound at least %d of every 100 |\n",
 		aiCertReady, aicert.CertifiedPassBoundPercent)
+	fmt.Fprintf(page, "| Fewest tries for %s | %d, counted over all of the feature's test cases |\n", aiCertReady, aicert.CertifiedMinRuns)
+	fmt.Fprintf(page, "| Fewest quality scores for %s | %d on every test case a judge scores |\n", aiCertReady, aicert.MinJudgeScores)
 	fmt.Fprintf(page, "| Each test case, for %s | right in at least %d of every 100 of its own tries |\n",
 		aiCertReady, aicert.CasePassPercent)
 	fmt.Fprintf(page, "| Right answers needed for %s | at least %s of all tries |\n", aiCertCare, aiCertMajorityWords())

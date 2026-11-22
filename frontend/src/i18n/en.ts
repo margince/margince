@@ -17630,7 +17630,17 @@ export const en = {
   "firstRun.ai.keyHint": "Stored in the key vault and never shown again.",
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
-    "A starting point. Any model the provider serves works.",
+    "Any model the provider serves works. The tests graded the setup above, not one model on every tier.",
+  "firstRun.ai.setup": "Models: {setup}",
+  "firstRun.ai.setupHint":
+    "The setup our tests graded for this provider, one model for each tier. You can change any of them later in Settings under AI.",
+  "firstRun.ai.oneModel": "Use one model for every tier instead",
+  "aiCert.ready": "Ready",
+  "aiCert.withCare": "Usable with care",
+  "aiCert.notReliable": "Not reliable yet",
+  "aiCert.notMeasured": "Not measured",
+  "aiCert.recheckPending": "{grade}, re-check pending",
+  "aiCert.title": "Test grade of {model} on this feature",
   "firstRun.ai.embedModel": "Embedding model",
   "firstRun.ai.keyFailed": "Key not stored",
   "firstRun.ai.bindFailed": "Provider not bound",

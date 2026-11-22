@@ -111,9 +111,19 @@ func TestVerdictPoolsEveryCaseAndVetoesAClearlyBrokenOne(t *testing.T) {
 			aicert.VerdictSupportedDegraded,
 		},
 		{
-			"nine of nine on one case certifies",
+			"nine of nine on one case is too few runs to certify",
 			[]aicert.ScenarioRuns{graded(testBands, 9, 90, 90, 90, 90, 90, 90, 90, 90, 90)},
+			aicert.VerdictSupportedDegraded,
+		},
+		{
+			"twelve of twelve on one case certifies",
+			[]aicert.ScenarioRuns{graded(testBands, 12, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90)},
 			aicert.VerdictCertified,
+		},
+		{
+			"a judged case with two scores cannot certify however high they are",
+			append(repeated(4, perfect), graded(testBands, 2, 95, 95)),
+			aicert.VerdictSupportedDegraded,
 		},
 		{
 			"a case passing under half its runs withholds certified",
@@ -235,6 +245,26 @@ func TestRecordForSiteAppliesTheSetRule(t *testing.T) {
 	rec.Scenarios = legacy[:2]
 	if tally, _ := rec.ForSite("acts"); tally.Verdict != aicert.VerdictCertified {
 		t.Fatalf("legacy site verdict = %q, want the record's own verdict for a site holding every row", tally.Verdict)
+	}
+}
+
+// A site too small for the pooled bound is graded for what it measured: every
+// try right reads too few runs, never usable with care, and a case that fails
+// on its own still grades the site down.
+func TestASiteWithTooFewRunsIsNotCalledWeak(t *testing.T) {
+	bands := &aicert.RowBands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}
+	right := aicert.ScenarioRecord{Site: "field_extract", Runs: 3, Passed: 3, JudgeScores: []int{95, 92, 95}, Bands: bands}
+	if tally, _ := (aicert.Record{Scenarios: []aicert.ScenarioRecord{right}}).ForSite("field_extract"); tally.Verdict != aicert.SiteTooFewRuns {
+		t.Errorf("3 of 3 right reads %q, want %q", tally.Verdict, aicert.SiteTooFewRuns)
+	}
+	wrong := right
+	wrong.Passed = 0
+	if tally, _ := (aicert.Record{Scenarios: []aicert.ScenarioRecord{right, wrong}}).ForSite("field_extract"); tally.Verdict != aicert.VerdictNotSupported {
+		t.Errorf("a site with a case failing every try reads %q, want not_supported", tally.Verdict)
+	}
+	four := []aicert.ScenarioRecord{right, right, right, right}
+	if tally, _ := (aicert.Record{Scenarios: four}).ForSite("field_extract"); tally.Verdict != aicert.VerdictCertified {
+		t.Errorf("12 of 12 right reads %q, want certified", tally.Verdict)
 	}
 }
 

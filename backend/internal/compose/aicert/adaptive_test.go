@@ -38,8 +38,8 @@ func TestABorderlineCaseIsExtendedAndASettledOneIsNot(t *testing.T) {
 		{"a median further above it is not", caseRuns(3, 84, 90, 96), 3},
 		{"a median exactly at degraded_min is borderline", caseRuns(3, 40, 50, 60), 6},
 		{"a mean near a bar is borderline though the median is far from it", caseRuns(3, 40, 90, 91), 6},
-		{"a borderline case at seven runs stops at the cap", caseRuns(4, nineties(7)...), adaptiveMaxRuns},
-		{"a borderline case at the cap is not extended", caseRuns(4, nineties(9)...), adaptiveMaxRuns},
+		{"a borderline case at ten runs stops at the cap", caseRuns(5, nineties(10)...), adaptiveMaxRuns},
+		{"a borderline case at the cap is not extended", caseRuns(6, nineties(adaptiveMaxRuns)...), adaptiveMaxRuns},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := nextRunCounts(append(slices.Clone(settled), tc.c), adaptiveMaxRuns)
@@ -50,9 +50,9 @@ func TestABorderlineCaseIsExtendedAndASettledOneIsNot(t *testing.T) {
 	}
 }
 
-// A pool that meets 90% on its point estimate but not on its bound is a
-// question only more runs answer, so every case extends — and stops once the
-// bound clears.
+// A pool that meets 90% on its point estimate but not on its bound, or on
+// fewer runs than a certified grade rests on, is a question only more runs
+// answer, so every case extends — and stops once both clear.
 func TestAnUndecidedPoolExtendsEveryCase(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -61,8 +61,10 @@ func TestAnUndecidedPoolExtendsEveryCase(t *testing.T) {
 	}{
 		{"one case of three of three", []ScenarioRuns{caseRuns(3, nineties(3)...)}, []int{6}},
 		{"one case of six of six", []ScenarioRuns{caseRuns(6, nineties(6)...)}, []int{9}},
-		{"one case of nine of nine is decided", []ScenarioRuns{caseRuns(9, nineties(9)...)}, []int{9}},
+		{"one case of nine of nine is too few runs", []ScenarioRuns{caseRuns(9, nineties(9)...)}, []int{12}},
+		{"one case of twelve of twelve is decided", []ScenarioRuns{caseRuns(12, nineties(12)...)}, []int{12}},
 		{"two cases of three of three", []ScenarioRuns{caseRuns(3, nineties(3)...), caseRuns(3, nineties(3)...)}, []int{6, 6}},
+		{"four cases of three of three reach the fewest runs", slices.Repeat([]ScenarioRuns{caseRuns(3, nineties(3)...)}, 4), []int{3, 3, 3, 3}},
 		// No case is borderline alone: each scores one value, so it has no spread.
 		{"a pooled margin whose bound straddles 0", []ScenarioRuns{
 			caseRuns(3, 60, 60, 60), caseRuns(3, 60, 60, 60), caseRuns(3, 85, 85, 85), caseRuns(3, 85, 85, 85),
@@ -77,7 +79,7 @@ func TestAnUndecidedPoolExtendsEveryCase(t *testing.T) {
 }
 
 // runRounds drives the rounds nextRunCounts asks for and nothing else: a single
-// case right every time runs 3, then 6, then 9, and stops at the cap.
+// case right every time runs 3, then 6, 9 and 12, and stops at the cap.
 func TestRunRoundsDrivesEachExtensionOnceAndStopsAtTheCap(t *testing.T) {
 	var asked []int
 	sets, err := runRounds([]ScenarioRuns{{Bands: wideBands}}, defaultRepeats, adaptiveMaxRuns, func(_, run int) (RunResult, error) {
@@ -87,7 +89,7 @@ func TestRunRoundsDrivesEachExtensionOnceAndStopsAtTheCap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("runRounds: %v", err)
 	}
-	if want := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}; !slices.Equal(asked, want) {
+	if want := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}; !slices.Equal(asked, want) {
 		t.Fatalf("runs asked for = %v, want %v", asked, want)
 	}
 	if len(sets[0].Runs) != adaptiveMaxRuns {
@@ -98,14 +100,14 @@ func TestRunRoundsDrivesEachExtensionOnceAndStopsAtTheCap(t *testing.T) {
 // RUNS= sets the first round; at or past the cap nothing is extended.
 func TestAFirstRoundAtTheCapIsNeverExtended(t *testing.T) {
 	calls := 0
-	if _, err := runRounds([]ScenarioRuns{{Bands: wideBands}}, 11, adaptiveMaxRuns, func(_, _ int) (RunResult, error) {
+	if _, err := runRounds([]ScenarioRuns{{Bands: wideBands}}, adaptiveMaxRuns+2, adaptiveMaxRuns, func(_, _ int) (RunResult, error) {
 		calls++
 		return RunResult{HardPass: true, Score: 70}, nil
 	}); err != nil {
 		t.Fatalf("runRounds: %v", err)
 	}
-	if calls != 11 {
-		t.Fatalf("%d runs, want exactly the 11 asked for", calls)
+	if calls != adaptiveMaxRuns+2 {
+		t.Fatalf("%d runs, want exactly the %d asked for", calls, adaptiveMaxRuns+2)
 	}
 }
 

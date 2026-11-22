@@ -17792,7 +17792,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird im Schlüsseltresor gespeichert und nie wieder angezeigt.",
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
-    "Ein Ausgangspunkt. Jedes Modell, das der Anbieter bereitstellt, funktioniert.",
+    "Jedes Modell, das der Anbieter bereitstellt, funktioniert. Unsere Tests haben die Zusammenstellung oben bewertet, nicht ein Modell für jede Stufe.",
+  "firstRun.ai.setup": "Modelle: {setup}",
+  "firstRun.ai.setupHint":
+    "Die Zusammenstellung, die unsere Tests für diesen Anbieter bewertet haben, ein Modell pro Stufe. Du kannst jedes davon später in den Einstellungen unter KI ändern.",
+  "firstRun.ai.oneModel": "Stattdessen ein Modell für jede Stufe verwenden",
+  "aiCert.ready": "Bereit",
+  "aiCert.withCare": "Mit Vorsicht nutzbar",
+  "aiCert.notReliable": "Noch nicht zuverlässig",
+  "aiCert.notMeasured": "Nicht gemessen",
+  "aiCert.recheckPending": "{grade}, neue Prüfung ausstehend",
+  "aiCert.title": "Testnote von {model} für diese Funktion",
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.ai.keyFailed": "Schlüssel nicht gespeichert",
   "firstRun.ai.bindFailed": "Anbieter nicht zugeordnet",

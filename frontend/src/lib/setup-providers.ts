@@ -15,6 +15,11 @@
  * remain available in Settings → AI, where an operator who already has two
  * vendor accounts can bind the lanes separately.
  *
+ * WHY A PRESET. Onboarding binds the tiers of the preset named in `setup`,
+ * one model per tier as the certification graded it (modelsetups.gen.ts is
+ * generated from config/presets). One model on every tier is the advanced
+ * choice, and the setup the tests graded is not that one.
+ *
  * WHY DEFAULTS AND NOT A LIST. The two models named here are where each field
  * OPENS, not what it offers. What it offers comes from the server — the price
  * sheet, which is the one list that has to be right, since a model outside it
@@ -28,6 +33,7 @@
  * admin to know that is asking them to know our adapter names.
  */
 import type { components } from "../api/schema";
+import type { ModelSetupId } from "./modelsetups.gen";
 
 export type SetupProvider = {
   /** What onboarding calls it. */
@@ -42,7 +48,14 @@ export type SetupProvider = {
   readonly baseUrl?: string;
   /** The variable the server reads this key from, shown so an operator can find it. */
   readonly keyEnv: string;
-  /** Where the chat lanes start. Editable. */
+  /**
+   * The preset whose tiers onboarding binds: the setup the certification
+   * graded for this vendor. `backend/gates/frontendsetupproviders_test.go`
+   * fails a provider that names a preset of another vendor, or one whose
+   * models hold no current grade.
+   */
+  readonly setup: ModelSetupId;
+  /** The one model the advanced choice puts on every chat tier. Editable. */
   readonly chatModel: string;
   /** The embedding lane, a different model even on the same vendor. */
   readonly embedModel: string;
@@ -75,6 +88,7 @@ const PRESETS: Readonly<Record<SetupProviderId, SetupProvider>> = {
     label: "Google Gemini",
     provider: "gemini",
     keyEnv: "GEMINI_API_KEY",
+    setup: "gemini_cloud",
     chatModel: "gemini-3.1-flash-lite",
     embedModel: "gemini-embedding-001",
     credential: "api_key",
@@ -85,6 +99,7 @@ const PRESETS: Readonly<Record<SetupProviderId, SetupProvider>> = {
     provider: "openai_compatible",
     baseUrl: "https://openrouter.ai/api",
     keyEnv: "OPENAI_COMPATIBLE_API_KEY",
+    setup: "openrouter_cloud",
     chatModel: "mistralai/mistral-small-3.2-24b-instruct",
     embedModel: "openai/text-embedding-3-small",
     credential: "api_key",
@@ -97,6 +112,7 @@ const PRESETS: Readonly<Record<SetupProviderId, SetupProvider>> = {
     label: "Gemini on Vertex AI",
     provider: "gemini_vertex",
     keyEnv: "GEMINI_VERTEX_SA_JSON",
+    setup: "gemini_vertex_eu",
     chatModel: "gemini-3.1-flash-lite",
     embedModel: "gemini-embedding-001",
     credential: "service_account",

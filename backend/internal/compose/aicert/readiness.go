@@ -101,6 +101,12 @@ type Standing struct {
 	// holds. They do not make it stale — it is not wrong about what ships — but
 	// they are not coverage either, because nobody can re-run them.
 	Dropped []string
+	// GradedBy names the judge that graded a record when it is not the one this
+	// build grades with: a new judge moves scores on its own, so such a record
+	// is stale until that judge grades it again.
+	GradedBy string
+	// judgeOnly says GradedBy alone made the record stale: its stamps still match.
+	judgeOnly bool
 	// TaskStampOnly marks a record written before ScenarioRecord.Stamp existed.
 	// There is nothing finer to compare than the task stamp it carries, so its
 	// staleness names no scenario. Such a record reports no counts, exactly as
@@ -176,6 +182,7 @@ func (s Standing) Reason() string {
 	}
 	var reason string
 	switch {
+	case s.judgeOnly:
 	case s.TaskStampOnly:
 		reason = "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
 	case len(s.Moved) == 1:
@@ -184,6 +191,14 @@ func (s Standing) Reason() string {
 	default:
 		reason = fmt.Sprintf("%d scenarios it scored have changed since (%s): %s",
 			len(s.Moved), s.movedCauses(), namesUpTo(s.Moved, movedNamesShown))
+	}
+	if s.GradedBy != "" {
+		judge := fmt.Sprintf("graded by judge %s, and this build grades with %s", s.GradedBy, DefaultJudgeModel)
+		if reason == "" {
+			reason = judge
+		} else {
+			reason += "; " + judge
+		}
 	}
 	if len(s.Dropped) > 0 {
 		reason += fmt.Sprintf(" (it also scored %s, which the corpus no longer holds)",
@@ -273,20 +288,6 @@ func (r ReadinessRow) Coverage() string {
 	return fmt.Sprintf("%d/%d", r.Standing.Measured, r.Standing.Total)
 }
 
-// ClaimedScope is how much of the site the row can claim. With a record it is
-// what that run folded to; with none it is the most a run could ever cover,
-// which is how the agent loop's one-turn limit — and every case that measures
-// less than its site's whole path — stays visible while nothing is certified.
-func (r ReadinessRow) ClaimedScope() string {
-	if !r.Certified {
-		return r.Scope
-	}
-	if r.Record.CertifiedScope == "" {
-		return Unmeasured
-	}
-	return r.Record.CertifiedScope
-}
-
 // Binding names the (provider, model, env) this row was measured on, plus the
 // thinking level where the run set one — the whole of what a band green-lights.
 // Empty for an absent row, which was measured on nothing.
@@ -349,9 +350,13 @@ func Readiness(census Census, taskStamps map[string]string, perScenario map[stri
 			}
 			claimed[RecordKey(rec)] = true
 			measured = true
+			standing := scenarioStanding(rec, site.Variant, perScenario[task+"/"+site.Variant], taskStamps[task])
+			if gradedElsewhere(rec) {
+				standing.judgeOnly = !standing.Stale
+				standing.Stale, standing.GradedBy = true, rec.JudgeServedModel
+			}
 			rows = append(rows, ReadinessRow{
-				Site: site, Scope: scope, Record: rec, Tally: tally, Certified: true,
-				Standing: scenarioStanding(rec, site.Variant, perScenario[task+"/"+site.Variant], taskStamps[task]),
+				Site: site, Scope: scope, Record: rec, Tally: tally, Certified: true, Standing: standing,
 			})
 		}
 		if !measured {
@@ -365,6 +370,17 @@ func Readiness(census Census, taskStamps map[string]string, perScenario map[stri
 		}
 	}
 	return rows, unclaimed
+}
+
+// DefaultJudgeModel is the judge this build grades with, the model of
+// AICERT_DEFAULT_JUDGE in backend/Makefile, which a test holds it to.
+const DefaultJudgeModel = "claude-sonnet-5-5"
+
+// gradedElsewhere says rec's judge was not DefaultJudgeModel. A candidate of
+// the default judge's own family needs another judge, so any judge stands for it.
+func gradedElsewhere(rec Record) bool {
+	return rec.JudgeServedModel != "" && rec.JudgeServedModel != DefaultJudgeModel &&
+		!selfJudged(rec.ServedModel, DefaultJudgeModel)
 }
 
 // scenarioStanding judges one record against THIS SITE's scenarios, one by one.

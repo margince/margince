@@ -32479,6 +32479,24 @@ export interface components {
             decides?: boolean;
             overrides?: components["schemas"]["AiTaskOverride"];
             defaults?: components["schemas"]["AiTaskSettings"];
+            certification?: components["schemas"]["AiTaskCertification"];
+        };
+        /**
+         * @description The certification grade of the model that answers this feature first (the lead of
+         *     `normal_candidates`), read from the committed certification records by the readiness
+         *     report's rule: the worst grade over every site the feature ships, and not measured when
+         *     any site has no record for that model. Absent when no model is bound, and for embeddings.
+         */
+        AiTaskCertification: {
+            /**
+             * @description ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.
+             * @enum {string}
+             */
+            grade: "ready" | "usable_with_care" | "not_reliable" | "not_measured";
+            /** @description The model the grade is for. */
+            model: string;
+            /** @description The product has changed since the grade was measured: the grade is the last one there is, and a re-run replaces it. */
+            recheck_pending: boolean;
         };
         /** @description An admin's settings for one task. An absent field keeps the product's own value. */
         AiTaskOverride: {

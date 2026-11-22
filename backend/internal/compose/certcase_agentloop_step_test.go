@@ -3,196 +3,172 @@
 
 package compose
 
-// What a pinned argument owes a corpus author: it is compared as a subset
-// claim, numbers are compared by what they mean, and every assertion no call
-// could ever satisfy is refused at Prepare instead of at a paid run.
-//
-// Each refusal here is paired with the case it exists to catch, because a guard
-// that passes against the bug it describes is a guard nobody notices is gone.
+// What a scenario owes this site before a paid run: an expectation a run of the
+// agent could meet, tool answers a call could reach, and a fixture shaped like
+// what the scheduler, retrieval and the tools hand a run. Each refusal names
+// what is wrong, because finding it later costs a run.
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/compose/aitasks"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// The tool these tests pin arguments on: one morning_brief is offered, so a
-// rename reaches this file the same commit it reaches the agent's window.
-const (
-	agentLoopPinnedTool = "catch_me_up_on"
-	agentLoopPinnedArg  = "record_id"
-	agentLoopDealID     = `"0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07"`
-)
+// agentLoopRefusal is one scenario Prepare owes a refusal, and the words the
+// refusal owes its author.
+type agentLoopRefusal struct {
+	name     string
+	site     string
+	fixture  json.RawMessage
+	expected json.RawMessage
+	want     string
+}
 
-// runAgentLoopExpectation drives one case whose expectation is written out as
-// JSON, which is how a corpus scenario carrying arguments reaches Prepare.
-func runAgentLoopExpectation(
-	t *testing.T, fixture agentLoopFixture, expected json.RawMessage, reply string,
-) aitasks.Outcome {
+func runAgentLoopRefusals(t *testing.T, cases []agentLoopRefusal) {
 	t.Helper()
-	prepared, err := agentLoopCases{agent: agentLoopAgent}.Prepare(fixtureJSON(t, fixture), expected)
-	if err != nil {
-		t.Fatalf("preparing the case: %v", err)
-	}
-	trace, err := prepared.Run(context.Background(), &replyBrainStub{response: model.Response{Text: reply}})
-	if err != nil {
-		t.Fatalf("running the case: %v", err)
-	}
-	return prepared.Evaluate(trace)
-}
-
-// agentLoopArgExpectation writes the object spelling of an expected step.
-func agentLoopArgExpectation(t *testing.T, step, args string) json.RawMessage {
-	t.Helper()
-	return json.RawMessage(`{"step":"` + step + `","args":` + args + `}`)
-}
-
-// The scenarios that pin arguments pin them as a SUBSET: every argument named
-// has to be carried as named, and an argument the scenario never named is the
-// call being richer than its author imagined rather than wrong.
-func TestAgentLoopCaseGradesThePinnedArgumentsAndNoOthers(t *testing.T) {
-	pinned := `{"record_id":` + agentLoopDealID + `}`
-	for _, tc := range []struct {
-		name       string
-		reply      string
-		wantResult string
-		wantDetail string
-	}{
-		{
-			name:       "the call carries the pinned argument",
-			reply:      `{"tool":"catch_me_up_on","args":{"record_type":"deal","record_id":` + agentLoopDealID + `}}`,
-			wantResult: aitasks.OutcomeAccepted,
-			wantDetail: `the turn took the step "catch_me_up_on"`,
-		},
-		{
-			name:       "the call carries more than the scenario pinned",
-			reply:      `{"tool":"catch_me_up_on","args":{"record_type":"deal","record_id":` + agentLoopDealID + `,"max_items":5}}`,
-			wantResult: aitasks.OutcomeAccepted,
-			wantDetail: `the turn took the step "catch_me_up_on"`,
-		},
-		{
-			name:       "the call omits the pinned argument",
-			reply:      `{"tool":"catch_me_up_on","args":{"record_type":"deal"}}`,
-			wantResult: aitasks.OutcomeWrongAnswer,
-			wantDetail: agentLoopPinnedArg + " was not passed",
-		},
-		{
-			name:       "the call passes the pinned argument as something else",
-			reply:      `{"tool":"catch_me_up_on","args":{"record_type":"deal","record_id":"the big deal"}}`,
-			wantResult: aitasks.OutcomeWrongAnswer,
-			wantDetail: `record_id was passed as "the big deal", not ` + agentLoopDealID,
-		},
-	} {
+	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := runAgentLoopExpectation(t, agentLoopBaseFixture(),
-				agentLoopArgExpectation(t, agentLoopPinnedTool, pinned), tc.reply)
-			if outcome.Result != tc.wantResult {
-				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
+			site := tc.site
+			if site == "" {
+				site = agentLoopAgent
 			}
-			if !strings.Contains(outcome.Detail, tc.wantDetail) {
-				t.Errorf("Detail = %q, want it to name %q", outcome.Detail, tc.wantDetail)
-			}
-		})
-	}
-}
-
-// Numbers are the one JSON value with two spellings of the same meaning and two
-// meanings that share a spelling once rounded. A pinned max_items is a real
-// argument on this window, so both halves are reachable from a scenario:
-// float64 would grade the two integers below as equal, and comparing literals
-// would grade 5 and 5.0 as different.
-func TestAgentLoopCaseComparesPinnedNumbersExactly(t *testing.T) {
-	for _, tc := range []struct {
-		name       string
-		args       string
-		reply      string
-		wantResult string
-	}{
-		{
-			name:       "the same number written two ways agrees",
-			args:       `{"max_items":5}`,
-			reply:      `{"tool":"catch_me_up_on","args":{"record_type":"deal","record_id":` + agentLoopDealID + `,"max_items":5.0}}`,
-			wantResult: aitasks.OutcomeAccepted,
-		},
-		{
-			name:       "two integers past float64's reach stay apart",
-			args:       `{"max_items":9007199254740993}`,
-			reply:      `{"tool":"catch_me_up_on","args":{"max_items":9007199254740992}}`,
-			wantResult: aitasks.OutcomeWrongAnswer,
-		},
-		{
-			name:       "a number nested in a pinned object is compared too",
-			args:       `{"max_items":{"page":9007199254740993}}`,
-			reply:      `{"tool":"catch_me_up_on","args":{"max_items":{"page":9007199254740992}}}`,
-			wantResult: aitasks.OutcomeWrongAnswer,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			outcome := runAgentLoopExpectation(t, agentLoopBaseFixture(),
-				agentLoopArgExpectation(t, agentLoopPinnedTool, tc.args), tc.reply)
-			if outcome.Result != tc.wantResult {
-				t.Errorf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
-			}
-		})
-	}
-}
-
-// A wrong step is a wrong step. Reporting what a call the scenario never wanted
-// got wrong about its arguments would bury the one thing that went wrong under
-// the details of a call that should not have been made.
-func TestAgentLoopCaseReportsTheWrongStepWithoutItsArguments(t *testing.T) {
-	outcome := runAgentLoopExpectation(t, agentLoopBaseFixture(),
-		agentLoopArgExpectation(t, agentLoopPinnedTool, `{"record_id":`+agentLoopDealID+`}`),
-		`{"tool":"read_record","args":{"record_type":"deal","id":"018f3a1b-0000-7000-8000-000000000010"}}`)
-
-	if outcome.Result != aitasks.OutcomeWrongAnswer {
-		t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, aitasks.OutcomeWrongAnswer)
-	}
-	if !strings.Contains(outcome.Detail, `took the step "read_record" where the scenario expects "catch_me_up_on"`) {
-		t.Errorf("Detail = %q, want it to name the step disagreement", outcome.Detail)
-	}
-	if strings.Contains(outcome.Detail, agentLoopPinnedArg+" was not passed") {
-		t.Errorf("Detail = %q, want no argument disagreement under a wrong step", outcome.Detail)
-	}
-}
-
-// An argument assertion the turn could never satisfy fails for the scenario's
-// reason rather than the model's, and it would do so on every paid run until
-// somebody read the record closely enough to notice.
-func TestAgentLoopCaseRefusesAnArgumentNoCallCouldCarry(t *testing.T) {
-	for _, tc := range []struct {
-		name     string
-		expected json.RawMessage
-		want     string
-	}{
-		{
-			name:     "arguments pinned on the step that ends a run",
-			expected: agentLoopArgExpectation(t, agentLoopFinalStep, `{"record_id":"x"}`),
-			want:     "the step that ends a run carries none",
-		},
-		{
-			name:     "an argument the tool's own schema does not declare",
-			expected: agentLoopArgExpectation(t, agentLoopPinnedTool, `{"deal_id":"x"}`),
-			want:     `pins the argument "deal_id" on catch_me_up_on`,
-		},
-		{
-			name:     "an expectation object carrying a key this site does not know",
-			expected: json.RawMessage(`{"step":"catch_me_up_on","arguments":{"record_id":"x"}}`),
-			want:     "not a step name",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := agentLoopCases{agent: agentLoopAgent}.Prepare(fixtureJSON(t, agentLoopBaseFixture()), tc.expected)
+			_, err := agentLoopCases{agent: site}.Prepare(tc.fixture, tc.expected)
 			if err == nil {
-				t.Fatal("Prepare accepted an argument assertion this site cannot measure")
+				t.Fatal("Prepare accepted a scenario this site cannot measure")
 			}
 			if !strings.Contains(err.Error(), tc.want) {
 				t.Errorf("the refusal reads %q, want it to name %q", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestAgentLoopCaseRefusesAnEndNoRunCouldReach(t *testing.T) {
+	base := fixtureJSON(t, agentLoopBaseFixture(t))
+	runAgentLoopRefusals(t, []agentLoopRefusal{
+		{name: "an expectation that is not a step name", fixture: base, expected: json.RawMessage(`{"step":"final"}`), want: "not a step name"},
+		{
+			name: "the list read as the run's end", fixture: base, expected: agentLoopExpectationJSON(t, agentLoopReadTool),
+			want: "ends either by writing with annotate_brief or as \"final\"",
+		},
+		{name: "a tool this agent is never offered", fixture: base, expected: agentLoopExpectationJSON(t, "send_email"), want: `expects "send_email"`},
+	})
+}
+
+// agentLoopFixtureWith is the base fixture with its tool answers replaced.
+func agentLoopFixtureWith(t *testing.T, edit func(*agentLoopFixture)) json.RawMessage {
+	t.Helper()
+	f := agentLoopBaseFixture(t)
+	edit(&f)
+	return fixtureJSON(t, f)
+}
+
+func TestAgentLoopCaseRefusesToolAnswersNoCallCouldReach(t *testing.T) {
+	final := agentLoopExpectationJSON(t, agentLoopFinalStep)
+	runAgentLoopRefusals(t, []agentLoopRefusal{
+		{
+			name: "an answer for a tool the agent is not offered", expected: final, want: `answers "send_email"`,
+			fixture: agentLoopFixtureWith(t, func(f *agentLoopFixture) {
+				f.Tools = append(f.Tools, agentLoopToolAnswer{Tool: "send_email", Result: json.RawMessage(`{}`)})
+			}),
+		},
+		{
+			name: "an answer pinning an argument its tool does not take", expected: final, want: `pins "owner"`,
+			fixture: agentLoopFixtureWith(t, func(f *agentLoopFixture) {
+				f.Tools[1].Args = map[string]json.RawMessage{"owner": json.RawMessage(`"me"`)}
+			}),
+		},
+		{
+			name: "no answer for the list the goal reads first", expected: final, want: "answers read_brief 0 times",
+			fixture: agentLoopFixtureWith(t, func(f *agentLoopFixture) { f.Tools = f.Tools[1:] }),
+		},
+		{
+			name: "two answers for the list", expected: final, want: "answers read_brief 2 times",
+			fixture: agentLoopFixtureWith(t, func(f *agentLoopFixture) { f.Tools = append(f.Tools, f.Tools[0]) }),
+		},
+		{
+			name: "a list answer the tool could not have served", expected: final, want: "not the brief the tool serves",
+			fixture: agentLoopFixtureWith(t, func(f *agentLoopFixture) {
+				f.Tools[0].Result = json.RawMessage(`{"items":[],"verdict":"all good"}`)
+			}),
+		},
+	})
+}
+
+// A window the scheduler and retrieval would never have produced for this site
+// is a prompt the product never sends, so whatever a model says to it measures
+// nothing.
+func TestAgentLoopCaseRefusesAWindowTheLoopIsNeverHanded(t *testing.T) {
+	withRef := func(ref string) json.RawMessage {
+		return agentLoopFixtureWith(t, func(f *agentLoopFixture) { f.TriggerRef = ref })
+	}
+	final := agentLoopExpectationJSON(t, agentLoopFinalStep)
+	runAgentLoopRefusals(t, []agentLoopRefusal{
+		{name: "a job with no trigger occurrence", fixture: withRef(""), expected: final, want: "names no trigger"},
+		{
+			name: "a trigger shape production stopped minting", fixture: withRef("morning_brief:2026-07-27"), expected: final,
+			want: "has 2 segment(s); the scheduler mints 3",
+		},
+		{name: "a seat digest of the wrong width", fixture: withRef("morning_brief:2026-07-27:d48b383f"), expected: final, want: "segment 3 is"},
+		{
+			name: "another agent's occurrence", fixture: withRef("overnight_at_risk_sweep:2026-07-27:d48b383f3e8acec5d620c82b8c9b4202"),
+			expected: final, want: `names "overnight_at_risk_sweep"`,
+		},
+		{
+			name: "a site no scheduled agent carries", site: "ad_hoc_question",
+			fixture: withRef("ad_hoc_question:2026-07-27:d48b383f3e8acec5d620c82b8c9b4202"), expected: final,
+			want: "no scheduled agent carries this site's name",
+		},
+		{
+			name: "a fixture supplying its own goal", fixture: agentLoopRawFixture(t, "goal", `"Find the Acme account."`),
+			expected: final, want: `unknown field "goal"`,
+		},
+		{
+			name: "a fixture naming a tool surface instead of answers", fixture: agentLoopRawFixture(t, "tools", `"catalog"`),
+			expected: final, want: "not the shape this site takes",
+		},
+		{
+			name: "a seed item choosing its own trust tier", expected: final, want: `unknown field "trust_tier"`,
+			fixture: agentLoopRawFixture(t, "grounding", `[{"source_id":"user:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e0a","trust_tier":"T1","content":"x"}]`),
+		},
+	})
+}
+
+// agentLoopRawFixture is the base fixture with one top-level key set to value,
+// so a test can hand this site a shape the Go type cannot hold.
+func agentLoopRawFixture(t *testing.T, key, value string) json.RawMessage {
+	t.Helper()
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(fixtureJSON(t, agentLoopBaseFixture(t)), &fields); err != nil {
+		t.Fatalf("decoding the fixture: %v", err)
+	}
+	fields[key] = json.RawMessage(value)
+	return fixtureJSON(t, fields)
+}
+
+// A fixture answer pins only what tells two calls apart, as a subset, with
+// numbers compared by what they mean: float64 would make two integers past
+// 2^53 one answer, and comparing literals would make 5 and 5.0 two.
+func TestAToolAnswerMatchesTheCallsItsPinnedArgumentsName(t *testing.T) {
+	pinned := map[string]json.RawMessage{"record_id": json.RawMessage(`"d1"`), "max_items": json.RawMessage(`5`)}
+	for _, tc := range []struct {
+		name  string
+		call  string
+		match bool
+	}{
+		{"the pinned arguments and more", `{"record_type":"deal","record_id":"d1","max_items":5}`, true},
+		{"the same number written two ways", `{"record_id":"d1","max_items":5.0}`, true},
+		{"another record", `{"record_id":"d2","max_items":5}`, false},
+		{"a pinned argument left out", `{"max_items":5}`, false},
+		{"integers past float64's reach", `{"record_id":"d1","max_items":9007199254740993}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := len(agentLoopArgDisagreements(pinned, json.RawMessage(tc.call))) == 0; got != tc.match {
+				t.Errorf("a call %s matched = %v, want %v", tc.call, got, tc.match)
+			}
+		})
+	}
+	if far := map[string]json.RawMessage{"n": json.RawMessage(`9007199254740993`)}; len(agentLoopArgDisagreements(far, json.RawMessage(`{"n":9007199254740992}`))) == 0 {
+		t.Error("two integers that round to one float64 matched")
 	}
 }
