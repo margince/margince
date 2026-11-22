@@ -701,7 +701,9 @@ it("shows the request settings the attempts were sent with, and the host that se
     ],
   });
   const drawer = await openCall(user);
-  expect(await within(drawer).findByText("Settings this call was configured with")).toBeTruthy();
+  expect(
+    await within(drawer).findByText("Settings this call was configured with"),
+  ).toBeTruthy();
   expect(within(drawer).getByText(/"deadline_ms": 30000/)).toBeTruthy();
   expect(within(drawer).getByText(/served by Cerebras/)).toBeTruthy();
   expect(
@@ -816,9 +818,15 @@ it("says in the drawer when the AI budget demoted the call", async () => {
 });
 
 it("names the call detail settings as the call's configured settings in every language", () => {
-  const titles = [en, de, viCatalog].map((catalog) => catalog["aicalls.detail.settings"]);
+  const titles = [en, de, viCatalog].map(
+    (catalog) => catalog["aicalls.detail.settings"],
+  );
   expect(new Set(titles).size).toBe(3);
-  const old = ["Request settings sent", "Gesendete Anfrage-Einstellungen", "Cài đặt yêu cầu đã gửi"];
+  const old = [
+    "Request settings sent",
+    "Gesendete Anfrage-Einstellungen",
+    "Cài đặt yêu cầu đã gửi",
+  ];
   for (const text of old) {
     expect(titles).not.toContain(text);
   }

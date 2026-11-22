@@ -56,11 +56,10 @@ func (n planNode) walk(visit func(planNode)) {
 }
 
 // seedReplicaRole skips ordinary triggers for the rest of the transaction.
-// The seed would otherwise pay for settlement locks, last-activity clocks and
-// contact strength dates. The strength dates alone cost seconds on a 1500-row
-// link insert. The setting is local to the transaction, so no other
-// connection skips a trigger. seedOriginRole puts it back before the caller's
-// own writes.
+// The link insert alone would pay seconds for contact strength dates, and the
+// horizon reads none of what its triggers derive. Other inserts keep their
+// triggers, because the plan tests read what those stamp. The setting is local
+// to the transaction, so no other connection skips a trigger.
 const (
 	seedReplicaRole = "SET LOCAL session_replication_role = replica;\n"
 	seedOriginRole  = "SET LOCAL session_replication_role = origin;\n"
@@ -75,7 +74,7 @@ const (
 // figure the neighbouring tests measure.
 func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShape) {
 	t.Helper()
-	if _, err := tx.Exec(ctx, seedReplicaRole+`
+	if _, err := tx.Exec(ctx, `
 	INSERT INTO contact (id, full_name, source, captured_by)
 	  SELECT md5('customer'||g)::uuid, 'Customer '||g, 'manual', 'human:seed' FROM generate_series(1, 400) g;
 	CREATE TEMP TABLE mailbox_customer AS SELECT id, row_number() OVER () n FROM contact WHERE full_name LIKE 'Customer %';
@@ -92,8 +91,10 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShap
 	  SELECT i.id, 'c'||i.n||'@customers.example', c.id, 'from' FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
 	INSERT INTO activity_participant (activity_id, address, role)
 	  SELECT id, 'seat@work.test', 'to' FROM mailbox_inbound;
+	`+seedReplicaRole+`
 	INSERT INTO activity_link (activity_id, entity_type, contact_id)
 	  SELECT i.id, 'contact', c.id FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
+	`+seedOriginRole+`
 	INSERT INTO activity (kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
 	  SELECT 'email', 'Re: Topic '||g, at_time + interval '2 days', 'outbound', 'manual', 'human:seed', 'reply'||g, 'c'||n||'@customers.example', true
 	    FROM mailbox_inbound WHERE g % 100 < @reply_percent;
@@ -101,7 +102,6 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShap
 	  SELECT 'email', 'Update '||g, @at::timestamptz - (g * 53 % 364) * interval '1 day', 'outbound', 'manual', 'human:seed', 'out'||g,
 	         'c'||(1 + (g - 1) % 400)::int||'@customers.example', true
 	    FROM generate_series(1, @stray) g;
-	`+seedOriginRole+`
 	ANALYZE activity; ANALYZE activity_participant; ANALYZE activity_link`,
 		pgx.QueryExecModeSimpleProtocol, pgx.NamedArgs{
 			"at": clocktest.Now(t), "reply_percent": int(shape.replyShare * 100), "stray": shape.strayOutbound,
