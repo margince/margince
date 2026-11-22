@@ -2,13 +2,13 @@
 # Lists an admin edits
 
 An admin edits five lists in the app. Each entry has a label, an order, an active
-flag and a flag that protects the built-in entries. The lists come in two shapes,
-and what refers to an entry decides the shape.
+flag and a flag for the built-in entries. The lists come in two shapes,
+and what names an entry from outside decides the shape.
 
-| Shape | Use it when | An entry is unique by | Tables |
+| Shape | Use it when | No two entries share | Tables |
 |---|---|---|---|
-| Keyed | Code, a filter or another table refers to an entry by a fixed text | `key` | `record_role`, `lead_source`, `deal_acquisition_source` |
-| Label-only | Other tables refer to an entry by `id` | The label, trimmed and with case folded | `sdr_handoff_reason`, `lead_disqualify_reason` |
+| Keyed | Code, a filter or another table names an entry by a fixed text | `key` | `record_role`, `lead_source`, `deal_acquisition_source` |
+| Label-only | Other tables name an entry by `id` | The label, compared in lower case with the spaces at its ends removed | `sdr_handoff_reason`, `lead_disqualify_reason` |
 
 A keyed list lets an admin change a label and keep each reference, because the
 reference holds the key. `deal.acquisition_source` holds a key of
