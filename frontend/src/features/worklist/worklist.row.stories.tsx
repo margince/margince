@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import { emptyListAnswer, StoryProviders } from "../../testing/story-utils";
 import { WorklistRow } from "./worklist.row";
 // The row's own layout, imported as every surface that mounts these rows does,
 // so the story draws the screen and not bare markup.
@@ -49,7 +49,7 @@ function stubRow(readPending: boolean) {
         ? new Promise(() => {})
         : new Response(null, { status: 204 });
     }
-    return jsonResponse({ data: [] });
+    return emptyListAnswer(input);
   }) as typeof fetch;
 }
 

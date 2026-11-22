@@ -3,7 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import {
+  emptyListAnswer,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { TeamBoard } from "./worklist.board";
 
 // WHO ON THE TEAM IS CARRYING WHAT — counts, not rows, because the queue below
@@ -54,9 +58,7 @@ const aLoadedTeam: TeamBoardData = {
 function stubBoard(answer: () => Promise<Response>) {
   globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
     const url = String(input instanceof Request ? input.url : input);
-    return url.includes("/worklist/team")
-      ? answer()
-      : jsonResponse({ data: [] });
+    return url.includes("/worklist/team") ? answer() : emptyListAnswer(input);
   }) as typeof fetch;
 }
 
