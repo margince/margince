@@ -11,6 +11,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"strconv"
@@ -138,8 +139,7 @@ func TestEachCurrencyIsSummedInItsOwnMinorUnits(t *testing.T) {
 	}
 }
 
-// The stage totals add the deals that convert, as the reports do.
-// A per-company total is still all or nothing.
+// Every money population adds the deals that convert, as the reports do.
 func TestTheBaseMeasureAddsTheDealsThatConvertAndNamesWhatItLeavesOut(t *testing.T) {
 	d := newTwoDoors(t, "money-currency-base", "read")
 	seedMixedCurrencyPipeline(t, d)
@@ -189,11 +189,11 @@ func TestTheBaseMeasureAddsTheDealsThatConvertAndNamesWhatItLeavesOut(t *testing
 	}
 
 	perCompany := askMoney(t, d, map[string]any{"entity": "open-deals-per-company", "scope_kind": "workspace", "measures": measures})
-	if len(perCompany.Rows) != 1 {
-		t.Fatalf("per-company answer has %d rows: %+v", len(perCompany.Rows), perCompany.Rows)
+	if len(perCompany.Rows) != 1 || fmt.Sprint(perCompany.Rows[0]["base"]) != itoa(want) {
+		t.Fatalf("per-company answer = %+v, want the same %d as the stage total", perCompany.Rows, want)
 	}
-	if value, present := perCompany.Rows[0]["base"]; !present || value != nil {
-		t.Errorf("a per-company converted total = %v, want the explicit null its report gives", perCompany.Rows[0])
+	if coverage, _ := perCompany.Rows[0]["_coverage"].(map[string]any); coverage["partial"] != true {
+		t.Errorf("the per-company total leaves the CHF deals out without saying so: %v", coverage)
 	}
 }
 
@@ -228,6 +228,45 @@ func TestASumNoDealConvertsIntoStaysBlankAndSaysWhy(t *testing.T) {
 		if coverage["partial"] != true || fmt.Sprint(coverage["no_value_deals"]) != "5" ||
 			fmt.Sprint(coverage["no_rate_deals"]) != "5" || fmt.Sprint(coverage["aggregates"]) != "[base]" {
 			t.Errorf("%s: coverage %v, want 5 deals with no value, 5 with no rate, naming only the sum", door, coverage)
+		}
+	}
+}
+
+// Each group states its own gap: one leaves out deals with no rate, the other deals with no value.
+func TestEachGroupOfASumStatesItsOwnGapOnBothDoors(t *testing.T) {
+	d := newTwoDoors(t, "money-group-gaps", "read")
+	stages := apptest.DiscoverSeededPipeline(t, d.e)
+	noRate := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "No rate Ltd", "source": "manual"})
+	noValue := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "No value Ltd", "source": "manual"})
+	deal := func(company string, extra AnyMap) {
+		body := AnyMap{"name": "Deal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "company_id": company, "source": "manual"}
+		maps.Copy(body, extra)
+		createdID(t, d.e, "/v1/deals", body)
+	}
+	for range dealsPerCurrency {
+		deal(noRate, AnyMap{"amount_minor": 1_000, "currency": "EUR"})
+		deal(noRate, AnyMap{"amount_minor": 2_000, "currency": "CHF"})
+		deal(noValue, AnyMap{"amount_minor": 1_000, "currency": "EUR"})
+		deal(noValue, nil)
+	}
+	query := map[string]any{
+		"entity": "open-deals-per-company", "scope_kind": "workspace", "group_by": []any{"company_id"},
+		"measures": []any{map[string]any{"fn": "sum", "field": "amount_base_minor", "as": "base"}},
+	}
+	for door, answer := range map[string]moneyAnswer{
+		"route": askMoney(t, d, query),
+		"tool":  decodeMoney(t, d.tool(t, "run_analytics_query", query)),
+	} {
+		if len(answer.Rows) != 2 {
+			t.Fatalf("%s: %d rows, want one per company: %+v", door, len(answer.Rows), answer.Rows)
+		}
+		for _, row := range answer.Rows {
+			coverage, _ := row["_coverage"].(map[string]any)
+			got := fmt.Sprintf("%v %v %v %v", row["base"], coverage["no_value_deals"], coverage["no_rate_deals"], coverage["missing_currencies"])
+			want := map[string]string{noRate: "5000 0 5 [CHF]", noValue: "5000 5 0 []"}[fmt.Sprint(row["company_id"])]
+			if got != want {
+				t.Errorf("%s: company %v reads %q, want %q", door, row["company_id"], got, want)
+			}
 		}
 	}
 }

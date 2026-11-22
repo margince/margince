@@ -120,6 +120,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountBaseMinor: pipelineBaseValueExpr,
 		},
 		sumCoverage:    baseMoneyCoverage(fieldAmountBaseMinor),
+		partialSums:    true,
 		nativeMeasures: nativeMoney(fieldAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:    colOwnerID,

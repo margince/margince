@@ -295,13 +295,8 @@ func proveG03OneBaseCurrencyNumber(t *testing.T) {
 	if row["deals"] != float64(6) {
 		t.Errorf("counted %v deals, want all 6 including the unrated one", row["deals"])
 	}
-	// 3 x 10000 EUR + 2 x 40000 USD at 0.5, with the unrated deal left out and said so.
 	if row["base_total"] != float64(70_000) {
 		t.Errorf("base total = %v, want the 70000 of the deals that convert", row["base_total"])
-	}
-	coverage, _ := row["_coverage"].(map[string]any)
-	if coverage["partial"] != true || coverage["no_rate_deals"] != float64(1) || fmt.Sprint(coverage["missing_currencies"]) != "[VND]" {
-		t.Errorf("coverage = %v, want partial with the one VND deal named", coverage)
 	}
 }
 

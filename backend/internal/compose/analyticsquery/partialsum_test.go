@@ -4,6 +4,7 @@
 package analyticsquery
 
 import (
+	"encoding/json"
 	"slices"
 	"strings"
 	"testing"
@@ -60,5 +61,28 @@ func TestAQueryWithNoPartialSumAsksNoCoverage(t *testing.T) {
 	}
 	if plan.CoverageColumn != 0 || len(plan.Covered) != 0 || strings.Contains(plan.SQL, "string_agg") {
 		t.Errorf("a query with no partial sum asked coverage: %+v", plan)
+	}
+}
+
+func TestAPartialSumChangesTheSchemaVersionAndIsReadFromStoredJSON(t *testing.T) {
+	t.Parallel()
+	partial := partialSchema()
+	plain := partialSchema()
+	field := plain.Entities["deals"].Fields["base"]
+	field.PartialSum = false
+	plain.Entities["deals"].Fields["base"] = field
+	if SchemaVersion(plain.Entities) == SchemaVersion(partial.Entities) {
+		t.Error("a client that predates partial sums sees the same schema version")
+	}
+	var stored map[string]any
+	if err := json.Unmarshal([]byte(`{"_coverage":{"partial":true,"aggregates":["total"]}}`), &stored); err != nil {
+		t.Fatal(err)
+	}
+	if !LeavesOut(stored, "total") || LeavesOut(stored, "other") {
+		t.Error("a row decoded from JSON names its partial sums as []any and must still be read")
+	}
+	live := map[string]any{CoverageColumnName: map[string]any{"partial": true, "aggregates": []string{"total"}}}
+	if !LeavesOut(live, "total") {
+		t.Error("a fresh row names its partial sums as []string and must be read")
 	}
 }

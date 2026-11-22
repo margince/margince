@@ -83,10 +83,8 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 			}
 			unit, currency, coverage := money.of(measure, row)
 			value := reportingcsv.AnswerCell(row[column], unit == reportingMoney, currency)
-			if coverage != "ok" {
+			if coverage != "ok" && coverage != reportingPartial {
 				value = ""
-			} else if analyticsquery.LeavesOut(row, column) {
-				coverage = reportingPartial
 			}
 			rows = append(rows, cell(questionCell{label: label, value: value, unit: unit, currency: currency, context: column, coverage: coverage}))
 		}
@@ -116,6 +114,9 @@ func (m answerMoney) of(measure analyticsquery.Measure, row map[string]any) (uni
 	}
 	if m.base == "" {
 		return "", "", "no_base_currency"
+	}
+	if analyticsquery.LeavesOut(row, measure.Column()) {
+		return reportingMoney, m.base, reportingPartial
 	}
 	return reportingMoney, m.base, "ok"
 }
