@@ -152,7 +152,7 @@ func TestIndividualPerformanceOffRefusesACheckRunOfOneColleaguesDeals(t *testing
 	colleague := addColleagues(t, d.e, "run-floor", 1)[0]
 	openDealOf(t, d.e, colleague)
 	scanner := assurance.NewScanner(assurance.NewStore(compose.InstallationDB(d.e.Pool)),
-		compose.AssuranceSubjects, compose.AssuranceCoverage, compose.AssuranceConfig())
+		compose.AssuranceSubjects, compose.AssuranceCoverage, assurance.DefaultConfig())
 	if _, err := scanner.Scan(apptest.AdminContext(t, d.e, AdminPerms), clocktest.Now(t)); err != nil {
 		t.Fatalf("running the check: %v", err)
 	}

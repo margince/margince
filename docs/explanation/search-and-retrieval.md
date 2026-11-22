@@ -85,7 +85,7 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   only when one of them or the language changes. The History tab folds the quoted mail at the same
   line. A forward keeps the mail it passes on, and a reply written between the quoted lines keeps
   every line. A mail stored before this rule is found through its quoted text until the data task
-  `core/1795336404_mail_search_text` has passed it.
+  `core/1795347469_mail_search_text` has passed it.
 - **A mail is one hit.** A mail that several mailboxes captured is one activity hit, the reader's
   own copy where they have one. The timelines group copies the same way
   (`connector.MailCopyGroupFrom`).
@@ -431,7 +431,7 @@ projection, which has its own rules for how it stays current; see
 | Part | Where |
 |---|---|
 | Lexical index | generated `search_tsv` columns on `contact`, `company`, `deal`, `lead`, `project`, `tag`, and `product` + `offer_template`, with the functions that remove accents and apostrophes (`backend/migrations/core/0001_baseline.up.sql`) |
-| Lexical index of activities | `activity.search_tsv`, kept by the trigger function `activity_keeps_search_tsv` from `activity_search_tsv` (`backend/migrations/core/1795336404_mail_search_holds_the_senders_own_text.up.sql`); the boundary rule is `backend/internal/shared/kernel/mailquote/owntext.go` |
+| Lexical index of activities | `activity.search_tsv`, kept by the trigger function `activity_keeps_search_tsv` from `activity_search_tsv` (`backend/migrations/core/1795347469_mail_search_holds_the_senders_own_text.up.sql`); the boundary rule is `backend/internal/shared/kernel/mailquote/owntext.go` |
 | Vector store | `embedding` (`backend/migrations/core/0001_baseline.up.sql`: identity mark + a `vector` with no fixed length). **Not a tenant table**: no `workspace_id`, no RLS |
 | Binding marker | `embed_store_binding` (`backend/migrations/core/0001_baseline.up.sql`: run, identity and the pending set of workspaces). **Not a tenant table**: no `workspace_id`, no RLS |
 | Interaction projection | `graph_interaction_edge`; see [relationship-graph.md](relationship-graph.md) |

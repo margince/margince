@@ -62,7 +62,7 @@ func withMailboxScope(t *testing.T, check func(mailboxScopeEnv)) {
 func entityMailbox(t *testing.T, f mailboxScopeEnv, label string) ids.UUID {
 	t.Helper()
 	id, _, err := upsertConnection(f.ctx, f.tx, connectionUpsert{
-		userID: f.seat, provider: "gmail", scopes: []string{},
+		userID: f.seat, provider: "gmail",
 		ref: keyvault.Ref("fixture-credential"), accountLabel: &label,
 	}, ids.Nil)
 	if err != nil {

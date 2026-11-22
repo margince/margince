@@ -6,7 +6,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## close_date_run
 
-14 columns · primary key `(id)` · referenced by 2 foreign keys
+12 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -14,8 +14,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `as_of` | `date` | yes |  |
 | `checked` | `integer`, default `0` | yes |  |
 | `corrected` | `integer`, default `0` | yes |  |
-| `cursor_created_at` | `timestamp with time zone` |  |  |
-| `cursor_id` | `uuid` |  |  |
 | `eligible` | `integer`, default `0` | yes |  |
 | `finished_at` | `timestamp with time zone` |  |  |
 | `staged` | `integer`, default `0` | yes |  |
@@ -28,7 +26,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Rules**
 
 - `close_date_run_counts_are_tallies`: `CHECK (((eligible >= 0) AND (checked >= 0) AND (corrected >= 0) AND (staged >= 0)))`
-- `close_date_run_cursor_is_whole`: `CHECK (((cursor_created_at IS NULL) = (cursor_id IS NULL)))`
 - `close_date_run_finish_matches_status`: `CHECK (((status = 'running') = (finished_at IS NULL)))`
 - `close_date_run_status_check`: `CHECK ((status = ANY (ARRAY['running', 'complete', 'incomplete'])))`
 

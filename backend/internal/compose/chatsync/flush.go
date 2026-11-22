@@ -206,25 +206,7 @@ func (w *Flusher) answerFailure(ctx context.Context, pending chatlinks.Pending, 
 		}
 		return river.JobSnooze(wait)
 	}
-	carried := make([]ids.UUID, 0, len(pending.Items))
-	for _, item := range pending.Items {
-		carried = append(carried, item.ID)
-	}
-	if recordErr := w.Store.RecordFailure(ctx, pending.Link.ID, carried, chatFailureClass(err)); recordErr != nil {
-		w.Log.WarnContext(ctx, "chat flush could not record its failure", "link", pending.Link.ID.String(), "err", recordErr)
-	}
 	return err
-}
-
-// chatFailureClass names a failure without the chat's own words.
-func chatFailureClass(err error) string {
-	if errors.Is(err, dispact.ErrUnreachable) {
-		return "chat unreachable"
-	}
-	if errors.Is(err, dispact.ErrRequestRejected) {
-		return "chat refused the post"
-	}
-	return "post failed"
 }
 
 // FlushJob is the args of the flush job, which compose declares.

@@ -163,7 +163,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_snapshot
 
-41 columns · primary key `(id)` · referenced by 2 foreign keys
+40 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -174,7 +174,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `confirmed_date_count` | `integer` | yes |  |
 | `definition_version` | `text` | yes |  |
 | `eligible_count` | `integer` | yes |  |
-| `evidence_cutoff` | `timestamp with time zone` |  |  |
 | `evidence_minor` | `bigint` | yes |  |
 | `focus_on_target` | `boolean` |  |  |
 | `forward_measure` | `text` |  | One of `likely`, `qualified_likely`, `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted` and 1 more. |
