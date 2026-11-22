@@ -201,3 +201,13 @@ func TestMoneyMissingHoldsASumToItsCurrencyAndItsValueTogether(t *testing.T) {
 		}
 	}
 }
+
+func TestAThreeDigitCurrencyReadsASingleSeparatorAsADecimalPointToo(t *testing.T) {
+	kuwait, euro := MoneyIn("KWD 12.345")[0], MoneyIn("EUR 12.345")[0]
+	if kuwait.Major != "12.345" || len(kuwait.Keys) != 2 {
+		t.Errorf("KWD 12.345 reads %+v, want twelve dinar and twelve thousand as its two readings", kuwait)
+	}
+	if euro.Major != "12345" || len(euro.Keys) != 1 {
+		t.Errorf("EUR 12.345 reads %+v, want twelve thousand only", euro)
+	}
+}
