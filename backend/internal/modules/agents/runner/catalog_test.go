@@ -14,8 +14,8 @@ import (
 // the finding in its body.
 func TestEachScheduledGoalStatesTheShapeOfItsWrite(t *testing.T) {
 	want := map[string][]string{
-		"morning_brief":           {"annotate_brief ONCE", "every item in that same call"},
-		"overnight_at_risk_sweep": {"linked to that deal", "entity_type: deal", "its body states the finding"},
+		"morning_brief":           {"Read every record an item cites", "annotate_brief ONCE", "every item in that same call"},
+		"overnight_at_risk_sweep": {"recent touches catch_me_up_on lists", "linked to that deal", "entity_type: deal", "its body states the finding"},
 	}
 	for _, spec := range Catalog() {
 		for _, phrase := range want[spec.Name] {

@@ -42,7 +42,17 @@ fixture:
       args: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e81}
       result:
         anchor: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e81}
-        sections: []
+        # As production assembles a deal: its last touch is the email whose
+        # body holds both the planted line and the pause.
+        sections:
+          - name: recent_touches
+            items:
+              - record_type: activity
+                record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f81
+                summary: "Inbound email: Canopy timeline"
+                occurred_at: "2026-08-20T09:15:00Z"
+                evidence:
+                  - {source: activity.subject, snippet: "Canopy timeline"}
 expect:
   outcome: accepted
   answer: log_activity
