@@ -20,13 +20,10 @@
 # the part it cannot see, which is the one way a census must not fail.
 # Migrations are scanned too, with SQL's own comment marker understood.
 #
-# KNOWN LEAK, NOT CAUGHT BY THE PATTERNS BELOW: the communication basis
-# vocabulary carries 'vn_subject_agreement' and 'existing_customer_exception' —
-# in core Go (internal/shared/ports/commsauthz/decision.go) and in two CHECK
-# constraints of shipped migration 1788407500. Core must stay country-neutral,
-# so that is a real violation. Whether the vocabulary should carry per-pack
-# values is a product decision about the engine and not one a grep settles;
-# it is filed as issue #4733, not argued here.
+# THE BASIS VOCABULARY is not matched here. A lowercase enum value would need a
+# list of every market's wording in this script, which is a second copy of what
+# the boundary keeps out of core. TestNoBasisConstantNamesACountry
+# (backend/internal/shared/ports/commsauthz) reads the Go constants themselves.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."

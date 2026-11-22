@@ -769,7 +769,6 @@ export const en = {
   "approval.preview.basisObligation": "Legal obligation",
   "approval.preview.basisSecurity": "Vital or security interest",
   "approval.preview.basisCustomer": "Existing customer exception",
-  "approval.preview.basisAgreement": "Recipient agreement",
   "approval.preview.promotionTrigger": "Qualification trigger",
   "approval.preview.promotionNote": "Qualification evidence",
   "approval.preview.promotionEvidence": "Supporting activity",
@@ -11857,7 +11856,6 @@ export const en = {
     "Needed to keep you or your account safe.",
   "privacynotice.basis.existingCustomer":
     "You are our customer, and we tell you about products like the ones you bought. You can object at any time.",
-  "privacynotice.basis.vnAgreement": "You agreed to receive our advertising.",
   "privacynotice.category.postalAddress": "Your postal address",
   "privacynotice.category.socialProfile":
     "Your profiles and accounts on social networks and chat services",

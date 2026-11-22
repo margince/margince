@@ -19821,7 +19821,6 @@ const (
 	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
 	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
 	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
-	PrivacyInformationPagePurposeBasesVnSubjectAgreement             PrivacyInformationPagePurposeBases = "vn_subject_agreement"
 )
 
 // Valid indicates whether the value is a known member of the PrivacyInformationPagePurposeBases enum.
@@ -19844,8 +19843,6 @@ func (e PrivacyInformationPagePurposeBases) Valid() bool {
 	case PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence:
 		return true
 	case PrivacyInformationPagePurposeBasesVitalOrSecurityInterest:
-		return true
-	case PrivacyInformationPagePurposeBasesVnSubjectAgreement:
 		return true
 	default:
 		return false
@@ -59307,10 +59304,13 @@ type MorningBriefItemLineage struct {
 // MorningDigest The CAP-DDL-6 payload: what capture did overnight and what awaits the human (CAP-WIRE-6).
 type MorningDigest struct {
 	Capture struct {
+		// ActivitiesCreated The number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition: both fields hold this one count.
 		ActivitiesCreated *int `json:"activities_created,omitempty"`
 		CompaniesCreated  *int `json:"companies_created,omitempty"`
 		ContactsCreated   *int `json:"contacts_created,omitempty"`
-		MessagesSynced    *int `json:"messages_synced,omitempty"`
+
+		// MessagesSynced The number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition: both fields hold this one count.
+		MessagesSynced *int `json:"messages_synced,omitempty"`
 	} `json:"capture"`
 	Connectors []struct {
 		LastSyncErrorClass *string                          `json:"last_sync_error_class,omitempty"`

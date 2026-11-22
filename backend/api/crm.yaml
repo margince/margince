@@ -45999,8 +45999,8 @@ components:
         capture:
           type: object
           properties:
-            messages_synced: { type: integer }
-            activities_created: { type: integer }
+            messages_synced: { type: integer, description: 'The number of mail activities from the reader''s own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition: both fields hold this one count.' }
+            activities_created: { type: integer, description: 'The number of mail activities from the reader''s own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition: both fields hold this one count.' }
             contacts_created: { type: integer }
             companies_created: { type: integer }
         review:
@@ -78516,7 +78516,7 @@ components:
             whose record holds neither their consent nor an agreement with them.
           items:
             type: string
-            enum: [consent, contract, precontract_request, subject_initiated_correspondence, legitimate_interests, legal_obligation, vital_or_security_interest, existing_customer_exception, vn_subject_agreement, none]
+            enum: [consent, contract, precontract_request, subject_initiated_correspondence, legitimate_interests, legal_obligation, vital_or_security_interest, existing_customer_exception, none]
             x-extensible-enum: true
         data_categories:
           type: array

@@ -808,7 +808,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.basisSecurity":
     "Lebenswichtiges Interesse oder Sicherheitsinteresse",
   "approval.preview.basisCustomer": "Bestandskundenausnahme",
-  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
   "approval.preview.promotionTrigger": "Anlass der Qualifizierung",
   "approval.preview.promotionNote": "Beleg zur Qualifizierung",
   "approval.preview.promotionEvidence": "Belegende Aktivität",
@@ -11904,8 +11903,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nötig, um Sie oder Ihr Konto zu schützen.",
   "privacynotice.basis.existingCustomer":
     "Sie sind unser Kunde, und wir informieren Sie über Produkte wie die, die Sie gekauft haben. Sie können jederzeit widersprechen.",
-  "privacynotice.basis.vnAgreement":
-    "Sie haben zugestimmt, unsere Werbung zu erhalten.",
   "privacynotice.category.postalAddress": "Ihre Postanschrift",
   "privacynotice.category.socialProfile":
     "Ihre Profile und Konten in sozialen Netzwerken und Chat-Diensten",
