@@ -273,8 +273,9 @@ func TestADisconnectedCalendarKeepsNoGuestOnTheMeeting(t *testing.T) {
 	}
 }
 
-// A calendar whose copy is gone lists nobody, so it keeps no guest either.
-func TestACalendarThatLeftKeepsNoGuestOnTheMeeting(t *testing.T) {
+// A calendar whose copy is gone stops holding the guests another calendar
+// lists, so that calendar alone decides when they leave.
+func TestACalendarThatLeftNoLongerHoldsTheGuestsAnotherCalendarLists(t *testing.T) {
 	s := newSharedGuests(t)
 	e := s.e
 	meeting := s.bothList(t, sharedGuestHost)

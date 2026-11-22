@@ -66,6 +66,7 @@ var presenceReadsAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/activities:readGuestRows": "selects rows with `ap.user_id IS NULL`, which name no seat at all. A " +
 		"guessed mailbox owner names only a seat, so it cannot match this predicate and the question the rule answers " +
 		"does not arise.",
+	"internal/modules/activities:carryRostersTx":     "adds a folded copy's calendars to the survivor's roster rows, and leaves a colleague's own row out. It touches only rows a calendar roster lists, and a guessed mailbox owner's row names no roster, so the rule could change nothing here",
 	"internal/modules/capture:retireTheSeatThatLeft": "drops the calendar rows bound to the syncing seat once its own copy of the meeting is gone. It touches only rows a calendar roster lists, and a guessed mailbox owner's row names no roster, so the rule could change nothing here",
 	"internal/modules/capture:ReleaseImportTx": "releases one seat's import of one activity, by (activity, seat). It " +
 		"removes rows rather than concluding from them, and a guessed owner row is among the rows a release clears.",

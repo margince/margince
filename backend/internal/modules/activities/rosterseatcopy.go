@@ -20,8 +20,8 @@ import (
 const oneSeatRosterRows = `FROM activity_participant WHERE roster_seat IS NOT NULL`
 
 // CopyRosterSeatsTx moves the one seat of up to limit older guest rows into
-// their seat set, after the cursor, and returns the rows it inspected. Readers
-// take both columns as one set, so the move changes no answer and is not audited.
+// their seat set, after the cursor. It returns the rows it inspected and how
+// many it changed. Readers take both columns as one set, so no answer changes.
 func CopyRosterSeatsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err

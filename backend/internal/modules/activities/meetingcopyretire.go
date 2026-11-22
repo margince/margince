@@ -134,7 +134,8 @@ func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, surv
 
 // carryRostersTx adds the copy's calendars to the survivor's roster rows that
 // hold the same address. The calendar that listed a guest on the copy lists them
-// on the survivor too, so that guest stays until it drops them.
+// on the survivor too, so that guest stays until it drops them. A colleague's
+// own row is left alone: their own calendar decides it.
 func carryRostersTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) error {
 	_, err := tx.Exec(ctx, `
 		UPDATE activity_participant s SET `+storekit.StoreRosterSeatsSQL("listed.seats")+`
@@ -143,6 +144,7 @@ func carryRostersTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.Acti
 		          JOIN activity_participant d ON d.activity_id = $1 AND lower(d.address) = lower(kept.address)
 		         CROSS JOIN LATERAL unnest(`+storekit.RosterSeatsSQL("kept")+` || `+storekit.RosterSeatsSQL("d")+`) AS listing(seat)
 		         WHERE kept.activity_id = $2 AND `+storekit.OnACalendarRosterSQL("kept")+`
+		           AND NOT (kept.user_id IS NOT NULL AND `+storekit.RosterListsSQL("kept", "kept.user_id")+`)
 		         GROUP BY kept.id) listed
 		 WHERE s.id = listed.id AND NOT listed.seats <@ `+storekit.RosterSeatsSQL("s"), duplicate, survivor)
 	if err != nil {

@@ -249,13 +249,12 @@ func addFromTheRoster(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 }
 
 // heldAddresses answers each address the meeting holds, and whether its only
-// rows are address-only ones this calendar lists. A row that records a decline
-// counts only when no other calendar lists it: their copies may not show it.
+// rows are address-only ones this calendar alone lists. A row another calendar
+// lists too is never offered again: one copy may not show a decline.
 func heldAddresses(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, seat ids.UUID) (map[string]bool, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT address,
-		       count(*) = count(CASE WHEN `+storekit.RosterListsSQL("held", "$2")+` AND user_id IS NULL AND contact_id IS NULL
-			         AND (`+storekit.RosterSeatsSQL("held")+` = ARRAY[$2::uuid] OR coalesce(response, '') <> 'declined') THEN 1 END)
+		       count(*) = count(CASE WHEN `+storekit.RosterSeatsSQL("held")+` = ARRAY[$2::uuid] AND user_id IS NULL AND contact_id IS NULL THEN 1 END)
 		  FROM activity_participant held WHERE activity_id = $1 AND address IS NOT NULL
 		 GROUP BY address`, activityID, seat)
 	if err != nil {

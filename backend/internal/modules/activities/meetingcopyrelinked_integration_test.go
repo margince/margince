@@ -63,7 +63,7 @@ func TestAFoldedCopyCarriesAGuestsRelinkMark(t *testing.T) {
 
 // A folded copy's calendar joins the survivor's roster row for the same guest,
 // so that guest stays until both calendars dropped them. A row no roster wrote
-// on the survivor stays a member's.
+// on the survivor stays a member's, and a colleague's own row stays their calendar's.
 func TestAFoldedCopyCarriesItsCalendarToTheSurvivorsGuests(t *testing.T) {
 	e := setupSend(t)
 	ctx := context.Background()
@@ -83,6 +83,11 @@ func TestAFoldedCopyCarriesItsCalendarToTheSurvivorsGuests(t *testing.T) {
         ($2, 'older@partner.example', 'attendee', NULL, $3)`, survivor, duplicate, e.rep, otherCalendar); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := e.owner.Exec(ctx, `INSERT INTO activity_participant (activity_id, address, role, user_id, roster_seats)
+ VALUES ($1, 'own@myco.example', 'attendee', $3, ARRAY[$3::uuid]), ($2, 'own@myco.example', 'attendee', NULL, ARRAY[$4::uuid])`,
+		survivor, duplicate, e.rep, otherCalendar); err != nil {
+		t.Fatal(err)
+	}
 
 	system := principal.SystemActing(principal.WithWorkspaceID(ctx, e.ws), "system:meeting-fold")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
@@ -92,7 +97,9 @@ func TestAFoldedCopyCarriesItsCalendarToTheSurvivorsGuests(t *testing.T) {
 		t.Fatalf("folding the copy: %v", err)
 	}
 
-	for address, want := range map[string]int{"both@partner.example": 2, "member@partner.example": 0, "older@partner.example": 1} {
+	for address, want := range map[string]int{
+		"both@partner.example": 2, "member@partner.example": 0, "older@partner.example": 1, "own@myco.example": 1,
+	} {
 		var rows, calendars int
 		if err := e.owner.QueryRow(ctx, `SELECT count(*), coalesce(sum(cardinality(roster_seats)), 0) FROM activity_participant
  WHERE activity_id = $1 AND address = $2`, survivor, address).Scan(&rows, &calendars); err != nil {

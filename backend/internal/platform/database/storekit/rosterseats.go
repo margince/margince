@@ -22,10 +22,9 @@ func RosterListsSQL(participant, seat string) string {
 	return seat + ` = ANY(` + RosterSeatsSQL(participant) + `)`
 }
 
-// RosterSeatsWithSQL is the row's seats and more, each seat once. more is a
-// seat or an array of seats.
-func RosterSeatsWithSQL(participant, more string) string {
-	return `ARRAY(SELECT DISTINCT listing.seat FROM unnest(` + RosterSeatsSQL(participant) + ` || ` + more + `) AS listing(seat) ORDER BY 1)`
+// RosterSeatsWithSQL is the row's seats and one more seat, each seat once.
+func RosterSeatsWithSQL(participant, seat string) string {
+	return `ARRAY(SELECT DISTINCT listing.seat FROM unnest(` + RosterSeatsSQL(participant) + ` || ` + seat + `) AS listing(seat) ORDER BY 1)`
 }
 
 // StoreRosterSeatsSQL is the SET clause that stores seats as a row's rosters.
