@@ -173,37 +173,62 @@ type leadContactRepairPage struct {
 	Ambiguous []ids.LeadID
 }
 
+// leadContactCleanupSource names the lead and contact cleanup on the queue rows it files.
+const leadContactCleanupSource = "lead_contact_cleanup"
+
 type leadContactPair struct {
 	LeadID     ids.LeadID
 	ContactIDs []ids.UUID
+	Fields     []string
+	Values     []string
 }
 
+// existingLeadContactPairs lists live leads that share an identity with a live
+// contact, and skips a lead whose every pair of contacts a person already
+// dismissed as not a duplicate: that lead stays a lead for good. Fields and
+// Values name, per contact in id order, the identity that matched.
 const existingLeadContactPairs = `
 	FROM lead l
 	CROSS JOIN LATERAL (
-		SELECT array_agg(candidate.contact_id ORDER BY candidate.contact_id) AS contact_ids
+		SELECT array_agg(by_contact.contact_id ORDER BY by_contact.contact_id) AS contact_ids,
+		       array_agg(by_contact.field ORDER BY by_contact.contact_id) AS fields,
+		       array_agg(by_contact.value ORDER BY by_contact.contact_id) AS match_values
 		FROM (
-			SELECT ce.contact_id
-			  FROM contact_email ce JOIN contact c ON c.id = ce.contact_id
-			 WHERE ce.archived_at IS NULL AND c.archived_at IS NULL AND ce.email = l.email
-			UNION
-			SELECT cs.contact_id
-			  FROM contact_social cs JOIN contact c ON c.id = cs.contact_id
-			 WHERE c.archived_at IS NULL AND cs.platform = 'linkedin' AND cs.handle = l.linkedin_url
-			UNION
-			SELECT c.id FROM contact c WHERE c.id = l.from_contact_id AND c.archived_at IS NULL
-			UNION
-			SELECT c.id FROM contact c WHERE c.converted_from_lead_id = l.id AND c.archived_at IS NULL
-		) candidate
+			SELECT DISTINCT ON (candidate.contact_id) candidate.contact_id, candidate.field, candidate.value
+			FROM (
+				SELECT ce.contact_id, 'email' AS field, ce.email AS value
+				  FROM contact_email ce JOIN contact c ON c.id = ce.contact_id
+				 WHERE ce.archived_at IS NULL AND c.archived_at IS NULL AND ce.email = l.email
+				UNION ALL
+				SELECT cs.contact_id, 'linkedin', cs.handle
+				  FROM contact_social cs JOIN contact c ON c.id = cs.contact_id
+				 WHERE c.archived_at IS NULL AND cs.platform = 'linkedin' AND cs.handle = l.linkedin_url
+				UNION ALL
+				SELECT c.id, 'matched_lane', 'linked_lead' FROM contact c WHERE c.id = l.from_contact_id AND c.archived_at IS NULL
+				UNION ALL
+				SELECT c.id, 'matched_lane', 'linked_lead' FROM contact c WHERE c.converted_from_lead_id = l.id AND c.archived_at IS NULL
+			) candidate
+			ORDER BY candidate.contact_id, candidate.field
+		) by_contact
 	) matches
-	WHERE l.archived_at IS NULL AND cardinality(matches.contact_ids) > 0`
+	WHERE l.archived_at IS NULL AND cardinality(matches.contact_ids) > 0
+	  AND NOT (cardinality(matches.contact_ids) > 1 AND NOT EXISTS (
+		SELECT 1 FROM unnest(matches.contact_ids) AS a(id)
+		  JOIN unnest(matches.contact_ids) AS b(id) ON a.id < b.id
+		 WHERE NOT EXISTS (
+			SELECT 1 FROM dedupe_candidate d
+			 WHERE d.entity_type = 'contact' AND d.disposition = 'not_a_duplicate'
+			   AND d.left_contact_id = a.id AND d.right_contact_id = b.id)))`
 
 // MergeExistingLeadContactPairsTx promotes unambiguous pairs into the contact.
+// A lead that matches several contacts is left alone and each pair of those
+// contacts goes to the duplicate review, where merging them makes the lead
+// unambiguous for the next run.
 func (s *Store) MergeExistingLeadContactPairsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (leadContactRepairPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return leadContactRepairPage{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT l.id, matches.contact_ids `+existingLeadContactPairs+`
+	rows, err := tx.Query(ctx, `SELECT l.id, matches.contact_ids, matches.fields, matches.match_values `+existingLeadContactPairs+`
 		 AND l.id > $1 ORDER BY l.id LIMIT $2`, after, limit)
 	if err != nil {
 		return leadContactRepairPage{}, fmt.Errorf("contacts: reading lead and contact pairs: %w", err)
@@ -220,6 +245,9 @@ func (s *Store) MergeExistingLeadContactPairsTx(ctx context.Context, tx pgx.Tx, 
 	for _, pair := range pairs {
 		page.Inspected = append(page.Inspected, pair.LeadID.UUID)
 		if len(pair.ContactIDs) != 1 {
+			if err := pair.fileContactPairs(ctx, tx, by); err != nil {
+				return leadContactRepairPage{}, err
+			}
 			page.Ambiguous = append(page.Ambiguous, pair.LeadID)
 			continue
 		}
@@ -230,6 +258,34 @@ func (s *Store) MergeExistingLeadContactPairsTx(ctx context.Context, tx pgx.Tx, 
 		page.Merged++
 	}
 	return page, nil
+}
+
+// fileContactPairs puts every pair of the contacts one lead matches on the
+// duplicate review. A pair the queue already holds, open or dismissed, stays as it is.
+func (p leadContactPair) fileContactPairs(ctx context.Context, tx pgx.Tx, by string) error {
+	for i := range p.ContactIDs {
+		for j := i + 1; j < len(p.ContactIDs); j++ {
+			_, err := recordDedupeCandidate(ctx, tx, entityContact, p.ContactIDs[i], p.ContactIDs[j], 0,
+				p.evidence(i, j), leadContactCleanupSource, by)
+			if err != nil {
+				return fmt.Errorf("contacts: filing the contacts one lead matches: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+// evidence shows the identity both contacts matched the lead on, or the
+// generic lane when they matched in different ways.
+func (p leadContactPair) evidence(i, j int) []map[string]any {
+	field := p.Fields[i]
+	if p.Fields[j] != field {
+		field = "matched_lane"
+	}
+	return []map[string]any{{
+		evidenceFieldKey: field, evidenceLeftKey: p.Values[i], evidenceRightKey: p.Values[j],
+		evidenceSignalKey: evidenceSignalCollide,
+	}}
 }
 
 // MergeExistingLeadContactPairForEmailTx applies the cleanup task's merge to
