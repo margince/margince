@@ -13,6 +13,7 @@ package capture
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -270,9 +271,13 @@ func TestRefilingKeepsWhoMayReadTheMail(t *testing.T) {
 	}
 }
 
-func TestAContactAColleagueOwnsIsLeftWhenAnotherSeatClaimsItsAddress(t *testing.T) {
+// The claim hook runs as the system, which sees every contact. The two contacts
+// then differ only in who owns them.
+func TestTheHookLeavesAContactAColleagueOwns(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
+	mine := claimMintFormerContact(t, env)
+	const colleaguesAddress = "colleagues-contact@previous-employer.example"
 	var theirs ids.UUID
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
@@ -282,17 +287,44 @@ func TestAContactAColleagueOwnsIsLeftWhenAnotherSeatClaimsItsAddress(t *testing.
 		}
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
-			VALUES ($1, $2, true, 'gmail', 'connector:gmail')`, theirs, claimedFormer)
+			VALUES ($1, $2, true, 'gmail', 'connector:gmail')`, theirs, colleaguesAddress)
 		return err
 	})
 	if err != nil {
 		t.Fatalf("seeding the colleague's contact: %v", err)
 	}
+	hook := ownaddress.Retire(contacts.NewStore(e.DB()), slog.Default())
+	system := principal.SystemActing(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()), "system:test")
+	run := func(address string) {
+		err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+			return hook(system, tx, capturemod.ClaimedAddress{ID: ids.NewV7(), User: e.Rep1, Address: address, Proven: true})
+		})
+		if err != nil {
+			t.Fatalf("running the hook for %s: %v", address, err)
+		}
+	}
+
+	run(claimedFormer)
+	run(colleaguesAddress)
+
+	if claimContactLive(t, e, mine) {
+		t.Error("the control failed: the claimant's own contact was not archived, so the test proves nothing")
+	}
+	if !claimContactLive(t, e, theirs) {
+		t.Error("the hook archived a contact a colleague owns")
+	}
+}
+
+func TestAnAddressAColleagueOwnsAMailboxForIsLeftToThem(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	claimProve(t, e, e.Rep3, claimedFormer)
 
 	claimProvenFormer(t, e)
 
-	if !claimContactLive(t, e, theirs) {
-		t.Error("the member's claim archived a contact their colleague owns")
+	if !claimContactLive(t, e, contact) {
+		t.Error("an address two seats connected was treated as one member's own")
 	}
 }
 
@@ -347,18 +379,26 @@ func TestAContactWithANonMailActivityIsLeftWhole(t *testing.T) {
 	}
 }
 
-func TestAContactWithAHeldMessageIsLeftWhole(t *testing.T) {
+// A held message is archived with its hold, so the refile never reads it. Its
+// link stays where the hold put it, and the rest of the contact's mail moves.
+func TestAHeldMessageKeepsItsLinkWhenTheContactIsArchived(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
-	claimExec(t, e, `
-		UPDATE activity SET restricted_at = now()
-		 WHERE id = (SELECT activity_id FROM activity_link WHERE contact_id = $1 ORDER BY activity_id LIMIT 1)`, contact)
+	const first = `(SELECT activity_id FROM activity_link WHERE contact_id = $1 ORDER BY activity_id LIMIT 1)`
+	claimExec(t, e, `INSERT INTO activity_retention_evidence (activity_id, basis, qualified_at, decided_by_name, reason)
+		VALUES (`+first+`, 'controller_pin', now(), 'Datenschutz', 'litigation hold')`, contact)
+	claimExec(t, e, `UPDATE activity SET restricted_at = now(), archived_at = now(), restricted_reason = 'litigation hold',
+		restricted_until = now() + interval '1 year', retention_class = 'commercial_correspondence', retention_class_at = now()
+		WHERE id = `+first, contact)
 
 	claimProvenFormer(t, e)
 
-	if !claimContactLive(t, e, contact) {
-		t.Error("the contact was archived although one of its messages is held")
+	if claimContactLive(t, e, contact) {
+		t.Error("the contact stayed live although only a held message was in the way")
+	}
+	if n := contactLinkCount(t, e, contact); n != 1 {
+		t.Errorf("%d links left on the archived contact, want only the held message's", n)
 	}
 }
 
@@ -388,7 +428,7 @@ func TestAContactInADealOrARelationshipIsLeftWhole(t *testing.T) {
 	claimProvenFormer(t, e)
 
 	if !claimContactLive(t, e, contact) {
-		t.Error("the contact was archived although a person gave it a relationship")
+		t.Error("the contact was archived although a user gave it a relationship")
 	}
 }
 
@@ -540,7 +580,7 @@ func TestACaptureMintedContactIsRetractableByAVerdict(t *testing.T) {
 	var retracted bool
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
-		retracted, err = contacts.NewStore(e.DB()).RetractCaptureOnlyContactTx(e.Admin(), tx, ids.From[ids.ContactKind](contact), e.Rep1)
+		retracted, err = contacts.NewStore(e.DB()).RetractCaptureOnlyContactTx(principal.WithCorrelationID(e.Admin(), ids.NewV7()), tx, ids.From[ids.ContactKind](contact), e.Rep1)
 		return err
 	})
 	if err != nil {

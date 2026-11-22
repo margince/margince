@@ -36,7 +36,7 @@ type Restore func(ctx context.Context, tx pgx.Tx, id ids.ContactID) error
 func NewStore(db *database.DB, store *contacts.Store, restore Restore) *capture.OwnerIdentityStore {
 	log := slog.Default()
 	return capture.NewOwnerIdentityStore(db).
-		WithAddressClaimed(retire(store, log)).
+		WithAddressClaimed(Retire(store, log)).
 		WithAddressWithdrawn(release(store, restore, log))
 }
 
@@ -65,10 +65,10 @@ func release(store *contacts.Store, restore Restore, log *slog.Logger) capture.A
 	}
 }
 
-// retire withdraws the contact capture made for the claimed address, when the
-// claimant minted it and holds it alone, and refiles its mail. Every other
-// contact on the address is left as it is.
-func retire(store *contacts.Store, log *slog.Logger) capture.AddressClaimHook {
+// Retire is the claim hook. It withdraws the contact capture made for the
+// claimed address when the claimant minted it and holds it alone, and refiles
+// its mail. Every other contact on the address is left as it is.
+func Retire(store *contacts.Store, log *slog.Logger) capture.AddressClaimHook {
 	return func(ctx context.Context, tx pgx.Tx, claim capture.ClaimedAddress) error {
 		if !claim.Proven || claim.HeldByAnotherSeat {
 			return nil

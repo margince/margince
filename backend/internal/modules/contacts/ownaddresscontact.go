@@ -31,7 +31,7 @@ const (
 //
 // The contact must be machine-made for this owner and owner-scoped. It must
 // have no live grant and no audit row from a user, agent or approval. It must
-// have no relationship a person or a deal made. The owner's right to archive it is asked first, under
+// have no relationship a user or a deal made. The owner's right to archive it is asked first, under
 // the row lock. The archive records claim, so the claim's removal finds it.
 func (s *Store) RetractOwnAddressContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, owner, claim ids.UUID) (bool, error) {
 	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
