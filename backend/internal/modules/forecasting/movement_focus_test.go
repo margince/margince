@@ -37,7 +37,7 @@ func focusSides() (snapshotSide, snapshotSide) {
 	return opening, closing
 }
 
-func actionsOn(deal string, kinds ...string) []FocusAction {
+func actionsOn(kinds ...string) []FocusAction {
 	var out []FocusAction
 	for i, kind := range kinds {
 		out = append(out, FocusAction{
@@ -54,9 +54,9 @@ func TestFocusAttributionNamesTheShareMovedByWorkedListedDeals(t *testing.T) {
 	move := Classify(ReadingOpen, opening, closing)
 
 	got := attributeFocus(opening, &move, map[string][]FocusAction{
-		listedWorked:  actionsOn(listedWorked, "task_done", "mail_sent"),
-		unlistedWork:  actionsOn(unlistedWork, "meeting_held"),
-		listedWorkedB: actionsOn(listedWorkedB, "meeting_held"),
+		listedWorked:  actionsOn("task_done", "mail_sent"),
+		unlistedWork:  actionsOn("meeting_held"),
+		listedWorkedB: actionsOn("meeting_held"),
 	})
 
 	if got == nil {
@@ -91,7 +91,7 @@ func TestFocusAttributionIsAbsentWhenNoListedDealWasWorked(t *testing.T) {
 	t.Parallel()
 	opening, closing := focusSides()
 	move := Classify(ReadingOpen, opening, closing)
-	if got := attributeFocus(opening, &move, map[string][]FocusAction{unlistedWork: actionsOn(unlistedWork, "task_done")}); got != nil {
+	if got := attributeFocus(opening, &move, map[string][]FocusAction{unlistedWork: actionsOn("task_done")}); got != nil {
 		t.Errorf("attribution = %+v, want none: the only worked deal was not on the stored list", got)
 	}
 }
@@ -101,7 +101,7 @@ func TestFocusAttributionHasNoShareOfAZeroChange(t *testing.T) {
 	opening := side(DefinitionVersion, listed(open(listedWorked, 100_00)), open(unlistedWork, 100_00))
 	closing := side(DefinitionVersion, open(listedWorked, 110_00), open(unlistedWork, 90_00))
 	move := Classify(ReadingOpen, opening, closing)
-	got := attributeFocus(opening, &move, map[string][]FocusAction{listedWorked: actionsOn(listedWorked, "task_done")})
+	got := attributeFocus(opening, &move, map[string][]FocusAction{listedWorked: actionsOn("task_done")})
 	if got == nil || got.ShareBps != nil || got.AmountMinor != 10_00 {
 		t.Errorf("attribution = %+v, want +1000 and no share, because the whole change is zero", got)
 	}
@@ -112,7 +112,7 @@ func TestFocusAttributionCapsTheLinksOfOneDeal(t *testing.T) {
 	opening, closing := focusSides()
 	move := Classify(ReadingOpen, opening, closing)
 	kinds := slices.Repeat([]string{"mail_sent"}, 9)
-	got := attributeFocus(opening, &move, map[string][]FocusAction{listedWorked: actionsOn(listedWorked, kinds...)})
+	got := attributeFocus(opening, &move, map[string][]FocusAction{listedWorked: actionsOn(kinds...)})
 	if n := len(got.Deals[0].Actions); n != focusActionsPerDeal {
 		t.Errorf("deal links %d actions, want the cap of %d", n, focusActionsPerDeal)
 	}
@@ -127,7 +127,7 @@ func TestAMovementWithoutAFocusReaderCarriesNoAttribution(t *testing.T) {
 		t.Errorf("err=%v attribution=%+v, want none from a store with no reader bound", err, move.FocusActions)
 	}
 	store.WithFocusActions(func(context.Context, pgx.Tx, []ids.UUID, time.Time, time.Time) (map[string][]FocusAction, error) {
-		return map[string][]FocusAction{listedWorked: actionsOn(listedWorked, "task_done")}, nil
+		return map[string][]FocusAction{listedWorked: actionsOn("task_done")}, nil
 	})
 	if err := store.focusAttribution(context.Background(), nil, opening, closing, &move); err != nil || move.FocusActions == nil {
 		t.Errorf("err=%v attribution=%+v, want the bound reader's actions attributed", err, move.FocusActions)

@@ -8,7 +8,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"log/slog"
 	"net/http"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"

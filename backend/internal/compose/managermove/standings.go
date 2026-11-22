@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package managermove answers the Worklist's "bring in the manager" question:
-// who leads a deal owner's team, and where the deal stands in that team's
-// latest forecast freeze.
+// Package managermove answers the Worklist's "bring in the manager" question.
+// It names who leads a deal owner's team and where the deal stands in the
+// team's latest forecast freeze.
 package managermove
 
 import (
@@ -26,11 +26,11 @@ type ForecastReader interface {
 // the forecast-based reasons follow the reader's own forecast access.
 func Standings(forecast ForecastReader) dealstatus.ManagerStandings {
 	return func(ctx context.Context, tx pgx.Tx, owners map[ids.UUID]ids.UUID) (map[ids.UUID]dealstatus.ManagerStanding, error) {
-		return standings(ctx, tx, forecast, owners)
+		return standingsOf(ctx, tx, forecast, owners)
 	}
 }
 
-func standings(ctx context.Context, tx pgx.Tx, store ForecastReader, owners map[ids.UUID]ids.UUID) (map[ids.UUID]dealstatus.ManagerStanding, error) {
+func standingsOf(ctx context.Context, tx pgx.Tx, store ForecastReader, owners map[ids.UUID]ids.UUID) (map[ids.UUID]dealstatus.ManagerStanding, error) {
 	dealIDs := make([]ids.UUID, 0, len(owners))
 	leads := map[ids.UUID][]ids.UUID{}
 	for deal, owner := range owners {

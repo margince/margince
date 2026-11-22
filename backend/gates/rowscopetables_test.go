@@ -689,5 +689,9 @@ const (
 	// 168: contacts.autoMove reads the contact id of a claim it moves as the
 	// system principal (auth.RequireSystem in the sweep's entry points). The id
 	// goes to the claim's audit row and is returned to no caller.
-	modulesTierUnscopedCeiling = 168
+	//
+	// 169: forecasting.addTeamStandings reads a team freeze's deal ids and hands
+	// them to the snapshot lens before any caller sees one. The lens applies the
+	// reader's deal row scope and the team's assertion check, as FocusLists does.
+	modulesTierUnscopedCeiling = 169
 )

@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -32,17 +33,18 @@ type DealAction struct {
 }
 
 // DealActionsBetweenTx lists the tasks finished, mails sent and meetings held on
-// these deals after `after` and up to `until`, oldest first. It reads the
-// activity rows the write shape already keeps, and only those the caller may
-// read: the deal's row scope and the activity's audience both apply.
+// these deals from `after` up to but not including `until`, oldest first.
+// It reads the activity rows the write shape keeps.
+// Only rows the caller may read count: the deal's row scope and the activity's audience both apply.
 func DealActionsBetweenTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, after, until time.Time) ([]DealAction, error) {
 	if len(dealIDs) == 0 {
 		return nil, nil
 	}
-	for _, object := range []string{"deal", "activity"} {
-		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
-			return nil, err
-		}
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, linkEntityActivity, principal.ActionRead); err != nil {
+		return nil, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -55,12 +57,11 @@ func DealActionsBetweenTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, af
 		return nil, err
 	}
 	if content == "" {
-		content = "true"
+		content = sqlTrue
 	}
 	from, to := arg(after), arg(until)
-	within := func(column string) string {
-		return fmt.Sprintf("%s > $%d AND %s <= $%d", column, from, column, to)
-	}
+	taskWindow := fmt.Sprintf("a.done_at >= $%d AND a.done_at < $%d", from, to)
+	happenedWindow := occurredday.WithinSQL("a", fmt.Sprintf("$%d", from), fmt.Sprintf("$%d", to))
 	// The moment each kind counts at differs: a task when it was ticked, a mail
 	// and a meeting when they happened.
 	rows, err := tx.Query(ctx, `
@@ -72,9 +73,9 @@ func DealActionsBetweenTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, af
 		  JOIN activity_link l ON l.deal_id = d.id
 		  JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
 		 WHERE `+deals+` AND `+content+` AND (
-		       (a.kind = 'task' AND a.is_done AND `+within("a.done_at")+`)
-		    OR (a.kind = 'email' AND a.direction = 'outbound' AND `+within("a.occurred_at")+`)
-		    OR (a.kind = 'meeting' AND a.meeting_status = 'held' AND `+within("a.occurred_at")+`))
+		       (a.kind = 'task' AND a.is_done AND `+taskWindow+`)
+		    OR (a.kind = 'email' AND a.direction = 'outbound' AND `+happenedWindow+`)
+		    OR (a.kind = 'meeting' AND (a.meeting_status IS NULL OR a.meeting_status = 'held') AND `+happenedWindow+`))
 		 ORDER BY at, a.id`, args...)
 	if err != nil {
 		return nil, err

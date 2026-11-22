@@ -27,6 +27,8 @@ import (
 const ActionBringInManager = "bring_in_manager"
 
 const (
+	argSubject         = "subject"
+	argSource          = "source"
 	reasonBigDeal      = "big_deal"
 	reasonSingleThread = "single_contact"
 	reasonStuck        = "stuck"
@@ -34,9 +36,9 @@ const (
 	taskTypeReview = "review"
 )
 
-// ManagerStanding is what the Worklist needs about a deal beyond its own
-// rows: who leads the owner's team, and where the deal stands in the team's
-// latest forecast freeze.
+// ManagerStanding is what the Worklist needs beyond a deal's own rows.
+// It names who leads the owner's team and where the deal stands in the
+// team's latest forecast freeze.
 type ManagerStanding struct {
 	// Managers are the owner's team leads. Empty means nobody to bring in.
 	Managers    []ids.UUID
@@ -114,9 +116,9 @@ func managerReasons(f facts, standing ManagerStanding, maxSeats int) []managerRe
 }
 
 // withManagerMoves swaps a generic next step for "bring in the manager" where
-// the deal qualifies and its owner has a team manager. The move's fingerprint
-// holds each reason and the fact behind it, so a set-aside lifts when a fact
-// changes: the amount, the engaged contacts, or the stage a deal sticks in.
+// the deal qualifies and its owner has a team manager.
+// The fingerprint holds each reason and its fact, so a set-aside lifts when the
+// amount, the engaged contacts or the stuck stage changes.
 func (s *Service) withManagerMoves(
 	ctx context.Context, tx pgx.Tx, current map[ids.UUID]facts, moves map[ids.UUID]crmcontracts.DealStatusCardMove,
 ) error {
@@ -167,12 +169,12 @@ func managerMove(f facts, manager ids.UUID, reasons []managerReason) (crmcontrac
 	subject := fmt.Sprintf(said.Say(managerWords.Subject), f.deal.Name)
 	offer := ruleMove(ruleBringInManager, fmt.Sprintf(said.Say(managerWords.Offer), why),
 		map[string]any{
-			"subject":     subject,
+			argSubject:    subject,
 			"body":        capitalized(why) + ".",
 			"assignee_id": manager,
 			"task_type":   taskTypeReview,
 			argLinks:      []map[string]any{{argEntityType: linkDeal, argEntityID: f.deal.Id}},
-			"source":      provenance.RecordSourceManual,
+			argSource:     provenance.RecordSourceManual,
 		})
 	offer, err := assessMove(f, offer)
 	if err != nil {

@@ -15,14 +15,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// CauseFocusActions marks a deal on the opening snapshot's focus list that had
-// tasks done, mails sent or meetings held on it between the two snapshots.
-// It is a cause beside the buckets, never a bucket: a deal's money stays in
-// the one bucket it is counted under, so the waterfall still adds up.
+// CauseFocusActions marks a deal on the opening snapshot's focus list that was
+// worked between the two snapshots: tasks done, mails sent or meetings held.
+// It is a cause beside the buckets, never a bucket, so the waterfall adds up.
 const CauseFocusActions = "focus_actions"
 
 // focusActionsPerDeal bounds the links one deal carries, so a busy deal does
 // not turn a movement into a timeline.
+// basisPointsPerWhole is how many basis points make the whole change.
+const basisPointsPerWhole = 100 * 100
+
 const focusActionsPerDeal = 5
 
 // FocusAction is one thing done on a listed deal between two snapshots.
@@ -97,7 +99,7 @@ func attributeFocus(opening snapshotSide, move *Movement, actions map[string][]F
 		return cmp.Or(cmp.Compare(max(b.AmountMinor, -b.AmountMinor), max(a.AmountMinor, -a.AmountMinor)), cmp.Compare(a.DealID, b.DealID))
 	})
 	if whole := move.ClosingMinor - move.OpeningMinor; whole != 0 {
-		out.ShareBps = new(int(math.Round(float64(out.AmountMinor) / float64(whole) * 10000)))
+		out.ShareBps = new(int(math.Round(float64(out.AmountMinor) / float64(whole) * basisPointsPerWhole)))
 	}
 	return &out
 }
@@ -130,4 +132,10 @@ func (s *Store) focusAttribution(
 	}
 	move.FocusActions = attributeFocus(opening, move, actions)
 	return nil
+}
+
+// attributed is move with its focus-list attribution added.
+func (s *Store) attributed(ctx context.Context, tx pgx.Tx, opening, closing snapshotSide, move Movement) (Movement, error) {
+	err := s.focusAttribution(ctx, tx, opening, closing, &move)
+	return move, err
 }

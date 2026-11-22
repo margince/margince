@@ -427,11 +427,7 @@ func (s *Store) MovementTx(
 			Message: "a movement compares two readings in the same base currency",
 		}
 	}
-	out := Classify(reading, opening, closing)
-	if err := s.focusAttribution(ctx, tx, opening, closing, &out); err != nil {
-		return Movement{}, err
-	}
-	return out, nil
+	return s.attributed(ctx, tx, opening, closing, Classify(reading, opening, closing))
 }
 
 func sameID(a, b *ids.UUID) bool {

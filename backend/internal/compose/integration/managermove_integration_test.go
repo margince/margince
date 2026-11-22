@@ -72,8 +72,8 @@ func (f managerMoveFixture) touched(t *testing.T, deal ids.UUID) {
 	}
 }
 
-// freeze stores one daily team freeze holding these open deals, the way the
-// daily job does, so a deal's size and risk signals are read from it.
+// freeze stores one daily team freeze of these open deals, as the daily job does.
+// A deal's size and risk signals are then read from it.
 func (f managerMoveFixture) freeze(t *testing.T, at time.Time, rows ...forecasting.Contribution) {
 	t.Helper()
 	f.freezeTeam(t, f.e.Team1, at, rows...)
@@ -106,7 +106,7 @@ func openRow(deal ids.UUID, base int64, signals ...forecasting.Signal) forecasti
 	}
 }
 
-func (f managerMoveFixture) move(t *testing.T, ctx context.Context, deal ids.UUID) *crmcontracts.DealStatusCardMove {
+func (f managerMoveFixture) move(ctx context.Context, t *testing.T, deal ids.UUID) *crmcontracts.DealStatusCardMove {
 	t.Helper()
 	moves, err := f.svc.CurrentMoves(ctx, []ids.UUID{deal})
 	if err != nil {
@@ -139,7 +139,7 @@ func TestADealThatNeedsTheManagerOffersTheMoveWithEachReason(t *testing.T) {
 		"one engaged contact":   {single, "only one contact is engaged"},
 		"stuck in its stage":    {stuck, "stuck in its stage"},
 	} {
-		got := f.move(t, f.rep, want.deal)
+		got := f.move(f.rep, t, want.deal)
 		if got == nil {
 			t.Fatalf("%s: the deal offers no manager move", name)
 		}
@@ -151,7 +151,7 @@ func TestADealThatNeedsTheManagerOffersTheMoveWithEachReason(t *testing.T) {
 			t.Errorf("%s: arguments = %v, want a review task for the manager", name, args)
 		}
 	}
-	if got := f.move(t, f.rep, plain); got != nil {
+	if got := f.move(f.rep, t, plain); got != nil {
 		t.Errorf("an ordinary deal offers %+v, want no manager move", got)
 	}
 }
@@ -162,12 +162,12 @@ func TestARepWithNoManagerIsNotOfferedTheMove(t *testing.T) {
 	deal := f.e.SeedDeal(t, "Alone on the team", f.pipeline, f.stage, &owner)
 	f.touched(t, deal)
 	f.e.GrantRole(t, f.e.Rep2, "manager")
-	if got := f.move(t, f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, AccountRepPerms), deal); got != nil {
+	if got := f.move(f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, AccountRepPerms), t, deal); got != nil {
 		t.Errorf("a rep whose team has no manager is offered %+v, want nothing", got)
 	}
 	ownDeal := f.e.SeedDeal(t, "The manager's own deal", f.pipeline, f.stage, &f.e.Rep2)
 	f.touched(t, ownDeal)
-	if got := f.move(t, f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, AccountRepPerms), ownDeal); got != nil {
+	if got := f.move(f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, AccountRepPerms), t, ownDeal); got != nil {
 		t.Errorf("a manager is offered themself on their own deal: %+v", got)
 	}
 }
@@ -180,19 +180,19 @@ func TestSettingTheManagerMoveAsideHoldsUntilAFactChanges(t *testing.T) {
 	other := f.e.SeedDeal(t, "Ordinary add-on", f.pipeline, f.stage, &owner)
 	f.freeze(t, f.now.Add(-30*time.Hour), openRow(big, 900_000), openRow(other, 100_000))
 
-	offered := f.move(t, f.rep, big)
+	offered := f.move(f.rep, t, big)
 	if offered == nil || offered.Fingerprint == nil {
 		t.Fatalf("move = %+v, want the manager move with a fingerprint to set aside", offered)
 	}
 	if err := f.svc.DismissMove(f.rep, ids.From[ids.DealKind](big), *offered.Fingerprint); err != nil {
 		t.Fatalf("setting the move aside: %v", err)
 	}
-	if got := f.move(t, f.rep, big); got != nil {
+	if got := f.move(f.rep, t, big); got != nil {
 		t.Fatalf("the set-aside move is back with no change: %+v", got)
 	}
 
 	f.freeze(t, f.now.Add(-time.Hour), openRow(big, 950_000), openRow(other, 100_000))
-	if got := f.move(t, f.rep, big); got == nil {
+	if got := f.move(f.rep, t, big); got == nil {
 		t.Error("the deal's amount changed and the move is still set aside")
 	}
 }
@@ -232,7 +232,7 @@ func TestForecastReasonsFollowTheReadersForecastAccess(t *testing.T) {
 	if got := standings(blind); len(got) != 0 {
 		t.Errorf("a reader without forecast read gets %+v, want no standings and no error", got)
 	}
-	if got := f.move(t, blind, stuck); got != nil {
+	if got := f.move(blind, t, stuck); got != nil {
 		t.Errorf("a reader without forecast read is offered %+v for a deal only the forecast calls stuck", got)
 	}
 }
