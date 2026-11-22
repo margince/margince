@@ -30,6 +30,7 @@ import (
 const (
 	routingFieldsFile = "../frontend/src/features/ai/ai-routing-fields.tsx"
 	routingFormFile   = "../frontend/src/features/ai/ai-routing.tsx"
+	servicesFile      = "../frontend/src/features/ai/ai-provider-services.ts"
 )
 
 var quotedName = regexp.MustCompile(`"([^"]+)"`)
@@ -109,6 +110,32 @@ func TestTheDecisionRowOffersExactlyTheDecisionProviders(t *testing.T) {
 	for _, provider := range served {
 		if !slices.Contains(offered, provider) {
 			t.Errorf("the registry serves decision provider %q and the routing form's DECISION_PROVIDERS omits it — it cannot be bound from Settings", provider)
+		}
+	}
+}
+
+// The Providers table adds a keyless row, with a host-only sheet, for each
+// local provider the server's key list never names. That set must be the
+// registry's local providers with an endpoint of their own. None may take a
+// key, or its row would say "no key needed" for a provider that has one.
+func TestTheHostOnlyProviderRowsAreExactlyTheKeylessLocalProviders(t *testing.T) {
+	t.Parallel()
+	offered := readFormConstant(t, servicesFile, "LOCAL_PROVIDERS")
+	local := ai.LocalHostProviders()
+	for _, provider := range offered {
+		if !slices.Contains(local, provider) {
+			t.Errorf("the Providers table draws a host-only row for %q, which is not a local provider with an endpoint of its own — it would hide a key the provider takes", provider)
+		}
+	}
+	for _, provider := range local {
+		if !slices.Contains(offered, provider) {
+			t.Errorf("the registry's local provider %q takes no key and the key list never names it, but LOCAL_PROVIDERS omits it — its host cannot be set from Settings", provider)
+		}
+		if ai.KeyEnvVarFor(provider) != "" {
+			t.Errorf("local provider %q has a key variable %q; a host-only row says it takes no key", provider, ai.KeyEnvVarFor(provider))
+		}
+		if slices.Contains(ai.CloudProvidersNeedingKeys(), provider) {
+			t.Errorf("local provider %q holds a key slot, so the server's key list names it and the table would draw it twice", provider)
 		}
 	}
 }
