@@ -177,6 +177,7 @@ function registry(
 const SENTENCES = registry(MAGIC_SENTENCE_KEYS);
 const WHYS = registry(MAGIC_WHY_KEYS);
 const BYS = registry(MAGIC_BY_KEYS);
+const CONSEQUENCES = registry(MAGIC_CONSEQUENCE_KEYS);
 
 /** The sentence key this build carries, or null for one it predates. */
 export function magicSentenceKey(key: string): MessageKey | null {
@@ -186,6 +187,11 @@ export function magicSentenceKey(key: string): MessageKey | null {
 /** The reason key this build carries, or null for one it predates. */
 export function magicWhyKey(key: string): MessageKey | null {
   return WHYS.get(key) ?? null;
+}
+
+/** The consequence key this build carries, or null for one it predates. */
+export function magicConsequenceKey(key: string): MessageKey | null {
+  return CONSEQUENCES.get(key) ?? null;
 }
 
 /** The actor-name key this build carries, or null for one it predates. */
