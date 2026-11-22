@@ -48726,6 +48726,49 @@ components:
           type: array
           description: One row per deal that moved, each in exactly one bucket.
           items: {$ref: '#/components/schemas/ForecastMovementDeal'}
+        focus_actions:
+          allOf: [{$ref: '#/components/schemas/ForecastMovementFocusActions'}]
+          description: >-
+            How much of the change came from deals on the opening snapshot's stored focus list that were worked between the two snapshots. Absent when no listed deal was worked. It is a cause beside the buckets, not a bucket, so the buckets still add up.
+      additionalProperties: false
+    ForecastMovementFocusActions:
+      type: object
+      required: [amount_minor, deals]
+      properties:
+        amount_minor:
+          type: integer
+          format: int64
+          description: The change of the worked focus-list deals, in the reading drawn.
+        share_bps:
+          type: integer
+          description: >-
+            That change as a share of the whole change, in basis points. Absent when the whole change is zero.
+        deals:
+          type: array
+          description: The worked deals, largest change first, each with links to what was done.
+          items: {$ref: '#/components/schemas/ForecastMovementFocusDeal'}
+      additionalProperties: false
+    ForecastMovementFocusDeal:
+      type: object
+      required: [deal_id, amount_minor, actions]
+      properties:
+        deal_id: {type: string, format: uuid}
+        amount_minor: {type: integer, format: int64}
+        actions:
+          type: array
+          description: Up to five of the actions, oldest first.
+          items: {$ref: '#/components/schemas/ForecastMovementFocusAction'}
+      additionalProperties: false
+    ForecastMovementFocusAction:
+      type: object
+      required: [activity_id, kind, at]
+      properties:
+        activity_id: {type: string, format: uuid}
+        kind:
+          type: string
+          enum: [task_done, mail_sent, meeting_held]
+        at: {type: string, format: date-time}
+        subject: {type: string}
       additionalProperties: false
     ForecastMovementBucket:
       type: object
@@ -48763,7 +48806,7 @@ components:
             Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row.
           items:
             type: string
-            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx]
+            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, focus_actions]
       additionalProperties: false
     NewForecastCall:
       type: object
@@ -58553,13 +58596,17 @@ components:
           description: The deal recommendation's evidence basis, preserved across surfaces.
         action:
           type: string
-          enum: [draft_reply, draft_email, create_task, open_task, open_meeting_brief, reconnect, none]
+          enum: [draft_reply, draft_email, create_task, open_task, open_meeting_brief, reconnect, bring_in_manager, none]
           description: |-
             `draft_reply` answers the message in `activity_id` — offered only where the
             reader may READ that message, because there is no replying to words they
             cannot see. It survives beside `draft_email` because the two reach different
             composers: collapsing them would answer a waiting buyer with a fresh message
             and no thread behind it.
+        reason:
+          type: string
+          description: >-
+            One sentence saying why this move is offered. Carried by `bring_in_manager`, whose reasons are facts about the deal; the other verbs leave it absent and the row's own reason stands.
         activity_id:
           type: string
           format: uuid

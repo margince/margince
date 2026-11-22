@@ -4015,6 +4015,7 @@
   "room.docs.alreadyPresent": "Diese Datei ist schon im Raum.",
   "deal360.openTask": "Aufgabe öffnen",
   "deal360.createTask": "Folgeaufgabe erstellen",
+  "deal360.bringInManager": "Führungskraft einbinden",
   "deal360.followUpCreated": "Folgeaufgabe erstellt",
   "deal360.openBrief": "Terminvorbereitung öffnen",
   "auto.runs.outcomeFired": "Ausgelöst",

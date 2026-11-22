@@ -14290,6 +14290,7 @@ export const en = {
   "deal360.readFull": "Read full brief",
   "deal360.openTask": "Open task",
   "deal360.createTask": "Create follow-up",
+  "deal360.bringInManager": "Bring in manager",
   "deal360.followUpCreated": "Follow-up created",
   "deal360.openBrief": "Open meeting brief",
   "deal360.unreadable":

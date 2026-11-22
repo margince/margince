@@ -14129,6 +14129,7 @@ func (e ForecastMovementBucketName) Valid() bool {
 const (
 	ForecastMovementDealCausesAmount             ForecastMovementDealCauses = "amount"
 	ForecastMovementDealCausesCategory           ForecastMovementDealCauses = "category"
+	ForecastMovementDealCausesFocusActions       ForecastMovementDealCauses = "focus_actions"
 	ForecastMovementDealCausesFx                 ForecastMovementDealCauses = "fx"
 	ForecastMovementDealCausesLost               ForecastMovementDealCauses = "lost"
 	ForecastMovementDealCausesNew                ForecastMovementDealCauses = "new"
@@ -14147,6 +14148,8 @@ func (e ForecastMovementDealCauses) Valid() bool {
 		return true
 	case ForecastMovementDealCausesCategory:
 		return true
+	case ForecastMovementDealCausesFocusActions:
+		return true
 	case ForecastMovementDealCausesFx:
 		return true
 	case ForecastMovementDealCausesLost:
@@ -14164,6 +14167,27 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesStageWeight:
 		return true
 	case ForecastMovementDealCausesWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementFocusActionKind.
+const (
+	ForecastMovementFocusActionKindMailSent    ForecastMovementFocusActionKind = "mail_sent"
+	ForecastMovementFocusActionKindMeetingHeld ForecastMovementFocusActionKind = "meeting_held"
+	ForecastMovementFocusActionKindTaskDone    ForecastMovementFocusActionKind = "task_done"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementFocusActionKind enum.
+func (e ForecastMovementFocusActionKind) Valid() bool {
+	switch e {
+	case ForecastMovementFocusActionKindMailSent:
+		return true
+	case ForecastMovementFocusActionKindMeetingHeld:
+		return true
+	case ForecastMovementFocusActionKindTaskDone:
 		return true
 	default:
 		return false
@@ -29019,6 +29043,7 @@ func (e WorklistItemSource) Valid() bool {
 
 // Defines values for WorklistMoveAction.
 const (
+	WorklistMoveActionBringInManager   WorklistMoveAction = "bring_in_manager"
 	WorklistMoveActionCreateTask       WorklistMoveAction = "create_task"
 	WorklistMoveActionDraftEmail       WorklistMoveAction = "draft_email"
 	WorklistMoveActionDraftReply       WorklistMoveAction = "draft_reply"
@@ -29031,6 +29056,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistMoveAction enum.
 func (e WorklistMoveAction) Valid() bool {
 	switch e {
+	case WorklistMoveActionBringInManager:
+		return true
 	case WorklistMoveActionCreateTask:
 		return true
 	case WorklistMoveActionDraftEmail:
@@ -52583,9 +52610,12 @@ type ForecastMovement struct {
 	ClosingMinor int64                    `json:"closing_minor"`
 
 	// Deals One row per deal that moved, each in exactly one bucket.
-	Deals        []ForecastMovementDeal  `json:"deals"`
-	OpeningMinor int64                   `json:"opening_minor"`
-	Reading      ForecastMovementReading `json:"reading"`
+	Deals []ForecastMovementDeal `json:"deals"`
+
+	// FocusActions How much of the change came from deals on the opening snapshot's stored focus list that were worked between the two snapshots. Absent when no listed deal was worked. It is a cause beside the buckets, not a bucket, so the buckets still add up.
+	FocusActions *ForecastMovementFocusActions `json:"focus_actions,omitempty"`
+	OpeningMinor int64                         `json:"opening_minor"`
+	Reading      ForecastMovementReading       `json:"reading"`
 }
 
 // ForecastMovementReading defines model for ForecastMovement.Reading.
@@ -52623,6 +52653,37 @@ type ForecastMovementDeal struct {
 
 // ForecastMovementDealCauses defines model for ForecastMovementDeal.Causes.
 type ForecastMovementDealCauses string
+
+// ForecastMovementFocusAction defines model for ForecastMovementFocusAction.
+type ForecastMovementFocusAction struct {
+	ActivityId openapi_types.UUID              `json:"activity_id"`
+	At         time.Time                       `json:"at"`
+	Kind       ForecastMovementFocusActionKind `json:"kind"`
+	Subject    *string                         `json:"subject,omitempty"`
+}
+
+// ForecastMovementFocusActionKind defines model for ForecastMovementFocusAction.Kind.
+type ForecastMovementFocusActionKind string
+
+// ForecastMovementFocusActions defines model for ForecastMovementFocusActions.
+type ForecastMovementFocusActions struct {
+	// AmountMinor The change of the worked focus-list deals, in the reading drawn.
+	AmountMinor int64 `json:"amount_minor"`
+
+	// Deals The worked deals, largest change first, each with links to what was done.
+	Deals []ForecastMovementFocusDeal `json:"deals"`
+
+	// ShareBps That change as a share of the whole change, in basis points. Absent when the whole change is zero.
+	ShareBps *int `json:"share_bps,omitempty"`
+}
+
+// ForecastMovementFocusDeal defines model for ForecastMovementFocusDeal.
+type ForecastMovementFocusDeal struct {
+	// Actions Up to five of the actions, oldest first.
+	Actions     []ForecastMovementFocusAction `json:"actions"`
+	AmountMinor int64                         `json:"amount_minor"`
+	DealId      openapi_types.UUID            `json:"deal_id"`
+}
 
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
@@ -75050,6 +75111,12 @@ type WorklistMove struct {
 	// `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 	// sends the reader to reauthorize a source that stopped answering.
 	//
+	// `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+	// one engaged contact, or is stuck in its stage. `arguments` is a `CreateTaskRequest` assigned to the manager,
+	// which the client files on accept; the move's reason names why the deal qualifies. It is offered only where
+	// the deal owner has a team manager and the deal's own next step is a generic one. A reader who sets it aside
+	// sees it again only when one of those facts changes.
+	//
 	// `none` is a producer's answer that there is nothing to do — a closed deal has
 	// no next step. It is a member of this enum so a producer that computes one has
 	// a word for it, but NO row carries it: a step of "nothing" and no step at all
@@ -75092,6 +75159,9 @@ type WorklistMove struct {
 	// No mailbox identity, credential, cursor or colleague account travels.
 	MailCoverage *MailCaptureCoverage `json:"mail_coverage,omitempty"`
 
+	// Reason One sentence saying why this move is offered. Carried by `bring_in_manager`, whose reasons are facts about the deal; the other verbs leave it absent and the row's own reason stands.
+	Reason *string `json:"reason,omitempty"`
+
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 }
@@ -75105,6 +75175,12 @@ type WorklistMove struct {
 // `draft_email` opens a new message, `create_task` agrees a next step,
 // `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 // sends the reader to reauthorize a source that stopped answering.
+//
+// `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+// one engaged contact, or is stuck in its stage. `arguments` is a `CreateTaskRequest` assigned to the manager,
+// which the client files on accept; the move's reason names why the deal qualifies. It is offered only where
+// the deal owner has a team manager and the deal's own next step is a generic one. A reader who sets it aside
+// sees it again only when one of those facts changes.
 //
 // `none` is a producer's answer that there is nothing to do — a closed deal has
 // no next step. It is a member of this enum so a producer that computes one has

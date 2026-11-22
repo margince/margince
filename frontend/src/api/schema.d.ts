@@ -51345,6 +51345,36 @@ export interface components {
             buckets: components["schemas"]["ForecastMovementBucket"][];
             /** @description One row per deal that moved, each in exactly one bucket. */
             deals: components["schemas"]["ForecastMovementDeal"][];
+            /** @description How much of the change came from deals on the opening snapshot's stored focus list that were worked between the two snapshots. Absent when no listed deal was worked. It is a cause beside the buckets, not a bucket, so the buckets still add up. */
+            focus_actions?: components["schemas"]["ForecastMovementFocusActions"];
+        };
+        ForecastMovementFocusActions: {
+            /**
+             * Format: int64
+             * @description The change of the worked focus-list deals, in the reading drawn.
+             */
+            amount_minor: number;
+            /** @description That change as a share of the whole change, in basis points. Absent when the whole change is zero. */
+            share_bps?: number;
+            /** @description The worked deals, largest change first, each with links to what was done. */
+            deals: components["schemas"]["ForecastMovementFocusDeal"][];
+        };
+        ForecastMovementFocusDeal: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: int64 */
+            amount_minor: number;
+            /** @description Up to five of the actions, oldest first. */
+            actions: components["schemas"]["ForecastMovementFocusAction"][];
+        };
+        ForecastMovementFocusAction: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @enum {string} */
+            kind: "task_done" | "mail_sent" | "meeting_held";
+            /** Format: date-time */
+            at: string;
+            subject?: string;
         };
         ForecastMovementBucket: {
             /**
@@ -51377,7 +51407,7 @@ export interface components {
             /** Format: uuid */
             approval_id?: string;
             /** @description Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. */
-            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx")[];
+            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx" | "focus_actions")[];
         };
         NewForecastCall: {
             /**
@@ -64078,6 +64108,12 @@ export interface components {
              *     `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
              *     sends the reader to reauthorize a source that stopped answering.
              *
+             *     `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+             *     one engaged contact, or is stuck in its stage. `arguments` is a `CreateTaskRequest` assigned to the manager,
+             *     which the client files on accept; the move's reason names why the deal qualifies. It is offered only where
+             *     the deal owner has a team manager and the deal's own next step is a generic one. A reader who sets it aside
+             *     sees it again only when one of those facts changes.
+             *
              *     `none` is a producer's answer that there is nothing to do — a closed deal has
              *     no next step. It is a member of this enum so a producer that computes one has
              *     a word for it, but NO row carries it: a step of "nothing" and no step at all
@@ -64085,7 +64121,9 @@ export interface components {
              *     client that meets one anyway draws nothing, which is the same outcome.
              * @enum {string}
              */
-            action: "draft_reply" | "draft_email" | "create_task" | "open_task" | "open_meeting_brief" | "reconnect" | "none";
+            action: "draft_reply" | "draft_email" | "create_task" | "open_task" | "open_meeting_brief" | "reconnect" | "bring_in_manager" | "none";
+            /** @description One sentence saying why this move is offered. Carried by `bring_in_manager`, whose reasons are facts about the deal; the other verbs leave it absent and the row's own reason stands. */
+            reason?: string;
             /**
              * Format: uuid
              * @description The record the verb acts on, where the verb acts on one: the message for

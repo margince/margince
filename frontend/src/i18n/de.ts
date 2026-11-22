@@ -14334,6 +14334,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal360.readFull": "Vollständigen Bericht lesen",
   "deal360.openTask": "Aufgabe öffnen",
   "deal360.createTask": "Folgeaufgabe erstellen",
+  "deal360.bringInManager": "Führungskraft einbinden",
   "deal360.followUpCreated": "Folgeaufgabe erstellt",
   "deal360.openBrief": "Terminvorbereitung öffnen",
   "deal360.unreadable":

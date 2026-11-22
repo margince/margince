@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/completedchanges"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/managermove"
 	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -278,7 +279,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithContactEmployers(newContactsStore(db)).
 		WithMeetingOrganizers(activities.NewStore(db)).WithMeetingRooms(activities.NewStore(db)).
 		// Cached cards keep queue reads from starting model work.
-		WithDealMoves(attentionDealMoves{cards: cards}).
+		WithDealMoves(attentionDealMoves{cards: newDealStatusService(pool, now).WithManagerStandings(managermove.Standings)}).
 		WithDealStandings(attentionDealStandings{cards: cards}).
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
 		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).

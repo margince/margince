@@ -13953,6 +13953,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal360.readFull": "Đọc bản tóm tắt đầy đủ",
   "deal360.openTask": "Mở việc cần làm",
   "deal360.createTask": "Tạo việc tiếp theo",
+  "deal360.bringInManager": "Mời quản lý tham gia",
   "deal360.followUpCreated": "Đã tạo việc tiếp theo",
   "deal360.openBrief": "Mở bản tóm tắt cuộc họp",
   "deal360.unreadable":

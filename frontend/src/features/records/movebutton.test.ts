@@ -24,6 +24,16 @@ describe("whether a move can be drawn", () => {
         "the body the server prepared is present",
       ],
       [
+        { action: "bring_in_manager", arguments: { subject: "x" } },
+        true,
+        "the task for the manager is present",
+      ],
+      [
+        { action: "bring_in_manager" },
+        false,
+        "no task body: accepting would post {} and only be refused",
+      ],
+      [
         { action: "create_task" },
         false,
         "no body: a click would post {} and only be refused",

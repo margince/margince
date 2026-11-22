@@ -32,6 +32,8 @@ export type PerformableMove = {
   action: string;
   recommendation?: components["schemas"]["RecommendationReceipt"];
   arguments?: Record<string, unknown>;
+  // Why the server offers the move, for the verbs whose reasons are facts about the record.
+  reason?: string;
   // Set by the server when this reader may not take the verb; drawn as refused.
   // It is the only answer to whether this reader may: the server marks every
   // move it serves, and the client itself builds only `open_task`, a read.
@@ -71,6 +73,7 @@ export function recipientsOf(move: PerformableMove): string[] {
 export function hasMoveControl(move: PerformableMove): boolean {
   switch (move.action) {
     case "create_task":
+    case "bring_in_manager":
       return Boolean(move.arguments);
     case "open_task":
     case "open_meeting_brief":
@@ -197,8 +200,15 @@ export function MoveButton({
         </>
       );
     case "create_task":
+    case "bring_in_manager":
       return (
         <CreateTaskVerb
+          label={
+            move.action === "bring_in_manager"
+              ? t("deal360.bringInManager")
+              : t("deal360.createTask")
+          }
+          why={move.action === "bring_in_manager" ? move.reason : undefined}
           body={taskBody}
           refused={move.blocked_reason}
           pending={createTask.isPending}
@@ -329,25 +339,29 @@ function FollowUpDraft({
 // A rule wrote the task and pressing this accepts it. No model runs on the
 // press, so it is the plain primary, not indigo.
 function CreateTaskVerb({
+  label,
+  why,
   body,
   refused,
   pending,
   error,
   onCreate,
 }: Readonly<{
+  label: string;
+  why?: string;
   body: Record<string, unknown> | undefined;
   refused?: string;
   pending: boolean;
   error: unknown;
   onCreate: (body: Record<string, unknown>) => void;
 }>) {
-  const t = useT();
   // No body, no button: a click that sent {} would only be refused.
   if (!body) {
     return null;
   }
   return (
     <>
+      {why && <span>{why}</span>}
       <Button
         variant="primary"
         reason={refused}
@@ -355,7 +369,7 @@ function CreateTaskVerb({
         onClick={() => onCreate(body)}
       >
         <ListChecks aria-hidden />
-        {t("deal360.createTask")}
+        {label}
       </Button>
       <ErrorLine error={error} />
     </>
