@@ -17900,6 +17900,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.anthropic":
     "Basis-URL des Hosts. /v1 wird angehängt. Ohne Eintrag wird die API von Anthropic selbst genutzt.",
   "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
+  "aiRouting.baseUrl.help.ollama":
+    "Host-Adresse, etwa http://localhost:11434. Leer nutzt die Standardadresse.",
+  "aiRouting.baseUrl.placeholder.ollama": "http://localhost:11434",
+  "aiRouting.baseUrl.help.vllm":
+    "Host-Adresse; /v1 wird angehängt. Leer nutzt http://localhost:8000.",
+  "aiRouting.baseUrl.placeholder.vllm": "http://localhost:8000",
   "aiRouting.models.askingLocation":
     "Google wird gefragt, welche Modelle {location} bedient…",
   "aiRouting.models.noKey":
