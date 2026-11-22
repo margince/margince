@@ -1,0 +1,86 @@
+{
+  "scenario": "case81_she_wants_her_data",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "d59f7145fc42c7d3",
+    "tools": "4878692db27f4431",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T04:40:12Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:56Z"
+  },
+  "usage": {
+    "input_tokens": 44968,
+    "output_tokens": 2185,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 357760,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "list_data_subject_requests",
+        "open_data_subject_request",
+        "read_record",
+        "read_workspace",
+        "resolve_entities"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "open_data_subject_request",
+        "read_attention",
+        "read_record",
+        "read_workspace",
+        "resolve_entities",
+        "review_commitments"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 201364,
+      "min": 187280,
+      "max": 215448
+    },
+    "output_tokens": {
+      "median": 1092.5,
+      "min": 996,
+      "max": 1189
+    }
+  }
+}

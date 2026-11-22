@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -303,7 +304,7 @@ func (l crmLanding) deal(ctx context.Context, key string, f extension.DealFields
 		made, err := l.deals.CreateDeal(ctx, deals.CreateDealInput{
 			Name: f.Name, AmountMinor: f.AmountMinor, Currency: nonEmpty(f.Currency), CustomFields: f.CustomFields, CompanyID: company,
 			PipelineID: ids.From[ids.PipelineKind](pipeline), StageID: ids.From[ids.StageKind](stage),
-			ReferencesFromRequest: true, Source: l.system, SourceSystem: &l.system, SourceID: &key,
+			ReferencesFromRequest: true, Source: provenance.RecordSourceImport, SourceSystem: &l.system, SourceID: &key,
 		})
 		return ids.UUID(made.Id), err
 	}

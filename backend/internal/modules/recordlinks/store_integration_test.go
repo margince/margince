@@ -77,7 +77,7 @@ func setupLinks(t *testing.T) *linkEnv {
 		owner ids.UUID
 	}{{e.deal, "First deal", e.rep}, {e.renewal, "Renewal", e.rep}, {e.theirs, "Not mine", e.other}} {
 		e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-			VALUES ($1, $2, 'open', $3, $4, $5, 'seed', 'system')`, d.id, d.name, d.owner, pipeline, stage)
+			VALUES ($1, $2, 'open', $3, $4, $5, 'manual', 'system')`, d.id, d.name, d.owner, pipeline, stage)
 	}
 	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by)
 		VALUES ($1, 'Acme', $2, 'seed', 'system')`, e.company, e.rep)

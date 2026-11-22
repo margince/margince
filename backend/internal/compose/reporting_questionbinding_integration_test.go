@@ -66,7 +66,7 @@ func seedBoundBook(t *testing.T) *boundBook {
 	store := deals.NewStore(e.DB(), installseam.Deals())
 	seed := func(at *ids.UUID, n int) {
 		for i := range n {
-			input := deals.CreateDealInput{Name: fmt.Sprintf("Bound deal %d", i), PipelineID: pipeline, StageID: open}
+			input := deals.CreateDealInput{Source: "manual", Name: fmt.Sprintf("Bound deal %d", i), PipelineID: pipeline, StageID: open}
 			if at != nil {
 				id := ids.From[ids.CompanyKind](*at)
 				input.CompanyID = &id

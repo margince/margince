@@ -14,39 +14,39 @@
   "door": "rest",
   "self_judged": true,
   "stamp": {
-    "scenario": "ad14160c97b2ad8e",
+    "scenario": "c380023511ab51be",
     "tools": "8b653e7a3d01b493",
     "instructions": "a0e5174113e30161",
     "judge": "",
     "harness": "024566e70b0c3db3",
-    "commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
-    "ran_at": "2026-11-21T22:46:40Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:36:49Z"
+    "commit": "3145e709ad366fe7cda83e5612c5792d285a0836",
+    "ran_at": "2026-11-22T10:13:09Z",
+    "graded_commit": "3145e709ad366fe7cda83e5612c5792d285a0836",
+    "graded_at": "2026-11-22T10:13:09Z"
   },
   "usage": {
-    "input_tokens": 24,
-    "output_tokens": 3954,
-    "cache_creation_input_tokens": 30114,
-    "cache_read_input_tokens": 86683,
+    "input_tokens": 26,
+    "output_tokens": 3076,
+    "cache_creation_input_tokens": 22661,
+    "cache_read_input_tokens": 88736,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1687
+    "cost_usd": 0.1303
   },
   "tools_by_run": [
     {
       "passed": false,
       "tools": [
-        "find_records",
-        "list_records",
+        "read_reports",
+        "run_report",
         "skill_file"
       ]
     },
     {
       "passed": false,
       "tools": [
-        "find_records",
-        "list_records",
+        "read_reports",
+        "run_report",
         "skill_file"
       ]
     }
@@ -54,13 +54,13 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 10,
-      "min": 10,
+      "median": 9.5,
+      "min": 9,
       "max": 10
     },
     "turns": {
-      "median": 11,
-      "min": 11,
+      "median": 10.5,
+      "min": 10,
       "max": 11
     },
     "refused": {
@@ -69,19 +69,19 @@
       "max": 0
     },
     "prompt_tokens": {
-      "median": 58410.5,
-      "min": 58281,
-      "max": 58540
+      "median": 55711.5,
+      "min": 54820,
+      "max": 56603
     },
     "output_tokens": {
-      "median": 1977,
-      "min": 1972,
-      "max": 1982
+      "median": 1538,
+      "min": 1529,
+      "max": 1547
     },
     "duration_ms": {
-      "median": 17779,
-      "min": 17687,
-      "max": 17871
+      "median": 15841,
+      "min": 15332,
+      "max": 16350
     }
   }
 }

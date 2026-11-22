@@ -8911,6 +8911,24 @@ func (e ContactGraphRouteType) Valid() bool {
 	}
 }
 
+// Defines values for ContactImpersonationWarningReason.
+const (
+	ContactImpersonationWarningReasonDisplayNameOtherDomain ContactImpersonationWarningReason = "display_name_other_domain"
+	ContactImpersonationWarningReasonPunycodeDomain         ContactImpersonationWarningReason = "punycode_domain"
+)
+
+// Valid indicates whether the value is a known member of the ContactImpersonationWarningReason enum.
+func (e ContactImpersonationWarningReason) Valid() bool {
+	switch e {
+	case ContactImpersonationWarningReasonDisplayNameOtherDomain:
+		return true
+	case ContactImpersonationWarningReasonPunycodeDomain:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactMeans.
 const (
 	ContactMeansEmail ContactMeans = "email"
@@ -44834,6 +44852,9 @@ type Contact struct {
 	GreetingRegister *ContactGreetingRegister `json:"greeting_register,omitempty"`
 	Id               openapi_types.UUID       `json:"id"`
 
+	// ImpersonationWarning Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`).
+	ImpersonationWarning *ContactImpersonationWarning `json:"impersonation_warning,omitempty"`
+
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
@@ -45790,6 +45811,18 @@ type ContactGraphRouteEvidence struct {
 
 // ContactGraphRouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 type ContactGraphRouteType string
+
+// ContactImpersonationWarning The sign of impersonation the sender check saw when capture made this contact from a mail.
+type ContactImpersonationWarning struct {
+	// DetectedAt When the sender check recorded it.
+	DetectedAt time.Time `json:"detected_at"`
+
+	// Reason Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+	Reason *ContactImpersonationWarningReason `json:"reason,omitempty"`
+}
+
+// ContactImpersonationWarningReason Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+type ContactImpersonationWarningReason string
 
 // ContactListResponse defines model for ContactListResponse.
 type ContactListResponse struct {
@@ -47312,7 +47345,9 @@ type CreateDealRequest struct {
 
 	// ProjectId The body of work this deal belongs to; must name the same company as the deal.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
-	Source    string              `json:"source"`
+
+	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -47680,7 +47715,9 @@ type CreateOfferRequest struct {
 	// for an agent, the human it acts for. An unknown or archived entity is refused as 422.
 	LegalEntityId *openapi_types.UUID   `json:"legal_entity_id,omitempty"`
 	LineItems     *[]OfferLineItemInput `json:"line_items,omitempty"`
-	Source        string                `json:"source"`
+
+	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// TemplateId Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
@@ -47848,8 +47885,10 @@ type CreateProjectRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase The phase the project starts in; initiative when omitted.
-	Phase  *CreateProjectRequestPhase `json:"phase,omitempty"`
-	Source string                     `json:"source"`
+	Phase *CreateProjectRequestPhase `json:"phase,omitempty"`
+
+	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -48646,7 +48685,9 @@ type Deal struct {
 	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
 	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
-	Source    string                  `json:"source"`
+
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
@@ -48818,7 +48859,9 @@ type DealAdvanced struct {
 	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
 	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
-	Source    string                  `json:"source"`
+
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
@@ -59842,8 +59885,10 @@ type Offer struct {
 	PdfAssetRef *string `json:"pdf_asset_ref,omitempty"`
 
 	// Revision Bumped when a sent offer is regenerated; the prior revision becomes superseded.
-	Revision *int   `json:"revision,omitempty"`
-	Source   string `json:"source"`
+	Revision *int `json:"revision,omitempty"`
+
+	// Source The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// SourceCommercialRevision The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.
 	SourceCommercialRevision *int64      `json:"source_commercial_revision,omitempty"`
@@ -61382,12 +61427,14 @@ type Project struct {
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction.
-	Phase         *ProjectPhase           `json:"phase,omitempty"`
-	Raw           *map[string]interface{} `json:"raw,omitempty"`
-	Source        string                  `json:"source"`
-	StartedAt     *openapi_types.Date     `json:"started_at,omitempty"`
-	TargetEndDate *openapi_types.Date     `json:"target_end_date,omitempty"`
-	UpdatedAt     time.Time               `json:"updated_at"`
+	Phase *ProjectPhase           `json:"phase,omitempty"`
+	Raw   *map[string]interface{} `json:"raw,omitempty"`
+
+	// Source The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source        string              `json:"source"`
+	StartedAt     *openapi_types.Date `json:"started_at,omitempty"`
+	TargetEndDate *openapi_types.Date `json:"target_end_date,omitempty"`
+	UpdatedAt     time.Time           `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -79305,6 +79352,12 @@ type CreateContactEnrichmentRunParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ClearContactImpersonationWarningJSONBody defines parameters for ClearContactImpersonationWarning.
+type ClearContactImpersonationWarningJSONBody struct {
+	// DetectedAt The `detected_at` of the `impersonation_warning` the caller read.
+	DetectedAt time.Time `json:"detected_at"`
+}
+
 // DraftIntroNoteJSONBody defines parameters for DraftIntroNote.
 type DraftIntroNoteJSONBody struct {
 	// ThroughContactId The intermediary on a route that runs through another contact, when it does. Absent means the colleague knows the target directly.
@@ -85627,6 +85680,9 @@ type ApplyContactEmploymentImportJSONRequestBody = EmploymentImportRequest
 // CreateContactEnrichmentRunJSONRequestBody defines body for CreateContactEnrichmentRun for application/json ContentType.
 type CreateContactEnrichmentRunJSONRequestBody = CreateContactEnrichmentRunRequest
 
+// ClearContactImpersonationWarningJSONRequestBody defines body for ClearContactImpersonationWarning for application/json ContentType.
+type ClearContactImpersonationWarningJSONRequestBody ClearContactImpersonationWarningJSONBody
+
 // DraftIntroNoteJSONRequestBody defines body for DraftIntroNote for application/json ContentType.
 type DraftIntroNoteJSONRequestBody DraftIntroNoteJSONBody
 
@@ -88614,6 +88670,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "id")
 	}
 
+	if raw, found := object["impersonation_warning"]; found {
+		err = json.Unmarshal(raw, &a.ImpersonationWarning)
+		if err != nil {
+			return fmt.Errorf("error reading 'impersonation_warning': %w", err)
+		}
+		delete(object, "impersonation_warning")
+	}
+
 	if raw, found := object["imported_from"]; found {
 		err = json.Unmarshal(raw, &a.ImportedFrom)
 		if err != nil {
@@ -88931,6 +88995,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.ImpersonationWarning != nil {
+		object["impersonation_warning"], err = json.Marshal(a.ImpersonationWarning)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'impersonation_warning': %w", err)
+		}
 	}
 
 	if a.ImportedFrom != nil {
@@ -101379,6 +101450,9 @@ type ServerInterface interface {
 	// Who around this contact could open a door, and through whom.
 	// (GET /contacts/{id}/graph)
 	GetContactGraph(w http.ResponseWriter, r *http.Request, id Id)
+	// Answer a contact's impersonation warning as fine.
+	// (POST /contacts/{id}/impersonation-warning/clear)
+	ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft the forwardable note a colleague can paste into their own introduction.
 	// (POST /contacts/{id}/intro-note-draft)
 	DraftIntroNote(w http.ResponseWriter, r *http.Request, id Id)
@@ -106050,6 +106124,12 @@ func (_ Unimplemented) GetContactEnrichmentRun(w http.ResponseWriter, r *http.Re
 // Who around this contact could open a door, and through whom.
 // (GET /contacts/{id}/graph)
 func (_ Unimplemented) GetContactGraph(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a contact's impersonation warning as fine.
+// (POST /contacts/{id}/impersonation-warning/clear)
+func (_ Unimplemented) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -130065,6 +130145,38 @@ func (siw *ServerInterfaceWrapper) GetContactGraph(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContactGraph(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClearContactImpersonationWarning operation middleware
+func (siw *ServerInterfaceWrapper) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearContactImpersonationWarning(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -161427,6 +161539,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/graph", wrapper.GetContactGraph)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/impersonation-warning/clear", wrapper.ClearContactImpersonationWarning)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/intro-note-draft", wrapper.DraftIntroNote)

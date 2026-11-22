@@ -360,7 +360,7 @@ func queueDeal(t *testing.T, e *reviewEnv, stageID ids.StageID, name string, amo
 	if err := e.owner.QueryRow(t.Context(), `SELECT pipeline_id FROM stage WHERE id = $1`, stageID).Scan(&pipelineID); err != nil {
 		t.Fatal(err)
 	}
-	in := CreateDealInput{Name: name, PipelineID: pipelineID, StageID: stageID, AmountMinor: amount, ExpectedClose: closeOn}
+	in := CreateDealInput{Source: "manual", Name: name, PipelineID: pipelineID, StageID: stageID, AmountMinor: amount, ExpectedClose: closeOn}
 	if amount != nil {
 		in.Currency = new("EUR")
 	}
@@ -471,7 +471,7 @@ func TestADealCannotBeCreatedPastAStageThatNeedsLegal(t *testing.T) {
 	if err := e.owner.QueryRow(t.Context(), `SELECT pipeline_id FROM stage WHERE id = $1`, last).Scan(&pipelineID); err != nil {
 		t.Fatal(err)
 	}
-	_, err := e.store.CreateDeal(e.asRequester(), CreateDealInput{Name: "Skipped legal", PipelineID: pipelineID, StageID: last})
+	_, err := e.store.CreateDeal(e.asRequester(), CreateDealInput{Source: "manual", Name: "Skipped legal", PipelineID: pipelineID, StageID: last})
 	if _, refused := errors.AsType[*LegalGateOnCreateError](err); !refused {
 		t.Fatalf("a deal born past the gated stage answered %v, want legal_review_required", err)
 	}

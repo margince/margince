@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer says the standard bookings report errored and it has no official figure, so it never gives EUR 97,600 as the official bookings number, which fails the criterion.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 3. The answer gives the standard report's bookings figure, EUR 97,600, as the official one, with its period or coverage. Answer no if it gives another figure as the official bookings, presents a total it says it added up itself as the official one, or gives no official figure.",
+  "answer": "Booked this quarter: the standard bookings report answered with an error, so I have no official figure to give you. Thin or cold open deals: Körber Sensorik Rollout and Reply Deutschland Verlängerung. On price: one logged inbound mail supports it — Körber's 'Re: Angebot Sensorik', where the customer calls price the biggest obstacle; the tool states no share, so I will not quote one. Nordwind Armaturen: Sofia Meier knows Heike Brandt there and could make the introduction."
+}

@@ -198,7 +198,7 @@ func TestOfferRenderPrepareRender_DraftWithBuyerCompany_UsesLiveCompanyNotAFroze
 	}
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
-	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{BuyerCompanyID: &companyID})
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Source: "manual", BuyerCompanyID: &companyID})
 	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
 
 	ing, err := e.Deals.PrepareRender(ctx, offerID)
@@ -236,7 +236,7 @@ func TestOfferRenderPrepareRender_Sent_UsesFrozenBuyerAndIssuerSnapshot(t *testi
 	}
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
-	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{BuyerCompanyID: &companyID})
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Source: "manual", BuyerCompanyID: &companyID})
 	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
 
 	if _, err := e.Deals.SendOffer(ctx, offerID, nil); err != nil {
@@ -283,7 +283,7 @@ func TestOfferRenderPrepareRender_TemplateLocaleAndLayoutResolveFromOfferTemplat
 	}
 	templateID := ids.From[ids.OfferTemplateKind](ids.UUID(tmpl.Id))
 
-	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{TemplateID: &templateID})
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Source: "manual", TemplateID: &templateID})
 	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
 	if created.TemplateId == nil || ids.UUID(*created.TemplateId) != templateID.UUID {
 		t.Fatalf("the created offer must echo template_id, got %+v", created.TemplateId)
@@ -328,6 +328,7 @@ func TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved(t *testing.T) {
 	templateID := ids.From[ids.OfferTemplateKind](ids.UUID(tmpl.Id))
 	intro, terms := "Saved offer intro", "Saved offer terms"
 	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{
+		Source:     "manual",
 		TemplateID: &templateID, IntroText: &intro, TermsText: &terms,
 	})
 
@@ -364,7 +365,7 @@ func TestOfferRenderNoTemplateTakesTheDefaultOfItsLanguage(t *testing.T) {
 		}
 	}
 	english := "en"
-	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Language: &english})
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Source: "manual", Language: &english})
 
 	ing, err := e.Deals.PrepareRender(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)))
 	if err != nil {
@@ -399,7 +400,7 @@ func TestOfferRenderNoTemplateNoDefaultUsesTheOffersLanguage(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
 
 	english := "en"
-	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Language: &english})
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Source: "manual", Language: &english})
 	ing, err := e.Deals.PrepareRender(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)))
 	if err != nil {
 		t.Fatalf("prepare render: %v", err)

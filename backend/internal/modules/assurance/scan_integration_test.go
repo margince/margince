@@ -490,7 +490,7 @@ func (e *scanEnv) seedDealOwnedBy(t *testing.T, owner ids.UUID) string {
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Assurance subject', 'open', $2, $3, $4, 'seed', 'test')`,
+		VALUES ($1, 'Assurance subject', 'open', $2, $3, $4, 'manual', 'test')`,
 		id, owner, e.pipeline, e.stage); err != nil {
 		t.Fatalf("seeding an open deal: %v", err)
 	}

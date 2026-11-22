@@ -335,7 +335,8 @@ func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	companyID := ids.From[ids.CompanyKind](company)
 	renewal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Acme renewal 2027", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+		Source: "manual",
+		Name:   "Acme renewal 2027", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -374,7 +375,8 @@ func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	theirCompanyID := ids.From[ids.CompanyKind](theirs)
 	elsewhere, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Globex renewal", PipelineID: pipeline, StageID: open, CompanyID: &theirCompanyID,
+		Source: "manual",
+		Name:   "Globex renewal", PipelineID: pipeline, StageID: open, CompanyID: &theirCompanyID,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -486,7 +488,8 @@ func TestAContractAttachesToADealThatNamesNoCompany(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 
 	unattached, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Inbound, company unknown", PipelineID: pipeline, StageID: open,
+		Source: "manual",
+		Name:   "Inbound, company unknown", PipelineID: pipeline, StageID: open,
 	})
 	if err != nil {
 		t.Fatalf("creating a deal with no company: %v", err)
@@ -516,7 +519,8 @@ func TestAContractAttachesToADealThatNamesNoCompany(t *testing.T) {
 	elsewhere := e.SeedCompany(t, "Contoso", nil)
 	elsewhereID := ids.From[ids.CompanyKind](elsewhere)
 	otherDeal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Contoso expansion", PipelineID: pipeline, StageID: open, CompanyID: &elsewhereID,
+		Source: "manual",
+		Name:   "Contoso expansion", PipelineID: pipeline, StageID: open, CompanyID: &elsewhereID,
 	})
 	if err != nil {
 		t.Fatal(err)

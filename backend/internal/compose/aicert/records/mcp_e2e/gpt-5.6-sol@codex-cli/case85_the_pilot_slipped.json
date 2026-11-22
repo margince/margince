@@ -1,0 +1,87 @@
+{
+  "scenario": "case85_the_pilot_slipped",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "d65aa5e0204c6735",
+    "tools": "24a50b2bc28d3d4f",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:27:52Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:56Z"
+  },
+  "usage": {
+    "input_tokens": 74187,
+    "output_tokens": 2128,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 589952,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "create_project_health_assessment",
+        "describe_record_fields",
+        "describe_router_actions",
+        "find_records",
+        "read_project",
+        "read_project_360",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "create_project_health_assessment",
+        "describe_record_fields",
+        "describe_router_actions",
+        "find_records",
+        "read_project",
+        "read_project_360",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 332069.5,
+      "min": 330933,
+      "max": 333206
+    },
+    "output_tokens": {
+      "median": 1064,
+      "min": 1028,
+      "max": 1100
+    }
+  }
+}

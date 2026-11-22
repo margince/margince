@@ -2869,6 +2869,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erfasster Austausch zurückgenommen",
   "history.field.acquisition_request_retracted":
     "Anfrage aus der Herkunft zurückgenommen",
+  "history.field.impersonation_warning_cleared":
+    "Warnung vor möglicher Täuschung aufgehoben",
+  "history.field.impersonation_warning_carried":
+    "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
@@ -2907,6 +2911,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.value.meeting_status.no_show": "Nicht erschienen",
   "history.value.meeting_status.canceled": "Abgesagt",
   "history.value.relationship_mark.vendor_marketing": "Anbieter-Werbung",
+  "history.value.impersonation.punycode_domain": "Kodierte E-Mail-Domain",
+  "history.value.impersonation.display_name_other_domain":
+    "Andere Domain im Anzeigenamen",
+  "history.value.impersonation.unrecorded": "Anzeichen nicht festgehalten",
 
   "confidence.high": "hoch",
   "confidence.med": "mittel",
@@ -6021,6 +6029,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
   "lead.source.crawl": "Webrecherche",
+  "lead.source.api": "Integration",
+  "lead.source.automation": "Automatisierung",
+  "lead.source.capture": "Aus einer Unterhaltung erfasst",
   "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.unknown": "Unbekannte Quelle",
   "leadSources.removeOnlyTitle":
@@ -22476,6 +22487,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.follow.setAside":
     "Du hast diesen Kontakt bis {date} zurückgestellt.",
   "contact.follow.resume": "Wieder verfolgen",
+  "contact.impersonation.title":
+    "Diese Absendeadresse gibt sich möglicherweise als jemand anderes aus",
+  "contact.impersonation.clear": "Als unbedenklich einstufen",
+  "contact.impersonation.reason.punycodeDomain":
+    "Die E-Mail-Domain nutzt eine kodierte Schreibweise, die einer anderen Domain ähneln kann.",
+  "contact.impersonation.reason.displayNameOtherDomain":
+    "Der Anzeigename enthält eine Adresse auf einer anderen Domain als der, von der die E-Mail kam.",
+  "contact.impersonation.reason.unrecorded":
+    "Die Prüfung hat nicht festgehalten, welches Anzeichen gefunden wurde.",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Die Aufgabe konnte nicht wieder geöffnet werden. Bitte versuche es erneut.",

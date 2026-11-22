@@ -1049,6 +1049,11 @@ judges "$c48" case48 moves-one-of-three 1 "the judge says NO to: Criterion 1."
 c49="case49-who-can-introduce-us.yaml"
 judges "$c49" case49 answers-from-the-tools 0 "!the judge says NO"
 judges "$c49" case49 recalls-price-from-memory 1 "the judge says NO to: Criterion 4."
+# The report's own figure is the official one. A real report error already
+# fails must_call, so an answer that blames the report for an error it never
+# returned fails, as does a total the answer added up itself.
+judges "$c49" case49 claims-the-report-errored 1 "the judge says NO to: Criterion 3."
+judges "$c49" case49 adds-up-its-own-total 1 "the judge says NO to: Criterion 3."
 
 # CASE 50 — the movement named by its causes: a slip out of the quarter reported as
 # a loss is the failure the case exists for, and the right words on the wrong
@@ -1388,7 +1393,7 @@ fi
 #
 # A misspelled key would switch its check off with nothing failing, so every
 # committed scenario is linted the way the lane lints it before a paid run.
-if lint="$(python3 "$check" --lint "$root"/e2e/llm/scenarios/*.yaml 2>&1)"; then
+if lint="$(python3 "$root/e2e/llm/scenariolint.py" "$root"/e2e/llm/scenarios/*.yaml 2>&1)"; then
 	echo "ok: every scenario lints clean"
 else
 	echo "FAIL: a scenario does not lint"
@@ -1517,6 +1522,15 @@ for field in '"driver": "gpt:api"' '"effort": "reasoning medium"' '"system_promp
 		failures=$((failures + 1))
 	fi
 done
+
+# CASE 64 — the seeded rep has no brief today, said in either order; an
+# answer that reads a brief out of nothing does not hold.
+c64="case64-catch-me-up-and-the-brief.yaml"
+judges "$c64" case64 says-the-brief-is-missing 0
+judges "$c64" case64 says-there-is-no-brief 0
+judges "$c64" case64 says-the-brief-hasnt-been-generated 0
+judges "$c64" case64 says-the-brief-isnt-there 0
+judges "$c64" case64 reads-a-brief-that-is-not-there 1 "never said anything matching"
 
 # CASE 112 — the admin has no plan this week, and either order of saying so
 # holds; an answer that invents a plan does not.

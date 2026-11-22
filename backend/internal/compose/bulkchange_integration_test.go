@@ -572,7 +572,8 @@ func seedBulkDeals(t *testing.T, e *integration.Env, owner ids.UUID, n int) []cr
 	for i := range n {
 		ownerID := ids.From[ids.UserKind](owner)
 		created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: fmt.Sprintf("Bulk Deal %d %s", i, ids.NewV7().String()[:8]), PipelineID: pipeline, StageID: open, OwnerID: &ownerID,
+			Source: "manual",
+			Name:   fmt.Sprintf("Bulk Deal %d %s", i, ids.NewV7().String()[:8]), PipelineID: pipeline, StageID: open, OwnerID: &ownerID,
 		})
 		if err != nil {
 			t.Fatalf("seeding deal %d: %v", i, err)

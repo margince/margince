@@ -9,9 +9,8 @@ DB_NAME   ?= margince
 
 # The database THIS worktree's stack runs against, resolved by the same code
 # scripts/dev.sh uses. SEPARATE from DB_NAME on purpose: DB_NAME also feeds
-# db-init and db-wait, which run before dev.sh has created the per-stack database
-# and must target one that already exists — pointing them at margince_dev_<slug>
-# made `make dev` fail at db-init with "database does not exist".
+# db-wait, which runs before dev.sh has created the per-stack database and must
+# target one that already exists. db-init runs in `postgres` whatever DB_NAME is.
 #
 # Lazy (`?=` makes a recursively expanded variable), so the git calls only happen
 # for a target that reads it. Through a script reached by a RELATIVE path, because
@@ -1107,7 +1106,7 @@ db-up: ## Start the dev stack (docker-compose.dev.yml) and create the app role
 PSQL = bash ../scripts/dev-psql.sh $(PG_PORT)
 
 db-init: ## (Re)apply scripts/db-init.sql to the running Postgres
-	$(PSQL) $(DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
+	$(PSQL) postgres -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
 
 seed-reset: ## Clear the demo RECORDS, keeping the installation and its config (scripts/seed-reset.sql); make seed-dev refills it, no restart needed
 	$(PSQL) $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-reset.sql

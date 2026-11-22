@@ -200,7 +200,7 @@ func TestANoteFiledUnderTheKeyWithoutARecordIsNotFiledAgain(t *testing.T) {
 func TestAProjectSharedByTwoDealsHoldsTheTalkSoFarOnce(t *testing.T) {
 	e := setupPull(t)
 	project := ids.NewV7()
-	e.exec(t, `INSERT INTO project (id, name, source, captured_by) VALUES ($1, 'Brandt rollout', 'seed', 'system')`, project)
+	e.exec(t, `INSERT INTO project (id, name, source, captured_by) VALUES ($1, 'Brandt rollout', 'manual', 'system')`, project)
 	threeDaysBefore := -3 * 24 * 60
 	e.say("acme", 1, threeDaysBefore, "Maya Brandt asked for 8 percent")
 	yes := true

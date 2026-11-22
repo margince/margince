@@ -14,21 +14,21 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "da8e82b16c0c0fd4",
+    "scenario": "09f25ba8c52e21ce",
     "tools": "42f7f135ac62768d",
     "instructions": "c5c644eee9719be0",
     "judge": "",
     "harness": "024566e70b0c3db3",
-    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
-    "ran_at": "2026-11-21T18:10:52Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:32:45Z"
+    "commit": "1d06e4e790e4733576f87296a1fcadc09dafe0ae",
+    "ran_at": "2026-11-22T05:08:56Z",
+    "graded_commit": "24405859b1f4fe6f5c16d1e06e82b54398a7f1fa",
+    "graded_at": "2026-11-22T16:00:19Z"
   },
   "usage": {
-    "input_tokens": 72661,
-    "output_tokens": 17685,
+    "input_tokens": 71897,
+    "output_tokens": 16964,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 299231,
+    "cache_read_input_tokens": 264022,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -58,9 +58,9 @@
       "tools": [
         "catch_me_up_on",
         "change_state",
+        "describe_list_filters",
         "disqualify_lead",
         "find_records",
-        "get_worklist",
         "list_records",
         "promote_lead",
         "qualify_lead",
@@ -76,13 +76,13 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 15.5,
+      "median": 14,
       "min": 14,
-      "max": 17
+      "max": 14
     },
     "turns": {
-      "median": 8,
-      "min": 8,
+      "median": 7.5,
+      "min": 7,
       "max": 8
     },
     "refused": {
@@ -91,14 +91,14 @@
       "max": 0
     },
     "prompt_tokens": {
-      "median": 185946,
-      "min": 182601,
-      "max": 189291
+      "median": 167959.5,
+      "min": 151260,
+      "max": 184659
     },
     "output_tokens": {
-      "median": 8842.5,
-      "min": 8344,
-      "max": 9341
+      "median": 8482,
+      "min": 8274,
+      "max": 8690
     }
   }
 }

@@ -161,7 +161,7 @@ func TestAHiddenCustomerLinkMakesNoFollowUp(t *testing.T) {
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'My deal', 'open', $2, $3, $4, 'seed', 'system')`, deal, e.rep, pipeline, stage)
+		VALUES ($1, 'My deal', 'open', $2, $3, $4, 'manual', 'system')`, deal, e.rep, pipeline, stage)
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id) VALUES ($1, $2, 'deal', $3)`,
 		ids.NewV7(), meeting, deal)
 

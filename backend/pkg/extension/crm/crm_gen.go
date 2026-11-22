@@ -2757,7 +2757,9 @@ type Deal struct {
 	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
 	ProjectId *string                 `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
-	Source    string                  `json:"source"`
+
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *string `json:"stage_id"`

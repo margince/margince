@@ -19827,6 +19827,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/impersonation-warning/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a contact's impersonation warning as fine.
+         * @description Clears the warning `impersonation_warning` serves on the contact. The verdict stays on the
+         *     record with the moment and the user who cleared it, as the record of what was answered.
+         *     Requires permission to update the contact. A contact the caller cannot see answers `404`.
+         *
+         *     The body names the warning the caller read by its `detected_at`. A contact that now carries
+         *     a different open warning answers `409`, so nobody clears a warning they were not shown.
+         *     A contact with no open warning answers `204` and writes nothing.
+         *     One transaction: the row, its audit row and its `contact.updated` event.
+         */
+        post: operations["clearContactImpersonationWarning"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -34826,6 +34856,8 @@ export interface components {
              * @enum {string|null}
              */
             greeting_register?: "formal" | "familiar" | null;
+            /** @description Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`). */
+            readonly impersonation_warning?: components["schemas"]["ContactImpersonationWarning"];
             /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
@@ -41576,6 +41608,7 @@ export interface components {
             readonly stalled?: boolean;
             /** @description The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant. */
             readonly last_email?: components["schemas"]["DealLastEmail"] | null;
+            /** @description The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -41663,7 +41696,11 @@ export interface components {
              * @description Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).
              */
             expected_close_date?: string | null;
-            source: string;
+            /**
+             * @description The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
             /** @description The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`. */
@@ -42208,6 +42245,7 @@ export interface components {
              * @description The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
+            /** @description The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -42490,7 +42528,11 @@ export interface components {
             started_at?: string | null;
             /** Format: date */
             target_end_date?: string | null;
-            source: string;
+            /**
+             * @description The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409. */
             source_id?: string | null;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
@@ -59120,6 +59162,7 @@ export interface components {
              * @description The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.
              */
             readonly source_commercial_revision?: number | null;
+            /** @description The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -59248,7 +59291,11 @@ export interface components {
              *     answers 409 `version_skew`. The currency must be the deal's.
              */
             from_deal_revision?: number | null;
-            source: string;
+            /**
+             * @description The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
         };
         /** @description Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422). */
         UpdateOfferRequest: {
@@ -59304,6 +59351,19 @@ export interface components {
             on_behalf_of: string;
             /** Format: date-time */
             expires_at: string;
+        };
+        /** @description The sign of impersonation the sender check saw when capture made this contact from a mail. */
+        ContactImpersonationWarning: {
+            /**
+             * @description Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+             * @enum {string}
+             */
+            reason?: "punycode_domain" | "display_name_other_domain";
+            /**
+             * Format: date-time
+             * @description When the sender check recorded it.
+             */
+            detected_at: string;
         };
         /** @description A request to hear from us that the contact's acquisition records. */
         ContactAcquisitionRequest: {
@@ -95323,6 +95383,42 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    clearContactImpersonationWarning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description The `detected_at` of the `impersonation_warning` the caller read.
+                     */
+                    detected_at: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The contact carries no open warning. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
