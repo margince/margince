@@ -7,15 +7,15 @@ package activities
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 )
 
-// A seeded mailbox that left a trigger off would let a later write skip the
-// settlement locks or the strength dates. The test would then prove less than
-// it reads.
-func TestSeedingAMailboxLeavesEveryTriggerItSilencedEnabled(t *testing.T) {
+// The seed skips triggers for its own inserts only. A caller's later writes
+// in the same transaction, and every other connection, must still run them.
+func TestSeedingAMailboxSkipsNoTriggerBeyondItsOwnInserts(t *testing.T) {
 	e := setupPromises(t)
 	ctx := context.Background()
 	tx, err := e.owner.Begin(ctx)
@@ -27,17 +27,27 @@ func TestSeedingAMailboxLeavesEveryTriggerItSilencedEnabled(t *testing.T) {
 			t.Errorf("rolling back the seeded mailbox: %v", err)
 		}
 	})
+	other, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := other.Close(ctx); err != nil {
+			t.Errorf("closing the second connection: %v", err)
+		}
+	})
+
 	seedMailbox(ctx, t, tx, sparseMailbox)
 
-	for _, s := range seedSilencedTriggers {
-		var enabled string
-		err := tx.QueryRow(ctx, `SELECT tgenabled::text FROM pg_trigger WHERE tgrelid = $1::regclass AND tgname = $2`,
-			pgx.Identifier{s.table}.Sanitize(), s.trigger).Scan(&enabled)
-		if err != nil {
-			t.Fatalf("reading trigger %s on %s: %v", s.trigger, s.table, err)
+	for name, q := range map[string]interface {
+		QueryRow(context.Context, string, ...any) pgx.Row
+	}{"the seeding transaction": tx, "another connection": other} {
+		var role string
+		if err := q.QueryRow(ctx, `SHOW session_replication_role`).Scan(&role); err != nil {
+			t.Fatalf("reading the role of %s: %v", name, err)
 		}
-		if enabled != "O" {
-			t.Errorf("trigger %s on %s has tgenabled %q after the seed, want O (enabled)", s.trigger, s.table, enabled)
+		if role != "origin" {
+			t.Errorf("%s runs with session_replication_role %q after the seed, want origin so triggers fire", name, role)
 		}
 	}
 }
