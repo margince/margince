@@ -47131,7 +47131,7 @@ components:
         address:
           type: string
           maxLength: 500
-          description: The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+          description: The chat's web address, such as `https://chat.example.com`; a bare host means https. Required for Dispact, which every team hosts itself; refused for Telegram.
         eventsSecret:
           type: string
           maxLength: 200
