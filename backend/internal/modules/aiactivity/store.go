@@ -53,6 +53,12 @@ type Change struct {
 	Quantity     *int
 	QuantityUnit string
 
+	// Processed and Total are a live occurrence's position, in its source's own
+	// unit. Nil is unknown, never zero; Total without Processed is refused by the
+	// table.
+	Processed *int
+	Total     *int
+
 	DegradeReason string
 	Summary       string
 }
@@ -89,6 +95,11 @@ func NewStore(db *database.DB) *Store {
 // instant, a renewal delivered out of order carries an earlier one, and a
 // settled row carries none at all, and every one of those compares false.
 //
+// The other equal-tuple write is progress: the same attempt in the same state
+// reporting a higher processed count than the row holds. Redelivery and
+// out-of-order delivery carry an equal or lower count and compare false, and a
+// count never lowers while the attempt lives, so no ordering column is needed.
+//
 // Every column is written from EXCLUDED rather than merged: a reopened
 // occurrence must LOSE the previous attempt's finished_at, degrade_reason and
 // summary, and a partial update is how a row ends up reading as live and failed
@@ -100,8 +111,8 @@ INSERT INTO ai_task_run (
   actor_scope, actor_user_id, passport_id,
   state, queued_at, started_at, finished_at, stale_after,
   subject_type, subject_id, subject_label, quantity, quantity_unit,
-  degrade_reason, summary)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+  degrade_reason, summary, progress_processed, progress_total)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
 ON CONFLICT (source, occurrence_key) DO UPDATE SET
   kind = EXCLUDED.kind, ai_task = EXCLUDED.ai_task, attempt = EXCLUDED.attempt,
   actor_scope = EXCLUDED.actor_scope, actor_user_id = EXCLUDED.actor_user_id,
@@ -113,12 +124,16 @@ ON CONFLICT (source, occurrence_key) DO UPDATE SET
   subject_label = EXCLUDED.subject_label,
   quantity = EXCLUDED.quantity, quantity_unit = EXCLUDED.quantity_unit,
   degrade_reason = EXCLUDED.degrade_reason, summary = EXCLUDED.summary,
+  progress_processed = EXCLUDED.progress_processed, progress_total = EXCLUDED.progress_total,
   seq = nextval('ai_task_run_seq')
 WHERE (EXCLUDED.attempt, ai_task_run_state_rank(EXCLUDED.state))
     > (ai_task_run.attempt, ai_task_run_state_rank(ai_task_run.state))
    OR (EXCLUDED.attempt = ai_task_run.attempt
        AND EXCLUDED.state = ai_task_run.state
        AND EXCLUDED.stale_after > ai_task_run.stale_after)
+   OR (EXCLUDED.attempt = ai_task_run.attempt
+       AND EXCLUDED.state = ai_task_run.state
+       AND EXCLUDED.progress_processed > COALESCE(ai_task_run.progress_processed, -1))
 RETURNING seq`
 
 // ApplyStateChange projects one change and reports whether it landed.
@@ -172,6 +187,7 @@ func (c Change) args() []any {
 		textOrNil(c.SubjectType), uuidOrNil(c.SubjectID), textOrNil(c.SubjectLabel),
 		c.Quantity, textOrNil(c.QuantityUnit),
 		textOrNil(c.DegradeReason), textOrNil(c.Summary),
+		c.Processed, c.Total,
 	}
 }
 

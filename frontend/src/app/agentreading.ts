@@ -4,6 +4,7 @@ import type { MessageKey } from "../i18n/en";
 import type { AgentEdgeRegister } from "./agent-edge-signal";
 import type { AgentFault } from "./agent-fault";
 import type { AiActivityItem, Signals } from "./agentrail-reads";
+import { RUNNING } from "./agentrail-copy";
 import type { RailWords } from "./agentrail-resting";
 import type { AiActivity } from "./ai-activity";
 import { laneFor } from "./ai-activity-orb";
@@ -116,6 +117,29 @@ export function derive(
   // red, green and red again. Nobody reads a light that does that. What the orb reports is standing state; the screen that made
   // the request reports the request.
   return { state: "idle", cause: null, register: "agent" };
+}
+
+/**
+ * How far the run the orb is about has got, as the share the ring fills.
+ *
+ * Only a running occurrence that reported BOTH counts is measured. With
+ * `processed` alone, or neither, the answer is `undefined` and no ring is drawn:
+ * a percentage derived from elapsed time would be the surface inventing the one
+ * figure a reader trusts most. The share is clamped, because a source may count
+ * past a total it estimated.
+ */
+export function runRing(
+  cause: AiActivityItem | null,
+  state: MarginceCoreState,
+): number | undefined {
+  if (cause === null || cause.state !== "running" || !RUNNING.has(state)) {
+    return undefined;
+  }
+  const { processed, total } = cause;
+  if (processed == null || total == null || total <= 0) {
+    return undefined;
+  }
+  return Math.min(1, Math.max(0, processed / total));
 }
 
 /**

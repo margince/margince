@@ -269,7 +269,7 @@ func (w *siteDeepReadWorker) limitedCrawler(ctx context.Context, args SiteDeepRe
 // (crawlAndExtract): page calls launch as pages commit, so the crawl's slow
 // tail hides behind extraction, and the crawler owns the wall clock.
 func (w *siteDeepReadWorker) readSite(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim) (siteCrawl, siteExtraction, error) {
-	if err := w.contacts.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil); err != nil {
+	if err := w.contacts.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil, w.reclaimAfter()); err != nil {
 		w.log.WarnContext(ctx, "site read progress update failed", "read", args.SiteReadID.String(), "err", err)
 	}
 	crawler, err := w.limitedCrawler(ctx, args, claim)
@@ -391,7 +391,7 @@ func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeep
 
 func (w *siteDeepReadWorker) progressiveCallbacks(ctx context.Context, readID ids.UUID) (func(string, []crawlPage), func(pageFactsResult)) {
 	progress := func(phase string, pages []crawlPage) {
-		if err := w.contacts.UpdateSiteReadProgress(ctx, readID, phase, siteReadPages(pages)); err != nil {
+		if err := w.contacts.UpdateSiteReadProgress(ctx, readID, phase, siteReadPages(pages), w.reclaimAfter()); err != nil {
 			w.log.WarnContext(ctx, "site read progress update failed", "read", readID.String(), "err", err)
 		}
 	}

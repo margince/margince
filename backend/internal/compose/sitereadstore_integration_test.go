@@ -177,7 +177,7 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 		t.Fatal(err)
 	}
 	progressPages := []contacts.SiteReadPage{{URL: "https://acme.example", Kind: "home"}, {URL: "https://acme.example/imprint", Kind: "impressum"}}
-	if err := store.UpdateSiteReadProgress(worker, read.ID, "extracting", progressPages); err != nil {
+	if err := store.UpdateSiteReadProgress(worker, read.ID, "extracting", progressPages, time.Hour); err != nil {
 		t.Fatal(err)
 	}
 	next := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)

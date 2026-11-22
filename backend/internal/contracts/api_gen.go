@@ -34703,6 +34703,12 @@ type AiActivityItem struct {
 	// edits one.
 	Kind AiActivityKind `json:"kind"`
 
+	// Processed How much of its work a LIVE occurrence has finished so far, in the unit its source
+	// counts (a website read counts pages). Null while unknown, which is not zero: most
+	// kinds report no position, and a client then draws an unmeasured ring. A settled
+	// item carries none.
+	Processed *int `json:"processed,omitempty" minimum:"0"`
+
 	// StartedAt When the current attempt became current — its claim, or its enqueue while queued.
 	// An occurrence can start on one day and settle on the next, so this is NOT what
 	// `recent` is bounded by.
@@ -34748,6 +34754,11 @@ type AiActivityItem struct {
 	// optional by construction: nothing validates that a finishing occurrence produced one,
 	// and it is never the status line — the reader's locale decides those words.
 	Summary *string `json:"summary,omitempty"`
+
+	// Total How much the occurrence expects to finish in all, in the unit of `processed`. A
+	// client draws a measured arc only when both counts are present; with `processed`
+	// alone the ring stays unmeasured, and no percentage is ever derived from elapsed time.
+	Total *int `json:"total,omitempty" minimum:"1"`
 }
 
 // AiActivityItemState `done` is a clean finish; `degraded` kept partial state and MUST NOT read as done.

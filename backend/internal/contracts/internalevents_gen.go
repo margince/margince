@@ -111,6 +111,9 @@ type InternalEventAiTaskStateChanged struct {
 	// OccurrenceKey That source's own idempotency key for this occurrence.
 	OccurrenceKey string `json:"occurrence_key"`
 
+	// Processed How much of its work a LIVE occurrence has finished so far, in the unit its source counts (a website read counts pages). Absent while unknown, which is not zero. Never the settled quantity: a settled event carries none.
+	Processed *int `json:"processed,omitempty" minimum:"0"`
+
 	// Quantity How much the occurrence handled, in quantity_unit.
 	Quantity *int `json:"quantity,omitempty" minimum:"0"`
 
@@ -142,6 +145,9 @@ type InternalEventAiTaskStateChanged struct {
 
 	// Summary The occurrence's own prose. Never the status line.
 	Summary *string `json:"summary,omitempty"`
+
+	// Total How much the occurrence expects to finish in all, in the unit of processed. Absent while the source does not know its length, and a ceiling it might stop short of is not a length.
+	Total *int `json:"total,omitempty" minimum:"1"`
 }
 
 // InternalEventBookingPageUpdated A host changed the policy or public availability of their booking page.

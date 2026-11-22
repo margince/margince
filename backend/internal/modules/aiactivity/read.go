@@ -113,6 +113,10 @@ type Item struct {
 	// read is a different authorization this package declines to hold.
 	SubjectType *string
 	SubjectID   *ids.UUID
+	// Processed and Total are the live position the source last reported, nil
+	// while unknown. Total is only ever set beside Processed.
+	Processed *int
+	Total     *int
 }
 
 // StateStalled is derived at READ time and never stored.
@@ -175,7 +179,8 @@ const feedSQL = `
          CASE WHEN ` + pastLeaseSQL + ` THEN '` + StateStalled + `' ELSE state END,
          COALESCE(started_at, queued_at), finished_at,
          left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
-         left(subject_type, $10), subject_id
+         left(subject_type, $10), subject_id,
+         progress_processed, progress_total
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('queued','running')
@@ -188,7 +193,8 @@ UNION ALL
   SELECT 'settled' AS arm, id, kind, state,
          COALESCE(started_at, queued_at), finished_at,
          left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
-         left(subject_type, $10), subject_id
+         left(subject_type, $10), subject_id,
+         progress_processed, progress_total
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('done','degraded','failed')
@@ -202,7 +208,8 @@ UNION ALL
   SELECT 'fault' AS arm, id, kind, state,
          COALESCE(started_at, queued_at), finished_at,
          left(degrade_reason, $4), left(summary, $5), left(subject_label, $8),
-         left(subject_type, $10), subject_id
+         left(subject_type, $10), subject_id,
+         progress_processed, progress_total
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('degraded','failed')
@@ -263,7 +270,8 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 			var arm string
 			if scanErr := rows.Scan(&arm, &item.ID, &item.Kind, &item.State,
 				&item.StartedAt, &item.FinishedAt, &item.DegradeReason, &item.Summary,
-				&item.SubjectLabel, &item.SubjectType, &item.SubjectID); scanErr != nil {
+				&item.SubjectLabel, &item.SubjectType, &item.SubjectID,
+				&item.Processed, &item.Total); scanErr != nil {
 				return scanErr
 			}
 			// An arm the statement cannot produce is a statement this loop has

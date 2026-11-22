@@ -282,10 +282,13 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, companyID *ids.Company
 // UpdateSiteReadProgress records the worker's live position — the phase
 // and how many pages have committed — on a still-running dossier, so the
 // SPA's poll shows movement during the crawl and the model call instead
-// of a silent 'running'. Best-effort by contract: a read that is no
-// longer running is simply not updated (the terminal write won), never
-// an error. No auth.Require, same rationale as BeginSiteRead.
-func (s *Store) UpdateSiteReadProgress(ctx context.Context, readID ids.UUID, phase string, pages []SiteReadPage) error {
+// of a silent 'running'. Once a page has committed it also reports the count
+// to the AI-activity projection, under the same lease the claim announced:
+// a different one would move the instant the read stops being believed.
+// Best-effort by contract: a read that is no longer running is simply not
+// updated (the terminal write won), never an error. No auth.Require, same
+// rationale as BeginSiteRead.
+func (s *Store) UpdateSiteReadProgress(ctx context.Context, readID ids.UUID, phase string, pages []SiteReadPage, lease time.Duration) error {
 	if phase != "crawling" && phase != "extracting" {
 		return fmt.Errorf("contacts: %q is not a site-read phase (crawling|extracting)", phase)
 	}
@@ -294,12 +297,20 @@ func (s *Store) UpdateSiteReadProgress(ctx context.Context, readID ids.UUID, pha
 		return fmt.Errorf("contacts: progressive site-read pages: %w", err)
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
+		updated, err := scanSiteRead(tx.QueryRow(ctx, `
 			UPDATE site_read SET phase = $2, pages = $3, pages_read = $4, updated_at = now()
-			WHERE id = $1 AND status = 'running'`, readID, phase, pagesRaw, len(pages)); err != nil {
+			WHERE id = $1 AND status = 'running'
+			RETURNING `+siteReadColumns, readID, phase, pagesRaw, len(pages)))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
 			return fmt.Errorf("update site read progress: %w", err)
 		}
-		return nil
+		if updated.PagesRead == 0 {
+			return nil
+		}
+		return logSiteReadProgress(ctx, tx, updated, lease)
 	})
 }
 
