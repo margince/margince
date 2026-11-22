@@ -47,18 +47,21 @@ func (s *Store) CorrectHeldWording(ctx context.Context, intent ids.UUID, in comm
 		return 0, err
 	}
 	in.HTMLBody = markup
-	actor, err := storekit.Actor(ctx)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	own, err := ScheduledSendReadableSQL(ctx, "scheduled_send", arg)
 	if err != nil {
 		return 0, err
 	}
+	locate := fmt.Sprintf(`SELECT version, status FROM scheduled_send WHERE id = $%d AND %s AND held_reason = ANY($%d) FOR UPDATE`,
+		arg(intent), own, arg(heldreason.Reviewable()))
 	var version int64
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := authority.AuthorizeWordingCorrectionTx(ctx, tx, intent); err != nil {
 			return err
 		}
 		var status string
-		if err := tx.QueryRow(ctx, `SELECT version, status FROM scheduled_send WHERE id=@id AND scheduled_by=@seat AND held_reason = ANY(@hold_reasons) FOR UPDATE`,
-			pgx.StrictNamedArgs{"id": intent, argSeat: actor.UserID, "hold_reasons": heldreason.Reviewable()}).Scan(&version, &status); err != nil {
+		if err := tx.QueryRow(ctx, locate, args...).Scan(&version, &status); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}

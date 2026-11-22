@@ -94,6 +94,7 @@ func subjectGraphIdentifiers(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]str
 //
 // subjectEmails, subjectAccounts and subjectName are the caller's, read before
 // the anonymization overwrote them.
+// A sweep by subject takes no meeting's attendee lock; the hourly evidence pass corrects it.
 func scrubContactGraphTraces(
 	ctx context.Context, tx pgx.Tx, id ids.UUID,
 	subjectEmails []string, subjectAccounts []channelIdentity,

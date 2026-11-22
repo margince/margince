@@ -186,7 +186,7 @@ func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (doc
 	if err != nil {
 		return documentTarget{}, fmt.Errorf("read the invoice: %w", err)
 	}
-	if err := auth.EnsureVisibleLive(ctx, tx, "company", target.companyID); err != nil {
+	if err := ensureLedgerVisible(ctx, tx, target.companyID, true); err != nil {
 		return documentTarget{}, err
 	}
 	linked, err := companyIsLinked(ctx, tx, ids.CompanyID{UUID: target.companyID}, conn.id)

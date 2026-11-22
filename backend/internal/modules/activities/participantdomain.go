@@ -86,6 +86,7 @@ func foldInsertedParticipants(ctx context.Context, tx pgx.Tx, rows pgx.Rows) (in
 
 // storeParticipantDomains writes owndomain.StoredOfAddress for rows a writer
 // could not fold in its own statement, and returns how many it changed.
+// A sweep by row id takes no meeting's attendee lock; the hourly evidence pass corrects it.
 func storeParticipantDomains(ctx context.Context, tx pgx.Tx, written []participantAddress) (int, error) {
 	rowIDs := make([]ids.UUID, 0, len(written))
 	domains := make([]*string, 0, len(written))
