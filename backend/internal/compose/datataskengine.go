@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
 	"github.com/margince/margince/backend/internal/compose/viabilitytasks"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -138,7 +139,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		linkedAuditRedactionDataTask(pool),
 		markedAuditRedactionDataTask(),
 		keyedIdentifiersDataTask(),
-		stockLaddersDataTask(pool),
+		stockLaddersDataTask(ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool)).AdoptStockTaskLaddersTx),
 		mailCopiesDataTask(pool),
 		answeredTasksDataTask(pool),
 		falseMeetingCancelsDataTask(now),

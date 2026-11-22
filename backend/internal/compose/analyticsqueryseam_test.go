@@ -130,6 +130,22 @@ func TestTheSchemaVersionMovesWhenTheVocabularyDoes(t *testing.T) {
 	}
 }
 
+// Each entity says which rows it holds, so "open-deals-per-company" reads as
+// every open deal a question can count, not as a grouping of them.
+func TestTheVocabularyNamesTheRowsOfEveryEntity(t *testing.T) {
+	t.Parallel()
+	schema := AnalyticsSchemaFor(seatWith("deal", "activity", "lead", "project"))
+	described := DescribeAnalyticsSchema(schema)
+	if len(schema.Entities) == 0 {
+		t.Fatal("the vocabulary offers no entity, so this proves nothing")
+	}
+	for name, entity := range schema.Entities {
+		if entity.Rows == "" || !strings.Contains(described, name+"\n  rows:     "+entity.Rows+"\n") {
+			t.Errorf("%s does not say which rows it holds", name)
+		}
+	}
+}
+
 // A model reads the currency rule from the vocabulary before it asks, and a
 // saved answer from before a measure became per-row money does not compare as
 // the same vocabulary.

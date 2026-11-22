@@ -30,13 +30,13 @@ The heaviest menu is `overnight_at_risk_sweep`: 6705 of the window's 32768 token
 ```text
 Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items
 are the queue already ranked for them; do not assemble a workspace-wide list. Read the evidence for
-those items, then call annotate_brief with one concise narrative and grounded findings: why each
-item matters, what changed and the next move. An item with a previous_rank was already on this queue
-on the run's previous_local_day: say what has changed since then rather than reporting it as new. An
-item without one may simply not have ranked that day, so do not call it new either. Use each
-returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the
-existing order. If there are no items, finish without inventing a brief. A tool refusal means the
-findings were not saved: correct it before claiming completion.
+those items, then call annotate_brief ONCE, with one concise narrative and a grounded finding for
+every item in that same call: why it matters, what changed and the next move. An item with a
+previous_rank was already on this queue on the run's previous_local_day: say what has changed since
+then rather than reporting it as new. An item without one may simply not have ranked that day, so do
+not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that
+item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a
+brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 ```
 
 Attaches 5 tools and pays 4439 tokens on every step (2055 listing, 1653 step schema), leaving
@@ -57,9 +57,10 @@ gone quiet, or missing next steps. First call whats_slipping_this_week: in this 
 the at-risk deals your member owns. Each other member's run sweeps that member's deals, and a deal
 whose owner has not granted this sweep is swept by nobody, so do not read or log on a deal outside
 that list. A deal the retrieved context mentions is one example, not the sweep, so do not read or
-log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal.
-Its subject names the risk; its body states the finding and the evidence (cite the records you
-read). A note without a body is refused. Do not advance stages, send anything, or archive anything.
+log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal,
+linked to that deal (links: [{entity_type: deal, entity_id: <its deal_id>}]). Its subject names the
+risk in a few words; its body states the finding and the evidence (cite the records you read). A
+note without a body is refused. Do not advance stages, send anything, or archive anything.
 ```
 
 Attaches 7 tools and pays 6705 tokens on every step (3354 listing, 2620 step schema), leaving

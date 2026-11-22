@@ -54,7 +54,7 @@ func TestTheStockLaddersTaskGivesAStockInstallItsPresetsOrder(t *testing.T) {
 	storeGeminiRouting(t, e, routing, false)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	for range 2 {
-		e.RunDataTask(ctx, t, stockLaddersDataTask(e.Pool))
+		e.RunDataTask(ctx, t, stockLaddersDataTask(routing.AdoptStockTaskLaddersTx))
 	}
 	stored, err := routing.Get(e.Admin())
 	if err != nil {
@@ -75,7 +75,7 @@ func TestTheStockLaddersTaskLeavesACustomisedInstallAlone(t *testing.T) {
 	routing := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	storeGeminiRouting(t, e, routing, true)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	e.RunDataTask(ctx, t, stockLaddersDataTask(e.Pool))
+	e.RunDataTask(ctx, t, stockLaddersDataTask(routing.AdoptStockTaskLaddersTx))
 	stored, err := routing.Get(e.Admin())
 	if err != nil {
 		t.Fatal(err)

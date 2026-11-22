@@ -10,6 +10,7 @@ import (
 	"errors"
 	"reflect"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -84,7 +85,7 @@ func (c *Fixture) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: err.Error()}
 	}
-	same, err := sameSearchPlanArguments(c.want, got)
+	same, err := sameSearchPlanArguments(c.want, got, c.Vocabulary)
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
@@ -95,18 +96,22 @@ func (c *Fixture) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
 }
 
-func sameSearchPlanArguments(want, got Plan) (bool, error) {
+func sameSearchPlanArguments(want, got Plan, vocabulary string) (bool, error) {
 	switch want.Engine {
 	case EngineReporting:
 		return sameSearchArguments[crmcontracts.ReportingSelection](want.Arguments, got.Arguments)
 	case EngineAnalytics:
 		return sameSearchArguments[crmcontracts.AnalyticsQuery](want.Arguments, got.Arguments)
 	case EngineRecords:
-		expected, err := orderedSearchPredicates(json.RawMessage(want.Arguments))
+		dates, err := dateFields(vocabulary)
 		if err != nil {
 			return false, err
 		}
-		actual, err := orderedSearchPredicates(json.RawMessage(got.Arguments))
+		expected, err := orderedSearchPredicates(json.RawMessage(want.Arguments), dates)
+		if err != nil {
+			return false, err
+		}
+		actual, err := orderedSearchPredicates(json.RawMessage(got.Arguments), dates)
 		return bytes.Equal(expected, actual), err
 	default:
 		return sameSearchArguments[crmcontracts.WorkspaceQueryRequest](want.Arguments, got.Arguments)
@@ -124,14 +129,14 @@ func sameSearchArguments[T any](want, got string) (bool, error) {
 	return reflect.DeepEqual(expected, actual), nil
 }
 
-func orderedSearchPredicates(raw json.RawMessage) ([]byte, error) {
+func orderedSearchPredicates(raw json.RawMessage, dates map[string]bool) ([]byte, error) {
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &object); err != nil {
 		return nil, err
 	}
 	for _, key := range []string{"plan", "traverse"} {
 		if nested, ok := object[key]; ok && string(nested) != jsonNull {
-			ordered, err := orderedSearchPredicates(nested)
+			ordered, err := orderedSearchPredicates(nested, dates)
 			if err != nil {
 				return nil, err
 			}
@@ -145,6 +150,7 @@ func orderedSearchPredicates(raw json.RawMessage) ([]byte, error) {
 		}
 		var ordered []string
 		for _, predicate := range predicates {
+			halfOpenDateBound(predicate, dates)
 			encoded, err := json.Marshal(predicate)
 			if err != nil {
 				return nil, err
@@ -163,4 +169,47 @@ func orderedSearchPredicates(raw json.RawMessage) ([]byte, error) {
 		object["where"] = encoded
 	}
 	return json.Marshal(object)
+}
+
+// dateFields names the record fields the vocabulary declares as dates in every
+// target that has them, the fields whose operand binds as a whole day.
+func dateFields(vocabulary string) (map[string]bool, error) {
+	var doc struct {
+		Records struct {
+			Targets []struct {
+				Fields []struct{ Name, Kind string } `json:"fields"`
+			} `json:"targets"`
+		} `json:"record_vocabulary"`
+	}
+	if err := json.Unmarshal([]byte(vocabulary), &doc); err != nil {
+		return nil, err
+	}
+	dates := map[string]bool{}
+	for _, target := range doc.Records.Targets {
+		for _, field := range target.Fields {
+			if prior, seen := dates[field.Name]; !seen || prior {
+				dates[field.Name] = field.Kind == "date"
+			}
+		}
+	}
+	return dates, nil
+}
+
+// halfOpenDateBound writes a closed bound on a date field as the half-open one
+// it equals, "lte 30 Nov" as "lt 1 Dec", so two plans that select one set of
+// days compare equal. An operand that is not a day is left as written.
+func halfOpenDateBound(predicate map[string]json.RawMessage, dates map[string]bool) {
+	var field, op, day string
+	if json.Unmarshal(predicate["field"], &field) != nil || !dates[field] ||
+		json.Unmarshal(predicate["op"], &op) != nil || (op != "lte" && op != "gt") ||
+		json.Unmarshal(predicate["value"], &day) != nil {
+		return
+	}
+	at, err := time.Parse(time.DateOnly, day)
+	if err != nil {
+		return
+	}
+	// Both are ASCII, so a quoted Go string is the JSON string.
+	predicate["op"] = json.RawMessage(strconv.Quote(map[string]string{"lte": "lt", "gt": "gte"}[op]))
+	predicate["value"] = json.RawMessage(strconv.Quote(at.AddDate(0, 0, 1).Format(time.DateOnly)))
 }
