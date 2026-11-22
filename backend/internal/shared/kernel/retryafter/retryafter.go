@@ -34,10 +34,10 @@ import (
 // They stand in only when Retry-After is absent: a limited call carries both.
 var resetHeaders = []string{"x-ratelimit-reset-requests", "x-ratelimit-reset-tokens"}
 
-// Of reads how long a response says to wait. Zero means it did not say — the
-// header was absent, unparseable, or named an instant already past — and the
-// caller falls back to its own backoff. Retry-After wins; without it the
-// longest x-ratelimit-reset-* interval is the wait, since every limit must clear.
+// Of reads how long a response says to wait. Zero means it did not say: the
+// header was absent, unparseable, or named an instant already past. The caller
+// then falls back to its own backoff. Retry-After wins. Without it the longest
+// x-ratelimit-reset-* interval is the wait, since every limit must clear.
 func Of(resp *http.Response) time.Duration {
 	if resp == nil {
 		return 0

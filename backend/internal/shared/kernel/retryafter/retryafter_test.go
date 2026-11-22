@@ -85,39 +85,27 @@ func TestOfIsZeroWhenTheProviderSaidNothing(t *testing.T) {
 	}
 }
 
-func responseWith(headers map[string]string) *http.Response {
-	resp := &http.Response{Header: http.Header{}}
-	for name, value := range headers {
-		resp.Header.Set(name, value)
-	}
-	return resp
-}
-
 // OpenAI states a limited call's wait in x-ratelimit-reset-*, in Go-style
-// durations, and every limit must clear, so the longest one is the wait.
-func TestOfReadsTheLongestRateLimitResetWhenThereIsNoRetryAfter(t *testing.T) {
-	resp := responseWith(map[string]string{
-		"x-ratelimit-reset-requests": "1s",
-		"x-ratelimit-reset-tokens":   "6m0s",
-	})
-	if got := retryafter.Of(resp); got != 6*time.Minute {
-		t.Errorf("Of = %v, want 6m", got)
-	}
-	if got := retryafter.Of(responseWith(map[string]string{"x-ratelimit-reset-tokens": "20ms"})); got != 20*time.Millisecond {
-		t.Errorf("Of(20ms) = %v, want 20ms", got)
-	}
-}
-
-func TestRetryAfterOutranksTheRateLimitReset(t *testing.T) {
-	resp := responseWith(map[string]string{"Retry-After": "3", "x-ratelimit-reset-tokens": "6m0s"})
-	if got := retryafter.Of(resp); got != 3*time.Second {
-		t.Errorf("Of = %v, want 3s", got)
-	}
-}
-
-func TestAnUnreadableRateLimitResetAsksForNoWait(t *testing.T) {
-	resp := responseWith(map[string]string{"x-ratelimit-reset-requests": "soon", "x-ratelimit-reset-tokens": "-4s"})
-	if got := retryafter.Of(resp); got != 0 {
-		t.Errorf("Of = %v, want 0", got)
+// durations. Every limit must clear, so the longest is the wait. Retry-After
+// outranks both when present.
+func TestOfReadsTheRateLimitResetsWhenRetryAfterSaysNothing(t *testing.T) {
+	for name, tc := range map[string]struct {
+		headers map[string]string
+		want    time.Duration
+	}{
+		"the longest of two resets": {map[string]string{"x-ratelimit-reset-requests": "1s", "x-ratelimit-reset-tokens": "6m0s"}, 6 * time.Minute},
+		"milliseconds":              {map[string]string{"x-ratelimit-reset-tokens": "20ms"}, 20 * time.Millisecond},
+		"Retry-After wins":          {map[string]string{"Retry-After": "3", "x-ratelimit-reset-tokens": "6m0s"}, 3 * time.Second},
+		"unreadable or negative":    {map[string]string{"x-ratelimit-reset-requests": "soon", "x-ratelimit-reset-tokens": "-4s"}, 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			resp := &http.Response{Header: http.Header{}}
+			for header, value := range tc.headers {
+				resp.Header.Set(header, value)
+			}
+			if got := retryafter.Of(resp); got != tc.want {
+				t.Errorf("Of = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }

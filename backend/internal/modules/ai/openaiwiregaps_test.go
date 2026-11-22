@@ -3,9 +3,9 @@
 
 package ai
 
-// Where the OpenAI-wire adapters departed from OpenAI's API reference: the
-// chat wire's output ceiling and reasoning effort, the Responses wire's input
-// shapes, and a streamed refusal.
+// Where the OpenAI-wire adapters departed from OpenAI's API reference. Covers
+// the chat wire's output ceiling and reasoning effort. Also the Responses
+// wire's input shapes and a streamed refusal.
 
 import (
 	"context"

@@ -22,10 +22,10 @@ func pointsAtOpenAI(baseURL string) bool {
 }
 
 // sendsMaxCompletionTokens reports whether the output ceiling goes out as
-// max_completion_tokens. OpenAI deprecates max_tokens and refuses it for o-series
-// models, so its own host always gets the new name, and so does a bare reasoning
-// model id (o3, gpt-5-mini) behind a gateway that fronts OpenAI, such as Azure.
-// Every other model keeps max_tokens, the name vLLM and brokers read.
+// max_completion_tokens. OpenAI refuses max_tokens for o-series models, so its
+// own host always gets the new name. So does a bare reasoning model id (o3,
+// gpt-5-mini) behind a gateway such as Azure. Every other model keeps
+// max_tokens, the name vLLM and brokers read.
 func sendsMaxCompletionTokens(baseURL, modelID string) bool {
 	if pointsAtOpenAI(baseURL) {
 		return true

@@ -426,9 +426,8 @@ type openaiStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
 	end     streamEnd
-	// refusal collects response.refusal.delta text: a refusal streams beside
-	// output_text and the response still ends completed, so without it the
-	// reply would read as a clean empty answer.
+	// refusal collects response.refusal.delta text. The response still ends
+	// completed, so without it a refusal reads as a clean empty answer.
 	refusal strings.Builder
 }
 
