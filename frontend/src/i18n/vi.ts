@@ -17424,6 +17424,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.anthropic":
     "Gốc máy chủ; hệ thống thêm /v1. Để trống thì dùng API riêng của Anthropic.",
   "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
+  "aiRouting.baseUrl.help.ollama":
+    "Địa chỉ gốc của máy chủ, ví dụ http://localhost:11434. Để trống sẽ dùng địa chỉ mặc định.",
+  "aiRouting.baseUrl.placeholder.ollama": "http://localhost:11434",
+  "aiRouting.baseUrl.help.vllm":
+    "Địa chỉ gốc của máy chủ; /v1 được tự thêm. Để trống sẽ dùng http://localhost:8000.",
+  "aiRouting.baseUrl.placeholder.vllm": "http://localhost:8000",
   "aiRouting.models.askingLocation":
     "Đang hỏi Google {location} phục vụ những mô hình nào…",
   "aiRouting.models.noKey":

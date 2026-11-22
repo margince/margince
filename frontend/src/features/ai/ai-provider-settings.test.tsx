@@ -208,6 +208,44 @@ describe("a provider's settings on its sheet", () => {
     );
   });
 
+  // A local server has no key and no vendor list: its sheet is the host alone,
+  // and a blank host is the adapter's own default.
+  it.each([
+    ["ollama", "http://10.0.0.5:11434"],
+    ["vllm", "http://10.0.0.5:8000"],
+  ])(
+    "sets the host of the local provider %s without a key",
+    async (provider, address) => {
+      const puts = backend(
+        routingWith({ [provider]: { base_url: "http://old:1" } }),
+      );
+      const user = userEvent.setup();
+      render(<AiProviderKeysCard />);
+
+      const sheet = await openSheet(user, provider);
+      expect(within(sheet).getByText("No key needed")).toBeInTheDocument();
+      expect(
+        within(sheet).queryByRole("combobox", { name: "Service" }),
+      ).toBeNull();
+      const host = await within(sheet).findByLabelText("Host");
+      expect(host).toHaveValue("http://old:1");
+      await user.clear(host);
+      await user.type(host, address);
+      await user.click(
+        within(sheet).getByRole("button", { name: "Save connection" }),
+      );
+      await waitFor(() =>
+        expect(puts).toEqual([{ provider, body: { base_url: address } }]),
+      );
+
+      await user.clear(host);
+      await user.click(
+        within(sheet).getByRole("button", { name: "Save connection" }),
+      );
+      await waitFor(() => expect(puts[1]).toEqual({ provider, body: {} }));
+    },
+  );
+
   // The form starts from what is stored; drawn before the routing read lands
   // it would start empty, and Save would then remove the stored entry.
   it("waits for the stored settings before drawing the form", async () => {

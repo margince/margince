@@ -36,6 +36,7 @@ import { isOpenRouter } from "./ai-provider-links";
 import {
   hasProviderSettings,
   ProviderSettingsForm,
+  withLocalProviders,
 } from "./ai-provider-settings";
 import { ProviderSheet } from "./ai-provider-sheet";
 import { ProviderTable } from "./ai-provider-table";
@@ -122,7 +123,10 @@ export function AiProviderKeysCard() {
     >
       <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
         {(list) => {
-          const openStatus = list.providers.find((p) => p.provider === opened);
+          // The status line counts keys, so it reads the list as the server
+          // sent it; the table and sheets also carry the keyless local rows.
+          const providers = withLocalProviders(list.providers);
+          const openStatus = providers.find((p) => p.provider === opened);
           return (
             <>
               <ProvidersStatus
@@ -130,7 +134,7 @@ export function AiProviderKeysCard() {
                 routing={routing.data?.routing}
               />
               <ProviderTable
-                providers={list.providers}
+                providers={providers}
                 canManage={canManage}
                 usage={usage}
                 unhosted={unhosted}

@@ -195,3 +195,41 @@ func TestASovereignRunTakesACloudJudgeAndStillRefusesACloudCandidate(t *testing.
 		t.Error("a cloud candidate was accepted under a sovereign run; its record would describe a deployment nobody has")
 	}
 }
+
+// The routing a run certifies is written the way the shipped presets are: the
+// broker's host and pins sit once on the provider, and no lane repeats them.
+func TestLadderDocumentWritesTheProvidersBlockAndNoPerLaneHost(t *testing.T) {
+	binding := ai.ProviderConfig{
+		Provider: "openai_compatible",
+		Model:    "z-ai/glm-5.2",
+		BaseURL:  "https://openrouter.ai/api",
+		Routing: &ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{
+			Only: []string{"deepinfra"}, Quantizations: []string{"fp8"},
+		}},
+	}
+	tiers := map[ai.Tier]ai.ProviderConfig{}
+	for _, tier := range ai.AllTiers() {
+		tiers[tier] = binding
+	}
+
+	doc := ladderDocument(binding, ai.ProfileCloudFrontier, tiers)
+
+	entry, ok := doc.Providers["openai_compatible"]
+	if !ok || entry.BaseURL != "https://openrouter.ai/api" {
+		t.Fatalf("providers block = %+v, want the broker's host on openai_compatible", doc.Providers)
+	}
+	if entry.Upstream == nil || len(entry.Upstream.Provider.Only) != 1 {
+		t.Errorf("provider upstream = %+v, want the only-pin lifted onto the provider", entry.Upstream)
+	}
+	for tier, lane := range doc.Tiers {
+		if lane.BaseURL != "" {
+			t.Errorf("tier %s still carries base_url %q", tier, lane.BaseURL)
+		}
+		if lane.Routing == nil || len(lane.Routing.Provider.Only) != 0 || len(lane.Routing.Provider.Quantizations) != 1 {
+			t.Errorf("tier %s routing = %+v, want the pins gone and the serving preference kept", tier, lane.Routing)
+		}
+	}
+	if doc.Embeddings.BaseURL != "" || doc.Embeddings.Routing != nil {
+		t.Errorf("embeddings lane = %+v, want no host and no routing of its own", doc.Embeddings)
+	}
+}

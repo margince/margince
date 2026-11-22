@@ -49,6 +49,9 @@ type Service = Readonly<{
 type ProviderServices = Readonly<{
   services: readonly Service[];
   other: OtherHost & { label: MessageKey };
+  // A host typed straight into one field, with no service to pick: a local
+  // server has no vendor, and a blank host is its compiled default.
+  direct?: true;
 }>;
 
 const OTHER = "other";
@@ -219,7 +222,57 @@ const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
       },
     },
   ],
+  [
+    "ollama",
+    {
+      services: [],
+      direct: true,
+      other: {
+        label: "aiProviderSettings.service.otherAddress",
+        help: "aiRouting.baseUrl.help.ollama",
+        placeholder: "aiRouting.baseUrl.placeholder.ollama",
+      },
+    },
+  ],
+  [
+    "vllm",
+    {
+      services: [],
+      direct: true,
+      other: {
+        label: "aiProviderSettings.service.otherAddress",
+        help: "aiRouting.baseUrl.help.vllm",
+        placeholder: "aiRouting.baseUrl.placeholder.vllm",
+      },
+    },
+  ],
 ]);
+
+// The providers whose sheet is only a host: they take no key, so the server's
+// key list never names them and the table adds their rows itself.
+export const LOCAL_PROVIDERS: readonly string[] = [...SERVICES]
+  .filter(([, catalog]) => catalog.direct)
+  .map(([provider]) => provider);
+
+type KeyStatus = components["schemas"]["AiProviderKeyStatus"];
+
+/** The key list with a keyless row for each local provider it does not name. */
+export function withLocalProviders(
+  listed: readonly KeyStatus[],
+): readonly KeyStatus[] {
+  const named = new Set(listed.map((p) => p.provider));
+  const local = LOCAL_PROVIDERS.filter((p) => !named.has(p)).map(
+    (provider): KeyStatus => ({
+      provider,
+      configured: false,
+      env_var: "",
+      optional: false,
+      credential_kind: "api_key",
+      usable: true,
+    }),
+  );
+  return [...listed, ...local];
+}
 
 /** Whether a provider has anything this sheet can set. */
 export function hasProviderSettings(provider: string): boolean {
@@ -251,6 +304,7 @@ const UNCHOSEN = "";
 
 /** The service a stored host belongs to: a known one, Other, or none yet. */
 export function serviceOf(provider: string, host: string): string {
+  if (SERVICES.get(provider)?.direct) return OTHER;
   const known = SERVICES.get(provider)?.services ?? [];
   if (host.trim() === "") {
     return known.find((s) => s.host === "")?.id ?? UNCHOSEN;
@@ -384,7 +438,7 @@ export function ProviderSettingsForm({
           {refusal}
         </p>
       )}
-      {catalog && (
+      {catalog && !catalog.direct && (
         <Field label={t("aiProviderSettings.service.label")}>
           {(control) => (
             <Select
@@ -410,6 +464,7 @@ export function ProviderSettingsForm({
           other={catalog.other}
           typed={typed}
           disabled={disabled}
+          guide={!catalog.direct}
           onChange={setTyped}
         />
       )}
