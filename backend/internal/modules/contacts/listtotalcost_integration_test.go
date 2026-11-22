@@ -31,7 +31,11 @@ func TestExactListTotalUsesExhaustedFirstPage(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					if page.Total == nil || *page.Total != count {
+					later := cursor != nil && *cursor != ""
+					if later && page.Total != nil {
+						t.Fatalf("a page after the first sent total %d; only the first page counts", *page.Total)
+					}
+					if !later && (page.Total == nil || *page.Total != count) {
 						t.Fatalf("total = %v, want %d", page.Total, count)
 					}
 					return size, page, meter.Cost().Statements
@@ -56,9 +60,12 @@ func TestExactListTotalUsesExhaustedFirstPage(t *testing.T) {
 					if countedStatements != statements+1 {
 						t.Fatalf("overflow used %d statements, exhausted page used %d; want exactly one extra count", countedStatements, statements)
 					}
-					tailSize, tail, _ := read(2, &partial.NextCursor)
+					tailSize, tail, tailStatements := read(1, &partial.NextCursor)
 					if tailSize != 1 || tail.HasMore || tail.NextCursor != "" {
 						t.Fatalf("last page size=%d page=%+v, want one row and no continuation", tailSize, tail)
+					}
+					if tailStatements != countedStatements-1 {
+						t.Fatalf("a page with a cursor used %d statements, a counted first page %d; want one fewer", tailStatements, countedStatements)
 					}
 				}
 				if first.HasMore {

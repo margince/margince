@@ -112,6 +112,11 @@ const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
   ["stage_id", "history.field.stage_id"],
   ["disqualify_reason_id", "history.field.disqualify_reason_id"],
   ["trigger", "history.field.trigger"],
+  ["role", "history.field.role"],
+  ["is_current_primary", "history.field.is_current_primary"],
+  ["employment_status", "history.field.employment_status"],
+  ["started_precision", "history.field.started_precision"],
+  ["ended_precision", "history.field.ended_precision"],
   ["win_probability_override", "history.field.win_probability_override"],
   ["win_probability_set_by", "history.field.win_probability_set_by"],
 ]);
@@ -235,12 +240,22 @@ export function historyFieldLabel(
   field: string,
   t: (key: MessageKey) => string,
 ): string {
-  const key =
+  const key = fieldWordKey(field);
+  return key ? t(key) : field.replaceAll("_", " ");
+}
+
+function fieldWordKey(field: string): MessageKey | undefined {
+  return (
     HISTORY_FIELD_LABELS.get(field) ??
     STORED_COLUMN_LABELS.get(field) ??
     SYNTHETIC_AUDIT_FIELD_LABELS.get(field) ??
-    profileFieldLabelKey(field);
-  return key ? t(key) : field.replaceAll("_", " ");
+    profileFieldLabelKey(field)
+  );
+}
+
+/** Whether a column has a word of its own, rather than its stored name with spaces. */
+export function hasFieldWord(field: string): boolean {
+  return fieldWordKey(field) !== undefined;
 }
 
 // The same map as a lookup, for the census that holds it against the contract.

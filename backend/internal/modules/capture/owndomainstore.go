@@ -233,6 +233,9 @@ func (s *OwnDomainStore) Add(ctx context.Context, raw string) (OwnDomain, error)
 			Scan(&out.Domain, &out.Source, &out.Verified, &out.CreatedAt, &priorSource, &priorVerified); err != nil {
 			return fmt.Errorf("capture: registering own domain: %w", err)
 		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		var beforeImage map[string]any
 		if priorSource != nil && priorVerified != nil {
 			beforeImage = map[string]any{
@@ -293,6 +296,9 @@ func (s *OwnDomainStore) Remove(ctx context.Context, raw string) error {
 		}
 		if err != nil {
 			return fmt.Errorf("capture: removing own domain: %w", err)
+		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
 		}
 		// "archive", not a delete verb: the audit vocabulary is closed (0018)
 		// and withdrawing a registry entry IS retiring it — the same reading

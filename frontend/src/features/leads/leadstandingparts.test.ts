@@ -366,6 +366,48 @@ describe("nextBookedMeeting", () => {
   });
 });
 
+describe("leadNext for a next task with only a date", () => {
+  const picked = {
+    status: "contacted" as const,
+    next_task_subject: "Call back",
+    next_task_due_at: "2026-11-17T07:59:59Z",
+    next_task_due_has_time: false,
+    next_task_due_intent: {
+      wall_clock: "2026-11-16T23:59:59",
+      timezone: "America/Los_Angeles",
+    },
+    open_task_count: 1,
+  };
+
+  it("is late by the company's calendar once the picked day is over there", () => {
+    const next = leadNext(lead(picked), {
+      ...ctx,
+      asOf: "2026-11-17T07:00:00Z",
+      record: "Europe/Berlin",
+    });
+    expect(next.late).toMatchObject({ tone: "danger" });
+  });
+
+  it("prints the picked day to a reader far east of the picker", () => {
+    const next = leadNext(lead(picked), {
+      ...ctx,
+      zone: "Asia/Tokyo",
+      asOf: "2026-11-16T07:00:00Z",
+      record: "Europe/Berlin",
+    });
+    expect(next.sub).toBe(`co.next.due:{"when":"16 Nov"}`);
+  });
+
+  it("is not late while the picked day is still running on the company's calendar", () => {
+    const next = leadNext(lead(picked), {
+      ...ctx,
+      asOf: "2026-11-17T07:00:00Z",
+      record: "America/Los_Angeles",
+    });
+    expect(next.late).toBeUndefined();
+  });
+});
+
 describe("leadNext", () => {
   it("asks to qualify an engaged lead with evidence and an address", () => {
     const next = leadNext(

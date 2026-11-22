@@ -7,6 +7,7 @@ package mailprobe
 
 import (
 	"context"
+	"errors"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -22,6 +23,9 @@ func For(authority activities.SendAuthority) approvals.SendProbe {
 		}
 		// No chosen mailbox and no anchor: the default mailbox the send falls back to.
 		provider, _, err := authority.SendableMailbox(ctx, ids.UUID{}, ids.ActivityID{})
+		if _, none := errors.AsType[*activities.MailboxNotConnectedError](err); none {
+			return false, nil
+		}
 		return provider != "", err
 	}
 }

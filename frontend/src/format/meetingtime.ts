@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Locale } from "../i18n";
-import { assertIanaZone, displayDay, INTL_LOCALE } from "./format";
+import { assertIanaZone, displayDay } from "./format";
+import { dateTimeFormat } from "./formatters";
 import { hourCycle } from "./preferences";
 
 // When a booked meeting happens, as the pages about one meeting say it: the
@@ -18,7 +19,7 @@ export function formatDayFull(
   zone: string,
 ): string {
   assertIanaZone(zone);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     weekday: "long",
     day: "numeric",
@@ -38,7 +39,7 @@ export function formatTimeRange(
   zone: string,
 ): string {
   assertIanaZone(zone);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     hour: "2-digit",
     minute: "2-digit",

@@ -14,9 +14,11 @@
 //     can take a record out of somebody's reach advances home_read_fence through
 //     a trigger, so no writer can forget it. A write that only widens reach
 //     leaves it, because capture widens reach all day;
-//   - no record grant it was assembled under has expired, since expiry writes
-//     nothing;
-//   - the walk its first page started can still be resumed.
+//   - no record grant it was assembled under has expired, and none of its
+//     reader's snoozes has ended or lifted, since neither writes anything.
+//
+// The walk a first page started lives four hours, less than a day answer. Once
+// it ends, the answer is served paging without it and read again behind.
 //
 // An answer served in its last minute of Life, or past it, is read again behind
 // it. So a reader who keeps Home open does not wait on its expiry. A refresh

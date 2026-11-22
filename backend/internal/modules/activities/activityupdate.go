@@ -80,11 +80,11 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 	}
 	at := s.now()
 	in.recordedAt, in.recordZone = &at, s.recordZone
-	if err := s.readPatchColumns(ctx, &in); err != nil {
-		return crmcontracts.Activity{}, err
-	}
 	var out crmcontracts.Activity
 	err := s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
+		if err := s.readPatchColumns(ctx, tx, &in); err != nil {
+			return err
+		}
 		var err error
 		out, err = updateActivityInTx(ctx, tx, id, in)
 		if err == nil {

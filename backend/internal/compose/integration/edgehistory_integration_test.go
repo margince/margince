@@ -385,3 +385,52 @@ func TestEdgeHistoryInterleavesWithTheRecordsOwnRowsAcrossPages(t *testing.T) {
 		t.Fatalf("two pages of %d yielded %d distinct rows", limit, len(seen))
 	}
 }
+
+// A reader whose role masks relationship.role sees the link line but not the
+// role, its previous value or its name among the changed fields. The anchor
+// record's own mask is empty, so only the relationship mask can explain it.
+func TestEdgeHistoryWithholdsAMaskedLinkRoleFromTheEdgeObject(t *testing.T) {
+	e := Setup(t)
+	contact := e.SeedContact(t, "Ada Employed", &e.Rep1)
+	company := e.SeedCompany(t, "Employer GmbH", &e.Rep1)
+	edge := linkEmployment(t, e, contact, company, "cto")
+	if _, err := e.Contacts.UpdateRelationship(e.Admin(), edge, contacts.UpdateRelationshipInput{
+		Role: new("coo"),
+	}); err != nil {
+		t.Fatalf("changing the link's role: %v", err)
+	}
+
+	perms := principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{
+			"contact": {Read: true}, "company": {Read: true}, "relationship": {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+		FieldMasks: []principal.FieldMask{
+			{Object: "relationship", Field: "role", Condition: principal.MaskAlways},
+		},
+	}
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+	page, err := privacy.ListRecordHistory(reader, e.DB(), privacy.RecordHistoryFilter{
+		EntityType: "contact", EntityID: contact,
+	})
+	if err != nil {
+		t.Fatalf("reading the contact's history: %v", err)
+	}
+	seen := 0
+	for _, entry := range page.Entries {
+		if entry.Edge == nil {
+			continue
+		}
+		seen++
+		if entry.Edge.Role != nil || entry.Edge.PreviousRole != nil || slices.Contains(entry.Edge.ChangedFields, "role") {
+			t.Errorf("a masked role reached the edge object: %+v", entry.Edge)
+		}
+		if strings.Contains(entry.Summary, "cto") || strings.Contains(entry.Summary, "coo") ||
+			strings.Contains(entry.Summary, "role") {
+			t.Errorf("a masked role reached the summary: %q", entry.Summary)
+		}
+	}
+	if seen == 0 {
+		t.Fatal("the reader saw no link entries, so nothing proves the mask")
+	}
+}

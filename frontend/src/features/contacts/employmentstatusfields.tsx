@@ -1,6 +1,8 @@
 import { Field, TextInput } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { type Locale, type Translator, useT } from "../../i18n";
+import { fieldCheckSentence } from "../../lib/problem";
+import { validDateEntry } from "./employmentpatch";
 
 /** A status the reader picked; empty until one is, for a link imported as unknown. */
 export type EmploymentStatusChoice = "current" | "former" | "";
@@ -17,6 +19,8 @@ export function EmploymentStatusFields({
   onEndChange,
   disabled,
   statusPlaceholder,
+  statusError,
+  endError,
 }: Readonly<{
   status: EmploymentStatusChoice;
   onStatusChange: (status: "current" | "former") => void;
@@ -24,11 +28,13 @@ export function EmploymentStatusFields({
   onEndChange: (end: string) => void;
   disabled?: boolean;
   statusPlaceholder?: string;
+  statusError?: string;
+  endError?: string;
 }>) {
   const t = useT();
   return (
     <>
-      <Field label={t("employment.statusLabel")}>
+      <Field label={t("employment.statusLabel")} error={statusError}>
         {(control) => (
           <Select
             {...control}
@@ -46,7 +52,11 @@ export function EmploymentStatusFields({
           />
         )}
       </Field>
-      <Field label={t("employment.end")} hint={t("employment.dateHint")}>
+      <Field
+        label={t("employment.end")}
+        hint={t("employment.dateHint")}
+        error={endError}
+      >
         {(control) => (
           <TextInput
             {...control}
@@ -58,4 +68,27 @@ export function EmploymentStatusFields({
       </Field>
     </>
   );
+}
+
+// A start or end typed in neither shape the hint names. Keyed as the dialogs
+// key their fields, so a press says which date to fix.
+export function employmentDateFaults(
+  locale: Locale,
+  t: Translator,
+  dates: Readonly<{ start: string; end: string }>,
+): Map<string, string> {
+  const faults = new Map<string, string>();
+  if (!validDateEntry(dates.start)) {
+    faults.set(
+      "start",
+      fieldCheckSentence("invalid_date", locale, t("employment.start")),
+    );
+  }
+  if (!validDateEntry(dates.end)) {
+    faults.set(
+      "end",
+      fieldCheckSentence("invalid_date", locale, t("employment.end")),
+    );
+  }
+  return faults;
 }

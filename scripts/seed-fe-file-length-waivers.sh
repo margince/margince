@@ -56,8 +56,8 @@ fi
 # lines its rewritten paths added, and by nothing else. Its PR body lists each
 # raise.
 #
-# The population is the two trees the gate walks: frontend/src and
-# frontend/scripts.
+# The population is the three trees the gate walks: frontend/src,
+# frontend/scripts and frontend/e2e.
 # Format: <frozen-line-count> <path>
 HEAD
   sed -n 's/^FAIL: \(.*\) is \([0-9][0-9]*\) lines (> .*$/\2 \1/p' <<<"$report" \

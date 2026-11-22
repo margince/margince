@@ -138,16 +138,16 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
-	active, err := s.activeColumns(ctx, "contact")
-	if err != nil {
-		return PromoteOutcome{}, err
-	}
 
 	// The retry is outside the transaction, so a restart rolls back every
 	// write of the attempt it replaces. A move is caught before the first one.
 	for range promoteAttempts {
 		var out PromoteOutcome
 		err = s.tx(ctx, func(tx pgx.Tx) error {
+			active, err := s.activeColumnsIn(ctx, tx, "contact")
+			if err != nil {
+				return err
+			}
 			candidate, err := s.promoteCandidate(ctx, tx, id)
 			if err != nil {
 				return err
@@ -442,7 +442,25 @@ func carryLeadPhone(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, cont
 	if err != nil || len(phones) == 0 {
 		return err
 	}
-	return insertContactPhones(ctx, tx, contactID, lead.Source, by, phones)
+	seen, err := seeContactSets(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	if err := insertContactPhones(ctx, tx, contactID, lead.Source, by, phones); err != nil {
+		return err
+	}
+	if err := touchChildSetParent(ctx, tx, contactEntity, contactID.UUID); err != nil {
+		return err
+	}
+	before, after := map[string]any{}, map[string]any{}
+	if err := seen.recordContactSetChange(ctx, tx, contactID, before, after); err != nil || len(after) == 0 {
+		return err
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID.UUID, before, after)
+	if err != nil {
+		return fmt.Errorf("audit the number a promotion carried: %w", err)
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, contactID.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after})
 }
 
 // unwritablePromotionTarget answers a promotion whose exact match the promoter

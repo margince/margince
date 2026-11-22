@@ -9,9 +9,10 @@ import { useArchiveRecord } from "../../components/archive";
 import { Button, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
-import { useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { unwrap } from "../../lib/problem";
+import { blankRequired, unwrap } from "../../lib/problem";
 import "../../design-system/querystates.css";
 
 type Company = components["schemas"]["Company"];
@@ -37,8 +38,10 @@ export function CompanyRejectAction({
   disabledReasonId?: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   // ONE key per confirmation, held across retries. Without it a response lost
   // after the transaction committed comes back as a version conflict on the
   // retry: the record is archived, its version has moved, and the reader is
@@ -112,7 +115,7 @@ export function CompanyRejectAction({
   if (!mayArchive || !mayDecideDomains || !primary) {
     return null;
   }
-  const ready = reason.trim().length > 0;
+  const reasonLabel = t("company.rejectReasonLabel");
   return (
     <>
       <Button
@@ -125,14 +128,22 @@ export function CompanyRejectAction({
       </Button>
       <ConfirmModal
         open={confirming}
-        onClose={() => setConfirming(false)}
+        onClose={() => {
+          setConfirming(false);
+          faults.show(new Map());
+        }}
         title={t("company.reject")}
         confirmLabel={t("company.reject")}
         confirmVariant="danger"
-        // The reason is REQUIRED by the contract, so the control that sends it
-        // says so before the server has to.
-        confirmDisabled={!ready}
-        onConfirm={() => mutation.mutate({ reason })}
+        bodyRef={faultsRoot}
+        // The contract requires the reason, so the press says so before the
+        // server has to.
+        onConfirm={() => {
+          const blank = blankRequired(locale, {
+            reason: [reasonLabel, reason],
+          });
+          if (!faults.show(blank)) mutation.mutate({ reason });
+        }}
         pending={mutation.isPending}
       >
         <p>
@@ -142,16 +153,20 @@ export function CompanyRejectAction({
           })}
         </p>
         <Field
-          label={t("company.rejectReasonLabel")}
+          label={reasonLabel}
           hint={t("company.rejectReasonHint")}
           required
+          error={faults.of("reason")}
         >
           {(control) => (
             <Textarea
               {...control}
               rows={3}
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => {
+                setReason(e.target.value);
+                faults.edited("reason");
+              }}
             />
           )}
         </Field>

@@ -86,8 +86,10 @@ readers of that message.
 
 A shared mailbox can be a source too. The list names it by its address. Its
 mail is also read by the mailbox's reader team, including members who are not
-on the message. Admins outside that team do not read it. A shared mailbox has
-no owner to start a history import, so it captures new mail only.
+on the message. Admins outside that team do not read it. Older mail between
+colleagues is never kept from a shared mailbox, because that import needs a
+mailbox owner. **Import older mail** on the mailbox brings in its other older
+mail, see [Shared mailboxes](#shared-mailboxes).
 
 Sharing one message does not share its thread or give a team access.
 Other members see no message or count. A link to a company, deal or project
@@ -352,8 +354,24 @@ at their next read. Their Home stops showing it at once, too.
 **A delete in the shared mailbox.** Deleting a message in the mail service
 removes nothing in Margince.
 
-Mail that came in only through a shared mailbox adds no contact, company, task
-or Worklist row. It is still filed under records that already exist.
+**Older mail.** An admin brings in older mail with **Import older mail** on a
+connected mailbox's row and chooses how far back to go. **Contacts.** Mail that
+came in only through a shared mailbox adds no contact, company or lead. It is filed under a contact or lead that has the address it
+came from, else under nothing.
+
+**Work from it.** Such mail can still make work for one colleague. It goes to
+the owner of the contact it came from or went to. With no such owner, it goes
+to the owner of that contact's company. When neither gives one colleague, for
+example two contacts with different owners, it goes to the mailbox's backup
+owner.
+
+The colleague must be someone who can be given tasks and who already reads the
+mail. For mail from a **Held** mailbox:
+
+- A reply reminder needs the AI to find a request. Whether it reads held mail is the **Check private mail for requests** setting, see [Your day](your-day.md#what-happens-to-a-request-in-an-email).
+- With that setting off, held mail shows on your Worklist only when you wrote on its conversation first.
+- A follow-up on a promise is never made from held mail.
+- When several open deals fit, the task **Which deal is this about?** goes to that colleague. Only they see it.
 
 When you open such an email, the reason under its subject says **In a shared
 mailbox**. The line below it names the mailbox and the team that reads it.

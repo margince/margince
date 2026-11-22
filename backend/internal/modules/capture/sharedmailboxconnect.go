@@ -11,7 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -184,7 +184,9 @@ func upsertSharedConnectionTx(ctx context.Context, tx pgx.Tx, in sharedUpsert) (
 	}).Scan(&id); err != nil {
 		return ids.Nil, nil, err
 	}
-	database.Forget(tx, ownerIdentitiesMemo)
+	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+		return ids.Nil, nil, err
+	}
 	view := SharedMailboxView{Provider: in.Provider, Address: in.address, Status: "connected", ReaderTeam: in.ReaderTeam, Posture: posture, BackupOwner: backup}
 	after := sharedMailboxImage(view)
 	verb, change, before := auditVerbCreate, sharedChangeConnected, map[string]any(nil)

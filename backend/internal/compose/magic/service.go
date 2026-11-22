@@ -172,7 +172,7 @@ func (s *Service) drawDone(
 	// Asked inside the page's own transaction, after the lines are drawn. The
 	// judge reads the record each line names, and a second connection inside
 	// this one can deadlock against a lock it holds.
-	if err := s.judgeUndoOn(ctx, tx, lines); err != nil {
+	if err := s.judgeUndoOn(ctx, tx, lines, entries); err != nil {
 		return err
 	}
 	// A line standing for many records has no single way back. The judge read

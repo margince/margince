@@ -419,13 +419,17 @@ describe("ProjectScreen", () => {
     const confirm = within(dialog).getByRole("button", {
       name: "Close project",
     });
-    expect(confirm.hasAttribute("disabled")).toBe(true);
+    await user.click(confirm);
+    expect(posted).toBeFalsy();
+    expect(within(dialog).getByText("Reason is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(
+      within(dialog).getByLabelText("Reason *"),
+    );
 
     await user.type(
       within(dialog).getByLabelText("Reason *"),
       "Delivered and signed off",
     );
-    expect(confirm.hasAttribute("disabled")).toBe(false);
     await user.click(confirm);
 
     await waitFor(() => expect(posted).toBeTruthy());

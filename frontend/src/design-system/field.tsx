@@ -5,15 +5,33 @@ import {
   type ReactNode,
   useId,
 } from "react";
+import { withCharacterLimit } from "./characterlimit";
 import { describedByIds } from "./describedby";
 
 // `ComponentPropsWithRef`, not the bare attribute set. A caller that opens
 // this field itself needs the node, such as an edit-in-place value that puts
 // the caret where the reader clicked. React 19 passes `ref` as an ordinary
 // prop to a function component.
-export function TextInput(props: ComponentPropsWithRef<"input">) {
+//
+// `maxLength` counts characters, as the server does; see withCharacterLimit.
+export function TextInput({
+  maxLength,
+  onChange,
+  onCompositionEnd,
+  onFocus,
+  ...props
+}: ComponentPropsWithRef<"input">) {
   return (
-    <input {...props} className={`input ${props.className ?? ""}`.trim()} />
+    <input
+      {...props}
+      {...withCharacterLimit({
+        maxLength,
+        onChange,
+        onCompositionEnd,
+        onFocus,
+      })}
+      className={`input ${props.className ?? ""}`.trim()}
+    />
   );
 }
 
@@ -37,11 +55,7 @@ export function SearchField({
   return (
     <span className={flush ? "input-icon input-icon-flush" : "input-icon"}>
       <Search aria-hidden />
-      <input
-        type="search"
-        {...props}
-        className={`input ${props.className ?? ""}`.trim()}
-      />
+      <TextInput type="search" {...props} />
     </span>
   );
 }
@@ -63,6 +77,10 @@ export function SearchField({
  */
 export function Textarea({
   grow,
+  maxLength,
+  onChange,
+  onCompositionEnd,
+  onFocus,
   ...props
 }: ComponentPropsWithRef<"textarea"> & Readonly<{ grow?: boolean }>) {
   // `grow` sizes the box to its text in CSS alone: no measuring on each key.
@@ -71,6 +89,12 @@ export function Textarea({
     <textarea
       rows={grow ? 3 : undefined}
       {...props}
+      {...withCharacterLimit({
+        maxLength,
+        onChange,
+        onCompositionEnd,
+        onFocus,
+      })}
       className={[grow ? "textarea textarea-grow" : "textarea", props.className]
         .filter(Boolean)
         .join(" ")}

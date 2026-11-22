@@ -68,6 +68,26 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/companies/companystanding.events.test.ts",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/privacy/legalreviewpack.tasks.test.tsx",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/projects/partners.nextstep.order.test.ts",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/projects/projectstanding.test.ts",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "lib/standingpeeks.test.ts",
+    why: "A task with only a date must print its picked day for readers east and west of the picker; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
     file: "features/mail/directsendmodal.stories.tsx",
     why: "Draws Send anyway at a later time for a held message set in a named zone, so the picker reads that zone rather than the viewer's.",
   },
@@ -556,6 +576,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "format/daysuntil.test.ts",
     why: "The zone IS the input under test: the whole case is that a record's date and the count beside it name the same day, which only shows up where the reader's calendar and UTC's disagree — so it needs one named zone east of UTC, one west, and UTC itself to count against. A zone read off the runner would decide whether the defect can appear at all, and the suite would pass over code that is wrong for half the world.",
+  },
+  {
+    file: "format/formatters.test.ts",
+    why: "Tests the formatter cache. It must pin named zones to prove the cache key holds the zone: one instant read in Auckland and in Los Angeles gives two days.",
   },
   {
     file: "format/format.test.ts",

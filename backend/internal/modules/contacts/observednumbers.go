@@ -117,6 +117,9 @@ func applyObservedNumberList(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		if n.outcome != observedApplied && n.outcome != observedReplaced {
 			continue
 		}
+		if err := touchChildSetParent(ctx, tx, contactEntity, contactID.UUID); err != nil {
+			return nil, err
+		}
 		if _, err := writeContactProfileField(ctx, tx, contactID, contactProfileFieldRow{
 			Field: fieldPhone, Value: n.phone.String(), EvidenceSnippet: n.Evidence,
 			SourceRef: s.SourceRef, Source: s.Source, CapturedBy: s.CapturedBy,

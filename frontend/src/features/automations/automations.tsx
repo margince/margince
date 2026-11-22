@@ -12,7 +12,6 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { type QueryLike, QueryStates } from "../../design-system/querystates";
 import { Chip } from "../../design-system/readings";
 import { RowOpen } from "../../design-system/rowopen";
-import { INTL_LOCALE } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
@@ -27,6 +26,7 @@ import { AutomationDialog } from "./automations.form";
 import { ConfiguredAutomations, shut } from "./automations.instances";
 import { triggerLabel } from "./automations.recipe";
 import "./automations.css";
+import { segmenter } from "../../format/formatters";
 
 // The automations editor over the closed catalog. Every form field derives from
 // the entry's params_schema plus the instance name: no free-form rule body and no
@@ -378,7 +378,7 @@ function libraryColumns(
 
 // The row says what a template does; the dialog it opens reads the rest.
 function leadSentence(text: string, locale: Locale): string {
-  const [first] = new Intl.Segmenter(INTL_LOCALE[locale], {
+  const [first] = segmenter(locale, {
     granularity: "sentence",
   }).segment(text);
   return first?.segment.trim() ?? text;

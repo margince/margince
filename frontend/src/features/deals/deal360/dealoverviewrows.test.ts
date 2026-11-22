@@ -89,6 +89,24 @@ describe("the committee's rows", () => {
     ]);
   });
 
+  // An older server sends no threshold and judged at a floor of two.
+  it("asks for a second contact when the server names no threshold", () => {
+    const { gaps } = committeeRows(
+      {
+        deal_id: "d1",
+        stakeholders: [{ contact_id: "c1", role: "user", engaged: true }],
+        our_side: [],
+        risks: [{ kind: "single_threaded_theirs", summary: "one thread" }],
+        sections_omitted: [],
+      },
+      t,
+      (role) => role,
+    );
+    expect(gaps.map((gap) => gap.title)).toEqual([
+      t("deal.committee.missing.secondContact"),
+    ]);
+  });
+
   it("draws one row per contact, naming every role they hold", () => {
     const { seats } = committeeRows(
       {

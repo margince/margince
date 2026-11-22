@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
 import {
   RosterFailedLine,
@@ -19,6 +20,7 @@ import {
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
+import { focusFirstRefused } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { isRealCalendarDay } from "../../format/calendarday";
 import { useT } from "../../i18n";
@@ -129,8 +131,9 @@ export function StagedEditor({
 }>) {
   const t = useT();
   const blank = required.some((field) => isBlank(draft[field]));
+  const root = useRef<HTMLDivElement>(null);
   return (
-    <div className="form-stack approval-editor" data-date-scope>
+    <div className="form-stack approval-editor" data-date-scope ref={root}>
       {fields.map((entry) =>
         entry.as === "doer" ? (
           <DoerField
@@ -170,9 +173,12 @@ export function StagedEditor({
           <Button
             variant="primary"
             pending={pending}
-            disabled={disabled || blank}
+            disabled={disabled}
             onClick={(event) => {
-              if (!refuseUnreadableField(event.currentTarget)) {
+              // Each blank required field already says so; the press goes there.
+              if (blank) {
+                focusFirstRefused(root.current);
+              } else if (!refuseUnreadableField(event.currentTarget)) {
                 onApprove();
               }
             }}

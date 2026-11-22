@@ -278,10 +278,25 @@ func (s *CSVSource) rowFrom(line int, record []string, index map[string]int) (Ro
 		external = strings.TrimSpace(record[at])
 	}
 	if external == "" {
+		external = s.idCell(record, index)
+	}
+	if external == "" {
 		s.skip(line, Why(ReasonRowKeyEmpty, "column", s.sourceKey))
 		return Row{}, false
 	}
 	return Row{ExternalID: s.identityOf(external), Fields: fields, LastSyncedAt: time.Time{}, Line: line}, true
+}
+
+// idCell is the row's own id when its key column is empty and the file maps an
+// id column. An exported contact without an email still names its record.
+func (s *CSVSource) idCell(record []string, index map[string]int) string {
+	for column, target := range s.mapping {
+		at, ok := index[column]
+		if target == "id" && ok && at < len(record) {
+			return strings.TrimSpace(record[at])
+		}
+	}
+	return ""
 }
 
 func (s *CSVSource) skip(line int, why Reason) {

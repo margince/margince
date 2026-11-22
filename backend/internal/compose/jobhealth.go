@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -142,11 +143,10 @@ type jobHealthHandlers struct {
 // dispatchers, which an admin's agent may read as the admin does.
 func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	// Queue depth and retry ladders: what an operator on call needs, and the
-	// same reader the other two System health cards have — so the same ladder
-	// admits all three (adminhealth.go), which is where the ORDER of its rungs
-	// is stated once.
-	if !admitHealthReader(w, r) {
+	// Queue depth and retry ladders: what an operator on call needs. The other
+	// System health cards share this reader, so one ladder admits them all.
+	// compose/adminadmit states the order of its rungs once.
+	if !adminadmit.HealthReader(w, r) {
 		return
 	}
 	wsID, ok := principal.WorkspaceID(ctx)

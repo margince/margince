@@ -1,5 +1,5 @@
 import type { Locale } from "../i18n";
-import { INTL_LOCALE } from "./intllocale";
+import { numberFormat } from "./formatters";
 
 /**
  * A share of a whole as a whole-number percentage: "42%", or "42 %" for a
@@ -14,7 +14,7 @@ export function formatPercent(
   locale: Locale,
   fractionDigits = 0,
 ): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "percent",
     maximumFractionDigits: fractionDigits,
   }).format(fraction);
@@ -34,7 +34,7 @@ export function formatFinePercent(fraction: number, locale: Locale): string {
   if (fraction === 0) {
     return formatPercent(0, locale);
   }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "percent",
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,

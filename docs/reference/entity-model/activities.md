@@ -166,8 +166,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
-- `activity_calendar_method_unread`: `btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email') AND (direction = 'inbound'))`
-- `activity_calendar_method_unread_outbound`: `btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email') AND (direction = 'outbound'))`
 - `activity_meeting_no_overlap`: `gist (host_user_id, tsrange(timezone('UTC', occurred_at), (timezone('UTC', occurred_at) + (( CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)::double precision * '00:00:01'::interval)), '[)')) WHERE ((kind = 'meeting') AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'))`
 - `activity_pkey`: `unique, btree (id)`
 - `idx_activity_answer_mail_subject`: `btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''), '^(\s*(re|aw|antw)\s*:)+\s*', '', 'i'), '\s+', ' ', 'g'))), occurred_at) WHERE ((direction = 'outbound') AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
@@ -211,6 +209,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_no_company_meeting_on_rekind`: `BEFORE UPDATE OF kind FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()`
 - `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome) OR (old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested))) EXECUTE FUNCTION trg_activity_project_last_activity()`
 - `activity_refuse_restricted_mutation`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()`
+- `activity_strength_dates`: `AFTER UPDATE REFERENCING OLD TABLE AS changed_from NEW TABLE AS changed_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_strength_dates()`
 - `activity_system_text_retire`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()`
 - `advance_activity_domain_evidence_version`: `BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at FOR EACH ROW EXECUTE FUNCTION advance_activity_domain_evidence_version()`
 - `deleted_mail_clears_reply_settled`: `AFTER DELETE REFERENCING OLD TABLE AS written_mail FOR EACH STATEMENT EXECUTE FUNCTION written_mail_clears_reply_settled()`
@@ -283,7 +282,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `activity_calendar_method_backfill_pkey`: `unique, btree (activity_id)`
-- `activity_calendar_method_backfill_resume`: `btree (direction, activity_created_at, activity_id)`
 
 **Triggers**
 
@@ -419,6 +417,9 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_link_last_activity`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_activity_link_last_activity()`
 - `activity_link_no_company_meeting`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_link_refuses_a_company_meeting()`
 - `activity_link_project_last_activity`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_activity_link_project_last_activity()`
+- `activity_link_strength_dates_added`: `AFTER INSERT REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_added()`
+- `activity_link_strength_dates_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_moved()`
+- `activity_link_strength_dates_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_removed()`
 - `home_read_fence_first_link`: `AFTER INSERT REFERENCING NEW TABLE AS added_links FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence_on_first_link()`
 - `home_read_fence_link_change`: `AFTER UPDATE FOR EACH ROW WHEN (((old.activity_id IS DISTINCT FROM new.activity_id) OR (old.contact_id IS DISTINCT FROM new.contact_id) OR (old.company_id IS DISTINCT FROM new.company_id) OR (old.deal_id IS DISTINCT FROM new.deal_id) OR (old.lead_id IS DISTINCT FROM new.lead_id) OR (old.project_id IS DISTINCT FROM new.project_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_link_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
@@ -601,9 +602,14 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `activity_participant_strength_dates_added`: `AFTER INSERT REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_added()`
+- `activity_participant_strength_dates_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_moved()`
+- `activity_participant_strength_dates_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_removed()`
+- `deleted_participant_clears_reply_settled`: `AFTER DELETE REFERENCING OLD TABLE AS written_participant FOR EACH STATEMENT EXECUTE FUNCTION written_participant_clears_reply_settled()`
 - `home_read_fence_participant`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_participant_removed`: `AFTER DELETE FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()`
-- `participant_clears_reply_settled`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION participant_clears_reply_settled()`
+- `inserted_participant_clears_reply_settled`: `AFTER INSERT REFERENCING NEW TABLE AS written_participant FOR EACH STATEMENT EXECUTE FUNCTION written_participant_clears_reply_settled()`
+- `participant_clears_reply_settled`: `AFTER UPDATE OF activity_id, role, address, contact_id FOR EACH ROW EXECUTE FUNCTION participant_clears_reply_settled()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()`
 - `stamp_participant_domain_evidence`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION stamp_participant_domain_evidence()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"role": 20000, "address": 20000, "response": 20000, "channel_user_id": 20000, "address_domain_folded": 20000, "domain_evidence_precision": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"address_domain_folded":20000,"channel_user_id":20000,"domain_evidence_precision":20000,"response":20000,"role":20000}')`
@@ -1227,7 +1233,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## meeting_invitation
 
-21 columns · primary key `(activity_id)` · referenced by 1 foreign key
+22 columns · primary key `(activity_id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1249,6 +1255,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `receipt` | `jsonb` |  |  |
 | `reminder_status` | `text`, default `'off'::text` | yes | One of `off`, `pending`, `queued`, `unavailable`. |
 | `status` | `text` | yes | One of `pending`, `confirmed`, `rescheduling`, `canceling`, `needs_attention`, `canceled` and 1 more. |
+| `team_user_ids` | `uuid[]`, default `'{}'::uuid[]` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -1276,6 +1283,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `meeting_invitation_management_hash_key`: `unique, btree (management_hash)`
 - `meeting_invitation_pkey`: `unique, btree (activity_id)`
 - `meeting_invitation_public_intent`: `unique, btree (((public_intent ->> 'key_hash'))) WHERE (public_intent IS NOT NULL)`
+- `meeting_invitation_team_user_ids`: `gin (team_user_ids)`
 
 **Triggers**
 

@@ -19,6 +19,7 @@ import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
+import { useFieldFaults } from "../design-system/savepage";
 import { Select } from "../design-system/select";
 import { Row } from "../design-system/stack";
 import { useToast } from "../design-system/toast";
@@ -32,6 +33,7 @@ import { activityDay } from "../format/activitywhen";
 import { formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
+import { blankRequired } from "../lib/problem";
 import { routeHash } from "../lib/router";
 import { useRecordOwnerOptions } from "./assigneepicker";
 import { DealSuggestionAnswerDialog } from "./dealsuggestion.answer";
@@ -270,8 +272,10 @@ export function AcceptSuggestionDialog({
   onClose,
 }: Readonly<{ suggestion: DealSuggestion; onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const toast = useToast();
   const headingId = useId();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   // ONE key per dialog, held across retries: a response lost after the deal
   // was opened replays that acceptance rather than being refused as a second.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
@@ -314,13 +318,20 @@ export function AcceptSuggestionDialog({
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("dealSuggestion.acceptTitle", { company: suggestion.company_name })}
       </Heading>
-      <div className="form-stack">
-        <Field label={t("dealSuggestion.field.name")} required>
+      <div className="form-stack" ref={faultsRoot}>
+        <Field
+          label={t("dealSuggestion.field.name")}
+          required
+          error={faults.of("name")}
+        >
           {(control) => (
             <TextInput
               {...control}
               value={draft.name}
-              onChange={(event) => set({ name: event.target.value })}
+              onChange={(event) => {
+                set({ name: event.target.value });
+                faults.edited("name");
+              }}
               data-testid="deal-suggestion-name"
             />
           )}
@@ -397,8 +408,12 @@ export function AcceptSuggestionDialog({
         </Button>
         <Button
           variant="primary"
-          disabled={!draft.name.trim() || accept.isPending}
+          disabled={accept.isPending}
           onClick={(event) => {
+            const blank = blankRequired(locale, {
+              name: [t("dealSuggestion.field.name"), draft.name],
+            });
+            if (faults.show(blank)) return;
             if (!refuseUnreadableField(event.currentTarget)) {
               submit();
             }

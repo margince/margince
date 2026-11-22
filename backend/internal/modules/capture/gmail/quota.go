@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -50,6 +51,28 @@ func (c *Connector) authorize(ctx context.Context, st authState) (context.Contex
 	ctx = quotaOwner(ctx, st.Owner)
 	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
 	return ctx, access, err
+}
+
+// authorized runs op under the mailbox's access token. A kept token can be
+// revoked before its stated lifetime ends. So a 401 redeems once more, and op
+// runs again on the new token rather than parking a healthy connection.
+func authorized[T any](
+	ctx context.Context, c *Connector, st authState, op func(context.Context, string) (T, error),
+) (T, error) {
+	ctx, access, err := c.authorize(ctx, st)
+	if err != nil {
+		var none T
+		return none, err
+	}
+	out, err := op(ctx, access)
+	if !oauthflow.Unauthorized(err) {
+		return out, err
+	}
+	if access, err = c.oauth.AccessToken(oauthflow.Renewing(ctx), st.RefreshToken); err != nil {
+		var none T
+		return none, err
+	}
+	return op(ctx, access)
 }
 
 func newQuotaPacing(mailbox, project int) quotaPacing {

@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -24,7 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const csvTargetOwner = "owner_email"
+const csvTargetOwner = recordexport.OwnerEmail
 
 // seatsByEmail answers the seat each address belongs to, keyed by the folded
 // address, in one query. An address no seat holds is absent.

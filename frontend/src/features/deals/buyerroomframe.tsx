@@ -18,11 +18,13 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { useFieldFaults } from "../../design-system/savepage";
 import { formatDateAbbrev } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { unwrap } from "../../lib/problem";
+import { emailFault } from "../../lib/emailshape";
+import { blankRequired, unwrap } from "../../lib/problem";
 
 // The buyer's page around its documents: the ground and the product's mark,
 // the screens a dead or lapsed link lands on, the hero the seller wrote, and
@@ -78,7 +80,10 @@ export function DeadLink({ message }: Readonly<{ message: string }>) {
 
 export function LinkRequest() {
   const t = useT();
+  const { locale } = useLocale();
   const [email, setEmail] = useState("");
+  const [faults, faultsRoot] = useFieldFaults();
+  const emailLabel = t("buyer.emailLabel");
   const request = useMutation({
     mutationKey: ["buyer-room-link-request"],
     mutationFn: async (address: string) => {
@@ -103,27 +108,37 @@ export function LinkRequest() {
   }
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    request.mutate(email.trim());
+    const blank = blankRequired(locale, { email: [emailLabel, email] });
+    const malformed = emailFault(email.trim(), locale, emailLabel);
+    if (malformed && blank.size === 0) blank.set("email", malformed);
+    if (!faults.show(blank)) request.mutate(email.trim());
   };
   return (
-    <form className="buyer-linkrequest" onSubmit={submit}>
-      <Field label={t("buyer.emailLabel")} hint={t("buyer.emailHint")}>
+    <form
+      className="buyer-linkrequest"
+      ref={faultsRoot}
+      noValidate
+      onSubmit={submit}
+    >
+      <Field
+        label={emailLabel}
+        hint={t("buyer.emailHint")}
+        required
+        error={faults.of("email")}
+      >
         {(field) => (
           <TextInput
             {...field}
             type="email"
-            required
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              faults.edited("email");
+            }}
           />
         )}
       </Field>
-      <Button
-        type="submit"
-        variant="primary"
-        pending={request.isPending}
-        disabled={email.trim() === ""}
-      >
+      <Button type="submit" variant="primary" pending={request.isPending}>
         <Mail aria-hidden />
         {t("buyer.requestLink")}
       </Button>

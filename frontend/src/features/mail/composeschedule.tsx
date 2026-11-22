@@ -10,7 +10,7 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { Popover } from "../../design-system/popover";
 import { calendarDay, isRealCalendarDay } from "../../format/calendarday";
-import { formatDateTime, INTL_LOCALE } from "../../format/format";
+import { formatDateTime } from "../../format/format";
 import {
   browserZone,
   instantAtWallClock,
@@ -131,7 +131,7 @@ export function momentOf(local: string, zone = browserZone()): Date | null {
 
 /** A scheduled moment, spelled the way every line in this drawer spells one. */
 export function momentLabel(at: Date, locale: Locale, zone: string): string {
-  return `${formatDateTime(at.toISOString(), locale, zone)} · ${zoneNameAndOffset(INTL_LOCALE[locale], at, zone)}`;
+  return `${formatDateTime(at.toISOString(), locale, zone)} · ${zoneNameAndOffset(locale, at, zone)}`;
 }
 
 export function scheduledSendLabel(

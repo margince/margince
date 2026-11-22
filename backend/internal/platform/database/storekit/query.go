@@ -139,6 +139,41 @@ func (q Query) CountMatching(ctx context.Context, tx pgx.Tx, p Predicate) (int, 
 	return n, nil
 }
 
+// CountEach is CountMatching for many filters in one statement: one count per
+// filter over the same base clause and row scope. The filters joined by `OR`
+// in the `WHERE` let the planner skip the rows none of them selects.
+func (q Query) CountEach(ctx context.Context, tx pgx.Tx, filters []Predicate) ([]int, error) {
+	out := make([]int, len(filters))
+	if len(filters) == 0 {
+		return out, nil
+	}
+	columns := make([]string, 0, len(filters))
+	where, args, err := q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
+		compiled := make([]string, 0, len(filters))
+		for _, filter := range filters {
+			clause, err := CompilePredicate(filter, q.Fields, arg)
+			if err != nil {
+				return "", err
+			}
+			compiled = append(compiled, "("+clause+")")
+			columns = append(columns, "count(*) FILTER (WHERE "+clause+")")
+		}
+		return "(" + strings.Join(compiled, " OR ") + ")", nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	targets := make([]any, len(out))
+	for i := range out {
+		targets[i] = &out[i]
+	}
+	sql := fmt.Sprintf("SELECT %s FROM %s t WHERE %s", strings.Join(columns, ", "), q.Table, where)
+	if err := tx.QueryRow(ctx, sql, args...).Scan(targets...); err != nil {
+		return nil, fmt.Errorf("predicate counts on %s: %w", q.Table, err)
+	}
+	return out, nil
+}
+
 // SelectIDs runs the predicate inside the caller's workspace-bound
 // transaction and returns matching row ids, deterministically ordered
 // by id (the keyset tie-breaker) and hard-capped at PredicateRowLimit.

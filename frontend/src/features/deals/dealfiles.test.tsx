@@ -321,6 +321,37 @@ it("offers Delete on an upload and no Hide", async () => {
   ).not.toBeInTheDocument();
 });
 
+it("edits an upload from the shared menu and offers Edit on no captured file", async () => {
+  const { calls } = stubApi([upload(), captured()]);
+  const user = userEvent.setup();
+  render(<DealFiles deal={dealOf()} />);
+
+  await user.click(
+    await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
+  );
+  expect(
+    screen.queryByRole("button", { name: en["files.edit"] }),
+  ).not.toBeInTheDocument();
+  await user.keyboard("{Escape}");
+
+  await user.click(
+    await screen.findByRole("button", { name: /Actions for pricing/ }),
+  );
+  await user.click(screen.getByRole("button", { name: en["files.edit"] }));
+  const dialog = await screen.findByRole("dialog");
+  await user.type(within(dialog).getByRole("textbox"), "Price list");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["files.save"] }),
+  );
+
+  await waitFor(() => expect(calls).toHaveLength(1));
+  expect(calls[0].method).toBe("PATCH");
+  expect(new URL(calls[0].url).pathname).toBe(
+    "/v1/attachments/att-up/metadata",
+  );
+  expect(await calls[0].json()).toEqual({ title: "Price list" });
+});
+
 it("names a titled file by the title its tile shows, in its menu and its delete", async () => {
   const titled = upload();
   stubApi([
@@ -476,9 +507,20 @@ it("withholds the upload and the row verbs on a deal this caller may not write",
 
   expect(await screen.findByText("MSA-redline.docx")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Add document" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Capture a chat" })).toBeNull();
   expect(
     screen.queryByRole("button", { name: /Actions for MSA-redline/ }),
   ).toBeNull();
+});
+
+it("opens Capture a chat on a deal this caller may write", async () => {
+  stubApi([upload(), captured()]);
+  render(<DealFiles deal={dealOf({})} />);
+
+  await userEvent
+    .setup()
+    .click(await screen.findByRole("button", { name: "Capture a chat" }));
+  expect(await screen.findByLabelText("Screenshot")).toBeInTheDocument();
 });
 
 it("takes a deleted upload out of every list that showed it, and no other", async () => {

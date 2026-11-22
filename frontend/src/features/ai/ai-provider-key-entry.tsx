@@ -60,7 +60,11 @@ export function KeyEntry({
     );
   }
   return (
-    <Field label={t("aiProviderKeys.field")} hint={hint}>
+    <Field
+      label={t("aiProviderKeys.field")}
+      hint={hint}
+      error={refusal ? t(refusal) : undefined}
+    >
       {/* One paste and the verbs that act on it, on one line. */}
       {(control) => (
         <div className="ai-key-entry">

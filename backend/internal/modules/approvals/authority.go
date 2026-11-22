@@ -366,9 +366,9 @@ var targetResolvedGrants = map[string]principal.Action{
 	// A part is written on the record it hangs off (an offer, a company, a
 	// project). Its store gates the write on that record's update grant.
 	"change_record_parts": principal.ActionUpdate,
-	// Accepting a transfer moves a contact or a company to a colleague, which
-	// is an owner change on that record.
-	approvalsubject.KindOwnershipTransfer: principal.ActionUpdate,
+	// Accepting a transfer changes the record's owner. Approving edit access
+	// shares the record, which takes its update grant as Share does.
+	approvalsubject.KindOwnershipTransfer: principal.ActionUpdate, approvalsubject.KindEditAccess: principal.ActionUpdate,
 }
 
 // PendingDecidableBy rechecks current state and authority because a notification event may be stale.

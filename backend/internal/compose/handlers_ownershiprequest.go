@@ -8,15 +8,17 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/editaccess"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ownershipRequestHandlers is the HTTP door onto a colleague's request to be
-// handed a contact or company, and onto its owner's offer to hand it on.
+// handed a contact or company, or for edit access, and onto an owner's offer.
 type ownershipRequestHandlers struct {
 	transfers ownershipTransfers
+	editaccess.Handlers
 }
 
 // RequestOwnershipTransfer needs nothing of Idempotency-Key itself: the

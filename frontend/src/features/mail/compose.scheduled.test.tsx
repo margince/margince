@@ -17,6 +17,7 @@ import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -89,6 +90,9 @@ function stubSend(status: number) {
           ? await request.clone().json()
           : JSON.parse(String(init?.body));
         return jsonResponse(allowedPreview(previewedAddresses(body)));
+      }
+      if (url.pathname.endsWith("/connectors")) {
+        return jsonResponse(CONNECTED_ROSTER);
       }
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }),

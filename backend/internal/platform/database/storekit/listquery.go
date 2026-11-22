@@ -191,6 +191,11 @@ func (s *ListSort) orderExpr() string {
 	return expr
 }
 
+// Orders reports whether this sort is field in the given direction.
+func (s *ListSort) Orders(field string, desc bool) bool {
+	return s != nil && s.name == field && s.desc == desc
+}
+
 // OrderBy renders the ORDER BY clause: the sort field first (NULLS LAST
 // under both directions, so the NULL tail sits at the end where the
 // keyset continuation expects it), then the house (created_at, id)

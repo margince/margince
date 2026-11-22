@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // sendRefs names what a payload shows: the seat's own tasks, tasks shown as
@@ -345,7 +346,7 @@ func seatAuthorityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID) (context.Con
 	if err != nil {
 		return ctx, false, fmt.Errorf("send: reading the recipient's current authority: %w", err)
 	}
-	return boundToSeat(ctx, seat, rbac, seatType), true, nil
+	return principal.WithActor(ctx, authz.HumanPrincipal(seat, rbac, seatType)), true, nil
 }
 
 // decisionTargets are the records a decision other than a commitment names.

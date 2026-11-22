@@ -28,6 +28,8 @@ var editableMembers = map[string][]string{
 	approvalsubject.KindOwnershipTransfer: {},
 	// A share request is answered yes or no; every member names a record.
 	approvalsubject.KindContactShare: {},
+	// An edit access request is answered yes or no; its fields name the parties.
+	approvalsubject.KindEditAccess: {},
 }
 
 // assertEditableMembers refuses an edit that changes a member its kind does not

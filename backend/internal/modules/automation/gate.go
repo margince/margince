@@ -90,29 +90,17 @@ func checkOwnerPermission(ctx context.Context, resolver authz.Resolver, ev workf
 	// it writes — so there is no read-only branch to spare here. The set is
 	// named rather than spelled out: an enumeration copied into a comment is
 	// a second catalog, and this one had gone stale by an action already.
-	seat, err := resolver.SeatType(ctx, ev.WorkspaceID, ev.OwnerID)
+	rbac, seat, err := resolver.AdmittedAuthority(ctx, ev.WorkspaceID, ev.OwnerID, ids.Nil)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
-			// Same honest-hard-case as EffectiveRBAC below: a gone/archived/
-			// suspended owner is a real denial, never an outage.
-			return gateDecision{blocked: true, reason: reasonOwnerGone}, nil
-		}
-		return gateDecision{}, fmt.Errorf("automation: resolving the owner's live seat: %w", err)
-	}
-	if !seat.CanMutate() {
-		return gateDecision{blocked: true, reason: "the automation's owner no longer has a seat that can make changes"}, nil
-	}
-
-	rbac, err := resolver.EffectiveRBAC(ctx, ev.WorkspaceID, ev.OwnerID)
-	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			// The owner's live RBAC resolves to ErrNotFound for gone,
-			// archived, or suspended — never to an empty-but-valid
-			// authority (shared/ports/authz's Resolver doc). That is a
-			// real denial, not an outage.
+			// A gone, archived or suspended owner is a real denial, never an
+			// outage: the resolver answers ErrNotFound, not an empty authority.
 			return gateDecision{blocked: true, reason: reasonOwnerGone}, nil
 		}
 		return gateDecision{}, fmt.Errorf("automation: resolving the owner's live authority: %w", err)
+	}
+	if !seat.CanMutate() {
+		return gateDecision{blocked: true, reason: "the automation's owner no longer has a seat that can make changes"}, nil
 	}
 
 	for _, action := range effect.Actions {

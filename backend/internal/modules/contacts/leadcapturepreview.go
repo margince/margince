@@ -33,11 +33,11 @@ func (s *Store) PreviewCapturedLeadFold(ctx context.Context, id ids.LeadID, in C
 	if err := previewFieldsVisible(ctx, leadEntity, contactNameColumn, "company_name", "title"); err != nil {
 		return out, err
 	}
-	active, err := s.activeColumns(ctx, leadEntity)
-	if err != nil {
-		return out, err
-	}
-	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, leadEntity)
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureWritableLive(ctx, tx, leadEntity, id.UUID); err != nil {
 			return err
 		}

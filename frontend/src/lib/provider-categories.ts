@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { INTL_LOCALE } from "../format/format";
+import { listFormat } from "../format/formatters";
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
@@ -67,7 +67,7 @@ export function categoryNamesTogether(
   locale: Locale,
 ): string {
   const names = categories.map((category) => categoryName(category, t));
-  return new Intl.ListFormat(INTL_LOCALE[locale], {
+  return listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(names);

@@ -6,7 +6,12 @@ import { identifierNumber } from "../../format/format";
 import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { looksLikeEmail } from "../../lib/emailshape";
-import { IMAP_PORT_DEFAULT, inRange, PORT_RANGE } from "../../lib/imapconnect";
+import {
+  IMAP_PORT_DEFAULT,
+  PORT_RANGE,
+  rangeFault,
+  rangeParams,
+} from "../../lib/imapconnect";
 import { valueFor } from "../../lib/labelfor";
 import {
   type FieldLabel,
@@ -73,13 +78,12 @@ function valueFault(
     return { code: "email_malformed" };
   }
   if (key !== "imap.port") return null;
-  const port = Number(value);
-  if (!Number.isInteger(port)) return { code: "not_integer" };
-  return inRange(port, PORT_RANGE)
+  const code = rangeFault(Number(value), PORT_RANGE);
+  return code === null
     ? null
     : {
-        code: "out_of_range",
-        params: { min: String(PORT_RANGE.min), max: String(PORT_RANGE.max) },
+        code,
+        params: rangeParams(PORT_RANGE),
       };
 }
 

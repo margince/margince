@@ -143,6 +143,8 @@ type InstallationSettingsStore struct {
 	// onCalendarChange runs inside the transaction that moves the reporting
 	// zone or the fiscal start, before either is written.
 	onCalendarChange CalendarChange
+	// onZoneChange runs in that transaction when the zone itself moves.
+	onZoneChange ZoneChange
 	// now dates a window change, which takes over at the next reset after it.
 	now func() time.Time
 }

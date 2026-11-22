@@ -65,6 +65,8 @@ function mount(
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () => jsonResponse(server.profile),
     "GET /scheduling/calendars": () => jsonResponse(calendars),
+    "GET /scheduling/team-candidates": () => jsonResponse([]),
+    "GET /scheduling/team-requests": () => jsonResponse([]),
     "PUT /scheduling/profile": (body) => {
       server.profile = body as Profile;
       server.profileWrites.push(server.profile);
@@ -104,7 +106,9 @@ async function ruleName(name: string) {
 
 // The page's one save bar, drawn only while some card holds a draft.
 function saveBar() {
-  return screen.queryByRole("region", { name: "Unsaved changes" });
+  return screen.queryByRole("region", {
+    name: /^(Unsaved changes|Save to make these yours\.)$/,
+  });
 }
 
 function barSave() {

@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -56,7 +57,9 @@ func salarySheet(t *testing.T) []byte {
 
 func readerOver(files map[ids.UUID]storedFile) (*threadDocuments, *fakeAttachments) {
 	fake := &fakeAttachments{files: files}
-	return &threadDocuments{files: fake, pdf: processPDFReader, slots: make(chan struct{}, 1)}, fake
+	return &threadDocuments{
+		files: fake, pdf: processPDFReader, slots: make(chan struct{}, 1), fileBudget: confidentialityDocumentTimeout,
+	}, fake
 }
 
 func TestAThreadsSalarySheetReachesThePromptInsideTheFence(t *testing.T) {
@@ -225,5 +228,33 @@ func TestAnImageNeedsNoObjectFetchWithoutAnImageReader(t *testing.T) {
 	}
 	if !doc.Unreadable || len(files.fetched) != 0 {
 		t.Fatalf("image read: unreadable=%v fetched=%d", doc.Unreadable, len(files.fetched))
+	}
+}
+
+// compilingPDFEngine is a pdftext.Reader whose first compile outlasts any parse
+// budget: a Read before Start waits out the caller's deadline.
+type compilingPDFEngine struct{ started bool }
+
+func (e *compilingPDFEngine) Start() error {
+	e.started = true
+	return nil
+}
+
+func (e *compilingPDFEngine) Read(ctx context.Context, _ []byte, _ int) (string, error) {
+	if !e.started {
+		<-ctx.Done()
+		return "", ctx.Err()
+	}
+	return "Anna Berger\nWork Experience\nEducation", nil
+}
+
+func TestACompilingPDFEngineDoesNotSpendTheFilesParseBudget(t *testing.T) {
+	reader := &threadDocuments{pdf: &compilingPDFEngine{}, fileBudget: time.Millisecond}
+	doc := capture.ThreadDocument{Filename: "anna-berger.pdf"}
+	if err := reader.excerpt(context.Background(), &doc, []byte("%PDF-1.4"), documentPDFMIME); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Unreadable || !doc.Personnel {
+		t.Fatalf("a CV behind a cold engine: unreadable=%v personnel=%v, want read as personnel", doc.Unreadable, doc.Personnel)
 	}
 }

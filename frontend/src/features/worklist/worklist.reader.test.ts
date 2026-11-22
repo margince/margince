@@ -321,3 +321,38 @@ it("reads a timed task on the reader's clock, not the company's", () => {
     t("worklist.when.due", { when: "23:30 (15 Sept, 06:30 Asia/Bangkok)" }),
   );
 });
+
+// A task with a date and no time is due on the date its chosen clock names.
+// A row drawn on the company's clock prints that date, whichever zone the
+// picker was in, and stays quiet for today.
+it("prints a date-only task by its picked date for a company east or west of the picker", () => {
+  const now = new Date("2026-11-16T08:00:00Z");
+  const dated = (wall_clock: string, timezone: string, due_at: string) => ({
+    ...task,
+    due_at,
+    due_has_time: false,
+    due_intent: { wall_clock, timezone },
+  });
+  const forToday = dated("2026-11-16T23:59:59", "UTC", "2026-11-16T23:59:59Z");
+  expect(whenText(forToday, t, "en", "UTC", "Europe/Berlin", now)).toBeNull();
+  const fromLosAngeles = dated(
+    "2026-11-16T23:59:59",
+    "America/Los_Angeles",
+    "2026-11-17T07:59:59Z",
+  );
+  expect(
+    whenText(fromLosAngeles, t, "en", "UTC", "Europe/Berlin", now),
+  ).toBeNull();
+  const fromTokyo = dated(
+    "2026-11-16T23:59:59",
+    "Asia/Tokyo",
+    "2026-11-16T14:59:59Z",
+  );
+  expect(
+    whenText(fromTokyo, t, "en", "UTC", "America/Chicago", now),
+  ).toBeNull();
+  const tomorrow = dated("2026-11-17T23:59:59", "UTC", "2026-11-17T23:59:59Z");
+  expect(whenText(tomorrow, t, "en", "UTC", "Europe/Berlin", now)).toContain(
+    "17",
+  );
+});

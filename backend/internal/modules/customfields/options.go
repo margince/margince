@@ -145,6 +145,7 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 		  WHERE id = $2`, optionsArg, id, options); err != nil {
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: updating options: %w", err)
 	}
+	forgetActiveColumns(tx, f.Object)
 	out, err := readField(ctx, tx, id)
 	if err != nil {
 		return crmcontracts.CustomField{}, err

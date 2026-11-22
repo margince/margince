@@ -101,11 +101,7 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 		Lane:       crmcontracts.MagicLineLaneMagicLaneDone,
 		Summary:    d.summary,
 		Reason:     d.reason,
-		Entity: &crmcontracts.MagicEntityRef{
-			Type:  e.EntityType,
-			Id:    openapi_types.UUID(e.EntityID),
-			Label: e.Label,
-		},
+		Entity:     new(entityRefOf(e)),
 		Actor: crmcontracts.MagicActor{
 			Type:  crmcontracts.MagicActorType(e.ActorType),
 			Id:    e.ActorID,
@@ -131,10 +127,19 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 	}
 	// A create's image is the whole new record and an archive's is empty;
 	// neither says more than the line's sentence and the record's name.
-	if !bulkActions[e.Action] {
+	if !bulkActions[e.Action] && e.ParentType == nil {
 		line.Before, line.After = imagesOf(mask, e)
 	}
 	return line, groupKey(e, d), true
+}
+
+// entityRefOf is the record a line names and links: the row's own record, or
+// the parent a placed child belongs to.
+func entityRefOf(e entry) crmcontracts.MagicEntityRef {
+	if e.ParentType != nil && e.ParentID != nil {
+		return crmcontracts.MagicEntityRef{Type: *e.ParentType, Id: openapi_types.UUID(*e.ParentID), Label: e.Label}
+	}
+	return crmcontracts.MagicEntityRef{Type: e.EntityType, Id: openapi_types.UUID(e.EntityID), Label: e.Label}
 }
 
 // imagesOf is what a line shows of its row's before and after images: the
@@ -162,7 +167,7 @@ func showDeferredImages(ctx context.Context, tx pgx.Tx, mask imageMask, lines []
 	shown := make([]entry, 0, len(lines))
 	lineAt := map[ids.UUID]int{}
 	for i, line := range lines {
-		if e, ok := byID[ids.UUID(line.Id)]; ok && imagesDeferred(e.Action) {
+		if e, ok := byID[ids.UUID(line.Id)]; ok && imagesDeferred(e) {
 			lineAt[e.ID] = i
 			shown = append(shown, e)
 		}

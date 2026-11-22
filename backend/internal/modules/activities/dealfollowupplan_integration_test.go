@@ -125,6 +125,7 @@ func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 				stats, read, n.NodeType, n.RelationName, n.Alias)
 		}
 	})
+	assertFollowUpsComputedOnce(t, stats, plan)
 	if sets != 1 || attendeeReads == 0 || keyedReads == 0 {
 		t.Fatalf("%s statistics: the plan read no attendees (%.0f) or no later activity (%.0f), so this test checks nothing",
 			stats, attendeeReads, keyedReads)
@@ -132,6 +133,30 @@ func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 	if attendeeReads > planMeetings {
 		t.Errorf("%s statistics: attendees read %.0f times for %d meetings, once per deal instead of once",
 			stats, attendeeReads, planMeetings)
+	}
+}
+
+// perMeetingSteps bounds how often one step may run for each meeting: a
+// follow-up checks a few later activities and arms per meeting. A statement that
+// re-runs the follow-ups for every deal link loops planMeetings times as often.
+const perMeetingSteps = 8
+
+// assertFollowUpsComputedOnce holds the batch to computing its follow-up rows
+// once. Joined as a subquery, a nested loop may run them again for every link.
+func assertFollowUpsComputedOnce(t *testing.T, stats string, plan planNode) {
+	t.Helper()
+	computed := 0
+	plan.walk(func(n planNode) {
+		if n.ActualLoops > perMeetingSteps*planMeetings {
+			t.Errorf("%s: %s %s %s ran %.0f times for %d meetings, so the follow-ups ran again per deal link",
+				stats, n.NodeType, n.RelationName, n.Alias, n.ActualLoops, planMeetings)
+		}
+		if n.SubplanName == "CTE "+followUpsOwed {
+			computed++
+		}
+	})
+	if computed != 1 {
+		t.Errorf("%s: the plan computes the follow-up rows in %d materialized sets, want exactly one", stats, computed)
 	}
 }
 

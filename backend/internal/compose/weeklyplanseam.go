@@ -121,7 +121,7 @@ func (c weeklyPlanCapacity) ForWeek(
 			  (SELECT count(*) FROM activity t
 			    WHERE t.kind = 'task' AND t.archived_at IS NULL
 			      AND NOT t.is_done AND t.assignee_id = $3 AND `+current+`
-			      AND `+storekit.TaskDueSQL("t")+` >= $1 AND `+storekit.TaskDueSQL("t")+` < $2)`,
+			      AND `+storekit.TaskDueFromSQL("t", "$1")+` AND `+storekit.TaskDueBeforeSQL("t", "$2")+`)`,
 			args...).
 			Scan(&out.Meetings, &out.Tasks)
 	})
