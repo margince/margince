@@ -75,12 +75,12 @@ export function classMeetings(path: string, text: string): ClassMeeting[] {
 }
 
 /**
- * The members, and beside each one the same member carrying the classes of its
- * own family that a markup site lists next to it: `stat-card-alert`, or the
- * sheet classes an open prefix such as `stat-card-narrow-` reaches. A state
- * class like `is-lifted` joins no family, since a sheet uses it on other
- * elements. A prefix that is the member's class and a dash (`panel-${tone}`) is
- * skipped: it cannot tell a variant from a part such as `panel-head`.
+ * Each member, and beside it the same member carrying the classes of its own
+ * family that a markup site lists next to it, such as `stat-card-alert`. An
+ * open prefix like `stat-card-narrow-` adds the sheet classes it reaches. A
+ * state class like `is-lifted` joins no family: sheets use it on other
+ * elements. A bare slot (`panel-${tone}`) is skipped, because it cannot tell
+ * a variant from a part such as `panel-head`.
  */
 export function withMeetings(
   members: readonly Written[],
