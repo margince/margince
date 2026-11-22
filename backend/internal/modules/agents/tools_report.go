@@ -157,12 +157,12 @@ func reportProperty(catalog []ReportCatalogEntry) string {
 	return `{"enum":[` + strings.Join(keys, ",") + `],` + described + `}`
 }
 
-// describeReportCatalog says what each report ANSWERS, and names where the
-// three plan vocabularies are rather than reciting them.
+// describeReportCatalog says what each report ANSWERS (measures, every
+// dimension, default starred) and names where the `filters` and `aggregates`
+// vocabularies are rather than reciting them.
 //
-// Reciting all three vocabularies for every report cost 3.4KB here — 6% of the
-// served catalog in one tool, held by every client for a whole session and
-// re-sent by every Surface-B run on every step. They are the document's now.
+// Reciting all three vocabularies for every report cost 3.4KB here, held by
+// every client for a whole session. Filters and aggregates are the document's.
 //
 // WHERE THE LINE FALLS is MEASURED rather than reasoned, and the measurement is
 // worth keeping: with the defaults deferred too, leaving an enum of bare keys,

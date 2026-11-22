@@ -4,8 +4,8 @@
 package agents
 
 // `margince://schema/reports` — the three plan vocabularies each prebuilt report
-// accepts, published as a document rather than recited into run_report's own
-// input schema.
+// accepts. run_report's description lists only measures and dimensions; filters
+// and aggregates live here.
 //
 // run_report's `report` property carried these lists for all nine prebuilt
 // reports — 3.4KB of one tool's description, 6% of the whole served catalog and

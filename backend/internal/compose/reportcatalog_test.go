@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -264,11 +265,9 @@ func TestReportPlanRefusesTrailingContent(t *testing.T) {
 // vocabulary door instead of the report, because `deals-by-stage` answers that
 // goal with no plan at all and a bare key does not say so. 2/3 to 0/3.
 //
-// So the default is the only per-report content left in the description, and a
-// report that shipped without one would silently reopen exactly that failure:
-// a spec with neither default aggregates
-// nor default grouping would render nothing, which is a shape runAdHocPlan already builds. Nothing
-// else on this surface tells a caller which report answers their question.
+// So each report's line (measures, dimensions, default starred) is what a
+// caller selects by, and a report with neither default aggregates nor default
+// grouping, a shape runAdHocPlan already builds, would render nothing.
 //
 // Derived from the engine's own catalog, so a report added tomorrow inherits the
 // obligation rather than escaping it.
@@ -291,20 +290,36 @@ func TestEveryReportKeyIsDescribedByItsDefaultAnswer(t *testing.T) {
 		if !strings.Contains(described, entry.Report) {
 			t.Errorf("%s is in the enum and not in the description", entry.Report)
 		}
-		if entry.Measures != "" && !strings.Contains(described, entry.Measures) {
-			t.Errorf("%s: the description does not say what it computes by default: %q",
-				entry.Report, entry.Measures)
+		assertReportClause(t, described, entry.Report, prebuiltReports[entry.Report])
+	}
+}
+
+// assertReportClause reads ONE report's own clause out of the served
+// description and compares it with what the engine's spec says: its measures
+// exactly, its dimensions exactly, and the star on exactly spec.defaultBy.
+// Searching the whole description would find a dimension dropped here in
+// another report's clause.
+func assertReportClause(t *testing.T, described, report string, spec reportSpec) {
+	t.Helper()
+	match := regexp.MustCompile(`(?:^| )` + regexp.QuoteMeta(report) + `: ([^.]*)\. `).FindStringSubmatch(described)
+	if match == nil {
+		t.Errorf("%s has no clause in the description: %s", report, described)
+		return
+	}
+	measures, dimensions, _ := strings.Cut(match[1], "by: ")
+	measures = strings.TrimSuffix(strings.TrimSpace(measures), ";")
+	if want := describeReportMeasures(spec); measures != want {
+		t.Errorf("%s: measures %q, the spec's default aggregates are %q", report, measures, want)
+	}
+	want := make([]string, 0, len(spec.dimensions))
+	for _, name := range allowedReportNames(spec.dimensions) {
+		if slices.Contains(spec.defaultBy, name) {
+			name += "*"
 		}
-		for _, dimension := range entry.GroupBy {
-			want := dimension
-			if slices.Contains(entry.DefaultBy, dimension) {
-				want += "*"
-			}
-			if !strings.Contains(described, entry.Report+": ") || !strings.Contains(described, want) {
-				t.Errorf("%s: the description does not list the dimension %q the engine accepts",
-					entry.Report, want)
-			}
-		}
+		want = append(want, name)
+	}
+	if got := strings.Split(dimensions, ", "); !slices.Equal(got, want) {
+		t.Errorf("%s: dimensions %v, the engine accepts %v with the default starred", report, got, want)
 	}
 }
 
