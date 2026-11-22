@@ -119,7 +119,7 @@ func runMigration(ctx context.Context, t *testing.T, file string) []string {
 	return raised
 }
 
-func runNoticeValidation(ctx context.Context, t *testing.T, conn *pgx.Conn) []string {
+func runNoticeValidation(ctx context.Context, t *testing.T) []string {
 	t.Helper()
 	return runMigration(ctx, t, noticeValidate)
 }
@@ -139,7 +139,7 @@ func TestTheNoticeAndContributionChecksValidateWhenNoRowBreaksThem(t *testing.T)
 	headSchema(t, conn)
 	ctx := context.Background()
 	reopenChecks(ctx, t, conn)
-	runNoticeValidation(ctx, t, conn)
+	runNoticeValidation(ctx, t)
 	for _, name := range []string{noticeCheck, contributionCheck} {
 		if !validated(ctx, t, conn, name) {
 			t.Errorf("%s stayed NOT VALID on a clean table", name)
@@ -169,7 +169,7 @@ func TestAnOldNoticeWithAnUnknownTargetLosesTheCheckAndStaysUpdatable(t *testing
 	if _, err := conn.Exec(ctx, `ALTER TABLE notice ADD CONSTRAINT `+noticeCheck+` `+def+` NOT VALID`); err != nil {
 		t.Fatal(err)
 	}
-	raised := runNoticeValidation(ctx, t, conn)
+	raised := runNoticeValidation(ctx, t)
 	if present(ctx, t, conn, noticeCheck) {
 		t.Errorf("%s was kept over a row that breaks it", noticeCheck)
 	}

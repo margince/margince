@@ -21,6 +21,7 @@ import (
 // Held by: TestNoticeTargetTypeIsTheApprovalListAndTheNoticeOwn (backend/gates/approvaltargettypes_test.go)
 type OwnTargetType string
 
+// The notice target types an approval cannot name.
 const (
 	OwnTargetApproval               OwnTargetType = "approval"
 	OwnTargetDataTask               OwnTargetType = "data_task"
@@ -48,7 +49,7 @@ func requireKnownTarget(target Target) error {
 	if _, own := ownTargets[target.Type]; own || targettype.Known(target.Type) {
 		return nil
 	}
-	return fmt.Errorf("notices: target type %q is not one a notice can point at: %w", target.Type, apperrors.ErrInvalidArgument)
+	return fmt.Errorf("the target type %q is not one a notice can point at: %w", target.Type, apperrors.ErrInvalidArgument)
 }
 
 // TargetApproval is the target type of a notice that opens a pending decision.

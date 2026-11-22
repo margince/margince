@@ -42,5 +42,5 @@ func requireKnownSourceType(sourceType string) error {
 	if _, known := knownSourceTypes[sourceType]; known {
 		return nil
 	}
-	return fmt.Errorf("reporting: source type %q is not one a metric counts from: %w", sourceType, apperrors.ErrInvalidArgument)
+	return fmt.Errorf("the source type %q is not one a metric counts from: %w", sourceType, apperrors.ErrInvalidArgument)
 }
